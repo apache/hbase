@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
@@ -4505,11 +4506,7 @@ public class HRegion implements HeapSize { // , Writable{
   // TODO: There's a lot of boiler plate code identical
   // to increment... See how to better unify that.
   /**
-   *
    * Perform one or more append operations on a row.
-   * <p>
-   * Appends performed are done under row lock but reads do not take locks out
-   * so this can be seen partially complete by gets and scans.
    *
    * @param append
    * @param lockid
@@ -4519,7 +4516,6 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public Result append(Append append, Integer lockid, boolean writeToWAL)
       throws IOException {
-    // TODO: Use MVCC to make this set of appends atomic to reads
     byte[] row = append.getRow();
     checkRow(row, "append");
     boolean flush = false;
@@ -4533,9 +4529,15 @@ public class HRegion implements HeapSize { // , Writable{
     // Lock row
     startRegionOperation();
     this.writeRequestsCount.increment();
+    WriteEntry w = null;
     try {
       Integer lid = getLock(lockid, row, true);
       this.updatesLock.readLock().lock();
+      // wait for all prior MVCC transactions to finish - while we hold the row lock
+      // (so that we are guaranteed to see the latest state)
+      mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+      // now start my own transaction
+      w = mvcc.beginMemstoreInsert();
       try {
         long now = EnvironmentEdgeManager.currentTimeMillis();
         // Process each family
@@ -4598,6 +4600,7 @@ public class HRegion implements HeapSize { // , Writable{
                 newKV.getBuffer(), newKV.getQualifierOffset(),
                 kv.getQualifierLength());
 
+            newKV.setMemstoreTS(w.getWriteNumber());
             kvs.add(newKV);
 
             // Append update to WAL
@@ -4627,7 +4630,15 @@ public class HRegion implements HeapSize { // , Writable{
         //Actually write to Memstore now
         for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
           Store store = entry.getKey();
-          size += store.upsert(entry.getValue());
+          if (store.getFamily().getMaxVersions() == 1) {
+            // upsert if VERSIONS for this CF == 1
+            size += store.upsert(entry.getValue(), getSmallestReadPoint());
+          } else {
+            // otherwise keep older versions around
+            for (KeyValue kv : entry.getValue()) {
+              size += store.add(kv);
+            }
+          }
           allKVs.addAll(entry.getValue());
         }
         size = this.addAndGetGlobalMemstoreSize(size);
@@ -4640,6 +4651,9 @@ public class HRegion implements HeapSize { // , Writable{
         syncOrDefer(txid); // sync the transaction log outside the rowlock
       }
     } finally {
+      if (w != null) {
+        mvcc.completeMemstoreInsert(w);
+      }
       closeRegionOperation();
     }
 
@@ -4656,11 +4670,7 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   *
    * Perform one or more increment operations on a row.
-   * <p>
-   * Increments performed are done under row lock but reads do not take locks
-   * out so this can be seen partially complete by gets and scans.
    * @param increment
    * @param lockid
    * @param writeToWAL
@@ -4670,7 +4680,6 @@ public class HRegion implements HeapSize { // , Writable{
   public Result increment(Increment increment, Integer lockid,
       boolean writeToWAL)
   throws IOException {
-    // TODO: Use MVCC to make this set of increments atomic to reads
     byte [] row = increment.getRow();
     checkRow(row, "increment");
     TimeRange tr = increment.getTimeRange();
@@ -4685,9 +4694,15 @@ public class HRegion implements HeapSize { // , Writable{
     // Lock row
     startRegionOperation();
     this.writeRequestsCount.increment();
+    WriteEntry w = null;
     try {
       Integer lid = getLock(lockid, row, true);
       this.updatesLock.readLock().lock();
+      // wait for all prior MVCC transactions to finish - while we hold the row lock
+      // (so that we are guaranteed to see the latest state)
+      mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+      // now start my own transaction
+      w = mvcc.beginMemstoreInsert();
       try {
         long now = EnvironmentEdgeManager.currentTimeMillis();
         // Process each family
@@ -4726,6 +4741,7 @@ public class HRegion implements HeapSize { // , Writable{
             // Append new incremented KeyValue to list
             KeyValue newKV = new KeyValue(row, family.getKey(), column.getKey(),
                 now, Bytes.toBytes(amount));
+            newKV.setMemstoreTS(w.getWriteNumber());
             kvs.add(newKV);
 
             // Prepare WAL updates
@@ -4754,7 +4770,15 @@ public class HRegion implements HeapSize { // , Writable{
         //Actually write to Memstore now
         for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
           Store store = entry.getKey();
-          size += store.upsert(entry.getValue());
+          if (store.getFamily().getMaxVersions() == 1) {
+            // upsert if VERSIONS for this CF == 1
+            size += store.upsert(entry.getValue(), getSmallestReadPoint());
+          } else {
+            // otherwise keep older versions around
+            for (KeyValue kv : entry.getValue()) {
+              size += store.add(kv);
+            }
+          }
           allKVs.addAll(entry.getValue());
         }
         size = this.addAndGetGlobalMemstoreSize(size);
@@ -4767,6 +4791,9 @@ public class HRegion implements HeapSize { // , Writable{
         syncOrDefer(txid); // sync the transaction log outside the rowlock
       }
     } finally {
+      if (w != null) {
+        mvcc.completeMemstoreInsert(w);
+      }
       closeRegionOperation();
       this.metricsRegion.updateIncrement();
     }

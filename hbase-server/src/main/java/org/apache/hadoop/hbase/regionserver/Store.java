@@ -74,20 +74,6 @@ public interface Store extends  HeapSize {
       throws IOException;
 
   /**
-   * Updates the value for the given row/family/qualifier. This function will always be seen as
-   * atomic by other readers because it only puts a single KV to memstore. Thus no read/write
-   * control necessary.
-   * @param row row to update
-   * @param f family to update
-   * @param qualifier qualifier to update
-   * @param newValue the new value to set into memstore
-   * @return memstore size delta
-   * @throws IOException
-   */
-  public long updateColumnValue(byte[] row, byte[] f, byte[] qualifier, long newValue)
-      throws IOException;
-
-  /**
    * Adds or replaces the specified KeyValues.
    * <p>
    * For each KeyValue specified, if a cell with the same row, family, and qualifier exists in
@@ -96,10 +82,11 @@ public interface Store extends  HeapSize {
    * This operation is atomic on each KeyValue (row/family/qualifier) but not necessarily atomic
    * across all of them.
    * @param kvs
+   * @param readpoint readpoint below which we can safely remove duplicate KVs 
    * @return memstore size delta
    * @throws IOException
    */
-  public long upsert(Iterable<KeyValue> kvs) throws IOException;
+  public long upsert(Iterable<KeyValue> kvs, long readpoint) throws IOException;
 
   /**
    * Adds a value to the memstore

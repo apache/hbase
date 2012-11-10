@@ -108,7 +108,8 @@ public class TestAtomicOperation extends HBaseTestCase {
   public void testIncrementMultiThreads() throws IOException {
 
     LOG.info("Starting test testIncrementMultiThreads");
-    initHRegion(tableName, getName(), fam1);
+    // run a with mixed column families (1 and 3 versions)
+    initHRegion(tableName, getName(), new int[] {1,3}, fam1, fam2);
 
     // create 100 threads, each will increment by its own quantity
     int numThreads = 100;
@@ -135,6 +136,8 @@ public class TestAtomicOperation extends HBaseTestCase {
       }
     }
     assertICV(row, fam1, qual1, expectedTotal);
+    assertICV(row, fam1, qual2, expectedTotal*2);
+    assertICV(row, fam2, qual3, expectedTotal*3);
     LOG.info("testIncrementMultiThreads successfully verified that total is " +
              expectedTotal);
   }
@@ -156,17 +159,20 @@ public class TestAtomicOperation extends HBaseTestCase {
   }
 
   private void initHRegion (byte [] tableName, String callingMethod,
-    byte[] ... families)
-  throws IOException {
-    initHRegion(tableName, callingMethod, HBaseConfiguration.create(), families);
+      byte[] ... families)
+    throws IOException {
+    initHRegion(tableName, callingMethod, null, families);
   }
 
-  private void initHRegion (byte [] tableName, String callingMethod,
-    Configuration conf, byte [] ... families)
-  throws IOException{
+  private void initHRegion (byte [] tableName, String callingMethod, int [] maxVersions,
+    byte[] ... families)
+  throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
+    int i=0;
     for(byte [] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      hcd.setMaxVersions(maxVersions != null ? maxVersions[i++] : 1);
+      htd.addFamily(hcd);
     }
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
@@ -175,7 +181,7 @@ public class TestAtomicOperation extends HBaseTestCase {
         throw new IOException("Failed delete of " + path);
       }
     }
-    region = HRegion.createHRegion(info, path, conf, htd);
+    region = HRegion.createHRegion(info, path, HBaseConfiguration.create(), htd);
   }
 
   /**
@@ -184,18 +190,14 @@ public class TestAtomicOperation extends HBaseTestCase {
   public static class Incrementer extends Thread {
 
     private final HRegion region;
-    private final int threadNumber;
     private final int numIncrements;
     private final int amount;
 
-    private int count;
 
     public Incrementer(HRegion region,
         int threadNumber, int amount, int numIncrements) {
       this.region = region;
-      this.threadNumber = threadNumber;
       this.numIncrements = numIncrements;
-      this.count = 0;
       this.amount = amount;
       setDaemon(true);
     }
@@ -206,16 +208,79 @@ public class TestAtomicOperation extends HBaseTestCase {
         try {
           Increment inc = new Increment(row);
           inc.addColumn(fam1, qual1, amount);
-          Result result = region.increment(inc, null, true);
-          // LOG.info("thread:" + threadNumber + " iter:" + i);
+          inc.addColumn(fam1, qual2, amount*2);
+          inc.addColumn(fam2, qual3, amount*3);
+          region.increment(inc, null, true);
+
+          // verify: Make sure we only see completed increments
+          Get g = new Get(row);
+          Result result = region.get(g, null);
+          assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2, Bytes.toLong(result.getValue(fam1, qual2))); 
+          assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*3, Bytes.toLong(result.getValue(fam2, qual3)));
         } catch (IOException e) {
           e.printStackTrace();
         }
-        count++;
       }
     }
   }
 
+  public void testAppendMultiThreads() throws IOException {
+    LOG.info("Starting test testAppendMultiThreads");
+    // run a with mixed column families (1 and 3 versions)
+    initHRegion(tableName, getName(), new int[] {1,3}, fam1, fam2);
+
+    int numThreads = 100;
+    int opsPerThread = 100;
+    AtomicOperation[] all = new AtomicOperation[numThreads];
+    final byte[] val = new byte[]{1};
+
+    AtomicInteger failures = new AtomicInteger(0);
+    // create all threads
+    for (int i = 0; i < numThreads; i++) {
+      all[i] = new AtomicOperation(region, opsPerThread, null, failures) {
+        @Override
+        public void run() {
+          for (int i=0; i<numOps; i++) {
+            try {
+              Append a = new Append(row);
+              a.add(fam1, qual1, val);
+              a.add(fam1, qual2, val);
+              a.add(fam2, qual3, val);
+              region.append(a, null, true);
+
+              Get g = new Get(row);
+              Result result = region.get(g, null);
+              assertEquals(result.getValue(fam1, qual1).length, result.getValue(fam1, qual2).length); 
+              assertEquals(result.getValue(fam1, qual1).length, result.getValue(fam2, qual3).length); 
+            } catch (IOException e) {
+              e.printStackTrace();
+              failures.incrementAndGet();
+              fail();
+            }
+          }
+        }
+      };
+    }
+
+    // run all threads
+    for (int i = 0; i < numThreads; i++) {
+      all[i].start();
+    }
+
+    // wait for all threads to finish
+    for (int i = 0; i < numThreads; i++) {
+      try {
+        all[i].join();
+      } catch (InterruptedException e) {
+      }
+    }
+    assertEquals(0, failures.get());
+    Get g = new Get(row);
+    Result result = region.get(g, null);
+    assertEquals(result.getValue(fam1, qual1).length, 10000);
+    assertEquals(result.getValue(fam1, qual2).length, 10000);
+    assertEquals(result.getValue(fam2, qual3).length, 10000);
+  }
   /**
    * Test multi-threaded row mutations.
    */

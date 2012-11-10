@@ -435,6 +435,8 @@ public class MemStore implements HeapSize {
   }
 
   /**
+   * Only used by tests. TODO: Remove
+   *
    * Given the specs of a column, update it, first by inserting a new record,
    * then removing the old one.  Since there is only 1 KeyValue involved, the memstoreTS
    * will be set to 0, thus ensuring that they instantly appear to anyone. The underlying
@@ -449,7 +451,7 @@ public class MemStore implements HeapSize {
    * @param now
    * @return  Timestamp
    */
-  public long updateColumnValue(byte[] row,
+  long updateColumnValue(byte[] row,
                                 byte[] family,
                                 byte[] qualifier,
                                 long newValue,
@@ -497,7 +499,7 @@ public class MemStore implements HeapSize {
       // create or update (upsert) a new KeyValue with
       // 'now' and a 0 memstoreTS == immediately visible
       return upsert(Arrays.asList(
-          new KeyValue(row, family, qualifier, now, Bytes.toBytes(newValue)))
+          new KeyValue(row, family, qualifier, now, Bytes.toBytes(newValue))), 1L
       );
     } finally {
       this.lock.readLock().unlock();
@@ -519,15 +521,15 @@ public class MemStore implements HeapSize {
    * atomically.  Scans will only see each KeyValue update as atomic.
    *
    * @param kvs
+   * @param readpoint readpoint below which we can safely remove duplicate KVs 
    * @return change in memstore size
    */
-  public long upsert(Iterable<KeyValue> kvs) {
+  public long upsert(Iterable<KeyValue> kvs, long readpoint) {
    this.lock.readLock().lock();
     try {
       long size = 0;
       for (KeyValue kv : kvs) {
-        kv.setMemstoreTS(0);
-        size += upsert(kv);
+        size += upsert(kv, readpoint);
       }
       return size;
     } finally {
@@ -549,7 +551,7 @@ public class MemStore implements HeapSize {
    * @param kv
    * @return change in size of MemStore
    */
-  private long upsert(KeyValue kv) {
+  private long upsert(KeyValue kv, long readpoint) {
     // Add the KeyValue to the MemStore
     // Use the internalAdd method here since we (a) already have a lock
     // and (b) cannot safely use the MSLAB here without potentially
@@ -566,6 +568,8 @@ public class MemStore implements HeapSize {
         kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
     SortedSet<KeyValue> ss = kvset.tailSet(firstKv);
     Iterator<KeyValue> it = ss.iterator();
+    // versions visible to oldest scanner
+    int versionsVisible = 0;
     while ( it.hasNext() ) {
       KeyValue cur = it.next();
 
@@ -573,23 +577,23 @@ public class MemStore implements HeapSize {
         // ignore the one just put in
         continue;
       }
-      // if this isn't the row we are interested in, then bail
-      if (!kv.matchingRow(cur)) {
-        break;
-      }
+      // check that this is the row and column we are interested in, otherwise bail
+      if (kv.matchingRow(cur) && kv.matchingQualifier(cur)) {
+        // only remove Puts that concurrent scanners cannot possibly see
+        if (cur.getType() == KeyValue.Type.Put.getCode() && cur.getMemstoreTS() <= readpoint) {
+          if (versionsVisible > 1) {
+            // if we get here we have seen at least one version visible to the oldest scanner,
+            // which means we can prove that no scanner will see this version
 
-      // if the qualifier matches and it's a put, remove it
-      if (kv.matchingQualifier(cur)) {
-
-        // to be extra safe we only remove Puts that have a memstoreTS==0
-        if (kv.getType() == KeyValue.Type.Put.getCode() &&
-            kv.getMemstoreTS() == 0) {
-          // false means there was a change, so give us the size.
-          addedSize -= heapSizeChange(kv, true);
-          it.remove();
+            // false means there was a change, so give us the size.
+            addedSize -= heapSizeChange(cur, true);
+            it.remove();
+          } else {
+            versionsVisible++;
+          }
         }
       } else {
-        // past the column, done
+        // past the row or column, done
         break;
       }
     }
