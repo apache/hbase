@@ -1383,6 +1383,18 @@ public class TestAdmin {
     assertTrue(("actual count: " + count), count <= 2);
   }
 
+  @Test
+  public void testRootTableSplit() throws Exception {
+    Scan s = new Scan();
+    HTable rootTable = new HTable(TEST_UTIL.getConfiguration(), HConstants.ROOT_TABLE_NAME);
+    ResultScanner scanner = rootTable.getScanner(s);
+    Result metaEntry = scanner.next();
+    this.admin.split(HConstants.ROOT_TABLE_NAME, metaEntry.getRow());
+    Thread.sleep(1000);
+    List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(HConstants.ROOT_TABLE_NAME);
+    assertEquals("ROOT region should not be splitted.",1, regions.size());
+  }
+
   private void setUpforLogRolling() {
     // Force a region split after every 768KB
     TEST_UTIL.getConfiguration().setLong("hbase.hregion.max.filesize",
