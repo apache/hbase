@@ -3084,10 +3084,7 @@ public class HRegion implements HeapSize {
       return next(outResults, limit, null);
     }
 
-    @Override
-    public synchronized boolean next(List<KeyValue> outResults, int limit,
-        String metric) throws IOException {
-      readRequests.incrTotalRequstCount();
+    private void preCondition() throws IOException{
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -3101,7 +3098,68 @@ public class HRegion implements HeapSize {
 
       // This could be a new thread from the last time we called next().
       MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
+    }
 
+    /**
+     * A method to return all the rows that can fit in the response size.
+     * it respects the two stop conditions:
+     * 1) scan.getMaxResponseSize
+     * 2) scan.getCaching() (which is nbRows) 
+     * the loop breaks whoever comes first.
+     * This is only used by scan(), not get()
+     * @param outResults a list of rows to return 
+     * @param nbRows the number of rows that can be returned at most
+     * @param metric the metric name 
+     * @return true if there are more rows to fetch.
+     *
+     * This is used by Scans.
+     */
+    public synchronized void nextRows(List<Result> outResults, int nbRows, 
+        String metric) throws IOException {
+      preCondition(); 
+      List<KeyValue> tmpList = new ArrayList<KeyValue>();
+      int limit = this.getOriginalScan().getBatch();
+      int currentNbRows = 0;
+      boolean moreRows = true;
+      // This is necessary b/c partialResponseSize is not serialized through RPC    
+      getOriginalScan().setCurrentPartialResponseSize(0);
+      int maxResponseSize = getOriginalScan().getMaxResponseSize();
+      do {
+        moreRows = nextInternal(tmpList, limit, metric);
+        if (!tmpList.isEmpty()) {
+          currentNbRows++;
+          if (outResults != null) {
+            outResults.add(new Result(tmpList));
+            tmpList.clear();
+          }
+        }
+        resetFilters();
+        if (isFilterDone()) {
+          readRequests.incrTotalRequstCount(currentNbRows);
+          return;
+        }
+         
+        // While Condition
+        // 1. respect maxResponseSize and nbRows whichever comes first,
+        // 2. recheck the currentPartialResponseSize is to catch the case
+        //   where maxResponseSize is saturated and partialRow == false 
+        //   since we allow this case valid in the nextInternal() layer
+      } while (moreRows && 
+          (getOriginalScan().getCurrentPartialResponseSize() < maxResponseSize 
+           && currentNbRows < nbRows));
+       
+      readRequests.incrTotalRequstCount(currentNbRows);
+    }
+    
+    /**
+     * This is used by Gets & Compactions & unit tests, whereas nextRows() is
+     * used by Scans
+     */
+    @Override
+    public synchronized boolean next(List<KeyValue> outResults, int limit,
+        String metric) throws IOException {
+      readRequests.incrTotalRequstCount();
+      preCondition();
       boolean returnResult;
       if (outResults.isEmpty()) {
          // Usually outResults is empty. This is true when next is called
@@ -3151,6 +3209,9 @@ public class HRegion implements HeapSize {
         throw new IllegalArgumentException("First parameter should be an empty list");
       }
 
+      boolean partialRow = getOriginalScan().isPartialRow();
+      long maxResponseSize = getOriginalScan().getMaxResponseSize();
+      
       while (true) {
         byte [] currentRow = peekRow();
         if (isStopRow(currentRow)) {
@@ -3170,9 +3231,16 @@ public class HRegion implements HeapSize {
           do {
             this.storeHeap.next(results, limit - results.size(), metric);
             if (limit > 0 && results.size() == limit) {
-              if (this.filter != null && filter.hasFilterRow()) throw new IncompatibleFilterException(
+              if (this.filter != null && filter.hasFilterRow()) 
+                throw new IncompatibleFilterException(
                   "Filter with filterRow(List<KeyValue>) incompatible with scan with limit!");
               return true; // we are expecting more yes, but also limited to how many we can return.
+            }
+            // this gaurantees that we still complete the entire row if
+            // currentPartialResponseSize exceeds the maxResponseSize. 
+            if (partialRow && getOriginalScan().getCurrentPartialResponseSize()
+                 >= maxResponseSize) {
+              return true;
             }
           } while (Bytes.equals(currentRow, nextRow = peekRow()));
 

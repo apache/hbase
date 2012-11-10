@@ -72,6 +72,7 @@ public class TestHLogFiltering {
   private void fillTable() throws IOException, InterruptedException {
     HTable table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES, 3,
         Bytes.toBytes("row0"), Bytes.toBytes("row99"), NUM_RS);
+    TEST_UTIL.waitUntilAllRegionsAssigned(NUM_RS);
     Random rand = new Random(19387129L);
     for (int iStoreFile = 0; iStoreFile < 4; ++iStoreFile) {
       for (int iRow = 0; iRow < 100; ++iRow) {
@@ -98,7 +99,6 @@ public class TestHLogFiltering {
         table.flushCommits();
       }
     }
-    TEST_UTIL.waitUntilAllRegionsAssigned(NUM_RS);
   }
 
   @Test

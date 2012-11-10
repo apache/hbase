@@ -37,9 +37,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.regionserver.kvaggregator.KeyValueAggregator;
-
-
-import static org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 
 /**
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
@@ -369,7 +367,11 @@ public class StoreScanner extends NonLazyKeyValueScanner
     KeyValue.KVComparator comparator =
         store != null ? store.getComparator() : null;
 
-    long addedResultsSize = 0;
+    int addedResultsSize = 0;
+    // set the responseSize so that it now can fetch records
+    // in terms of keyvalue's boundary rather than row's boundary
+    int remainingResponseSize = scan.getMaxResponseSize()
+                              - scan.getCurrentPartialResponseSize();
     try {
       LOOP: while((kv = this.heap.peek()) != null) {
         // kv is no longer immutable due to KeyOnlyFilter! use copy for safety
@@ -436,7 +438,13 @@ public class StoreScanner extends NonLazyKeyValueScanner
             } else {
               this.heap.next();
             }
-
+            // If the user is strict about the response size and allows
+            // partialRow scanning, we only return the number of keyvalue 
+            // pairs to fill up the request size. Otherwise when partialRow 
+            // is false, we just fetch the entire row
+            if (scan.isPartialRow() && addedResultsSize >= remainingResponseSize) {
+              break LOOP;
+            }
             if (limit > 0 && (numNewKeyValues == limit)) {
               break LOOP;
             }
@@ -509,6 +517,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
       throw e;
 
     } finally {
+      // update the remaining response size
+      scan.setCurrentPartialResponseSize(scan.getCurrentPartialResponseSize()
+          + addedResultsSize);
       // update the counter
       if (addedResultsSize > 0 && metric != null) {
         HRegion.incrNumericMetric(this.metricNamePrefix + metric,

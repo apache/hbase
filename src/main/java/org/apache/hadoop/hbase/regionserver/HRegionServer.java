@@ -228,8 +228,6 @@ public class HRegionServer implements HRegionInterface,
 
   protected final int numRegionsToReport;
 
-  private final long maxScannerResultSize;
-
   // Remote HMaster
   private HMasterRegionInterface hbaseMaster;
 
@@ -390,10 +388,6 @@ public class HRegionServer implements HRegionInterface,
         HConstants.REGION_SERVER_MSG_INTERVAL);
 
     sleeper = new Sleeper(this.msgInterval, this);
-
-    this.maxScannerResultSize = conf.getLong(
-            HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
-            HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
 
     // Task thread to process requests from Master
     this.worker = new Worker();
@@ -2536,7 +2530,9 @@ public class HRegionServer implements HRegionInterface,
   public Result [] next(final long scannerId, int nbRows) throws IOException {
     try {
       String scannerName = String.valueOf(scannerId);
-      InternalScanner s = this.scanners.get(scannerName);
+      // HRegionServer only deals with Region Scanner, 
+      // thus, we just typecast directly
+      HRegion.RegionScanner s = (HRegion.RegionScanner)this.scanners.get(scannerName);
       if (s == null) {
         throw new UnknownScannerException("Name: " + scannerName);
       }
@@ -2549,34 +2545,13 @@ public class HRegionServer implements HRegionInterface,
         throw e;
       }
       this.leases.renewLease(scannerName);
-      List<Result> results = new ArrayList<Result>(nbRows);
-      long currentScanResultSize = 0;
-      List<KeyValue> values = new ArrayList<KeyValue>();
-      int i = 0;
-      for (; i < nbRows && currentScanResultSize < maxScannerResultSize; i++) {
-        // Collect values to be returned here
-        boolean moreRows = s.next(values, HRegion.METRIC_NEXTSIZE);
-        if (!values.isEmpty()) {
-          if (maxScannerResultSize < Long.MAX_VALUE){
-            for (KeyValue kv : values) {
-              currentScanResultSize += kv.heapSize();
-            }
-          }
-          results.add(new Result(values));
-        }
-        if (!moreRows) {
-          break;
-        }
-        values.clear();
-      }
-      numReads.addAndGet(i);
-      // Below is an ugly hack where we cast the InternalScanner to be a
-      // HRegion.RegionScanner.  The alternative is to change InternalScanner
-      // interface but its used everywhere whereas we just need a bit of info
-      // from HRegion.RegionScanner, IF its filter if any is done with the scan
+      List<Result> results = new ArrayList<Result>();
+      s.nextRows(results, nbRows, HRegion.METRIC_NEXTSIZE); 
+      numReads.addAndGet(results.size());
+      // IF its filter if any is done with the scan
       // and wants to tell the client to stop the scan.  This is done by passing
       // a null result.
-      return ((HRegion.RegionScanner)s).isFilterDone() && results.isEmpty()?
+      return s.isFilterDone() && results.isEmpty()?
         null: results.toArray(new Result[0]);
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException) {

@@ -65,14 +65,13 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.common.collect.Lists;
-
-import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * Basic stand-alone testing of HRegion.
@@ -1464,6 +1463,96 @@ public class TestHRegion extends HBaseTestCase {
       fail("Got wrong type of exception - should be a NotServingRegionException, but was an IOException: "
               + e.getMessage());
     }
+  }
+
+  public void testRegionScannerNextRows() throws IOException {
+    // Setting up region
+    String method = this.getName();
+    byte[] tableName = Bytes.toBytes("testtableNextRows");
+    byte[][] rows = {Bytes.toBytes("row1"), Bytes.toBytes("row2"), 
+                    Bytes.toBytes("rows3")};
+    byte[][] families = { Bytes.toBytes("fam1"), Bytes.toBytes("fam2"),
+        Bytes.toBytes("fam3"), Bytes.toBytes("fam4") };
+    initHRegion(tableName, method, families);
+
+    // Putting data in Region
+    List<KeyValue> expected = new ArrayList<KeyValue>();
+    fillTable(rows, families, 2, expected);
+    /**
+     * in this case we know kv size = 28 
+     * KLEN VLEN ROWLEN ROWNAME CFLEN CFNAME TS TYPE 
+     * --4-|--4-|--2---|---4---|--1--|--4---|-8-|--1-- ===> 28 bytes
+     */
+    Scan scan = new Scan();
+    scan.setMaxVersions(3);
+    scan.addFamily(families[1]);
+    scan.addFamily(families[3]);
+
+    // fetch one kv even when responseSize = 0, oh well, this's the semantic
+    // that users should be aware of  
+    compareNextRows(scan, 0, true, Integer.MAX_VALUE, expected.subList(0, 1));
+    // fetch the last kv pair if the responseSize is not big enough
+    compareNextRows(scan, 1, true, Integer.MAX_VALUE, expected.subList(0, 1));
+    // maxResponseSize perfectly fits one kv 
+    compareNextRows(scan, 28, true, Integer.MAX_VALUE, expected.subList(0, 1));
+
+    // if partialRow == true, fetch as much as  maxResponseSize allows 
+    compareNextRows(scan, 29, true, Integer.MAX_VALUE, expected.subList(0, 2));
+    // if partialRow == false, fetch the entire row  
+    compareNextRows(scan, 29, false, Integer.MAX_VALUE, expected.subList(0, 6));
+    
+    // fetch everything in the table as long as responseSize is big enough
+    compareNextRows(scan, 10000, true, Integer.MAX_VALUE, expected);
+    compareNextRows(scan, 10000, false, Integer.MAX_VALUE, expected);
+   
+    // check nbRows 
+    // fetch two rows, each has two columns and each column has 3 kvs
+    compareNextRows(scan, 10000, true, 2, expected.subList(0, 12));
+    compareNextRows(scan, 10000, false, 2, expected.subList(0, 12));
+  }
+
+  private void fillTable(byte[][] rows, byte[][] families, int nTs,
+      List<KeyValue> expected) throws IOException {
+    Put put = null;
+    long ts = System.currentTimeMillis();
+    long[] timestamps = { ts, ts - 10, ts - 20 };
+    for (byte[] row : rows) {
+      put = new Put(row);
+      for (byte[] cf : families) {
+        for (long t : timestamps) {
+          put.add(cf, null, t, null);
+          if (cf.equals(families[1]) || cf.equals(families[3])) {
+            expected.add(new KeyValue(row, cf, null, t, KeyValue.Type.Put,
+                  null));
+          }
+        }
+      }
+      region.put(put);
+    }
+  }
+
+  private void compareNextRows(Scan scan, int responseSize, boolean partialRow,
+      int nbRows, List<KeyValue> expected)
+      throws IOException {
+    if (nbRows == Integer.MAX_VALUE) {
+      scan.setCaching(responseSize, partialRow);
+    } else {
+      scan.setCaching(nbRows);
+    }
+    RegionScanner rs = (RegionScanner) region.getScanner(scan);
+    List<KeyValue> kvListScan = new ArrayList<KeyValue>();
+    List<Result> results = new ArrayList<Result>();
+    rs.nextRows(results, nbRows, null);
+    for (Result res : results) {
+      for (KeyValue kv : res.list()) {
+        kvListScan.add(kv);
+      }
+    }
+    assertEquals(expected.size(), kvListScan.size());
+    for (int i = 0; i < kvListScan.size(); i++) {
+      assertEquals(expected.get(i), kvListScan.get(i));
+    }
+    rs.close();
   }
 
   public void testRegionScanner_Next() throws IOException {

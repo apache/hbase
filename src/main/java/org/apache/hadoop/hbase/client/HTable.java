@@ -1065,14 +1065,13 @@ public class HTable implements HTableInterface {
       }
       if (cache.size() == 0) {
         Result [] values = null;
-        long remainingResultSize = maxScannerResultSize;
-        int countdown = this.caching;
         // We need to reset it if it's a new callable that was created
         // with a countdown in nextScanner
         callable.setCaching(this.caching);
         // This flag is set when we want to skip the result returned.  We do
         // this when we reset scanner because it split under us.
         boolean skipFirst = false;
+        boolean foundResults = false;
         do {
           try {
             // Server returns a null values if scanning is to stop.  Else,
@@ -1094,7 +1093,7 @@ public class HTable implements HTableInterface {
                 long elapsed = System.currentTimeMillis() - lastNext;
                 ScannerTimeoutException ex = new ScannerTimeoutException(
                     elapsed + "ms passed since the last invocation, " +
-                        "timeout is currently set to " + scannerTimeout);
+                    "timeout is currently set to " + scannerTimeout);
                 ex.initCause(e);
                 throw ex;
               }
@@ -1114,23 +1113,17 @@ public class HTable implements HTableInterface {
             }
             // Clear region
             this.currentRegion = null;
-            continue;
           }
           lastNext = System.currentTimeMillis();
           if (values != null && values.length > 0) {
+            foundResults = true;
             for (Result rs : values) {
               cache.add(rs);
-              for (KeyValue kv : rs.raw()) {
-                  remainingResultSize -= kv.heapSize();
-              }
-              countdown--;
               this.lastResult = rs;
             }
           }
-          // Values == null means server-side filter has determined we must STOP
-        } while (remainingResultSize > 0 && countdown > 0 && nextScanner(countdown, values == null));
+        } while (!foundResults && nextScanner(this.caching, values == null));
       }
-
       if (cache.size() > 0) {
         return cache.poll();
       }

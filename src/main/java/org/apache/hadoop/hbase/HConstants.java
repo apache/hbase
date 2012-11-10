@@ -472,7 +472,7 @@ public final class HConstants {
      * scanner's next method.
      */
   public static String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = "hbase.client.scanner.max.result.size";
-
+  
   /**
    * Maximum number of bytes returned when calling a scanner's next method.
    * Note that when a single row is larger than this limit the row is still
@@ -482,6 +482,15 @@ public final class HConstants {
    */
   public static long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
 
+
+  /**
+   * Maximum number of bytes returned when calling a scanner's next method.
+   * Used with partialRow parameter on the client side.  Note that when a 
+   * single row is larger than this limit, the row is still returned completely
+   * if partialRow is true, otherwise, the row will be truncated in order to
+   * fit the memory.
+   */
+  public static int DEFAULT_HBASE_SCANNER_MAX_RESULT_SIZE = Integer.MAX_VALUE;
 
   /**
    * HRegion server lease period in milliseconds. Clients must report in within this period
