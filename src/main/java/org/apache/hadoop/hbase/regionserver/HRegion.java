@@ -5053,10 +5053,10 @@ public class HRegion implements HeapSize { // , Writable{
    * is based on the size of the store.
    */
   public byte[] checkSplit() {
-    // Can't split META
-    if (getRegionInfo().isMetaRegion()) {
+    // Can't split ROOT/META
+    if (this.regionInfo.isMetaTable()) {
       if (shouldForceSplit()) {
-        LOG.warn("Cannot split meta regions in HBase 0.20 and above");
+        LOG.warn("Cannot split root/meta regions in HBase 0.20 and above");
       }
       return null;
     }

@@ -1573,7 +1573,19 @@ public class TestAdmin {
       ct.stop();
     }
   }
-
+  
+  @Test
+  public void testRootTableSplit() throws Exception {
+    Scan s = new Scan();
+    HTable rootTable = new HTable(TEST_UTIL.getConfiguration(), HConstants.ROOT_TABLE_NAME);
+    ResultScanner scanner = rootTable.getScanner(s);
+    Result metaEntry = scanner.next();
+    this.admin.split(HConstants.ROOT_TABLE_NAME, metaEntry.getRow());
+    Thread.sleep(1000);
+    List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(HConstants.ROOT_TABLE_NAME);
+    assertEquals("ROOT region should not be splitted.",1, regions.size());
+  }
+  
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
