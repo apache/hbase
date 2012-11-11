@@ -3831,7 +3831,6 @@ public class HRegion implements HeapSize {
    */
   private List<KeyValue> get(final Get get) throws IOException {
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    readRequests.incrTotalRequstCount();
     Scan scan = new Scan(get);
 
     List<KeyValue> results = new ArrayList<KeyValue>();

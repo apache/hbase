@@ -183,7 +183,7 @@ public class TestHLog  {
    * @throws Exception
    */
   @Test
-  public void Broken_testSync() throws Exception {
+  public void testSync() throws Exception {
     byte [] bytes = Bytes.toBytes(getName());
     // First verify that using streams all works.
     Path p = new Path(dir, getName() + ".fsdos");
@@ -483,20 +483,6 @@ public class TestHLog  {
         System.out.println(key + " " + val);
         count++;
       }
-      HLog.Entry entry = null;
-      while ((entry = reader.next(null)) != null) {
-        HLogKey key = entry.getKey();
-        WALEdit val = entry.getEdit();
-        // Assert only one more row... the meta flushed row.
-        assertTrue(Bytes.equals(regionName, key.getRegionName()));
-        assertTrue(Bytes.equals(tableName, key.getTablename()));
-        KeyValue kv = val.getKeyValues().get(0);
-        assertTrue(Bytes.equals(HLog.METAROW, kv.getRow()));
-        assertTrue(Bytes.equals(HLog.METAFAMILY, kv.getFamily()));
-        assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
-          val.getKeyValues().get(0).getValue()));
-        System.out.println(key + " " + val);
-      }
     } finally {
       if (log != null) {
         log.closeAndDelete();
@@ -550,20 +536,6 @@ public class TestHLog  {
         System.out.println(entry.getKey() + " " + val);
         idx++;
       }
-
-      // Get next row... the meta flushed row.
-      entry = reader.next();
-      assertEquals(1, entry.getEdit().size());
-      for (KeyValue val : entry.getEdit().getKeyValues()) {
-        assertTrue(Bytes.equals(hri.getRegionName(),
-          entry.getKey().getRegionName()));
-        assertTrue(Bytes.equals(tableName, entry.getKey().getTablename()));
-        assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));
-        assertTrue(Bytes.equals(HLog.METAFAMILY, val.getFamily()));
-        assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
-          val.getValue()));
-        System.out.println(entry.getKey() + " " + val);
-      }
     } finally {
       if (log != null) {
         log.closeAndDelete();
@@ -607,14 +579,15 @@ public class TestHLog  {
 
     // Flush the first region, we expect to see the first two files getting
     // archived
+    addEdits(log, hri, tableName, 1);
     long seqId = log.startCacheFlush(hri.getRegionName());
     log.completeCacheFlush(hri.getRegionName(), tableName, seqId, false);
     log.rollWriter();
     assertEquals(2, log.getNumLogFiles());
 
     // Flush the second region, which removes all the remaining output files
-    // since the oldest was completely flushed and the two others only contain
-    // flush information
+    // since the oldest was completely flushed.
+    addEdits(log, hri2, tableName2, 1);
     seqId = log.startCacheFlush(hri2.getRegionName());
     log.completeCacheFlush(hri2.getRegionName(), tableName2, seqId, false);
     log.rollWriter();
