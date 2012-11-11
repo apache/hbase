@@ -171,6 +171,10 @@ public class AssignmentDomain {
     }
   }
 
+  public Set<HServerAddress> getAllServers() {
+    return regionServerToRackMap.keySet();
+  }
+  
   /**
    * Get the region server to rack map
    */

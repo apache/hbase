@@ -33,6 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
@@ -77,6 +79,12 @@ public class RegionAssignmentSnapshot {
     LOG.info("Start to scan the META for the current region assignment " +
 		"snappshot");
 
+    // Add all the online region servers
+    HBaseAdmin admin  = new HBaseAdmin(conf);
+    for (HServerInfo serverInfo : admin.getClusterStatus().getServerInfo()) {
+      globalAssignmentDomain.addServer(serverInfo.getServerAddress());
+    }
+    
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(Result result) throws IOException {
         try {
@@ -94,13 +102,10 @@ public class RegionAssignmentSnapshot {
 
           // Process the region server
           if (server == null) return true;
-          HServerAddress regionServer =
-            new HServerAddress(Bytes.toString(server));
+          HServerAddress regionServer = new HServerAddress(Bytes.toString(server));
 
           // Add the current assignment to the snapshot
           addAssignment(regionInfo, regionServer);
-          // Add the region server into the rack view
-          globalAssignmentDomain.addServer(regionServer);
 
           // Process the assignment plan
           byte[] favoredNodes = result.getValue(HConstants.CATALOG_FAMILY,
@@ -111,7 +116,6 @@ public class RegionAssignmentSnapshot {
             RegionPlacement.getFavoredNodesList(favoredNodes);
           exsitingAssignmentPlan.updateAssignmentPlan(regionInfo,
               favoredServerList);
-
           return true;
         } catch (RuntimeException e) {
           LOG.error("Catche remote exception " + e.getMessage() +

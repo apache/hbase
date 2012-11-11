@@ -315,12 +315,14 @@ public class RegionPlacement implements RegionPlacementPolicy{
       // Get the current assignment map
       Map<HRegionInfo, HServerAddress> currentAssignmentMap =
         assignmentSnapshot.getRegionToRegionServerMap();
-      // Get the all the region servers
-      List<HServerAddress> servers = new ArrayList<HServerAddress>();
-      servers.addAll(assignmentSnapshot.getRegionServerToRegionMap().keySet());
+
       // Get the assignment domain
       AssignmentDomain domain = assignmentSnapshot.getGlobalAssignmentDomain();
 
+      // Get the all the region servers
+      List<HServerAddress> servers = new ArrayList<HServerAddress>();
+      servers.addAll(domain.getAllServers());
+      
       LOG.info("Start to generate assignment plan for " + numRegions +
           " regions from table " + tableName + " with " +
           servers.size() + " region servers");
