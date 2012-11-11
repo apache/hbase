@@ -432,8 +432,8 @@ public class TestSplitLogManager {
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker1"));
     waitForCounter(tot_mgr_heartbeat, 0, 1, 1000);
     slm.handleDeadWorker("worker1");
-    waitForCounter(tot_mgr_resubmit, 0, 1, 1000);
-    waitForCounter(tot_mgr_resubmit_dead_server_task, 0, 1, 1000);
+    waitForCounter(tot_mgr_resubmit, 0, 1, 3000);
+    waitForCounter(tot_mgr_resubmit_dead_server_task, 0, 1, 3000);
 
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
