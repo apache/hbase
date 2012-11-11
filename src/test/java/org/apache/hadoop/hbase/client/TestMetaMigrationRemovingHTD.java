@@ -79,8 +79,7 @@ public class TestMetaMigrationRemovingHTD {
     Path hbaseRootDir = TEST_UTIL.getDefaultRootDirPath();
     if (!fs.isDirectory(hbaseRootDir.getParent())) {
       // mkdir at first
-      doFsCommand(shell,
-        new String [] {"-mkdir", hbaseRootDir.getParent().toString()});
+      fs.mkdirs(hbaseRootDir.getParent());
     }
     doFsCommand(shell,
       new String [] {"-put", untar.toURI().toString(), hbaseRootDir.toString()});
