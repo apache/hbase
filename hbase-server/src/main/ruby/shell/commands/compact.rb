@@ -37,9 +37,9 @@ module Shell
         EOF
       end
 
-      def command(table_or_region_name, *args)
+      def command(table_or_region_name, family = nil)
         format_simple_command do
-          admin.compact(table_or_region_name, *args)
+          admin.compact(table_or_region_name, family)
         end
       end
     end

@@ -51,25 +51,23 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or column family compaction
-    def compact(table_or_region_name, *args)
-      if args.empty?
+    def compact(table_or_region_name, family)
+      if family == nil
         @admin.compact(table_or_region_name)
-      elsif args.length == 1
+      else
         # We are compacting a column family within a region.
-        column_family = args.first
-        @admin.compact(table_or_region_name, column_family)
+        @admin.compact(table_or_region_name, family)
       end
     end
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or column family major compaction
-    def major_compact(table_or_region_name, *args)
-      if args.empty?
+    def major_compact(table_or_region_name, family)
+      if family == nil
         @admin.majorCompact(table_or_region_name)
-      elsif args.length == 1
+      else
         # We are major compacting a column family within a region or table.
-        column_family = args.first
-        @admin.majorCompact(table_or_region_name, column_family)
+        @admin.majorCompact(table_or_region_name, family)
       end
     end
 
