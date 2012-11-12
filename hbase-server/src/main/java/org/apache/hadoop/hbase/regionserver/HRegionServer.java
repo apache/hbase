@@ -3582,7 +3582,10 @@ public class  HRegionServer implements ClientProtocol,
         }
       }
 
-      String log = "User-triggered " + (major ? "major " : "") + "compaction";
+      String familyLogMsg = (family != null)?" for column family: " + Bytes.toString(family):"";
+      LOG.trace("User-triggered compaction requested for region " +
+        region.getRegionNameAsString() + familyLogMsg);
+      String log = "User-triggered " + (major ? "major " : "") + "compaction" + familyLogMsg;
       if(family != null) {
         compactSplitThread.requestCompaction(region, store, log,
           Store.PRIORITY_USER);
