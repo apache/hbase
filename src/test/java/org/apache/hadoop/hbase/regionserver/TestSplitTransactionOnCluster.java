@@ -27,6 +27,8 @@ import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.NavigableMap;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -70,7 +73,11 @@ public class TestSplitTransactionOnCluster {
   private HBaseAdmin admin = null;
   private MiniHBaseCluster cluster = null;
   private static final int NB_SERVERS = 2;
-
+  private static CountDownLatch latch = new CountDownLatch(1);
+  private static boolean secondSplit = false;
+  private static boolean callRollBack = false;
+  private static boolean firstSplitCompleted = false;
+  
   private static final HBaseTestingUtility TESTING_UTIL =
     new HBaseTestingUtility();
 
@@ -564,7 +571,7 @@ public class TestSplitTransactionOnCluster {
       } else {
         st = new MockedSplitTransaction(regions.get(0), null) {
           @Override
-          int createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region, ServerName serverName)
+          void createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region, ServerName serverName)
               throws KeeperException, IOException {
             throw new IOException();
           }
@@ -643,6 +650,100 @@ public class TestSplitTransactionOnCluster {
     }
   }
   
+  @Test(timeout = 2000000)
+  public void testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack() throws Exception {
+    final byte[] tableName = Bytes
+        .toBytes("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack");
+    HBaseAdmin admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
+    try {
+      // Create table then get the single region for our new table.
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(new HColumnDescriptor("cf"));
+      admin.createTable(htd);
+      HTable t = new HTable(cluster.getConfiguration(), tableName);
+      while (!(cluster.getRegions(tableName).size() == 1)) {
+        Thread.sleep(100);
+      }
+      final List<HRegion> regions = cluster.getRegions(tableName);
+      HRegionInfo hri = getAndCheckSingleTableRegion(regions);
+      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+      final HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+      insertData(tableName, admin, t);
+      // Turn off balancer so it doesn't cut in and mess up our placements.
+      this.admin.setBalancerRunning(false, false);
+      // Turn off the meta scanner so it don't remove parent on us.
+      cluster.getMaster().setCatalogJanitorEnabled(false);
+
+      new Thread() {
+        public void run() {
+          SplitTransaction st = null;
+          st = new MockedSplitTransaction(regions.get(0), Bytes.toBytes("row2"));
+          try {
+            st.prepare();
+            st.execute(regionServer, regionServer);
+          } catch (IOException e) {
+
+          }
+        }
+      }.start();
+      while (!callRollBack) {
+        Thread.sleep(100);
+      }
+      SplitTransaction st = null;
+      st = new MockedSplitTransaction(regions.get(0), Bytes.toBytes("row2"));
+      try {
+        secondSplit = true;
+        st.prepare();
+        st.execute(regionServer, regionServer);
+      } catch (IOException e) {
+        LOG.debug("Rollback started :"+ e.getMessage());
+        st.rollback(regionServer, regionServer);
+      }
+      while (!firstSplitCompleted) {
+        Thread.sleep(100);
+      }
+      NavigableMap<String, RegionState> rit = cluster.getMaster().getAssignmentManager()
+          .getRegionsInTransition();
+      while (rit.containsKey(hri.getTableNameAsString())) {
+        Thread.sleep(100);
+      }
+      List<HRegion> onlineRegions = regionServer.getOnlineRegions(tableName);
+      // Region server side split is successful.
+      assertEquals("The parent region should be splitted", 2, onlineRegions.size());
+      //Should be present in RIT
+      List<HRegionInfo> regionsOfTable = cluster.getMaster().getAssignmentManager().getRegionsOfTable(tableName);
+      // Master side should also reflect the same
+      assertEquals("No of regions in master", 2, regionsOfTable.size());
+    } finally {
+      admin.setBalancerRunning(true, false);
+      secondSplit = false;
+      firstSplitCompleted = false;
+      callRollBack = false;
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+      if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
+        admin.disableTable(tableName);
+        admin.deleteTable(tableName);
+        admin.close();
+      }
+    }
+  }
+
+  private void insertData(final byte[] tableName, HBaseAdmin admin, HTable t) throws IOException,
+      InterruptedException {
+    Put p = new Put(Bytes.toBytes("row1"));
+    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
+    t.put(p);
+    p = new Put(Bytes.toBytes("row2"));
+    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("2"));
+    t.put(p);
+    p = new Put(Bytes.toBytes("row3"));
+    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("3"));
+    t.put(p);
+    p = new Put(Bytes.toBytes("row4"));
+    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("4"));
+    t.put(p);
+    admin.flush(tableName);
+  }
   @Test(timeout = 15000)
   public void testShouldThrowIOExceptionIfStoreFileSizeIsEmptyAndSHouldSuccessfullyExecuteRollback()
       throws Exception {
@@ -695,8 +796,43 @@ public class TestSplitTransactionOnCluster {
   }
   public static class MockedSplitTransaction extends SplitTransaction {
 
+    private HRegion currentRegion;
     public MockedSplitTransaction(HRegion r, byte[] splitrow) {
       super(r, splitrow);
+      this.currentRegion = r;
+    }
+    
+    @Override
+    void transitionZKNode(Server server, RegionServerServices services, HRegion a, HRegion b)
+        throws IOException {
+      if (this.currentRegion.getRegionInfo().getTableNameAsString()
+          .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
+        try {
+          if (!secondSplit){
+            callRollBack = true;
+            latch.await();
+          }
+        } catch (InterruptedException e) {
+        }
+       
+      }
+      super.transitionZKNode(server, services, a, b);
+      if (this.currentRegion.getRegionInfo().getTableNameAsString()
+          .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
+        firstSplitCompleted = true;
+      }
+    }
+    @Override
+    public boolean rollback(Server server, RegionServerServices services) throws IOException {
+      if (this.currentRegion.getRegionInfo().getTableNameAsString()
+          .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
+        if(secondSplit){
+          super.rollback(server, services);
+          latch.countDown();
+          return true;
+        }
+      }
+      return super.rollback(server, services);
     }
 
   }
