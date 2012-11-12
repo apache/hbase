@@ -2966,16 +2966,41 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @QosPriority(priority=HConstants.HIGH_QOS)
   public void compactRegion(HRegionInfo regionInfo, boolean major)
       throws NotServingRegionException, IOException {
+    compactRegion(regionInfo, major, null);
+  }
+
+  @Override
+  @QosPriority(priority=HConstants.HIGH_QOS)
+  public void compactRegion(HRegionInfo regionInfo, boolean major,  byte[] family)
+      throws NotServingRegionException, IOException {
     checkOpen();
     HRegion region = getRegion(regionInfo.getRegionName());
+    Store store = null;
+    if (family != null) {
+      store = region.getStore(family);
+      if (store == null) {
+        throw new IOException("column family " + Bytes.toString(family) +
+          " does not exist in region " + new String(region.getRegionNameAsString()));
+      }
+    }
+
     if (major) {
-      region.triggerMajorCompaction();
+      if (family != null) {
+        store.triggerMajorCompaction();
+      } else {
+        region.triggerMajorCompaction();
+      }
     }
     LOG.trace("User-triggered compaction requested for region " +
       region.getRegionNameAsString());
-    compactSplitThread.requestCompaction(region, "User-triggered "
-        + (major ? "major " : "") + "compaction",
+    String log = "User-triggered " + (major ? "major " : "") + "compaction";
+    if (family != null) {
+      compactSplitThread.requestCompaction(region, store, log,
         Store.PRIORITY_USER);
+    } else {
+      compactSplitThread.requestCompaction(region, log,
+        Store.PRIORITY_USER);
+    }
   }
 
   /** @return the info server */
