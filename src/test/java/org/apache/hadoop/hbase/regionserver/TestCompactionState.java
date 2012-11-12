@@ -60,12 +60,52 @@ public class TestCompactionState {
 
   @Test(timeout=60000)
   public void testMajorCompaction() throws IOException, InterruptedException {
-    compaction("testMajorCompaction", 8, CompactionState.MAJOR);
+    compaction("testMajorCompaction", 8, CompactionState.MAJOR, false);
   }
 
   @Test(timeout=60000)
   public void testMinorCompaction() throws IOException, InterruptedException {
-    compaction("testMinorCompaction", 15, CompactionState.MINOR);
+    compaction("testMinorCompaction", 15, CompactionState.MINOR, false);
+  }
+
+  @Test(timeout=60000)
+  public void testMajorCompactionOnFamily() throws IOException, InterruptedException {
+    compaction("testMajorCompactionOnFamily", 8, CompactionState.MAJOR, true);
+  }
+
+  @Test(timeout=60000)
+  public void testMinorCompactionOnFamily() throws IOException, InterruptedException {
+    compaction("testMinorCompactionOnFamily", 15, CompactionState.MINOR, true);
+  }
+
+  @Test
+  public void testInvalidColumnFamily() throws IOException, InterruptedException {
+    byte [] table = Bytes.toBytes("testInvalidColumnFamily");
+    byte [] family = Bytes.toBytes("family");
+    byte [] fakecf = Bytes.toBytes("fakecf");
+    boolean caughtMinorCompact = false;
+    boolean caughtMajorCompact = false;
+    HTable ht = null;
+    try {
+      ht = TEST_UTIL.createTable(table, family);
+      HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      try {
+        admin.compact(table, fakecf);
+      } catch (IOException ioe) {
+        caughtMinorCompact = true;
+      }
+      try {
+        admin.majorCompact(table, fakecf);
+      } catch (IOException ioe) {
+        caughtMajorCompact = true;
+      }
+    } finally {
+      if (ht != null) {
+        TEST_UTIL.deleteTable(table);
+      }
+      assertTrue(caughtMinorCompact);
+      assertTrue(caughtMajorCompact);
+    }
   }
 
   /**
@@ -75,27 +115,40 @@ public class TestCompactionState {
    * @param tableName
    * @param flushes
    * @param expectedState
+   * @param singleFamily otherwise, run compaction on all cfs
    * @throws IOException
    * @throws InterruptedException
    */
   private void compaction(final String tableName, final int flushes,
-      final CompactionState expectedState) throws IOException, InterruptedException {
+      final CompactionState expectedState, boolean singleFamily)
+      throws IOException, InterruptedException {
     // Create a table with regions
     byte [] table = Bytes.toBytes(tableName);
     byte [] family = Bytes.toBytes("family");
+    byte [][] families =
+      {family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3"))};
     HTable ht = null;
     try {
-      ht = TEST_UTIL.createTable(table, family);
-      loadData(ht, family, 3000, flushes);
+      ht = TEST_UTIL.createTable(table, families);
+      loadData(ht, families, 3000, flushes);
       HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
       List<HRegion> regions = rs.getOnlineRegions(table);
-      int countBefore = countStoreFiles(regions, family);
+      int countBefore = countStoreFilesInFamilies(regions, families);
+      int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
       assertTrue(countBefore > 0); // there should be some data files
       HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
       if (expectedState == CompactionState.MINOR) {
-        admin.compact(tableName);
+        if (singleFamily) {
+          admin.compact(table, family);
+        } else {
+          admin.compact(table);
+        }
       } else {
-        admin.majorCompact(table);
+        if (singleFamily) {
+          admin.majorCompact(table, family);
+        } else {
+          admin.majorCompact(table);
+        }
       }
       long curt = System.currentTimeMillis();
       long waitTime = 5000;
@@ -126,10 +179,22 @@ public class TestCompactionState {
         // Now, compaction should be done.
         assertEquals(CompactionState.NONE, state);
       }
-      int countAfter = countStoreFiles(regions, family);
+      int countAfter = countStoreFilesInFamilies(regions, families);
+      int countAfterSingleFamily = countStoreFilesInFamily(regions, family);
       assertTrue(countAfter < countBefore);
-      if (expectedState == CompactionState.MAJOR) assertTrue(1 == countAfter);
-      else assertTrue(1 < countAfter);
+      if (!singleFamily) {
+        if (expectedState == CompactionState.MAJOR) assertTrue(families.length == countAfter);
+        else assertTrue(families.length < countAfter);
+      } else {
+        int singleFamDiff = countBeforeSingleFamily - countAfterSingleFamily;
+        // assert only change was to single column family
+        assertTrue(singleFamDiff == (countBefore - countAfter));
+        if (expectedState == CompactionState.MAJOR) {
+          assertTrue(1 == countAfterSingleFamily);
+        } else {
+          assertTrue(1 < countAfterSingleFamily);
+        }
+      }
     } finally {
       if (ht != null) {
         TEST_UTIL.deleteTable(table);
@@ -137,16 +202,20 @@ public class TestCompactionState {
     }
   }
 
-  private static int countStoreFiles(
+  private static int countStoreFilesInFamily(
       List<HRegion> regions, final byte[] family) {
+    return countStoreFilesInFamilies(regions, new byte[][]{family});
+  }
+
+  private static int countStoreFilesInFamilies(List<HRegion> regions, final byte[][] families) {
     int count = 0;
     for (HRegion region: regions) {
-      count += region.getStoreFileList(new byte[][]{family}).size();
+      count += region.getStoreFileList(families).size();
     }
     return count;
   }
-
-  private static void loadData(final HTable ht, final byte[] family,
+  
+  private static void loadData(final HTable ht, final byte[][] families,
       final int rows, final int flushes) throws IOException {
     List<Put> puts = new ArrayList<Put>(rows);
     byte[] qualifier = Bytes.toBytes("val");
@@ -154,7 +223,9 @@ public class TestCompactionState {
       for (int k = 0; k < rows; k++) {
         byte[] row = Bytes.toBytes(random.nextLong());
         Put p = new Put(row);
-        p.add(family, qualifier, row);
+        for (int j = 0; j < families.length; ++j) {
+          p.add(families[ j ], qualifier, row);
+        }
         puts.add(p);
       }
       ht.put(puts);
