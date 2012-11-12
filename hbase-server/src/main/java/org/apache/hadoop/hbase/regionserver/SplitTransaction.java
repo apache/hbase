@@ -107,10 +107,6 @@ public class SplitTransaction {
    */
   enum JournalEntry {
     /**
-     * Before creating node in splitting state.
-     */
-    STARTED_SPLITTING,
-    /**
      * Set region as in transition, set it into SPLITTING state.
      */
     SET_SPLITTING_IN_ZK,
@@ -240,19 +236,32 @@ public class SplitTransaction {
         server.getConfiguration().getLong("hbase.regionserver.fileSplitTimeout",
           this.fileSplitTimeout);
 
-    this.journal.add(JournalEntry.STARTED_SPLITTING);
     // Set ephemeral SPLITTING znode up in zk.  Mocked servers sometimes don't
     // have zookeeper so don't do zk stuff if server or zookeeper is null
     if (server != null && server.getZooKeeper() != null) {
       try {
-        this.znodeVersion = createNodeSplitting(server.getZooKeeper(),
+        createNodeSplitting(server.getZooKeeper(),
           this.parent.getRegionInfo(), server.getServerName());
       } catch (KeeperException e) {
-        throw new IOException("Failed setting SPLITTING znode on " +
+        throw new IOException("Failed creating SPLITTING znode on " +
           this.parent.getRegionNameAsString(), e);
       }
     }
     this.journal.add(JournalEntry.SET_SPLITTING_IN_ZK);
+    if (server != null && server.getZooKeeper() != null) {
+      try {
+        // Transition node from SPLITTING to SPLITTING after creating the split node.
+        // Master will get the callback for node change only if the transition is successful.
+        // Note that if the transition fails then the rollback will delete the created znode
+        // as the journal entry SET_SPLITTING_IN_ZK is added.
+        // TODO : May be we can add some new state to znode and handle the new state incase of success/failure
+        this.znodeVersion = transitionNodeSplitting(server.getZooKeeper(),
+            this.parent.getRegionInfo(), server.getServerName(), -1);
+      } catch (KeeperException e) {
+        throw new IOException("Failed setting SPLITTING znode on "
+            + this.parent.getRegionNameAsString(), e);
+      }
+    }
 
     createSplitDir(this.parent.getFilesystem(), this.splitdir);
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
@@ -750,15 +759,9 @@ public class SplitTransaction {
       JournalEntry je = iterator.previous();
       switch(je) {
 
-      case STARTED_SPLITTING:
-        if (server != null && server.getZooKeeper() != null) {
-          cleanZK(server, this.parent.getRegionInfo(), false);
-        }
-        break;
-
       case SET_SPLITTING_IN_ZK:
         if (server != null && server.getZooKeeper() != null) {
-          cleanZK(server, this.parent.getRegionInfo(), true);
+          cleanZK(server, this.parent.getRegionInfo());
         }
         break;
 
@@ -855,15 +858,11 @@ public class SplitTransaction {
     LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
   }
 
-  private static void cleanZK(final Server server, final HRegionInfo hri, boolean abort) {
+  private static void cleanZK(final Server server, final HRegionInfo hri) {
     try {
       // Only delete if its in expected state; could have been hijacked.
       ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
         EventType.RS_ZK_REGION_SPLITTING);
-    } catch (KeeperException.NoNodeException nn) {
-      if (abort) {
-        server.abort("Failed cleanup of " + hri.getRegionNameAsString(), nn);
-      }
     } catch (KeeperException e) {
       server.abort("Failed cleanup of " + hri.getRegionNameAsString(), e);
     }
