@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,7 +26,6 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -33,6 +33,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public final class HConstants {
+  /** When we encode strings, we always specify UTF8 encoding */
+  public static final String UTF8_ENCODING = "UTF-8";
+
+  /** When we encode strings, we always specify UTF8 encoding */
+  public static final Charset UTF8_CHARSET = Charset.forName(UTF8_ENCODING);
+
+  private static byte[] toBytes(String target) {
+    return target.getBytes(UTF8_CHARSET);
+  }
+
+  private static String toString(byte[] target) {
+    return new String(target, UTF8_CHARSET);
+  }
+
   /**
    * Status codes used for return values of bulk operations.
    */
@@ -306,10 +320,10 @@ public final class HConstants {
   // should go down.
 
   /** The root table's name.*/
-  public static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
+  public static final byte [] ROOT_TABLE_NAME = toBytes("-ROOT-");
 
   /** The META table's name. */
-  public static final byte [] META_TABLE_NAME = Bytes.toBytes(".META.");
+  public static final byte [] META_TABLE_NAME = toBytes(".META.");
 
   /** delimiter used between portions of a region name */
   public static final int META_ROW_DELIMITER = ',';
@@ -318,33 +332,33 @@ public final class HConstants {
   public static final String CATALOG_FAMILY_STR = "info";
 
   /** The catalog family */
-  public static final byte [] CATALOG_FAMILY = Bytes.toBytes(CATALOG_FAMILY_STR);
+  public static final byte [] CATALOG_FAMILY = toBytes(CATALOG_FAMILY_STR);
 
   /** The RegionInfo qualifier as a string */
   public static final String REGIONINFO_QUALIFIER_STR = "regioninfo";
 
   /** The regioninfo column qualifier */
   public static final byte [] REGIONINFO_QUALIFIER =
-    Bytes.toBytes(REGIONINFO_QUALIFIER_STR);
+    toBytes(REGIONINFO_QUALIFIER_STR);
 
   /** The server column qualifier */
-  public static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
+  public static final byte [] SERVER_QUALIFIER = toBytes("server");
 
   /** The startcode column qualifier */
-  public static final byte [] STARTCODE_QUALIFIER = Bytes.toBytes("serverstartcode");
+  public static final byte [] STARTCODE_QUALIFIER = toBytes("serverstartcode");
 
   /** The lower-half split region column qualifier */
-  public static final byte [] SPLITA_QUALIFIER = Bytes.toBytes("splitA");
+  public static final byte [] SPLITA_QUALIFIER = toBytes("splitA");
 
   /** The upper-half split region column qualifier */
-  public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
+  public static final byte [] SPLITB_QUALIFIER = toBytes("splitB");
 
   /**
    * The meta table version column qualifier.
    * We keep current version of the meta table in this column in <code>-ROOT-</code>
    * table: i.e. in the 'info:v' column.
    */
-  public static final byte [] META_VERSION_QUALIFIER = Bytes.toBytes("v");
+  public static final byte [] META_VERSION_QUALIFIER = toBytes("v");
 
   /**
    * The current version of the meta table.
@@ -386,9 +400,6 @@ public final class HConstants {
    */
   public static final int MAX_ROW_LENGTH = Short.MAX_VALUE;
 
-  /** When we encode strings, we always specify UTF8 encoding */
-  public static final String UTF8_ENCODING = "UTF-8";
-
   /**
    * Timestamp to use when we want to refer to the latest cell.
    * This is the timestamp sent by clients when no timestamp is specified on
@@ -404,7 +415,17 @@ public final class HConstants {
   /**
    * LATEST_TIMESTAMP in bytes form
    */
-  public static final byte [] LATEST_TIMESTAMP_BYTES = Bytes.toBytes(LATEST_TIMESTAMP);
+  public static final byte [] LATEST_TIMESTAMP_BYTES = {
+    // big-endian
+    (byte) (LATEST_TIMESTAMP >>> 56),
+    (byte) (LATEST_TIMESTAMP >>> 48),
+    (byte) (LATEST_TIMESTAMP >>> 40),
+    (byte) (LATEST_TIMESTAMP >>> 32),
+    (byte) (LATEST_TIMESTAMP >>> 24),
+    (byte) (LATEST_TIMESTAMP >>> 16),
+    (byte) (LATEST_TIMESTAMP >>> 8),
+    (byte) LATEST_TIMESTAMP,
+  };
 
   /**
    * Define for 'return-all-versions'.
@@ -689,7 +710,7 @@ public final class HConstants {
    * The byte array represents for NO_NEXT_INDEXED_KEY;
    * The actual value is irrelevant because this is always compared by reference.
    */
-  public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
+  public static final byte [] NO_NEXT_INDEXED_KEY = toBytes("NO_NEXT_INDEXED_KEY");
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
 
@@ -708,7 +729,7 @@ public final class HConstants {
 
   public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(
       Arrays.asList(new String[] { HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME,
-          Bytes.toString(META_TABLE_NAME), Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
+          toString(META_TABLE_NAME), toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
           HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY }));
   
   private HConstants() {

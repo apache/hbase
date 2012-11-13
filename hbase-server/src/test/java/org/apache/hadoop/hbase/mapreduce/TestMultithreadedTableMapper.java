@@ -103,8 +103,7 @@ public class TestMultithreadedTableMapper {
             Bytes.toString(INPUT_FAMILY) + "'.");
       }
       // Get the original value and reverse it
-      String originalValue = new String(value.getValue(INPUT_FAMILY, null),
-          HConstants.UTF8_ENCODING);
+      String originalValue = Bytes.toString(value.getValue(INPUT_FAMILY, null));
       StringBuilder newValue = new StringBuilder(originalValue);
       newValue.reverse();
       // Now set the value to be collected
@@ -229,7 +228,7 @@ public class TestMultithreadedTableMapper {
           throw new NullPointerException(Bytes.toString(r.getRow()) +
               ": first value is null");
         }
-        first = new String(firstValue, HConstants.UTF8_ENCODING);
+        first = Bytes.toString(firstValue);
         String second = "";
         if (secondValue == null) {
           throw new NullPointerException(Bytes.toString(r.getRow()) +
@@ -239,7 +238,7 @@ public class TestMultithreadedTableMapper {
         for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
           secondReversed[i] = secondValue[j];
         }
-        second = new String(secondReversed, HConstants.UTF8_ENCODING);
+        second = Bytes.toString(secondReversed);
         if (first.compareTo(second) != 0) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("second key is not the reverse of first. row=" +

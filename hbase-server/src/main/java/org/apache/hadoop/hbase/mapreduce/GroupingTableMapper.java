@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -27,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -143,11 +141,7 @@ extends TableMapper<ImmutableBytesWritable,Result> implements Configurable {
       if(i > 0) {
         sb.append(" ");
       }
-      try {
-        sb.append(new String(vals[i], HConstants.UTF8_ENCODING));
-      } catch (UnsupportedEncodingException e) {
-        throw new RuntimeException(e);
-      }
+      sb.append(Bytes.toString(vals[i]));
     }
     return new ImmutableBytesWritable(Bytes.toBytes(sb.toString()));
   }

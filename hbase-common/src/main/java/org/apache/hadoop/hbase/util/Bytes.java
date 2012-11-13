@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.util;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -279,8 +278,7 @@ public class Bytes {
 
   /**
    * This method will convert utf8 encoded bytes into a string. If
-   * an UnsupportedEncodingException occurs, this method will eat it
-   * and return null instead.
+   * the given byte array is null, this method will return null.
    *
    * @param b Presumed UTF-8 encoded byte array.
    * @param off offset into array
@@ -294,12 +292,7 @@ public class Bytes {
     if (len == 0) {
       return "";
     }
-    try {
-      return new String(b, off, len, HConstants.UTF8_ENCODING);
-    } catch (UnsupportedEncodingException e) {
-      LOG.error("UTF-8 not supported?", e);
-      return null;
-    }
+    return new String(b, off, len, HConstants.UTF8_CHARSET);
   }
 
   /**
@@ -414,12 +407,7 @@ public class Bytes {
    * @return the byte array
    */
   public static byte[] toBytes(String s) {
-    try {
-      return s.getBytes(HConstants.UTF8_ENCODING);
-    } catch (UnsupportedEncodingException e) {
-      LOG.error("UTF-8 not supported?", e);
-      return null;
-    }
+    return s.getBytes(HConstants.UTF8_CHARSET);
   }
 
   /**

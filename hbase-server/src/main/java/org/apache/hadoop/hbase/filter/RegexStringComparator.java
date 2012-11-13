@@ -70,7 +70,7 @@ public class RegexStringComparator extends ByteArrayComparable {
 
   private static final Log LOG = LogFactory.getLog(RegexStringComparator.class);
 
-  private Charset charset = Charset.forName(HConstants.UTF8_ENCODING);
+  private Charset charset = HConstants.UTF8_CHARSET;
 
   private Pattern pattern;
 

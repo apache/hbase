@@ -86,18 +86,17 @@ public class TestScanner extends HBaseTestCase {
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
   final private byte[] col1, col2;
 
-  public TestScanner() throws Exception {
+  public TestScanner() {
     super();
 
-    firstRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
-    secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
+    firstRowBytes = START_KEY_BYTES;
+    secondRowBytes = START_KEY_BYTES.clone();
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
-    thirdRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
-    thirdRowBytes[START_KEY_BYTES.length - 1]++;
-    thirdRowBytes[START_KEY_BYTES.length - 1]++;
-    col1 = "column1".getBytes(HConstants.UTF8_ENCODING);
-    col2 = "column2".getBytes(HConstants.UTF8_ENCODING);
+    thirdRowBytes = START_KEY_BYTES.clone();
+    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    col1 = Bytes.toBytes("column1");
+    col2 = Bytes.toBytes("column2");
   }
 
   /**

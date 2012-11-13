@@ -105,8 +105,7 @@ public class TestTableMapReduce {
       }
 
       // Get the original value and reverse it
-      String originalValue = new String(value.getValue(INPUT_FAMILY, null),
-        HConstants.UTF8_ENCODING);
+      String originalValue = Bytes.toString(value.getValue(INPUT_FAMILY, null));
       StringBuilder newValue = new StringBuilder(originalValue);
       newValue.reverse();
       // Now set the value to be collected
@@ -232,7 +231,7 @@ public class TestTableMapReduce {
           throw new NullPointerException(Bytes.toString(r.getRow()) +
             ": first value is null");
         }
-        first = new String(firstValue, HConstants.UTF8_ENCODING);
+        first = Bytes.toString(firstValue);
 
         String second = "";
         if (secondValue == null) {
@@ -243,7 +242,7 @@ public class TestTableMapReduce {
         for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
           secondReversed[i] = secondValue[j];
         }
-        second = new String(secondReversed, HConstants.UTF8_ENCODING);
+        second = Bytes.toString(secondReversed);
 
         if (first.compareTo(second) != 0) {
           if (LOG.isDebugEnabled()) {

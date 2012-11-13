@@ -79,7 +79,7 @@ public class TestCompaction extends HBaseTestCase {
   private static final long MAX_FILES_TO_COMPACT = 10;
 
   /** constructor */
-  public TestCompaction() throws Exception {
+  public TestCompaction() {
     super();
 
     // Set cache flush size to 1MB
@@ -87,15 +87,14 @@ public class TestCompaction extends HBaseTestCase {
     conf.setInt("hbase.hregion.memstore.block.multiplier", 100);
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
 
-    firstRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
-    secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
+    firstRowBytes = START_KEY_BYTES;
+    secondRowBytes = START_KEY_BYTES.clone();
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
-    thirdRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
-    thirdRowBytes[START_KEY_BYTES.length - 1]++;
-    thirdRowBytes[START_KEY_BYTES.length - 1]++;
-    col1 = "column1".getBytes(HConstants.UTF8_ENCODING);
-    col2 = "column2".getBytes(HConstants.UTF8_ENCODING);
+    thirdRowBytes = START_KEY_BYTES.clone();
+    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    col1 = Bytes.toBytes("column1");
+    col2 = Bytes.toBytes("column2");
   }
 
   @Override
@@ -226,7 +225,7 @@ public class TestCompaction extends HBaseTestCase {
 
     // look at the second row
     // Increment the least significant character so we get to next row.
-    byte [] secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
+    byte [] secondRowBytes = START_KEY_BYTES.clone();
     secondRowBytes[START_KEY_BYTES.length - 1]++;
 
     // Always 3 versions if that is what max versions is.

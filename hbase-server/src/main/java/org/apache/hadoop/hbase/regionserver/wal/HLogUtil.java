@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -47,15 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class HLogUtil {
   static final Log LOG = LogFactory.getLog(HLogUtil.class);
 
-  static byte[] COMPLETE_CACHE_FLUSH;
-  static {
-    try {
-      COMPLETE_CACHE_FLUSH = "HBASE::CACHEFLUSH"
-          .getBytes(HConstants.UTF8_ENCODING);
-    } catch (UnsupportedEncodingException e) {
-      assert (false);
-    }
-  }
+  static final byte[] COMPLETE_CACHE_FLUSH = Bytes.toBytes("HBASE::CACHEFLUSH");
 
   /**
    * @param family

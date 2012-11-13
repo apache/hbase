@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
@@ -30,7 +29,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.UnsupportedEncodingException;
 
 import static org.junit.Assert.*;
 
@@ -40,15 +38,7 @@ public class TestPrefixFilter {
   static final char FIRST_CHAR = 'a';
   static final char LAST_CHAR = 'e';
   static final String HOST_PREFIX = "org.apache.site-";
-  static byte [] GOOD_BYTES = null;
-
-  static {
-    try {
-      GOOD_BYTES = "abc".getBytes(HConstants.UTF8_ENCODING);
-    } catch (UnsupportedEncodingException e) {
-      fail();
-    }
-  }
+  static final byte [] GOOD_BYTES = Bytes.toBytes("abc");
 
   @Before
   public void setUp() throws Exception {
