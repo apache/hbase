@@ -91,14 +91,14 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching) {
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat) {
     Cacheable cachedBlock;
 
-    if ((cachedBlock = onHeapCache.getBlock(cacheKey, caching)) != null) {
+    if ((cachedBlock = onHeapCache.getBlock(cacheKey, caching, repeat)) != null) {
       stats.hit(caching);
       return cachedBlock;
 
-    } else if ((cachedBlock = offHeapCache.getBlock(cacheKey, caching)) != null) {
+    } else if ((cachedBlock = offHeapCache.getBlock(cacheKey, caching, repeat)) != null) {
       if (caching) {
         onHeapCache.cacheBlock(cacheKey, cachedBlock);
       }
@@ -106,7 +106,7 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
       return cachedBlock;
     }
 
-    stats.miss(caching);
+    if (!repeat) stats.miss(caching);
     return null;
   }
 

@@ -87,7 +87,7 @@ public class TestHFileDataBlockEncoder {
     BlockCacheKey cacheKey = new BlockCacheKey("test", 0);
     blockCache.cacheBlock(cacheKey, cacheBlock);
 
-    HeapSize heapSize = blockCache.getBlock(cacheKey, false);
+    HeapSize heapSize = blockCache.getBlock(cacheKey, false, false);
     assertTrue(heapSize instanceof HFileBlock);
 
     HFileBlock returnedBlock = (HFileBlock) heapSize;;

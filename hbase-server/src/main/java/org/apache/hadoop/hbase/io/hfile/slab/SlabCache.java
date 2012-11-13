@@ -229,23 +229,23 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   /**
    * Get the buffer of the block with the specified name.
-   *
-   * @param key
    * @param caching
+   * @param key
+   *
    * @return buffer of specified block name, or null if not in cache
    */
-  public Cacheable getBlock(BlockCacheKey key, boolean caching) {
+  public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat) {
     SingleSizeCache cachedBlock = backingStore.get(key);
     if (cachedBlock == null) {
-      stats.miss(caching);
+      if (!repeat) stats.miss(caching);
       return null;
     }
 
-    Cacheable contentBlock = cachedBlock.getBlock(key, caching);
+    Cacheable contentBlock = cachedBlock.getBlock(key, caching, false);
 
     if (contentBlock != null) {
       stats.hit(caching);
-    } else {
+    } else if (!repeat) {
       stats.miss(caching);
     }
     return contentBlock;

@@ -90,10 +90,6 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   /** Block cache configuration. */
   protected final CacheConfig cacheConf;
 
-  protected AtomicLong cacheHits = new AtomicLong();
-  protected AtomicLong blockLoads = new AtomicLong();
-  protected AtomicLong metaLoads = new AtomicLong();
-
   /** Path of file */
   protected final Path path;
 
