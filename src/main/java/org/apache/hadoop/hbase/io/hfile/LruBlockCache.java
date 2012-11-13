@@ -327,13 +327,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * Get the buffer of the block with the specified name.
    * @param cacheKey block's cache key
    * @param caching true if the caller caches blocks on cache misses
+   * @param repeat Whether this is a repeat lookup for the same block
+   *        (used to avoid double counting cache misses when doing double-check locking)
+   *        {@see HFileReaderV2#readBlock(long, long, boolean, boolean, boolean, BlockType)}
    * @return buffer of specified cache key, or null if not in cache
    */
   @Override
-  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching) {
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat) {
     CachedBlock cb = map.get(cacheKey);
     if(cb == null) {
-      stats.miss(caching);
+      if (!repeat) stats.miss(caching);
       return null;
     }
     stats.hit(caching);

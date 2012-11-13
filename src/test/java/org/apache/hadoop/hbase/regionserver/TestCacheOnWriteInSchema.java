@@ -213,7 +213,7 @@ public class TestCacheOnWriteInSchema {
           false, null);
         BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           offset);
-        boolean isCached = cache.getBlock(blockCacheKey, true) != null;
+        boolean isCached = cache.getBlock(blockCacheKey, true, false) != null;
         boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
         if (shouldBeCached != isCached) {
           throw new AssertionError(

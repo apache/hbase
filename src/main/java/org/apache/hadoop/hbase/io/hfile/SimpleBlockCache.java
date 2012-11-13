@@ -68,7 +68,7 @@ public class SimpleBlockCache implements BlockCache {
     return cache.size();
   }
 
-  public synchronized Cacheable getBlock(BlockCacheKey cacheKey, boolean caching) {
+  public synchronized Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat) {
     processQueue(); // clear out some crap.
     Ref ref = cache.get(cacheKey);
     if (ref == null)

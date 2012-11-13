@@ -225,15 +225,12 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
     // Per meta key from any given file, synchronize reads for said block
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
-      metaLoads.incrementAndGet();
-
       // Check cache for block.  If found return.
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
           (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
-              cacheConf.shouldCacheBlockOnRead(effectiveCategory));
+              cacheConf.shouldCacheBlockOnRead(effectiveCategory), false);
         if (cachedBlock != null) {
-          cacheHits.incrementAndGet();
           getSchemaMetrics().updateOnCacheHit(effectiveCategory,
               SchemaMetrics.NO_COMPACTION);
           return cachedBlock.getBufferWithoutHeader();
@@ -290,15 +287,12 @@ public class HFileReaderV1 extends AbstractHFileReader {
     // the other choice is to duplicate work (which the cache would prevent you
     // from doing).
     synchronized (dataBlockIndexReader.getRootBlockKey(block)) {
-      blockLoads.incrementAndGet();
-
       // Check cache for block.  If found return.
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
           (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
-              cacheConf.shouldCacheDataOnRead());
+              cacheConf.shouldCacheDataOnRead(), false);
         if (cachedBlock != null) {
-          cacheHits.incrementAndGet();
           getSchemaMetrics().updateOnCacheHit(
               cachedBlock.getBlockType().getCategory(), isCompaction);
           return cachedBlock.getBufferWithoutHeader();
