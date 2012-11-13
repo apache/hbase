@@ -596,6 +596,7 @@
               <exclude>**/target/**</exclude>
               <exclude>**/CHANGES.txt</exclude>
               <exclude>**/generated/**</exclude>
+              <exclude>**/gen-*/**</exclude>
               <exclude>**/conf/*</exclude>
               <exclude>**/*.avpr</exclude>
               <exclude>**/*.svg</exclude>
