@@ -1,5 +1,73 @@
 HBase Change Log
 
+Release 0.94.3 - 11/12/2012
+Sub-task
+
+    [HBASE-4913] - Per-CF compaction Via the Shell
+    [HBASE-6305] - TestLocalHBaseCluster hangs with hadoop 2.0/0.23 builds.
+    [HBASE-6925] - Change socket write size from 8K to 64K for HBaseServer
+    [HBASE-6996] - HRegion.mutateRowsWithLocks should call checkResources/checkReadOnly
+    [HBASE-7076] - Add test that increment/append properly integrate with MVCC
+    [HBASE-7077] - Test for: CheckAndPut should properly read MVCC
+    [HBASE-7078] - Add a test that append is atomic
+
+Bug
+
+    [HBASE-6389] - Modify the conditions to ensure that Master waits for sufficient number of Region Servers before starting region assignments
+    [HBASE-6583] - Enhance Hbase load test tool to automatically create column families if not present
+    [HBASE-6665] - ROOT region should not be splitted even with META row as explicit split key
+    [HBASE-6700] - [replication] empty znodes created during queue failovers aren't deleted
+    [HBASE-6728] - [89-fb] prevent OOM possibility due to per connection responseQueue being unbounded
+    [HBASE-6733] - [0.92 UNIT TESTS] TestReplication.queueFailover occasionally fails [Part-2]
+    [HBASE-6796] - Backport HBASE-5547, Don't delete HFiles in backup mode.
+    [HBASE-6843] - loading lzo error when using coprocessor
+    [HBASE-6846] - BitComparator bug - ArrayIndexOutOfBoundsException
+    [HBASE-6904] - In the HBase shell, an error is thrown that states replication-related znodes already exist
+    [HBASE-6958] - TestAssignmentManager sometimes fails
+    [HBASE-6974] - Metric for blocked updates
+    [HBASE-6978] - Minor typo in ReplicationSource SocketTimeoutException error handling
+    [HBASE-7017] - Backport "[replication] The replication-executor should make sure the file that it is replicating is closed before declaring success on that file" to 0.94
+    [HBASE-7018] - Fix and Improve TableDescriptor caching for bulk assignment
+    [HBASE-7021] - Default to Hadoop 1.0.4 in 0.94 and add Hadoop 1.1 profile
+    [HBASE-7037] - ReplicationPeer logs at WARN level aborting server instead of at FATAL
+    [HBASE-7048] - Regionsplitter requires the hadoop config path to be in hbase classpath
+    [HBASE-7051] - CheckAndPut should properly read MVCC
+    [HBASE-7060] - Region load balancing by table does not handle the case where a table's region count is lower than the number of the RS in the cluster
+    [HBASE-7069] - HTable.batch does not have to be synchronized
+    [HBASE-7086] - Enhance ResourceChecker to log stack trace for potentially hanging threads
+    [HBASE-7095] - Cannot set 'lenAsVal' for KeyOnlyFilter from shell
+    [HBASE-7103] - Need to fail split if SPLIT znode is deleted even before the split is completed.
+    [HBASE-7143] - TestMetaMigrationRemovingHTD fails when used with Hadoop 0.23/2.x
+
+Improvement
+
+    [HBASE-5257] - Allow INCLUDE_AND_NEXT_COL in filters and use it in ColumnPaginationFilter
+    [HBASE-5314] - Gracefully rolling restart region servers in rolling-restart.sh
+    [HBASE-5898] - Consider double-checked locking for block cache lock
+    [HBASE-6852] - SchemaMetrics.updateOnCacheHit costs too much while full scanning a table with all of its fields
+    [HBASE-6942] - Endpoint implementation for bulk deletion of data
+    [HBASE-6951] - Allow the master info server to be started in a read only mode.
+    [HBASE-7073] - OperationMetrics needs to cache the value of hbase.metrics.exposeOperationTimes
+    [HBASE-7089] - Allow filter to be specified for Get from HBase shell
+    [HBASE-7097] - Log message in SecureServer.class uses wrong class name
+    [HBASE-7151] - Better log message for Per-CF compactions
+
+Task
+
+    [HBASE-6032] - Port HFileBlockIndex improvement from HBASE-5987
+    [HBASE-7016] - port HBASE-6518 'Bytes.toBytesBinary() incorrect trailing backslash escape' to 0.94
+    [HBASE-7020] - Backport HBASE-6336 Split point should not be equal to start row or end row
+    [HBASE-7038] - Port HBASE-5970 Improve the AssignmentManager#updateTimer and speed up handling opened event to 0.94
+    [HBASE-7040] - Port HBASE-5867 Improve Compaction Throttle Default to 0.94
+    [HBASE-7053] - port blockcache configurability (part of HBASE-6312, and HBASE-7033) to 0.94
+    [HBASE-7087] - Add to NOTICE.txt a note on jamon being MPL
+
+Test
+
+    [HBASE-5984] - TestLogRolling.testLogRollOnPipelineRestart failed with HADOOP 2.0.0
+    [HBASE-7142] - TestSplitLogManager#testDeadWorker may fail because of hard limit on the TimeoutMonitor's timeout period
+
+
 Release 0.94.2 - 10/08/2012
 Sub-task
 
