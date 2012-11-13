@@ -240,7 +240,7 @@ public class TestCacheOnWrite {
           false, null);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           offset, encodingInCache, block.getBlockType());
-      boolean isCached = blockCache.getBlock(blockCacheKey, true) != null;
+      boolean isCached = blockCache.getBlock(blockCacheKey, true, false) != null;
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
       if (shouldBeCached != isCached) {
         throw new AssertionError(

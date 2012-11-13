@@ -152,10 +152,10 @@ public class SingleSizeCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public Cacheable getBlock(BlockCacheKey key, boolean caching) {
+  public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat) {
     CacheablePair contentBlock = backingMap.get(key);
     if (contentBlock == null) {
-      stats.miss(caching);
+      if (!repeat) stats.miss(caching);
       return null;
     }
 

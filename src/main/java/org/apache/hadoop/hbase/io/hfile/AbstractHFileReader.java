@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -89,10 +88,6 @@ public abstract class AbstractHFileReader extends SchemaConfigured
 
   /** Block cache configuration. */
   protected final CacheConfig cacheConf;
-
-  protected AtomicLong cacheHits = new AtomicLong();
-  protected AtomicLong blockLoads = new AtomicLong();
-  protected AtomicLong metaLoads = new AtomicLong();
 
   /** Path of file */
   protected final Path path;
