@@ -894,6 +894,10 @@ public class TestMasterFailover {
     LOG.info("Staring cluster for second time");
     TEST_UTIL.startMiniHBaseCluster(NUM_MASTERS, NUM_RS);
 
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    while (!master.isInitialized()) {
+      Thread.sleep(100);
+    }
     // Failover should be completed, now wait for no RIT
     log("Waiting for no more RIT");
     ZKAssign.blockUntilNoRIT(zkw);
