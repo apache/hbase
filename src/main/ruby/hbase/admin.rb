@@ -51,7 +51,7 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or column family compaction
-    def compact(table_or_region_name, family)
+    def compact(table_or_region_name, family = nil)
       if family == nil
         @admin.compact(table_or_region_name)
       else
@@ -62,7 +62,7 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or column family major compaction
-    def major_compact(table_or_region_name, family)
+    def major_compact(table_or_region_name, family = nil)
       if family == nil
         @admin.majorCompact(table_or_region_name)
       else
