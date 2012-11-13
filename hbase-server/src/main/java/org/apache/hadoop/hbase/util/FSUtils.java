@@ -942,7 +942,8 @@ public abstract class FSUtils {
             isValid = this.fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
-        e.printStackTrace();
+        LOG.warn("An error occurred while verifying if [" + p.toString() + 
+                 "] is a valid directory. Returning 'not valid' and continuing.", e);
       }
       return isValid;
     }
