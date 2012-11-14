@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.coprocessor.*;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 
 import java.io.IOException;
 
@@ -69,6 +70,12 @@ public class MasterCoprocessorHost
   public MasterEnvironment createEnvironment(final Class<?> implClass,
       final Coprocessor instance, final int priority, final int seq,
       final Configuration conf) {
+    for (Class c : implClass.getInterfaces()) {
+      if (CoprocessorProtocol.class.isAssignableFrom(c)) {
+        masterServices.registerProtocol(c, (CoprocessorProtocol)instance);
+        break;
+      }
+    }
     return new MasterEnvironment(implClass, instance, priority, seq, conf,
         masterServices);
   }

@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -273,6 +274,16 @@ public class TestCatalogJanitor {
     @Override
     public boolean isServerShutdownHandlerEnabled() {
       return true;
+    }
+
+    @Override
+    public MasterCoprocessorHost getCoprocessorHost() {
+      return null;
+    }
+
+    @Override
+    public <T extends CoprocessorProtocol> boolean registerProtocol(Class<T> protocol, T handler) {
+      return false;
     }
   }
 

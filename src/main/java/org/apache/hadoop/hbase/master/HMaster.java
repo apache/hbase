@@ -22,13 +22,13 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,6 +41,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.management.ObjectName;
 
+import com.google.common.collect.ClassToInstanceMap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.MutableClassToInstanceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -67,9 +70,12 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.coprocessor.Exec;
+import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -88,7 +94,6 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
-import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -222,6 +227,13 @@ Server {
    * MX Bean for MasterInfo
    */
   private ObjectName mxBean = null;
+
+  // Registered master protocol handlers
+  private ClassToInstanceMap<CoprocessorProtocol>
+      protocolHandlers = MutableClassToInstanceMap.create();
+
+  private Map<String, Class<? extends CoprocessorProtocol>>
+      protocolHandlerNames = Maps.newHashMap();
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -1291,7 +1303,7 @@ Server {
       cpHost.preDisableTable(tableName);
     }
     this.executorService.submit(new DisableTableHandler(this, tableName,
-      catalogTracker, assignmentManager, false));
+        catalogTracker, assignmentManager, false));
 
     if (cpHost != null) {
       cpHost.postDisableTable(tableName);
@@ -1552,6 +1564,7 @@ Server {
     return zooKeeper;
   }
 
+  @Override
   public MasterCoprocessorHost getCoprocessorHost() {
     return cpHost;
   }
@@ -1748,6 +1761,78 @@ Server {
       list.add(htd);
     }
     return list.toArray(new HTableDescriptor [] {});
+  }
+
+  @Override
+  public <T extends CoprocessorProtocol> boolean registerProtocol(
+      Class<T> protocol, T handler) {
+
+    /* No stacking of protocol handlers is currently allowed.  The
+     * first to claim wins!
+     */
+    if (protocolHandlers.containsKey(protocol)) {
+      LOG.error("Protocol "+protocol.getName()+
+          " already registered, rejecting request from "+
+          handler
+      );
+      return false;
+    }
+
+    protocolHandlers.putInstance(protocol, handler);
+    protocolHandlerNames.put(protocol.getName(), protocol);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Registered master protocol handler: protocol="+protocol.getName());
+    }
+    return true;
+  }
+
+  @Override
+  public ExecResult execCoprocessor(Exec call) throws IOException {
+    Class<? extends CoprocessorProtocol> protocol = call.getProtocol();
+    if (protocol == null) {
+      String protocolName = call.getProtocolName();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received dynamic protocol exec call with protocolName " + protocolName);
+      }
+      // detect the actual protocol class
+      protocol  = protocolHandlerNames.get(protocolName);
+      if (protocol == null) {
+        throw new HBaseRPC.UnknownProtocolException(protocol,
+            "No matching handler for master protocol "+protocolName);
+      }
+    }
+    if (!protocolHandlers.containsKey(protocol)) {
+      throw new HBaseRPC.UnknownProtocolException(protocol,
+          "No matching handler for protocol ");
+    }
+
+    CoprocessorProtocol handler = protocolHandlers.getInstance(protocol);
+    Object value;
+
+    try {
+      Method method = protocol.getMethod(
+          call.getMethodName(), call.getParameterClasses());
+      method.setAccessible(true);
+
+      value = method.invoke(handler, call.getParameters());
+    } catch (InvocationTargetException e) {
+      Throwable target = e.getTargetException();
+      if (target instanceof IOException) {
+        throw (IOException)target;
+      }
+      IOException ioe = new IOException(target.toString());
+      ioe.setStackTrace(target.getStackTrace());
+      throw ioe;
+    } catch (Throwable e) {
+      if (!(e instanceof IOException)) {
+        LOG.error("Unexpected throwable object ", e);
+      }
+      IOException ioe = new IOException(e.toString());
+      ioe.setStackTrace(e.getStackTrace());
+      throw ioe;
+    }
+
+    return new ExecResult(value);
   }
 
   /**
