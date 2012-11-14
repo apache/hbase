@@ -34,17 +34,20 @@ import java.lang.reflect.Method;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.hadoop.util.Shell;
+
 /**
  * This class is a wrapper for the implementation of
  * com.sun.management.UnixOperatingSystemMXBean
- * It will decide to use Oracle Java api or its own implementation
+ * It will decide to use the sun api or its own implementation
  * depending on the runtime (vendor) used.
  */
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class OSMXBean {
-  static final Logger LOG = LoggerFactory.getLogger(OSMXBean.class);
+public class JVM 
+{
+  static final Logger LOG = LoggerFactory.getLogger(JVM.class);
 
   private OperatingSystemMXBean osMbean;
 
@@ -58,7 +61,7 @@ public class OSMXBean {
   /**
    * Constructor. Get the running Operating System instance
    */
-  public OSMXBean () {
+  public JVM () {
     this.osMbean = ManagementFactory.getOperatingSystemMXBean();
   }
  
@@ -80,8 +83,8 @@ public class OSMXBean {
    * @param mBeanMethodName : method to run from the interface UnixOperatingSystemMXBean
    * @return the method result
    */
-  private Long runUnixMXBeanMethod (String mBeanMethodName)
-  {
+  private Long runUnixMXBeanMethod (String mBeanMethodName) {
+  
     Object unixos;
     Class<?> classRef;
     Method mBeanMethod;
@@ -107,8 +110,8 @@ public class OSMXBean {
    * Otherwise, this methods implements it (linux only).  
    * @return number of open file descriptors for the jvm
    */
-  public long getOpenFileDescriptorCount() 
-  {
+  public long getOpenFileDescriptorCount() {
+
     Long ofdc;
     
     if (!ibmvendor) {
@@ -123,18 +126,17 @@ public class OSMXBean {
 
       //using linux bash commands to retrieve info
       Process p = Runtime.getRuntime().exec(
-        new String[] { "bash", "-c",
+      new String[] { "bash", "-c",
           "ls /proc/" + pidhost[0] + "/fdinfo | wc -l" });
       InputStream in = p.getInputStream();
       BufferedReader output = new BufferedReader(
-        new InputStreamReader(in));
+        		new InputStreamReader(in));
 
       String openFileDesCount;
-      if ((openFileDesCount = output.readLine()) != null) {
-        return Long.parseLong(openFileDesCount);
-      }
-    } catch (IOException ie) {
-      LOG.warn("Not able to get the number of open file descriptors", ie);
+      if ((openFileDesCount = output.readLine()) != null)      
+             return Long.parseLong(openFileDesCount);
+     } catch (IOException ie) {
+     	     LOG.warn("Not able to get the number of open file descriptors", ie);
     }
     return -1;
   }
@@ -145,8 +147,8 @@ public class OSMXBean {
    * Otherwise, this methods implements it (linux only).  
    * @return max number of file descriptors the operating system can use.
    */
-  public long getMaxFileDescriptorCount()
-  {
+  public long getMaxFileDescriptorCount() {
+
     Long mfdc;
 
     if (!ibmvendor) {
@@ -157,19 +159,18 @@ public class OSMXBean {
       
       //using linux bash commands to retrieve info
       Process p = Runtime.getRuntime().exec(
-        new String[] { "bash", "-c",
-        "ulimit -n" });
+        	  new String[] { "bash", "-c",
+        	  "ulimit -n" });
       InputStream in = p.getInputStream();
       BufferedReader output = new BufferedReader(
         new InputStreamReader(in));
 
       String maxFileDesCount;
-      if ((maxFileDesCount = output.readLine()) != null) {
-        return Long.parseLong(maxFileDesCount);
-      }
-    } catch (IOException ie) {
-      LOG.warn("Not able to get the max number of file descriptors", ie);
+      if ((maxFileDesCount = output.readLine()) != null)      
+        	return Long.parseLong(maxFileDesCount);
+    }   catch (IOException ie) {
+      		LOG.warn("Not able to get the max number of file descriptors", ie);
     }
     return -1;
-  }  
+ }
 }

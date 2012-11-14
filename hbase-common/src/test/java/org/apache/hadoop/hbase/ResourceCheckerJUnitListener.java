@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hbase.ResourceChecker.Phase;
 import org.junit.runner.notification.RunListener;
 
-import com.sun.management.UnixOperatingSystemMXBean;
+import org.apache.hadoop.hbase.util.JVM;
 
 /**
  * Listen to the test progress and check the usage of:
@@ -85,32 +85,15 @@ public class ResourceCheckerJUnitListener extends RunListener {
     }
   }
 
-  /**
-   * On unix, we know how to get the number of open file descriptor. This class allow to share
-   *  the MXBeans code.
-   */
-  abstract static class OSResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
-    protected static final OperatingSystemMXBean osStats;
-    protected static final UnixOperatingSystemMXBean unixOsStats;
 
-    static {
-      osStats = ManagementFactory.getOperatingSystemMXBean();
-      if (osStats instanceof UnixOperatingSystemMXBean) {
-        unixOsStats = (UnixOperatingSystemMXBean) osStats;
-      } else {
-        unixOsStats = null;
-      }
-    }
-  }
-
-  static class OpenFileDescriptorResourceAnalyzer extends OSResourceAnalyzer {
+  static class OpenFileDescriptorResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
-      if (unixOsStats == null) {
-        return 0;
-      } else {
-        return (int) unixOsStats.getOpenFileDescriptorCount();
-      }
+      JVM jvm = new JVM();
+      if (jvm != null && jvm.isUnix() == true)
+          return (int)jvm.getOpenFileDescriptorCount();
+      else
+           return 0;
     }
 
     @Override
@@ -119,16 +102,16 @@ public class ResourceCheckerJUnitListener extends RunListener {
     }
   }
 
-  static class MaxFileDescriptorResourceAnalyzer extends OSResourceAnalyzer {
+  static class MaxFileDescriptorResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
-      if (unixOsStats == null) {
-        return 0;
-      } else {
-        return (int) unixOsStats.getMaxFileDescriptorCount();
-      }
-    }
-  }
+      JVM jvm = new JVM();
+      if (jvm != null && jvm.isUnix() == true)
+           return (int)jvm.getMaxFileDescriptorCount();
+      else
+           return 0;
+     } 
+   }
 
 
   /**
