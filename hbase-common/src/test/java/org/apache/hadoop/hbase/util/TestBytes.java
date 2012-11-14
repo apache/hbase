@@ -23,6 +23,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -170,6 +171,69 @@ public class TestBytes extends TestCase {
     result[0] = (byte) 0xAA;
     System.arraycopy(src, 0, result, 1, src.length);
     return result;
+  }
+
+  public void testToBytesForByteBuffer() {
+    byte[] array = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    ByteBuffer target = ByteBuffer.wrap(array);
+    target.position(2);
+    target.limit(7);
+
+    byte[] actual = Bytes.toBytes(target);
+    byte[] expected = { 0, 1, 2, 3, 4, 5, 6 };
+    assertTrue(Arrays.equals(expected,  actual));
+    assertEquals(2, target.position());
+    assertEquals(7, target.limit());
+
+    ByteBuffer target2 = target.slice();
+    assertEquals(0, target2.position());
+    assertEquals(5, target2.limit());
+
+    byte[] actual2 = Bytes.toBytes(target2);
+    byte[] expected2 = { 2, 3, 4, 5, 6 };
+    assertTrue(Arrays.equals(expected2, actual2));
+    assertEquals(0, target2.position());
+    assertEquals(5, target2.limit());
+  }
+
+  public void testGetBytesForByteBuffer() {
+    byte[] array = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    ByteBuffer target = ByteBuffer.wrap(array);
+    target.position(2);
+    target.limit(7);
+
+    byte[] actual = Bytes.getBytes(target);
+    byte[] expected = { 2, 3, 4, 5, 6 };
+    assertTrue(Arrays.equals(expected,  actual));
+    assertEquals(2, target.position());
+    assertEquals(7, target.limit());
+  }
+
+  public void testToStringBinaryForBytes() {
+    byte[] array = { '0', '9', 'a', 'z', 'A', 'Z', '@', 1 };
+    String actual = Bytes.toStringBinary(array);
+    String expected = "09azAZ@\\x01";
+    assertEquals(expected, actual);
+
+    String actual2 = Bytes.toStringBinary(array, 2, 3);
+    String expected2 = "azA";
+    assertEquals(expected2, actual2);
+  }
+
+  public void testToStringBinaryForArrayBasedByteBuffer() {
+    byte[] array = { '0', '9', 'a', 'z', 'A', 'Z', '@', 1 };
+    ByteBuffer target = ByteBuffer.wrap(array);
+    String actual = Bytes.toStringBinary(target);
+    String expected = "09azAZ@\\x01";
+    assertEquals(expected, actual);
+  }
+
+  public void testToStringBinaryForReadOnlyByteBuffer() {
+    byte[] array = { '0', '9', 'a', 'z', 'A', 'Z', '@', 1 };
+    ByteBuffer target = ByteBuffer.wrap(array).asReadOnlyBuffer();
+    String actual = Bytes.toStringBinary(target);
+    String expected = "09azAZ@\\x01";
+    assertEquals(expected, actual);
   }
 
   public void testBinarySearch() throws Exception {

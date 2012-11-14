@@ -242,14 +242,24 @@ public class Bytes {
   }
 
   /**
-   * Returns a new byte array, copied from the passed ByteBuffer.
-   * @param bb A ByteBuffer
+   * Returns a new byte array, copied from the given {@code buf},
+   * from the index 0 (inclusive) to the limit (exclusive),
+   * regardless of the current position.
+   * The position and the other index parameters are not changed.
+   *
+   * @param buf a byte buffer
    * @return the byte array
+   * @see #getBytes(ByteBuffer)
    */
-  public static byte[] toBytes(ByteBuffer bb) {
-    int length = bb.limit();
-    byte [] result = new byte[length];
-    System.arraycopy(bb.array(), bb.arrayOffset(), result, 0, length);
+  public static byte[] toBytes(ByteBuffer buf) {
+    ByteBuffer dup = buf.duplicate();
+    dup.position(0);
+    return readBytes(dup);
+  }
+
+  private static byte[] readBytes(ByteBuffer buf) {
+    byte [] result = new byte[buf.remaining()];
+    buf.get(result);
     return result;
   }
 
@@ -309,16 +319,23 @@ public class Bytes {
   }
 
   /**
-   * Converts the given byte buffer, from its array offset to its limit, to
-   * a string. The position and the mark are ignored.
+   * Converts the given byte buffer to a printable representation,
+   * from the index 0 (inclusive) to the limit (exclusive),
+   * regardless of the current position.
+   * The position and the other index parameters are not changed.
    *
    * @param buf a byte buffer
    * @return a string representation of the buffer's binary contents
+   * @see #toBytes(ByteBuffer)
+   * @see #getBytes(ByteBuffer)
    */
   public static String toStringBinary(ByteBuffer buf) {
     if (buf == null)
       return "null";
-    return toStringBinary(buf.array(), buf.arrayOffset(), buf.limit());
+    if (buf.hasArray()) {
+      return toStringBinary(buf.array(), buf.arrayOffset(), buf.limit());
+    }
+    return toStringBinary(toBytes(buf));
   }
 
   /**
@@ -737,17 +754,16 @@ public class Bytes {
   }
 
   /**
-   * This method will get a sequence of bytes from pos -> limit,
-   * but will restore pos after.
-   * @param buf
-   * @return byte array
+   * Returns a new byte array, copied from the given {@code buf},
+   * from the position (inclusive) to the limit (exclusive).
+   * The position and the other index parameters are not changed.
+   *
+   * @param buf a byte buffer
+   * @return the byte array
+   * @see #toBytes(ByteBuffer)
    */
   public static byte[] getBytes(ByteBuffer buf) {
-    int savedPos = buf.position();
-    byte [] newBytes = new byte[buf.remaining()];
-    buf.get(newBytes);
-    buf.position(savedPos);
-    return newBytes;
+    return readBytes(buf.duplicate());
   }
 
   /**
