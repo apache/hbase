@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -287,6 +288,11 @@ public class TestCatalogJanitor {
     @Override
     public boolean isServerShutdownHandlerEnabled() {
       return true;
+    }
+
+    @Override
+    public boolean registerService(Service instance) {
+      return false;
     }
   }
 

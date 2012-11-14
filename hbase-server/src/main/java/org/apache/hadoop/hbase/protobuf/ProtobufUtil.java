@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.AdminProtocol;
@@ -1341,6 +1342,20 @@ public final class ProtobufUtil {
     try {
       CoprocessorServiceResponse response =
           client.execService(null, request);
+      return response;
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  public static CoprocessorServiceResponse execService(final MasterAdminProtocol client,
+      final CoprocessorServiceCall call) throws IOException {
+    CoprocessorServiceRequest request = CoprocessorServiceRequest.newBuilder()
+        .setCall(call).setRegion(
+            RequestConverter.buildRegionSpecifier(REGION_NAME, HConstants.EMPTY_BYTE_ARRAY)).build();
+    try {
+      CoprocessorServiceResponse response =
+          client.execMasterService(null, request);
       return response;
     } catch (ServiceException se) {
       throw getRemoteException(se);

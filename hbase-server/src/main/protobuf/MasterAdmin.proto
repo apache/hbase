@@ -25,6 +25,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "hbase.proto";
+import "Client.proto";
 
 /* Column-level protobufs */
 
@@ -273,4 +274,10 @@ service MasterAdminService {
    */
   rpc isCatalogJanitorEnabled(IsCatalogJanitorEnabledRequest)
      returns(IsCatalogJanitorEnabledResponse);
+
+  /**
+   * Call a master coprocessor endpoint
+   */
+  rpc execMasterService(CoprocessorServiceRequest)
+    returns(CoprocessorServiceResponse);
 }

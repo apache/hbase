@@ -70,6 +70,11 @@ public class MasterCoprocessorHost
   public MasterEnvironment createEnvironment(final Class<?> implClass,
       final Coprocessor instance, final int priority, final int seq,
       final Configuration conf) {
+    for (Class c : implClass.getInterfaces()) {
+      if (CoprocessorService.class.isAssignableFrom(c)) {
+        masterServices.registerService(((CoprocessorService)instance).getService());
+      }
+    }
     return new MasterEnvironment(implClass, instance, priority, seq, conf,
         masterServices);
   }

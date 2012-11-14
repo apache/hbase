@@ -40,6 +40,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.management.ObjectName;
 
+import com.google.common.collect.Maps;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -82,6 +87,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
@@ -101,7 +107,9 @@ import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -159,6 +167,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -308,6 +317,8 @@ Server {
   private final boolean masterCheckCompression;
 
   private SpanReceiverHost spanReceiverHost;
+
+  private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -2272,6 +2283,79 @@ Server {
       throw new ServiceException(ioe);
     }
     return OfflineRegionResponse.newBuilder().build();
+  }
+
+  @Override
+  public boolean registerService(Service instance) {
+    /*
+     * No stacking of instances is allowed for a single service name
+     */
+    Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
+    if (coprocessorServiceHandlers.containsKey(serviceDesc.getFullName())) {
+      LOG.error("Coprocessor service "+serviceDesc.getFullName()+
+          " already registered, rejecting request from "+instance
+      );
+      return false;
+    }
+
+    coprocessorServiceHandlers.put(serviceDesc.getFullName(), instance);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Registered master coprocessor service: service="+serviceDesc.getFullName());
+    }
+    return true;
+  }
+
+  @Override
+  public ClientProtos.CoprocessorServiceResponse execMasterService(final RpcController controller,
+      final ClientProtos.CoprocessorServiceRequest request) throws ServiceException {
+    try {
+      ServerRpcController execController = new ServerRpcController();
+
+      ClientProtos.CoprocessorServiceCall call = request.getCall();
+      String serviceName = call.getServiceName();
+      String methodName = call.getMethodName();
+      if (!coprocessorServiceHandlers.containsKey(serviceName)) {
+        throw new HBaseRPC.UnknownProtocolException(null,
+            "No registered master coprocessor service found for name "+serviceName);
+      }
+
+      Service service = coprocessorServiceHandlers.get(serviceName);
+      Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
+      Descriptors.MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
+      if (methodDesc == null) {
+        throw new HBaseRPC.UnknownProtocolException(service.getClass(),
+            "Unknown method "+methodName+" called on master service "+serviceName);
+      }
+
+      //invoke the method
+      Message execRequest = service.getRequestPrototype(methodDesc).newBuilderForType()
+          .mergeFrom(call.getRequest()).build();
+      final Message.Builder responseBuilder =
+          service.getResponsePrototype(methodDesc).newBuilderForType();
+      service.callMethod(methodDesc, controller, execRequest, new RpcCallback<Message>() {
+        @Override
+        public void run(Message message) {
+          if (message != null) {
+            responseBuilder.mergeFrom(message);
+          }
+        }
+      });
+      Message execResult = responseBuilder.build();
+
+      if (execController.getFailedOn() != null) {
+        throw execController.getFailedOn();
+      }
+      ClientProtos.CoprocessorServiceResponse.Builder builder =
+          ClientProtos.CoprocessorServiceResponse.newBuilder();
+      builder.setRegion(RequestConverter.buildRegionSpecifier(
+          RegionSpecifierType.REGION_NAME, HConstants.EMPTY_BYTE_ARRAY));
+      builder.setValue(
+          builder.getValueBuilder().setName(execResult.getClass().getName())
+              .setValue(execResult.toByteString()));
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
   }
 
   /**

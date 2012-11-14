@@ -45,6 +45,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * TestEndpoint: test cases to verify coprocessor Endpoint
@@ -75,6 +76,8 @@ public class TestCoprocessorEndpoint {
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         org.apache.hadoop.hbase.coprocessor.ColumnAggregationEndpoint.class.getName(),
         org.apache.hadoop.hbase.coprocessor.GenericEndpoint.class.getName(),
+        ProtobufCoprocessorService.class.getName());
+    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         ProtobufCoprocessorService.class.getName());
     util.startMiniCluster(2);
     HBaseAdmin admin = new HBaseAdmin(conf);
@@ -251,6 +254,17 @@ public class TestCoprocessorEndpoint {
     } finally {
       table.close();
     }
+  }
+
+  @Test
+  public void testMasterCoprocessorService() throws Throwable {
+    HBaseAdmin admin = util.getHBaseAdmin();
+    final TestProtos.EchoRequestProto request =
+        TestProtos.EchoRequestProto.newBuilder().setMessage("hello").build();
+    TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
+        TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());
+    assertEquals("hello", service.echo(null, request).getMessage());
+    admin.close();
   }
 
   private static byte[][] makeN(byte[] base, int n) {

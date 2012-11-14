@@ -14464,6 +14464,11 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse> done);
       
+      public abstract void execMasterService(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done);
+      
     }
     
     public static com.google.protobuf.Service newReflectiveService(
@@ -14621,6 +14626,14 @@ public final class MasterAdminProtos {
           impl.isCatalogJanitorEnabled(controller, request, done);
         }
         
+        @java.lang.Override
+        public  void execMasterService(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done) {
+          impl.execMasterService(controller, request, done);
+        }
+        
       };
     }
     
@@ -14681,6 +14694,8 @@ public final class MasterAdminProtos {
               return impl.enableCatalogJanitor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest)request);
             case 18:
               return impl.isCatalogJanitorEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest)request);
+            case 19:
+              return impl.execMasterService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -14733,6 +14748,8 @@ public final class MasterAdminProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest.getDefaultInstance();
             case 18:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
+            case 19:
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -14785,6 +14802,8 @@ public final class MasterAdminProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.getDefaultInstance();
             case 18:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
+            case 19:
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -14887,6 +14906,11 @@ public final class MasterAdminProtos {
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse> done);
+    
+    public abstract void execMasterService(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done);
     
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
@@ -15005,6 +15029,11 @@ public final class MasterAdminProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse>specializeCallback(
               done));
           return;
+        case 19:
+          this.execMasterService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -15057,6 +15086,8 @@ public final class MasterAdminProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest.getDefaultInstance();
         case 18:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
+        case 19:
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -15109,6 +15140,8 @@ public final class MasterAdminProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.getDefaultInstance();
         case 18:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
+        case 19:
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -15414,6 +15447,21 @@ public final class MasterAdminProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance()));
       }
+      
+      public  void execMasterService(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(19),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance()));
+      }
     }
     
     public static BlockingInterface newBlockingStub(
@@ -15515,6 +15563,11 @@ public final class MasterAdminProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse isCatalogJanitorEnabled(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest request)
+          throws com.google.protobuf.ServiceException;
+      
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse execMasterService(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request)
           throws com.google.protobuf.ServiceException;
     }
     
@@ -15752,6 +15805,18 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance());
       }
       
+      
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse execMasterService(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(19),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance());
+      }
+      
     }
   }
   
@@ -15954,79 +16019,81 @@ public final class MasterAdminProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\021MasterAdmin.proto\032\013hbase.proto\"R\n\020AddC" +
-      "olumnRequest\022\021\n\ttableName\030\001 \002(\014\022+\n\016colum" +
-      "nFamilies\030\002 \002(\0132\023.ColumnFamilySchema\"\023\n\021" +
-      "AddColumnResponse\"<\n\023DeleteColumnRequest" +
-      "\022\021\n\ttableName\030\001 \002(\014\022\022\n\ncolumnName\030\002 \002(\014\"" +
-      "\026\n\024DeleteColumnResponse\"U\n\023ModifyColumnR" +
-      "equest\022\021\n\ttableName\030\001 \002(\014\022+\n\016columnFamil" +
-      "ies\030\002 \002(\0132\023.ColumnFamilySchema\"\026\n\024Modify" +
-      "ColumnResponse\"Z\n\021MoveRegionRequest\022 \n\006r" +
-      "egion\030\001 \002(\0132\020.RegionSpecifier\022#\n\016destSer",
-      "verName\030\002 \001(\0132\013.ServerName\"\024\n\022MoveRegion" +
-      "Response\"7\n\023AssignRegionRequest\022 \n\006regio" +
-      "n\030\001 \002(\0132\020.RegionSpecifier\"\026\n\024AssignRegio" +
-      "nResponse\"O\n\025UnassignRegionRequest\022 \n\006re" +
-      "gion\030\001 \002(\0132\020.RegionSpecifier\022\024\n\005force\030\002 " +
-      "\001(\010:\005false\"\030\n\026UnassignRegionResponse\"8\n\024" +
-      "OfflineRegionRequest\022 \n\006region\030\001 \002(\0132\020.R" +
-      "egionSpecifier\"\027\n\025OfflineRegionResponse\"" +
-      "J\n\022CreateTableRequest\022!\n\013tableSchema\030\001 \002" +
-      "(\0132\014.TableSchema\022\021\n\tsplitKeys\030\002 \003(\014\"\025\n\023C",
-      "reateTableResponse\"\'\n\022DeleteTableRequest" +
-      "\022\021\n\ttableName\030\001 \002(\014\"\025\n\023DeleteTableRespon" +
-      "se\"\'\n\022EnableTableRequest\022\021\n\ttableName\030\001 " +
-      "\002(\014\"\025\n\023EnableTableResponse\"(\n\023DisableTab" +
-      "leRequest\022\021\n\ttableName\030\001 \002(\014\"\026\n\024DisableT" +
-      "ableResponse\"J\n\022ModifyTableRequest\022\021\n\tta" +
-      "bleName\030\001 \002(\014\022!\n\013tableSchema\030\002 \002(\0132\014.Tab" +
-      "leSchema\"\025\n\023ModifyTableResponse\"\021\n\017Shutd" +
-      "ownRequest\"\022\n\020ShutdownResponse\"\023\n\021StopMa" +
-      "sterRequest\"\024\n\022StopMasterResponse\"\020\n\016Bal",
-      "anceRequest\"&\n\017BalanceResponse\022\023\n\013balanc" +
-      "erRan\030\001 \002(\010\"<\n\031SetBalancerRunningRequest" +
-      "\022\n\n\002on\030\001 \002(\010\022\023\n\013synchronous\030\002 \001(\010\"6\n\032Set" +
-      "BalancerRunningResponse\022\030\n\020prevBalanceVa" +
-      "lue\030\001 \001(\010\"\024\n\022CatalogScanRequest\")\n\023Catal" +
-      "ogScanResponse\022\022\n\nscanResult\030\001 \001(\005\"-\n\033En" +
-      "ableCatalogJanitorRequest\022\016\n\006enable\030\001 \002(" +
-      "\010\"1\n\034EnableCatalogJanitorResponse\022\021\n\tpre" +
-      "vValue\030\001 \001(\010\" \n\036IsCatalogJanitorEnabledR" +
-      "equest\"0\n\037IsCatalogJanitorEnabledRespons",
-      "e\022\r\n\005value\030\001 \002(\0102\263\t\n\022MasterAdminService\022" +
-      "2\n\taddColumn\022\021.AddColumnRequest\032\022.AddCol" +
-      "umnResponse\022;\n\014deleteColumn\022\024.DeleteColu" +
-      "mnRequest\032\025.DeleteColumnResponse\022;\n\014modi" +
-      "fyColumn\022\024.ModifyColumnRequest\032\025.ModifyC" +
-      "olumnResponse\0225\n\nmoveRegion\022\022.MoveRegion" +
-      "Request\032\023.MoveRegionResponse\022;\n\014assignRe" +
-      "gion\022\024.AssignRegionRequest\032\025.AssignRegio" +
-      "nResponse\022A\n\016unassignRegion\022\026.UnassignRe" +
-      "gionRequest\032\027.UnassignRegionResponse\022>\n\r",
-      "offlineRegion\022\025.OfflineRegionRequest\032\026.O" +
-      "fflineRegionResponse\0228\n\013deleteTable\022\023.De" +
-      "leteTableRequest\032\024.DeleteTableResponse\0228" +
-      "\n\013enableTable\022\023.EnableTableRequest\032\024.Ena" +
-      "bleTableResponse\022;\n\014disableTable\022\024.Disab" +
-      "leTableRequest\032\025.DisableTableResponse\0228\n" +
-      "\013modifyTable\022\023.ModifyTableRequest\032\024.Modi" +
-      "fyTableResponse\0228\n\013createTable\022\023.CreateT" +
-      "ableRequest\032\024.CreateTableResponse\022/\n\010shu" +
-      "tdown\022\020.ShutdownRequest\032\021.ShutdownRespon",
-      "se\0225\n\nstopMaster\022\022.StopMasterRequest\032\023.S" +
-      "topMasterResponse\022,\n\007balance\022\017.BalanceRe" +
-      "quest\032\020.BalanceResponse\022M\n\022setBalancerRu" +
-      "nning\022\032.SetBalancerRunningRequest\032\033.SetB" +
-      "alancerRunningResponse\022;\n\016runCatalogScan" +
-      "\022\023.CatalogScanRequest\032\024.CatalogScanRespo" +
-      "nse\022S\n\024enableCatalogJanitor\022\034.EnableCata" +
-      "logJanitorRequest\032\035.EnableCatalogJanitor" +
-      "Response\022\\\n\027isCatalogJanitorEnabled\022\037.Is" +
-      "CatalogJanitorEnabledRequest\032 .IsCatalog",
-      "JanitorEnabledResponseBG\n*org.apache.had" +
-      "oop.hbase.protobuf.generatedB\021MasterAdmi" +
-      "nProtosH\001\210\001\001\240\001\001"
+      "\n\021MasterAdmin.proto\032\013hbase.proto\032\014Client" +
+      ".proto\"R\n\020AddColumnRequest\022\021\n\ttableName\030" +
+      "\001 \002(\014\022+\n\016columnFamilies\030\002 \002(\0132\023.ColumnFa" +
+      "milySchema\"\023\n\021AddColumnResponse\"<\n\023Delet" +
+      "eColumnRequest\022\021\n\ttableName\030\001 \002(\014\022\022\n\ncol" +
+      "umnName\030\002 \002(\014\"\026\n\024DeleteColumnResponse\"U\n" +
+      "\023ModifyColumnRequest\022\021\n\ttableName\030\001 \002(\014\022" +
+      "+\n\016columnFamilies\030\002 \002(\0132\023.ColumnFamilySc" +
+      "hema\"\026\n\024ModifyColumnResponse\"Z\n\021MoveRegi" +
+      "onRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif",
+      "ier\022#\n\016destServerName\030\002 \001(\0132\013.ServerName" +
+      "\"\024\n\022MoveRegionResponse\"7\n\023AssignRegionRe" +
+      "quest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\"" +
+      "\026\n\024AssignRegionResponse\"O\n\025UnassignRegio" +
+      "nRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi" +
+      "er\022\024\n\005force\030\002 \001(\010:\005false\"\030\n\026UnassignRegi" +
+      "onResponse\"8\n\024OfflineRegionRequest\022 \n\006re" +
+      "gion\030\001 \002(\0132\020.RegionSpecifier\"\027\n\025OfflineR" +
+      "egionResponse\"J\n\022CreateTableRequest\022!\n\013t" +
+      "ableSchema\030\001 \002(\0132\014.TableSchema\022\021\n\tsplitK",
+      "eys\030\002 \003(\014\"\025\n\023CreateTableResponse\"\'\n\022Dele" +
+      "teTableRequest\022\021\n\ttableName\030\001 \002(\014\"\025\n\023Del" +
+      "eteTableResponse\"\'\n\022EnableTableRequest\022\021" +
+      "\n\ttableName\030\001 \002(\014\"\025\n\023EnableTableResponse" +
+      "\"(\n\023DisableTableRequest\022\021\n\ttableName\030\001 \002" +
+      "(\014\"\026\n\024DisableTableResponse\"J\n\022ModifyTabl" +
+      "eRequest\022\021\n\ttableName\030\001 \002(\014\022!\n\013tableSche" +
+      "ma\030\002 \002(\0132\014.TableSchema\"\025\n\023ModifyTableRes" +
+      "ponse\"\021\n\017ShutdownRequest\"\022\n\020ShutdownResp" +
+      "onse\"\023\n\021StopMasterRequest\"\024\n\022StopMasterR",
+      "esponse\"\020\n\016BalanceRequest\"&\n\017BalanceResp" +
+      "onse\022\023\n\013balancerRan\030\001 \002(\010\"<\n\031SetBalancer" +
+      "RunningRequest\022\n\n\002on\030\001 \002(\010\022\023\n\013synchronou" +
+      "s\030\002 \001(\010\"6\n\032SetBalancerRunningResponse\022\030\n" +
+      "\020prevBalanceValue\030\001 \001(\010\"\024\n\022CatalogScanRe" +
+      "quest\")\n\023CatalogScanResponse\022\022\n\nscanResu" +
+      "lt\030\001 \001(\005\"-\n\033EnableCatalogJanitorRequest\022" +
+      "\016\n\006enable\030\001 \002(\010\"1\n\034EnableCatalogJanitorR" +
+      "esponse\022\021\n\tprevValue\030\001 \001(\010\" \n\036IsCatalogJ" +
+      "anitorEnabledRequest\"0\n\037IsCatalogJanitor",
+      "EnabledResponse\022\r\n\005value\030\001 \002(\0102\201\n\n\022Maste" +
+      "rAdminService\0222\n\taddColumn\022\021.AddColumnRe" +
+      "quest\032\022.AddColumnResponse\022;\n\014deleteColum" +
+      "n\022\024.DeleteColumnRequest\032\025.DeleteColumnRe" +
+      "sponse\022;\n\014modifyColumn\022\024.ModifyColumnReq" +
+      "uest\032\025.ModifyColumnResponse\0225\n\nmoveRegio" +
+      "n\022\022.MoveRegionRequest\032\023.MoveRegionRespon" +
+      "se\022;\n\014assignRegion\022\024.AssignRegionRequest" +
+      "\032\025.AssignRegionResponse\022A\n\016unassignRegio" +
+      "n\022\026.UnassignRegionRequest\032\027.UnassignRegi",
+      "onResponse\022>\n\rofflineRegion\022\025.OfflineReg" +
+      "ionRequest\032\026.OfflineRegionResponse\0228\n\013de" +
+      "leteTable\022\023.DeleteTableRequest\032\024.DeleteT" +
+      "ableResponse\0228\n\013enableTable\022\023.EnableTabl" +
+      "eRequest\032\024.EnableTableResponse\022;\n\014disabl" +
+      "eTable\022\024.DisableTableRequest\032\025.DisableTa" +
+      "bleResponse\0228\n\013modifyTable\022\023.ModifyTable" +
+      "Request\032\024.ModifyTableResponse\0228\n\013createT" +
+      "able\022\023.CreateTableRequest\032\024.CreateTableR" +
+      "esponse\022/\n\010shutdown\022\020.ShutdownRequest\032\021.",
+      "ShutdownResponse\0225\n\nstopMaster\022\022.StopMas" +
+      "terRequest\032\023.StopMasterResponse\022,\n\007balan" +
+      "ce\022\017.BalanceRequest\032\020.BalanceResponse\022M\n" +
+      "\022setBalancerRunning\022\032.SetBalancerRunning" +
+      "Request\032\033.SetBalancerRunningResponse\022;\n\016" +
+      "runCatalogScan\022\023.CatalogScanRequest\032\024.Ca" +
+      "talogScanResponse\022S\n\024enableCatalogJanito" +
+      "r\022\034.EnableCatalogJanitorRequest\032\035.Enable" +
+      "CatalogJanitorResponse\022\\\n\027isCatalogJanit" +
+      "orEnabled\022\037.IsCatalogJanitorEnabledReque",
+      "st\032 .IsCatalogJanitorEnabledResponse\022L\n\021" +
+      "execMasterService\022\032.CoprocessorServiceRe" +
+      "quest\032\033.CoprocessorServiceResponseBG\n*or" +
+      "g.apache.hadoop.hbase.protobuf.generated" +
+      "B\021MasterAdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -16344,6 +16411,7 @@ public final class MasterAdminProtos {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
         }, assigner);
   }
   
