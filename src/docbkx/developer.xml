@@ -196,7 +196,6 @@ mvn clean package -DskipTests
   860  vi pom.xml
   861  svn commit -m "Add SNAPSHOT to the version" pom.xml
   862  ~/bin/mvn/bin/mvn release:clean
-  863  ~/bin/mvn/bin/mvn release:perform
   865  ~/bin/mvn/bin/mvn release:prepare
   866  # Answer questions and then ^C to kill the build after the last question. See below for more on this.
   867  vi release.properties
