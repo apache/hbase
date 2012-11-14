@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.Proxy;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -55,8 +56,10 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.MasterExecRPCInvoker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest.CompactionState;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -1887,5 +1890,21 @@ public class HBaseAdmin implements Abortable, Closeable {
       cleanupCatalogTracker(ct);
     }
     return state;
+  }
+
+  /**
+   * Creates and returns a proxy to the CoprocessorProtocol instance running in the
+   * master.
+   *
+   * @param protocol The class or interface defining the remote protocol
+   * @return A CoprocessorProtocol instance
+   */
+  public <T extends CoprocessorProtocol> T coprocessorProxy(
+      Class<T> protocol) {
+    return (T) Proxy.newProxyInstance(this.getClass().getClassLoader(),
+        new Class[]{protocol},
+        new MasterExecRPCInvoker(conf,
+            connection,
+            protocol));
   }
 }

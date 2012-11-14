@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.client.coprocessor;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Classes;
@@ -53,6 +54,9 @@ public class ExecResult implements Writable {
   public ExecResult() {
   }
 
+  public ExecResult(Object value) {
+    this(HConstants.EMPTY_BYTE_ARRAY, value);
+  }
   public ExecResult(byte[] region, Object value) {
     this.regionName = region;
     this.value = value;

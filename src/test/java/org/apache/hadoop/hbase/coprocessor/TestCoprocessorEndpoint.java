@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -75,6 +76,8 @@ public class TestCoprocessorEndpoint {
     Configuration conf = util.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.coprocessor.ColumnAggregationEndpoint",
+        "org.apache.hadoop.hbase.coprocessor.GenericEndpoint");
+    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.coprocessor.GenericEndpoint");
 
     util.startMiniCluster(2);
@@ -134,6 +137,34 @@ public class TestCoprocessorEndpoint {
     Text workResult11 = protocol.doWork(new Text("foo"));
     assertEquals(new Text("foo"), workResult11);
     table.close();
+  }
+
+  @Test
+  public void testMasterGeneric() throws Throwable {
+    HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
+    GenericProtocol protocol = admin.coprocessorProxy(GenericProtocol.class);
+    String workResult1 = protocol.doWork("foo");
+    assertEquals("foo", workResult1);
+    byte[] workResult2 = protocol.doWork(new byte[]{1});
+    assertArrayEquals(new byte[]{1}, workResult2);
+    byte workResult3 = protocol.doWork((byte)1);
+    assertEquals((byte)1, workResult3);
+    char workResult4 = protocol.doWork('c');
+    assertEquals('c', workResult4);
+    boolean workResult5 = protocol.doWork(true);
+    assertEquals(true, workResult5);
+    short workResult6 = protocol.doWork((short)1);
+    assertEquals((short)1, workResult6);
+    int workResult7 = protocol.doWork(5);
+    assertEquals(5, workResult7);
+    long workResult8 = protocol.doWork(5l);
+    assertEquals(5l, workResult8);
+    double workResult9 = protocol.doWork(6d);
+    assertEquals(6d, workResult9, 0.01);
+    float workResult10 = protocol.doWork(6f);
+    assertEquals(6f, workResult10, 0.01);
+    Text workResult11 = protocol.doWork(new Text("foo"));
+    assertEquals(new Text("foo"), workResult11);
   }
 
   @Ignore @Test
