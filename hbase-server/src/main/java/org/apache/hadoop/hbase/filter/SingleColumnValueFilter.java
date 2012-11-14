@@ -74,12 +74,12 @@ public class SingleColumnValueFilter extends FilterBase {
 
   protected byte [] columnFamily;
   protected byte [] columnQualifier;
-  private CompareOp compareOp;
-  private ByteArrayComparable comparator;
-  private boolean foundColumn = false;
-  private boolean matchedColumn = false;
-  private boolean filterIfMissing = false;
-  private boolean latestVersionOnly = true;
+  protected CompareOp compareOp;
+  protected ByteArrayComparable comparator;
+  protected boolean foundColumn = false;
+  protected boolean matchedColumn = false;
+  protected boolean filterIfMissing = false;
+  protected boolean latestVersionOnly = true;
 
   /**
    * Constructor for binary compare of the value of a single column.  If the
