@@ -35,7 +35,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.94.3-SNAPSHOT</version>
+  <version>0.94.2</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -46,9 +46,9 @@
   <url>http://hbase.apache.org</url>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/tags/0.94.2mvn</connection>
     <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/tags/0.94.2mvn</developerConnection>
-    <url>http://svn.apache.org/viewvc/hbase/trunk</url>
+    <url>http://svn.apache.org/viewvc/hbase/tags/0.94.2mvn</url>
   </scm>
 
   <issueManagement>
@@ -330,7 +330,7 @@
               profile on the command line as follows:
 
               $ ~/bin/mvn/bin/mvn  -Papache-release release:perform
-              
+
               I've also been kiling the release:prepare step mid-way to check the
               release.properties it generates at the top-level.  Sometimes it refers
               to HEAD rather than to the svn branch.
@@ -342,7 +342,7 @@
              -->
             <releaseProfiles>apache-release</releaseProfiles>
             <!--This stops our running tests for each stage of maven release.
-                But it builds the test jar.  From SUREFIRE-172.      
+                But it builds the test jar.  From SUREFIRE-172.
               -->
             <arguments>-Dmaven.test.skip.exec</arguments>
           </configuration>
@@ -452,9 +452,9 @@
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.5</version>
         </plugin>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. It 
-          has no influence on the Maven build itself. m2e does not provide any safeguards against 
-          rogue maven plugins that leak classloaders, modify random files inside workspace 
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. It
+          has no influence on the Maven build itself. m2e does not provide any safeguards against
+          rogue maven plugins that leak classloaders, modify random files inside workspace
           or throw nasty exceptions to fail the build -->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
@@ -476,7 +476,7 @@
                   <action>
                     <execute />
                   </action>
-                </pluginExecution> 
+                </pluginExecution>
                 <pluginExecution>
                   <pluginExecutionFilter>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -509,7 +509,7 @@
         </plugin>
 	<plugin> <!-- in plugin management section so excludes can be inherited -->
 	  <groupId>org.apache.rat</groupId>
-          <artifactId>apache-rat-plugin</artifactId>	  
+          <artifactId>apache-rat-plugin</artifactId>
           <version>0.8</version>
           <configuration>
             <excludes>
@@ -525,7 +525,7 @@
               <exclude>**/generated/**</exclude>
               <exclude>**/conf/*</exclude>
               <exclude>**/*.avpr</exclude>
-              <exclude>**/*.svg</exclude> <!-- vector graphics --> 
+              <exclude>**/*.svg</exclude> <!-- vector graphics -->
               <exclude>**/*.vm</exclude> <!-- apache doxia generated -->
               <exclude>**/control</exclude>
               <exclude>**/conffile</exclude>
@@ -883,7 +883,7 @@
 					else
 						BUILD_DIR=`cygpath --unix '${project.build.directory}'`
 					fi
-					
+
 					cd $BUILD_DIR/${project.build.finalName}
 					tar czf $BUILD_DIR/${project.build.finalName}.tar.gz ${project.build.finalName}
 				</echo>
