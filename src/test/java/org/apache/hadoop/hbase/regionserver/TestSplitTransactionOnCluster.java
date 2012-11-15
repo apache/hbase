@@ -145,8 +145,7 @@ public class TestSplitTransactionOnCluster {
       // Now try splitting and it should work.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      List<HRegion> daughters = checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
       String path = ZKAssign.getNodeName(t.getConnection().getZooKeeperWatcher(),
         hri.getEncodedName());
@@ -174,7 +173,12 @@ public class TestSplitTransactionOnCluster {
         assertTrue(daughters.contains(r));
       }
       // Finally assert that the ephemeral SPLIT znode was cleaned up.
-      stats = t.getConnection().getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
+      for (int i=0; i<100; i++) {
+        // wait a bit (10s max) for the node to disappear
+        stats = t.getConnection().getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
+        if (stats == null) break;
+        Thread.sleep(100);
+      }
       LOG.info("EPHEMERAL NODE AFTER SERVER ABORT, path=" + path + ", stats=" + stats);
       assertTrue(stats == null);
     } finally {
@@ -228,8 +232,7 @@ public class TestSplitTransactionOnCluster {
       // Now try splitting and it should work.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      checkAndGetDaughters(tableName);
       // OK, so split happened after we cleared the blocking node.
     } finally {
       admin.setBalancerRunning(true, false);
@@ -271,8 +274,7 @@ public class TestSplitTransactionOnCluster {
       // Now split.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      List<HRegion> daughters = checkAndGetDaughters(tableName);
       // Remove one of the daughters from .META. to simulate failed insert of
       // daughter region up into .META.
       removeDaughterFromMeta(daughters.get(0).getRegionName());
@@ -328,8 +330,7 @@ public class TestSplitTransactionOnCluster {
       // Now split.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      List<HRegion> daughters = checkAndGetDaughters(tableName);
       // Now split one of the daughters.
       regionCount = server.getOnlineRegions().size();
       HRegionInfo daughter = daughters.get(0).getRegionInfo();
@@ -411,8 +412,7 @@ public class TestSplitTransactionOnCluster {
       // Now try splitting and it should work.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
       String path = ZKAssign.getNodeName(t.getConnection()
           .getZooKeeperWatcher(), hri.getEncodedName());
@@ -489,8 +489,7 @@ public class TestSplitTransactionOnCluster {
       
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
       String path = ZKAssign.getNodeName(t.getConnection()
           .getZooKeeperWatcher(), hri.getEncodedName());
@@ -836,7 +835,20 @@ public class TestSplitTransactionOnCluster {
     }
 
   }
-  
+
+  private List<HRegion> checkAndGetDaughters(byte[] tableName)
+      throws InterruptedException {    
+    List<HRegion> daughters = null;
+    // try up to 10s
+    for (int i=0; i<100; i++) {
+      daughters = cluster.getRegions(tableName);
+      if (daughters.size() >= 2) break;
+      Thread.sleep(100);
+    }
+    assertTrue(daughters.size() >= 2);
+    return daughters;
+  }
+
   private MockMasterWithoutCatalogJanitor abortAndWaitForMaster() 
   throws IOException, InterruptedException {
     cluster.abortMaster(0);
