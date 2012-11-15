@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Objects;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.protobuf.Message;
@@ -370,7 +369,7 @@ class ProtobufRpcEngine implements RpcEngine {
               "; Served: " + protocol.getSimpleName()+"#"+method.getName() +
               " queueTime=" + qTime +
               " processingTime=" + processingTime +
-              " contents=" + Objects.describeQuantity(param));
+              " contents=" + param.toString());
         }
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
