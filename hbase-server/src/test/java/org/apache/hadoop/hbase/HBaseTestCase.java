@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableMap;
@@ -90,12 +89,7 @@ public abstract class HBaseTestCase extends TestCase {
 
   private void init() {
     conf = HBaseConfiguration.create();
-    try {
-      START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_ENCODING);
-    } catch (UnsupportedEncodingException e) {
-      LOG.fatal("error during initialization", e);
-      fail();
-    }
+    START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
   }
 
   /**
