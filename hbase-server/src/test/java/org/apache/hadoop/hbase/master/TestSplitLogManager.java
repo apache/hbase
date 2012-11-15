@@ -425,7 +425,7 @@ public class TestSplitLogManager {
     zkw.getRecoverableZooKeeper().create(tasknode1, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-    int to = 1000;
+    int to = 4000;
     conf.setInt("hbase.splitlog.manager.timeout", to);
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 2 * to);
     conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 100);
@@ -451,10 +451,10 @@ public class TestSplitLogManager {
     // since we have stopped heartbeating the owned node therefore it should
     // get resubmitted
     LOG.info("waiting for manager to resubmit the orphan task");
-    waitForCounter(tot_mgr_resubmit, 0, 1, to + 500);
+    waitForCounter(tot_mgr_resubmit, 0, 1, to + to/2);
 
     // now all the nodes are unassigned. manager should post another rescan
-    waitForCounter(tot_mgr_resubmit_unassigned, 0, 1, 2 * to + 500);
+    waitForCounter(tot_mgr_resubmit_unassigned, 0, 1, 2 * to + to/2);
   }
 
   @Test
