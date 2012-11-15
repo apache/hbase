@@ -16,14 +16,17 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.loadtest.ColumnFamilyProperties;
-import org.apache.hadoop.hbase.loadtest.HBaseUtils;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.loadtest.RegionSplitter;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -124,7 +127,8 @@ public abstract class Benchmark {
    */
   public HTable createTableAndLoadData(byte[] tableName, int kvSize, 
       long numKVs, boolean bulkLoad) throws IOException {
-    return createTableAndLoadData(tableName, "cf1", kvSize, numKVs, bulkLoad);
+    return createTableAndLoadData(tableName, "cf1", kvSize, 
+        numKVs, 1, bulkLoad);
   }
   
   /**
@@ -134,79 +138,96 @@ public abstract class Benchmark {
    * @param cfNameStr cf to create
    * @param kvSize size of kv's to write
    * @param numKVs number of kv's to write into the table and cf
+   * @param numRegionsPerRS numer of regions per RS, 0 for one region
    * @param bulkLoad if true, create HFile and load. Else do puts.
    * @return HTable instance to the table just created
    * @throws IOException
    */
   public HTable createTableAndLoadData(byte[] tableName, String cfNameStr, 
-      int kvSize, long numKVs, boolean bulkLoad) throws IOException {
+      int kvSize, long numKVs, int numRegionsPerRS, boolean bulkLoad) 
+  throws IOException {
     HTable htable = null;
     try {
       htable = new HTable(conf, tableName);
+      LOG.info("Table " + new String(tableName) + " exists, skipping create.");
     } catch (IOException e) {
-      LOG.info("Table " + new String(tableName) + " already exists.");
+      LOG.info("Table " + new String(tableName) + " does not exist.");
     }
     
-    if (htable != null) return htable;
-
-    // setup the column family properties
-    ColumnFamilyProperties familyProperty = new ColumnFamilyProperties();
-    familyProperty.familyName = cfNameStr;
-    familyProperty.minColsPerKey = 1;
-    familyProperty.maxColsPerKey = 1;    
-    familyProperty.minColDataSize = kvSize;
-    familyProperty.maxColDataSize = kvSize;
-    familyProperty.maxVersions = 1;
-    familyProperty.compressionType = "none";
+    int numRegions = numRegionsPerRS;
+    if (htable == null) {
+      // create the table - 1 version, no compression or bloomfilters
+      HTableDescriptor desc = new HTableDescriptor(tableName);
+      desc.addFamily(new HColumnDescriptor(Bytes.toBytes(cfNameStr))
+        .setMaxVersions(1)
+        .setCompressionType("NONE")
+        .setBloomFilterType("NONE"));
+      try {
+        HBaseAdmin admin = new HBaseAdmin(conf);
+        int numberOfServers = admin.getClusterStatus().getServers();
+        numRegions = numberOfServers * numRegionsPerRS;
+        if (numRegions <= 0) numRegions = 1;
+        // create the correct number of regions
+        if (numRegions == 1) {
+          LOG.info("Creating table " + new String(tableName) + 
+          " with 1 region");
+          admin.createTable(desc);
+        }
+        else {
+          // if we are asked for n regions, this will create (n+1), but the 
+          // the first region is always skipped.
+          byte[][] regionSplits = new byte[numRegions][];
+          long delta = Math.round(numKVs * 1.0 / numRegions);
+          for (int i = 0; i < numRegions; i++) {
+            regionSplits[i] = getRowKeyFromLong(delta * (i+1));
+          }
+          LOG.info("Creating table " + new String(tableName) + " with " + 
+              numRegions + " regions");
+          admin.createTable(desc, regionSplits);
+        }
+      } catch (Exception e) {
+        LOG.error("Failed to create table", e);
+        System.exit(0);
+      }
+    } 
     
-    ColumnFamilyProperties[] familyProperties = new ColumnFamilyProperties[1];
-    familyProperties[0] = familyProperty;
-    
-    // create the table
-    LOG.info("Creating table " + new String(tableName));
-    HBaseUtils.createTableIfNotExists(conf, tableName, familyProperties, 1);
+    // check if the table has any data
+    Scan scan = new Scan();
+    scan.addFamily(Bytes.toBytes(cfNameStr));
+    ResultScanner scanner = htable.getScanner(scan);
+    Result result = scanner.next();
+    if (result != null && !result.isEmpty()) {
+      LOG.info("Table " + new String(tableName) + " has data, skipping load");
+      return htable;
+    }
+    LOG.info("Table " + new String(tableName) + " has no data, loading");
 
+    // load the data
     if (bulkLoad) {
       LOG.info("Bulk load of " + numKVs + " KVs of " + kvSize + 
-          " bytes requested.");
+          " bytes each requested.");
       // get the regions to RS map for this table
       htable = new HTable(conf, tableName);
       NavigableMap<HRegionInfo, HServerAddress> regionsToRS = 
         htable.getRegionsInfo();
-      // get the region and rs objects
-      HRegionInfo hRegionInfo = regionsToRS.firstKey();
-      HServerAddress hServerAddress = regionsToRS.get(hRegionInfo);
-      // get the regionserver
-      HConnection connection = HConnectionManager.getConnection(conf);
-      HRegionInterface regionServer = 
-        connection.getHRegionConnection(hServerAddress);
-
-      // create an hfile
-      LOG.info("Creating data files...");
-      String tableNameStr = new String(tableName);
-      FileSystem fs = FileSystem.get(conf);
-      Path hbaseRootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
-      Path basedir = new Path(hbaseRootDir, tableNameStr);
-      Path hFile =  new Path(basedir, "hfile." + System.currentTimeMillis());
-      HFile.Writer writer =
-        HFile.getWriterFactoryNoCache(conf).withPath(fs, hFile).create();
-      byte [] family = 
-        hRegionInfo.getTableDesc().getFamilies().iterator().next().getName();
-      byte [] value = new byte[kvSize];
-      (new Random()).nextBytes(value);
-      for (long rowID = 0; rowID < numKVs; rowID++) {
-        // write a 20 byte fixed length key (Long.MAX_VALUE has 19 digits)
-        byte[] row = Bytes.toBytes(String.format("%20d", rowID));
-        writer.append(new KeyValue(row, family, Bytes.toBytes(rowID), 
-            System.currentTimeMillis(), value));
+      // bulk load some data into the tables
+      long numKVsInRegion = Math.round(numKVs * 1.0 / numRegions);
+      for (HRegionInfo hRegionInfo : regionsToRS.keySet()) {
+        // skip the first region which has an empty start key
+        if ("".equals(new String(hRegionInfo.getStartKey()))) {
+          continue;
+        }
+        // get the region server
+        HServerAddress hServerAddress = regionsToRS.get(hRegionInfo);
+        HConnection connection = HConnectionManager.getConnection(conf);
+        HRegionInterface regionServer = 
+          connection.getHRegionConnection(hServerAddress);
+        FileSystem fs = FileSystem.get(conf);
+        Path hbaseRootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
+        Path basedir = new Path(hbaseRootDir, new String(tableName));
+        bulkLoadDataForRegion(fs, basedir, hRegionInfo, regionServer, 
+            cfNameStr, kvSize, numKVsInRegion);
       }
-      writer.close();
-      LOG.info("Done creating data file [" + hFile.getName() + 
-          "], will bulk load data...");
-
-      // bulk load the file
-      regionServer.bulkLoadHFile(hFile.toString(), hRegionInfo.getRegionName(), 
-          Bytes.toBytes(cfNameStr), true);
     } 
     else {
       // write data as puts
@@ -214,7 +235,7 @@ public abstract class Benchmark {
       String[] loadTestToolArgs = {
         "-zk", "localhost", 
         "-tn", new String(tableName),
-        "-cf", familyProperty.familyName,
+        "-cf", cfNameStr,
         "-write", "1:" + kvSize, 
         "-num_keys", "" + numKVs, 
         "-multiput",
@@ -230,6 +251,53 @@ public abstract class Benchmark {
   }
   
   /**
+   * Create a HFile and bulk load it for a given region
+   * @throws IOException 
+   */
+  private void bulkLoadDataForRegion(FileSystem fs, Path basedir, 
+      HRegionInfo hRegionInfo, HRegionInterface regionServer, String cfNameStr, 
+      int kvSize, long numKVsInRegion) throws IOException {
+    // create an hfile
+    Path hFile =  new Path(basedir, "hfile." + hRegionInfo.getEncodedName() + 
+        "." + System.currentTimeMillis());
+    HFile.Writer writer =
+      HFile.getWriterFactoryNoCache(conf).withPath(fs, hFile).create();
+    byte [] family = 
+      hRegionInfo.getTableDesc().getFamilies().iterator().next().getName();
+    byte [] value = new byte[kvSize];
+    (new Random()).nextBytes(value);
+
+    long startKey = getLongFromRowKey(hRegionInfo.getStartKey());
+    long rowID = startKey;
+    for (; rowID < startKey + numKVsInRegion; rowID++) {
+      byte[] row = getRowKeyFromLong(rowID);
+      writer.append(new KeyValue(row, family, Bytes.toBytes(rowID), 
+          System.currentTimeMillis(), value));
+    }
+    writer.close();
+    LOG.info("Done creating data file: " + hFile.getName() + 
+        ", hfile key-range: (" + startKey + ", " + rowID + 
+        ") for region: " + hRegionInfo.getEncodedName() + 
+        ", region key-range: (" + 
+        (new String(hRegionInfo.getStartKey())).trim() + ", " + 
+        (new String(hRegionInfo.getEndKey())).trim() + ")");
+
+    // bulk load the file
+    regionServer.bulkLoadHFile(hFile.toString(), hRegionInfo.getRegionName(), 
+        Bytes.toBytes(cfNameStr), true);
+    LOG.info("Done bulk-loading data file [" + hFile.getName() + 
+        "] for region [" + hRegionInfo.getEncodedName() + "]");
+  }
+  
+  protected byte[] getRowKeyFromLong(long l) {
+    return Bytes.toBytes(String.format("%20d", l));
+  }
+  
+  protected long getLongFromRowKey(byte[] rowKey) {
+    return Long.parseLong((new String(rowKey)).trim());
+  }
+  
+  /**
    * Sets up the environment for the benchmark. All extending class should call 
    * this method from their main() method.
    */
@@ -240,6 +308,7 @@ public abstract class Benchmark {
     Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
     Logger.getLogger("org.apache.hadoop.hbase.client").setLevel(Level.ERROR);
     Logger.getLogger("org.apache.hadoop.hbase.zookeeper").setLevel(Level.ERROR);
+    Logger.getLogger("org.apache.hadoop.hbase.benchmark").setLevel(Level.DEBUG);    
     
     Benchmark benchmark = benchmarkClass.newInstance();    
     benchmark.parseArgs(args);

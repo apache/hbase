@@ -21,7 +21,8 @@ public class GetBenchmark extends Benchmark {
   private static Integer[] CLIENT_THREADS = { 40, 50, 60, 70, 80, 90, 100 };
   private static Integer[] NUM_CONNECTIONS = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
   public static Configuration[] connCountConfs = new Configuration[100];
-  public static int kvSize = 50;
+  public static final int numRegionsPerRS = 10;
+  public static final int kvSize = 50;
   public static int numKVs = 1000000;
   
   /**
@@ -39,7 +40,8 @@ public class GetBenchmark extends Benchmark {
   
   public void runBenchmark() throws Throwable {
     // populate the table, bulk load it
-    createTableAndLoadData(tableName, cfName, kvSize, numKVs, true);
+    createTableAndLoadData(tableName, cfName, kvSize, numKVs, numRegionsPerRS, 
+        true);
     // warm block cache, force jit compilation
     System.out.println("Warming blockcache and forcing JIT compilation...");
     runExperiment("warmup-", false, 1, 100*1000, 1);
