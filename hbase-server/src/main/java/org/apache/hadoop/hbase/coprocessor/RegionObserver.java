@@ -543,7 +543,9 @@ public interface RegionObserver extends Coprocessor {
    * @param writeToWAL true if the change should be written to the WAL
    * @return value to return to the client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
+   * @deprecated This hook is no longer called by the RegionServer
    */
+  @Deprecated
   long preIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL)
@@ -563,7 +565,9 @@ public interface RegionObserver extends Coprocessor {
    * @param result the result returned by incrementColumnValue
    * @return the result to return to the client
    * @throws IOException if an error occurred on the coprocessor
+   * @deprecated This hook is no longer called by the RegionServer
    */
+  @Deprecated
   long postIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL, final long result)
