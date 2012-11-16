@@ -27,19 +27,17 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MultiThreadedWriter;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -59,9 +57,10 @@ public class TestEncodedSeekers {
   private static final byte[] CF_BYTES = Bytes.toBytes(CF_NAME);
   private static final int MAX_VERSIONS = 5;
 
+  private static final int BLOCK_SIZE = 64 * 1024;
   private static final int MIN_VALUE_SIZE = 30;
   private static final int MAX_VALUE_SIZE = 60;
-  private static final int NUM_ROWS = 1000;
+  private static final int NUM_ROWS = 1003;
   private static final int NUM_COLS_PER_ROW = 20;
   private static final int NUM_HFILES = 4;
   private static final int NUM_ROWS_PER_FLUSH = NUM_ROWS / NUM_HFILES;
@@ -101,61 +100,73 @@ public class TestEncodedSeekers {
             .setMaxVersions(MAX_VERSIONS)
             .setDataBlockEncoding(encoding)
             .setEncodeOnDisk(encodeOnDisk)
+            .setBlocksize(BLOCK_SIZE)
     );
-    LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(
-        MIN_VALUE_SIZE, MAX_VALUE_SIZE);
 
-    // Write
-    for (int i = 0; i < NUM_ROWS; ++i) {
+    //write the data, but leave some in the memstore
+    doPuts(region);
+    
+    //verify correctness when memstore contains data
+    doGets(region);
+    
+    //verify correctness again after compacting
+    region.compactStores();
+    doGets(region);
+
+    
+    Map<DataBlockEncoding, Integer> encodingCounts = cache.getEncodingCountsForTest();
+
+    // Ensure that compactions don't pollute the cache with unencoded blocks
+    // in case of in-cache-only encoding.
+    System.err.println("encodingCounts=" + encodingCounts);
+    assertEquals(1, encodingCounts.size());
+    DataBlockEncoding encodingInCache = encodingCounts.keySet().iterator().next();
+    assertEquals(encoding, encodingInCache);
+    assertTrue(encodingCounts.get(encodingInCache) > 0);
+  }
+  
+  
+  private void doPuts(HRegion region) throws IOException{
+    LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(MIN_VALUE_SIZE, MAX_VALUE_SIZE);
+     for (int i = 0; i < NUM_ROWS; ++i) {
       byte[] key = MultiThreadedWriter.longToByteArrayKey(i);
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         Put put = new Put(key);
         String colAsStr = String.valueOf(j);
+        byte[] col = Bytes.toBytes(colAsStr);
         byte[] value = dataGenerator.generateRandomSizeValue(i, colAsStr);
         put.add(CF_BYTES, Bytes.toBytes(colAsStr), value);
+        if(VERBOSE){
+          KeyValue kvPut = new KeyValue(key, CF_BYTES, col, value);
+          System.err.println(Strings.padFront(i+"", ' ', 4)+" "+kvPut);
+        }
         region.put(put);
       }
       if (i % NUM_ROWS_PER_FLUSH == 0) {
         region.flushcache();
       }
     }
-
-    for (int doneCompaction = 0; doneCompaction <= 1; ++doneCompaction) {
-      // Read
-      for (int i = 0; i < NUM_ROWS; ++i) {
-        final byte[] rowKey = MultiThreadedWriter.longToByteArrayKey(i);
-        for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
-          if (VERBOSE) {
-            System.err.println("Reading row " + i + ", column " +  j);
-          }
-          final String qualStr = String.valueOf(j);
-          final byte[] qualBytes = Bytes.toBytes(qualStr);
-          Get get = new Get(rowKey);
-          get.addColumn(CF_BYTES, qualBytes);
-          Result result = region.get(get, null);
-          assertEquals(1, result.size());
-          assertTrue(LoadTestKVGenerator.verify(Bytes.toString(rowKey), qualStr,
-              result.getValue(CF_BYTES, qualBytes)));
+  }
+  
+  
+  private void doGets(HRegion region) throws IOException{
+    for (int i = 0; i < NUM_ROWS; ++i) {
+      final byte[] rowKey = MultiThreadedWriter.longToByteArrayKey(i);
+      for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
+        final String qualStr = String.valueOf(j);
+        if (VERBOSE) {
+          System.err.println("Reading row " + i + ", column " + j + " " + Bytes.toString(rowKey)+"/"
+              +qualStr);
         }
-      }
-
-      if (doneCompaction == 0) {
-        // Compact, then read again at the next loop iteration.
-        region.compactStores();
+        final byte[] qualBytes = Bytes.toBytes(qualStr);
+        Get get = new Get(rowKey);
+        get.addColumn(CF_BYTES, qualBytes);
+        Result result = region.get(get, null);
+        assertEquals(1, result.size());
+        assertTrue(LoadTestKVGenerator.verify(Bytes.toString(rowKey), qualStr,
+            result.getValue(CF_BYTES, qualBytes)));
       }
     }
-
-    Map<DataBlockEncoding, Integer> encodingCounts =
-        cache.getEncodingCountsForTest();
-
-    // Ensure that compactions don't pollute the cache with unencoded blocks
-    // in case of in-cache-only encoding.
-    System.err.println("encodingCounts=" + encodingCounts);
-    assertEquals(1, encodingCounts.size());
-    DataBlockEncoding encodingInCache =
-        encodingCounts.keySet().iterator().next();
-    assertEquals(encoding, encodingInCache);
-    assertTrue(encodingCounts.get(encodingInCache) > 0);
   }
 
 }

@@ -126,8 +126,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     int keyOffset;
     keyLength += commonLength;
 
-    ByteBufferUtils.ensureSpace(buffer, keyLength + valueLength
-        + KeyValue.ROW_OFFSET);
+    ensureSpace(buffer, keyLength + valueLength + KeyValue.ROW_OFFSET);
 
     buffer.putInt(keyLength);
     buffer.putInt(valueLength);

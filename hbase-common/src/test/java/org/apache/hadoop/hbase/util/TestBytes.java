@@ -28,8 +28,10 @@ import java.util.Arrays;
 import java.util.Random;
 
 import junit.framework.TestCase;
-import org.junit.experimental.categories.Category;
+
 import org.apache.hadoop.hbase.SmallTests;
+import org.junit.Assert;
+import org.junit.experimental.categories.Category;
 
 
 @Category(SmallTests.class)
@@ -376,7 +378,7 @@ public class TestBytes extends TestCase {
     assertEquals("World", Bytes.readStringFixedSize(dis, 18));
     assertEquals("", Bytes.readStringFixedSize(dis, 9));
   }
-  
+
   public void testCopy() throws Exception {
     byte [] bytes = Bytes.toBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     byte [] copy =  Bytes.copy(bytes);
@@ -395,6 +397,33 @@ public class TestBytes extends TestCase {
   public void testToStringBinary_toBytesBinary_Reversable() throws Exception {
     String bytes = Bytes.toStringBinary(Bytes.toBytes(2.17));
     assertEquals(2.17, Bytes.toDouble(Bytes.toBytesBinary(bytes)), 0);        
+  }
+
+  public void testUnsignedBinarySearch(){
+    byte[] bytes = new byte[]{0,5,123,127,-128,-100,-1};
+    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)5), 1);
+    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)127), 3);
+    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-128), 4);
+    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-100), 5);
+    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-1), 6);
+    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)2), -1-1);
+    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-5), -6-1);
+  }
+
+  public void testUnsignedIncrement(){
+    byte[] a = Bytes.toBytes(0);
+    int a2 = Bytes.toInt(Bytes.unsignedCopyAndIncrement(a), 0);
+    Assert.assertTrue(a2==1);
+
+    byte[] b = Bytes.toBytes(-1);
+    byte[] actual = Bytes.unsignedCopyAndIncrement(b);
+    Assert.assertNotSame(b, actual);
+    byte[] expected = new byte[]{1,0,0,0,0};
+    Assert.assertArrayEquals(expected, actual);
+
+    byte[] c = Bytes.toBytes(255);//should wrap to the next significant byte
+    int c2 = Bytes.toInt(Bytes.unsignedCopyAndIncrement(c), 0);
+    Assert.assertTrue(c2==256);
   }
 }
 

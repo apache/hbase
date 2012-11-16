@@ -76,4 +76,41 @@ public class Strings {
       return null;
     return dnPtr.endsWith(".") ? dnPtr.substring(0, dnPtr.length()-1) : dnPtr;
   }
+
+  /**
+   * Null-safe length check.
+   * @param input
+   * @return true if null or length==0
+   */
+  public static boolean isEmpty(String input) {
+    return input == null || input.length() == 0;
+  }
+
+  /**
+   * Push the input string to the right by appending a character before it, usually a space.
+   * @param input the string to pad
+   * @param padding the character to repeat to the left of the input string
+   * @param length the desired total length including the padding
+   * @return padding characters + input
+   */
+  public static String padFront(String input, char padding, int length) {
+    if (input.length() > length) {
+      throw new IllegalArgumentException("input \"" + input + "\" longer than maxLength=" + length);
+    }
+    int numPaddingCharacters = length - input.length();
+    return repeat(padding, numPaddingCharacters) + input;
+  }
+
+  /**
+   * @param c repeat this character
+   * @param reapeatFor the length of the output String
+   * @return c, repeated repeatFor times
+   */
+  public static String repeat(char c, int reapeatFor) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < reapeatFor; ++i) {
+      sb.append(c);
+    }
+    return sb.toString();
+  }
 }

@@ -162,7 +162,7 @@ public interface DataBlockEncoder {
      */
     public ByteBuffer getValueShallowCopy();
 
-    /** @return key value at current position. */
+    /** @return key value at current position with position set to limit */
     public ByteBuffer getKeyValueBuffer();
 
     /**

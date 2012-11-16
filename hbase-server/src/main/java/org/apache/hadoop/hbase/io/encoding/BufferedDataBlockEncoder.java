@@ -352,4 +352,21 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
   }
 
+  /**
+   * Asserts that there is at least the given amount of unfilled space
+   * remaining in the given buffer.
+   * @param out typically, the buffer we are writing to
+   * @param length the required space in the buffer
+   * @throws EncoderBufferTooSmallException If there are no enough bytes.
+   */
+  protected static void ensureSpace(ByteBuffer out, int length)
+      throws EncoderBufferTooSmallException {
+    if (out.position() + length > out.limit()) {
+      throw new EncoderBufferTooSmallException(
+          "Buffer position=" + out.position() +
+          ", buffer limit=" + out.limit() +
+          ", length to be written=" + length);
+    }
+  }
+
 }

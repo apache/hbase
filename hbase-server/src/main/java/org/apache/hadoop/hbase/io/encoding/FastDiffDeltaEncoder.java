@@ -230,8 +230,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     }
     int commonLength = ByteBufferUtils.readCompressedInt(source);
 
-    ByteBufferUtils.ensureSpace(out, state.keyLength + state.valueLength +
-        KeyValue.ROW_OFFSET);
+    ensureSpace(out, state.keyLength + state.valueLength + KeyValue.ROW_OFFSET);
 
     int kvPos = out.position();
 

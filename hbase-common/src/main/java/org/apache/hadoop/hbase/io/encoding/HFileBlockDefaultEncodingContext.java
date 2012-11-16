@@ -25,9 +25,10 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
+
+import com.google.common.base.Preconditions;
 
 /**
  * A default implementation of {@link HFileBlockEncodingContext}. It will
@@ -85,28 +86,15 @@ public class HFileBlockDefaultEncodingContext implements
                 + compressionAlgorithm, e);
       }
     }
-    if (headerBytes == null) {
-      dummyHeader = HFileBlock.DUMMY_HEADER;
-    } else {
-      dummyHeader = headerBytes;
-    }
-  }
-
-  /**
-   * @param compressionAlgorithm compression algorithm
-   * @param encoding encoding
-   */
-  public HFileBlockDefaultEncodingContext(
-      Compression.Algorithm compressionAlgorithm,
-      DataBlockEncoding encoding) {
-    this(compressionAlgorithm, encoding, null);
+    dummyHeader = Preconditions.checkNotNull(headerBytes, 
+      "Please pass HFileBlock.DUMMY_HEADER instead of null for param headerBytes");
   }
 
   /**
    * prepare to start a new encoding.
    * @throws IOException
    */
-  void prepareEncoding() throws IOException {
+  public void prepareEncoding() throws IOException {
     encodedStream.reset();
     dataOut.write(dummyHeader);
     if (encodingAlgo != null

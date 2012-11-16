@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
+import org.apache.hbase.Cell;
+import org.apache.hbase.cell.CellComparator;
 
 import com.google.common.primitives.Longs;
 
@@ -63,7 +65,7 @@ import com.google.common.primitives.Longs;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class KeyValue implements Writable, HeapSize {
+public class KeyValue implements Cell, Writable, HeapSize {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
   // TODO: Group Key-only comparators and operations into a Key class, just
   // for neatness sake, if can figure what to call it.
@@ -261,12 +263,23 @@ public class KeyValue implements Writable, HeapSize {
   /** Here be dragons **/
 
   // used to achieve atomic operations in the memstore.
-  public long getMemstoreTS() {
+  @Override
+  public long getMvccVersion() {
     return memstoreTS;
   }
 
+  public void setMvccVersion(long mvccVersion){
+    this.memstoreTS = mvccVersion;
+  }
+
+  @Deprecated
+  public long getMemstoreTS() {
+    return getMvccVersion();
+  }
+
+  @Deprecated
   public void setMemstoreTS(long memstoreTS) {
-    this.memstoreTS = memstoreTS;
+    setMvccVersion(memstoreTS);
   }
 
   // default value is 0, aka DNC
@@ -831,19 +844,21 @@ public class KeyValue implements Writable, HeapSize {
         value, voffset, vlength);
   }
 
-  // Needed doing 'contains' on List.  Only compares the key portion, not the
-  // value.
+  /**
+   * Needed doing 'contains' on List.  Only compares the key portion, not the value.
+   * 
+   * For temporary backwards compatibility with the original KeyValue.equals method, we ignore the
+   * mvccVersion.
+   */
+  @Override
   public boolean equals(Object other) {
-    if (!(other instanceof KeyValue)) {
+    if (!(other instanceof Cell)) {
       return false;
     }
-    KeyValue kv = (KeyValue)other;
-    // Comparing bytes should be fine doing equals test.  Shouldn't have to
-    // worry about special .META. comparators doing straight equals.
-    return Bytes.equals(getBuffer(), getKeyOffset(), getKeyLength(),
-      kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
+    return CellComparator.equalsIgnoreMvccVersion(this, (Cell)other);
   }
 
+  @Override
   public int hashCode() {
     byte[] b = getBuffer();
     int start = getOffset(), end = getOffset() + getLength();
@@ -864,6 +879,7 @@ public class KeyValue implements Writable, HeapSize {
    * Clones a KeyValue.  This creates a copy, re-allocating the buffer.
    * @return Fully copied clone of this KeyValue
    */
+  @Override
   public KeyValue clone() {
     byte [] b = new byte[this.length];
     System.arraycopy(this.bytes, this.offset, b, 0, this.length);
@@ -1042,8 +1058,17 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   */
+  @Override
+  public byte[] getValueArray() {
+    return bytes;
+  }
+
+  /**
    * @return Value offset
    */
+  @Override
   public int getValueOffset() {
     return getKeyOffset() + getKeyLength();
   }
@@ -1051,13 +1076,23 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * @return Value length
    */
+  @Override
   public int getValueLength() {
     return Bytes.toInt(this.bytes, this.offset + Bytes.SIZEOF_INT);
   }
 
   /**
+   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   */
+  @Override
+  public byte[] getRowArray() {
+    return bytes;
+  }
+
+  /**
    * @return Row offset
    */
+  @Override
   public int getRowOffset() {
     return getKeyOffset() + Bytes.SIZEOF_SHORT;
   }
@@ -1065,13 +1100,23 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * @return Row length
    */
+  @Override
   public short getRowLength() {
     return Bytes.toShort(this.bytes, getKeyOffset());
   }
 
   /**
+   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   */
+  @Override
+  public byte[] getFamilyArray() {
+    return bytes;
+  }
+
+  /**
    * @return Family offset
    */
+  @Override
   public int getFamilyOffset() {
     return getFamilyOffset(getRowLength());
   }
@@ -1086,6 +1131,7 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * @return Family length
    */
+  @Override
   public byte getFamilyLength() {
     return getFamilyLength(getFamilyOffset());
   }
@@ -1098,8 +1144,17 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   */
+  @Override
+  public byte[] getQualifierArray() {
+    return bytes;
+  }
+
+  /**
    * @return Qualifier offset
    */
+  @Override
   public int getQualifierOffset() {
     return getQualifierOffset(getFamilyOffset());
   }
@@ -1114,6 +1169,7 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * @return Qualifier length
    */
+  @Override
   public int getQualifierLength() {
     return getQualifierLength(getRowLength(),getFamilyLength());
   }
@@ -1273,6 +1329,7 @@ public class KeyValue implements Writable, HeapSize {
    * @return Timestamp
    */
   private long timestampCache = -1;
+  @Override
   public long getTimestamp() {
     if (timestampCache == -1) {
       timestampCache = getTimestamp(getKeyLength());
@@ -1293,6 +1350,14 @@ public class KeyValue implements Writable, HeapSize {
    * @return Type of this KeyValue.
    */
   public byte getType() {
+    return getType(getKeyLength());
+  }
+
+  /**
+   * @return KeyValue.TYPE byte representation
+   */
+  @Override
+  public byte getTypeByte() {
     return getType(getKeyLength());
   }
 
@@ -2564,13 +2629,23 @@ public class KeyValue implements Writable, HeapSize {
     }
   }
 
-  // HeapSize
+  /**
+   * HeapSize implementation
+   *
+   * We do not count the bytes in the rowCache because it should be empty for a KeyValue in the
+   * MemStore.
+   */
+  @Override
   public long heapSize() {
-    return ClassSize.align(ClassSize.OBJECT + (2 * ClassSize.REFERENCE) +
-        ClassSize.align(ClassSize.ARRAY) + ClassSize.align(length) +
-        (3 * Bytes.SIZEOF_INT) +
-        ClassSize.align(ClassSize.ARRAY) +
-        (2 * Bytes.SIZEOF_LONG));
+    int sum = 0;
+    sum += ClassSize.OBJECT;// the KeyValue object itself
+    sum += 2 * ClassSize.REFERENCE;// 2 * pointers to "bytes" and "rowCache" byte[]
+    sum += 2 * ClassSize.align(ClassSize.ARRAY);// 2 * "bytes" and "rowCache" byte[]
+    sum += ClassSize.align(length);// number of bytes of data in the "bytes" array
+    //ignore the data in the rowCache because it is cleared for inactive memstore KeyValues
+    sum += 3 * Bytes.SIZEOF_INT;// offset, length, keyLength
+    sum += 2 * Bytes.SIZEOF_LONG;// timestampCache, memstoreTS
+    return ClassSize.align(sum);
   }
 
   // this overload assumes that the length bytes have already been read,
@@ -2587,11 +2662,13 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   // Writable
+  @Override
   public void readFields(final DataInput in) throws IOException {
     int length = in.readInt();
     readFields(length, in);
   }
 
+  @Override
   public void write(final DataOutput out) throws IOException {
     out.writeInt(this.length);
     out.write(this.bytes, this.offset, this.length);

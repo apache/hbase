@@ -80,8 +80,10 @@ public class LoadTestKVGenerator {
    */
   public byte[] generateRandomSizeValue(long key, String qual) {
     String rowKey = md5PrefixedKey(key);
-    int dataSize = minValueSize + randomForValueSize.nextInt(
-        Math.abs(maxValueSize - minValueSize));
+    int dataSize = minValueSize;
+    if(minValueSize != maxValueSize){
+      dataSize = minValueSize + randomForValueSize.nextInt(Math.abs(maxValueSize - minValueSize));
+    }
     return getValueForRowColumn(rowKey, qual, dataSize);
   }
 

@@ -725,7 +725,7 @@ public class HFileBlock implements Cacheable {
       this.dataBlockEncoder = dataBlockEncoder != null
           ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
       defaultBlockEncodingCtx =
-        new HFileBlockDefaultEncodingContext(compressionAlgorithm, null);
+        new HFileBlockDefaultEncodingContext(compressionAlgorithm, null, DUMMY_HEADER);
       dataBlockEncodingCtx =
         this.dataBlockEncoder.newOnDiskDataBlockEncodingContext(
             compressionAlgorithm, DUMMY_HEADER);

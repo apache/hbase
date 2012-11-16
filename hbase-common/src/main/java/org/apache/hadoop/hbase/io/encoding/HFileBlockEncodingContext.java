@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -29,6 +30,11 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
  *
  */
 public interface HFileBlockEncodingContext {
+
+  /**
+   * @return OutputStream to which encoded data is written
+   */
+  public OutputStream getOutputStreamForEncoder();
 
   /**
    * @return encoded and compressed bytes with header which are ready to write

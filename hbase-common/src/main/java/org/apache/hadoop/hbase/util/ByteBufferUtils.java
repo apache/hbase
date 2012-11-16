@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -25,8 +26,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.io.encoding.
-    EncoderBufferTooSmallException;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -300,23 +300,6 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Asserts that there is at least the given amount of unfilled space
-   * remaining in the given buffer.
-   * @param out typically, the buffer we are writing to
-   * @param length the required space in the buffer
-   * @throws EncoderBufferTooSmallException If there are no enough bytes.
-   */
-  public static void ensureSpace(ByteBuffer out, int length)
-      throws EncoderBufferTooSmallException {
-    if (out.position() + length > out.limit()) {
-      throw new EncoderBufferTooSmallException(
-          "Buffer position=" + out.position() +
-          ", buffer limit=" + out.limit() +
-          ", length to be written=" + length);
-    }
-  }
-
-  /**
    * Copy the given number of bytes from the given stream and put it at the
    * current position of the given buffer, updating the position in the buffer.
    * @param out the buffer to write data to
@@ -334,6 +317,17 @@ public final class ByteBufferUtils {
         out.put(in.readByte());
       }
     }
+  }
+  
+  /**
+   * Copy from the InputStream to a new heap ByteBuffer until the InputStream is exhausted.
+   */
+  public static ByteBuffer drainInputStreamToBuffer(InputStream is) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(4096);
+    IOUtils.copyBytes(is, baos, 4096, true);
+    ByteBuffer buffer = ByteBuffer.wrap(baos.toByteArray());
+    buffer.rewind();
+    return buffer;
   }
 
   /**
@@ -438,6 +432,26 @@ public final class ByteBufferUtils {
    */
   public static void skip(ByteBuffer buffer, int length) {
     buffer.position(buffer.position() + length);
+  }
+
+  public static void extendLimit(ByteBuffer buffer, int numBytes) {
+    buffer.limit(buffer.limit() + numBytes);
+  }
+
+  /**
+   * Copy the bytes from position to limit into a new byte[] of the exact length and sets the
+   * position and limit back to their original values (though not thread safe).
+   * @param buffer copy from here
+   * @param startPosition put buffer.get(startPosition) into byte[0]
+   * @return a new byte[] containing the bytes in the specified range
+   */
+  public static byte[] toBytes(ByteBuffer buffer, int startPosition) {
+    int originalPosition = buffer.position();
+    byte[] output = new byte[buffer.limit() - startPosition];
+    buffer.position(startPosition);
+    buffer.get(output);
+    buffer.position(originalPosition);
+    return output;
   }
 
 }

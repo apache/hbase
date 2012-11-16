@@ -310,4 +310,16 @@ public class TestByteBufferUtils {
       throw new RuntimeException("Bug in test!", e);
     }
   }
+
+  @Test
+  public void testToBytes(){
+    ByteBuffer buffer = ByteBuffer.allocate(5);
+    buffer.put(new byte[]{0,1,2,3,4});
+    assertEquals(5, buffer.position());
+    assertEquals(5, buffer.limit());
+    byte[] copy = ByteBufferUtils.toBytes(buffer, 2);
+    assertArrayEquals(new byte[]{2,3,4}, copy);
+    assertEquals(5, buffer.position());
+    assertEquals(5, buffer.limit());
+  }
 }

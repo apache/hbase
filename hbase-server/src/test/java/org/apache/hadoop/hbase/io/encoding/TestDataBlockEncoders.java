@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -75,7 +76,7 @@ public class TestDataBlockEncoders {
       return encoder.newDataBlockEncodingContext(algo, encoding,
           HFileBlock.DUMMY_HEADER);
     } else {
-      return new HFileBlockDefaultEncodingContext(algo, encoding);
+      return new HFileBlockDefaultEncodingContext(algo, encoding, HFileBlock.DUMMY_HEADER);
     }
   }
 

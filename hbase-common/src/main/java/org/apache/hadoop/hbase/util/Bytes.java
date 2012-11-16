@@ -1647,7 +1647,7 @@ public class Bytes {
 
     return toString(b, 0, n);
   }
-  
+
   /**
    * Copy the byte array given in parameter and return an instance 
    * of a new byte array with the same length and the same content.
@@ -1660,4 +1660,62 @@ public class Bytes {
     System.arraycopy(bytes, 0, result, 0, bytes.length);	  
     return result;
   }
+
+  /**
+   * Search sorted array "a" for byte "key". I can't remember if I wrote this or copied it from
+   * somewhere. (mcorgan)
+   * @param a Array to search. Entries must be sorted and unique.
+   * @param fromIndex First index inclusive of "a" to include in the search.
+   * @param toIndex Last index exclusive of "a" to include in the search.
+   * @param key The byte to search for.
+   * @return The index of key if found. If not found, return -(index + 1), where negative indicates
+   *         "not found" and the "index + 1" handles the "-0" case.
+   */
+  public static int unsignedBinarySearch(byte[] a, int fromIndex, int toIndex, byte key) {
+    int unsignedKey = key & 0xff;
+    int low = fromIndex;
+    int high = toIndex - 1;
+
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      int midVal = a[mid] & 0xff;
+
+      if (midVal < unsignedKey) {
+        low = mid + 1;
+      } else if (midVal > unsignedKey) {
+        high = mid - 1;
+      } else {
+        return mid; // key found
+      }
+    }
+    return -(low + 1); // key not found.
+  }
+
+  /**
+   * Treat the byte[] as an unsigned series of bytes, most significant bits first.  Start by adding
+   * 1 to the rightmost bit/byte and carry over all overflows to the more significant bits/bytes.
+   *
+   * @param input The byte[] to increment.
+   * @return The incremented copy of "in".  May be same length or 1 byte longer.
+   */
+  public static byte[] unsignedCopyAndIncrement(final byte[] input) {
+    byte[] copy = copy(input);
+    if (copy == null) {
+      throw new IllegalArgumentException("cannot increment null array");
+    }
+    for (int i = copy.length - 1; i >= 0; --i) {
+      if (copy[i] == -1) {// -1 is all 1-bits, which is the unsigned maximum
+        copy[i] = 0;
+      } else {
+        ++copy[i];
+        return copy;
+      }
+    }
+    // we maxed out the array
+    byte[] out = new byte[copy.length + 1];
+    out[0] = 1;
+    System.arraycopy(copy, 0, out, 1, copy.length);
+    return out;
+  }
+
 }

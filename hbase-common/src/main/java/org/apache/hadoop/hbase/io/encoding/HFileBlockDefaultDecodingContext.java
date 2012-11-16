@@ -24,7 +24,6 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 
 /**
  * A default implementation of {@link HFileBlockDecodingContext}. It assumes the

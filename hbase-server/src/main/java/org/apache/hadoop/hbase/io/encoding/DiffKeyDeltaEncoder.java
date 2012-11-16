@@ -233,8 +233,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
     // create KeyValue buffer and fill it prefix
     int keyOffset = buffer.position();
-    ByteBufferUtils.ensureSpace(buffer, keyLength + valueLength
-        + KeyValue.ROW_OFFSET);
+    ensureSpace(buffer, keyLength + valueLength + KeyValue.ROW_OFFSET);
     buffer.putInt(keyLength);
     buffer.putInt(valueLength);
 

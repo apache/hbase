@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,37 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.util.Bytes;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-public class KeyValueTestUtil {
+/**
+ * Utility methods for Iterable including null-safe handlers.
+ */
+public class IterableUtils {
 
-  public static KeyValue create(
-      String row,
-      String family,
-      String qualifier,
-      long timestamp,
-      String value)
-  {
-    return create(row, family, qualifier, timestamp, KeyValue.Type.Put, value);
+  private static final List<Object> EMPTY_LIST = Collections
+      .unmodifiableList(new ArrayList<Object>(0));
+
+  @SuppressWarnings("unchecked")
+  public static <T> Iterable<T> nullSafe(Iterable<T> in) {
+    if (in == null) {
+      return (List<T>) EMPTY_LIST;
+    }
+    return in;
   }
 
-  public static KeyValue create(
-      String row,
-      String family,
-      String qualifier,
-      long timestamp,
-      KeyValue.Type type,
-      String value)
-  {
-      return new KeyValue(
-          Bytes.toBytes(row),
-          Bytes.toBytes(family),
-          Bytes.toBytes(qualifier),
-          timestamp,
-          type,
-          Bytes.toBytes(value)
-      );
-  }
 }

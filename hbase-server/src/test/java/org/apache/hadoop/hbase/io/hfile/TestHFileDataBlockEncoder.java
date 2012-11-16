@@ -33,9 +33,8 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
-import org.apache.hadoop.hbase.io.encoding.RedundantKVGenerator;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.junit.After;
+import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -112,9 +111,8 @@ public class TestHFileDataBlockEncoder {
   public void testEncodingWritePath() throws IOException {
     // usually we have just block without headers, but don't complicate that
     HFileBlock block = getSampleHFileBlock();
-    HFileBlockEncodingContext context =
-        new HFileBlockDefaultEncodingContext(
-            Compression.Algorithm.NONE, blockEncoder.getEncodingOnDisk());
+    HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(
+        Compression.Algorithm.NONE, blockEncoder.getEncodingOnDisk(), HFileBlock.DUMMY_HEADER);
     blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
             includesMemstoreTS, context, block.getBlockType());
 
