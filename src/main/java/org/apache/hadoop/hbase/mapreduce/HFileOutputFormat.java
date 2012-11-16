@@ -283,6 +283,34 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   }
 
   /**
+   * It is safe to set up  this job only if each mapper emits values for one region only 
+   * and in a sorted order.
+   * @param job
+   * @param table
+   * @throws IOException
+   */
+  public static void configAsMapOutputFormat(Job job, HTable table) throws IOException {
+    LOG.warn("Set up the HFileOutputFormat as MapperOutputFormat." +
+    		"It is the mapper task's responsibility to make sure that each mapper emits values " +
+    		"for one region only and in a sorted order. !");
+    
+    Configuration conf = job.getConfiguration();
+    if (!KeyValue.class.equals(job.getMapOutputValueClass())) {
+      LOG.error("Only support the KeyValue.class as MapOutputValueClass so far!");
+      System.exit (-1);
+    }
+
+    // Set compression algorithms based on column families
+    configureCompression(table, conf);
+    // Set BloomFilter type based on column families and
+    // relevant parameters.
+    configureBloomFilter(table, conf);
+    
+    LOG.info("Configured the HFileOutputFormat as MapperOutputFormat for table: " +
+        table.getTableDescriptor().getNameAsString());
+  }
+
+  /**
    * Configure a MapReduce Job to perform an incremental load into the given
    * table. This
    * <ul>
@@ -409,7 +437,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     conf.set(COMPRESSION_CONF_KEY, compressionConfigValue.toString());
   }
 
-  private static void configureBloomFilter(HTable table, Configuration conf)
+  protected static void configureBloomFilter(HTable table, Configuration conf)
   throws IOException {
     // get conf information needed by BloomFilter
     Configuration tableConf = table.getConfiguration();

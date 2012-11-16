@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -81,6 +82,37 @@ public class TableMapReduceUtil {
       convertScanToString(scan));
   }
 
+  /**
+   * Initialize a Map only job which takes TableInputFormat as MapInputFormat and
+   * HFileOutputFormat as MapOutputFormat.
+   * 
+   * It is safe to set up  this job only if each mapper emits values for one region only 
+   * and in a sorted order.
+   *
+   * @param table
+   * @param scan
+   * @param mapper
+   * @param job
+   * @throws IOException
+   */
+  public static void initHTableInputAndHFileOutputMapperJob(String table, Scan scan, 
+      Class<? extends TableMapper> mapper, Job job) throws IOException {
+    Configuration conf = job.getConfiguration();
+    job.setInputFormatClass(TableInputFormat.class);
+    
+    job.setOutputKeyClass(ImmutableBytesWritable.class);
+    job.setOutputValueClass(KeyValue.class);
+    job.setOutputFormatClass(HFileOutputFormat.class);
+    
+    HFileOutputFormat.configAsMapOutputFormat(job, new HTable(conf, table));
+    
+    job.setMapperClass(mapper);
+    job.setNumReduceTasks(0);
+    
+    job.getConfiguration().set(TableInputFormat.INPUT_TABLE, table);
+    job.getConfiguration().set(TableInputFormat.SCAN, convertScanToString(scan));
+  }
+  
   /**
    * Writes the given scan into a Base64 encoded string.
    *
