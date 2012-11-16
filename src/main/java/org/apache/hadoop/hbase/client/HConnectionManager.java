@@ -495,7 +495,6 @@ public class HConnectionManager {
     private volatile boolean closed;
     private volatile boolean aborted;
     private volatile HMasterInterface master;
-    private volatile boolean masterChecked;
     // ZooKeeper reference
     private volatile ZooKeeperWatcher zooKeeper;
     // ZooKeeper-based master address tracker
@@ -574,7 +573,6 @@ public class HConnectionManager {
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
       this.master = null;
-      this.masterChecked = false;
     }
 
     private synchronized void ensureZookeeperTrackers()
@@ -662,9 +660,7 @@ public class HConnectionManager {
         this.master = null;
 
         for (int tries = 0;
-          !this.closed &&
-          !this.masterChecked && this.master == null &&
-          tries < numRetries;
+          !this.closed && this.master == null && tries < numRetries;
         tries++) {
 
           try {
@@ -703,10 +699,6 @@ public class HConnectionManager {
             throw new RuntimeException("Thread was interrupted while trying to connect to master.");
           }
         }
-        // Avoid re-checking in the future if this is a managed HConnection,
-        // even if we failed to acquire a master.
-        // (this is to retain the existing behavior before HBASE-5058)
-        this.masterChecked = managed;
 
         if (this.master == null) {
           if (sn == null) {
@@ -1756,7 +1748,6 @@ public class HConnectionManager {
           HBaseRPC.stopProxy(master);
         }
         master = null;
-        masterChecked = false;
       }
       if (stopProxy) {
         for (HRegionInterface i : servers.values()) {
