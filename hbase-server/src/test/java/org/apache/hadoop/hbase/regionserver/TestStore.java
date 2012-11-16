@@ -51,7 +51,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -149,6 +152,35 @@ public class TestStore extends TestCase {
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
 
     store = new HStore(basedir, region, hcd, fs, conf);
+  }
+
+  /**
+   * Verify that compression and data block encoding are respected by the
+   * Store.createWriterInTmp() method, used on store flush.
+   */
+  public void testCreateWriter() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem fs = FileSystem.get(conf);
+
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setCompressionType(Compression.Algorithm.GZ);
+    hcd.setDataBlockEncoding(DataBlockEncoding.DIFF);
+    init(getName(), conf, hcd);
+
+    // Test createWriterInTmp()
+    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompression(), false);
+    Path path = writer.getPath();
+    writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
+    writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));
+    writer.append(new KeyValue(row2, family, qf1, Bytes.toBytes(3)));
+    writer.append(new KeyValue(row2, family, qf2, Bytes.toBytes(4)));
+    writer.close();
+
+    // Verify that compression and encoding settings are respected
+    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf));
+    assertEquals(hcd.getCompressionType(), reader.getCompressionAlgorithm());
+    assertEquals(hcd.getDataBlockEncoding(), reader.getEncodingOnDisk());
+    reader.close();
   }
 
   public void testDeleteExpiredStoreFiles() throws Exception {
