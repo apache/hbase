@@ -93,7 +93,9 @@ public class StoreScanner extends NonLazyKeyValueScanner
     this.scan = scan;
     this.keyValueAggregator = keyValueAggregator;
     this.columns = columns;
-    oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl
+    long currentTime = (scan.getEffectiveTS() == HConstants.LATEST_TIMESTAMP) ? EnvironmentEdgeManager
+        .currentTimeMillis() : scan.getEffectiveTS();
+    oldestUnexpiredTS = currentTime - ttl
         - flashBackQueryLimit;
 
     // We look up row-column Bloom filters for multi-column queries as part of
@@ -398,6 +400,10 @@ public class StoreScanner extends NonLazyKeyValueScanner
         }
 
         switch(qcode) {
+
+          case SEEK_TO_EFFECTIVE_TS:
+            reseek(matcher.getKeyForEffectiveTSOnRow(kv));
+            break;
           case INCLUDE:
           case INCLUDE_AND_SEEK_NEXT_ROW:
           case INCLUDE_AND_SEEK_NEXT_COL:

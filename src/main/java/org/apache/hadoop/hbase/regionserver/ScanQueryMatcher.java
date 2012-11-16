@@ -77,6 +77,8 @@ public class ScanQueryMatcher {
 
   private final long oldestFlashBackTS;
 
+  private final long effectiveTS;
+
   /**
    * Constructs a ScanQueryMatcher for a Scan.
    * @param scan
@@ -111,8 +113,9 @@ public class ScanQueryMatcher {
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
     this.stopRow = scan.getStopRow();
-    this.startKey = KeyValue.createFirstDeleteFamilyOnRow(scan.getStartRow(),
-        family);
+    this.effectiveTS = scan.getEffectiveTS();
+    this.startKey = KeyValue.createDeleteFamilyOnRow(scan.getStartRow(),
+        family, effectiveTS);
     this.filter = scan.getFilter();
     this.retainDeletesInOutputUntil = retainDeletesInOutputUntil;
     this.maxReadPointToTrackVersions = readPointToUse;
@@ -171,6 +174,9 @@ public class ScanQueryMatcher {
    *      caused by a data corruption.
    */
   public MatchCode match(KeyValue kv) throws IOException {
+    if (kv.getTimestamp() > effectiveTS) {
+      return MatchCode.SEEK_TO_EFFECTIVE_TS;
+    }
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
@@ -389,6 +395,10 @@ public class ScanQueryMatcher {
         null, 0, 0);
   }
 
+  public KeyValue getKeyForEffectiveTSOnRow(KeyValue kv) {
+    return kv.createFirstOnRowColTS(effectiveTS);
+  }
+
   /**
    * {@link #match} return codes.  These instruct the scanner moving through
    * memstores and StoreFiles what to do with the current KeyValue.
@@ -439,6 +449,8 @@ public class ScanQueryMatcher {
      * Seek to next key which is given as hint.
      */
     SEEK_NEXT_USING_HINT,
+
+    SEEK_TO_EFFECTIVE_TS,
 
     /**
      * Include KeyValue and done with column, seek to next.

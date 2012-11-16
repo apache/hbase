@@ -1677,18 +1677,29 @@ public class KeyValue implements Writable, HeapSize {
     return new KeyValue(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Maximum);
   }
 
+  public static KeyValue createFirstDeleteFamilyOnRow(final byte[] row,
+      final byte[] family) {
+    return createDeleteFamilyOnRow(row, family,
+        HConstants.LATEST_TIMESTAMP);
+  }
+
   /**
    * Create a Delete Family KeyValue for the specified row and family that would
    * be smaller than all other possible Delete Family KeyValues that have the
-   * same row and family.
-   * Used for seeking.
-   * @param row - row key (arbitrary byte array)
-   * @param family - family name
-   * @return First Delete Family possible key on passed <code>row</code>.
+   * same row and family. Used for seeking.
+   *
+   * @param row
+   *          - row key (arbitrary byte array)
+   * @param family
+   *          - family name
+   * @param ts
+   *          - timestamp
+   * @return the Delete Family possible key on passed <code>row</code>
+   * and <code>ts</code>.
    */
-  public static KeyValue createFirstDeleteFamilyOnRow(final byte [] row,
-      final byte [] family) {
-    return new KeyValue(row, family, null, HConstants.LATEST_TIMESTAMP,
+  public static KeyValue createDeleteFamilyOnRow(final byte [] row,
+      final byte[] family, long ts) {
+    return new KeyValue(row, family, null, ts,
         Type.DeleteFamily);
   }
 

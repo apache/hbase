@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -83,11 +84,12 @@ import java.util.TreeSet;
  * execute {@link #setCacheBlocks(boolean)}.
  */
 public class Scan extends Operation implements Writable {
-  private static final int VERSION_STORE_LIMIT = 2;
-  private static final int VERSION_STORE_OFFSET = 3;
-  private static final int VERSION_RESPONSE_SIZE = 4;
-  private static final byte SCAN_VERSION = VERSION_RESPONSE_SIZE;
-  
+  private static final byte STORE_LIMIT_VERSION = (byte)2;
+  private static final byte STORE_OFFSET_VERSION = (byte)3;
+  private static final byte RESPONSE_SIZE_VERSION = (byte)4;
+  private static final byte FLASHBACK_VERSION = (byte) 5;
+  private static final byte SCAN_VERSION = FLASHBACK_VERSION;
+
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
@@ -103,6 +105,7 @@ public class Scan extends Operation implements Writable {
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
+  private long effectiveTS = HConstants.LATEST_TIMESTAMP;
 
   /**
    * Create a Scan operation across all rows.
@@ -180,6 +183,7 @@ public class Scan extends Operation implements Writable {
     this.storeOffset = get.getRowOffsetPerColumnFamily();
     this.tr = get.getTimeRange();
     this.familyMap = get.getFamilyMap();
+    this.effectiveTS = get.getEffectiveTS();
   }
 
   public boolean isGetScan() {
@@ -278,6 +282,16 @@ public class Scan extends Operation implements Writable {
    */
   public Scan setStopRow(byte [] stopRow) {
     this.stopRow = stopRow;
+    return this;
+  }
+
+  /**
+   * Set the effective timestamp of this operation
+   *
+   * @return this
+   */
+  public Scan setEffectiveTS(long effectiveTS) {
+    this.effectiveTS = effectiveTS;
     return this;
   }
 
@@ -465,6 +479,13 @@ public class Scan extends Operation implements Writable {
   }
 
   /**
+   * @return the effective timestamp for this operation
+   */
+  public long getEffectiveTS() {
+    return this.effectiveTS;
+  }
+
+  /**
    * @return maximum number of values to return for a single call to next()
    */
   public int getBatch() {
@@ -641,15 +662,18 @@ public class Scan extends Operation implements Writable {
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
     this.batch = in.readInt();
-    if (version >= VERSION_STORE_LIMIT) {
+    if (version >= STORE_LIMIT_VERSION) {
       this.storeLimit = in.readInt();
     }
-    if (version >= VERSION_STORE_OFFSET) {
+    if (version >= STORE_OFFSET_VERSION) {
       this.storeOffset = in.readInt();
     }
-    if (version >= VERSION_RESPONSE_SIZE) {
+    if (version >= RESPONSE_SIZE_VERSION) {
       this.maxResponseSize = in.readInt();
       this.partialRow = in.readBoolean();
+    }
+    if (version >= FLASHBACK_VERSION) {
+      effectiveTS = in.readLong();
     }
     this.caching = in.readInt();
     this.cacheBlocks = in.readBoolean();
@@ -676,13 +700,18 @@ public class Scan extends Operation implements Writable {
 
   public void write(final DataOutput out)
   throws IOException {
-    byte version = (byte)1;
-    if (this.maxResponseSize != HConstants.DEFAULT_HBASE_SCANNER_MAX_RESULT_SIZE) {
-      version = (byte) VERSION_RESPONSE_SIZE;
+    // We try to talk a protocol version as low as possible so that we can be
+    // backward compatible as far as possible.
+    byte version = (byte) 1;
+    if (effectiveTS != HConstants.LATEST_TIMESTAMP) {
+      version = FLASHBACK_VERSION;
+    } else if (this.maxResponseSize
+        != HConstants.DEFAULT_HBASE_SCANNER_MAX_RESULT_SIZE) {
+      version = (byte) RESPONSE_SIZE_VERSION;
     } else if (this.storeOffset != 0) {
-      version = (byte)VERSION_STORE_OFFSET;
+      version = STORE_OFFSET_VERSION;
     } else if (this.storeLimit != -1) {
-      version = (byte)VERSION_STORE_LIMIT;
+      version = STORE_LIMIT_VERSION;
     }
 
     out.writeByte(version);
@@ -690,15 +719,18 @@ public class Scan extends Operation implements Writable {
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);
     out.writeInt(this.batch);
-    if (version >= VERSION_STORE_LIMIT) {
+    if (version >= STORE_LIMIT_VERSION) {
       out.writeInt(this.storeLimit);
     }
-    if (version >= VERSION_STORE_OFFSET) {
+    if (version >= STORE_OFFSET_VERSION) {
       out.writeInt(this.storeOffset);
     }
-    if (version >= VERSION_RESPONSE_SIZE) {
+    if (version >= RESPONSE_SIZE_VERSION) {
       out.writeInt(this.maxResponseSize);
       out.writeBoolean(this.partialRow);
+    }
+    if (version >= FLASHBACK_VERSION) {
+      out.writeLong(effectiveTS);
     }
     out.writeInt(this.caching);
     out.writeBoolean(this.cacheBlocks);

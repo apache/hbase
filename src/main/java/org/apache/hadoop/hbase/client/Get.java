@@ -69,7 +69,10 @@ import java.util.TreeSet;
  */
 public class Get extends OperationWithAttributes
   implements Writable, Row, Comparable<Row> {
-  private static final byte GET_VERSION = (byte)3;
+  private static final byte STORE_LIMIT_VERSION = (byte) 2;
+  private static final byte STORE_OFFSET_VERSION = (byte) 3;
+  private static final byte FLASHBACK_VERSION = (byte) 4;
+  private static final byte GET_VERSION = FLASHBACK_VERSION;
 
   private byte [] row = null;
   private long lockId = -1L;
@@ -80,6 +83,8 @@ public class Get extends OperationWithAttributes
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
+  // Operation should be performed as if it was performed at the given ts.
+  private long effectiveTS = HConstants.LATEST_TIMESTAMP;
 
   /** Constructor for Writable.  DO NOT USE */
   public Get() {}
@@ -183,6 +188,16 @@ public class Get extends OperationWithAttributes
   }
 
   /**
+   * Set the effective timestamp for this get.
+   *
+   * @return this for invocation chaining
+   */
+  public Get setEffectiveTS(long effectiveTS) {
+    this.effectiveTS = effectiveTS;
+    return this;
+  }
+
+  /**
    * Get up to the specified number of versions of each column.
    * @param maxVersions maximum versions for each column
    * @throws IOException if invalid number of versions
@@ -267,6 +282,13 @@ public class Get extends OperationWithAttributes
    */
   public int getMaxVersions() {
     return this.maxVersions;
+  }
+
+  /**
+   * @return the effective timestamp of this operation.
+   */
+  public long getEffectiveTS() {
+    return this.effectiveTS;
   }
 
   /**
@@ -412,11 +434,14 @@ public class Get extends OperationWithAttributes
     this.row = Bytes.readByteArray(in);
     this.lockId = in.readLong();
     this.maxVersions = in.readInt();
-    if (version > 1) {
+    if (version >= STORE_LIMIT_VERSION) {
       this.storeLimit = in.readInt();
     }
-    if (version > 2) {
+    if (version >= STORE_OFFSET_VERSION) {
       this.storeOffset = in.readInt();
+    }
+    if (version >= FLASHBACK_VERSION) {
+      effectiveTS = in.readLong();
     }
     boolean hasFilter = in.readBoolean();
     if (hasFilter) {
@@ -446,21 +471,28 @@ public class Get extends OperationWithAttributes
 
   public void write(final DataOutput out)
   throws IOException {
-    byte version = (byte)1;
-    if (this.storeOffset != 0) {
-      version = GET_VERSION;
+    // We try to talk a protocol version as low as possible so that we can be
+    // backward compatible as far as possible.
+    byte version = (byte) 1;
+    if (effectiveTS != HConstants.LATEST_TIMESTAMP) {
+      version = FLASHBACK_VERSION;
+    } else if (this.storeOffset != 0) {
+      version = STORE_OFFSET_VERSION;
     } else if (this.storeLimit != -1) {
-      version = (byte)2;
+      version = STORE_LIMIT_VERSION;
     }
     out.writeByte(version);
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.lockId);
     out.writeInt(this.maxVersions);
-    if (version > 1) {
+    if (version >= STORE_LIMIT_VERSION) {
       out.writeInt(this.storeLimit);
     }
-    if (version > 2) {
+    if (version >= STORE_OFFSET_VERSION) {
       out.writeInt(this.storeOffset);
+    }
+    if (version >= FLASHBACK_VERSION) {
+      out.writeLong(effectiveTS);
     }
     if(this.filter == null) {
       out.writeBoolean(false);
