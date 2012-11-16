@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -235,14 +236,22 @@ public class HTableMultiplexer {
   public static class HTableMultiplexerStatus {
     private long totalFailedPutCounter;
     private long totalBufferedPutCounter;
+    private long maxLatency;
+    private long overallAverageLatency;
     private Map<String, Long> serverToFailedCounterMap;
     private Map<String, Long> serverToBufferedCounterMap;
+    private Map<String, Long> serverToAverageLatencyMap;
+    private Map<String, Long> serverToMaxLatencyMap;
 
     public HTableMultiplexerStatus(Map<HServerAddress, HTableFlushWorker> serverToFlushWorkerMap) {
       this.totalBufferedPutCounter = 0;
       this.totalFailedPutCounter = 0;
+      this.maxLatency = 0;
+      this.overallAverageLatency = 0;
       this.serverToBufferedCounterMap = new HashMap<String, Long>();
       this.serverToFailedCounterMap = new HashMap<String, Long>();
+      this.serverToAverageLatencyMap = new HashMap<String, Long>();
+      this.serverToMaxLatencyMap = new HashMap<String, Long>();
       this.initialize(serverToFlushWorkerMap);
     }
 
@@ -251,6 +260,8 @@ public class HTableMultiplexer {
         return;
       }
 
+      long averageCalcSum = 0;
+      int averageCalcCount = 0;
       for (Map.Entry<HServerAddress, HTableFlushWorker> entry : serverToFlushWorkerMap
           .entrySet()) {
         HServerAddress addr = entry.getKey();
@@ -258,15 +269,32 @@ public class HTableMultiplexer {
 
         long bufferedCounter = worker.getTotalBufferedCount();
         long failedCounter = worker.getTotalFailedCount();
+        long serverMaxLatency = worker.getMaxLatency();
+        AtomicAverageCounter averageCounter = worker.getAverageLatencyCounter();
+        // Get sum and count pieces separately to compute overall average
+        SimpleEntry<Long, Integer> averageComponents =
+          averageCounter.getComponents();
+        long serverAvgLatency = averageCounter.getAndReset();
 
         this.totalBufferedPutCounter += bufferedCounter;
         this.totalFailedPutCounter += failedCounter;
+        if (serverMaxLatency > this.maxLatency) {
+          this.maxLatency = serverMaxLatency;
+        }
+        averageCalcSum += averageComponents.getKey();
+        averageCalcCount += averageComponents.getValue();
 
         this.serverToBufferedCounterMap.put(addr.getHostNameWithPort(),
             bufferedCounter);
         this.serverToFailedCounterMap.put(addr.getHostNameWithPort(),
             failedCounter);
+        this.serverToAverageLatencyMap.put(addr.getHostNameWithPort(),
+            serverAvgLatency);
+        this.serverToMaxLatencyMap.put(addr.getHostNameWithPort(),
+            serverMaxLatency);
       }
+      this.overallAverageLatency = averageCalcCount != 0 ?
+        averageCalcSum / averageCalcCount : 0;
     }
 
     public long getTotalBufferedCounter() {
@@ -277,12 +305,28 @@ public class HTableMultiplexer {
       return this.totalFailedPutCounter;
     }
 
+    public long getMaxLatency() {
+      return this.maxLatency;
+    }
+
+    public long getOverallAverageLatency() {
+      return this.overallAverageLatency;
+    }
+
     public Map<String, Long> getBufferedCounterForEachRegionServer() {
       return this.serverToBufferedCounterMap;
     }
 
     public Map<String, Long> getFailedCounterForEachRegionServer() {
       return this.serverToFailedCounterMap;
+    }
+
+    public Map<String, Long> getMaxLatencyForEachRegionServer() {
+      return this.serverToMaxLatencyMap;
+    }
+
+    public Map<String, Long> getAverageLatencyForEachRegionServer() {
+      return this.serverToAverageLatencyMap;
     }
   }
   
@@ -313,6 +357,46 @@ public class HTableMultiplexer {
     }
   }
 
+  /**
+   * Helper to count the average over an interval until reset.
+   */
+  public static class AtomicAverageCounter {
+    private long sum;
+    private int count;
+
+    public AtomicAverageCounter() {
+      this.sum = 0L;
+      this.count = 0;
+    }
+
+    public synchronized long getAndReset() {
+      long result = this.get();
+      this.reset();
+      return result;
+    }
+
+    public synchronized long get() {
+      if (this.count == 0) {
+        return 0;
+      }
+      return this.sum / this.count;
+    }
+
+    public synchronized SimpleEntry<Long, Integer> getComponents() {
+      return new SimpleEntry<Long, Integer>(sum, count);
+    }
+
+    public synchronized void reset() {
+      this.sum = 0l;
+      this.count = 0;
+    }
+
+    public synchronized void add(long value) {
+      this.sum += value;
+      this.count++;
+    }
+  }
+
   private static class HTableFlushWorker implements Runnable {
     private HServerAddress addr;
     private Configuration conf;
@@ -321,7 +405,9 @@ public class HTableMultiplexer {
     private HTableMultiplexer htableMultiplexer;
     private AtomicLong totalFailedPutCount;
     private AtomicInteger currentProcessingPutCount;
-    
+    private AtomicAverageCounter averageLatency;
+    private AtomicLong maxLatency;
+
     public HTableFlushWorker(Configuration conf, HServerAddress addr,
         HConnection connection, HTableMultiplexer htableMultiplexer,
         LinkedBlockingQueue<PutStatus> queue) {
@@ -332,6 +418,8 @@ public class HTableMultiplexer {
       this.queue = queue;
       this.totalFailedPutCount = new AtomicLong(0);
       this.currentProcessingPutCount = new AtomicInteger(0);
+      this.averageLatency = new AtomicAverageCounter();
+      this.maxLatency = new AtomicLong(0);
     }
 
     public long getTotalFailedCount() {
@@ -340,6 +428,14 @@ public class HTableMultiplexer {
 
     public long getTotalBufferedCount() {
       return queue.size() + currentProcessingPutCount.get();
+    }
+
+    public AtomicAverageCounter getAverageLatencyCounter() {
+      return this.averageLatency;
+    }
+
+    public long getMaxLatency() {
+      return this.maxLatency.getAndSet(0);
     }
 
     private boolean resubmitFailedPut(PutStatus failedPutStatus, HServerAddress oldLoc) throws IOException{
@@ -378,7 +474,7 @@ public class HTableMultiplexer {
       int failedCount = 0;
       while (true) {
         try {
-          start = System.currentTimeMillis();
+          start = elapsed = System.currentTimeMillis();
 
           // Clear the processingList, putToStatusMap and failedCount
           processingList.clear();
@@ -439,15 +535,27 @@ public class HTableMultiplexer {
             
             // Reset the current processing put count
             currentProcessingPutCount.set(0);
-            
+
+            elapsed = System.currentTimeMillis() - start;
+            // Update latency counters
+            averageLatency.add(elapsed);
+            if (elapsed > maxLatency.get()) {
+              maxLatency.set(elapsed);
+            }
+
             // Log some basic info
-            LOG.debug("Processed " + currentProcessingPutCount
-                + " put requests for " + addr.getHostNameWithPort()
-                + " and " + failedCount + " failed");
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Processed " + currentProcessingPutCount
+                  + " put requests for " + addr.getHostNameWithPort()
+                  + " and " + failedCount + " failed"
+                  + ", latency for this send: " + elapsed);
+            }
           }
 
           // Sleep for a while
-          elapsed = System.currentTimeMillis() - start;
+          if (elapsed == start) {
+            elapsed = System.currentTimeMillis() - start;
+          }
           if (elapsed < frequency) {
             Thread.sleep(frequency - elapsed);
           }
