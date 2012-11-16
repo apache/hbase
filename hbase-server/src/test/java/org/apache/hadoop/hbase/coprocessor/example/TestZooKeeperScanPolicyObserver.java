@@ -85,8 +85,12 @@ public class TestZooKeeperScanPolicyObserver {
     // let's say test last backup was 1h ago
     // using plain ZK here, because RecoverableZooKeeper add extra encoding to the data
     zk.setData(ZooKeeperScanPolicyObserver.node, Bytes.toBytes(now - 3600*1000), -1);
-    
+
     LOG.debug("Set time: "+Bytes.toLong(Bytes.toBytes(now - 3600*1000)));
+
+    // sleep for 1s to give the ZK change a chance to reach the watcher in the observer.
+    // TODO: Better to wait for the data to be propagated
+    Thread.sleep(1000);
 
     long ts = now - 2000;
     Put p = new Put(R);
