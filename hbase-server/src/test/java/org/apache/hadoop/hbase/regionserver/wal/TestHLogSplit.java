@@ -140,7 +140,7 @@ public class TestHLogSplit {
     // Create fake maping user to group and set it to the conf.
     Map<String, String []> u2g_map = new HashMap<String, String []>(2);
     ROBBER = User.getCurrent().getName() + "-robber";
-    ZOMBIE = User.getCurrent().getName() + "-robber";
+    ZOMBIE = User.getCurrent().getName() + "-zombie";
     u2g_map.put(ROBBER, GROUP);
     u2g_map.put(ZOMBIE, GROUP);
     DFSTestUtil.updateConfWithFakeGroupMapping(TEST_UTIL.getConfiguration(), u2g_map);
