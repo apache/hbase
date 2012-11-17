@@ -288,7 +288,7 @@ public class TestHFileOutputFormat  {
   @Test
   public void testWritingPEData() throws Exception {
     Configuration conf = util.getConfiguration();
-    Path testDir = util.getDataTestDir("testWritingPEData");
+    Path testDir = util.getDataTestDirOnTestFS("testWritingPEData");
     FileSystem fs = testDir.getFileSystem(conf);
 
     // Set down this value or we OOME in eclipse.
@@ -357,11 +357,11 @@ public class TestHFileOutputFormat  {
       boolean shouldChangeRegions) throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
-    Path testDir = util.getDataTestDir("testLocalMRIncrementalLoad");
     byte[][] startKeys = generateRandomStartKeys(5);
 
     try {
       util.startMiniCluster();
+      Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTable table = util.createTable(TABLE_NAME, FAMILIES);
       assertEquals("Should start with empty table",
@@ -449,7 +449,7 @@ public class TestHFileOutputFormat  {
       Configuration conf, HTable table, Path outDir)
   throws Exception {
     Job job = new Job(conf, "testLocalMRIncrementalLoad");
-    job.setWorkingDirectory(util.getDataTestDir("runIncrementalPELoad"));
+    job.setWorkingDirectory(util.getDataTestDirOnTestFS("runIncrementalPELoad"));
     setupRandomGeneratorMapper(job);
     HFileOutputFormat.configureIncrementalLoad(job, table);
     FileOutputFormat.setOutputPath(job, outDir);
@@ -546,7 +546,7 @@ public class TestHFileOutputFormat  {
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
     Path dir =
-        util.getDataTestDir("testColumnFamilyCompression");
+        util.getDataTestDirOnTestFS("testColumnFamilyCompression");
 
     HTable table = Mockito.mock(HTable.class);
 
@@ -570,7 +570,7 @@ public class TestHFileOutputFormat  {
       // pollutes the GZip codec pool with an incompatible compressor.
       conf.set("io.seqfile.compression.type", "NONE");
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
-      job.setWorkingDirectory(util.getDataTestDir("testColumnFamilyCompression"));
+      job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilyCompression"));
       setupRandomGeneratorMapper(job);
       HFileOutputFormat.configureIncrementalLoad(job, table);
       FileOutputFormat.setOutputPath(job, dir);
@@ -703,7 +703,7 @@ public class TestHFileOutputFormat  {
       util.startMiniMapReduceCluster();
 
       for (int i = 0; i < 2; i++) {
-        Path testDir = util.getDataTestDir("testExcludeAllFromMinorCompaction_" + i);
+        Path testDir = util.getDataTestDirOnTestFS("testExcludeAllFromMinorCompaction_" + i);
         runIncrementalPELoad(conf, table, testDir);
         // Perform the actual load
         new LoadIncrementalHFiles(conf).doBulkLoad(testDir, table);
@@ -748,11 +748,11 @@ public class TestHFileOutputFormat  {
   public void testExcludeMinorCompaction() throws Exception {
     Configuration conf = util.getConfiguration();
     conf.setInt("hbase.hstore.compaction.min", 2);
-    Path testDir = util.getDataTestDir("testExcludeMinorCompaction");
     generateRandomStartKeys(5);
 
     try {
       util.startMiniCluster();
+      Path testDir = util.getDataTestDirOnTestFS("testExcludeMinorCompaction");
       final FileSystem fs = util.getDFSCluster().getFileSystem();
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTable table = util.createTable(TABLE_NAME, FAMILIES);

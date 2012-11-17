@@ -403,7 +403,7 @@ public class TestHLog  {
     try {
       DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
       dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_ENTER);
-      cluster.shutdown();
+      TEST_UTIL.shutdownMiniDFSCluster();
       try {
         // wal.writer.close() will throw an exception,
         // but still call this since it closes the LogSyncer thread first

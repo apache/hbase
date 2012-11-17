@@ -106,7 +106,7 @@ public class TestHRegionServerBulkLoad {
   /**
    * Thread that does full scans of the table looking for any partially
    * completed rows.
-   * 
+   *
    * Each iteration of this loads 10 hdfs files, which occupies 5 file open file
    * handles. So every 10 iterations (500 file handles) it does a region
    * compaction to reduce the number of open file handles.
@@ -124,7 +124,7 @@ public class TestHRegionServerBulkLoad {
 
     public void doAnAction() throws Exception {
       long iteration = numBulkLoads.getAndIncrement();
-      Path dir =  UTIL.getDataTestDir(String.format("bulkLoad_%08d",
+      Path dir =  UTIL.getDataTestDirOnTestFS(String.format("bulkLoad_%08d",
           iteration));
 
       // create HFiles for different column families

@@ -465,7 +465,7 @@ public class TestRegionObserverInterface {
     );
 
     FileSystem fs = util.getTestFileSystem();
-    final Path dir = util.getDataTestDir(testName).makeQualified(fs);
+    final Path dir = util.getDataTestDirOnTestFS(testName).makeQualified(fs);
     Path familyDir = new Path(dir, Bytes.toString(A));
 
     createHFile(util.getConfiguration(), fs, new Path(familyDir,Bytes.toString(A)), A, A);

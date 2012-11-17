@@ -126,7 +126,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   }
 
   private Path buildBulkFiles(String table, int value) throws Exception {
-    Path dir = util.getDataTestDir(table);
+    Path dir = util.getDataTestDirOnTestFS(table);
     Path bulk1 = new Path(dir, table+value);
     FileSystem fs = util.getTestFileSystem();
     buildHFiles(fs, bulk1, value);
