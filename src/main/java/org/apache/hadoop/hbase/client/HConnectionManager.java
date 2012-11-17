@@ -79,7 +79,6 @@ import org.apache.hadoop.hbase.regionserver.RegionOverloadedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MetaUtils;
-import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -383,9 +382,9 @@ public class HConnectionManager {
     // Used by master and region servers during safe mode only
     private volatile HRegionLocation rootRegionLocation;
 
-    private final Map<Integer, SortedMap<byte [], HRegionLocation>>
-      cachedRegionLocations =
-        new HashMap<Integer, SortedMap<byte [], HRegionLocation>>();
+    private final Map<Integer, ConcurrentSkipListMap<byte [], HRegionLocation>>
+      cachedRegionLocations = new ConcurrentHashMap<Integer, 
+      ConcurrentSkipListMap<byte [], HRegionLocation>>();
 
     // amount of time to wait before we consider a server to be in fast fail mode
     private long fastFailThresholdMilliSec;
@@ -1110,7 +1109,7 @@ public class HConnectionManager {
      */
     HRegionLocation getCachedLocation(final byte [] tableName,
         final byte [] row) {
-      SortedMap<byte [], HRegionLocation> tableLocations =
+      ConcurrentSkipListMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
 
       // start to examine the cache. we can only do cache actions
@@ -1132,37 +1131,28 @@ public class HConnectionManager {
         return rl;
       }
 
-      // Cut the cache so that we only get the part that could contain
-      // regions that match our key
-      SortedMap<byte[], HRegionLocation> matchingRegions =
-        tableLocations.headMap(row);
+      // get the matching region for the row
+      Entry<byte [], HRegionLocation> entry = tableLocations.floorEntry(row);
+      HRegionLocation possibleRegion = (entry == null)?null:entry.getValue();
 
-      // if that portion of the map is empty, then we're done. otherwise,
       // we need to examine the cached location to verify that it is
       // a match by end key as well.
-      if (!matchingRegions.isEmpty()) {
-        HRegionLocation possibleRegion =
-          matchingRegions.get(matchingRegions.lastKey());
+      if (possibleRegion != null) {
+        byte[] endKey = possibleRegion.getRegionInfo().getEndKey();
 
-        // there is a possibility that the reference was garbage collected
-        // in the instant since we checked isEmpty().
-        if (possibleRegion != null) {
-          byte[] endKey = possibleRegion.getRegionInfo().getEndKey();
-
-          // make sure that the end key is greater than the row we're looking
-          // for, otherwise the row actually belongs in the next region, not
-          // this one. the exception case is when the endkey is
-          // HConstants.EMPTY_START_ROW, signifying that the region we're
-          // checking is actually the last region in the table.
-          if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
-              KeyValue.getRowComparator(tableName).compareRows(endKey, 0, endKey.length,
-                  row, 0, row.length) > 0) {
-            return possibleRegion;
-          }
+        // make sure that the end key is greater than the row we're looking
+        // for, otherwise the row actually belongs in the next region, not
+        // this one. the exception case is when the endkey is
+        // HConstants.EMPTY_START_ROW, signifying that the region we're
+        // checking is actually the last region in the table.
+        if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
+            KeyValue.getRowComparator(tableName).compareRows(endKey, 0, endKey.length,
+                row, 0, row.length) > 0) {
+          return possibleRegion;
         }
       }
 
-      // Passed all the way through, so we got nothin - complete cache miss
+      // Passed all the way through, so we got nothing - complete cache miss
       return null;
     }
 
@@ -1232,18 +1222,21 @@ public class HConnectionManager {
      * @param tableName
      * @return Map of cached locations for passed <code>tableName</code>
      */
-    private SortedMap<byte [], HRegionLocation> getTableLocations(
+    private ConcurrentSkipListMap<byte [], HRegionLocation> getTableLocations(
         final byte [] tableName) {
       // find the map of cached locations for this table
       Integer key = Bytes.mapKey(tableName);
-      SortedMap<byte [], HRegionLocation> result;
-      synchronized (this.cachedRegionLocations) {
-        result = this.cachedRegionLocations.get(key);
-        // if tableLocations for this table isn't built yet, make one
-        if (result == null) {
-          result = new SoftValueSortedMap<byte [], HRegionLocation>(
-              Bytes.BYTES_COMPARATOR);
-          this.cachedRegionLocations.put(key, result);
+      ConcurrentSkipListMap<byte [], HRegionLocation> result = 
+        this.cachedRegionLocations.get(key);
+      if (result == null) {
+        synchronized (this.cachedRegionLocations) {
+          result = this.cachedRegionLocations.get(key);
+          if (result == null) {
+            // if tableLocations for this table isn't built yet, make one
+            result = new ConcurrentSkipListMap<byte [], HRegionLocation>(
+                Bytes.BYTES_COMPARATOR);
+            this.cachedRegionLocations.put(key, result);
+          }
         }
       }
       return result;

@@ -416,8 +416,8 @@ public class HBaseRPC {
       int rpcTimeout, HBaseRPCOptions options)
       throws IOException {
 
-    return getProxy(protocol, clientVersion, addr, conf, NetUtils
-        .getDefaultSocketFactory(conf), rpcTimeout, options);
+    return getProxy(protocol, clientVersion, addr, conf, 
+        SocketFactory.getDefault(), rpcTimeout, options);
   }
   
   /* this is needed for unit tests. some tests start multiple
