@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.regionserver.wal.HLogMetrics.Metric;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.classification.InterfaceAudience;
 

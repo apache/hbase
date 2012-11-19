@@ -25,7 +25,9 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.Interns;
 
 /**
- * Hadoop1 implementation of MetricsRegionServerSource.
+ * Hadoop2 implementation of MetricsRegionServerSource.
+ *
+ * Implements BaseSource through BaseSourceImpl, following the pattern
  */
 public class MetricsRegionServerSourceImpl
     extends BaseSourceImpl implements MetricsRegionServerSource {

@@ -30,7 +30,10 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 
 /**
- * Hadoop 2 implementation of BaseSource (using metrics2 framework)
+ * Hadoop 2 implementation of BaseSource (using metrics2 framework).  It handles registration to
+ * DefaultMetricsSystem and creation of the metrics registry.
+ *
+ * All MetricsSource's in hbase-hadoop2-compat should derive from this class.
  */
 public class BaseSourceImpl implements BaseSource, MetricsSource {
 

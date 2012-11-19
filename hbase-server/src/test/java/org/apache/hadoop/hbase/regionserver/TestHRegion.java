@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.FailedSanityCheckException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -56,13 +57,11 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -72,7 +71,6 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -82,13 +80,12 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.HLogMetrics;
+import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
-import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
@@ -129,6 +126,9 @@ public class TestHRegion extends HBaseTestCase {
   protected final byte[] value2 = Bytes.toBytes("value2");
   protected final byte [] row = Bytes.toBytes("rowA");
   protected final byte [] row2 = Bytes.toBytes("rowB");
+
+  protected final MetricsAssertHelper metricsAssertHelper =
+      CompatibilitySingletonFactory.getInstance(MetricsAssertHelper.class);
 
 
   /**
@@ -628,9 +628,10 @@ public class TestHRegion extends HBaseTestCase {
     byte[] qual = Bytes.toBytes("qual");
     byte[] val = Bytes.toBytes("val");
     this.region = initHRegion(b, getName(), cf);
+    MetricsWALSource source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
     try {
-      HLogMetrics.getSyncTime(); // clear counter from prior tests
-      assertEquals(0, HLogMetrics.getSyncTime().count);
+      long syncs = metricsAssertHelper.getCounter("syncTimeNumOps", source);
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
 
       LOG.info("First a batch put with all valid puts");
       final Put[] puts = new Put[10];
@@ -645,7 +646,8 @@ public class TestHRegion extends HBaseTestCase {
         assertEquals(OperationStatusCode.SUCCESS, codes[i]
             .getOperationStatusCode());
       }
-      assertEquals(1, HLogMetrics.getSyncTime().count);
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 1, source);
+
 
       LOG.info("Next a batch put with one invalid family");
       puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
@@ -655,7 +657,8 @@ public class TestHRegion extends HBaseTestCase {
         assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
           OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
       }
-      assertEquals(1, HLogMetrics.getSyncTime().count);
+
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 2, source);
 
       LOG.info("Next a batch put that has to break into two batches to avoid a lock");
       Integer lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
@@ -676,7 +679,7 @@ public class TestHRegion extends HBaseTestCase {
   
       LOG.info("...waiting for put thread to sync first time");
       long startWait = System.currentTimeMillis();
-      while (HLogMetrics.getSyncTime().count == 0) {
+      while (metricsAssertHelper.getCounter("syncTimeNumOps", source) == syncs +2 ) {
         Thread.sleep(100);
         if (System.currentTimeMillis() - startWait > 10000) {
           fail("Timed out waiting for thread to sync first minibatch");
@@ -687,7 +690,7 @@ public class TestHRegion extends HBaseTestCase {
       LOG.info("...joining on thread");
       ctx.stop();
       LOG.info("...checking that next batch was synced");
-      assertEquals(1, HLogMetrics.getSyncTime().count);
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 4, source);
       codes = retFromThread.get();
       for (int i = 0; i < 10; i++) {
         assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
@@ -711,7 +714,7 @@ public class TestHRegion extends HBaseTestCase {
           OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
       }
       // Make sure we didn't do an extra batch
-      assertEquals(1, HLogMetrics.getSyncTime().count);
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 5, source);
   
       // Make sure we still hold lock
       assertTrue(region.isRowLocked(lockedRow));
@@ -737,8 +740,9 @@ public class TestHRegion extends HBaseTestCase {
     this.region = initHRegion(b, getName(), conf, cf);
 
     try{
-      HLogMetrics.getSyncTime(); // clear counter from prior tests
-      assertEquals(0, HLogMetrics.getSyncTime().count);
+      MetricsWALSource source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+      long syncs = metricsAssertHelper.getCounter("syncTimeNumOps", source);
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
 
       final Put[] puts = new Put[10];
       for (int i = 0; i < 10; i++) {
@@ -752,8 +756,7 @@ public class TestHRegion extends HBaseTestCase {
         assertEquals(OperationStatusCode.SANITY_CHECK_FAILURE, codes[i]
             .getOperationStatusCode());
       }
-      assertEquals(0, HLogMetrics.getSyncTime().count);
-
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
 
     } finally {
       HRegion.closeHRegion(this.region);

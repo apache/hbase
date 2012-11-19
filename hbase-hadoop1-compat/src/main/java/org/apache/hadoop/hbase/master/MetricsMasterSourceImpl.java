@@ -29,6 +29,8 @@ import org.apache.hadoop.metrics2.lib.MetricMutableHistogram;
 
 /**
  * Hadoop1 implementation of MetricsMasterSource.
+ *
+ * Implements BaseSource through BaseSourceImpl, following the pattern
  */
 public class MetricsMasterSourceImpl
     extends BaseSourceImpl implements MetricsMasterSource {

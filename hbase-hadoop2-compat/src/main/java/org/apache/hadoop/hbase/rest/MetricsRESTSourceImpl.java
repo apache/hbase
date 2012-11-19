@@ -24,6 +24,8 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 /**
  * Hadoop Two implementation of a metrics2 source that will export metrics from the Rest server to
  * the hadoop metrics2 subsystem.
+ *
+ * Implements BaseSource through BaseSourceImpl, following the pattern
  */
 public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsRESTSource {
 

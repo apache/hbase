@@ -18,22 +18,17 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -45,8 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,18 +49,15 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -214,7 +204,8 @@ class FSHLog implements HLog, Syncable {
   private final int closeErrorsTolerated;
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
-  
+  private final MetricsWAL metrics;
+
   /**
    * Constructor.
    *
@@ -365,6 +356,8 @@ class FSHLog implements HLog, Syncable {
     Threads.setDaemonThreadRunning(logSyncerThread.getThread(),
         Thread.currentThread().getName() + ".logSyncer");
     coprocessorHost = new WALCoprocessorHost(this, conf);
+
+    this.metrics = new MetricsWAL();
   }
   
   // use reflection to search for getDefaultBlockSize(Path f)
@@ -1045,7 +1038,7 @@ class FSHLog implements HLog, Syncable {
     }
     try {
       long doneUpto;
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTimeMillis();
       // First flush all the pending writes to HDFS. Then 
       // issue the sync to HDFS. If sync is successful, then update
       // syncedTillHere to indicate that transactions till this
@@ -1081,7 +1074,7 @@ class FSHLog implements HLog, Syncable {
       }
       this.syncedTillHere = Math.max(this.syncedTillHere, doneUpto);
 
-      HLogMetrics.syncTime.inc(System.currentTimeMillis() - now);
+      this.metrics.finishSync(EnvironmentEdgeManager.currentTimeMillis() - now);
       if (!this.logRollRunning) {
         checkLowReplication();
         try {
@@ -1208,28 +1201,19 @@ class FSHLog implements HLog, Syncable {
       }
     }
     try {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTimeMillis();
       // coprocessor hook:
       if (!coprocessorHost.preWALWrite(info, logKey, logEdit)) {
         // write to our buffer for the Hlog file.
         logSyncerThread.append(new FSHLog.Entry(logKey, logEdit));
       }
-      long took = System.currentTimeMillis() - now;
+      long took = EnvironmentEdgeManager.currentTimeMillis() - now;
       coprocessorHost.postWALWrite(info, logKey, logEdit);
-      HLogMetrics.writeTime.inc(took);
       long len = 0;
       for (KeyValue kv : logEdit.getKeyValues()) {
         len += kv.getLength();
       }
-      HLogMetrics.writeSize.inc(len);
-      if (took > 1000) {
-        LOG.warn(String.format(
-          "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
-          Thread.currentThread().getName(), took, this.numEntries.get(),
-          StringUtils.humanReadableInt(len)));
-        HLogMetrics.slowHLogAppendCount.incrementAndGet();
-        HLogMetrics.slowHLogAppendTime.inc(took);
-      }
+      this.metrics.finishAppend(took, len);
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of hlog", e);
       requestLogRoll();
@@ -1299,18 +1283,18 @@ class FSHLog implements HLog, Syncable {
       }
       long txid = 0;
       synchronized (updateLock) {
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTimeMillis();
         WALEdit edit = completeCacheFlushLogEdit();
         HLogKey key = makeKey(encodedRegionName, tableName, logSeqId,
             System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
         logSyncerThread.append(new Entry(key, edit));
         txid = this.unflushedEntries.incrementAndGet();
-        HLogMetrics.writeTime.inc(System.currentTimeMillis() - now);
+        long took = EnvironmentEdgeManager.currentTimeMillis() - now;
         long len = 0;
         for (KeyValue kv : edit.getKeyValues()) {
           len += kv.getLength();
         }
-        HLogMetrics.writeSize.inc(len);
+        this.metrics.finishAppend(took, len);
         this.numEntries.incrementAndGet();
       }
       // sync txn to file system

@@ -19,7 +19,8 @@
 package org.apache.hadoop.hbase.metrics;
 
 /**
- *   BaseSource for dynamic metrics to announce to Metrics2
+ *   BaseSource for dynamic metrics to announce to Metrics2.
+ *   In hbase-hadoop{1|2}-compat there is an implementation of this interface.
  */
 public interface BaseSource {
 

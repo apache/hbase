@@ -24,6 +24,8 @@ import org.apache.hadoop.metrics2.lib.MetricMutableStat;
 
 /**
  * Hadoop 1 version of MetricsThriftServerSource{@link MetricsThriftServerSource}
+ *
+ * Implements BaseSource through BaseSourceImpl, following the pattern
  */
 public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
     MetricsThriftServerSource {

@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 /**
  * Hadoop2 implementation of MetricsReplicationSource. This provides access to metrics gauges and
  * counters.
+ *
+ * Implements BaseSource through BaseSourceImpl, following the pattern
  */
 public class MetricsReplicationSourceImpl extends BaseSourceImpl implements
     MetricsReplicationSource {
