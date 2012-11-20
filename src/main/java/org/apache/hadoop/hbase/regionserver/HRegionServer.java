@@ -436,6 +436,7 @@ public class HRegionServer implements HRegionInterface,
 
               public Thread newThread(Runnable r) {
                 Thread t = new Thread(r, "regionOpenCloseThread-" + count++);
+                t.setDaemon(true);
                 return t;
               }
             });

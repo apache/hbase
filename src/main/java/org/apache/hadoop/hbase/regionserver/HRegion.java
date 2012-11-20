@@ -926,6 +926,7 @@ public class HRegion implements HeapSize {
 
               public Thread newThread(Runnable r) {
                 Thread t = new Thread(r, threadNamePrefix + "-" + count++);
+                t.setDaemon(true);
                 return t;
               }
             });
