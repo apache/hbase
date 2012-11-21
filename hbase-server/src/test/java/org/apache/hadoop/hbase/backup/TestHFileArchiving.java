@@ -230,18 +230,70 @@ public class TestHFileArchiving {
 
     // then get the current store files
     Path regionDir = region.getRegionDir();
-    List<String> storeFiles = getAllFileNames(fs, regionDir);
-    // remove all the non-storefile named files for the region
-    for (int i = 0; i < storeFiles.size(); i++) {
-      String file = storeFiles.get(i);
-      if (file.contains(HRegion.REGIONINFO_FILE) || file.contains("hlog")) {
-        storeFiles.remove(i--);
-      }
-    }
-    storeFiles.remove(HRegion.REGIONINFO_FILE);
+    List<String> storeFiles = getRegionStoreFiles(fs, regionDir);
 
     // then delete the table so the hfiles get archived
     UTIL.deleteTable(TABLE_NAME);
+
+    // then get the files in the archive directory.
+    Path archiveDir = HFileArchiveUtil.getArchivePath(UTIL.getConfiguration());
+    List<String> archivedFiles = getAllFileNames(fs, archiveDir);
+    Collections.sort(storeFiles);
+    Collections.sort(archivedFiles);
+
+    LOG.debug("Store files:");
+    for (int i = 0; i < storeFiles.size(); i++) {
+      LOG.debug(i + " - " + storeFiles.get(i));
+    }
+    LOG.debug("Archive files:");
+    for (int i = 0; i < archivedFiles.size(); i++) {
+      LOG.debug(i + " - " + archivedFiles.get(i));
+    }
+
+    assertTrue("Archived files are missing some of the store files!",
+      archivedFiles.containsAll(storeFiles));
+  }
+
+  /**
+   * Test that the store files are archived when a column family is removed.
+   * @throws Exception
+   */
+  @Test
+  public void testArchiveOnTableFamilyDelete() throws Exception {
+    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
+    // make sure we only have 1 region serving this table
+    assertEquals(1, servingRegions.size());
+    HRegion region = servingRegions.get(0);
+
+    // get the parent RS and monitor
+    HRegionServer hrs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+    FileSystem fs = hrs.getFileSystem();
+
+    // put some data on the region
+    LOG.debug("-------Loading table");
+    UTIL.loadRegion(region, TEST_FAM);
+
+    // get the hfiles in the region
+    List<HRegion> regions = hrs.getOnlineRegions(TABLE_NAME);
+    assertEquals("More that 1 region for test table.", 1, regions.size());
+
+    region = regions.get(0);
+    // wait for all the compactions to complete
+    region.waitForFlushesAndCompactions();
+
+    // disable table to prevent new updates
+    UTIL.getHBaseAdmin().disableTable(TABLE_NAME);
+    LOG.debug("Disabled table");
+
+    // remove all the files from the archive to get a fair comparison
+    clearArchiveDirectory();
+
+    // then get the current store files
+    Path regionDir = region.getRegionDir();
+    List<String> storeFiles = getRegionStoreFiles(fs, regionDir);
+
+    // then delete the table so the hfiles get archived
+    UTIL.getHBaseAdmin().deleteColumn(TABLE_NAME, TEST_FAM);
 
     // then get the files in the archive directory.
     Path archiveDir = HFileArchiveUtil.getArchivePath(UTIL.getConfiguration());
@@ -289,5 +341,19 @@ public class TestHFileArchiving {
       } else fileNames.add(file.getPath().getName());
     }
     return fileNames;
+  }
+
+  private List<String> getRegionStoreFiles(final FileSystem fs, final Path regionDir) 
+      throws IOException {
+    List<String> storeFiles = getAllFileNames(fs, regionDir);
+    // remove all the non-storefile named files for the region
+    for (int i = 0; i < storeFiles.size(); i++) {
+      String file = storeFiles.get(i);
+      if (file.contains(HRegion.REGIONINFO_FILE) || file.contains("hlog")) {
+        storeFiles.remove(i--);
+      }
+    }
+    storeFiles.remove(HRegion.REGIONINFO_FILE);
+    return storeFiles;
   }
 }
