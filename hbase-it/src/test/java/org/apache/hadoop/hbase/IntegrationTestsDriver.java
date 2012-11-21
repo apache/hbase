@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
@@ -28,12 +29,16 @@ import org.junit.internal.TextListener;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * This class drives the Integration test suite execution. Executes all
  * tests having @Category(IntegrationTests.class) annotation against an
  * already deployed distributed cluster.
  */
 public class IntegrationTestsDriver extends AbstractHBaseTool {
+  private static final Log LOG = LogFactory.getLog(IntegrationTestsDriver.class);
 
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(new IntegrationTestsDriver(), args);
@@ -51,21 +56,24 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
   /**
    * Returns test classes annotated with @Category(IntegrationTests.class)
    */
-  private Class<?>[] findIntegrationTestClasses() throws ClassNotFoundException, IOException {
-    TestCheckTestClasses util = new TestCheckTestClasses();
-    List<Class<?>> classes = util.findTestClasses(IntegrationTests.class);
-    return classes.toArray(new Class<?>[classes.size()]);
-  }
+  private Class<?>[] findIntegrationTestClasses()
+    throws ClassNotFoundException, LinkageError, IOException {
+     ClassTestFinder classFinder = new ClassTestFinder(IntegrationTests.class);
+     Set<Class<?>> classes = classFinder.findClasses(true);
+     return classes.toArray(new Class<?>[classes.size()]);
+   }
+
 
   @Override
   protected int doWork() throws Exception {
-
     //this is called from the command line, so we should set to use the distributed cluster
     IntegrationTestingUtility.setUseDistributedCluster(conf);
+    Class<?>[] classes = findIntegrationTestClasses();
+    LOG.info("Found " + classes.length + " integration tests to run");
 
     JUnitCore junit = new JUnitCore();
     junit.addListener(new TextListener(System.out));
-    Result result = junit.run(findIntegrationTestClasses());
+    Result result = junit.run(classes);
 
     return result.wasSuccessful() ? 0 : 1;
   }

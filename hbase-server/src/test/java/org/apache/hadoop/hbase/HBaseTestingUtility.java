@@ -114,10 +114,9 @@ import org.apache.zookeeper.ZooKeeper.States;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HBaseTestingUtility {
-  private static final Log LOG = LogFactory.getLog(HBaseTestingUtility.class);
-  private Configuration conf;
-  private MiniZooKeeperCluster zkCluster = null;
+public class HBaseTestingUtility extends HBaseCommonTestingUtility {
+   private Configuration conf;
+   private MiniZooKeeperCluster zkCluster = null;
 
   /**
    * The default number of regions per regionserver when creating a pre-split
@@ -140,9 +139,6 @@ public class HBaseTestingUtility {
 
   private String hadoopLogDir;
 
-  /** Directory where we put the data for this instance of HBaseTestingUtility*/
-  private File dataTestDir = null;
-
   /** Directory (a subdirectory of dataTestDir) used by the dfs cluster if any */
   private File clusterTestDir = null;
 
@@ -158,17 +154,6 @@ public class HBaseTestingUtility {
    *  @deprecated can be used only with mini dfs
    */
   private static final String TEST_DIRECTORY_KEY = "test.build.data";
-
-  /**
-   * System property key to get base test directory value
-   */
-  public static final String BASE_TEST_DIRECTORY_KEY =
-    "test.build.data.basedirectory";
-
-  /**
-   * Default base directory for test output.
-   */
-  public static final String DEFAULT_BASE_TEST_DIRECTORY = "target/test-data";
 
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String FS_URI;
@@ -244,18 +229,77 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * @return Where to write test data on local filesystem; usually
-   * {@link #DEFAULT_BASE_TEST_DIRECTORY}
-   * Should not be used by the unit tests, hence its's private.
-   * Unit test will use a subdirectory of this directory.
-   * @see #setupDataTestDir()
-   * @see #getTestFileSystem()
+   * Home our data in a dir under {@link #DEFAULT_BASE_TEST_DIRECTORY}.
+   * Give it a random name so can have many concurrent tests running if
+   * we need to.  It needs to amend the {@link #TEST_DIRECTORY_KEY}
+   * System property, as it's what minidfscluster bases
+   * it data dir on.  Moding a System property is not the way to do concurrent
+   * instances -- another instance could grab the temporary
+   * value unintentionally -- but not anything can do about it at moment;
+   * single instance only is how the minidfscluster works.
+   *
+   * We also create the underlying directory for
+   *  hadoop.log.dir, mapred.local.dir and hadoop.tmp.dir, and set the values
+   *  in the conf, and as a system property for hadoop.tmp.dir
+   *
+   * @return The calculated data test build directory, if newly-created.
    */
-  private Path getBaseTestDir() {
-    String PathName = System.getProperty(
-      BASE_TEST_DIRECTORY_KEY, DEFAULT_BASE_TEST_DIRECTORY);
+  @Override
+  protected Path setupDataTestDir() {
+    Path testPath = super.setupDataTestDir();
+    if (null == testPath) {
+      return null;
+    }
 
-    return new Path(PathName);
+    createSubDirAndSystemProperty(
+      "hadoop.log.dir",
+      testPath, "hadoop-log-dir");
+
+    // This is defaulted in core-default.xml to /tmp/hadoop-${user.name}, but
+    //  we want our own value to ensure uniqueness on the same machine
+    createSubDirAndSystemProperty(
+      "hadoop.tmp.dir",
+      testPath, "hadoop-tmp-dir");
+
+    // Read and modified in org.apache.hadoop.mapred.MiniMRCluster
+    createSubDir(
+      "mapred.local.dir",
+      testPath, "mapred-local-dir");
+
+    return testPath;
+  }
+
+  private void createSubDir(String propertyName, Path parent, String subDirName){
+    Path newPath= new Path(parent, subDirName);
+    File newDir = new File(newPath.toString()).getAbsoluteFile();
+    newDir.deleteOnExit();
+    conf.set(propertyName, newDir.getAbsolutePath());
+  }
+
+  private void createSubDirAndSystemProperty(
+    String propertyName, Path parent, String subDirName){
+
+    String sysValue = System.getProperty(propertyName);
+
+    if (sysValue != null) {
+      // There is already a value set. So we do nothing but hope
+      //  that there will be no conflicts
+      LOG.info("System.getProperty(\""+propertyName+"\") already set to: "+
+        sysValue + " so I do NOT create it in " + parent);
+      String confValue = conf.get(propertyName);
+      if (confValue != null && !confValue.endsWith(sysValue)){
+       LOG.warn(
+         propertyName + " property value differs in configuration and system: "+
+         "Configuration="+confValue+" while System="+sysValue+
+         " Erasing configuration value by system value."
+       );
+      }
+      conf.set(propertyName, sysValue);
+    } else {
+      // Ok, it's not set, so we create it as a subdirectory
+      createSubDir(propertyName, parent, subDirName);
+      System.setProperty(propertyName, conf.get(propertyName));
+    }
   }
 
   /**
@@ -267,19 +311,6 @@ public class HBaseTestingUtility {
   private Path getBaseTestDirOnTestFS() throws IOException {
     FileSystem fs = getTestFileSystem();
     return new Path(fs.getWorkingDirectory(), "test-data");
-  }
-
-  /**
-   * @return Where to write test data on local filesystem, specific to
-   *  the test.  Useful for tests that do not use a cluster.
-   * Creates it if it does not exist already.
-   * @see #getTestFileSystem()
-   */
-  public Path getDataTestDir() {
-    if (this.dataTestDir == null){
-      setupDataTestDir();
-    }
-    return new Path(this.dataTestDir.getAbsolutePath());
   }
 
   /**
@@ -313,16 +344,6 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * @param subdirName
-   * @return Path to a subdirectory named <code>subdirName</code> under
-   * {@link #getDataTestDir()}.
-   * Does *NOT* create it if it does not exist.
-   */
-  public Path getDataTestDir(final String subdirName) {
-    return new Path(getDataTestDir(), subdirName);
-  }
-
-  /**
    * Returns a Path in the test filesystem, obtained from {@link #getTestFileSystem()}
    * to write temporary test data. Call this method after setting up the mini dfs cluster
    * if the test relies on it.
@@ -348,85 +369,6 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * Home our data in a dir under {@link #DEFAULT_BASE_TEST_DIRECTORY}.
-   * Give it a random name so can have many concurrent tests running if
-   * we need to.  It needs to amend the {@link #TEST_DIRECTORY_KEY}
-   * System property, as it's what minidfscluster bases
-   * it data dir on.  Moding a System property is not the way to do concurrent
-   * instances -- another instance could grab the temporary
-   * value unintentionally -- but not anything can do about it at moment;
-   * single instance only is how the minidfscluster works.
-   *
-   * We also create the underlying directory for
-   *  hadoop.log.dir, mapred.local.dir and hadoop.tmp.dir, and set the values
-   *  in the conf, and as a system property for hadoop.tmp.dir
-   *
-   * @return The calculated data test build directory.
-   */
-  private void setupDataTestDir() {
-    if (this.dataTestDir != null) {
-      LOG.warn("Data test dir already setup in " +
-        dataTestDir.getAbsolutePath());
-      return;
-    }
-
-    String randomStr = UUID.randomUUID().toString();
-    Path testPath= new Path(getBaseTestDir(), randomStr);
-
-    this.dataTestDir = new File(testPath.toString()).getAbsoluteFile();
-    this.dataTestDir.deleteOnExit();
-
-    createSubDirAndSystemProperty(
-      "hadoop.log.dir",
-      testPath, "hadoop-log-dir");
-
-    // This is defaulted in core-default.xml to /tmp/hadoop-${user.name}, but
-    //  we want our own value to ensure uniqueness on the same machine
-    createSubDirAndSystemProperty(
-      "hadoop.tmp.dir",
-      testPath, "hadoop-tmp-dir");
-
-    // Read and modified in org.apache.hadoop.mapred.MiniMRCluster
-    createSubDir(
-      "mapred.local.dir",
-      testPath, "mapred-local-dir");
-  }
-
-  private void createSubDir(String propertyName, Path parent, String subDirName){
-    Path newPath= new Path(parent, subDirName);
-    File newDir = new File(newPath.toString()).getAbsoluteFile();
-    newDir.deleteOnExit();
-    conf.set(propertyName, newDir.getAbsolutePath());
-  }
-
-  private void createSubDirAndSystemProperty(
-    String propertyName, Path parent, String subDirName){
-
-    String sysValue = System.getProperty(propertyName);
-
-    if (sysValue != null) {
-      // There is already a value set. So we do nothing but hope
-      //  that there will be no conflicts
-      LOG.info("System.getProperty(\""+propertyName+"\") already set to: "+
-        sysValue + " so I do NOT create it in " + this.dataTestDir.getAbsolutePath());
-      String confValue = conf.get(propertyName);
-      if (confValue != null && !confValue.endsWith(sysValue)){
-       LOG.warn(
-         propertyName + " property value differs in configuration and system: "+
-         "Configuration="+confValue+" while System="+sysValue+
-         " Erasing configuration value by system value."
-       );
-      }
-      conf.set(propertyName, sysValue);
-    } else {
-      // Ok, it's not set, so we create it as a subdirectory
-      createSubDir(propertyName, parent, subDirName);
-      System.setProperty(propertyName, conf.get(propertyName));
-    }
-  }
-
-
-  /**
    * Sets up a path in test filesystem to be used by tests
    */
   private void setupDataTestDirOnTestFS() throws IOException {
@@ -442,9 +384,7 @@ public class HBaseTestingUtility {
     //the working directory, and create a unique sub dir there
     FileSystem fs = getTestFileSystem();
     if (fs.getUri().getScheme().equals(fs.getLocal(conf).getUri().getScheme())) {
-      if (dataTestDir == null) {
-        setupDataTestDir();
-      }
+      File dataTestDir = new File(getDataTestDir().toString());
       dataTestDirOnTestFS = new Path(dataTestDir.getAbsolutePath());
     } else {
       Path base = getBaseTestDirOnTestFS();
@@ -1705,7 +1645,7 @@ public class HBaseTestingUtility {
     //ensure that we have connection to the server before closing down, otherwise
     //the close session event will be eaten out before we start CONNECTING state
     long start = System.currentTimeMillis();
-    while (newZK.getState() != States.CONNECTED 
+    while (newZK.getState() != States.CONNECTED
          && System.currentTimeMillis() - start < 1000) {
        Thread.sleep(1);
     }
@@ -1854,48 +1794,6 @@ public class HBaseTestingUtility {
 
   public FileSystem getTestFileSystem() throws IOException {
     return HFileSystem.get(conf);
-  }
-
-  /**
-   * @return True if we removed the test dirs
-   * @throws IOException
-   */
-  boolean cleanupTestDir() throws IOException {
-    if (deleteDir(this.dataTestDir)) {
-      this.dataTestDir = null;
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * @param subdir Test subdir name.
-   * @return True if we removed the test dir
-   * @throws IOException
-   */
-  boolean cleanupTestDir(final String subdir) throws IOException {
-    if (this.dataTestDir == null){
-      return false;
-    }
-    return deleteDir(new File(this.dataTestDir, subdir));
-  }
-
-  /**
-   * @param dir Directory to delete
-   * @return True if we deleted it.
-   * @throws IOException
-   */
-  boolean deleteDir(final File dir) throws IOException {
-    if (dir != null && dir.exists()) {
-      // Need to use deleteDirectory because File.delete required dir is empty.
-      if (!FSUtils.deleteDirectory(FileSystem.getLocal(this.conf),
-          new Path(dir.getAbsolutePath()))) {
-        LOG.warn("Failed delete of " + dir.toString());
-      } else {
-        return true;
-      }
-    }
-    return false;
   }
 
   public void waitTableAvailable(byte[] table, long timeoutMillis)
