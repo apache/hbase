@@ -98,7 +98,7 @@ import org.apache.hadoop.util.StringUtils;
  * rolling is not. To prevent log rolling taking place during this period, a
  * separate reentrant lock is used.
  *
- * <p>To read an HLog, call {@link #getReader(org.apache.hadoop.fs.FileSystem,
+ * <p>To read an HLog, call {@link HLogFactory#createReader(org.apache.hadoop.fs.FileSystem,
  * org.apache.hadoop.fs.Path, org.apache.hadoop.conf.Configuration)}.
  *
  */
