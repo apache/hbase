@@ -126,7 +126,7 @@ public class Threads {
   /**
    * @param millis How long to sleep for in milliseconds.
    */
-  public static void sleep(int millis) {
+  public static void sleep(long millis) {
     try {
       Thread.sleep(millis);
     } catch (InterruptedException e) {
@@ -158,15 +158,15 @@ public class Threads {
   }
 
   /**
-   * Create a new CachedThreadPool with a bounded number as the maximum 
+   * Create a new CachedThreadPool with a bounded number as the maximum
    * thread size in the pool.
-   * 
+   *
    * @param maxCachedThread the maximum thread could be created in the pool
    * @param timeout the maximum time to wait
    * @param unit the time unit of the timeout argument
    * @param threadFactory the factory to use when creating new threads
-   * @return threadPoolExecutor the cachedThreadPool with a bounded number 
-   * as the maximum thread size in the pool. 
+   * @return threadPoolExecutor the cachedThreadPool with a bounded number
+   * as the maximum thread size in the pool.
    */
   public static ThreadPoolExecutor getBoundedCachedThreadPool(
       int maxCachedThread, long timeout, TimeUnit unit,
@@ -178,12 +178,13 @@ public class Threads {
     boundedCachedThreadPool.allowCoreThreadTimeOut(true);
     return boundedCachedThreadPool;
   }
-  
-  
+
+
   /**
-   * Returns a {@link java.util.concurrent.ThreadFactory} that names each created thread uniquely,
-   * with a common prefix.
-   * @param prefix The prefix of every created Thread's name
+   * Returns a {@link java.util.concurrent.ThreadFactory} that names each
+   * created thread uniquely, with a common prefix.
+   *
+   * @param prefix  The prefix of every created Thread's name
    * @return a {@link java.util.concurrent.ThreadFactory} that names threads
    */
   public static ThreadFactory getNamedThreadFactory(final String prefix) {
@@ -204,6 +205,7 @@ public class Threads {
       }
     };
   }
+
 
   /**
    * Get a named {@link ThreadFactory} that just builds daemon threads

@@ -22,9 +22,12 @@ import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestExactCounterMetric {
 
   @Test
