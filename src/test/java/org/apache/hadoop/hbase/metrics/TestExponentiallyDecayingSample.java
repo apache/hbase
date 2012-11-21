@@ -22,8 +22,13 @@ import junit.framework.Assert;
 
 import com.yammer.metrics.stats.ExponentiallyDecayingSample;
 import com.yammer.metrics.stats.Snapshot;
-import org.junit.Test;
 
+import org.apache.hadoop.hbase.SmallTests;
+
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+@Category(SmallTests.class)
 public class TestExponentiallyDecayingSample {
   
   @Test

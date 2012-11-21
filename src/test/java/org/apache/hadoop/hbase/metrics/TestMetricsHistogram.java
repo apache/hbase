@@ -22,10 +22,13 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
+import org.apache.hadoop.hbase.SmallTests;
 import com.yammer.metrics.stats.Snapshot;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestMetricsHistogram {
 
   @Test

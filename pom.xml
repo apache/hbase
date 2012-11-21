@@ -403,7 +403,6 @@
             <excludes>
               <exlude>${unittest.include}</exlude>
               <exclude>**/*$*</exclude>
-              <exclude>${test.exclude.pattern}</exclude>
             </excludes>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
             <environmentVariables>
@@ -764,6 +763,12 @@
           <configuration>
             <skip>false</skip>
             <forkMode>always</forkMode>
+            <!-- TODO: failsafe does timeout, but verify does not fail the build because of the timeout.
+                 I believe it is a failsafe bug, we may consider using surefire -->
+            <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
+            <argLine>-enableassertions -Xmx1900m
+              -Djava.security.egd=file:/dev/./urandom</argLine>
+            <testFailureIgnore>false</testFailureIgnore>
           </configuration>
       </plugin>
       <plugin>

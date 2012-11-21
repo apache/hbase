@@ -1,6 +1,4 @@
-/*
- * Copyright 2011 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,18 +19,21 @@
 package org.apache.hadoop.hbase;
 
 /**
- * Tag a test as 'Medium', meaning that the test class has the following
- * characteristics:
- *  - executed in an isolated JVM. Tests can however be executed in different
- *    JVM on the same machine simultaneously.
- *  - will have to be executed by the developer before submitting a bug
- *  - ideally, last less than 1 minutes to help parallelization
+ * Tag a test as 'integration/system' test, meaning that the test class has the following
+ * characteristics: <ul>
+ *  <li> Possibly takes hours to complete</li>
+ *  <li> Can be run on a mini cluster or an actual cluster</li>
+ *  <li> Can make changes to the given cluster (starting stopping daemons, etc)</li>
+ *  <li> Should not be run in parallel of other integration tests</li>
+ * </ul>
  *
- *  Use it for tests that cannot be tagged as 'Small'.
+ * Integration / System tests should have a class name starting with "IntegrationTest", and
+ * should be annotated with @Category(IntegrationTests.class). Integration tests can be run
+ * using the IntegrationTestsDriver class or from mvn verify.
  *
  * @see SmallTests
+ * @see MediumTests
  * @see LargeTests
- * @see IntegrationTests
  */
-public interface MediumTests {
+public interface IntegrationTests {
 }

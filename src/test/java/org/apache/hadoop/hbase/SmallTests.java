@@ -29,6 +29,7 @@ package org.apache.hadoop.hbase;
  *
  * @see MediumTests
  * @see LargeTests
+ * @see IntegrationTests
  */
 public interface SmallTests {
 }

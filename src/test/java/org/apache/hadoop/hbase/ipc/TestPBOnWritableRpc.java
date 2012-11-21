@@ -25,14 +25,17 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.DescriptorProtos.EnumDescriptorProto;
 
 /** Unit tests to test PB-based types on WritableRpcEngine. */
+@Category(MediumTests.class)
 public class TestPBOnWritableRpc {
 
   private static Configuration conf = new Configuration();

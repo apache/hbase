@@ -1,6 +1,4 @@
-/*
- * Copyright 2011 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.util;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Stoppable;
 
 /**
- * Tag a test as 'Medium', meaning that the test class has the following
- * characteristics:
- *  - executed in an isolated JVM. Tests can however be executed in different
- *    JVM on the same machine simultaneously.
- *  - will have to be executed by the developer before submitting a bug
- *  - ideally, last less than 1 minutes to help parallelization
- *
- *  Use it for tests that cannot be tagged as 'Small'.
- *
- * @see SmallTests
- * @see LargeTests
- * @see IntegrationTests
+ * A base implementation for a Stoppable service
  */
-public interface MediumTests {
+@InterfaceAudience.Private
+public class StoppableImplementation implements Stoppable {
+  volatile boolean stopped = false;
+
+  @Override
+  public void stop(String why) {
+    this.stopped = true;
+  }
+
+  @Override
+  public boolean isStopped() {
+    return stopped;
+  }
 }
