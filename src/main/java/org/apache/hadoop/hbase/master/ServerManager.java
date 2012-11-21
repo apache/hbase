@@ -1083,7 +1083,9 @@ public class ServerManager {
   }
 
   public void joinThreads() {
+    oldLogCleaner.triggerNow();
     Threads.shutdown(oldLogCleaner);
+    serverMonitorThread.triggerNow();
     Threads.shutdown(serverMonitorThread);
   }
 
