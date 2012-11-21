@@ -119,7 +119,7 @@ public interface ColumnInterpreter<T, S> {
   /**
    * This method should return any additional data that is needed on the
    * server side to construct the ColumnInterpreter. The server
-   * will pass this to the {@link #initialize(org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.ColumnInterpreter)}
+   * will pass this to the {@link #initialize(ByteString)}
    * method. If there is no ColumnInterpreter specific data (for e.g.,
    * {@link LongColumnInterpreter}) then null should be returned.
    * @return the PB message

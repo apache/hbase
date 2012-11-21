@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.coprocessor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,27 +36,39 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.coprocessor.RowProcessorClient;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.FriendsOfFriendsProcessorRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.FriendsOfFriendsProcessorResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.IncCounterProcessorResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.IncCounterProcessorRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.RowSwapProcessorRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.RowSwapProcessorResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult;
+import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorService;
 import org.apache.hadoop.hbase.regionserver.BaseRowProcessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 import com.sun.org.apache.commons.logging.Log;
 import com.sun.org.apache.commons.logging.LogFactory;
 
@@ -100,7 +110,7 @@ public class TestRowProcessorEndpoint {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     Configuration conf = util.getConfiguration();
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         RowProcessorEndpoint.class.getName());
     conf.setInt("hbase.client.retries.number", 1);
     conf.setLong("hbase.hregion.row.processor.timeout", 1000L);
@@ -138,12 +148,18 @@ public class TestRowProcessorEndpoint {
   @Test
   public void testDoubleScan() throws Throwable {
     prepareTestData();
-    RowProcessorProtocol protocol =
-        table.coprocessorProxy(RowProcessorProtocol.class, ROW);
+    
+    CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.FriendsOfFriendsProcessor processor =
         new RowProcessorEndpoint.FriendsOfFriendsProcessor(ROW, A);
-    Set<String> result = protocol.process(processor);
-
+    RowProcessorService.BlockingInterface service = 
+        RowProcessorService.newBlockingStub(channel);
+    RowProcessorRequest request = RowProcessorClient.getRowProcessorPB(processor);
+    RowProcessorResult protoResult = service.process(null, request);
+    FriendsOfFriendsProcessorResponse response = 
+        FriendsOfFriendsProcessorResponse.parseFrom(protoResult.getRowProcessorResult());
+    Set<String> result = new HashSet<String>();
+    result.addAll(response.getResultList()); 
     Set<String> expected =
       new HashSet<String>(Arrays.asList(new String[]{"d", "e", "f", "g"}));
     Get get = new Get(ROW);
@@ -176,12 +192,17 @@ public class TestRowProcessorEndpoint {
   }
 
   private int incrementCounter(HTable table) throws Throwable {
-    RowProcessorProtocol protocol =
-        table.coprocessorProxy(RowProcessorProtocol.class, ROW);
+    CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.IncrementCounterProcessor processor =
         new RowProcessorEndpoint.IncrementCounterProcessor(ROW);
-    int counterValue = protocol.process(processor);
-    return counterValue;
+    RowProcessorService.BlockingInterface service = 
+        RowProcessorService.newBlockingStub(channel);
+    RowProcessorRequest request = RowProcessorClient.getRowProcessorPB(processor);
+    RowProcessorResult protoResult = service.process(null, request);
+    IncCounterProcessorResponse response = IncCounterProcessorResponse
+        .parseFrom(protoResult.getRowProcessorResult());
+    Integer result = response.getResponse();
+    return result;
   }
 
   private void concurrentExec(
@@ -234,23 +255,27 @@ public class TestRowProcessorEndpoint {
   }
 
   private void swapRows(HTable table) throws Throwable {
-    RowProcessorProtocol protocol =
-        table.coprocessorProxy(RowProcessorProtocol.class, ROW);
+    CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.RowSwapProcessor processor =
         new RowProcessorEndpoint.RowSwapProcessor(ROW, ROW2);
-    protocol.process(processor);
+    RowProcessorService.BlockingInterface service = 
+        RowProcessorService.newBlockingStub(channel);
+    RowProcessorRequest request = RowProcessorClient.getRowProcessorPB(processor);
+    service.process(null, request);
   }
 
   @Test
   public void testTimeout() throws Throwable {
     prepareTestData();
-    RowProcessorProtocol protocol =
-        table.coprocessorProxy(RowProcessorProtocol.class, ROW);
+    CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.TimeoutProcessor processor =
         new RowProcessorEndpoint.TimeoutProcessor(ROW);
+    RowProcessorService.BlockingInterface service = 
+        RowProcessorService.newBlockingStub(channel);
+    RowProcessorRequest request = RowProcessorClient.getRowProcessorPB(processor);
     boolean exceptionCaught = false;
     try {
-      protocol.process(processor);
+      service.process(null, request);
     } catch (Exception e) {
       exceptionCaught = true;
     }
@@ -264,11 +289,11 @@ public class TestRowProcessorEndpoint {
    * We define the RowProcessors as the inner class of the endpoint.
    * So they can be loaded with the endpoint on the coprocessor.
    */
-  public static class RowProcessorEndpoint extends BaseRowProcessorEndpoint
-      implements RowProcessorProtocol {
-
+  public static class RowProcessorEndpoint<S extends Message,T extends Message>
+  extends BaseRowProcessorEndpoint<S,T> implements CoprocessorService {
     public static class IncrementCounterProcessor extends
-        BaseRowProcessor<Integer> implements Writable {
+        BaseRowProcessor<IncrementCounterProcessorTestProtos.IncCounterProcessorRequest,
+        IncrementCounterProcessorTestProtos.IncCounterProcessorResponse> {
       int counter = 0;
       byte[] row = new byte[0];
 
@@ -288,8 +313,10 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public Integer getResult() {
-        return counter;
+      public IncCounterProcessorResponse getResult() {
+        IncCounterProcessorResponse.Builder i = IncCounterProcessorResponse.newBuilder();
+        i.setResponse(counter);
+        return i.build();
       }
 
       @Override
@@ -330,21 +357,22 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void readFields(DataInput in) throws IOException {
-        this.row = Bytes.readByteArray(in);
-        this.counter = in.readInt();
+      public IncCounterProcessorRequest getRequestData() throws IOException {
+        IncCounterProcessorRequest.Builder builder = IncCounterProcessorRequest.newBuilder();
+        builder.setCounter(counter);
+        builder.setRow(ByteString.copyFrom(row));
+        return builder.build();
       }
 
       @Override
-      public void write(DataOutput out) throws IOException {
-        Bytes.writeByteArray(out, row);
-        out.writeInt(counter);
+      public void initialize(IncCounterProcessorRequest msg) {
+        this.row = msg.getRow().toByteArray();
+        this.counter = msg.getCounter();
       }
-
     }
 
     public static class FriendsOfFriendsProcessor extends
-        BaseRowProcessor<Set<String>> implements Writable {
+        BaseRowProcessor<FriendsOfFriendsProcessorRequest, FriendsOfFriendsProcessorResponse> {
       byte[] row = null;
       byte[] person = null;
       final Set<String> result = new HashSet<String>();
@@ -366,8 +394,11 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public Set<String> getResult() {
-        return result;
+      public FriendsOfFriendsProcessorResponse getResult() {
+        FriendsOfFriendsProcessorResponse.Builder builder = 
+            FriendsOfFriendsProcessorResponse.newBuilder();
+        builder.addAllResult(result);
+        return builder.build();
       }
 
       @Override
@@ -405,29 +436,28 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void readFields(DataInput in) throws IOException {
-        this.person = Bytes.readByteArray(in);
-        this.row = Bytes.readByteArray(in);
-        int size = in.readInt();
-        result.clear();
-        for (int i = 0; i < size; ++i) {
-          result.add(Text.readString(in));
-        }
+      public FriendsOfFriendsProcessorRequest getRequestData() throws IOException {
+        FriendsOfFriendsProcessorRequest.Builder builder =
+            FriendsOfFriendsProcessorRequest.newBuilder();
+        builder.setPerson(ByteString.copyFrom(person));
+        builder.setRow(ByteString.copyFrom(row));
+        builder.addAllResult(result);
+        FriendsOfFriendsProcessorRequest f = builder.build();
+        return f;
       }
 
       @Override
-      public void write(DataOutput out) throws IOException {
-        Bytes.writeByteArray(out, person);
-        Bytes.writeByteArray(out, row);
-        out.writeInt(result.size());
-        for (String s : result) {
-          Text.writeString(out, s);
-        }
+      public void initialize(FriendsOfFriendsProcessorRequest request) 
+          throws IOException {
+        this.person = request.getPerson().toByteArray();
+        this.row = request.getRow().toByteArray();
+        result.clear();
+        result.addAll(request.getResultList());
       }
     }
 
     public static class RowSwapProcessor extends
-        BaseRowProcessor<Set<String>> implements Writable {
+        BaseRowProcessor<RowSwapProcessorRequest, RowSwapProcessorResponse> {
       byte[] row1 = new byte[0];
       byte[] row2 = new byte[0];
 
@@ -453,6 +483,11 @@ public class TestRowProcessorEndpoint {
       @Override
       public boolean readOnly() {
         return false;
+      }
+
+      @Override
+      public RowSwapProcessorResponse getResult() {
+        return RowSwapProcessorResponse.getDefaultInstance();
       }
 
       @Override
@@ -502,25 +537,27 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void readFields(DataInput in) throws IOException {
-        this.row1 = Bytes.readByteArray(in);
-        this.row2 = Bytes.readByteArray(in);
-      }
-
-      @Override
-      public void write(DataOutput out) throws IOException {
-        Bytes.writeByteArray(out, row1);
-        Bytes.writeByteArray(out, row2);
-      }
-
-      @Override
       public String getName() {
         return "swap";
+      }
+
+      @Override
+      public RowSwapProcessorRequest getRequestData() throws IOException {
+        RowSwapProcessorRequest.Builder builder = RowSwapProcessorRequest.newBuilder();
+        builder.setRow1(ByteString.copyFrom(row1));
+        builder.setRow2(ByteString.copyFrom(row2));
+        return builder.build();
+      }
+
+      @Override
+      public void initialize(RowSwapProcessorRequest msg) {
+        this.row1 = msg.getRow1().toByteArray();
+        this.row2 = msg.getRow2().toByteArray();
       }
     }
 
     public static class TimeoutProcessor extends
-        BaseRowProcessor<Void> implements Writable {
+        BaseRowProcessor<TimeoutProcessorRequest, TimeoutProcessorResponse> {
 
       byte[] row = new byte[0];
 
@@ -536,6 +573,11 @@ public class TestRowProcessorEndpoint {
 
       public Collection<byte[]> getRowsToLock() {
         return Collections.singleton(row);
+      }
+
+      @Override
+      public TimeoutProcessorResponse getResult() {
+        return TimeoutProcessorResponse.getDefaultInstance();
       }
 
       @Override
@@ -555,18 +597,20 @@ public class TestRowProcessorEndpoint {
       }
 
       @Override
-      public void readFields(DataInput in) throws IOException {
-        this.row = Bytes.readByteArray(in);
-      }
-
-      @Override
-      public void write(DataOutput out) throws IOException {
-        Bytes.writeByteArray(out, row);
-      }
-
-      @Override
       public String getName() {
         return "timeout";
+      }
+
+      @Override
+      public TimeoutProcessorRequest getRequestData() throws IOException {
+        TimeoutProcessorRequest.Builder builder = TimeoutProcessorRequest.newBuilder();
+        builder.setRow(ByteString.copyFrom(row));
+        return builder.build();
+      }
+
+      @Override
+      public void initialize(TimeoutProcessorRequest msg) throws IOException {
+        this.row = msg.getRow().toByteArray();
       }
     }
 

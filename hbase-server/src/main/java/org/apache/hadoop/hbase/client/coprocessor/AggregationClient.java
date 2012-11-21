@@ -678,9 +678,10 @@ public class AggregationClient {
     final AggregateArgument.Builder requestBuilder = 
         AggregateArgument.newBuilder();
     requestBuilder.setInterpreterClassName(ci.getClass().getCanonicalName());
-    if (ci.columnInterpreterSpecificData() != null) {
-      requestBuilder.setInterpreterSpecificBytes(
-        ci.columnInterpreterSpecificData());
+    ByteString columnInterpreterSpecificData = null;
+    if ((columnInterpreterSpecificData = ci.columnInterpreterSpecificData()) 
+       != null) {
+      requestBuilder.setInterpreterSpecificBytes(columnInterpreterSpecificData);
     }
     requestBuilder.setScan(ProtobufUtil.toScan(scan));
     return requestBuilder.build();

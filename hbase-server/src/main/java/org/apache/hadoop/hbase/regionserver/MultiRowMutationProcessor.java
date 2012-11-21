@@ -27,13 +27,16 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProcessorProtos.MultiRowMutationProcessorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProcessorProtos.MultiRowMutationProcessorResponse;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A <code>MultiRowProcessor</code> that performs multiple puts and deletes.
  */
-class MultiRowMutationProcessor extends BaseRowProcessor<Void> {
+class MultiRowMutationProcessor extends BaseRowProcessor<MultiRowMutationProcessorRequest,
+MultiRowMutationProcessorResponse> {
   Collection<byte[]> rowsToLock;
   Collection<Mutation> mutations;
 
@@ -51,6 +54,11 @@ class MultiRowMutationProcessor extends BaseRowProcessor<Void> {
   @Override
   public boolean readOnly() {
     return false;
+  }
+  
+  @Override
+  public MultiRowMutationProcessorResponse getResult() {
+    return MultiRowMutationProcessorResponse.getDefaultInstance();
   }
 
   @Override
@@ -123,4 +131,13 @@ class MultiRowMutationProcessor extends BaseRowProcessor<Void> {
     }
   }
 
+  @Override
+  public MultiRowMutationProcessorRequest getRequestData() {
+    return MultiRowMutationProcessorRequest.getDefaultInstance();
+  }
+
+  @Override
+  public void initialize(MultiRowMutationProcessorRequest msg) {
+    //nothing
+  }
 }

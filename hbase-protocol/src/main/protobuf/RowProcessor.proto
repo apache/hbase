@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,37 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
-
-import java.io.IOException;
-import java.util.UUID;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-
-import com.google.protobuf.Message;
-
 /**
- * Base class for RowProcessor with some default implementations.
+ * Defines a protocol to perform multi row transactions.
+ * See BaseRowProcessorEndpoint for the implementation.
+ * See HRegion#processRowsWithLocks() for details.
  */
-public abstract class BaseRowProcessor<S extends Message,T extends Message> 
-implements RowProcessor<S,T> {
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "RowProcessorProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
-  @Override
-  public void preProcess(HRegion region, WALEdit walEdit) throws IOException {
-  }
+message RowProcessorRequest {
+  required string rowProcessorClassName = 1;
+  optional string rowProcessorInitializerMessageName = 2;
+  optional bytes  rowProcessorInitializerMessage = 3;
+}
 
-  @Override
-  public void postProcess(HRegion region, WALEdit walEdit) throws IOException {
-  }
+message RowProcessorResult {
+  required bytes rowProcessorResult = 1;
+}
 
-  @Override
-  public UUID getClusterId() {
-    return HConstants.DEFAULT_CLUSTER_ID;
-  }
-
-  @Override
-  public String getName() {
-    return this.getClass().getSimpleName().toLowerCase();
-  }
+service RowProcessorService {
+  rpc process (RowProcessorRequest) returns (RowProcessorResult);
 }

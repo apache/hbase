@@ -27,6 +27,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
+
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 
@@ -38,10 +41,12 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  * This class performs scans and generates mutations and WAL edits.
  * The locks and MVCC will be handled by HRegion.
  *
- * The generic type parameter T is the return type of
- * RowProcessor.getResult().
+ * The RowProcessor user code could have data that needs to be 
+ * sent across for proper initialization at the server side. The generic type 
+ * parameter S is the type of the request data sent to the server.
+ * The generic type parameter T is the return type of RowProcessor.getResult().
  */
-public interface RowProcessor<T> {
+public interface RowProcessor<S extends Message, T extends Message> {
 
   /**
    * Rows to lock while operation.
@@ -51,7 +56,9 @@ public interface RowProcessor<T> {
   Collection<byte[]> getRowsToLock();
 
   /**
-   * Obtain the processing result
+   * Obtain the processing result. All row processor implementations must
+   * implement this, even if the method is simply returning an empty
+   * Message.
    */
   T getResult();
 
@@ -108,4 +115,22 @@ public interface RowProcessor<T> {
    * @return The name of the processor
    */
   String getName();
+
+  /**
+   * This method should return any additional data that is needed on the
+   * server side to construct the RowProcessor. The server will pass this to
+   * the {@link #initialize(ByteString)} method. If there is no RowProcessor
+   * specific data then null should be returned.
+   * @return the PB message
+   * @throws IOException
+   */
+  S getRequestData() throws IOException;
+
+  /**
+   * This method should initialize any field(s) of the RowProcessor with
+   * a parsing of the passed message bytes (used on the server side).
+   * @param msg
+   * @throws IOException
+   */
+  void initialize(S msg) throws IOException;
 }

@@ -4302,7 +4302,7 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @param processor The object defines the reads and writes to a row.
    */
-  public void processRowsWithLocks(RowProcessor<?> processor)
+  public void processRowsWithLocks(RowProcessor<?,?> processor)
       throws IOException {
     processRowsWithLocks(processor, rowProcessorTimeout);
   }
@@ -4314,7 +4314,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param timeout The timeout of the processor.process() execution
    *                Use a negative number to switch off the time bound
    */
-  public void processRowsWithLocks(RowProcessor<?> processor, long timeout)
+  public void processRowsWithLocks(RowProcessor<?,?> processor, long timeout)
       throws IOException {
 
     for (byte[] row : processor.getRowsToLock()) {
@@ -4453,7 +4453,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
-  private void doProcessRowWithTimeout(final RowProcessor<?> processor,
+  private void doProcessRowWithTimeout(final RowProcessor<?,?> processor,
                                        final long now,
                                        final HRegion region,
                                        final List<KeyValue> mutations,

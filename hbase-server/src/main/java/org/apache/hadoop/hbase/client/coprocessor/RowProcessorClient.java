@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,27 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.coprocessor;
+
+package org.apache.hadoop.hbase.client.coprocessor;
 
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest;
 import org.apache.hadoop.hbase.regionserver.RowProcessor;
 
+import com.google.protobuf.Message;
 /**
- * Defines a protocol to perform multi row transactions.
- * See {@link BaseRowProcessorEndpoint} for the implementation.
- * See {@link HRegion#processRowsWithLocks()} for detials.
+ * Convenience class that is used to make RowProcessorEndpoint invocations.
+ * For example usage, refer TestRowProcessorEndpoint
+ *
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface RowProcessorProtocol extends CoprocessorProtocol {
-
-  /**
-   * @param processor The processor defines how to process the row
-   */
-  <T> T process(RowProcessor<T> processor) throws IOException;
+public class RowProcessorClient {
+  public static <S extends Message, T extends Message>
+  RowProcessorRequest getRowProcessorPB(RowProcessor<S,T> r)
+      throws IOException {
+    final RowProcessorRequest.Builder requestBuilder =
+        RowProcessorRequest.newBuilder();
+    requestBuilder.setRowProcessorClassName(r.getClass().getName());
+    S s = r.getRequestData();
+    if (s != null) {
+      requestBuilder.setRowProcessorInitializerMessageName(s.getClass().getName());
+      requestBuilder.setRowProcessorInitializerMessage(s.toByteString());
+    }
+    return requestBuilder.build();
+  }
 }
