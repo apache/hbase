@@ -534,6 +534,8 @@ public class RegionManager {
     } else {
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
     }
+    // Now that we have told the server to open the region. Clean up the assignment plan.
+    assignmentManager.removeTransientAssignment(sinfo.getServerAddress(), rs.regionInfo);
   }
 
   /*
