@@ -101,13 +101,15 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 @SuppressWarnings("serial")
 public class HConnectionManager {
   // Register a shutdown hook, one that cleans up RPC and closes zk sessions.
+  public static final Thread shutdownHook = new Thread("HCM.shutdownHook") {
+    @Override
+    public void run() {
+      HConnectionManager.deleteAllConnections();
+    }
+  };
+
   static {
-    Runtime.getRuntime().addShutdownHook(new Thread("HCM.shutdownHook") {
-      @Override
-      public void run() {
-        HConnectionManager.deleteAllConnections();
-      }
-    });
+    Runtime.getRuntime().addShutdownHook(shutdownHook);
   }
 
   /*

@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
@@ -72,6 +73,9 @@ class ShutdownHook {
       final Stoppable stop, final Thread threadToJoin) {
     Thread fsShutdownHook = suppressHdfsShutdownHook(fs);
     Thread t = new ShutdownHookThread(conf, stop, threadToJoin, fsShutdownHook);
+    // Let us not do the client side shutdown hook. Deleting all connections
+    // will be done at the end or the run.
+    Runtime.getRuntime().removeShutdownHook(HConnectionManager.shutdownHook);
     Runtime.getRuntime().addShutdownHook(t);
     LOG.info("Installed shutdown hook thread: " + t.getName());
   }
@@ -107,6 +111,13 @@ class ShutdownHook {
           this.fsShutdownHook.start();
           Threads.shutdown(this.fsShutdownHook,
             this.conf.getLong(FS_SHUTDOWN_HOOK_WAIT, 30000));
+        }
+        if (HConnectionManager.shutdownHook != null) {
+          LOG.info("Starting HConnectionManager shutdown hook thread.");
+          HConnectionManager.shutdownHook.start();
+          long timeout = 10000; // 10 sec
+          Threads.shutdown(HConnectionManager.shutdownHook,
+            timeout);
         }
       }
       LOG.info("Shutdown hook finished.");
