@@ -18,6 +18,8 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.List;
 
 /**
@@ -58,7 +60,15 @@ public class RetriesExhaustedException extends IOException {
     buffer.append(" attempts.\nExceptions:\n");
     for (Throwable t : exceptions) {
       buffer.append(t.toString());
+      
+      StringWriter errors = new StringWriter();
+      t.printStackTrace(new PrintWriter(errors));
+      buffer.append(errors.toString());
       buffer.append("\n");
+      
+      try { 
+        errors.close();
+      } catch (IOException e) {} // ignore
     }
     return buffer.toString();
   }
