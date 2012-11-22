@@ -160,7 +160,7 @@ import com.google.common.base.Preconditions;
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 public class HRegionServer implements HRegionInterface,
-    HBaseRPCErrorHandler, Runnable, Watcher, Stoppable {
+    HBaseRPCErrorHandler, Runnable, Watcher {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_RESTARTING = new HMsg(
@@ -3462,6 +3462,7 @@ public class HRegionServer implements HRegionInterface,
     return stopRequested.get();
   }
 
+  @Override
   public String getStopReason() {
     return stopReason;
   }

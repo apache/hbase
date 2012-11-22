@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Restartable;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiAction;
@@ -46,7 +47,7 @@ import org.apache.hadoop.io.MapWritable;
  * <p>NOTE: if you change the interface, you must change the RPC version
  * number in HBaseRPCProtocolVersion
  */
-public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
+public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, Stoppable {
   /**
    * Get metainfo about an HRegion
    *
@@ -399,5 +400,14 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
    * Update the configuration.
    */
   public void updateConfiguration() throws IOException;
+  
+  /**
+   * Stop this service.
+   * @param why Why we're stopping.
+   */
+  public void stop(String why);
+
+  /** @return why we are stopping */
+  String getStopReason();
 
 }

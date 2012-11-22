@@ -1250,6 +1250,23 @@ public class HBaseAdmin {
       LOG.info("Restarting RegionServer" + hsa.toString());
       rs.stopForRestart();
   }
+  
+  /**
+   * Stop the designated RegionServer for a stop.
+   * 
+   * @param hsa
+   *          the address of the RegionServer to stop
+   * @para message
+   *          the reason to stop the RegionServer
+   * @throws IOException
+   *           if a remote or network exception occurs
+   */
+  public synchronized void stopRegionServer(final HServerAddress hsa, String reason)
+      throws IOException {
+    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+    LOG.info("Stopping RegionServer" + hsa.toString() + " because " + reason);
+    rs.stop(reason);
+  }
 
   /**
    * @return cluster status
