@@ -2,12 +2,14 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -541,7 +543,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
     Map<String, List<HRegionInfo>> tableToRegionMap =
       assignmentSnapshot.getTableToRegionMap();
     LOG.info("Start to generate the new assignment plan for the " +
-		 + tableToRegionMap.keySet().size() + " tables" );
+         + tableToRegionMap.keySet().size() + " tables" );
     for (String table : tableToRegionMap.keySet()) {
       try {
         if (!this.targetTableSet.isEmpty() &&
@@ -570,7 +572,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
     // Update the new assignment plan to Region Servers
     updateAssignmentPlanToRegionServers(plan);
     LOG.info("Finish to update the new assignment plan for the META table and" +
-		" the region servers");
+        " the region servers");
   }
 
   @Override
@@ -666,7 +668,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
     }
     // log the succeeded updates
     LOG.info("Updated " + succeededNum + " region servers with " +
-			"the new assignment plan");
+            "the new assignment plan");
 
     // log the failed updates
     int failedNum = failedUpdateMap.size();
@@ -688,7 +690,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
    */
   public void verifyRegionPlacement(boolean isDetailMode) throws IOException {
     System.out.println("Start to verify the region assignment and " +
-		"generate the verification report");
+        "generate the verification report");
     // Get the region assignment snapshot
     RegionAssignmentSnapshot snapshot = this.getRegionAssignmentSnapshot();
 
@@ -853,7 +855,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
         "For example: -tables: t1,t2,...,tn");
     opt.addOption("l", "locality", true, "enforce the maxium locality");
     opt.addOption("m", "min-move", true, "enforce minium assignment move");
-    
+    opt.addOption("diff", false, "calculate difference between assignment plans");
     try {
       // Set the log4j
       Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
@@ -934,13 +936,27 @@ public class RegionPlacement implements RegionPlacementPolicy{
         RegionPlacement.printAssignmentPlan(plan);
         // Update the assignment to META and Region Servers
         rp.updateAssignmentPlan(plan);
+      } else if (cmd.hasOption("diff")) {
+        AssignmentPlan newPlan = rp.getNewAssignmentPlan();
+
+        Map<String, Map<String, Float>> locality = FSUtils
+            .getRegionDegreeLocalityMappingFromFS(conf);
+        Map<String, Integer> movesPerTable = rp.getRegionsMovement(newPlan);
+        rp.checkDifferencesWithOldPlan(movesPerTable, locality, newPlan);
+        System.out.println("Do you want to update the assignment plan? [y/n]");
+        Scanner s = new Scanner (System.in);
+        String input = s.nextLine().trim();
+        if (input.equals("y")) {
+          System.out.println("Updating assignment plan...");
+          rp.updateAssignmentPlan(newPlan);
+        }
       } else if (cmd.hasOption("p") || cmd.hasOption("print")) {
         AssignmentPlan plan = rp.getExistingAssignmentPlan();
         RegionPlacement.printAssignmentPlan(plan);
       } else if (cmd.hasOption("overwrite")) {
         if (!cmd.hasOption("f") || !cmd.hasOption("r")) {
           throw new IllegalArgumentException("Please specify: " +
-			" -update -r regionName -f server1:port,server2:port,server3:port");
+              " -update -r regionName -f server1:port,server2:port,server3:port");
         }
 
         String regionName = cmd.getOptionValue("r");
@@ -972,7 +988,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
 
   private static void printHelp(Options opt) {
     new HelpFormatter().printHelp(
-        "RegionPlacement < -w | -u | -n | -v | -t | -h | -overwrite -r regionName -f favoredNodes >" +
+        "RegionPlacement < -w | -u | -n | -v | -t | -h | -overwrite -r regionName -f favoredNodes " +
+        "-diff>" +
         " [-l false] [-m false] [-d] [-tables t1,t2,...tn] [-zk zk1,zk2,zk3]" +
         " [-fs hdfs://a.b.c.d:9000] [-hbase_root /HBASE]", opt);
   }
@@ -1112,6 +1129,122 @@ public class RegionPlacement implements RegionPlacementPolicy{
         result[rowInverse[i]] = colInverse[indices[i]];
       }
       return result;
+    }
+  }
+
+  /**
+   * Return how many regions will move per table since their primary RS will
+   * change
+   *
+   * @param newPlanMap - new AssignmentPlan
+   * @return how many primaries will move per table
+   */
+  public Map<String, Integer> getRegionsMovement(AssignmentPlan newPlan)
+      throws IOException {
+    Map<String, Integer> movesPerTable = new HashMap<String, Integer>();
+    RegionAssignmentSnapshot snapshot = this.getRegionAssignmentSnapshot();
+    Map<String, List<HRegionInfo>> tableToRegions = snapshot
+        .getTableToRegionMap();
+    AssignmentPlan oldPlan = snapshot.getExistingAssignmentPlan();
+    Set<String> tables = snapshot.getTableSet();
+    for (String table : tables) {
+      int movedPrimaries = 0;
+      if (!this.targetTableSet.isEmpty()
+          && !this.targetTableSet.contains(table)) {
+        continue;
+      }
+      List<HRegionInfo> regions = tableToRegions.get(table);
+      for (HRegionInfo region : regions) {
+        List<HServerAddress> oldServers = oldPlan.getAssignment(region);
+        List<HServerAddress> newServers = newPlan.getAssignment(region);
+        if (oldServers != null && newServers != null) {
+          HServerAddress oldPrimary = oldServers.get(0);
+          HServerAddress newPrimary = newServers.get(0);
+          if (oldPrimary.compareTo(newPrimary) != 0) {
+            movedPrimaries++;
+          }
+        }
+      }
+      movesPerTable.put(table, movedPrimaries);
+    }
+    return movesPerTable;
+  }
+
+  /**
+   * Compares two plans and check whether the locality dropped or increased
+   * (prints the information as a string) also prints the baseline locality
+   *
+   * @param movesPerTable - how many primary regions will move per table
+   * @param regionLocalityMap - locality map from FS
+   * @param newPlan - new assignment plan
+   * @throws IOException
+   */
+  public void checkDifferencesWithOldPlan(Map<String, Integer> movesPerTable,
+      Map<String, Map<String, Float>> regionLocalityMap, AssignmentPlan newPlan)
+      throws IOException {
+    // localities for primary, secondary and tertiary
+    RegionAssignmentSnapshot snapshot = this.getRegionAssignmentSnapshot();
+    AssignmentPlan oldPlan = snapshot.getExistingAssignmentPlan();
+    Set<String> tables = snapshot.getTableSet();
+    Map<String, List<HRegionInfo>> tableToRegionsMap = snapshot.getTableToRegionMap();
+    for (String table : tables) {
+      float[] deltaLocality = new float[3];
+      float[] locality = new float[3];
+      if (!this.targetTableSet.isEmpty()
+          && !this.targetTableSet.contains(table)) {
+        continue;
+      }
+      List<HRegionInfo> regions = tableToRegionsMap.get(table);
+      System.out.println("==================================================");
+      System.out.println("Assignment Plan Projection Report For Table: " + table);
+      System.out.println("\t Total regions: " + regions.size());
+      System.out.println("\t" + movesPerTable.get(table)
+          + " primaries will move due to their primary has changed");
+      for (HRegionInfo currentRegion : regions) {
+        Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion
+            .getEncodedName());
+        if (regionLocality == null) {
+          continue;
+        }
+        List<HServerAddress> oldServers = oldPlan.getAssignment(currentRegion);
+        List<HServerAddress> newServers = newPlan.getAssignment(currentRegion);
+        if (newServers != null && oldServers != null) {
+          int i=0;
+          for (AssignmentPlan.POSITION p : AssignmentPlan.POSITION.values()) {
+            HServerAddress newServer = oldServers.get(p.ordinal());
+            HServerAddress oldServer = newServers.get(p.ordinal());
+            Float oldLocality = 0f;
+            if (oldServers != null) {
+              oldLocality = regionLocality.get(oldServer.getHostname());
+              if (oldLocality == null) {
+                oldLocality = 0f;
+              }
+              locality[i] += oldLocality;
+            }
+            Float newLocality = regionLocality.get(newServer.getHostname());
+            if (newLocality == null) {
+              newLocality = 0f;
+            }
+            deltaLocality[i] += newLocality - oldLocality;
+            i++;
+          }
+        }
+      }
+      DecimalFormat df = new java.text.DecimalFormat( "#.##");
+      for (int i = 0; i < deltaLocality.length; i++) {
+        System.out.print("\t\t Baseline locality for ");
+        if (i == 0) {
+          System.out.print("primary ");
+        } else if (i == 1) {
+          System.out.print("secondary ");
+        } else if (i == 2) {
+          System.out.print("tertiary ");
+        }
+        System.out.println(df.format(100 * locality[i] / regions.size()) + "%");
+        System.out.print("\t\t Locality will change with the new plan: ");
+        System.out.println(df.format(100 * deltaLocality[i] / regions.size())
+            + "%");
+      }
     }
   }
 }

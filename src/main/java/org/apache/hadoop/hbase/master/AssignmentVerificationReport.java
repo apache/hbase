@@ -367,8 +367,8 @@ public class AssignmentVerificationReport {
         float avgLocality = 100 *
           (favoredNodesLocalitySummary[p.ordinal()] / (float) totalRegions);
         System.out.println("\t\tThe expected avg locality if all regions" +
-			" on the " + p.toString() + " region servers: "
-			+ df.format(avgLocality) + " %");
+            " on the " + p.toString() + " region servers: "
+            + df.format(avgLocality) + " %");
       }
     }
 
@@ -384,7 +384,7 @@ public class AssignmentVerificationReport {
           " hosts;");
 
       System.out.println("\t\tThe number of the region servers with the max" +
-		" dispersion num: " + this.maxDispersionNumServerSet.size());
+          " dispersion num: " + this.maxDispersionNumServerSet.size());
       if (isDetailMode) {
         printHServerAddressSet(maxDispersionNumServerSet);
       }
