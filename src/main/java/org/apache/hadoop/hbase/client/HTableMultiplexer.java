@@ -533,9 +533,6 @@ public class HTableMultiplexer {
             // Update the totalFailedCount
             this.totalFailedPutCount.addAndGet(failedCount);
             
-            // Reset the current processing put count
-            currentProcessingPutCount.set(0);
-
             elapsed = System.currentTimeMillis() - start;
             // Update latency counters
             averageLatency.add(elapsed);
@@ -550,6 +547,9 @@ public class HTableMultiplexer {
                   + " and " + failedCount + " failed"
                   + ", latency for this send: " + elapsed);
             }
+            
+            // Reset the current processing put count
+            currentProcessingPutCount.set(0);
           }
 
           // Sleep for a while
