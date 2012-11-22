@@ -282,18 +282,6 @@ public class ThriftUtilities {
     return out;
   }
 
-  public static List<TDelete> deletesFromHBase(List<Delete> in) {
-    List<TDelete> out = new ArrayList<TDelete>(in.size());
-    for (Delete delete : in) {
-      if (delete == null) {
-        out.add(null);
-      } else {
-        out.add(deleteFromHBase(delete));
-      }
-    }
-    return out;
-  }
-
   public static Scan scanFromThrift(TScan in) throws IOException {
     Scan out = new Scan();
 

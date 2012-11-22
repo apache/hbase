@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.thrift2;
 
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deletesFromHBase;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deletesFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getsFromThrift;
@@ -36,6 +35,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -261,15 +261,14 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   @Override
   public List<TDelete> deleteMultiple(ByteBuffer table, List<TDelete> deletes) throws TIOError, TException {
     HTableInterface htable = getTable(table.array());
-    List<Delete> tempDeletes = deletesFromThrift(deletes);
     try {
-      htable.delete(tempDeletes);
+      htable.delete(deletesFromThrift(deletes));
     } catch (IOException e) {
       throw getTIOError(e);
     } finally {
       closeTable(htable);
     }
-    return deletesFromHBase(tempDeletes);
+    return Collections.emptyList();
   }
 
   @Override

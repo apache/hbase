@@ -314,9 +314,9 @@ service THBaseService {
   /**
    * Bulk commit a List of TDeletes to the table.
    *
-   * This returns a list of TDeletes that were not
-   * executed. So if everything succeeds you'll
-   * receive an empty list.
+   * Throws a TIOError if any of the deletes fail.
+   *
+   * Always returns an empty list for backwards compatibility.
    */
   list<TDelete> deleteMultiple(
     /** the table to delete from */
