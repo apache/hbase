@@ -268,17 +268,19 @@ public class TestHLog  {
    */
   @Test
   public void testFindMemstoresWithEditsEqualOrOlderThan() throws IOException {
-    Map<byte [], Long> regionsToSeqids = new HashMap<byte [], Long>();
+    Map<byte [], Long> regionsToSeqids1 = new HashMap<byte [], Long>();
+    Map<byte [], Long> regionsToSeqids2 = new HashMap<byte [], Long>();
     for (int i = 0; i < 10; i++) {
       Long l = Long.valueOf(i);
-      regionsToSeqids.put(l.toString().getBytes(), l);
+      regionsToSeqids1.put(l.toString().getBytes(), l);
     }
     byte [][] regions =
-      HLog.findMemstoresWithEditsEqualOrOlderThan(1, regionsToSeqids);
+      HLog.findMemstoresWithEditsEqualOrOlderThan(1, regionsToSeqids1, regionsToSeqids2);
     assertEquals(2, regions.length);
     assertTrue(Bytes.equals(regions[0], "0".getBytes()) ||
         Bytes.equals(regions[0], "1".getBytes()));
-    regions = HLog.findMemstoresWithEditsEqualOrOlderThan(3, regionsToSeqids);
+    regions = HLog.findMemstoresWithEditsEqualOrOlderThan(3, regionsToSeqids2,
+        regionsToSeqids1);
     int count = 4;
     assertEquals(count, regions.length);
     // Regions returned are not ordered.

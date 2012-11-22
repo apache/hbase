@@ -40,6 +40,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -212,7 +213,9 @@ public class HLog implements Syncable {
   /*
    * Map of regions to first sequence/edit id in their memstore.
    */
-  private final ConcurrentSkipListMap<byte [], Long> lastSeqWritten =
+  private final ConcurrentSkipListMap<byte [], Long> firstSeqWrittenInCurrentMemstore =
+    new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
+  private final ConcurrentSkipListMap<byte [], Long> firstSeqWrittenInSnapshotMemstore =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
 
   private volatile boolean closed = false;
@@ -631,10 +634,11 @@ public class HLog implements Syncable {
       }
       // Can we delete any of the old log files?
       if (this.outputfiles.size() > 0) {
-        if (this.lastSeqWritten.size() <= 0) {
+        if (this.firstSeqWrittenInCurrentMemstore.size() <= 0
+            && this.firstSeqWrittenInSnapshotMemstore.size() <= 0) {
           LOG.debug("Last sequence written is empty. Deleting all old hlogs");
           // If so, then no new writes have come in since all regions were
-          // flushed (and removed from the lastSeqWritten map). Means can
+          // flushed (and removed from the firstSeqWrittenInXXX maps). Means can
           // remove all but currently open log file.
           TreeSet<Long> tempSet = new TreeSet<Long>(outputfiles.keySet());
           for (Long seqNum : tempSet) {
@@ -741,7 +745,7 @@ public class HLog implements Syncable {
     if (logCount > this.maxLogs && this.outputfiles != null &&
         this.outputfiles.size() > 0) {
       regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
-        this.lastSeqWritten);
+        this.firstSeqWrittenInCurrentMemstore, this.firstSeqWrittenInSnapshotMemstore);
 
       if (regions != null) {
         StringBuilder sb = new StringBuilder();
@@ -766,13 +770,24 @@ public class HLog implements Syncable {
    * necessarily in order).  Null if no regions found.
    */
   static byte [][] findMemstoresWithEditsEqualOrOlderThan(final long oldestWALseqid,
-      final Map<byte [], Long> regionsToSeqids) {
+      final Map<byte [], Long> regionsToCurSeqids,
+      final Map<byte [], Long> regionsToPrevSeqids) {
     //  This method is static so it can be unit tested the easier.
     List<byte []> regions = null;
-    for (Map.Entry<byte [], Long> e: regionsToSeqids.entrySet()) {
+    for (Map.Entry<byte [], Long> e: regionsToCurSeqids.entrySet()) {
       if (e.getValue().longValue() <= oldestWALseqid) {
         if (regions == null) regions = new ArrayList<byte []>();
-        regions.add(e.getKey());
+        byte [] region = e.getKey();
+        if (!regions.contains(region))
+          regions.add(region);
+      }
+    }
+    for (Map.Entry<byte [], Long> e: regionsToPrevSeqids.entrySet()) {
+      if (e.getValue().longValue() <= oldestWALseqid) {
+        if (regions == null) regions = new ArrayList<byte []>();
+        byte [] region = e.getKey();
+        if (!regions.contains(region))
+          regions.add(region);
       }
     }
     return regions == null?
@@ -783,18 +798,33 @@ public class HLog implements Syncable {
    * @return Logs older than this id are safe to remove.
    */
   private Long getOldestOutstandingSeqNum() {
-    return Collections.min(this.lastSeqWritten.values());
+    long oldest = Long.MAX_VALUE;
+    if (this.firstSeqWrittenInCurrentMemstore.size() > 0) {
+      oldest = Collections.min(this.firstSeqWrittenInCurrentMemstore.values());
+    }
+    if (this.firstSeqWrittenInSnapshotMemstore.size() > 0) {
+      oldest = Math.min(oldest,
+          Collections.min(this.firstSeqWrittenInSnapshotMemstore.values()));
+    }
+
+    return oldest;
   }
 
   private byte [] getOldestRegion(final Long oldestOutstandingSeqNum) {
     byte [] oldestRegion = null;
-    for (Map.Entry<byte [], Long> e: this.lastSeqWritten.entrySet()) {
+    for (Map.Entry<byte [], Long> e: this.firstSeqWrittenInCurrentMemstore.entrySet()) {
       if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
         oldestRegion = e.getKey();
-        break;
+        return oldestRegion;
       }
     }
-    return oldestRegion;
+    for (Map.Entry<byte [], Long> e: this.firstSeqWrittenInSnapshotMemstore.entrySet()) {
+      if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
+        oldestRegion = e.getKey();
+        return oldestRegion;
+      }
+    }
+    return null;
   }
 
   /*
@@ -1001,7 +1031,7 @@ public class HLog implements Syncable {
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
       long seqNum = obtainSeqNum();
-      this.lastSeqWritten.putIfAbsent(regionName, seqNum);
+      this.firstSeqWrittenInCurrentMemstore.putIfAbsent(regionName, seqNum);
       HLogKey logKey = makeKey(regionName, tableName, seqNum, now);
       
       doWrite(info, logKey, edits);
@@ -1285,18 +1315,11 @@ public class HLog implements Syncable {
    * completion of a cache-flush. Otherwise the log-seq-id for the flush will
    * not appear in the correct logfile.
    *
-   * Ensuring that flushes and log-rolls don't happen concurrently also allows
-   * us to temporarily put a log-seq-number in lastSeqWritten against the region
-   * being flushed that might not be the earliest in-memory log-seq-number for
-   * that region. By the time the flush is completed or aborted and before the
-   * cacheFlushLock is released it is ensured that lastSeqWritten again has the
-   * oldest in-memory edit's lsn for the region that was being flushed.
-   *
-   * In this method, by removing the entry in lastSeqWritten for the region
+   * In this method, by removing the entry in firstSeqWritten for the region
    * being flushed we ensure that the next edit inserted in this region will be
    * correctly recorded in {@link #append(HRegionInfo, HLogKey, WALEdit)}. The
    * lsn of the earliest in-memory lsn - which is now in the memstore snapshot -
-   * is saved temporarily in the lastSeqWritten map while the flush is active.
+   * is saved temporarily in the firstSeqWritten map while the flush is active.
    *
    * @return sequence ID to pass {@link #completeCacheFlush(byte[], byte[], long, boolean)}
    * (byte[], byte[], long)}
@@ -1305,24 +1328,14 @@ public class HLog implements Syncable {
    */
   public long startCacheFlush(final byte [] regionName) {
     this.cacheFlushLock.readLock().lock();
-    Long seq = this.lastSeqWritten.remove(regionName);
-    // seq is the lsn of the oldest edit associated with this region. If a
-    // snapshot already exists - because the last flush failed - then seq will
-    // be the lsn of the oldest edit in the snapshot
-    if (seq != null) {
-      // keeping the earliest sequence number of the snapshot in
-      // lastSeqWritten maintains the correctness of
-      // getOldestOutstandingSeqNum(). But it doesn't matter really because
-      // everything is being done inside of cacheFlush lock.
-      Long oldseq =
-        lastSeqWritten.put(regionName, seq);
-      if (oldseq != null) {
-        syncFailureAbortStrategy.abort("Logic Error Snapshot seq id from earlier flush still" +
-                  " present! for region " + Bytes.toString(regionName) +
-                  " overwritten oldseq=" + oldseq + "with new seq=" + seq, new Throwable());
-      } else {
-        LOG.debug("Inserted lastSeqWritten of region snapshot " +
-                  regionName + " as " + seq);
+    if (this.firstSeqWrittenInSnapshotMemstore.containsKey(regionName)) {
+      LOG.warn("Requested a startCacheFlush while firstSeqWrittenInSnapshotMemstore still"
+          + " contains " + Bytes.toString(regionName) + " . Did the previous flush fail?"
+          + " Will try to complete it");
+    } else {
+      Long seq = this.firstSeqWrittenInCurrentMemstore.remove(regionName);
+      if (seq != null) {
+        this.firstSeqWrittenInSnapshotMemstore.put(regionName, seq);
       }
     }
     return obtainSeqNum();
@@ -1342,7 +1355,7 @@ public class HLog implements Syncable {
       final long logSeqId, final boolean isMetaRegion) {
     // Cleaning up of lastSeqWritten is in the finally clause because we
     // don't want to confuse getOldestOutstandingSeqNum()
-    this.lastSeqWritten.remove(regionName);
+    this.firstSeqWrittenInSnapshotMemstore.remove(regionName);
     this.cacheFlushLock.readLock().unlock();
   }
 
@@ -1355,24 +1368,7 @@ public class HLog implements Syncable {
   public void abortCacheFlush(byte[] regionName) {
     LOG.debug("Aborting cache flush of region " +
               Bytes.toString(regionName));
-    Long snapshot_seq =
-      this.lastSeqWritten.remove(regionName);
-    if (snapshot_seq != null) {
-      // updateLock not necessary because we are racing against
-      // lastSeqWritten.putIfAbsent() in append() and we will always win
-      // before releasing cacheFlushLock make sure that the region's entry in
-      // lastSeqWritten points to the earliest edit in the region
-      Long current_memstore_earliest_seq =
-        this.lastSeqWritten.put(regionName, snapshot_seq);
-      if (current_memstore_earliest_seq != null &&
-          (current_memstore_earliest_seq.longValue() <=
-           snapshot_seq.longValue())) {
-        syncFailureAbortStrategy.abort(
-            "Logic Error region " + Bytes.toString(regionName) +
-            "acquired edits out of order current memstore seq=" +
-            current_memstore_earliest_seq + " snapshot seq=" + snapshot_seq, new Throwable());
-      }
-    }
+    // Let us leave the old Seq number in this.firstSeqWrittenInPrevMemstore
     this.cacheFlushLock.readLock().unlock();
   }
 
