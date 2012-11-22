@@ -252,6 +252,9 @@ public class HLog implements Syncable {
    */
   private final int maxLogs;
 
+  private final int hlogIndexID;
+  private final String hlogName;
+
   /**
    * Thread that handles group commit
    */
@@ -391,7 +394,7 @@ public class HLog implements Syncable {
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
               final Configuration conf, final LogRollListener listener)
   throws IOException {
-    this(fs, dir, oldLogDir, conf, listener, null, null);
+    this(fs, dir, oldLogDir, conf, listener, null, null, 0, 1);
   }
 
   /**
@@ -410,17 +413,19 @@ public class HLog implements Syncable {
    * @param prefix should always be hostname and port in distributed env and
    *        it will be URL encoded before being used.
    *        If prefix is null, "hlog" will be used
+   * @param hlogIndexID the index ID for the current HLog
+   * @param totalHLogCnt the total number of HLog in the current region server
    * @throws IOException
    */
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
               final Configuration conf, final LogRollListener listener,
-              final LogActionsListener actionListener, final String prefix)
+              final LogActionsListener actionListener, final String prefix, int hlogIndexID,
+              int totalHLogCnt)
   throws IOException {
     super();
     syncFailureAbortStrategy = conf.getBoolean("hbase.hlog.sync.failure.abort.process", true) ?
         RuntimeHaltAbortStrategy.INSTANCE : RuntimeExceptionAbortStrategy.INSTANCE;
     this.fs = fs;
-    this.dir = dir;
     this.conf = conf;
     this.listener = listener;
     this.flushlogentries =
@@ -432,14 +437,20 @@ public class HLog implements Syncable {
     this.logrollsize = (long)(this.blocksize * multi);
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 1 * 1000);
-    if (fs.exists(dir)) {
-      throw new IOException("Target HLog directory already exists: " + dir);
-    }
-    fs.mkdirs(dir);
-    this.oldLogDir = oldLogDir;
+    
     if (!fs.exists(oldLogDir)) {
-      fs.mkdirs(this.oldLogDir);
+      fs.mkdirs(oldLogDir);
     }
+    this.oldLogDir = oldLogDir;
+    
+    if (!fs.exists(dir)) {
+      fs.mkdirs(dir);
+    }
+    this.dir = dir;
+    
+    this.hlogIndexID = hlogIndexID;
+    this.hlogName = "HLog-" + this.hlogIndexID + " ";
+
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
     LOG.info("HLog configuration: blocksize=" + this.blocksize +
@@ -450,10 +461,19 @@ public class HLog implements Syncable {
     if (actionListener != null) {
       addLogActionsListerner(actionListener);
     }
-    // If prefix is null||empty then just name it hlog
-    this.prefix = prefix == null || prefix.isEmpty() ?
-        "hlog" : URLEncoder.encode(prefix, "UTF8");
-    // rollWriter sets this.hdfs_out if it can.
+    
+    // If prefix is null||empty, then just name it hlog.
+    if (conf.getBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, true)) {
+      this.prefix = prefix == null || prefix.isEmpty() ? "hlog" : URLEncoder.encode(prefix, "UTF8");
+      LOG.warn("Still using old hlog prefix due to HLOG_FORMAT_BACK_COMPATIBILITY: " + this.prefix);
+    } else {
+      // Also append the current hlogIndexId-totalHLogCnt to the prefix.
+      this.prefix = (prefix == null || prefix.isEmpty() ? 
+          "hlog" : URLEncoder.encode(prefix, "UTF8"))
+          + "." + hlogIndexID + "-" + totalHLogCnt;
+      LOG.info("HLog prefix is " + this.prefix);
+    }
+
     rollWriter();
 
     // handle the reflection necessary to call getNumCurrentReplicas()
@@ -475,10 +495,10 @@ public class HLog implements Syncable {
     } else {
       LOG.info("getNumCurrentReplicas--HDFS-826 not available" );
     }
-
+    
     logSyncerThread = new LogSyncer(this.optionalFlushInterval);
     Threads.setDaemonThreadRunning(logSyncerThread.getThread(),
-        Thread.currentThread().getName() + ".logSyncer");
+        Thread.currentThread().getName() + ".logSyncer-" + hlogIndexID);
   }
 
   /**
@@ -501,7 +521,7 @@ public class HLog implements Syncable {
         !this.logSeqNum.compareAndSet(id, newvalue); id = this.logSeqNum.get()) {
       // This could spin on occasion but better the occasional spin than locking
       // every increment of sequence number.
-      LOG.debug("Change sequence number from " + logSeqNum + " to " + newvalue);
+      LOG.debug(hlogName + "Change sequence number from " + logSeqNum + " to " + newvalue);
     }
   }
 
@@ -621,7 +641,7 @@ public class HLog implements Syncable {
             + FSUtils.getPath(oldFile), e);
       }
 
-      LOG.info((oldFile != null ? "Roll " + FSUtils.getPath(oldFile)
+      LOG.info(hlogName + (oldFile != null ? "Roll " + FSUtils.getPath(oldFile)
           + ", entries=" + oldNumEntries + ", filesize="
           + this.fs.getFileStatus(oldFile).getLen() + ". " : "")
           + "New hlog " + FSUtils.getPath(newPath)
@@ -637,7 +657,7 @@ public class HLog implements Syncable {
         if (this.firstSeqWrittenInCurrentMemstore.size() <= 0
             && this.firstSeqWrittenInSnapshotMemstore.size() <= 0) {
           LOG.debug("Last sequence written is empty. Deleting all old hlogs");
-          // If so, then no new writes have come in since all regions were
+         // If so, then no new writes have come in since all regions were
           // flushed (and removed from the firstSeqWrittenInXXX maps). Means can
           // remove all but currently open log file.
           TreeSet<Long> tempSet = new TreeSet<Long>(outputfiles.keySet());
@@ -728,7 +748,7 @@ public class HLog implements Syncable {
       if (LOG.isDebugEnabled()) {
         // Find associated region; helps debugging.
         byte [] oldestRegion = getOldestRegion(oldestOutstandingSeqNum);
-        LOG.debug("Found " + logsToRemove + " hlogs to remove" +
+        LOG.debug(hlogName + "Found " + logsToRemove + " hlogs to remove" +
           " out of total " + this.outputfiles.size() + ";" +
           " oldest outstanding sequenceid is " + oldestOutstandingSeqNum +
           " from region " + Bytes.toString(oldestRegion));
@@ -753,7 +773,7 @@ public class HLog implements Syncable {
           if (i > 0) sb.append(", ");
           sb.append(Bytes.toStringBinary(regions[i]));
         }
-        LOG.info("Too many hlogs: logs=" + logCount + ", maxlogs=" +
+        LOG.info(hlogName + ": Too many hlogs: logs=" + logCount + ", maxlogs=" +
             this.maxLogs + "; forcing flush of " + regions.length + " regions(s): " +
             sb.toString());
       }
@@ -856,7 +876,7 @@ public class HLog implements Syncable {
       try {
           writer.sync();
       } catch (IOException ioe) {
-        syncFailureAbortStrategy.abort("log sync failed when trying to close "
+        syncFailureAbortStrategy.abort(hlogName + " log sync failed when trying to close "
             + writer, ioe);
       }
     }
@@ -875,7 +895,7 @@ public class HLog implements Syncable {
         Path fname = computeFilename(filenum);
         if (!tryRecoverFileLease(fs, fname, conf)) {
           IOException ioe2 =
-              new IOException("lease recovery pending for " + fname, ioe);
+              new IOException(hlogName + "lease recovery pending for " + fname, ioe);
           throw ioe2;
         }
       }
@@ -890,7 +910,7 @@ public class HLog implements Syncable {
 
   private void archiveLogFile(final Path p, final Long seqno) throws IOException {
     Path newPath = getHLogArchivePath(this.oldLogDir, p);
-    LOG.info("moving old hlog file " + FSUtils.getPath(p) +
+    LOG.info(hlogName + "moving old hlog file " + FSUtils.getPath(p) +
       " whose highest sequence/edit id is " + seqno + " to " +
       FSUtils.getPath(newPath));
     this.fs.rename(p, newPath);
@@ -934,7 +954,7 @@ public class HLog implements Syncable {
       fs.rename(file.getPath(),
           getHLogArchivePath(this.oldLogDir, file.getPath()));
     }
-    LOG.debug("Moved " + files.length + " log files to " +
+    LOG.debug(hlogName + "Moved " + files.length + " log files to " +
         FSUtils.getPath(this.oldLogDir));
     fs.delete(dir, true);
   }
@@ -956,7 +976,7 @@ public class HLog implements Syncable {
         logSyncerThread.interrupt();
       }
     } catch (InterruptedException e) {
-      LOG.error("Exception while waiting for syncer thread to die", e);
+      LOG.error(hlogName + "Exception while waiting for syncer thread to die", e);
     }
     
     if (LOG.isDebugEnabled()) {
@@ -1225,7 +1245,7 @@ public class HLog implements Syncable {
         try {
           this.syncTillHere += this.logBuffer.appendAndSync();
         } catch (IOException e) {
-          syncFailureAbortStrategy.abort("Could not sync hlog. Aborting", e);
+          syncFailureAbortStrategy.abort(hlogName + "Could not sync hlog. Aborting", e);
         }
       }
       
@@ -1366,10 +1386,10 @@ public class HLog implements Syncable {
    * by the failure gets restored to the memstore.
    */
   public void abortCacheFlush(byte[] regionName) {
-    LOG.debug("Aborting cache flush of region " +
+    LOG.debug(hlogName + "Aborting cache flush of region " +
               Bytes.toString(regionName));
     // Let us leave the old Seq number in this.firstSeqWrittenInPrevMemstore
-    this.cacheFlushLock.readLock().unlock();
+   this.cacheFlushLock.readLock().unlock();
   }
 
   /**

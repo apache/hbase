@@ -84,7 +84,7 @@ public class TestLogActionsListener {
   public void testActionListener() throws Exception {
     DummyLogActionsListener list = new DummyLogActionsListener();
     DummyLogActionsListener laterList = new DummyLogActionsListener();
-    HLog hlog = new HLog(fs, logDir, oldLogDir, conf, null, list, null);
+    HLog hlog = new HLog(fs, logDir, oldLogDir, conf, null, list, null, 0 ,1);
     HRegionInfo hri = new HRegionInfo(new HTableDescriptor(SOME_BYTES),
         SOME_BYTES, SOME_BYTES, false);
 

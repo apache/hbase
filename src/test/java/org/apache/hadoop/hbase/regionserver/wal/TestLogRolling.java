@@ -127,7 +127,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
    // the namenode might still try to choose the recently-dead datanode 
    // for a pipeline, so try to a new pipeline multiple times
    conf.setInt("dfs.client.block.write.retries", 30);
-   
+   conf.setBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, false);
    super.setUp();
   }
 
@@ -135,7 +135,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
     this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
-    this.log = server.getLog();
+    this.log = server.getLog(0);
 
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -216,7 +216,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
     this.server = cluster.getRegionServer(0);
-    this.log = server.getLog();
+    this.log = server.getLog(0);
     
     assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
     // don't run this test without append support (HDFS-200 & HDFS-142)

@@ -113,6 +113,7 @@ public class TestHLog  {
         .setInt("ipc.client.connect.max.retries", 1);
     TEST_UTIL.getConfiguration().setInt(
         "dfs.client.block.recovery.retries", 1);
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, false);
     TEST_UTIL.startMiniCluster(3);
 
     conf = TEST_UTIL.getConfiguration();

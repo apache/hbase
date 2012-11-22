@@ -117,7 +117,7 @@ public class TestHLogSplit {
     TEST_UTIL.getConfiguration().
             setClass("hbase.regionserver.hlog.writer.impl",
                 InstrumentedSequenceFileLogWriter.class, HLog.Writer.class);
-
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, false);
     TEST_UTIL.startMiniDFSCluster(2);
   }
 

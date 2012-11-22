@@ -591,7 +591,13 @@ public final class HConstants {
   /** Configuration key suffix for Thrift server port */
   public static final String THRIFT_PORT_SUFFIX = "port";
 
-  /**
+  /** The number of HLogs for each region server */
+  public static final String HLOG_CNT_PER_SERVER = "hbase.regionserver.hlog.cnt.perserver";
+  
+  public static final String HLOG_FORMAT_BACKWARD_COMPATIBILITY =
+      "hbase.regionserver.hlog.format.backward.compatibility";
+  
+  /** 
    * The byte array represents for NO_NEXT_INDEXED_KEY;
    * The actual value is irrelevant because this is always compared by reference.
    */

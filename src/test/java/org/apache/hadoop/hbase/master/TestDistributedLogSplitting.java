@@ -74,11 +74,15 @@ public class TestDistributedLogSplitting {
   }
 
   final int NUM_RS = 6;
+  final int HLOG_CNT_PER_SERVER = 2;
 
   MiniHBaseCluster cluster;
   HMaster master;
   Configuration conf;
   HBaseTestingUtility TEST_UTIL;
+  byte[] table = Bytes.toBytes("table");
+  byte[] family = Bytes.toBytes("family");
+  byte[] value = Bytes.toBytes("value");
 
   @Before
   public void before() throws Exception {
@@ -92,6 +96,8 @@ public class TestDistributedLogSplitting {
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat("hbase.regions.slop", (float)100.0); // no load balancing
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
+    conf.setInt(HConstants.HLOG_CNT_PER_SERVER, HLOG_CNT_PER_SERVER);
+    conf.setBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, false);
     TEST_UTIL = new HBaseTestingUtility(conf);
     cluster = TEST_UTIL.startMiniCluster(num_rs);
     int live_rs;
@@ -120,7 +126,7 @@ public class TestDistributedLogSplitting {
     startCluster(NUM_RS);
 
 
-    HTable ht = installTable("table", "family", NUM_REGIONS_TO_CREATE);
+    HTable ht = installTable(table, family, NUM_REGIONS_TO_CREATE);
     populateDataInTable(NUM_ROWS_PER_REGION, "family");
 
 
@@ -155,17 +161,18 @@ public class TestDistributedLogSplitting {
     LOG.info("testRecoveredEdits");
     startCluster(NUM_RS);
     final int NUM_LOG_LINES = 1000;
+    final int NUM_REGIONS = 40;
     final SplitLogManager slm = master.getSplitLogManager();
     FileSystem fs = master.getFileSystem();
-
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
+
     HRegionServer hrs = rsts.get(0).getRegionServer();
     Path rootdir = FSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
         HLog.getHLogDirectoryName(hrs.getServerInfo().getServerName()));
 
-    installTable("table", "family", 40);
-    byte[] table = Bytes.toBytes("table");
+    HTable htable = installTable(table, family, NUM_REGIONS);
+    
     Collection<HRegion> regions = new LinkedList<HRegion>(hrs.getOnlineRegions());
     LOG.info("#regions = " + regions.size());
     Iterator<HRegion> it = regions.iterator();
@@ -176,14 +183,18 @@ public class TestDistributedLogSplitting {
         it.remove();
       }
     }
-    makeHLog(hrs.getLog(), regions, "table",
-        NUM_LOG_LINES, 100);
-
+    for (HRegion region : regions) {
+      for (int i = 0; i < NUM_LOG_LINES; i++) {
+        Put p = new Put(region.getStartKey());
+        p.add(family, Bytes.toBytes("cf"+i), i, value);
+        htable.put(p);
+      }
+    }
+    
     slm.splitLogDistributed(logDir);
 
-    int count = 0;
     for (HRegion rgn : regions) {
-
+      int count = 0;
       Path tdir = HTableDescriptor.getTableDir(rootdir, table);
       Path editsdir =
         HLog.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
@@ -194,15 +205,15 @@ public class TestDistributedLogSplitting {
       int c = countHLog(files[0].getPath(), fs, conf);
       count += c;
       LOG.info(c + " edits in " + files[0].getPath());
+      assertEquals(NUM_LOG_LINES, count);
     }
-    assertEquals(NUM_LOG_LINES, count);
   }
 
   @Test
   public void testWorkerAbort() throws Exception {
     LOG.info("testWorkerAbort");
     startCluster(1);
-    final int NUM_LOG_LINES = 10000;
+    final int NUM_LOG_LINES = 1000;
     final SplitLogManager slm = master.getSplitLogManager();
     FileSystem fs = master.getFileSystem();
 
@@ -212,10 +223,15 @@ public class TestDistributedLogSplitting {
     final Path logDir = new Path(rootdir,
         HLog.getHLogDirectoryName(hrs.getServerInfo().getServerName()));
 
-    installTable("table", "family", 40);
-    byte[] table = Bytes.toBytes("table");
-    makeHLog(hrs.getLog(), hrs.getOnlineRegions(), "table",
-        NUM_LOG_LINES, 100);
+    HTable htable = installTable(table, family, 40);
+
+    for (HRegion region : hrs.getOnlineRegions()) {
+      for (int i = 0; i < NUM_LOG_LINES; i++) {
+        Put p = new Put(region.getStartKey());
+        p.add(family, Bytes.toBytes("cf"+i), i, value);
+        htable.put(p);
+      }
+    }
 
     new Thread() {
       public void run() {
@@ -287,10 +303,7 @@ public class TestDistributedLogSplitting {
     t.join();
   }
 
-  HTable installTable(String tname, String fname, int nrs ) throws Exception {
-    // Create a table with regions
-    byte [] table = Bytes.toBytes(tname);
-    byte [] family = Bytes.toBytes(fname);
+  HTable installTable(byte [] tname, byte [] fname, int nrs ) throws Exception {
     LOG.info("Creating table with " + nrs + " regions");
     HTable ht = TEST_UTIL.createTable(table, new byte[][]{family},
         3, Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), nrs);
@@ -319,43 +332,6 @@ public class TestDistributedLogSplitting {
         putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), family);
       }
     }
-  }
-
-  public void makeHLog(HLog log,
-      Collection<HRegion> rgns, String tname,
-      int num_edits, int edit_size) throws IOException {
-
-    List<HRegion> regions = new ArrayList<HRegion>(rgns);
-    byte[] table = Bytes.toBytes(tname);
-    byte[] value = new byte[edit_size];
-    for (int i = 0; i < edit_size; i++) {
-      value[i] = (byte)('a' + (i % 26));
-    }
-    int n = regions.size();
-    int[] counts = new int[n];
-    int j = 0;
-    for (int i = 0; i < num_edits; i += 1) {
-      WALEdit e = new WALEdit();
-      byte [] row = Bytes.toBytes("r" + Integer.toString(i));
-      byte [] family = Bytes.toBytes("f");
-      byte [] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-      e.add(new KeyValue(row, family, qualifier,
-          System.currentTimeMillis(), value));
-      // LOG.info("Region " + i + ": " + e);
-      j++;
-      log.append(regions.get(j % n).getRegionInfo(), table, e, System.currentTimeMillis());
-      counts[j % n] += 1;
-      // if ((i % 8096) == 0) {
-        // log.sync();
-      //  }
-    }
-    log.sync();
-    log.close();
-    for (int i = 0; i < n; i++) {
-      LOG.info("region " + regions.get(i).getRegionNameAsString() +
-          " has " + counts[i] + " edits");
-    }
-    return;
   }
 
   private int countHLog(Path log, FileSystem fs, Configuration conf)

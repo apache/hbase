@@ -272,10 +272,14 @@ public class HRegionServer implements HRegionInterface,
    */
   Chore majorCompactionChecker;
 
-  // HLog and HLog roller.  log is protected rather than private to avoid
+  // An array of HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
-  protected volatile HLog hlog;
-  LogRoller hlogRoller;
+  protected volatile HLog[] hlogs;  
+  protected LogRoller[] hlogRollers;
+  
+  private volatile int currentHLogIndex = 0;
+  private Map<String, Integer> regionNameToHLogIDMap =
+      new ConcurrentHashMap<String, Integer>();
 
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
@@ -522,7 +526,15 @@ public class HRegionServer implements HRegionInterface,
     this.compactSplitThread = new CompactSplitThread(this);
 
     // Log rolling thread
-    this.hlogRoller = new LogRoller(this);
+    int hlogCntPerServer = this.conf.getInt(HConstants.HLOG_CNT_PER_SERVER, 2);
+    if (conf.getBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, true)) {
+      hlogCntPerServer = 1;
+      LOG.warn("Override HLOG_CNT_PER_SERVER as 1 due to HLOG_FORMAT_BACKWARD_COMPATIBILITY");
+    }
+    this.hlogRollers = new LogRoller[hlogCntPerServer];  
+    for (int i = 0; i < hlogCntPerServer; i++) { 
+      this.hlogRollers[i] = new LogRoller(this, i); 
+    }
 
     // Background thread to check for major compactions; needed if region
     // has not gotten updates in a while.  Make it run at a lesser frequency.
@@ -798,18 +810,20 @@ public class HRegionServer implements HRegionInterface,
     // TODO: Should we check they are alive?  If OOME could have exited already
     cacheFlusher.interruptIfNecessary();
     compactSplitThread.interruptIfNecessary();
-    hlogRoller.interruptIfNecessary();
+    for (int i = 0; i < hlogRollers.length; i++) {  
+      hlogRollers[i].interruptIfNecessary();  
+    }
     this.majorCompactionChecker.interrupt();
 
     if (killed) {
       // Just skip out w/o closing regions.
-      hlog.kill();
+      this.killAllHLogs();
     } else if (abortRequested) {
       if (this.fsOk) {
         // Only try to clean up if the file system is available
         try {
-          if (this.hlog != null) {
-            this.hlog.close();
+          if (this.hlogs != null) {
+            this.closeAllHLogs();
             LOG.info("On abort, closed hlog");
           }
         } catch (Throwable e) {
@@ -824,8 +838,8 @@ public class HRegionServer implements HRegionInterface,
       ArrayList<HRegion> regionsClosed = closeAllRegions();
       if (numRegionsToClose == regionsClosed.size()) {
         try {
-          if (this.hlog != null) {
-            hlog.closeAndDelete();
+          if (this.hlogs != null) { 
+            this.closeAndDeleteAllHLogs();
           }
         } catch (Throwable e) {
           LOG.error("Close and delete failed",
@@ -965,10 +979,29 @@ public class HRegionServer implements HRegionInterface,
       // accessors will be going against wrong filesystem (unless all is set
       // to defaults).
       this.conf.set("fs.defaultFS", this.conf.get("hbase.rootdir"));
-      // Get fs instance used by this RS
+
+      // Check the log directory:
       this.fs = FileSystem.get(this.conf);
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
-      this.hlog = setupHLog();
+      Path logdir = new Path(rootDir, HLog.getHLogDirectoryName(this.serverInfo));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("HLog dir " + logdir);
+      }
+      if (!fs.exists(logdir)) {
+        fs.mkdirs(logdir);
+      } else {
+        throw new RegionServerRunningException("region server already " +
+            "running at " + this.serverInfo.getServerName() +
+            " because logdir " + logdir.toString() + " exists");
+      }
+      // Check the old log directory
+      final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+      if (!fs.exists(oldLogDir)) {
+        fs.mkdirs(oldLogDir);
+      }
+      // Initialize the HLogs
+      setupHLog(logdir, oldLogDir, this.hlogRollers.length);
+      
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
       this.dynamicMetrics = RegionServerDynamicMetrics.newInstance(this);
@@ -1257,30 +1290,31 @@ public class HRegionServer implements HRegionInterface,
     return isOnline;
   }
 
-  private HLog setupHLog() throws IOException {
-    final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    Path logdir = new Path(rootDir, HLog.getHLogDirectoryName(this.serverInfo));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Log dir " + logdir);
+  private void setupHLog(Path logDir, Path oldLogDir, int totalHLogCnt) throws IOException {
+    hlogs = new HLog[totalHLogCnt];
+    for (int i = 0; i < totalHLogCnt; i++) { 
+      hlogs[i] = new HLog(this.fs, logDir, oldLogDir, this.conf, this.hlogRollers[i], 
+          null, (this.serverInfo.getServerAddress().toString()), i, totalHLogCnt);  
     }
-    if (fs.exists(logdir)) {
-      throw new RegionServerRunningException("region server already " +
-        "running at " + this.serverInfo.getServerName() +
-        " because logdir " + logdir.toString() + " exists");
-    }
-    HLog log = instantiateHLog(logdir, oldLogDir);
-    return log;
+    LOG.info("Initialized " + totalHLogCnt + " HLogs");
   }
 
-  // instantiate
-  protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
-    return new HLog(this.fs, logdir, oldLogDir, this.conf, this.hlogRoller,
-        null, this.serverInfo.getServerAddress().toString());
-  }
-
-
-  protected LogRoller getLogRoller() {
-    return hlogRoller;
+  private void killAllHLogs() { 
+    for (int i = 0; i < this.hlogs.length; i++) { 
+      hlogs[i].kill();  
+    } 
+  } 
+    
+  private void closeAllHLogs() throws IOException { 
+    for (int i = 0; i < this.hlogs.length; i++) { 
+      hlogs[i].close(); 
+    } 
+  } 
+    
+  private void closeAndDeleteAllHLogs() throws IOException {  
+    for (int i = 0; i < this.hlogs.length; i++) { 
+      hlogs[i].closeAndDelete();  
+    } 
   }
 
   /*
@@ -1448,9 +1482,13 @@ public class HRegionServer implements HRegionInterface,
         abort("Uncaught exception in service thread " + t.getName(), e);
       }
     };
-    Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller",
-        handler);
     this.cacheFlusher.start(n, handler);
+    
+    // Initialize the hlog roller threads
+    for (int i = 0; i < this.hlogRollers.length; i++) { 
+      Threads.setDaemonThreadRunning(this.hlogRollers[i], n + ".logRoller-" + i, handler);  
+    }
+    
     Threads.setDaemonThreadRunning(this.workerThread, n + ".worker", handler);
     Threads.setDaemonThreadRunning(this.majorCompactionChecker,
         n + ".majorCompactionChecker", handler);
@@ -1522,12 +1560,20 @@ public class HRegionServer implements HRegionInterface,
 
     // Verify that all threads are alive
     if (!(leases.isAlive() &&
-        cacheFlusher.isAlive() && hlogRoller.isAlive() &&
+        cacheFlusher.isAlive() && isAllHLogRollerAlive() &&
         workerThread.isAlive() && this.majorCompactionChecker.isAlive())) {
       stop("One or more threads are no longer alive");
       return false;
     }
     return true;
+  }
+  
+  private boolean isAllHLogRollerAlive() {  
+    boolean res = true; 
+    for (int i = 0; i < this.hlogRollers.length; i++) { 
+      res = res && this.hlogRollers[i].isAlive(); 
+    } 
+    return res; 
   }
 
   /*
@@ -1558,22 +1604,31 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
-  /** @return the HLog */
-  public HLog getLog() {
-    return this.hlog;
-  }
-
-  /**
-   * @param rollCurrentHLog if true, the current HLog is rolled and will be
-   * included in the list returned
-   * @return list of HLog files
-   */
   @Override
   public List<String> getHLogsList(boolean rollCurrentHLog) throws IOException {
-    if (rollCurrentHLog) this.hlog.rollWriter();
-    return this.hlog.getHLogsList();
+    List <String> allHLogsList = new ArrayList<String>();
+  
+    for (int i = 0; i < hlogs.length; i++) {
+      if (rollCurrentHLog) {
+        this.hlogs[i].rollWriter();
+      }
+      allHLogsList.addAll(this.hlogs[i].getHLogsList());
+    }
+
+    return allHLogsList;
+  }
+  
+  /**
+   * Return the i th HLog in this region server
+   */
+  public HLog getLog(int i) {
+    return this.hlogs[i];
   }
 
+  public int getTotalHLogCnt() {
+    return this.hlogs.length;
+  }
+  
   /**
    * Sets a flag that will cause all the HRegionServer threads to shut down
    * in an orderly fashion.  Used by unit tests.
@@ -1655,7 +1710,9 @@ public class HRegionServer implements HRegionInterface,
     Threads.shutdown(this.majorCompactionChecker);
     Threads.shutdown(this.workerThread);
     this.cacheFlusher.join();
-    Threads.shutdown(this.hlogRoller);
+    for (int i = 0; i < this.hlogRollers.length; i++) {  
+      Threads.shutdown(this.hlogRollers[i]);  
+    } 
     this.compactSplitThread.join();
   }
 
@@ -1943,8 +2000,21 @@ public class HRegionServer implements HRegionInterface,
     if (region == null) {
       try {
         zkUpdater.startRegionOpenEvent(null, true);
-        region = instantiateRegion(regionInfo, this.hlog);
+        
+        // Assign one of the HLogs to the new opening region.
+        // If the region has been opened before, assign the previous HLog instance to that region.
+        Integer hLogIndex = null;
+        if ((hLogIndex = regionNameToHLogIDMap.get(regionInfo.getRegionNameAsString())) == null) {
+          hLogIndex = Integer.valueOf((this.currentHLogIndex++) % (this.hlogs.length));
+          this.regionNameToHLogIDMap.put(regionInfo.getRegionNameAsString(), hLogIndex);
+        }
+        region = instantiateRegion(regionInfo, this.hlogs[hLogIndex.intValue()]);
+        LOG.info("Initiate the region: " + regionInfo.getRegionNameAsString() + " with HLog #" + 
+            hLogIndex);
+        
+        // Set up the favorite nodes for all the HFile for that region
         setFavoredNodes(region, favoredNodes);
+       
         // Startup a compaction early if one is needed, if store has references
         // or has too many store files
         for (Store s : region.getStores().values()) {
@@ -2012,11 +2082,11 @@ public class HRegionServer implements HRegionInterface,
    * @return
    * @throws IOException
    */
-  protected HRegion instantiateRegion(final HRegionInfo regionInfo, final HLog wal)
+  protected HRegion instantiateRegion(final HRegionInfo regionInfo, final HLog hlog)
   throws IOException {
     Path dir =
       HTableDescriptor.getTableDir(rootDir, regionInfo.getTableDesc().getName());
-    HRegion r = HRegion.newHRegion(dir, this.hlog, this.fs, conf, regionInfo,
+    HRegion r = HRegion.newHRegion(dir, hlog, this.fs, conf, regionInfo,
       this.cacheFlusher);
     long seqid = r.initialize(new Progressable() {
       @Override
@@ -2025,8 +2095,8 @@ public class HRegionServer implements HRegionInterface,
       }
     });
     // If a wal and its seqid is < that of new region, use new regions seqid.
-    if (wal != null) {
-      if (seqid > wal.getSequenceNumber()) wal.setSequenceNumber(seqid);
+    if (hlog != null) {
+      if (seqid > hlog.getSequenceNumber()) hlog.setSequenceNumber(seqid);
     }
     return r;
   }

@@ -48,13 +48,17 @@ class LogRoller extends HasThread implements LogRollListener {
   private volatile long lastrolltime = System.currentTimeMillis();
   // Period to roll log.
   private final long rollperiod;
+  private final int hlogIndexID;
+  private final String logRollerName;
 
   /** @param server */
-  public LogRoller(final HRegionServer server) {
+  public LogRoller(final HRegionServer server, int hlogIndexID) {
     super();
     this.server = server;
     this.rollperiod =
       this.server.conf.getLong("hbase.regionserver.logroll.period", 3600000);
+    this.hlogIndexID = hlogIndexID;
+    this.logRollerName = "HLogRoller-" + hlogIndexID + " ";
   }
 
   @Override
@@ -82,15 +86,15 @@ class LogRoller extends HasThread implements LogRollListener {
         // Time for periodic roll
         if (LOG.isDebugEnabled()) {
           if (modifiedRollPeriod == this.rollperiod) {
-            LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
+            LOG.debug(logRollerName + "roll period " + this.rollperiod + "ms elapsed");
           }
         }
       }
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
-        byte [][] regionsToFlush = server.getLog().rollWriter();
+        byte [][] regionsToFlush = server.getLog(this.hlogIndexID).rollWriter();
         if (status != null) {
-          status.markComplete("Log rolling succeeded after " + retried +
+          status.markComplete(logRollerName + "Log rolling succeeded after " + retried +
               "retires.");
           retried = -1;
           status = null;
@@ -100,10 +104,10 @@ class LogRoller extends HasThread implements LogRollListener {
         }
       } catch (IOException ex) {
         retried++;
-        String msg = "log roll failed." +
+        String msg = logRollerName + "log roll failed." +
             " retried=" + retried + ", " + StringUtils.stringifyException(ex);
         if (status == null) {
-          LOG.warn("Log rolling failed with ioe. Will retry." +
+          LOG.warn(logRollerName + "Log rolling failed with ioe. Will retry." +
               " Will update status with exceptionif retry fails " +
               RemoteExceptionHandler.checkIOException(ex));
           status = TaskMonitor.get().createStatus(msg);
@@ -112,7 +116,7 @@ class LogRoller extends HasThread implements LogRollListener {
         }
         server.checkFileSystem();
       } catch (Exception ex) {
-        LOG.fatal("Log rolling failed, unexpected exception. Force Aborting",
+        LOG.fatal(logRollerName + "Log rolling failed, unexpected exception. Force Aborting",
             ex);
         server.forceAbort();
       } finally {
@@ -122,9 +126,9 @@ class LogRoller extends HasThread implements LogRollListener {
       }
     }
     if (status != null) {
-      status.abort("LogRoller exiting while log was unstable and roll pending");
+      status.abort(logRollerName + "LogRoller exiting while log was unstable and roll pending");
     }
-    LOG.info("LogRoller exiting.");
+    LOG.info(logRollerName + "exiting.");
   }
 
   private void scheduleFlush(final byte [] region) {
@@ -139,7 +143,7 @@ class LogRoller extends HasThread implements LogRollListener {
       }
     }
     if (!scheduled) {
-    LOG.warn("Failed to schedule flush of " +
+    LOG.warn(logRollerName + "Failed to schedule flush of " +
       Bytes.toString(region) + "r=" + r + ", requester=" + requester);
     }
   }
