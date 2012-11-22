@@ -45,6 +45,9 @@
 #
 #   MAVEN_HOME       Where mvn is installed.
 #
+#   MAVEN_OPTS       Extra options (eg '-Dhadoop.profile=2.0') passed to maven.
+#                    Empty by default.
+#
 #   JRUBY_HOME       JRuby path: $JRUBY_HOME/lib/jruby.jar should exist.
 #                    Defaults to the jar packaged with HBase.
 #
@@ -153,7 +156,15 @@ add_maven_deps_to_classpath() {
   f="${HBASE_HOME}/target/cached_classpath.txt"
   if [ ! -f "${f}" ]
   then
-    ${MVN} -f "${HBASE_HOME}/pom.xml" package dependency:build-classpath -DskipTests -Dmdep.outputFile="${f}" &> /dev/null
+    ${MVN} -f "${HBASE_HOME}/pom.xml" package dependency:build-classpath -DskipTests -Dmdep.outputFile="${f}" $MAVEN_OPTS &> /dev/null
+    if [ $? -ne 0 ]
+    then
+      #delete the file, maven writes it even on failure. Keeping it would breaks the caching mechanism the next time we call the script
+      rm -rf "${f}"
+      echo "The maven command used to generate the classpath failed, please check your environment."
+      echo "Maven command was: ${MVN} -f '${HBASE_HOME}/pom.xml' package dependency:build-classpath -DskipTests -Dmdep.outputFile='${f}' $MAVEN_OPTS"
+      exit 1
+    fi
   fi
   CLASSPATH=${CLASSPATH}:`cat "${f}"`
 }
