@@ -32,10 +32,8 @@
     <title>Introduction</title>
 
     <para><xref linkend="quickstart" /> will get you up and
-    running on a single-node instance of HBase using the local filesystem. 
-    <xref linkend="configuration" /> describes basic system
-    requirements and configuration running HBase in distributed mode
-    on top of HDFS.</para>
+    running on a single-node instance of HBase using the local filesystem.
+    </para>
   </section>
 
   <section xml:id="quickstart">
@@ -46,6 +44,13 @@
     rows via the HBase <command>shell</command>, and then cleaning
     up and shutting down your standalone HBase instance. The below exercise
     should take no more than ten minutes (not including download time).</para>
+    <para>Before you start, check you are good on the below prerequisites.
+    <orderedlist>
+        <listitem><para><xref linkend="java"/></para></listitem>
+        <listitem><para><xref linkend="ssh"/></para></listitem>
+        <listitem><para><xref linkend="loopback.ip"/></para></listitem>
+    </orderedlist>
+    </para>
 
     <section>
       <title>Download and unpack the latest stable release.</title>
