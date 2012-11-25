@@ -62,12 +62,13 @@ to ensure well-formedness of your document after an edit session.
     <title>Basic Prerequisites</title>
     <para>This section lists required services and some required system configuration.
     </para>
+
     <section xml:id="java">
         <title>Java</title>
-
-        <para>Just like Hadoop, HBase requires java 6 from <link
-        xlink:href="http://www.java.com/download/">Oracle</link>.</para>
+        <para>Just like Hadoop, HBase requires at least java 6 from
+        <link xlink:href="http://www.java.com/download/">Oracle</link>.</para>
     </section>
+
     <section xml:id="os">
         <title>Operating System</title>
       <section xml:id="ssh">
@@ -107,15 +108,7 @@ to ensure well-formedness of your document after an edit session.
       </section>
       <section xml:id="loopback.ip">
         <title>Loopback IP</title>
-        <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
-        for example, will default to 127.0.1.1 and this will cause problems for you.
-        </para>
-        <para><filename>/etc/hosts</filename> should look something like this:
-<programlisting>
-            127.0.0.1 localhost
-            127.0.0.1 ubuntu.ubuntu-domain ubuntu
-</programlisting>
-        </para>
+        <para>HBase expects the loopback IP address to be 127.0.0.1.  See <xref linkend="loopback.ip"/></para>
        </section>
 
       <section xml:id="ntp">

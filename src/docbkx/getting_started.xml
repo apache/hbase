@@ -44,13 +44,20 @@
     rows via the HBase <command>shell</command>, and then cleaning
     up and shutting down your standalone HBase instance. The below exercise
     should take no more than ten minutes (not including download time).</para>
-    <para>Before you start, check you are good on the below prerequisites.
-    <orderedlist>
-        <listitem><para><xref linkend="java"/></para></listitem>
-        <listitem><para><xref linkend="ssh"/></para></listitem>
-        <listitem><para><xref linkend="loopback.ip"/></para></listitem>
-    </orderedlist>
-    </para>
+    <para>Before we proceed, make sure you are good on the below loopback prerequisite.</para>
+    <note xml:id="loopback.ip.getting.started">
+        <title>Loopback IP</title>
+        <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
+        for example, will default to 127.0.1.1 and this will cause problems for you.
+        </para>
+        <para><filename>/etc/hosts</filename> should look something like this:
+<programlisting>
+            127.0.0.1 localhost
+            127.0.0.1 ubuntu.ubuntu-domain ubuntu
+</programlisting>
+        </para>
+       </note>
+
 
     <section>
       <title>Download and unpack the latest stable release.</title>
@@ -112,7 +119,7 @@ starting Master, logging to logs/hbase-user-master-example.org.out</programlisti
 
         <para>All of the above presumes a 1.6 version of Oracle
         <application>java</application> is installed on your machine and
-        available on your path; i.e. when you type
+        available on your path (See <xref linkend="java" />); i.e. when you type
         <application>java</application>, you see output that describes the
         options the java program takes (HBase requires java 6). If this is not
         the case, HBase will not start. Install java, edit
