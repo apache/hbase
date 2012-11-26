@@ -85,7 +85,6 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
@@ -182,6 +181,7 @@ public class HBaseFsck {
   private long timelag = DEFAULT_TIME_LAG; // tables whose modtime is older
   private boolean fixAssignments = false; // fix assignment errors?
   private boolean fixMeta = false; // fix meta errors?
+  private boolean checkHdfs = true; // load and check fs consistency?
   private boolean fixHdfsHoles = false; // fix fs holes?
   private boolean fixHdfsOverlaps = false; // fix fs overlaps (risky)
   private boolean fixHdfsOrphans = false; // fix fs holes (missing .regioninfo)
@@ -339,8 +339,8 @@ public class HBaseFsck {
    */
   public void offlineHdfsIntegrityRepair() throws IOException, InterruptedException {
     // Initial pass to fix orphans.
-    if (shouldFixHdfsOrphans() || shouldFixHdfsHoles()
-        || shouldFixHdfsOverlaps() || shouldFixTableOrphans()) {
+    if (shouldCheckHdfs() && (shouldFixHdfsOrphans() || shouldFixHdfsHoles()
+        || shouldFixHdfsOverlaps() || shouldFixTableOrphans())) {
       LOG.info("Loading regioninfos HDFS");
       // if nothing is happening this should always complete in two iterations.
       int maxIterations = conf.getInt("hbase.hbck.integrityrepair.iterations.max", 3);
@@ -397,8 +397,10 @@ public class HBaseFsck {
     loadDeployedRegions();
 
     // load regiondirs and regioninfos from HDFS
-    loadHdfsRegionDirs();
-    loadHdfsRegionInfos();
+    if (shouldCheckHdfs()) {
+      loadHdfsRegionDirs();
+      loadHdfsRegionInfos();
+    }
 
     // Empty cells in .META.?
     reportEmptyMetaCells();
@@ -790,7 +792,7 @@ public class HBaseFsck {
       List<String> tmpList = new ArrayList<String>();
       tmpList.addAll(orphanTableDirs.keySet());
       HTableDescriptor[] htds = getHTableDescriptors(tmpList);
-      Iterator iter = orphanTableDirs.entrySet().iterator();
+      Iterator<Entry<String, Set<String>>> iter = orphanTableDirs.entrySet().iterator();
       int j = 0; 
       int numFailedCase = 0;
       while (iter.hasNext()) {
@@ -1485,8 +1487,12 @@ public class HBaseFsck {
       errors.print(msg);
       undeployRegions(hbi);
       setShouldRerun();
-      HBaseFsckRepair.fixUnassigned(admin, hbi.getHdfsHRI());
-      HBaseFsckRepair.waitUntilAssigned(admin, hbi.getHdfsHRI());
+      HRegionInfo hri = hbi.getHdfsHRI();
+      if (hri == null) {
+        hri = hbi.metaEntry;
+      }
+      HBaseFsckRepair.fixUnassigned(admin, hri);
+      HBaseFsckRepair.waitUntilAssigned(admin, hri);
     }
   }
 
@@ -1498,7 +1504,8 @@ public class HBaseFsck {
     String descriptiveName = hbi.toString();
 
     boolean inMeta = hbi.metaEntry != null;
-    boolean inHdfs = hbi.getHdfsRegionDir()!= null;
+    // In case not checking HDFS, assume the region is on HDFS
+    boolean inHdfs = !shouldCheckHdfs() || hbi.getHdfsRegionDir() != null;
     boolean hasMetaAssignment = inMeta && hbi.metaEntry.regionServer != null;
     boolean isDeployed = !hbi.deployedOn.isEmpty();
     boolean isMultiplyDeployed = hbi.deployedOn.size() > 1;
@@ -1508,7 +1515,7 @@ public class HBaseFsck {
     boolean splitParent =
       (hbi.metaEntry == null)? false: hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
     boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry);
-    boolean recentlyModified = hbi.getHdfsRegionDir() != null &&
+    boolean recentlyModified = inHdfs &&
       hbi.getModTime() + timelag > System.currentTimeMillis();
 
     // ========== First the healthy cases =============
@@ -3122,6 +3129,14 @@ public class HBaseFsck {
     return fixMeta;
   }
 
+  public void setCheckHdfs(boolean checking) {
+    checkHdfs = checking;
+  }
+
+  boolean shouldCheckHdfs() {
+    return checkHdfs;
+  }
+
   public void setFixHdfsHoles(boolean shouldFix) {
     fixHdfsHoles = shouldFix;
   }
@@ -3277,6 +3292,8 @@ public class HBaseFsck {
     System.err.println("   -fix              Try to fix region assignments.  This is for backwards compatiblity");
     System.err.println("   -fixAssignments   Try to fix region assignments.  Replaces the old -fix");
     System.err.println("   -fixMeta          Try to fix meta problems.  This assumes HDFS region info is good.");
+    System.err.println("   -noHdfsChecking   Don't load/check region info from HDFS."
+        + " Assumes META region info is good. Won't check/fix any HDFS issue, e.g. hole, orphan, or overlap");
     System.err.println("   -fixHdfsHoles     Try to fix region holes in hdfs.");
     System.err.println("   -fixHdfsOrphans   Try to fix region dirs with no .regioninfo file in hdfs");
     System.err.println("   -fixTableOrphans  Try to fix table dirs with no .tableinfo file in hdfs (online mode only)");
@@ -3380,6 +3397,8 @@ public class HBaseFsck {
         setFixAssignments(true);
       } else if (cmd.equals("-fixMeta")) {
         setFixMeta(true);
+      } else if (cmd.equals("-noHdfsChecking")) {
+        setCheckHdfs(false);
       } else if (cmd.equals("-fixHdfsHoles")) {
         setFixHdfsHoles(true);
       } else if (cmd.equals("-fixHdfsOrphans")) {
@@ -3411,6 +3430,7 @@ public class HBaseFsck {
         setFixVersionFile(true);
         setSidelineBigOverlaps(true);
         setFixSplitParents(false);
+        setCheckHdfs(true);
       } else if (cmd.equals("-repairHoles")) {
         // this will make all missing hdfs regions available but may lose data
         setFixHdfsHoles(true);
@@ -3420,6 +3440,7 @@ public class HBaseFsck {
         setFixHdfsOverlaps(false);
         setSidelineBigOverlaps(false);
         setFixSplitParents(false);
+        setCheckHdfs(true);
       } else if (cmd.equals("-maxOverlapsToSideline")) {
         if (i == args.length - 1) {
           System.err.println("-maxOverlapsToSideline needs a numeric value argument.");
@@ -3531,7 +3552,7 @@ public class HBaseFsck {
    * ls -r for debugging purposes
    */
   public static void debugLsr(Configuration conf, Path p) throws IOException {
-    if (!LOG.isDebugEnabled()) {
+    if (!LOG.isDebugEnabled() || p == null) {
       return;
     }
     FileSystem fs = p.getFileSystem(conf);
