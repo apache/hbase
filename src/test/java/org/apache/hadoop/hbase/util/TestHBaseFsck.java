@@ -1313,6 +1313,160 @@ public class TestHBaseFsck {
   }
 
   /**
+   * Test -noHdfsChecking option can detect and fix assignments issue.
+   */
+  @Test
+  public void testFixAssignmentsAndNoHdfsChecking() throws Exception {
+    String table = "testFixAssignmentsAndNoHdfsChecking";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by closing a region
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
+        Bytes.toBytes("B"), true, false, false, false);
+
+      // verify there is no other errors
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that noHdfsChecking report the same errors
+      HBaseFsck fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.onlineHbck();
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that fixAssignments works fine with noHdfsChecking
+      fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.setFixAssignments(true);
+      fsck.onlineHbck();
+      assertTrue(fsck.shouldRerun());
+      fsck.onlineHbck();
+      assertNoErrors(fsck);
+
+      assertEquals(ROWKEYS.length, countRows());
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
+   * Test -noHdfsChecking option can detect region is not in meta but deployed.
+   * However, it can not fix it without checking Hdfs because we need to get
+   * the region info from Hdfs in this case, then to patch the meta.
+   */
+  @Test
+  public void testFixMetaNotWorkingWithNoHdfsChecking() throws Exception {
+    String table = "testFixMetaNotWorkingWithNoHdfsChecking";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by deleting a region from the metadata
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
+        Bytes.toBytes("B"), false, true, false, false);
+
+      // verify there is no other errors
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_IN_META, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that noHdfsChecking report the same errors
+      HBaseFsck fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.onlineHbck();
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_IN_META, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that fixMeta doesn't work with noHdfsChecking
+      fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.setFixAssignments(true);
+      fsck.setFixMeta(true);
+      fsck.onlineHbck();
+      assertFalse(fsck.shouldRerun());
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_IN_META, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
+   * Test -fixHdfsHoles doesn't work with -noHdfsChecking option,
+   * and -noHdfsChecking can't detect orphan Hdfs region.
+   */
+  @Test
+  public void testFixHdfsHolesNotWorkingWithNoHdfsChecking() throws Exception {
+    String table = "testFixHdfsHolesNotWorkingWithNoHdfsChecking";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by creating an overlap in the metadata
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
+        Bytes.toBytes("B"), true, true, false, true);
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
+
+      HRegionInfo hriOverlap = createRegion(conf, tbl.getTableDescriptor(),
+        Bytes.toBytes("A2"), Bytes.toBytes("B"));
+      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
+      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+        .waitForAssignment(hriOverlap);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.ORPHAN_HDFS_REGION, ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+        ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that noHdfsChecking can't detect ORPHAN_HDFS_REGION
+      HBaseFsck fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.onlineHbck();
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that fixHdfsHoles doesn't work with noHdfsChecking
+      fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.setFixHdfsHoles(true);
+      fsck.setFixHdfsOverlaps(true);
+      fsck.setFixHdfsOrphans(true);
+      fsck.onlineHbck();
+      assertFalse(fsck.shouldRerun());
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.HOLE_IN_REGION_CHAIN});
+    } finally {
+      if (TEST_UTIL.getHBaseAdmin().isTableDisabled(table)) {
+        TEST_UTIL.getHBaseAdmin().enableTable(table);
+      }
+      deleteTable(table);
+    }
+  }
+
+  /**
    * We don't have an easy way to verify that a flush completed, so we loop until we find a
    * legitimate hfile and return it.
    * @param fs
