@@ -49,8 +49,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.*;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
@@ -302,6 +301,7 @@ public class TestCompaction extends HBaseTestCase {
     conf.setFloat("hbase.hregion.majorcompaction.jitter", jitterPct);
 
     HStore s = ((HStore) r.getStore(COLUMN_FAMILY));
+    s.compactionPolicy.updateConfiguration(conf, s);
     try {
       createStoreFile(r);
       createStoreFile(r);
@@ -313,9 +313,11 @@ public class TestCompaction extends HBaseTestCase {
       assertEquals(2, s.getStorefilesCount());
 
       // ensure that major compaction time is deterministic
-      long mcTime = s.getNextMajorCompactTime();
+      CompactionPolicy c = s.compactionPolicy;
+      List<StoreFile> storeFiles = s.getStorefiles();
+      long mcTime = c.getNextMajorCompactTime(storeFiles);
       for (int i = 0; i < 10; ++i) {
-        assertEquals(mcTime, s.getNextMajorCompactTime());
+        assertEquals(mcTime, c.getNextMajorCompactTime(storeFiles));
       }
 
       // ensure that the major compaction time is within the variance
