@@ -143,7 +143,9 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    * @throws IOException if there is an unexpected filesystem error
    */
   private boolean checkAndDeleteDirectory(Path toCheck) throws IOException {
-    LOG.debug("Checking directory: " + toCheck);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Checking directory: " + toCheck);
+    }
     FileStatus[] children = FSUtils.listStatus(fs, toCheck, null);
     // if the directory doesn't exist, then we are done
     if (children == null) return true;
@@ -195,12 +197,16 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
 
       if (!cleaner.isFileDeletable(filePath)) {
         // this file is not deletable, then we are done
-        LOG.debug(filePath + " is not deletable according to:" + cleaner);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(filePath + " is not deletable according to:" + cleaner);
+        }
         return false;
       }
     }
     // delete this file if it passes all the cleaners
-    LOG.debug("Removing:" + filePath + " from archive");
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Removing:" + filePath + " from archive");
+    }
     boolean success = this.fs.delete(filePath, false);
     if (!success) {
       LOG.warn("Attempted to delete:" + filePath
