@@ -4172,7 +4172,7 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * @return True if needs a mojor compaction.
+   * @return True if needs a major compaction.
    * @throws IOException
    */
   boolean isMajorCompaction() throws IOException {

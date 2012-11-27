@@ -19,15 +19,13 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.GregorianCalendar;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 @InterfaceAudience.Private
 public class CompactSelection {
@@ -48,37 +46,15 @@ public class CompactSelection {
    */
   private final static Object compactionCountLock = new Object();
 
-  // HBase conf object
-  Configuration conf;
   // was this compaction promoted to an off-peak
   boolean isOffPeakCompaction = false;
-  // compactRatio: double on purpose!  Float.MAX < Long.MAX < Double.MAX
-  // With float, java will downcast your long to float for comparisons (bad)
-  private double compactRatio;
-  // compaction ratio off-peak
-  private double compactRatioOffPeak;
-  // offpeak start time
-  private int offPeakStartHour = -1;
-  // off peak end time
-  private int offPeakEndHour = -1;
+  // CompactSelection object creation time.
+  private final long selectionTime;
 
-  public CompactSelection(Configuration conf, List<StoreFile> filesToCompact) {
+  public CompactSelection(List<StoreFile> filesToCompact) {
+    this.selectionTime = EnvironmentEdgeManager.currentTimeMillis();
     this.filesToCompact = filesToCompact;
-    this.conf = conf;
-    this.compactRatio = conf.getFloat("hbase.hstore.compaction.ratio", 1.2F);
-    this.compactRatioOffPeak = conf.getFloat("hbase.hstore.compaction.ratio.offpeak", 5.0F);
-
-    // Peak time is from [offPeakStartHour, offPeakEndHour). Valid numbers are [0, 23]
-    this.offPeakStartHour = conf.getInt("hbase.offpeak.start.hour", -1);
-    this.offPeakEndHour = conf.getInt("hbase.offpeak.end.hour", -1);
-    if (!isValidHour(this.offPeakStartHour) || !isValidHour(this.offPeakEndHour)) {
-      if (!(this.offPeakStartHour == -1 && this.offPeakEndHour == -1)) {
-        LOG.warn("Invalid start/end hour for peak hour : start = " +
-            this.offPeakStartHour + " end = " + this.offPeakEndHour +
-            ". Valid numbers are [0-23]");
-      }
-      this.offPeakStartHour = this.offPeakEndHour = -1;
-    }
+    this.isOffPeakCompaction = false;
   }
 
   /**
@@ -113,35 +89,9 @@ public class CompactSelection {
     }
 
     if (hasExpiredStoreFiles) {
-      expiredSFSelection = new CompactSelection(conf, expiredStoreFiles);
+      expiredSFSelection = new CompactSelection(expiredStoreFiles);
     }
     return expiredSFSelection;
-  }
-
-  /**
-   * If the current hour falls in the off peak times and there are no 
-   * outstanding off peak compactions, the current compaction is 
-   * promoted to an off peak compaction. Currently only one off peak 
-   * compaction is present in the compaction queue.
-   *
-   * @param currentHour
-   * @return
-   */
-  public double getCompactSelectionRatio() {
-    double r = this.compactRatio;
-    synchronized(compactionCountLock) {
-      if (isOffPeakHour() && numOutstandingOffPeakCompactions == 0) {
-        r = this.compactRatioOffPeak;
-        numOutstandingOffPeakCompactions++;
-        isOffPeakCompaction = true;
-      }
-    }
-    if(isOffPeakCompaction) {
-      LOG.info("Running an off-peak compaction, selection ratio = " +
-          compactRatioOffPeak + ", numOutstandingOffPeakCompactions is now " +
-          numOutstandingOffPeakCompactions);
-    }
-    return r;
   }
 
   /**
@@ -150,12 +100,14 @@ public class CompactSelection {
    */
   public void finishRequest() {
     if (isOffPeakCompaction) {
+      long newValueToLog = -1;
       synchronized(compactionCountLock) {
-        numOutstandingOffPeakCompactions--;
+        assert !isOffPeakCompaction : "Double-counting off-peak count for compaction";
+        newValueToLog = --numOutstandingOffPeakCompactions;
         isOffPeakCompaction = false;
       }
       LOG.info("Compaction done, numOutstandingOffPeakCompactions is now " +
-          numOutstandingOffPeakCompactions);
+          newValueToLog);
     }
   }
 
@@ -170,13 +122,14 @@ public class CompactSelection {
   public void emptyFileList() {
     filesToCompact.clear();
     if (isOffPeakCompaction) {
+      long newValueToLog = -1;
       synchronized(compactionCountLock) {
         // reset the off peak count
-        numOutstandingOffPeakCompactions--;
+        newValueToLog = --numOutstandingOffPeakCompactions;
         isOffPeakCompaction = false;
       }
       LOG.info("Nothing to compact, numOutstandingOffPeakCompactions is now " +
-          numOutstandingOffPeakCompactions);
+          newValueToLog);
     }
   }
 
@@ -184,16 +137,30 @@ public class CompactSelection {
     return this.isOffPeakCompaction;
   }
 
-  private boolean isOffPeakHour() {
-    int currentHour = (new GregorianCalendar()).get(Calendar.HOUR_OF_DAY);
-    // If offpeak time checking is disabled just return false.
-    if (this.offPeakStartHour == this.offPeakEndHour) {
-      return false;
+  public static long getNumOutStandingOffPeakCompactions() {
+    synchronized(compactionCountLock) {
+      return numOutstandingOffPeakCompactions;
     }
-    if (this.offPeakStartHour < this.offPeakEndHour) {
-      return (currentHour >= this.offPeakStartHour && currentHour < this.offPeakEndHour);
+  }
+
+  /**
+   * Tries making the compaction off-peak.
+   * Only checks internal compaction constraints, not timing.
+   * @return Eventual value of isOffPeakCompaction.
+   */
+  public boolean trySetOffpeak() {
+    assert !isOffPeakCompaction : "Double-setting off-peak for compaction " + this;
+    synchronized(compactionCountLock) {
+      if (numOutstandingOffPeakCompactions == 0) {
+         numOutstandingOffPeakCompactions++;
+         isOffPeakCompaction = true;
+      }
     }
-    return (currentHour >= this.offPeakStartHour || currentHour < this.offPeakEndHour);
+    return isOffPeakCompaction;
+  }
+
+  public long getSelectionTime() {
+    return selectionTime;
   }
 
   public CompactSelection subList(int start, int end) {
