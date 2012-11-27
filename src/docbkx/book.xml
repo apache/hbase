@@ -739,6 +739,43 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
     inserted a lot of data).
     </para>
     </section>
+    <section xml:id="rowkey.regionsplits"><title>Relationship Between RowKeys and Region Splits</title>
+    <para>If you pre-split your table, it is <emphasis>critical</emphasis> to understand how your rowkey will be distributed across
+    the region boundaries.  As an example of why this is important, consider the example of using displayable hex characters as the
+    lead position of the key (e.g., ""0000000000000000" to "ffffffffffffffff").  Running those key ranges through <code>Bytes.split</code>
+    (which is the split strategy used when creating regions in <code>HBaseAdmin.createTable(byte[] startKey, byte[] endKey, numRegions)</code>
+    for 10 regions will generate the following splits...
+    </para>
+    <para>
+    <programlisting>
+48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48                                // 0
+54 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10                 // 6
+61 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -68                 // =
+68 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -126  // D
+75 75 75 75 75 75 75 75 75 75 75 75 75 75 75 72                                // K
+82 18 18 18 18 18 18 18 18 18 18 18 18 18 18 14                                // R
+88 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -44                 // X
+95 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -102                // _
+102 102 102 102 102 102 102 102 102 102 102 102 102 102 102 102                // f
+    </programlisting>
+    ... (note:  the lead byte is listed to the right as a comment.)  Given that the first split is a '0' and the last split is an 'f',
+    everything is great, right?  Not so fast.
+    </para>
+    <para>The problem is that all the data is going to pile up in the first 2 regions and the last region thus creating a "lumpy" (and 
+    possibly "hot") region problem.  To understand why, refer to an  <link xlink:href="http://www.asciitable.com">ASCII Table</link>.  
+    '0' is byte 48, and 'f' is byte 102, but there is a huge gap in byte values (bytes 58 to 96) that will <emphasis>never appear in this
+    keyspace</emphasis> because the only values are [0-9] and [a-f].  Thus, the middle regions regions will 
+    never be used.  To make pre-spliting work with this example keyspace, a custom definition of splits (i.e., and not relying on the
+    built-in split method) is required.   
+    </para>
+    <para>Lesson #1:  Pre-splitting tables is generally a best practice, but you need to pre-split them in such a way that all the 
+    regions are accessible in the keyspace.  While this example demonstrated the problem with a hex-key keyspace, the same problem can happen
+     with <emphasis>any</emphasis> keyspace.  Know your data.
+    </para>
+    <para>Lesson #2:  While generally not advisable, using hex-keys (and more generally, displayable data) can still work with pre-split
+    tables as long as all the created regions are accessible in the keyspace.
+    </para>
+    </section>
     </section>  <!--  rowkey design -->
     <section xml:id="schema.versions">
   <title>
