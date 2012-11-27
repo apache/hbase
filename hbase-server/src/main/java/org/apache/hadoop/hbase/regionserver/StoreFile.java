@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
@@ -296,7 +295,7 @@ public class StoreFile {
    * @return True if this is a StoreFile Reference; call after {@link #open()}
    * else may get wrong answer.
    */
-  public boolean isReference() {
+  boolean isReference() {
     return this.reference != null;
   }
 
@@ -358,7 +357,7 @@ public class StoreFile {
   /**
    * @return True if this file was made by a major compaction.
    */
-  public boolean isMajorCompaction() {
+  boolean isMajorCompaction() {
     if (this.majorCompaction == null) {
       throw new NullPointerException("This has not been set yet");
     }
@@ -368,7 +367,7 @@ public class StoreFile {
   /**
    * @return True if this file should not be part of a minor compaction.
    */
-  public boolean excludeFromMinorCompaction() {
+  boolean excludeFromMinorCompaction() {
     return this.excludeFromMinorCompaction;
   }
 
@@ -580,6 +579,7 @@ public class StoreFile {
         }
       }
     }
+
     this.reader.setSequenceID(this.sequenceid);
 
     b = metadataMap.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
@@ -945,11 +945,6 @@ public class StoreFile {
     return r.write(fs, p);
   }
 
-  public Long getMinimumTimestamp() {
-    return (getReader().timeRangeTracker == null) ?
-        null :
-        getReader().timeRangeTracker.minimumTimestamp;
-  }
 
   /**
    * A StoreFile writer.  Use this to read/write HBase Store Files. It is package

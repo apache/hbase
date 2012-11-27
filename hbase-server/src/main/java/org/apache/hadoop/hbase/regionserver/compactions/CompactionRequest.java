@@ -208,10 +208,6 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       return p;
     }
 
-    public long getSelectionTime() {
-      return compactSelection.getSelectionTime();
-    }
-
     /** Gets the priority for the request */
     public void setPriority(int p) {
       this.p = p;
@@ -275,7 +271,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         server.checkFileSystem();
       } finally {
         s.finishRequest(this);
-        LOG.debug("CompactSplitThread Status: " + server.compactSplitThread);
+        LOG.debug("CompactSplitThread status: " + server.compactSplitThread);
       }
     }
 

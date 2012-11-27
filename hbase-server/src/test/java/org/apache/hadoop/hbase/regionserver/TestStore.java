@@ -248,15 +248,17 @@ public class TestStore extends TestCase {
       flush(i);
     }
     // after flush; check the lowest time stamp
-    long lowestTimeStampFromManager = StoreUtils.getLowestTimestamp(store.getStorefiles());
-    long lowestTimeStampFromFS = getLowestTimeStampFromFS(fs, store.getStorefiles());
-    assertEquals(lowestTimeStampFromManager,lowestTimeStampFromFS);
-
+    long lowestTimeStampFromStore = 
+        HStore.getLowestTimestamp(store.getStorefiles());
+    long lowestTimeStampFromFS = 
+      getLowestTimeStampFromFS(fs,store.getStorefiles());
+    assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
+    
     // after compact; check the lowest time stamp
     store.compact(store.requestCompaction());
-    lowestTimeStampFromManager = StoreUtils.getLowestTimestamp(store.getStorefiles());
-    lowestTimeStampFromFS = getLowestTimeStampFromFS(fs, store.getStorefiles());
-    assertEquals(lowestTimeStampFromManager, lowestTimeStampFromFS);
+    lowestTimeStampFromStore = HStore.getLowestTimestamp(store.getStorefiles());
+    lowestTimeStampFromFS = getLowestTimeStampFromFS(fs,store.getStorefiles());
+    assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS); 
   }
   
   private static long getLowestTimeStampFromFS(FileSystem fs, 
