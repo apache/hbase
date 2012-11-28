@@ -942,9 +942,20 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
       tables, such as having 1 row with 1 million attributes, or 1 million rows with 1 columns apiece.
       </para>
       <para>Preference:  Rows (generally speaking).  To be clear, this guideline is in the context is in extremely wide cases, not in the
-      standard use-case where one needs to store a few dozen or hundred columns.
+      standard use-case where one needs to store a few dozen or hundred columns.  But there is also a middle path between these two
+      options, and that is "Rows as Columns." 
       </para>
     </section>
+    <section xml:id="schema.smackdown.rowsascols"><title>Rows as Columns</title>
+      <para>The middle path between Rows vs. Columns is packing data that would be a separate row into columns, for certain rows.
+      OpenTSDB is the best example of this case where a single row represents a defined time-range, and then discrete events are treated as
+      columns.  This approach is often more complex, and may require the additional complexity of re-writing your data, but has the 
+      advantage of being I/O efficient.  For an overview of this approach, see 
+      <link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</link> 
+      from HBaseCon2012.
+      </para>
+    </section>
+    
   </section>
   <section xml:id="schema.ops"><title>Operational and Performance Configuration Options</title>
     <para>See the Performance section <xref linkend="perf.schema"/> for more information operational and performance
