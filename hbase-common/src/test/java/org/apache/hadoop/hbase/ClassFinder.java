@@ -46,9 +46,14 @@ public class ClassFinder {
   private static final Log LOG = LogFactory.getLog(ClassFinder.class);
   private static String CLASS_EXT = ".class";
 
+  private ResourcePathFilter resourcePathFilter;
   private FileNameFilter fileNameFilter;
   private ClassFilter classFilter;
   private FileFilter fileFilter;
+
+  public static interface ResourcePathFilter {
+    public boolean isCandidatePath(String resourcePath, boolean isJar);
+  };
 
   public static interface FileNameFilter {
     public boolean isCandidateFile(String fileName, String absFilePath);
@@ -58,7 +63,13 @@ public class ClassFinder {
     public boolean isCandidateClass(Class<?> c);
   };
 
-  public ClassFinder(FileNameFilter fileNameFilter, ClassFilter classFilter) {
+  public ClassFinder() {
+    this(null, null, null);
+  }
+
+  public ClassFinder(ResourcePathFilter resourcePathFilter,
+      FileNameFilter fileNameFilter, ClassFilter classFilter) {
+    this.resourcePathFilter = resourcePathFilter;
     this.classFilter = classFilter;
     this.fileNameFilter = fileNameFilter;
     this.fileFilter = new FileFilterWithName(fileNameFilter);
@@ -93,10 +104,16 @@ public class ClassFinder {
       URL resource = resources.nextElement();
       String resourcePath = resource.getFile();
       Matcher matcher = jarResourceRe.matcher(resourcePath);
-      if (matcher.find()) {
-        jars.add(matcher.group(1));
-      } else {
-        dirs.add(new File(resource.getFile()));
+      boolean isJar = matcher.find();
+      resourcePath = isJar ? matcher.group(1) : resourcePath;
+      if (null == this.resourcePathFilter
+          || this.resourcePathFilter.isCandidatePath(resourcePath, isJar)) {
+        LOG.debug("Will look for classes in " + resourcePath);
+        if (isJar) {
+          jars.add(resourcePath);
+        } else {
+          dirs.add(new File(resourcePath));
+        }
       }
     }
 
@@ -145,7 +162,8 @@ public class ClassFinder {
       }
       int ix = className.lastIndexOf('/');
       String fileName = (ix >= 0) ? className.substring(ix + 1) : className;
-      if (!this.fileNameFilter.isCandidateFile(fileName, className)) {
+      if (null != this.fileNameFilter
+          && !this.fileNameFilter.isCandidateFile(fileName, className)) {
         continue;
       }
       className = className
@@ -200,7 +218,8 @@ public class ClassFinder {
     throws ClassNotFoundException, LinkageError {
     try {
       Class<?> c = Class.forName(className, false, this.getClass().getClassLoader());
-      return classFilter.isCandidateClass(c) ? c : null;
+      boolean isCandidateClass = null == classFilter || classFilter.isCandidateClass(c);
+      return isCandidateClass ? c : null;
     } catch (ClassNotFoundException classNotFoundEx) {
       if (!proceedOnExceptions) {
         throw classNotFoundEx;
@@ -226,7 +245,8 @@ public class ClassFinder {
     public boolean accept(File file) {
       return file.isDirectory()
           || (file.getName().endsWith(CLASS_EXT)
-              && nameFilter.isCandidateFile(file.getName(), file.getAbsolutePath()));
+              && (null == nameFilter
+                || nameFilter.isCandidateFile(file.getName(), file.getAbsolutePath())));
     }
   };
 };

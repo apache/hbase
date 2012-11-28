@@ -41,9 +41,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 @Category(SmallTests.class)
 public class TestClassFinder {
+  private static final Log LOG = LogFactory.getLog(TestClassFinder.class);
   private static final HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
   private static final String BASEPKG = "tfcpkg";
 
@@ -53,24 +56,7 @@ public class TestClassFinder {
   private static AtomicLong testCounter = new AtomicLong(0);
   private static AtomicLong jarCounter = new AtomicLong(0);
 
-
   private static String basePath = null;
-
-  // Default name/class filters for testing.
-  private static final ClassFinder.FileNameFilter trueNameFilter =
-      new ClassFinder.FileNameFilter() {
-    @Override
-    public boolean isCandidateFile(String fileName, String absFilePath) {
-      return true;
-    }
-  };
-  private static final ClassFinder.ClassFilter trueClassFilter =
-      new ClassFinder.ClassFilter() {
-    @Override
-    public boolean isCandidateClass(Class<?> c) {
-      return true;
-    }
-  };
 
   @BeforeClass
   public static void createTestDir() throws IOException {
@@ -100,7 +86,7 @@ public class TestClassFinder {
     packageAndLoadJar(c1, c3);
     packageAndLoadJar(c2);
 
-    ClassFinder allClassesFinder = new ClassFinder(trueNameFilter, trueClassFilter);
+    ClassFinder allClassesFinder = new ClassFinder();
     Set<Class<?>> allClasses = allClassesFinder.findClasses(
         makePackageName("", counter), false);
     assertEquals(3, allClasses.size());
@@ -114,7 +100,7 @@ public class TestClassFinder {
     packageAndLoadJar(c1, c2);
     packageAndLoadJar(c1);
 
-    ClassFinder allClassesFinder = new ClassFinder(trueNameFilter, trueClassFilter);
+    ClassFinder allClassesFinder = new ClassFinder();
     Set<Class<?>> allClasses = allClassesFinder.findClasses(
         makePackageName("", counter), false);
     assertEquals(2, allClasses.size());
@@ -132,7 +118,7 @@ public class TestClassFinder {
     packageAndLoadJar(c1, c2);
     packageAndLoadJar(c3);
 
-    ClassFinder allClassesFinder = new ClassFinder(trueNameFilter, trueClassFilter);
+    ClassFinder allClassesFinder = new ClassFinder();
     Set<Class<?>> nestedClasses = allClassesFinder.findClasses(
         makePackageName(NESTED, counter), false);
     assertEquals(2, nestedClasses.size());
@@ -158,7 +144,7 @@ public class TestClassFinder {
         return !fileName.startsWith(CLASSNAMEEXCPREFIX);
       }
     };
-    ClassFinder incClassesFinder = new ClassFinder(notExcNameFilter, trueClassFilter);
+    ClassFinder incClassesFinder = new ClassFinder(null, notExcNameFilter, null);
     Set<Class<?>> incClasses = incClassesFinder.findClasses(
         makePackageName("", counter), false);
     assertEquals(1, incClasses.size());
@@ -182,7 +168,31 @@ public class TestClassFinder {
         return !c.getSimpleName().startsWith(CLASSNAMEEXCPREFIX);
       }
     };
-    ClassFinder incClassesFinder = new ClassFinder(trueNameFilter, notExcClassFilter);
+    ClassFinder incClassesFinder = new ClassFinder(null, null, notExcClassFilter);
+    Set<Class<?>> incClasses = incClassesFinder.findClasses(
+        makePackageName("", counter), false);
+    assertEquals(1, incClasses.size());
+    Class<?> incClass = makeClass("", CLASSNAME, counter);
+    assertTrue(incClasses.contains(incClass));
+  }
+
+  @Test
+  public void testClassFinderFiltersByPathInJar() throws Exception {
+    final String CLASSNAME = "c1";
+    long counter = testCounter.incrementAndGet();
+    FileAndPath c1 = compileTestClass(counter, "", CLASSNAME);
+    FileAndPath c2 = compileTestClass(counter, "", "c2");
+    packageAndLoadJar(c1);
+    final String excludedJar = packageAndLoadJar(c2);
+
+    final ClassFinder.ResourcePathFilter notExcJarFilter =
+        new ClassFinder.ResourcePathFilter() {
+      @Override
+      public boolean isCandidatePath(String resourcePath, boolean isJar) {
+        return !isJar || !resourcePath.equals(excludedJar);
+      }
+    };
+    ClassFinder incClassesFinder = new ClassFinder(notExcJarFilter, null, null);
     Set<Class<?>> incClasses = incClassesFinder.findClasses(
         makePackageName("", counter), false);
     assertEquals(1, incClasses.size());
@@ -194,7 +204,7 @@ public class TestClassFinder {
   public void testClassFinderCanFindClassesInDirs() throws Exception {
     // Well, technically, we are not guaranteed that the classes will
     // be in dirs, but during normal build they would be.
-    ClassFinder allClassesFinder = new ClassFinder(trueNameFilter, trueClassFilter);
+    ClassFinder allClassesFinder = new ClassFinder();
     Set<Class<?>> allClasses = allClassesFinder.findClasses(
         this.getClass().getPackage().getName(), false);
     assertTrue(allClasses.contains(this.getClass()));
@@ -204,16 +214,16 @@ public class TestClassFinder {
   @Test
   public void testClassFinderFiltersByNameInDirs() throws Exception {
     final String thisName = this.getClass().getSimpleName();
-    ClassFinder.FileNameFilter notThisFilter = new ClassFinder.FileNameFilter() {
+    final ClassFinder.FileNameFilter notThisFilter = new ClassFinder.FileNameFilter() {
       @Override
       public boolean isCandidateFile(String fileName, String absFilePath) {
         return !fileName.equals(thisName + ".class");
       }
     };
     String thisPackage = this.getClass().getPackage().getName();
-    ClassFinder allClassesFinder = new ClassFinder(trueNameFilter, trueClassFilter);
+    ClassFinder allClassesFinder = new ClassFinder();
     Set<Class<?>> allClasses = allClassesFinder.findClasses(thisPackage, false);
-    ClassFinder notThisClassFinder = new ClassFinder(notThisFilter, trueClassFilter);
+    ClassFinder notThisClassFinder = new ClassFinder(null, notThisFilter, null);
     Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(thisPackage, false);
     assertFalse(notAllClasses.contains(this.getClass()));
     assertEquals(allClasses.size() - 1, notAllClasses.size());
@@ -221,26 +231,42 @@ public class TestClassFinder {
 
   @Test
   public void testClassFinderFiltersByClassInDirs() throws Exception {
-    ClassFinder.ClassFilter notThisFilter = new ClassFinder.ClassFilter() {
+    final ClassFinder.ClassFilter notThisFilter = new ClassFinder.ClassFilter() {
       @Override
       public boolean isCandidateClass(Class<?> c) {
         return c != TestClassFinder.class;
       }
     };
     String thisPackage = this.getClass().getPackage().getName();
-    ClassFinder allClassesFinder = new ClassFinder(trueNameFilter, trueClassFilter);
+    ClassFinder allClassesFinder = new ClassFinder();
     Set<Class<?>> allClasses = allClassesFinder.findClasses(thisPackage, false);
-    ClassFinder notThisClassFinder = new ClassFinder(trueNameFilter, notThisFilter);
+    ClassFinder notThisClassFinder = new ClassFinder(null, null, notThisFilter);
     Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(thisPackage, false);
     assertFalse(notAllClasses.contains(this.getClass()));
     assertEquals(allClasses.size() - 1, notAllClasses.size());
   }
 
   @Test
+  public void testClassFinderFiltersByPathInDirs() throws Exception {
+    final String hardcodedThisSubdir = "hbase-common";
+    final ClassFinder.ResourcePathFilter notExcJarFilter =
+        new ClassFinder.ResourcePathFilter() {
+      @Override
+      public boolean isCandidatePath(String resourcePath, boolean isJar) {
+        return isJar || !resourcePath.contains(hardcodedThisSubdir);
+      }
+    };
+    String thisPackage = this.getClass().getPackage().getName();
+    ClassFinder notThisClassFinder = new ClassFinder(notExcJarFilter, null, null);
+    Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(thisPackage, false);
+    assertFalse(notAllClasses.contains(this.getClass()));
+  }
+
+  @Test
   public void testClassFinderDefaultsToOwnPackage() throws Exception {
     // Correct handling of nested packages is tested elsewhere, so here we just assume
     // pkgClasses is the correct answer that we don't have to check.
-    ClassFinder allClassesFinder = new ClassFinder(trueNameFilter, trueClassFilter);
+    ClassFinder allClassesFinder = new ClassFinder();
     Set<Class<?>> pkgClasses = allClassesFinder.findClasses(
         ClassFinder.class.getPackage().getName(), false);
     Set<Class<?>> defaultClasses = allClassesFinder.findClasses(false);
@@ -295,8 +321,9 @@ public class TestClassFinder {
   /**
    * Makes a jar out of some class files. Unfortunately it's very tedious.
    * @param filesInJar Files created via compileTestClass.
+   * @return path to the resulting jar file.
    */
-  private static void packageAndLoadJar(FileAndPath... filesInJar) throws Exception {
+  private static String packageAndLoadJar(FileAndPath... filesInJar) throws Exception {
     // First, write the bogus jar file.
     String path = basePath + "jar" + jarCounter.incrementAndGet() + ".jar";
     Manifest manifest = new Manifest();
@@ -343,5 +370,6 @@ public class TestClassFinder {
         .getDeclaredMethod("addURL", new Class[] { URL.class });
     method.setAccessible(true);
     method.invoke(urlClassLoader, new Object[] { jarFile.toURI().toURL() });
+    return jarFile.getAbsolutePath();
   }
 };

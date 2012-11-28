@@ -35,11 +35,11 @@ import org.junit.runners.Suite;
 public class ClassTestFinder extends ClassFinder {
 
   public ClassTestFinder() {
-    super(new TestFileNameFilter(), new TestClassFilter());
+    super(new TestFileNameFilter(), new TestFileNameFilter(), new TestClassFilter());
   }
 
   public ClassTestFinder(Class<?> category) {
-    super(new TestFileNameFilter(), new TestClassFilter(category));
+    super(new TestFileNameFilter(), new TestFileNameFilter(), new TestClassFilter(category));
   }
 
   public static Class<?>[] getCategoryAnnotations(Class<?> c) {
@@ -50,7 +50,7 @@ public class ClassTestFinder extends ClassFinder {
     return new Class<?>[0];
   }
 
-  private static class TestFileNameFilter implements FileNameFilter {
+  private static class TestFileNameFilter implements FileNameFilter, ResourcePathFilter {
     private static final Pattern hadoopCompactRe =
         Pattern.compile("hbase-hadoop\\d?-compat");
 
@@ -59,6 +59,11 @@ public class ClassTestFinder extends ClassFinder {
       boolean isTestFile = fileName.startsWith("Test")
           || fileName.startsWith("IntegrationTest");
       return isTestFile && !hadoopCompactRe.matcher(absFilePath).find();
+    }
+
+    @Override
+    public boolean isCandidatePath(String resourcePath, boolean isJar) {
+      return !hadoopCompactRe.matcher(resourcePath).find();
     }
   };
 
