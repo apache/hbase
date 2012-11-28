@@ -20,12 +20,15 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
@@ -34,15 +37,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTestDataIngestWithChaosMonkey;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.protobuf.ServiceException;
 
 /**
  * A utility to injects faults in a running cluster.
@@ -86,6 +93,16 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     setPoliciesByName(policies);
   }
 
+  /**
+   * Construct a new ChaosMonkey
+   * @param util the HBaseIntegrationTestingUtility already configured
+   * @param policies custom policies to use
+   */
+  public ChaosMonkey(IntegrationTestingUtility util, Policy... policies) {
+    this.util = util;
+    this.policies = policies;
+  }
+
   private void setPoliciesByName(String... policies) {
     this.policies = new Policy[policies.length];
     for (int i=0; i < policies.length; i++) {
@@ -115,16 +132,16 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   /**
    * A (possibly mischievous) action that the ChaosMonkey can perform.
    */
-  private static class Action {
-    long sleepTime; //how long should we sleep
-    ActionContext context;
-    HBaseCluster cluster;
-    ClusterStatus initialStatus;
-    ServerName[] initialServers;
+  public static class Action {
+    // TODO: interesting question - should actions be implemented inside
+    //       ChaosMonkey, or outside? If they are inside (initial), the class becomes
+    //       huge and all-encompassing; if they are outside ChaosMonkey becomes just
+    //       a random task scheduler. For now, keep inside.
 
-    public Action(long sleepTime) {
-      this.sleepTime = sleepTime;
-    }
+    protected ActionContext context;
+    protected HBaseCluster cluster;
+    protected ClusterStatus initialStatus;
+    protected ServerName[] initialServers;
 
     void init(ActionContext context) throws Exception {
       this.context = context;
@@ -136,33 +153,28 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
 
     void perform() throws Exception { };
 
+    // TODO: perhaps these methods should be elsewhere?
     /** Returns current region servers */
-    ServerName[] getCurrentServers() throws IOException {
+    protected ServerName[] getCurrentServers() throws IOException {
       Collection<ServerName> regionServers = cluster.getClusterStatus().getServers();
       return regionServers.toArray(new ServerName[regionServers.size()]);
     }
 
-    void killMaster(ServerName server) throws IOException {
+    protected void killMaster(ServerName server) throws IOException {
       LOG.info("Killing master:" + server);
       cluster.killMaster(server);
       cluster.waitForMasterToStop(server, TIMEOUT);
       LOG.info("Killed master server:" + server);
     }
 
-    void startMaster(ServerName server) throws IOException {
+    protected void startMaster(ServerName server) throws IOException {
       LOG.info("Starting master:" + server.getHostname());
       cluster.startMaster(server.getHostname());
       cluster.waitForActiveAndReadyMaster(TIMEOUT);
       LOG.info("Started master: " + server);
     }
 
-    void restartMaster(ServerName server, long sleepTime) throws IOException {
-      killMaster(server);
-      sleep(sleepTime);
-      startMaster(server);
-    }
-
-    void killRs(ServerName server) throws IOException {
+    protected void killRs(ServerName server) throws IOException {
       LOG.info("Killing region server:" + server);
       cluster.killRegionServer(server);
       cluster.waitForRegionServerToStop(server, TIMEOUT);
@@ -170,17 +182,31 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
           + cluster.getClusterStatus().getServersSize());
     }
 
-    void startRs(ServerName server) throws IOException {
+    protected void startRs(ServerName server) throws IOException {
       LOG.info("Starting region server:" + server.getHostname());
       cluster.startRegionServer(server.getHostname());
       cluster.waitForRegionServerToStart(server.getHostname(), TIMEOUT);
       LOG.info("Started region server:" + server + ". Reported num of rs:"
           + cluster.getClusterStatus().getServersSize());
     }
+  }
+
+  private static class RestartActionBase extends Action {
+    long sleepTime; // how long should we sleep
+
+    public RestartActionBase(long sleepTime) {
+      this.sleepTime = sleepTime;
+    }
 
     void sleep(long sleepTime) {
       LOG.info("Sleeping for:" + sleepTime);
       Threads.sleep(sleepTime);
+    }
+
+    void restartMaster(ServerName server, long sleepTime) throws IOException {
+      killMaster(server);
+      sleep(sleepTime);
+      startMaster(server);
     }
 
     void restartRs(ServerName server, long sleepTime) throws IOException {
@@ -190,7 +216,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
   }
 
-  private static class RestartActiveMaster extends Action {
+  public static class RestartActiveMaster extends RestartActionBase {
     public RestartActiveMaster(long sleepTime) {
       super(sleepTime);
     }
@@ -203,14 +229,9 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
   }
 
-  private static class RestartRandomRs extends Action {
+  public static class RestartRandomRs extends RestartActionBase {
     public RestartRandomRs(long sleepTime) {
       super(sleepTime);
-    }
-
-    @Override
-    void init(ActionContext context) throws Exception {
-      super.init(context);
     }
 
     @Override
@@ -222,7 +243,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
   }
 
-  private static class RestartRsHoldingMeta extends RestartRandomRs {
+  public static class RestartRsHoldingMeta extends RestartRandomRs {
     public RestartRsHoldingMeta(long sleepTime) {
       super(sleepTime);
     }
@@ -238,7 +259,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
   }
 
-  private static class RestartRsHoldingRoot extends RestartRandomRs {
+  public static class RestartRsHoldingRoot extends RestartRandomRs {
     public RestartRsHoldingRoot(long sleepTime) {
       super(sleepTime);
     }
@@ -257,17 +278,12 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   /**
    * Restarts a ratio of the running regionservers at the same time
    */
-  private static class BatchRestartRs extends Action {
+  public static class BatchRestartRs extends RestartActionBase {
     float ratio; //ratio of regionservers to restart
 
     public BatchRestartRs(long sleepTime, float ratio) {
       super(sleepTime);
       this.ratio = ratio;
-    }
-
-    @Override
-    void init(ActionContext context) throws Exception {
-      super.init(context);
     }
 
     @Override
@@ -307,7 +323,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
    * Restarts a ratio of the regionservers in a rolling fashion. At each step, either kills a
    * server, or starts one, sleeping randomly (0-sleepTime) in between steps.
    */
-  private static class RollingBatchRestartRs extends BatchRestartRs {
+  public static class RollingBatchRestartRs extends BatchRestartRs {
     public RollingBatchRestartRs(long sleepTime, float ratio) {
       super(sleepTime, ratio);
     }
@@ -346,6 +362,71 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
   }
 
+  public static class UnbalanceRegionsAction extends Action {
+    private double fractionOfRegions;
+    private double fractionOfServers;
+    private Random random = new Random();
+
+    /**
+     * Unbalances the regions on the cluster by choosing "target" servers, and moving
+     * some regions from each of the non-target servers to random target servers.
+     * @param fractionOfRegions Fraction of regions to move from each server.
+     * @param fractionOfServers Fraction of servers to be chosen as targets.
+     */
+    public UnbalanceRegionsAction(double fractionOfRegions, double fractionOfServers) {
+      this.fractionOfRegions = fractionOfRegions;
+      this.fractionOfServers = fractionOfServers;
+    }
+
+    @Override
+    void perform() throws Exception {
+      LOG.info("Unbalancing regions");
+      ClusterStatus status = this.cluster.getClusterStatus();
+      List<ServerName> victimServers = new LinkedList<ServerName>(status.getServers());
+      int targetServerCount = (int)Math.ceil(fractionOfServers * victimServers.size());
+      List<byte[]> targetServers = new ArrayList<byte[]>(targetServerCount);
+      for (int i = 0; i < targetServerCount; ++i) {
+        int victimIx = random.nextInt(victimServers.size());
+        String serverName = victimServers.remove(victimIx).getServerName();
+        targetServers.add(Bytes.toBytes(serverName));
+      }
+
+      List<byte[]> victimRegions = new LinkedList<byte[]>();
+      for (ServerName server : victimServers) {
+        ServerLoad serverLoad = status.getLoad(server);
+        // Ugh.
+        List<byte[]> regions = new LinkedList<byte[]>(serverLoad.getRegionsLoad().keySet());
+        int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
+        LOG.debug("Removing " + victimRegionCount + " regions from " + server.getServerName());
+        for (int i = 0; i < victimRegionCount; ++i) {
+          int victimIx = random.nextInt(regions.size());
+          String regionId = HRegionInfo.encodeRegionName(regions.remove(victimIx));
+          victimRegions.add(Bytes.toBytes(regionId));
+        }
+      }
+
+      LOG.info("Moving " + victimRegions.size() + " regions from " + victimServers.size()
+          + " servers to " + targetServers.size() + " different servers");
+      HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+      for (byte[] victimRegion : victimRegions) {
+        int targetIx = random.nextInt(targetServers.size());
+        admin.move(victimRegion, targetServers.get(targetIx));
+      }
+    }
+  }
+
+  public static class ForceBalancerAction extends Action {
+    @Override
+    void perform() throws Exception {
+      LOG.info("Balancing regions");
+      HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+      boolean result = admin.balancer();
+      if (!result) {
+        LOG.error("Balancer didn't succeed");
+      }
+    }
+  }
+
   /**
    * A context for a Policy
    */
@@ -358,7 +439,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   /**
    * A policy to introduce chaos to the cluster
    */
-  private static abstract class Policy extends StoppableImplementation implements Runnable {
+  public static abstract class Policy extends StoppableImplementation implements Runnable {
     PolicyContext context;
     public void init(PolicyContext context) throws Exception {
       this.context = context;
@@ -369,19 +450,32 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
    * A policy, which picks a random action according to the given weights,
    * and performs it every configurable period.
    */
-  private static class PeriodicRandomActionPolicy extends Policy {
-    private long period;
+  public static class PeriodicRandomActionPolicy extends Policy {
+    private long periodMs;
     private List<Pair<Action, Integer>> actions;
 
-    PeriodicRandomActionPolicy(long period, List<Pair<Action, Integer>> actions) {
-      this.period = period;
+    public PeriodicRandomActionPolicy(long periodMs, List<Pair<Action, Integer>> actions) {
+      this.periodMs = periodMs;
       this.actions = actions;
+    }
+
+    public PeriodicRandomActionPolicy(long periodMs, Pair<Action, Integer>... actions) {
+      // We don't expect it to be modified.
+      this(periodMs, Arrays.asList(actions));
+    }
+
+    public PeriodicRandomActionPolicy(long periodMs, Action... actions) {
+      this.periodMs = periodMs;
+      this.actions = new ArrayList<Pair<Action, Integer>>(actions.length);
+      for (Action action : actions) {
+        this.actions.add(new Pair<Action, Integer>(action, 1));
+      }
     }
 
     @Override
     public void run() {
       //add some jitter
-      int jitter = new Random().nextInt((int)period);
+      int jitter = new Random().nextInt((int)periodMs);
       LOG.info("Sleeping for " + jitter + " to add jitter");
       Threads.sleep(jitter);
 
@@ -396,7 +490,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
               + StringUtils.stringifyException(ex));
         }
 
-        long sleepTime = period - (System.currentTimeMillis() - start);
+        long sleepTime = periodMs - (System.currentTimeMillis() - start);
         if (sleepTime > 0) {
           LOG.info("Sleeping for:" + sleepTime);
           Threads.sleep(sleepTime);
@@ -407,7 +501,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     @Override
     public void init(PolicyContext context) throws Exception {
       super.init(context);
-      LOG.info("Using ChaosMonkey Policy: " + this.getClass() + ", period:" + period);
+      LOG.info("Using ChaosMonkey Policy: " + this.getClass() + ", period:" + periodMs);
       for (Pair<Action, Integer> action : actions) {
         action.getFirst().init(this.context);
       }
