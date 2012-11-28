@@ -338,7 +338,9 @@ public class SplitLogManager extends ZooKeeperListener {
             LOG.warn("No more task remaining (ZK or task map), splitting "
               + "should have completed. Remaining tasks in ZK " + remainingInZK
               + ", active tasks in map " + actual);
-            return;
+            if (remainingInZK == 0 && actual == 0) {
+              return;
+            }
           }
           batch.wait(100);
           if (stopper.isStopped()) {
