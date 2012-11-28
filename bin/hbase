@@ -156,13 +156,16 @@ add_maven_deps_to_classpath() {
   f="${HBASE_HOME}/target/cached_classpath.txt"
   if [ ! -f "${f}" ]
   then
-    ${MVN} -f "${HBASE_HOME}/pom.xml" package dependency:build-classpath -DskipTests -Dmdep.outputFile="${f}" $MAVEN_OPTS &> /dev/null
+    #we need hbase-it to always be the last module run. since it has the largest classpath
+    modules=`find hbase-* -type f -name 'pom.xml' |sed 's#\(.*\)/.*#\1#' | sed '/hbase-it/d' |sort -u  | paste -s -d , -`
+    modules="${modules},hbase-it"
+    ${MVN} -f "${HBASE_HOME}/pom.xml" package dependency:build-classpath -DskipTests -Dmdep.outputFile="${f}" -pl "${modules}" &> /dev/null
     if [ $? -ne 0 ]
     then
       #delete the file, maven writes it even on failure. Keeping it would breaks the caching mechanism the next time we call the script
       rm -rf "${f}"
       echo "The maven command used to generate the classpath failed, please check your environment."
-      echo "Maven command was: ${MVN} -f '${HBASE_HOME}/pom.xml' package dependency:build-classpath -DskipTests -Dmdep.outputFile='${f}' $MAVEN_OPTS"
+      echo "Maven command was: ${MVN} -f '${HBASE_HOME}/pom.xml' package dependency:build-classpath -DskipTests -Dmdep.outputFile='${f}' -pl '${modules}'"
       exit 1
     fi
   fi
