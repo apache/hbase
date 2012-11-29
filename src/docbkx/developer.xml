@@ -388,12 +388,16 @@ HBase unit tests. The integration category is for not for unit tests but for int
 tests.  These are run when you invoke <code>$ mvn verify</code>.  Integration tests
 are described TODO: POINTER_TO_INTEGRATION_TEST_SECTION and will not be discussed further
 in this section on HBase unit tests.</para>
+<para>
+Apache HBase uses a patched maven surefire plugin and maven profiles to implement
+its unit test characterizations.
+</para>
 <para>Read the below to figure which annotation of the set small, medium, and large to
 put on your new HBase unit test.
 </para>
 
 <section xml:id="hbase.unittests.small">
-<title>SmallTests<indexterm><primary>SmallTests</primary></indexterm></title>
+<title>Small Tests<indexterm><primary>SmallTests</primary></indexterm></title>
 <para>
 <emphasis>Small</emphasis> tests are executed in a shared JVM. We put in this category all the tests that can
 be executed quickly in a shared JVM.  The maximum execution time for a small test is 15 seconds,
@@ -401,7 +405,7 @@ and small tests should not use a (mini)cluster.</para>
 </section>
 
 <section xml:id="hbase.unittests.medium">
-<title>MediumTests<indexterm><primary>MediumTests</primary></indexterm></title>
+<title>Medium Tests<indexterm><primary>MediumTests</primary></indexterm></title>
 <para><emphasis>Medium</emphasis> tests represent tests that must be executed
 before proposing a patch. They are designed to run in less than 30 minutes altogether,
 and are quite stable in their results. They are designed to last less than 50 seconds
@@ -410,17 +414,19 @@ individually. They can use a cluster, and each of them is executed in a separate
 </section>
 
 <section xml:id="hbase.unittests.large">
-<title>Large<indexterm><primary>LargeTests</primary></indexterm></title>
-<para><emphasis>Large</emphasis> tests are everything else. They are typically integration-like
+<title>Large Tests<indexterm><primary>LargeTests</primary></indexterm></title>
+<para><emphasis>Large</emphasis> tests are everything else. They are typically large-scale
 tests, regression tests for specific bugs, timeout tests, performance tests.
 They are executed before a commit on the pre-integration machines. They can be run on
 the developer machine as well.
 </para>
 </section>
-<para>
-Apache HBase uses a patched maven surefire plugin and maven profiles to implement
-its unit test characterizations.
+<section xml:id="hbase.unittests.integration">
+<title>Integration Tests<indexterm><primary>IntegrationTests</primary></indexterm></title>
+<para><emphasis>Integration</emphasis> tests are system level tests. See
+<xref linkend="integration.tests">integration tests section</xref> for more info.
 </para>
+</section>
 </section>
 
 <section xml:id="hbase.unittests.cmds">
@@ -587,6 +593,165 @@ Sleep should be minimal to be as fast as possible. Waiting for a variable should
 Start/stopping a cluster cost around 10 seconds. They should not be started per test method but per test class.
 Started cluster must be shutdown using <methodname>HBaseTestingUtility#shutdownMiniCluster</methodname>, which cleans the directories.
 As most as possible, tests should use the default settings for the cluster. When they don't, they should document it. This will allow to share the cluster later.
+</para>
+</section>
+</section>
+
+<section xml:id="integration.tests">
+<title>Integration Tests</title>
+<para>HBase integration/system tests are tests that are beyond HBase unit tests.  They
+are generally long-lasting, sizeable (the test can be asked to 1M rows or 1B rows),
+targetable (they can take configuration that will point them at the ready-made cluster
+they are to run against; integration tests do not include cluster start/stop code),
+and verifying success, integration tests rely on public APIs only; they do not
+attempt to examine server internals asserting success/fail. Integration tests
+are what you would run when you need to more elaborate proofing of a release candidate
+beyond what unit tests can do. They are not generally run on the Apache Continuous Integration
+build server, however, some sites opt to run integration tests as a part of their
+continuous testing on an actual cluster.
+</para>
+<para>
+Integration tests currently live under the <filename>src/test</filename> directory
+in the hbase-it submodule and will match the regex: <filename>**/IntegrationTest*.java</filename>.
+All integration tests are also annotated with <code>@Category(IntegrationTests.class)</code>.
+</para>
+
+<para>
+Integration tests can be run in two modes: using a mini cluster, or against an actual distributed cluster.
+Maven failsafe is used to run the tests using the mini cluster. IntegrationTestsDriver class is used for
+executing the tests against a distributed cluster. Integration tests SHOULD NOT assume that they are running against a
+mini cluster, and SHOULD NOT use private API's to access cluster state. To interact with the distributed or mini
+cluster uniformly, <code>HBaseIntegrationTestingUtility</code>, and <code>HBaseCluster</code> classes,
+and public client API's can be used.
+</para>
+
+<section xml:id="maven.build.commands.integration.tests.mini">
+<title>Running integration tests against mini cluster</title>
+<para>HBase 0.92 added a <varname>verify</varname> maven target.
+Invoking it, for example by doing <code>mvn verify</code>, will
+run all the phases up to and including the verify phase via the
+maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>,
+running all the above mentioned HBase unit tests as well as tests that are in the HBase integration test group.
+After you have completed
+          <programlisting>mvn install -DskipTests</programlisting>
+You can run just the integration tests by invoking:
+          <programlisting>
+cd hbase-it
+mvn verify</programlisting>
+
+If you just want to run the integration tests in top-level, you need to run two commands. First:
+          <programlisting>mvn failsafe:integration-test</programlisting>
+This actually runs ALL the integration tests.
+          <note><para>This command will always output <code>BUILD SUCCESS</code> even if there are test failures.
+          </para></note>
+          At this point, you could grep the output by hand looking for failed tests. However, maven will do this for us; just use:
+          <programlisting>mvn failsafe:verify</programlisting>
+          The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.</para>
+
+      <section xml:id="maven.build.commanas.integration.tests2">
+          <title>Running a subset of Integration tests</title>
+          <para>This is very similar to how you specify running a subset of unit tests (see above), but use the property
+	      <code>it.test</code> instead of <code>test</code>.
+To just run <classname>IntegrationTestClassXYZ.java</classname>, use:
+          <programlisting>mvn failsafe:integration-test -Dit.test=IntegrationTestClassXYZ</programlisting>
+          The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java:
+          <programlisting>mvn failsafe:integration-test -Dit.test=*ClassX*</programlisting>
+          This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*".
+          You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups.This would look something like:
+          <programlisting>mvn failsafe:integration-test -Dit.test=*ClassX*, *ClassY</programlisting>
+          </para>
+      </section>
+</section>
+<section xml:id="maven.build.commands.integration.tests.distributed">
+<title>Running integration tests against distributed cluster</title>
+<para>
+If you have an already-setup HBase cluster, you can launch the integration tests by invoking the class <code>IntegrationTestsDriver</code>. You may have to
+run test-compile first. The configuration will be picked by the bin/hbase script.
+<programlisting>mvn test-compile</programlisting>
+Then launch the tests with:
+<programlisting>bin/hbase [--config config_dir] org.apache.hadoop.hbase.IntegrationTestsDriver</programlisting>
+
+This execution will launch the tests under <code>hbase-it/src/test</code>, having <code>@Category(IntegrationTests.class)</code> annotation,
+and a name starting with <code>IntegrationTests</code>. It uses Junit to run the tests. Currently there is no support for running integration tests against a distributed cluster using maven (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6201">HBASE-6201</link>).
+</para>
+
+<para>
+The tests interact with the distributed cluster by using the methods in the <code>DistributedHBaseCluster</code> (implementing <code>HBaseCluster</code>) class, which in turn uses a pluggable <code>ClusterManager</code>. Concrete implementations provide actual functionality for carrying out deployment-specific and environment-dependent tasks (SSH, etc). The default <code>ClusterManager</code> is <code>HBaseClusterManager</code>, which uses SSH to remotely execute start/stop/kill/signal commands, and assumes some posix commands (ps, etc). Also assumes the user running the test has enough "power" to start/stop servers on the remote machines. By default, it picks up <code>HBASE_SSH_OPTS, HBASE_HOME, HBASE_CONF_DIR</code> from the env, and uses <code>bin/hbase-daemon.sh</code> to carry out the actions. Currently tarball deployments, deployments which uses hbase-daemons.sh, and <link xlink:href="http://incubator.apache.org/ambari/">Apache Ambari</link> deployments are supported. /etc/init.d/ scripts are not supported for now, but it can be easily added. For other deployment options, a ClusterManager can be implemented and plugged in.
+</para>
+</section>
+
+<section xml:id="maven.build.commands.integration.tests.destructive">
+<title>Destructive integration / system tests</title>
+<para>
+	In 0.96, a tool named <code>ChaosMonkey</code> has been introduced. It is modeled after the <link xlink:href="http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html">same-named tool by Netflix</link>.
+Some of the tests use ChaosMonkey to simulate faults in the running cluster in the way of killing random servers,
+disconnecting servers, etc. ChaosMonkey can also be used as a stand-alone tool to run a (misbehaving) policy while you
+are running other tests.
+</para>
+
+<para>
+ChaosMonkey defines Action's and Policy's. Actions are sequences of events. We have at least the following actions:
+<itemizedlist>
+<listitem>Restart active master (sleep 5 sec)</listitem>
+<listitem>Restart random regionserver (sleep 5 sec)</listitem>
+<listitem>Restart random regionserver (sleep 60 sec)</listitem>
+<listitem>Restart META regionserver (sleep 5 sec)</listitem>
+<listitem>Restart ROOT regionserver (sleep 5 sec)</listitem>
+<listitem>Batch restart of 50% of regionservers (sleep 5 sec)</listitem>
+<listitem>Rolling restart of 100% of regionservers (sleep 5 sec)</listitem>
+</itemizedlist>
+
+Policies on the other hand are responsible for executing the actions based on a strategy.
+The default policy is to execute a random action every minute based on predefined action
+weights. ChaosMonkey executes predefined named policies until it is stopped. More than one
+policy can be active at any time.
+</para>
+
+<para>
+  To run ChaosMonkey as a standalone tool deploy your HBase cluster as usual. ChaosMonkey uses the configuration
+from the bin/hbase script, thus no extra configuration needs to be done. You can invoke the ChaosMonkey by running:
+<programlisting>bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey</programlisting>
+
+This will output smt like:
+<programlisting>
+12/11/19 23:21:57 INFO util.ChaosMonkey: Using ChaosMonkey Policy: class org.apache.hadoop.hbase.util.ChaosMonkey$PeriodicRandomActionPolicy, period:60000
+12/11/19 23:21:57 INFO util.ChaosMonkey: Sleeping for 26953 to add jitter
+12/11/19 23:22:24 INFO util.ChaosMonkey: Performing action: Restart active master
+12/11/19 23:22:24 INFO util.ChaosMonkey: Killing master:master.example.com,60000,1353367210440
+12/11/19 23:22:24 INFO hbase.HBaseCluster: Aborting Master: master.example.com,60000,1353367210440
+12/11/19 23:22:24 INFO hbase.ClusterManager: Executing remote command: ps aux | grep master | grep -v grep | tr -s ' ' | cut -d ' ' -f2 | xargs kill -s SIGKILL , hostname:master.example.com
+12/11/19 23:22:25 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:
+12/11/19 23:22:25 INFO hbase.HBaseCluster: Waiting service:master to stop: master.example.com,60000,1353367210440
+12/11/19 23:22:25 INFO hbase.ClusterManager: Executing remote command: ps aux | grep master | grep -v grep | tr -s ' ' | cut -d ' ' -f2 , hostname:master.example.com
+12/11/19 23:22:25 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:
+12/11/19 23:22:25 INFO util.ChaosMonkey: Killed master server:master.example.com,60000,1353367210440
+12/11/19 23:22:25 INFO util.ChaosMonkey: Sleeping for:5000
+12/11/19 23:22:30 INFO util.ChaosMonkey: Starting master:master.example.com
+12/11/19 23:22:30 INFO hbase.HBaseCluster: Starting Master on: master.example.com
+12/11/19 23:22:30 INFO hbase.ClusterManager: Executing remote command: /homes/enis/code/hbase-0.94/bin/../bin/hbase-daemon.sh --config /homes/enis/code/hbase-0.94/bin/../conf start master , hostname:master.example.com
+12/11/19 23:22:31 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:starting master, logging to /homes/enis/code/hbase-0.94/bin/../logs/hbase-enis-master-master.example.com.out
+....
+12/11/19 23:22:33 INFO util.ChaosMonkey: Started master: master.example.com,60000,1353367210440
+12/11/19 23:22:33 INFO util.ChaosMonkey: Sleeping for:51321
+12/11/19 23:23:24 INFO util.ChaosMonkey: Performing action: Restart random region server
+12/11/19 23:23:24 INFO util.ChaosMonkey: Killing region server:rs3.example.com,60020,1353367027826
+12/11/19 23:23:24 INFO hbase.HBaseCluster: Aborting RS: rs3.example.com,60020,1353367027826
+12/11/19 23:23:24 INFO hbase.ClusterManager: Executing remote command: ps aux | grep regionserver | grep -v grep | tr -s ' ' | cut -d ' ' -f2 | xargs kill -s SIGKILL , hostname:rs3.example.com
+12/11/19 23:23:25 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:
+12/11/19 23:23:25 INFO hbase.HBaseCluster: Waiting service:regionserver to stop: rs3.example.com,60020,1353367027826
+12/11/19 23:23:25 INFO hbase.ClusterManager: Executing remote command: ps aux | grep regionserver | grep -v grep | tr -s ' ' | cut -d ' ' -f2 , hostname:rs3.example.com
+12/11/19 23:23:25 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:
+12/11/19 23:23:25 INFO util.ChaosMonkey: Killed region server:rs3.example.com,60020,1353367027826. Reported num of rs:6
+12/11/19 23:23:25 INFO util.ChaosMonkey: Sleeping for:60000
+12/11/19 23:24:25 INFO util.ChaosMonkey: Starting region server:rs3.example.com
+12/11/19 23:24:25 INFO hbase.HBaseCluster: Starting RS on: rs3.example.com
+12/11/19 23:24:25 INFO hbase.ClusterManager: Executing remote command: /homes/enis/code/hbase-0.94/bin/../bin/hbase-daemon.sh --config /homes/enis/code/hbase-0.94/bin/../conf start regionserver , hostname:rs3.example.com
+12/11/19 23:24:26 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:starting regionserver, logging to /homes/enis/code/hbase-0.94/bin/../logs/hbase-enis-regionserver-rs3.example.com.out
+
+12/11/19 23:24:27 INFO util.ChaosMonkey: Started region server:rs3.example.com,60020,1353367027826. Reported num of rs:6
+</programlisting>
+
+As you can see from the log, ChaosMonkey started the default PeriodicRandomActionPolicy, which is configured with all the available actions, and ran RestartActiveMaster and RestartRandomRs actions. ChaosMonkey tool, if run from command line, will keep on running until the process is killed.
 </para>
 </section>
 </section>
