@@ -85,12 +85,6 @@ public class Scan extends OperationWithAttributes {
   private static final String RAW_ATTR = "_raw_";
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
 
-  private static final byte VERSION_WITH_PAGINATION = (byte)4;
-  private static final byte VERSION_WITH_RESULT_SIZE = (byte)3;
-  private static final byte VERSION_WITH_ATTRIBUTES = (byte)2;
-  
-  private static final byte SCAN_VERSION = VERSION_WITH_PAGINATION;
-  
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
@@ -117,22 +111,6 @@ public class Scan extends OperationWithAttributes {
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
 
-  /**
-   * @return the most backward-compatible version for this scan possible for its parameters
-   */
-  private byte getVersion() {
-    if (storeLimit != -1 || storeOffset != 0) {
-      return VERSION_WITH_PAGINATION;
-    }
-    if (maxResultSize != -1) { 
-      return VERSION_WITH_RESULT_SIZE;
-    }
-    if (getAttributeSize() != 0) {
-      return VERSION_WITH_ATTRIBUTES;
-    }
-    return 1;
-  }
-  
   /**
    * Create a Scan operation across all rows.
    */

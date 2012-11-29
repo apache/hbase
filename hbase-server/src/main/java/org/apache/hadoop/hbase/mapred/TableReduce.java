@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.Reducer;
  */
 @Deprecated
 @SuppressWarnings("unchecked")
-public interface TableReduce<K extends WritableComparable, V extends Writable>
+public interface TableReduce<K extends WritableComparable, V>
 extends Reducer<K, V, ImmutableBytesWritable, Put> {
 
 }

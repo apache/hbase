@@ -290,6 +290,7 @@ public class RemoteHTable implements HTableInterface {
         // fall through
       case 404:
         return new Result();
+
       case 509:
         try {
           Thread.sleep(sleepTime);

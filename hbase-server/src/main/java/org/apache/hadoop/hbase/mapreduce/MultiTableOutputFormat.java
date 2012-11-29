@@ -30,10 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -58,7 +58,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable, Writable> {
+public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable, Mutation> {
   /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (HLog) */
   public static final String WAL_PROPERTY = "hbase.mapreduce.multitableoutputformat.wal";
   /** Property value to use write-ahead logging */
@@ -69,7 +69,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
    * Record writer for outputting to multiple HTables.
    */
   protected static class MultiTableRecordWriter extends
-      RecordWriter<ImmutableBytesWritable, Writable> {
+      RecordWriter<ImmutableBytesWritable, Mutation> {
     private static final Log LOG = LogFactory.getLog(MultiTableRecordWriter.class);
     Map<ImmutableBytesWritable, HTable> tables;
     Configuration conf;
@@ -126,7 +126,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
      *          if the action is not a put or a delete.
      */
     @Override
-    public void write(ImmutableBytesWritable tableName, Writable action) throws IOException {
+    public void write(ImmutableBytesWritable tableName, Mutation action) throws IOException {
       HTable table = getTable(tableName);
       // The actions are not immutable, so we defensively copy them
       if (action instanceof Put) {
@@ -156,7 +156,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
   }
 
   @Override
-  public RecordWriter<ImmutableBytesWritable, Writable> getRecordWriter(TaskAttemptContext context)
+  public RecordWriter<ImmutableBytesWritable, Mutation> getRecordWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     return new MultiTableRecordWriter(HBaseConfiguration.create(conf),

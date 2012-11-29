@@ -83,7 +83,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 
@@ -104,7 +103,7 @@ import com.google.protobuf.Message.Builder;
 @InterfaceAudience.Private
 public class HBaseClient {
 
-  private static final Log LOG = LogFactory
+  public static final Log LOG = LogFactory
       .getLog("org.apache.hadoop.ipc.HBaseClient");
   protected final PoolMap<ConnectionId, Connection> connections;
 

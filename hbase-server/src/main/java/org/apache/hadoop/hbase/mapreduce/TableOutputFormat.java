@@ -30,9 +30,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -48,7 +48,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class TableOutputFormat<KEY> extends OutputFormat<KEY, Writable>
+public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation>
 implements Configurable {
 
   private final Log LOG = LogFactory.getLog(TableOutputFormat.class);
@@ -85,7 +85,7 @@ implements Configurable {
    * @param <KEY>  The type of the key.
    */
   protected static class TableRecordWriter<KEY>
-  extends RecordWriter<KEY, Writable> {
+  extends RecordWriter<KEY, Mutation> {
 
     /** The table to write to. */
     private HTable table;
@@ -121,7 +121,7 @@ implements Configurable {
      * @see org.apache.hadoop.mapreduce.RecordWriter#write(java.lang.Object, java.lang.Object)
      */
     @Override
-    public void write(KEY key, Writable value)
+    public void write(KEY key, Mutation value)
     throws IOException {
       if (value instanceof Put) this.table.put(new Put((Put)value));
       else if (value instanceof Delete) this.table.delete(new Delete((Delete)value));
@@ -139,7 +139,7 @@ implements Configurable {
    * @see org.apache.hadoop.mapreduce.lib.output.FileOutputFormat#getRecordWriter(org.apache.hadoop.mapreduce.TaskAttemptContext)
    */
   @Override
-  public RecordWriter<KEY, Writable> getRecordWriter(
+  public RecordWriter<KEY, Mutation> getRecordWriter(
     TaskAttemptContext context)
   throws IOException, InterruptedException {
     return new TableRecordWriter<KEY>(this.table);

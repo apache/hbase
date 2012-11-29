@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.OutputFormat;
 
@@ -52,7 +53,7 @@ import org.apache.hadoop.mapreduce.OutputFormat;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class IdentityTableReducer
-extends TableReducer<Writable, Writable, Writable> {
+extends TableReducer<Writable, Mutation, Writable> {
 
   @SuppressWarnings("unused")
   private static final Log LOG = LogFactory.getLog(IdentityTableReducer.class);
@@ -72,9 +73,9 @@ extends TableReducer<Writable, Writable, Writable> {
    * @throws InterruptedException When the job gets interrupted.
    */
   @Override
-  public void reduce(Writable key, Iterable<Writable> values, Context context)
+  public void reduce(Writable key, Iterable<Mutation> values, Context context)
   throws IOException, InterruptedException {
-    for(Writable putOrDelete : values) {
+    for(Mutation putOrDelete : values) {
       context.write(key, putOrDelete);
     }
   }

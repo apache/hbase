@@ -139,7 +139,7 @@ public class TestTimestampsFilter {
     // Request an empty list of versions using the Timestamps filter;
     // Should return none.
     kvs = getNVersions(ht, FAMILY, 2, 2, new ArrayList<Long>());
-    assertEquals(0, kvs.length);
+    assertEquals(0, kvs == null? 0: kvs.length);
 
     //
     // Test the filter using a Scan operation
@@ -272,7 +272,7 @@ public class TestTimestampsFilter {
         // ask for versions that do not exist.
         kvs = getNVersions(ht, cf, rowIdx, colIdx,
                            Arrays.asList(101L, 102L));
-        assertEquals(0, kvs.length);
+        assertEquals(0, kvs == null? 0: kvs.length);
 
         // ask for some versions that exist and some that do not.
         kvs = getNVersions(ht, cf, rowIdx, colIdx,

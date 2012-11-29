@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_ROW_COUNT;
@@ -226,7 +225,7 @@ public class TableRecordReaderImpl {
       if (result != null && result.size() > 0) {
         key.set(result.getRow());
         lastSuccessfulRow = key.get();
-        Writables.copyWritable(result, value);
+        value.copyFrom(result);
         return true;
       }
       return false;

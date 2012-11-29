@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -43,8 +42,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceStability.Stable
 public class Append extends Mutation {
   private static final String RETURN_RESULTS = "_rr_";
-  private static final byte APPEND_VERSION = (byte)1;
-
   /**
    * @param returnResults
    *          True (default) if the append operation should return the results.
@@ -90,5 +87,4 @@ public class Append extends Mutation {
     familyMap.put(family, list);
     return this;
   }
-
 }

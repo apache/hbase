@@ -18,20 +18,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.DataInput;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Container for Actions (i.e. Get, Delete, or Put), which are grouped by
@@ -39,14 +34,13 @@ import java.util.TreeMap;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class MultiAction<R> implements Writable {
+public final class MultiAction<R> {
 
   // map of regions to lists of puts/gets/deletes for that region.
-  public Map<byte[], List<Action<R>>> actions =
-    new TreeMap<byte[], List<Action<R>>>(
-      Bytes.BYTES_COMPARATOR);
+  public Map<byte[], List<Action<R>>> actions = new TreeMap<byte[], List<Action<R>>>(Bytes.BYTES_COMPARATOR);
 
   public MultiAction() {
+    super();
   }
 
   /**
@@ -56,7 +50,7 @@ public final class MultiAction<R> implements Writable {
    */
   public int size() {
     int size = 0;
-    for (List l : actions.values()) {
+    for (List<?> l : actions.values()) {
       size += l.size();
     }
     return size;
@@ -93,33 +87,4 @@ public final class MultiAction<R> implements Writable {
     }
     return res;
   }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(actions.size());
-    for (Map.Entry<byte[], List<Action<R>>> e : actions.entrySet()) {
-      Bytes.writeByteArray(out, e.getKey());
-      List<Action<R>> lst = e.getValue();
-      out.writeInt(lst.size());
-      for (Action a : lst) {
-        HbaseObjectWritable.writeObject(out, a, a.getClass(), null);
-      }
-    }
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    actions.clear();
-    int mapSize = in.readInt();
-    for (int i = 0; i < mapSize; i++) {
-      byte[] key = Bytes.readByteArray(in);
-      int listSize = in.readInt();
-      List<Action<R>> lst = new ArrayList<Action<R>>(listSize);
-      for (int j = 0; j < listSize; j++) {
-        lst.add((Action) HbaseObjectWritable.readObject(in, null));
-      }
-      actions.put(key, lst);
-    }
-  }
-
 }

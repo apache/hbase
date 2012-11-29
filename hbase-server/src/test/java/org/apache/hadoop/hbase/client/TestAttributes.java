@@ -19,12 +19,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.SmallTests;
@@ -36,31 +30,8 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestAttributes {
   @Test
-  public void testAttributesSerialization() throws IOException {
-    Put put = new Put();
-    put.setAttribute("attribute1", Bytes.toBytes("value1"));
-    put.setAttribute("attribute2", Bytes.toBytes("value2"));
-    put.setAttribute("attribute3", Bytes.toBytes("value3"));
-
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    DataOutput out = new DataOutputStream(byteArrayOutputStream);
-    put.write(out);
-
-    Put put2 = new Put();
-    Assert.assertTrue(put2.getAttributesMap().isEmpty());
-
-    put2.readFields(new DataInputStream(new ByteArrayInputStream(byteArrayOutputStream.toByteArray())));
-
-    Assert.assertNull(put2.getAttribute("absent"));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), put2.getAttribute("attribute1")));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), put2.getAttribute("attribute2")));
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value3"), put2.getAttribute("attribute3")));
-    Assert.assertEquals(3, put2.getAttributesMap().size());
-  }
-
-  @Test
   public void testPutAttributes() {
-    Put put = new Put();
+    Put put = new Put(new byte [] {});
     Assert.assertTrue(put.getAttributesMap().isEmpty());
     Assert.assertNull(put.getAttribute("absent"));
 
@@ -108,7 +79,7 @@ public class TestAttributes {
 
   @Test
   public void testDeleteAttributes() {
-    Delete del = new Delete();
+    Delete del = new Delete(new byte [] {});
     Assert.assertTrue(del.getAttributesMap().isEmpty());
     Assert.assertNull(del.getAttribute("absent"));
 
@@ -171,7 +142,7 @@ public class TestAttributes {
 
   @Test
   public void testDeleteId() {
-    Delete delete = new Delete();
+    Delete delete = new Delete(new byte [] {});
     Assert.assertNull("Make sure id is null if unset", delete.toMap().get("id"));
     delete.setId("myId");
     Assert.assertEquals("myId", delete.toMap().get("id"));
@@ -179,7 +150,7 @@ public class TestAttributes {
 
   @Test
   public void testPutId() {
-    Put put = new Put();
+    Put put = new Put(new byte [] {});
     Assert.assertNull("Make sure id is null if unset", put.toMap().get("id"));
     put.setId("myId");
     Assert.assertEquals("myId", put.toMap().get("id"));

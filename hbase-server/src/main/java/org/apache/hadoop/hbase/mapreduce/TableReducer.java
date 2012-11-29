@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.mapreduce.Reducer;
 
 /**
@@ -43,5 +43,5 @@ import org.apache.hadoop.mapreduce.Reducer;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class TableReducer<KEYIN, VALUEIN, KEYOUT>
-extends Reducer<KEYIN, VALUEIN, KEYOUT, Writable> {
+extends Reducer<KEYIN, VALUEIN, KEYOUT, Mutation> {
 }

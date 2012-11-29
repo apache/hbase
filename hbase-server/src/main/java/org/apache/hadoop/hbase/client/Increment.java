@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -30,7 +28,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Used to perform Increment operations on a single row.
@@ -47,8 +44,6 @@ import org.apache.hadoop.io.Writable;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Increment implements Row {
-  private static final byte INCREMENT_VERSION = (byte)2;
-
   private byte [] row = null;
   private long lockId = -1L;
   private boolean writeToWAL = true;
@@ -273,72 +268,6 @@ public class Increment implements Row {
     }
     sb.append("}");
     return sb.toString();
-  }
-
-  //Writable
-  public void readFields(final DataInput in)
-  throws IOException {
-    int version = in.readByte();
-    if (version > INCREMENT_VERSION) {
-      throw new IOException("unsupported version");
-    }
-    this.row = Bytes.readByteArray(in);
-    this.tr = new TimeRange();
-    tr.readFields(in);
-    this.lockId = in.readLong();
-    int numFamilies = in.readInt();
-    if (numFamilies == 0) {
-      throw new IOException("At least one column required");
-    }
-    this.familyMap =
-      new TreeMap<byte [],NavigableMap<byte [], Long>>(Bytes.BYTES_COMPARATOR);
-    for(int i=0; i<numFamilies; i++) {
-      byte [] family = Bytes.readByteArray(in);
-      boolean hasColumns = in.readBoolean();
-      NavigableMap<byte [], Long> set = null;
-      if(hasColumns) {
-        int numColumns = in.readInt();
-        set = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
-        for(int j=0; j<numColumns; j++) {
-          byte [] qualifier = Bytes.readByteArray(in);
-          set.put(qualifier, in.readLong());
-        }
-      } else {
-        throw new IOException("At least one column required per family");
-      }
-      this.familyMap.put(family, set);
-    }
-    if (version > 1) {
-      this.writeToWAL = in.readBoolean();
-    }
-  }
-
-  public void write(final DataOutput out)
-  throws IOException {
-    out.writeByte(INCREMENT_VERSION);
-    Bytes.writeByteArray(out, this.row);
-    tr.write(out);
-    out.writeLong(this.lockId);
-    if (familyMap.size() == 0) {
-      throw new IOException("At least one column required");
-    }
-    out.writeInt(familyMap.size());
-    for(Map.Entry<byte [], NavigableMap<byte [], Long>> entry :
-      familyMap.entrySet()) {
-      Bytes.writeByteArray(out, entry.getKey());
-      NavigableMap<byte [], Long> columnSet = entry.getValue();
-      if(columnSet == null) {
-        throw new IOException("At least one column required per family");
-      } else {
-        out.writeBoolean(true);
-        out.writeInt(columnSet.size());
-        for(Map.Entry<byte [], Long> qualifier : columnSet.entrySet()) {
-          Bytes.writeByteArray(out, qualifier.getKey());
-          out.writeLong(qualifier.getValue());
-        }
-      }
-    }
-    out.writeBoolean(writeToWAL);
   }
 
   @Override

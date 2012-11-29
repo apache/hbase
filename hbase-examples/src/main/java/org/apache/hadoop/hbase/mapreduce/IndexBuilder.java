@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -73,7 +72,7 @@ public class IndexBuilder {
    * Internal Mapper to be run by Hadoop.
    */
   public static class Map extends
-      Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Writable> {
+      Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Put> {
     private byte[] family;
     private HashMap<byte[], ImmutableBytesWritable> indexes;
 

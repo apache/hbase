@@ -230,6 +230,8 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     if (this.scanMetrics == null || rrs == null) {
       return;
     }
+    /*
+     * broken by protobufs
     for (Result rr : rrs) {
       if (rr.getBytes() != null) {
         this.scanMetrics.countOfBytesInResults.inc(rr.getBytes().getLength());
@@ -239,6 +241,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
         }
       }
     }
+    */
   }
 
   private void close() {

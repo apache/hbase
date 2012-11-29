@@ -65,10 +65,6 @@ import java.util.TreeSet;
 public class Get extends OperationWithAttributes
   implements Row, Comparable<Row> {
 
-  private static final byte VERSION_WITHOUT_PAGINATION = (byte) 2;
-  private static final byte VERSION_WITH_PAGINATION = (byte) 3;
-  private static final byte GET_VERSION = VERSION_WITH_PAGINATION;
-
   private byte [] row = null;
   private long lockId = -1L;
   private int maxVersions = 1;
@@ -79,14 +75,6 @@ public class Get extends OperationWithAttributes
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
-
-  /** @return the most backward-compatible version for this scan possible for its parameters */
-  private byte getVersion() {
-    if (storeLimit != -1 || storeOffset != 0) {
-      return VERSION_WITH_PAGINATION;
-    }
-    return VERSION_WITHOUT_PAGINATION;
-  }
 
   /**
    * Create a Get operation for the specified row.

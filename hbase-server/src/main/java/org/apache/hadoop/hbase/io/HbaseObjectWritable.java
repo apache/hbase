@@ -414,22 +414,6 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
 
   public static long getWritableSize(Object instance, Class declaredClass,
                                      Configuration conf) {
-    long size = Bytes.SIZEOF_BYTE; // code
-    if (instance == null) {
-      return 0L;
-    }
-
-    if (declaredClass.isArray()) {
-      if (declaredClass.equals(Result[].class)) {
-
-        return size + Result.getWriteArraySize((Result[])instance);
-      }
-    }
-    if (declaredClass.equals(Result.class)) {
-      Result r = (Result) instance;
-      // one extra class code for writable instance.
-      return r.getWritableSize() + size + Bytes.SIZEOF_BYTE;
-    }
     return 0L; // no hint is the default.
   }
   /**
@@ -460,8 +444,6 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       // byte-at-a-time we were previously doing.
       if (declClass.equals(byte [].class)) {
         Bytes.writeByteArray(out, (byte [])instanceObj);
-      } else if(declClass.equals(Result [].class)) {
-        Result.writeArray(out, (Result [])instanceObj);
       } else {
         //if it is a Generic array, write the element's type
         if (getClassCode(declaredClass) == GENERIC_ARRAY_CODE) {
@@ -641,8 +623,6 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     } else if (declaredClass.isArray()) {              // array
       if (declaredClass.equals(byte [].class)) {
         instance = Bytes.readByteArray(in);
-      } else if(declaredClass.equals(Result [].class)) {
-        instance = Result.readArray(in);
       } else {
         int length = in.readInt();
         instance = Array.newInstance(declaredClass.getComponentType(), length);

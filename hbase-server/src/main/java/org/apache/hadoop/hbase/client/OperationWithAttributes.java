@@ -19,9 +19,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.io.WritableUtils;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -85,30 +81,6 @@ public abstract class OperationWithAttributes extends Operation implements Attri
       }
     }
     return size;
-  }
-
-  protected void writeAttributes(final DataOutput out) throws IOException {
-    if (this.attributes == null) {
-      out.writeInt(0);
-    } else {
-      out.writeInt(this.attributes.size());
-      for (Map.Entry<String, byte[]> attr : this.attributes.entrySet()) {
-        WritableUtils.writeString(out, attr.getKey());
-        Bytes.writeByteArray(out, attr.getValue());
-      }
-    }
-  }
-  
-  protected void readAttributes(final DataInput in) throws IOException {
-    int numAttributes = in.readInt();
-    if (numAttributes > 0) {
-      this.attributes = new HashMap<String, byte[]>(numAttributes);
-      for(int i=0; i<numAttributes; i++) {
-        String name = WritableUtils.readString(in);
-        byte[] value = Bytes.readByteArray(in);
-        this.attributes.put(name, value);
-      }
-    }
   }
 
   /**

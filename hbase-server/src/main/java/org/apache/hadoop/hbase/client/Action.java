@@ -18,32 +18,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
-/*
+/**
  * A Get, Put or Delete associated with it's region.  Used internally by  
  * {@link HTable::batch} to associate the action with it's region and maintain 
  * the index from the original request. 
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Action<R> implements Writable, Comparable {
+public class Action<R> implements Comparable {
 
   private Row action;
   private int originalIndex;
   private R result;
-
-  public Action() {
-    super();
-  }
 
   /*
    * This constructor is replaced by {@link #Action(Row, int)}
@@ -88,22 +77,4 @@ public class Action<R> implements Writable, Comparable {
   public int compareTo(Object o) {
     return action.compareTo(((Action) o).getAction());
   }
-
-  // ///////////////////////////////////////////////////////////////////////////
-  // Writable
-  // ///////////////////////////////////////////////////////////////////////////
-
-  public void write(final DataOutput out) throws IOException {
-    HbaseObjectWritable.writeObject(out, action, Row.class, null);
-    out.writeInt(originalIndex);
-    HbaseObjectWritable.writeObject(out, result,
-        result != null ? result.getClass() : Writable.class, null);
-  }
-
-  public void readFields(final DataInput in) throws IOException {
-    this.action = (Row) HbaseObjectWritable.readObject(in, null);
-    this.originalIndex = in.readInt();
-    this.result = (R) HbaseObjectWritable.readObject(in, null);
-  }
-
 }

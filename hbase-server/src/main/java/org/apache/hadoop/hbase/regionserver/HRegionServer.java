@@ -3767,7 +3767,7 @@ public class  HRegionServer implements ClientProtocol,
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
       ActionResult.Builder resultBuilder = ActionResult.newBuilder();
-      NameBytesPair value = ProtobufUtil.toParameter(new Result());
+      NameBytesPair value = ProtobufUtil.toParameter(ClientProtos.Result.newBuilder().build());
       resultBuilder.setValue(value);
       ActionResult result = resultBuilder.build();
 

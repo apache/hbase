@@ -132,7 +132,6 @@ import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MultipleIOException;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
 
@@ -2372,7 +2371,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return true if the new put was executed, false otherwise
    */
   public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
-      CompareOp compareOp, ByteArrayComparable comparator, Writable w,
+      CompareOp compareOp, ByteArrayComparable comparator, Mutation w,
       Integer lockId, boolean writeToWAL)
   throws IOException{
     checkReadOnly();
@@ -2458,8 +2457,7 @@ public class HRegion implements HeapSize { // , Writable{
   @SuppressWarnings("unchecked")
   private void doBatchMutate(Mutation mutation, Integer lid) throws IOException,
       DoNotRetryIOException {
-    Pair<Mutation, Integer>[] mutateWithLocks = new Pair[] { new Pair<Mutation, Integer>(mutation,
-        lid) };
+    Pair<Mutation, Integer>[] mutateWithLocks = new Pair[] { new Pair<Mutation, Integer>(mutation, lid) };
     OperationStatus[] batchMutate = this.batchMutate(mutateWithLocks);
     if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.SANITY_CHECK_FAILURE)) {
       throw new FailedSanityCheckException(batchMutate[0].getExceptionMsg());
@@ -2546,13 +2544,13 @@ public class HRegion implements HeapSize { // , Writable{
    * @praram now
    * @throws IOException
    */
-  private void put(byte [] family, List<KeyValue> edits, Integer lid)
+  private void put(final byte [] row, byte [] family, List<KeyValue> edits, Integer lid)
   throws IOException {
     Map<byte[], List<KeyValue>> familyMap;
     familyMap = new HashMap<byte[], List<KeyValue>>();
 
     familyMap.put(family, edits);
-    Put p = new Put();
+    Put p = new Put(row);
     p.setFamilyMap(familyMap);
     p.setClusterId(HConstants.DEFAULT_CLUSTER_ID);
     p.setWriteToWAL(true);
@@ -3912,7 +3910,7 @@ public class HRegion implements HeapSize { // , Writable{
       edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
         HConstants.META_VERSION_QUALIFIER, now,
         Bytes.toBytes(HConstants.META_VERSION)));
-      meta.put(HConstants.CATALOG_FAMILY, edits, lid);
+      meta.put(row, HConstants.CATALOG_FAMILY, edits, lid);
     } finally {
       meta.releaseRowLock(lid);
     }

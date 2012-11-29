@@ -19,9 +19,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -36,10 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Single row result of a {@link Get} or {@link Scan} query.<p>
@@ -64,32 +58,36 @@ import org.apache.hadoop.io.Writable;
  * an HBase cell defined by the row, family, qualifier, timestamp, and value.<p>
  *
  * The underlying {@link KeyValue} objects can be accessed through the method {@link #list()}.
- * Each KeyValue can then be accessed
- * through {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()},
- * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.
+ * Each KeyValue can then be accessed through
+ * {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()},
+ * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.<p>
+ * 
+ * If you need to overwrite a Result with another Result instance -- as in the old 'mapred' RecordReader next
+ * invocations -- then create an empty Result with the null constructor and in then use {@link #copyFrom(Result)}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Result implements Writable, WritableWithSize {
-  private static final byte RESULT_VERSION = (byte)1;
-  private static final int DEFAULT_BUFFER_SIZE = 1024;
-
-  private KeyValue [] kvs = null;
-  private NavigableMap<byte[],
-     NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyMap = null;
+public class Result {
+  private KeyValue [] kvs;
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
-  private ImmutableBytesWritable bytes = null;
+  // Ditto for familyMap.  It can be composed on fly from passed in kvs.
+  private transient NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyMap = null;
 
   // never use directly
   private static byte [] buffer = null;
   private static final int PAD_WIDTH = 128;
 
   /**
-   * Constructor used for Writable.
+   * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #raw()}.
+   * Use this to represent no results if <code>null</code> won't do or in old 'mapred' as oppposed to 'mapreduce' package
+   * MapReduce where you need to overwrite a Result
+   * instance with a {@link #copyFrom(Result)} call.
    */
-  public Result() {}
+  public Result() {
+    super();
+  }
 
   /**
    * Instantiate a Result with the specified array of KeyValues.
@@ -98,9 +96,7 @@ public class Result implements Writable, WritableWithSize {
    * @param kvs array of KeyValues
    */
   public Result(KeyValue [] kvs) {
-    if(kvs != null && kvs.length > 0) {
-      this.kvs = kvs;
-    }
+    this.kvs = kvs;
   }
 
   /**
@@ -110,15 +106,7 @@ public class Result implements Writable, WritableWithSize {
    * @param kvs List of KeyValues
    */
   public Result(List<KeyValue> kvs) {
-    this(kvs.toArray(new KeyValue[0]));
-  }
-
-  /**
-   * Instantiate a Result from the specified raw binary format.
-   * @param bytes raw binary format of Result
-   */
-  public Result(ImmutableBytesWritable bytes) {
-    this.bytes = bytes;
+    this(kvs.toArray(new KeyValue[kvs.size()]));
   }
 
   /**
@@ -128,10 +116,7 @@ public class Result implements Writable, WritableWithSize {
    */
   public byte [] getRow() {
     if (this.row == null) {
-      if(this.kvs == null) {
-        readFields();
-      }
-      this.row = this.kvs.length == 0? null: this.kvs[0].getRow();
+      this.row = this.kvs == null || this.kvs.length == 0? null: this.kvs[0].getRow();
     }
     return this.row;
   }
@@ -154,12 +139,9 @@ public class Result implements Writable, WritableWithSize {
    *
    * This API is faster than using getFamilyMap() and getMap()
    *
-   * @return array of KeyValues
+   * @return array of KeyValues; can be null if nothing in the result
    */
   public KeyValue[] raw() {
-    if(this.kvs == null) {
-      readFields();
-    }
     return kvs;
   }
 
@@ -171,9 +153,6 @@ public class Result implements Writable, WritableWithSize {
    * @return The sorted list of KeyValue's.
    */
   public List<KeyValue> list() {
-    if(this.kvs == null) {
-      readFields();
-    }
     return isEmpty()? null: Arrays.asList(raw());
   }
 
@@ -544,15 +523,13 @@ public class Result implements Writable, WritableWithSize {
    * @return map from families to qualifiers to versions
    */
   public NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> getMap() {
-    if(this.familyMap != null) {
+    if (this.familyMap != null) {
       return this.familyMap;
     }
     if(isEmpty()) {
       return null;
     }
-    this.familyMap =
-      new TreeMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
-      (Bytes.BYTES_COMPARATOR);
+    this.familyMap = new TreeMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>(Bytes.BYTES_COMPARATOR);
     for(KeyValue kv : this.kvs) {
       SplitKeyValue splitKV = kv.split();
       byte [] family = splitKV.getFamily();
@@ -654,25 +631,10 @@ public class Result implements Writable, WritableWithSize {
   }
 
   /**
-   * Returns the raw binary encoding of this Result.<p>
-   *
-   * Please note, there may be an offset into the underlying byte array of the
-   * returned ImmutableBytesWritable.  Be sure to use both
-   * {@link ImmutableBytesWritable#get()} and {@link ImmutableBytesWritable#getOffset()}
-   * @return pointer to raw binary of Result
-   */
-  public ImmutableBytesWritable getBytes() {
-    return this.bytes;
-  }
-
-  /**
    * Check if the underlying KeyValue [] is empty or not
    * @return true if empty
    */
   public boolean isEmpty() {
-    if(this.kvs == null) {
-      readFields();
-    }
     return this.kvs == null || this.kvs.length == 0;
   }
 
@@ -680,9 +642,6 @@ public class Result implements Writable, WritableWithSize {
    * @return the size of the underlying KeyValue []
    */
   public int size() {
-    if(this.kvs == null) {
-      readFields();
-    }
     return this.kvs == null? 0: this.kvs.length;
   }
 
@@ -711,179 +670,6 @@ public class Result implements Writable, WritableWithSize {
     return sb.toString();
   }
 
-  //Writable
-  public void readFields(final DataInput in)
-  throws IOException {
-    familyMap = null;
-    row = null;
-    kvs = null;
-    int totalBuffer = in.readInt();
-    if(totalBuffer == 0) {
-      bytes = null;
-      return;
-    }
-    byte [] raw = new byte[totalBuffer];
-    readChunked(in, raw, 0, totalBuffer);
-    bytes = new ImmutableBytesWritable(raw, 0, totalBuffer);
-  }
-
-  private void readChunked(final DataInput in, byte[] dest, int ofs, int len)
-  throws IOException {
-    int maxRead = 8192;
-
-    for (; ofs < len; ofs += maxRead)
-      in.readFully(dest, ofs, Math.min(len - ofs, maxRead));
-  }
-
-  //Create KeyValue[] when needed
-  private void readFields() {
-    if (bytes == null) {
-      this.kvs = new KeyValue[0];
-      return;
-    }
-    byte [] buf = bytes.get();
-    int offset = bytes.getOffset();
-    int finalOffset = bytes.getSize() + offset;
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    while(offset < finalOffset) {
-      int keyLength = Bytes.toInt(buf, offset);
-      offset += Bytes.SIZEOF_INT;
-      kvs.add(new KeyValue(buf, offset, keyLength));
-      offset += keyLength;
-    }
-    this.kvs = kvs.toArray(new KeyValue[kvs.size()]);
-  }
-
-  public long getWritableSize() {
-    if (isEmpty())
-      return Bytes.SIZEOF_INT; // int size = 0
-
-    long size = Bytes.SIZEOF_INT; // totalLen
-
-    for (KeyValue kv : kvs) {
-      size += kv.getLength();
-      size += Bytes.SIZEOF_INT; // kv.getLength
-    }
-
-    return size;
-  }
-
-  public void write(final DataOutput out)
-  throws IOException {
-    if(isEmpty()) {
-      out.writeInt(0);
-    } else {
-      int totalLen = 0;
-      for(KeyValue kv : kvs) {
-        totalLen += kv.getLength() + Bytes.SIZEOF_INT;
-      }
-      out.writeInt(totalLen);
-      for(KeyValue kv : kvs) {
-        out.writeInt(kv.getLength());
-        out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
-      }
-    }
-  }
-
-  public static long getWriteArraySize(Result [] results) {
-    long size = Bytes.SIZEOF_BYTE; // RESULT_VERSION
-    if (results == null || results.length == 0) {
-      size += Bytes.SIZEOF_INT;
-      return size;
-    }
-
-    size += Bytes.SIZEOF_INT; // results.length
-    size += Bytes.SIZEOF_INT; // bufLen
-    for (Result result : results) {
-      size += Bytes.SIZEOF_INT; // either 0 or result.size()
-      if (result == null || result.isEmpty())
-        continue;
-
-      for (KeyValue kv : result.raw()) {
-        size += Bytes.SIZEOF_INT; // kv.getLength();
-        size += kv.getLength();
-      }
-    }
-
-    return size;
-  }
-
-  public static void writeArray(final DataOutput out, Result [] results)
-  throws IOException {
-    // Write version when writing array form.
-    // This assumes that results are sent to the client as Result[], so we
-    // have an opportunity to handle version differences without affecting
-    // efficiency.
-    out.writeByte(RESULT_VERSION);
-    if(results == null || results.length == 0) {
-      out.writeInt(0);
-      return;
-    }
-    out.writeInt(results.length);
-    int bufLen = 0;
-    for(Result result : results) {
-      bufLen += Bytes.SIZEOF_INT;
-      if(result == null || result.isEmpty()) {
-        continue;
-      }
-      for(KeyValue key : result.raw()) {
-        bufLen += key.getLength() + Bytes.SIZEOF_INT;
-      }
-    }
-    out.writeInt(bufLen);
-    for(Result result : results) {
-      if(result == null || result.isEmpty()) {
-        out.writeInt(0);
-        continue;
-      }
-      out.writeInt(result.size());
-      for(KeyValue kv : result.raw()) {
-        out.writeInt(kv.getLength());
-        out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
-      }
-    }
-  }
-
-  public static Result [] readArray(final DataInput in)
-  throws IOException {
-    // Read version for array form.
-    // This assumes that results are sent to the client as Result[], so we
-    // have an opportunity to handle version differences without affecting
-    // efficiency.
-    int version = in.readByte();
-    if (version > RESULT_VERSION) {
-      throw new IOException("version not supported");
-    }
-    int numResults = in.readInt();
-    if(numResults == 0) {
-      return new Result[0];
-    }
-    Result [] results = new Result[numResults];
-    int bufSize = in.readInt();
-    byte [] buf = new byte[bufSize];
-    int offset = 0;
-    for(int i=0;i<numResults;i++) {
-      int numKeys = in.readInt();
-      offset += Bytes.SIZEOF_INT;
-      if(numKeys == 0) {
-        results[i] = new Result((ImmutableBytesWritable)null);
-        continue;
-      }
-      int initialOffset = offset;
-      for(int j=0;j<numKeys;j++) {
-        int keyLen = in.readInt();
-        Bytes.putInt(buf, offset, keyLen);
-        offset += Bytes.SIZEOF_INT;
-        in.readFully(buf, offset, keyLen);
-        offset += keyLen;
-      }
-      int totalLength = offset - initialOffset;
-      results[i] = new Result(new ImmutableBytesWritable(buf, initialOffset,
-          totalLength));
-    }
-    return results;
-  }
-
   /**
    * Does a deep comparison of two Results, down to the byte arrays.
    * @param res1 first result to compare
@@ -892,7 +678,7 @@ public class Result implements Writable, WritableWithSize {
    */
   public static void compareResults(Result res1, Result res2)
       throws Exception {
-    if (res2 == null) {
+    if (res2 == null) {  
       throw new Exception("There wasn't enough rows, we stopped at "
           + Bytes.toStringBinary(res1.getRow()));
     }
@@ -909,5 +695,15 @@ public class Result implements Writable, WritableWithSize {
             + res1.toString() + " compared to " + res2.toString());
       }
     }
+  }
+
+  /**
+   * Copy another Result into this one. Needed for the old Mapred framework
+   * @param other
+   */
+  public void copyFrom(Result other) {
+    this.row = null;
+    this.familyMap = null;
+    this.kvs = other.kvs;
   }
 }

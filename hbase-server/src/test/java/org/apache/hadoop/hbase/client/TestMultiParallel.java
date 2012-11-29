@@ -26,10 +26,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ipc.HBaseClient;
+import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,6 +46,10 @@ import static org.junit.Assert.*;
 @Category(MediumTests.class)
 public class TestMultiParallel {
   private static final Log LOG = LogFactory.getLog(TestMultiParallel.class);
+  {
+    ((Log4JLogger)HBaseServer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)HBaseClient.LOG).getLogger().setLevel(Level.ALL);
+  }
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
@@ -200,6 +208,12 @@ public class TestMultiParallel {
     table.close();
   }
 
+  @Test (timeout=300000)
+  public void testFlushCommitsNoAbort() throws Exception {
+    LOG.info("test=testFlushCommitsNoAbort");
+    doTestFlushCommits(false);
+  }
+
   /**
    * Only run one Multi test with a forced RegionServer abort. Otherwise, the
    * unit tests will take an unnecessarily long time to run.
@@ -210,12 +224,6 @@ public class TestMultiParallel {
   public void testFlushCommitsWithAbort() throws Exception {
     LOG.info("test=testFlushCommitsWithAbort");
     doTestFlushCommits(true);
-  }
-
-  @Test (timeout=300000)
-  public void testFlushCommitsNoAbort() throws Exception {
-    LOG.info("test=testFlushCommitsNoAbort");
-    doTestFlushCommits(false);
   }
 
   private void doTestFlushCommits(boolean doAbort) throws Exception {
@@ -249,16 +257,14 @@ public class TestMultiParallel {
     validateLoadedData(table);
 
     // Validate server and region count
-    List<JVMClusterUtil.RegionServerThread> liveRSs =
-      UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
+    List<JVMClusterUtil.RegionServerThread> liveRSs = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
     int count = 0;
     for (JVMClusterUtil.RegionServerThread t: liveRSs) {
       count++;
       LOG.info("Count=" + count + ", Alive=" + t.getRegionServer());
     }
     LOG.info("Count=" + count);
-    Assert.assertEquals("Server count=" + count + ", abort=" + doAbort,
-      (doAbort ? 1 : 2), count);
+    Assert.assertEquals("Server count=" + count + ", abort=" + doAbort, (doAbort? 1 : 2), count);
     for (JVMClusterUtil.RegionServerThread t: liveRSs) {
       int regions = ProtobufUtil.getOnlineRegions(t.getRegionServer()).size();
       Assert.assertTrue("Count of regions=" + regions, regions > 10);
@@ -416,6 +422,7 @@ public class TestMultiParallel {
     validateResult(multiRes[1], QUAL4, Bytes.toBytes("xyz"));
     validateResult(multiRes[0], QUAL2, Bytes.toBytes(2L));
     validateResult(multiRes[0], QUAL3, Bytes.toBytes(1L));
+    table.close();
   }
 
   @Test(timeout=300000)

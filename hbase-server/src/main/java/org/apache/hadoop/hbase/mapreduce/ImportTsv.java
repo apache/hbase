@@ -261,6 +261,9 @@ public class ImportTsv {
     Class mapperClass = mapperClassName != null ?
         Class.forName(mapperClassName) : DEFAULT_MAPPER;
 
+    conf.setStrings("io.serializations", conf.get("io.serializations"),
+        MutationSerialization.class.getName(), ResultSerialization.class.getName());
+
     String tableName = args[0];
     Path inputDir = new Path(args[1]);
     Job job = new Job(conf, NAME + "_" + tableName);

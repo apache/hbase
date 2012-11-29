@@ -24,10 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,15 +64,7 @@ import java.util.Map;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Delete extends Mutation
-  implements Writable, Comparable<Row> {
-  private static final byte DELETE_VERSION = (byte)3;
-
-  /** Constructor for Writable.  DO NOT USE */
-  public Delete() {
-    this((byte [])null);
-  }
-
+public class Delete extends Mutation implements Comparable<Row> {
   /**
    * Create a Delete operation for the specified row.
    * <p>
@@ -263,53 +252,5 @@ public class Delete extends Mutation
     // why is put not doing this?
     map.put("ts", this.ts);
     return map;
-  }
-
-  //Writable
-  public void readFields(final DataInput in) throws IOException {
-    int version = in.readByte();
-    if (version > DELETE_VERSION) {
-      throw new IOException("version not supported");
-    }
-    this.row = Bytes.readByteArray(in);
-    this.ts = in.readLong();
-    this.lockId = in.readLong();
-    if (version > 2) {
-      this.writeToWAL = in.readBoolean();
-    }
-    this.familyMap.clear();
-    int numFamilies = in.readInt();
-    for(int i=0;i<numFamilies;i++) {
-      byte [] family = Bytes.readByteArray(in);
-      int numColumns = in.readInt();
-      List<KeyValue> list = new ArrayList<KeyValue>(numColumns);
-      for(int j=0;j<numColumns;j++) {
-    	KeyValue kv = new KeyValue();
-    	kv.readFields(in);
-    	list.add(kv);
-      }
-      this.familyMap.put(family, list);
-    }
-    if (version > 1) {
-      readAttributes(in);
-    }
-  }
-
-  public void write(final DataOutput out) throws IOException {
-    out.writeByte(DELETE_VERSION);
-    Bytes.writeByteArray(out, this.row);
-    out.writeLong(this.ts);
-    out.writeLong(this.lockId);
-    out.writeBoolean(this.writeToWAL);
-    out.writeInt(familyMap.size());
-    for(Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
-      Bytes.writeByteArray(out, entry.getKey());
-      List<KeyValue> list = entry.getValue();
-      out.writeInt(list.size());
-      for(KeyValue kv : list) {
-        kv.write(out);
-      }
-    }
-    writeAttributes(out);
   }
 }

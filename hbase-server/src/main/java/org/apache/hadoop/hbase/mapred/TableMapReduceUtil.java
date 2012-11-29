@@ -24,6 +24,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.MutationSerialization;
+import org.apache.hadoop.hbase.mapreduce.ResultSerialization;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -81,6 +83,8 @@ public class TableMapReduceUtil {
     job.setMapOutputValueClass(outputValueClass);
     job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
+    job.setStrings("io.serializations", job.get("io.serializations"),
+        MutationSerialization.class.getName(), ResultSerialization.class.getName());
     FileInputFormat.addInputPaths(job, table);
     job.set(TableInputFormat.COLUMN_LIST, columns);
     if (addDependencyJars) {
@@ -151,6 +155,8 @@ public class TableMapReduceUtil {
     job.set(TableOutputFormat.OUTPUT_TABLE, table);
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(Put.class);
+    job.setStrings("io.serializations", job.get("io.serializations"),
+        MutationSerialization.class.getName(), ResultSerialization.class.getName());
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
       HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
