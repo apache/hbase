@@ -878,6 +878,7 @@
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
     <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
+    <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <surefire.version>2.12-TRUNK-HBASE-2</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <compat.module>hbase-hadoop1-compat</compat.module>
@@ -961,6 +962,13 @@
         <artifactId>hbase-examples</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-it</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
       <!-- General dependencies -->
       <dependency>
