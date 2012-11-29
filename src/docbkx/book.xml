@@ -775,6 +775,34 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
     <para>Lesson #2:  While generally not advisable, using hex-keys (and more generally, displayable data) can still work with pre-split
     tables as long as all the created regions are accessible in the keyspace.
     </para>
+	 <para>To conclude this example, the following is an example of  how appropriate splits can be pre-created for hex-keys:.
+	    </para>
+<programlisting>public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
+throws IOException {
+  try {
+    admin.createTable( table, splits );
+    return true;
+  } catch (TableExistsException e) {
+    logger.info("table " + table.getNameAsString() + " already exists");
+    // the table already exists...
+    return false;
+  }
+}
+
+public static byte[][] getHexSplits(String startKey, String endKey, int numRegions) {
+  byte[][] splits = new byte[numRegions-1][];
+  BigInteger lowestKey = new BigInteger(startKey, 16);
+  BigInteger highestKey = new BigInteger(endKey, 16);
+  BigInteger range = highestKey.subtract(lowestKey);
+  BigInteger regionIncrement = range.divide(BigInteger.valueOf(numRegions));
+  lowestKey = lowestKey.add(regionIncrement);
+  for(int i=0; i &lt; numRegions-1;i++) {
+    BigInteger key = lowestKey.add(regionIncrement.multiply(BigInteger.valueOf(i)));
+    byte[] b = String.format("%016x", key).getBytes();
+    splits[i] = b;
+  }
+  return splits;
+}</programlisting>
     </section>
     </section>  <!--  rowkey design -->
     <section xml:id="schema.versions">
