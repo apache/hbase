@@ -8,62 +8,111 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.ipc.HBaseClient;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class GetBenchmark extends Benchmark {
-  public static final Log LOG = LogFactory.getLog(GetBenchmark.class);
-  static byte[] tableName = Bytes.toBytes("bench.GetFromMemory");
+public class RegionGetBenchmark extends Benchmark {
+  public static final Log LOG = LogFactory.getLog(RegionGetBenchmark.class);
   static String cfName = "cf1";
-  private static Integer[] CLIENT_THREADS = 
-    { 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200 };
-  private static Integer[] NUM_CONNECTIONS = { 5, 6, 7, 8, 9, 10 };
-  public static Configuration[] connCountConfs = new Configuration[100];
-  public static final int numRegionsPerRS = 10;
+  private static Integer[] NUM_THREADS = { 50, 60, 70, 80, 90, 100, 110, 120 };
+  private static Integer[] NUM_REGIONS = { 10, 15, 20 };
+  private Configuration conf;
+  private FileSystem fs;
+  private Path hbaseRootDir = null;
+  private Path oldLogDir;
+  private Path logDir;
+  private static final String tableName = "dummyTable";
   public static final int kvSize = 50;
   public static int numKVs = 1000000;
   static List<byte[]> keysWritten = new ArrayList<byte[]>();
   
+  public RegionGetBenchmark() throws IOException {
+    conf = HBaseConfiguration.create();
+    fs = FileSystem.get(conf);
+    this.hbaseRootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
+    this.oldLogDir = 
+      new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    this.logDir = new Path(this.hbaseRootDir, HConstants.HREGION_LOGDIR_NAME);
+    
+    reinitialize();
+  }
+  
+  public void reinitialize() throws IOException {
+    if (fs.exists(this.hbaseRootDir)) {
+      fs.delete(this.hbaseRootDir, true);
+    }
+    Path rootdir = fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
+    fs.mkdirs(rootdir);    
+  }
+
   /**
    * Initialize the benchmark results tracking and output.
    */
   public void initBenchmarkResults() {
     List<String> header = new ArrayList<String>();
     header.add("Threads");
-    for (int i = 0; i < NUM_CONNECTIONS.length; i++) {
-      header.add("   conn=" +  NUM_CONNECTIONS[i]);
+    for (int i = 0; i < NUM_REGIONS.length; i++) {
+      header.add("   " +  NUM_REGIONS[i] + " regions");
     }
     benchmarkResults = new BenchmarkResults<Integer, Integer, Double>(
-        CLIENT_THREADS, NUM_CONNECTIONS, "  %5d", "   %5.2f", header);
+        NUM_THREADS, NUM_REGIONS, "     %5d", "   %5.2f", header);
   }
   
   public void runBenchmark() throws Throwable {
-    // populate the table, bulk load it
-    createTableAndLoadData(tableName, cfName, kvSize, numKVs, numRegionsPerRS, 
-        true, keysWritten);
-    System.out.println("Total kvs = " + keysWritten.size());
+    // cleanup old data
+    Path basedir = new Path(this.hbaseRootDir, tableName);
+    if (this.fs.exists(basedir)) {
+      if (!this.fs.delete(basedir, true)) {
+        throw new IOException("Failed remove of " + basedir);
+      }
+    }
+    
+    // create some data to read
+    HLog wal = new HLog(FileSystem.get(conf), logDir, oldLogDir, conf, null);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes(cfName));
+    hcd.setBlocksize(4 * 1024);
+    htd.addFamily(hcd);
+    HRegionInfo hRegionInfo = 
+      new HRegionInfo(htd, getRowKeyFromLong(0), null, false);
+    bulkLoadDataForRegion(fs, basedir, hRegionInfo, null, cfName, kvSize, 
+        numKVs, keysWritten);
+
+    // setup all the regions
+    int maxRegions = NUM_REGIONS[0];
+    for (int numRegion : NUM_REGIONS) {
+      if (numRegion > maxRegions) maxRegions = numRegion;
+    }    
+    HRegion[] hRegions = new HRegion[maxRegions];
+    for (int i = 0; i < maxRegions; i++) {
+      hRegions[i] = HRegion.openHRegion(hRegionInfo, basedir, wal, this.conf);
+    }
+    System.out.println("Total kvs = " + keysWritten.size() + 
+        ", num regions = " + NUM_REGIONS);
     // warm block cache, force jit compilation
     System.out.println("Warming blockcache and forcing JIT compilation...");
-    runExperiment("warmup-", false, 1, 100*1000, 1);
-    // iterate on the number of connections
-    for (int numConnections : NUM_CONNECTIONS) {
-      LOG.info("Num connection = " + numConnections);
-      // stop all connections so that we respect num-connections param
-      HBaseRPC.stopClients();
-      // vary for a number of client threads
-      for (int numThreads : CLIENT_THREADS) {
-        if (numConnections > numThreads) continue;
+    runExperiment("warmup-", false, 1, 100*1000, hRegions, 1);
+
+    for (int numRegions : NUM_REGIONS) {
+      for (int numThreads : NUM_THREADS) {
         try {
           // read enough KVs to benchmark within a reasonable time
-          long numKVsToRead = 40*1000;
+          long numKVsToRead = 100*1000;
           if (numThreads >= 5) numKVsToRead = 20*1000;
           if (numThreads >= 40) numKVsToRead = 10*1000;
+          if (NUM_THREADS.length == 1) numKVsToRead = 10*1000*1000;
           // run the experiment
-          runExperiment("t" + numThreads + "-", true, 
-              numThreads, numKVsToRead, numConnections);
+          runExperiment("t" + numThreads + "-", true, numThreads, numKVsToRead, 
+              hRegions, numRegions);
         } catch (IOException e) { 
           e.printStackTrace();
         }
@@ -71,21 +120,16 @@ public class GetBenchmark extends Benchmark {
     }
   }
 
-  public void runExperiment(String prefix, boolean printStats, 
-      int numThreads, long numReadsPerThread, int numConnections) 
+  public void runExperiment(String prefix, boolean printStats, int numThreads, 
+      long numReadsPerThread, HRegion[] hRegions, int numRegions) 
   throws IOException {
     // Prepare the read threads
-    GetBenchMarkThread threads[] = new GetBenchMarkThread[numThreads];
+    RegionGetBenchMarkThread threads[] = 
+      new RegionGetBenchMarkThread[numThreads];
     for (int i = 0; i < numThreads; i++) {
-      if (connCountConfs[numConnections] == null) {
-        connCountConfs[numConnections] = getNewConfObject();
-        // set the number of connections per thread
-        connCountConfs[numConnections].setInt(
-            HBaseClient.NUM_CONNECTIONS_PER_SERVER, numConnections);
-      }
-      Configuration conf = connCountConfs[numConnections];
-      threads[i] = new GetBenchMarkThread(prefix+i, tableName, 
-          Bytes.toBytes(cfName), 0, numKVs, numReadsPerThread, conf, true);
+      threads[i] = new RegionGetBenchMarkThread(prefix+i, 
+          Bytes.toBytes(tableName), Bytes.toBytes(cfName), 0, numKVs, 
+          numReadsPerThread, hRegions[i%numRegions], true);
     }
     // start the read threads, each one times itself
     for (int i = 0; i < numThreads; i++) {
@@ -106,14 +150,14 @@ public class GetBenchmark extends Benchmark {
     System.out.println("Num threads =  " + successThreads + ", " + 
         "performance = " + String.format("%5.2f", totalOpsPerSec) + " ops/sec");
     // add to the benchmark results
-    benchmarkResults.addResult(numThreads, numConnections, totalOpsPerSec);
+    benchmarkResults.addResult(numThreads, numRegions, totalOpsPerSec);
   }
   
   /**
    * Thread that performs a given number of read operations and computes the 
    * number of read operations per second it was able to get.
    */
-  public static class GetBenchMarkThread extends Thread {
+  public static class RegionGetBenchMarkThread extends Thread {
     public static final long PRINT_INTERVAL = 20000;
     String name;
     byte[] table;
@@ -121,13 +165,13 @@ public class GetBenchmark extends Benchmark {
     int startKey;
     int endKey;
     long numGetsToPerform;
-    Configuration conf;
+    HRegion hRegion;
     long timeTakenMillis = 0;
     boolean debug = false;
     Random random = new Random();
     
-    public GetBenchMarkThread(String name, byte[] table, byte[] cf, 
-        int startKey, int endKey, long numGetsToPerform, Configuration conf, 
+    public RegionGetBenchMarkThread(String name, byte[] table, byte[] cf, 
+        int startKey, int endKey, long numGetsToPerform, HRegion hRegion, 
         boolean debug) {
       this.name = name;
       this.table = table;
@@ -135,7 +179,7 @@ public class GetBenchmark extends Benchmark {
       this.startKey = startKey;
       this.endKey = endKey;
       this.numGetsToPerform = numGetsToPerform;
-      this.conf = conf;
+      this.hRegion = hRegion;
       this.debug = debug;
     }
     
@@ -148,8 +192,6 @@ public class GetBenchmark extends Benchmark {
     
     public void run() {
       try {
-        // create a new HTable instance
-        HTable htable = new HTable(conf, tableName);
         byte[] rowKey = null;
         // number of reads we have performed
         long numSuccessfulGets = 0;
@@ -161,7 +203,7 @@ public class GetBenchmark extends Benchmark {
           get.addFamily(cf);
           // time the actual get
           long t1 = System.currentTimeMillis();
-          htable.get(get);
+          hRegion.get(get, null);
           timeTakenMillis += System.currentTimeMillis() - t1;
           numSuccessfulGets++;
           // print progress if needed
@@ -169,9 +211,9 @@ public class GetBenchmark extends Benchmark {
             double opsPerSec = 
               (numSuccessfulGets * 1.0 * 1000 / timeTakenMillis);
             LOG.debug("[Thread-" + name + "] " + "" +
-            		"Num gets = " + numSuccessfulGets + "/" + numGetsToPerform + 
-            		", current rate = " + String.format("%.2f", opsPerSec) + 
-            		" ops/sec");
+                "Num gets = " + numSuccessfulGets + "/" + numGetsToPerform + 
+                ", current rate = " + String.format("%.2f", opsPerSec) + 
+                " ops/sec");
           }
         }
       } catch (IOException e) {

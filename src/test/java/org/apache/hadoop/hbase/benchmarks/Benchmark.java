@@ -1,6 +1,7 @@
 package org.apache.hadoop.hbase.benchmarks;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.Random;
 
@@ -128,7 +129,7 @@ public abstract class Benchmark {
   public HTable createTableAndLoadData(byte[] tableName, int kvSize, 
       long numKVs, boolean bulkLoad) throws IOException {
     return createTableAndLoadData(tableName, "cf1", kvSize, 
-        numKVs, 1, bulkLoad);
+        numKVs, 1, bulkLoad, null);
   }
   
   /**
@@ -140,12 +141,13 @@ public abstract class Benchmark {
    * @param numKVs number of kv's to write into the table and cf
    * @param numRegionsPerRS numer of regions per RS, 0 for one region
    * @param bulkLoad if true, create HFile and load. Else do puts.
+   * @param keys if not null, fills in the keys populated for bulk load case.
    * @return HTable instance to the table just created
    * @throws IOException
    */
   public HTable createTableAndLoadData(byte[] tableName, String cfNameStr, 
-      int kvSize, long numKVs, int numRegionsPerRS, boolean bulkLoad) 
-  throws IOException {
+      int kvSize, long numKVs, int numRegionsPerRS, boolean bulkLoad, 
+      List<byte[]> keysWritten) throws IOException {
     HTable htable = null;
     try {
       htable = new HTable(conf, tableName);
@@ -189,15 +191,46 @@ public abstract class Benchmark {
         LOG.error("Failed to create table", e);
         System.exit(0);
       }
-    } 
+    }
+    
+    // get the table again
+    if (htable == null) {
+      try {
+        htable = new HTable(conf, tableName);
+        LOG.info("Table " + new String(tableName) + " exists, skipping create.");
+      } catch (IOException e) {
+        LOG.info("Table " + new String(tableName) + " does not exist.");
+      }
+    }
     
     // check if the table has any data
     Scan scan = new Scan();
     scan.addFamily(Bytes.toBytes(cfNameStr));
     ResultScanner scanner = htable.getScanner(scan);
     Result result = scanner.next();
+    
+    // if it has data we are done. Regenerate the keys we would have written if 
+    // needed
     if (result != null && !result.isEmpty()) {
       LOG.info("Table " + new String(tableName) + " has data, skipping load");
+      if (keysWritten != null) {
+        NavigableMap<HRegionInfo, HServerAddress> regionsToRS = 
+          htable.getRegionsInfo();
+        // bulk load some data into the tables
+        long numKVsInRegion = Math.round(numKVs * 1.0 / numRegions);
+        for (HRegionInfo hRegionInfo : regionsToRS.keySet()) {
+          // skip the first region which has an empty start key
+          if ("".equals(new String(hRegionInfo.getStartKey()))) {
+            continue;
+          }
+          long startKey = getLongFromRowKey(hRegionInfo.getStartKey());
+          long rowID = startKey;
+          for (; rowID < startKey + numKVsInRegion; rowID++) {
+            byte[] row = getRowKeyFromLong(rowID);
+            keysWritten.add(row);
+          }
+        }
+      }
       return htable;
     }
     LOG.info("Table " + new String(tableName) + " has no data, loading");
@@ -226,7 +259,7 @@ public abstract class Benchmark {
         Path hbaseRootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
         Path basedir = new Path(hbaseRootDir, new String(tableName));
         bulkLoadDataForRegion(fs, basedir, hRegionInfo, regionServer, 
-            cfNameStr, kvSize, numKVsInRegion);
+            cfNameStr, kvSize, numKVsInRegion, keysWritten);
       }
     } 
     else {
@@ -254,9 +287,10 @@ public abstract class Benchmark {
    * Create a HFile and bulk load it for a given region
    * @throws IOException 
    */
-  private void bulkLoadDataForRegion(FileSystem fs, Path basedir, 
+  public void bulkLoadDataForRegion(FileSystem fs, Path basedir, 
       HRegionInfo hRegionInfo, HRegionInterface regionServer, String cfNameStr, 
-      int kvSize, long numKVsInRegion) throws IOException {
+      int kvSize, long numKVsInRegion, List<byte[]> keysWritten) 
+  throws IOException {
     // create an hfile
     Path hFile =  new Path(basedir, "hfile." + hRegionInfo.getEncodedName() + 
         "." + System.currentTimeMillis());
@@ -273,6 +307,7 @@ public abstract class Benchmark {
       byte[] row = getRowKeyFromLong(rowID);
       writer.append(new KeyValue(row, family, Bytes.toBytes(rowID), 
           System.currentTimeMillis(), value));
+      if (keysWritten != null) keysWritten.add(row);
     }
     writer.close();
     LOG.info("Done creating data file: " + hFile.getName() + 
@@ -283,17 +318,19 @@ public abstract class Benchmark {
         (new String(hRegionInfo.getEndKey())).trim() + ")");
 
     // bulk load the file
-    regionServer.bulkLoadHFile(hFile.toString(), hRegionInfo.getRegionName(), 
-        Bytes.toBytes(cfNameStr), true);
-    LOG.info("Done bulk-loading data file [" + hFile.getName() + 
-        "] for region [" + hRegionInfo.getEncodedName() + "]");
+    if (regionServer != null) {
+      regionServer.bulkLoadHFile(hFile.toString(), hRegionInfo.getRegionName(), 
+          Bytes.toBytes(cfNameStr), true);
+      LOG.info("Done bulk-loading data file [" + hFile.getName() + 
+          "] for region [" + hRegionInfo.getEncodedName() + "]");
+    }
   }
   
-  protected byte[] getRowKeyFromLong(long l) {
+  public static byte[] getRowKeyFromLong(long l) {
     return Bytes.toBytes(String.format("%20d", l));
   }
   
-  protected long getLongFromRowKey(byte[] rowKey) {
+  public static long getLongFromRowKey(byte[] rowKey) {
     return Long.parseLong((new String(rowKey)).trim());
   }
   
