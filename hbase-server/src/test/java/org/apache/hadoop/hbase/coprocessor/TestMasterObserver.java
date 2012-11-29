@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -796,7 +797,7 @@ public class TestMasterObserver {
 
     // modify table
     htd.setMaxFileSize(512 * 1024 * 1024);
-    admin.modifyTable(TEST_TABLE, htd);
+    modifyTableSync(admin, TEST_TABLE, htd);
     // preModifyTable can't bypass default action.
     assertTrue("Test table should have been modified",
       cp.wasModifyTableCalled());
@@ -847,7 +848,7 @@ public class TestMasterObserver {
 
     // modify table
     htd.setMaxFileSize(512 * 1024 * 1024);
-    admin.modifyTable(TEST_TABLE, htd);
+    modifyTableSync(admin, TEST_TABLE, htd);
     assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
     // add a column family
@@ -904,6 +905,19 @@ public class TestMasterObserver {
         cp.wasDeleteTableCalled());
     assertTrue("Delete table handler should be called.",
         cp.wasDeleteTableHandlerCalled());
+  }
+
+  private void modifyTableSync(HBaseAdmin admin, byte[] tableName, HTableDescriptor htd)
+      throws IOException {
+    admin.modifyTable(tableName, htd);
+    //wait until modify table finishes
+    for (int t = 0; t < 100; t++) { //10 sec timeout
+      HTableDescriptor td = admin.getTableDescriptor(htd.getName());
+      if (td.equals(htd)) {
+        break;
+      }
+      Threads.sleep(100);
+    }
   }
 
   @Test
