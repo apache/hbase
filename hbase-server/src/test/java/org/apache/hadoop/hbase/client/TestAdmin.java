@@ -343,7 +343,7 @@ public class TestAdmin {
   public void testHColumnValidName() {
        boolean exceptionThrown = false;
        try {
-       HColumnDescriptor fam1 = new HColumnDescriptor("\\test\\abc");
+         new HColumnDescriptor("\\test\\abc");
        } catch(IllegalArgumentException iae) {
            exceptionThrown = true;
            assertTrue(exceptionThrown);
@@ -526,10 +526,10 @@ public class TestAdmin {
 
   protected void verifyRoundRobinDistribution(HTable ht, int expectedRegions) throws IOException {
     int numRS = ht.getConnection().getCurrentNrHRS();
-    Map<HRegionInfo,HServerAddress> regions = ht.getRegionsInfo();
-    Map<HServerAddress, List<HRegionInfo>> server2Regions = new HashMap<HServerAddress, List<HRegionInfo>>();
-    for (Map.Entry<HRegionInfo,HServerAddress> entry : regions.entrySet()) {
-      HServerAddress server = entry.getValue();
+    Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
+    Map<ServerName, List<HRegionInfo>> server2Regions = new HashMap<ServerName, List<HRegionInfo>>();
+    for (Map.Entry<HRegionInfo, ServerName> entry : regions.entrySet()) {
+      ServerName server = entry.getValue();
       List<HRegionInfo> regs = server2Regions.get(server);
       if (regs == null) {
         regs = new ArrayList<HRegionInfo>();
@@ -568,7 +568,7 @@ public class TestAdmin {
     admin.createTable(desc, splitKeys);
 
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    Map<HRegionInfo,HServerAddress> regions = ht.getRegionsInfo();
+    Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions " +
         "but only found " + regions.size(),
         expectedRegions, regions.size());
@@ -628,7 +628,7 @@ public class TestAdmin {
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
     HTable ht2 = new HTable(TEST_UTIL.getConfiguration(), TABLE_2);
-    regions = ht2.getRegionsInfo();
+    regions = ht2.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions " +
         "but only found " + regions.size(),
         expectedRegions, regions.size());
@@ -685,7 +685,7 @@ public class TestAdmin {
 
 
     HTable ht3 = new HTable(TEST_UTIL.getConfiguration(), TABLE_3);
-    regions = ht3.getRegionsInfo();
+    regions = ht3.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions " +
         "but only found " + regions.size(),
         expectedRegions, regions.size());
@@ -792,7 +792,7 @@ public class TestAdmin {
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    Map<HRegionInfo, HServerAddress> regions = ht.getRegionsInfo();
+    Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
     ht.close();
     assertEquals("Tried to create " + expectedRegions + " regions "
         + "but only found " + regions.size(), expectedRegions, regions.size());
@@ -819,6 +819,7 @@ public class TestAdmin {
       regioncount++;
       serverMap.put(server, regioncount);
     }
+    metaTable.close();
     List<Map.Entry<String, Integer>> entryList = new ArrayList<Map.Entry<String, Integer>>(
         serverMap.entrySet());
     Collections.sort(entryList, new Comparator<Map.Entry<String, Integer>>() {
@@ -893,7 +894,7 @@ public class TestAdmin {
       }
 
       // get the initial layout (should just be one region)
-      Map<HRegionInfo,HServerAddress> m = table.getRegionsInfo();
+      Map<HRegionInfo, ServerName> m = table.getRegionLocations();
       System.out.println("Initial regions (" + m.size() + "): " + m);
       assertTrue(m.size() == 1);
 
@@ -923,9 +924,9 @@ public class TestAdmin {
               continue;
             }
             // check again    table = new HTable(conf, tableName);
-            Map<HRegionInfo, HServerAddress> regions = null;
+            Map<HRegionInfo, ServerName> regions = null;
             try {
-              regions = table.getRegionsInfo();
+              regions = table.getRegionLocations();
             } catch (IOException e) {
               e.printStackTrace();
             }
@@ -953,9 +954,9 @@ public class TestAdmin {
       scanner.close();
       assertEquals(rowCount, rows);
 
-      Map<HRegionInfo, HServerAddress> regions = null;
+      Map<HRegionInfo, ServerName> regions = null;
       try {
-        regions = table.getRegionsInfo();
+        regions = table.getRegionLocations();
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -991,7 +992,7 @@ public class TestAdmin {
    * @throws IOException
    */
   @Test (expected=IllegalArgumentException.class)
-  public void testEmptyHHTableDescriptor() throws IOException {
+  public void testEmptyHTableDescriptor() throws IOException {
     this.admin.createTable(new HTableDescriptor());
   }
 
@@ -1223,8 +1224,7 @@ public class TestAdmin {
    */
   @Test (expected=TableNotFoundException.class)
   public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
-    new HTable(TEST_UTIL.getConfiguration(),
-        "testTableNotFoundExceptionWithoutAnyTables");
+    new HTable(TEST_UTIL.getConfiguration(),"testTableNotFoundExceptionWithoutAnyTables");
   }
   @Test
   public void testShouldCloseTheRegionBasedOnTheEncodedRegionName()

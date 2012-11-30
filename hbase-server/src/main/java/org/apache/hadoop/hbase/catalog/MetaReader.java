@@ -28,6 +28,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -622,6 +623,22 @@ public class MetaReader {
     @Override
     void add(Result r) {
       this.results.add(r);
+    }
+  }
+
+  /**
+   * Count regions in <code>.META.</code> for passed table.
+   * @param c
+   * @param tableName
+   * @return Count or regions in table <code>tableName</code>
+   * @throws IOException
+   */
+  public static int getRegionCount(final Configuration c, final String tableName) throws IOException {
+    HTable t = new HTable(c, tableName);
+    try {
+      return t.getRegionLocations().size();
+    } finally {
+      t.close();
     }
   }
 }

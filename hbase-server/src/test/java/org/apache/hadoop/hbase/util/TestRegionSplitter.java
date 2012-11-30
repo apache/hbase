@@ -18,12 +18,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
-import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -31,9 +32,11 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
@@ -296,11 +299,9 @@ public class TestRegionSplitter {
         final Configuration conf = UTIL.getConfiguration();
         final int numRegions = expectedBounds.size()-1;
         final HTable hTable = new HTable(conf, tableName.getBytes());
-        final Map<HRegionInfo, HServerAddress> regionInfoMap =
-                hTable.getRegionsInfo();
+        final Map<HRegionInfo, ServerName> regionInfoMap = hTable.getRegionLocations();
         assertEquals(numRegions, regionInfoMap.size());
-        for (Map.Entry<HRegionInfo, HServerAddress> entry:
-           regionInfoMap.entrySet()) {
+        for (Map.Entry<HRegionInfo, ServerName> entry: regionInfoMap.entrySet()) {
             final HRegionInfo regionInfo = entry.getKey();
             byte[] regionStart = regionInfo.getStartKey();
             byte[] regionEnd = regionInfo.getEndKey();

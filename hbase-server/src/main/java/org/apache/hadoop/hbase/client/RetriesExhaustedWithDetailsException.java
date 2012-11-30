@@ -22,9 +22,6 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
-import org.apache.hadoop.hbase.util.Addressing;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -40,7 +37,7 @@ import java.util.Set;
  * and if the result is false, you have input error problems, otherwise you
  * may have cluster issues.  You can iterate over the causes, rows and last
  * known server addresses via {@link #getNumExceptions()} and
- * {@link #getCause(int)}, {@link #getRow(int)} and {@link #getAddress(int)}.
+ * {@link #getCause(int)}, {@link #getRow(int)} and {@link #getHostnamePort(int)}.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
@@ -77,10 +74,6 @@ extends RetriesExhaustedException {
 
   public Row getRow(int i) {
     return actions.get(i);
-  }
-
-  public HServerAddress getAddress(int i) {
-    return new HServerAddress(Addressing.createInetSocketAddressFromHostAndPortStr(getHostnamePort(i)));
   }
 
   public String getHostnamePort(final int i) {

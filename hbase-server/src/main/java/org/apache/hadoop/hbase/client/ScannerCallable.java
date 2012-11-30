@@ -187,7 +187,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
                 connection.relocateRegion(tableName, scan.getStartRow());
               LOG.info("Scanner=" + scannerId
                 + " expired, current region location is " + location.toString()
-                + " ip:" + location.getServerAddress().getBindAddress());
+                + " ip:" + location.getHostnamePort());
             } catch (Throwable t) {
               LOG.info("Failed to relocate region", t);
             }
@@ -275,7 +275,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       if (logScannerActivity) {
         LOG.info("Open scanner=" + id + " for scan=" + scan.toString()
           + " on region " + this.location.toString() + " ip:"
-          + this.location.getServerAddress().getBindAddress());
+          + this.location.getHostnamePort());
       }
       return id;
     } catch (ServiceException se) {

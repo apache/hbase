@@ -40,8 +40,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
@@ -486,8 +484,7 @@ public class TestHbaseObjectWritable extends TestCase {
     assertEquals(23,HbaseObjectWritable.getClassCode(HRegion[].class).intValue());
     assertEquals(24,HbaseObjectWritable.getClassCode(HRegionInfo.class).intValue());
     assertEquals(25,HbaseObjectWritable.getClassCode(HRegionInfo[].class).intValue());
-    assertEquals(26,HbaseObjectWritable.getClassCode(HServerAddress.class).intValue());
-    assertEquals(27,HbaseObjectWritable.getClassCode(HServerInfo.class).intValue());
+    // Intentional hole... these objects have been removed.
     assertEquals(28,HbaseObjectWritable.getClassCode(HTableDescriptor.class).intValue());
     assertEquals(29,HbaseObjectWritable.getClassCode(MapWritable.class).intValue());
 

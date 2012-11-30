@@ -19,9 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Proxy;
@@ -40,9 +37,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -52,14 +47,12 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.io.DataInputInputStream;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
@@ -75,11 +68,11 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
-import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
+import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -480,38 +473,13 @@ public class HTable implements HTableInterface {
 
   /**
    * Gets all the regions and their address for this table.
-   * @return A map of HRegionInfo with it's server address
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Use {@link #getRegionLocations()} or {@link #getStartEndKeys()}
-   */
-  @Deprecated
-  public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
-    final Map<HRegionInfo, HServerAddress> regionMap =
-      new TreeMap<HRegionInfo, HServerAddress>();
-
-    final Map<HRegionInfo, ServerName> regionLocations = getRegionLocations();
-
-    for (Map.Entry<HRegionInfo, ServerName> entry : regionLocations.entrySet()) {
-      HServerAddress server = new HServerAddress();
-      ServerName serverName = entry.getValue();
-      if (serverName != null && serverName.getHostAndPort() != null) {
-        server = new HServerAddress(Addressing.createInetSocketAddressFromHostAndPortStr(
-            serverName.getHostAndPort()));
-      }
-      regionMap.put(entry.getKey(), server);
-    }
-
-    return regionMap;
-  }
-
-  /**
-   * Gets all the regions and their address for this table.
    * <p>
    * This is mainly useful for the MapReduce integration.
    * @return A map of HRegionInfo with it's server address
    * @throws IOException if a remote or network exception occurs
    */
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
+    // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocation, singular, returns an HRegionLocation.
     return MetaScanner.allTableRegions(getConfiguration(), getTableName(), false);
   }
 
@@ -542,106 +510,6 @@ public class HTable implements HTableInterface {
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW) &&
              (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0));
     return regionList;
-  }
-
-  /**
-   * Save the passed region information and the table's regions
-   * cache.
-   * <p>
-   * This is mainly useful for the MapReduce integration. You can call
-   * {@link #deserializeRegionInfo deserializeRegionInfo}
-   * to deserialize regions information from a
-   * {@link DataInput}, then call this method to load them to cache.
-   *
-   * <pre>
-   * {@code
-   * HTable t1 = new HTable("foo");
-   * FileInputStream fis = new FileInputStream("regions.dat");
-   * DataInputStream dis = new DataInputStream(fis);
-   *
-   * Map<HRegionInfo, HServerAddress> hm = t1.deserializeRegionInfo(dis);
-   * t1.prewarmRegionCache(hm);
-   * }
-   * </pre>
-   * @param regionMap This piece of regions information will be loaded
-   * to region cache.
-   */
-  public void prewarmRegionCache(Map<HRegionInfo, HServerAddress> regionMap) {
-    this.connection.prewarmRegionCache(this.getTableName(), regionMap);
-  }
-
-  /**
-   * Serialize the regions information of this table and output
-   * to <code>out</code>.
-   * <p>
-   * This is mainly useful for the MapReduce integration. A client could
-   * perform a large scan for all the regions for the table, serialize the
-   * region info to a file. MR job can ship a copy of the meta for the table in
-   * the DistributedCache.
-   * <pre>
-   * {@code
-   * FileOutputStream fos = new FileOutputStream("regions.dat");
-   * DataOutputStream dos = new DataOutputStream(fos);
-   * table.serializeRegionInfo(dos);
-   * dos.flush();
-   * dos.close();
-   * }
-   * </pre>
-   * @param out {@link DataOutput} to serialize this object into.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated serializing/deserializing regioninfo's are deprecated
-   */
-  @Deprecated
-  public void serializeRegionInfo(DataOutput out) throws IOException {
-    Map<HRegionInfo, HServerAddress> allRegions = this.getRegionsInfo();
-    // first, write number of regions
-    out.writeInt(allRegions.size());
-    for (Map.Entry<HRegionInfo, HServerAddress> es : allRegions.entrySet()) {
-      byte[] hriBytes = es.getKey().toDelimitedByteArray();
-      out.write(hriBytes);
-      es.getValue().write(out);
-    }
-  }
-
-  /**
-   * Read from <code>in</code> and deserialize the regions information.
-   *
-   * <p>It behaves similarly as {@link #getRegionsInfo getRegionsInfo}, except
-   * that it loads the region map from a {@link DataInput} object.
-   *
-   * <p>It is supposed to be followed immediately by  {@link
-   * #prewarmRegionCache prewarmRegionCache}.
-   *
-   * <p>
-   * Please refer to {@link #prewarmRegionCache prewarmRegionCache} for usage.
-   *
-   * @param in {@link DataInput} object.
-   * @return A map of HRegionInfo with its server address.
-   * @throws IOException if an I/O exception occurs.
-   * @deprecated serializing/deserializing regioninfo's are deprecated
-   */
-  @Deprecated
-  public Map<HRegionInfo, HServerAddress> deserializeRegionInfo(DataInput in)
-  throws IOException {
-    final Map<HRegionInfo, HServerAddress> allRegions =
-      new TreeMap<HRegionInfo, HServerAddress>();
-
-    DataInputStream is = null;
-    if (in instanceof DataInputStream) {
-      is = (DataInputStream) in;
-    } else {
-      is = new DataInputStream(DataInputInputStream.constructInputStream(in));
-    }
-
-    // the first integer is expected to be the size of records
-    int regionsCount = is.readInt();
-    for (int i = 0; i < regionsCount; ++i) {
-      HRegionInfo hri = HRegionInfo.parseFrom(is);
-      HServerAddress hsa = new HServerAddress();
-      hsa.readFields(is);
-      allRegions.put(hri, hsa);
-    }
-    return allRegions;
   }
 
   /**

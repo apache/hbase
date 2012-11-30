@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -29,17 +27,11 @@ import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.Lists;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
@@ -54,13 +46,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -71,6 +64,11 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Lists;
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.ServiceException;
 
 /**
  * Performs authorization checks for common operations, according to different
@@ -385,8 +383,8 @@ public class TestAccessController {
   @Test
   public void testMove() throws Exception {
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE);
-    Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
-    final Map.Entry<HRegionInfo, HServerAddress> firstRegion = regions.entrySet().iterator().next();
+    Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
+    final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
     final ServerName server = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
@@ -403,8 +401,8 @@ public class TestAccessController {
   @Test
   public void testAssign() throws Exception {
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE);
-    Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
-    final Map.Entry<HRegionInfo, HServerAddress> firstRegion = regions.entrySet().iterator().next();
+    Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
+    final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
 
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
@@ -421,8 +419,8 @@ public class TestAccessController {
   @Test
   public void testUnassign() throws Exception {
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE);
-    Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
-    final Map.Entry<HRegionInfo, HServerAddress> firstRegion = regions.entrySet().iterator().next();
+    Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
+    final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
 
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
       public Object run() throws Exception {

@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterAdminProtocol;
@@ -2239,17 +2238,6 @@ public class HConnectionManager {
     @Override
     public boolean getRegionCachePrefetch(final byte[] tableName) {
       return !regionCachePrefetchDisabledTables.contains(Bytes.mapKey(tableName));
-    }
-
-    @Override
-    public void prewarmRegionCache(byte[] tableName,
-        Map<HRegionInfo, HServerAddress> regions) {
-      for (Map.Entry<HRegionInfo, HServerAddress> e : regions.entrySet()) {
-        HServerAddress hsa = e.getValue();
-        if (hsa == null || hsa.getInetSocketAddress() == null) continue;
-        cacheLocation(tableName,
-          new HRegionLocation(e.getKey(), hsa.getHostname(), hsa.getPort()));
-      }
     }
 
     @Override

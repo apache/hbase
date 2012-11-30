@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Enumeration;
@@ -35,7 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -59,7 +59,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceStability.Stable
 public class TableMapReduceUtil {
   static Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
-  
+
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
    * the job.
@@ -75,7 +75,7 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapperJob(String table, Scan scan,
       Class<? extends TableMapper> mapper,
-      Class<?> outputKeyClass, 
+      Class<?> outputKeyClass,
       Class<?> outputValueClass, Job job)
   throws IOException {
     initTableMapperJob(table, scan, mapper, outputKeyClass, outputValueClass,
@@ -97,8 +97,8 @@ public class TableMapReduceUtil {
    * @throws IOException When setting up the details fails.
    */
    public static void initTableMapperJob(byte[] table, Scan scan,
-      Class<? extends TableMapper> mapper, 
-      Class<?> outputKeyClass, 
+      Class<? extends TableMapper> mapper,
+      Class<?> outputKeyClass,
       Class<?> outputValueClass, Job job)
   throws IOException {
       initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass, outputValueClass,
@@ -141,7 +141,7 @@ public class TableMapReduceUtil {
     }
     initCredentials(job);
   }
-  
+
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
    * the job.
@@ -167,7 +167,7 @@ public class TableMapReduceUtil {
       initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass,
               outputValueClass, job, addDependencyJars, inputFormatClass);
   }
-  
+
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
    * the job.
@@ -192,7 +192,7 @@ public class TableMapReduceUtil {
       initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass,
               outputValueClass, job, addDependencyJars, TableInputFormat.class);
   }
-  
+
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
    * the job.
@@ -353,7 +353,7 @@ public class TableMapReduceUtil {
     Class partitioner, String quorumAddress, String serverClass,
     String serverImpl, boolean addDependencyJars) throws IOException {
 
-    Configuration conf = job.getConfiguration();    
+    Configuration conf = job.getConfiguration();
     HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
     job.setOutputFormatClass(TableOutputFormat.class);
     if (reducer != null) job.setReducerClass(reducer);
@@ -374,10 +374,9 @@ public class TableMapReduceUtil {
     job.setOutputValueClass(Writable.class);
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
-      HTable outputTable = new HTable(conf, table);
-      int regions = outputTable.getRegionsInfo().size();
+      int regions = MetaReader.getRegionCount(conf, table);
       if (job.getNumReduceTasks() > regions) {
-        job.setNumReduceTasks(outputTable.getRegionsInfo().size());
+        job.setNumReduceTasks(regions);
       }
     } else if (partitioner != null) {
       job.setPartitionerClass(partitioner);
@@ -400,8 +399,7 @@ public class TableMapReduceUtil {
    */
   public static void limitNumReduceTasks(String table, Job job)
   throws IOException {
-    HTable outputTable = new HTable(job.getConfiguration(), table);
-    int regions = outputTable.getRegionsInfo().size();
+    int regions = MetaReader.getRegionCount(job.getConfiguration(), table);
     if (job.getNumReduceTasks() > regions)
       job.setNumReduceTasks(regions);
   }
@@ -416,9 +414,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, Job job)
   throws IOException {
-    HTable outputTable = new HTable(job.getConfiguration(), table);
-    int regions = outputTable.getRegionsInfo().size();
-    job.setNumReduceTasks(regions);
+    job.setNumReduceTasks(MetaReader.getRegionCount(job.getConfiguration(), table));
   }
 
   /**
@@ -454,9 +450,9 @@ public class TableMapReduceUtil {
           job.getCombinerClass());
     } catch (ClassNotFoundException e) {
       throw new IOException(e);
-    }    
+    }
   }
-  
+
   /**
    * Add the jars containing the given classes to the job's configuration
    * such that JobClient will ship them to the cluster and add them to
@@ -539,9 +535,9 @@ public class TableMapReduceUtil {
    * Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
    * on the class path that has a class with the same name.
-   * 
+   *
    * This is shamelessly copied from JobConf
-   * 
+   *
    * @param my_class the class to find.
    * @return a jar file that contains the class, or null.
    * @throws IOException

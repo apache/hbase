@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.MutationSerialization;
@@ -33,6 +33,7 @@ import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.hadoop.mapred.jobcontrol.Job;
 
 /**
  * Utility for {@link TableMap} and {@link TableReduce}
@@ -157,10 +158,9 @@ public class TableMapReduceUtil {
         MutationSerialization.class.getName(), ResultSerialization.class.getName());
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
-      HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
-      int regions = outputTable.getRegionsInfo().size();
+      int regions = MetaReader.getRegionCount(HBaseConfiguration.create(job), table);
       if (job.getNumReduceTasks() > regions) {
-        job.setNumReduceTasks(outputTable.getRegionsInfo().size());
+        job.setNumReduceTasks(regions);
       }
     } else if (partitioner != null) {
       job.setPartitionerClass(partitioner);
@@ -192,8 +192,7 @@ public class TableMapReduceUtil {
    */
   public static void limitNumReduceTasks(String table, JobConf job)
   throws IOException {
-    HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
-    int regions = outputTable.getRegionsInfo().size();
+    int regions = MetaReader.getRegionCount(HBaseConfiguration.create(job), table);
     if (job.getNumReduceTasks() > regions)
       job.setNumReduceTasks(regions);
   }
@@ -208,8 +207,7 @@ public class TableMapReduceUtil {
    */
   public static void limitNumMapTasks(String table, JobConf job)
   throws IOException {
-    HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
-    int regions = outputTable.getRegionsInfo().size();
+    int regions = MetaReader.getRegionCount(HBaseConfiguration.create(job), table);
     if (job.getNumMapTasks() > regions)
       job.setNumMapTasks(regions);
   }
@@ -224,9 +222,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, JobConf job)
   throws IOException {
-    HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
-    int regions = outputTable.getRegionsInfo().size();
-    job.setNumReduceTasks(regions);
+    job.setNumReduceTasks(MetaReader.getRegionCount(HBaseConfiguration.create(job), table));
   }
 
   /**
@@ -239,9 +235,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumMapTasks(String table, JobConf job)
   throws IOException {
-    HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
-    int regions = outputTable.getRegionsInfo().size();
-    job.setNumMapTasks(regions);
+    job.setNumMapTasks(MetaReader.getRegionCount(HBaseConfiguration.create(job), table));
   }
 
   /**

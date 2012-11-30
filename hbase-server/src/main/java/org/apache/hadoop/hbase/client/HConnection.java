@@ -21,16 +21,13 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.MasterMonitorProtocol;
@@ -349,14 +346,6 @@ public interface HConnection extends Abortable, Closeable {
    * it is disabled.
    */
   public boolean getRegionCachePrefetch(final byte[] tableName);
-
-  /**
-   * Load the region map and warm up the global region cache for the table.
-   * @param tableName name of the table to perform region cache prewarm.
-   * @param regions a region map.
-   */
-  public void prewarmRegionCache(final byte[] tableName,
-      final Map<HRegionInfo, HServerAddress> regions);
 
   /**
    * Scan zookeeper to get the number of region servers

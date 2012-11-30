@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
@@ -370,20 +371,18 @@ public class RegionSplitter {
     Preconditions.checkArgument(!admin.tableExists(tableName),
         "Table already exists: " + tableName);
     admin.createTable(desc, splitAlgo.split(splitCount));
+    admin.close();
     LOG.debug("Table created!  Waiting for regions to show online in META...");
-
     if (!conf.getBoolean("split.verify", true)) {
       // NOTE: createTable is synchronous on the table, but not on the regions
-      HTable table = new HTable(conf, tableName);
       int onlineRegions = 0;
       while (onlineRegions < splitCount) {
-        onlineRegions = table.getRegionsInfo().size();
+        onlineRegions = MetaReader.getRegionCount(conf, tableName);
         LOG.debug(onlineRegions + " of " + splitCount + " regions online...");
         if (onlineRegions < splitCount) {
           Thread.sleep(10 * 1000); // sleep
         }
       }
-      table.close();
     }
 
     LOG.debug("Finished creating table with " + splitCount + " regions");

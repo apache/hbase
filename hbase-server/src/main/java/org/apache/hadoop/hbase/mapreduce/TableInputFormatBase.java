@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +34,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -160,8 +160,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
-      HRegionLocation regLoc = table.getRegionLocation(
-          HConstants.EMPTY_BYTE_ARRAY, false);
+      HRegionLocation regLoc = table.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY, false);
       if (null == regLoc) {
         throw new IOException("Expecting at least one region.");
       }
@@ -177,24 +176,26 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       if ( !includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
         continue;
       }
-      HServerAddress regionServerAddress = 
-        table.getRegionLocation(keys.getFirst()[i]).getServerAddress();
-      InetAddress regionAddress =
-        regionServerAddress.getInetSocketAddress().getAddress();
+      HRegionLocation location = table.getRegionLocation(keys.getFirst()[i], false);
+      // The below InetSocketAddress creation does a name resolution.
+      InetSocketAddress isa = new InetSocketAddress(location.getHostname(), location.getPort());
+      if (isa.isUnresolved()) {
+        LOG.warn("Failed resolve " + isa);
+      }
+      InetAddress regionAddress = isa.getAddress();
       String regionLocation;
       try {
         regionLocation = reverseDNS(regionAddress);
       } catch (NamingException e) {
-        LOG.error("Cannot resolve the host name for " + regionAddress +
-            " because of " + e);
-        regionLocation = regionServerAddress.getHostname();
+        LOG.error("Cannot resolve the host name for " + regionAddress + " because of " + e);
+        regionLocation = location.getHostname();
       }
 
-			byte[] startRow = scan.getStartRow();
-			byte[] stopRow = scan.getStopRow();
-			// determine if the given start an stop key fall into the region
+      byte[] startRow = scan.getStartRow();
+      byte[] stopRow = scan.getStopRow();
+      // determine if the given start an stop key fall into the region
       if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
-					 Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
+          Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
           (stopRow.length == 0 ||
            Bytes.compareTo(stopRow, keys.getFirst()[i]) > 0)) {
         byte[] splitStart = startRow.length == 0 ||

@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
@@ -419,7 +418,7 @@ public class TestEndToEndSplitTransaction {
         verifyStartEndKeys(keys);
 
         //HTable.getRegionsInfo()
-        Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
+        Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
         verifyTableRegions(regions.keySet());
       } finally {
         IOUtils.closeQuietly(table);

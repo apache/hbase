@@ -57,7 +57,7 @@ public class TestTableResource {
   private static String TABLE = "TestTableResource";
   private static String COLUMN_FAMILY = "test";
   private static String COLUMN = COLUMN_FAMILY + ":qualifier";
-  private static Map<HRegionInfo,HServerAddress> regionMap;
+  private static Map<HRegionInfo, ServerName> regionMap;
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
@@ -101,7 +101,7 @@ public class TestTableResource {
     }
     table.flushCommits();
     // get the initial layout (should just be one region)
-    Map<HRegionInfo,HServerAddress> m = table.getRegionsInfo();
+    Map<HRegionInfo, ServerName> m = table.getRegionLocations();
     assertEquals(m.size(), 1);
     // tell the master to split the table
     admin.split(TABLE);
@@ -115,7 +115,7 @@ public class TestTableResource {
         LOG.warn(StringUtils.stringifyException(e));
       }
       // check again
-      m = table.getRegionsInfo();
+      m = table.getRegionLocations();
     }
 
     // should have two regions now
@@ -152,7 +152,7 @@ public class TestTableResource {
     while (regions.hasNext()) {
       TableRegionModel region = regions.next();
       boolean found = false;
-      for (Map.Entry<HRegionInfo,HServerAddress> e: regionMap.entrySet()) {
+      for (Map.Entry<HRegionInfo, ServerName> e: regionMap.entrySet()) {
         HRegionInfo hri = e.getKey();
         String hriRegionName = hri.getRegionNameAsString();
         String regionName = region.getName();
@@ -160,7 +160,7 @@ public class TestTableResource {
           found = true;
           byte[] startKey = hri.getStartKey();
           byte[] endKey = hri.getEndKey();
-          InetSocketAddress sa = e.getValue().getInetSocketAddress();
+          InetSocketAddress sa = new InetSocketAddress(e.getValue().getHostname(), e.getValue().getPort());
           String location = sa.getHostName() + ":" +
             Integer.valueOf(sa.getPort());
           assertEquals(hri.getRegionId(), region.getId());

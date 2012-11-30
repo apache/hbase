@@ -46,8 +46,6 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Action;
@@ -185,8 +183,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(HRegion[].class, code++);
     addToMap(HRegionInfo.class, code++);
     addToMap(HRegionInfo[].class, code++);
-    addToMap(HServerAddress.class, code++);
-    addToMap(HServerInfo.class, code++);
+    code++; // Removed
+    code++; // Removed
     addToMap(HTableDescriptor.class, code++);
     addToMap(MapWritable.class, code++);
 

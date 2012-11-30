@@ -358,11 +358,11 @@ public class TestHFileOutputFormat  {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     byte[][] startKeys = generateRandomStartKeys(5);
-
+    HBaseAdmin admin = null;
     try {
       util.startMiniCluster();
       Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
-      HBaseAdmin admin = new HBaseAdmin(conf);
+      admin = new HBaseAdmin(conf);
       HTable table = util.createTable(TABLE_NAME, FAMILIES);
       assertEquals("Should start with empty table",
           0, util.countRows(table));
@@ -402,7 +402,7 @@ public class TestHFileOutputFormat  {
         util.createMultiRegions(
             util.getConfiguration(), table, FAMILIES[0], newStartKeys);
         admin.enableTable(table.getTableName());
-        while (table.getRegionsInfo().size() != 15 ||
+        while (table.getRegionLocations().size() != 15 ||
             !admin.isTableAvailable(table.getTableName())) {
           Thread.sleep(200);
           LOG.info("Waiting for new region assignment to happen");
@@ -440,6 +440,7 @@ public class TestHFileOutputFormat  {
       assertEquals("Data should remain after reopening of regions",
           tableDigestBefore, util.checksumRows(table));
     } finally {
+      if (admin != null) admin.close();
       util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
@@ -456,8 +457,7 @@ public class TestHFileOutputFormat  {
 
     Assert.assertFalse( util.getTestFileSystem().exists(outDir)) ;
 
-    assertEquals(table.getRegionsInfo().size(),
-      job.getNumReduceTasks());
+    assertEquals(table.getRegionLocations().size(), job.getNumReduceTasks());
 
     assertTrue(job.waitForCompletion(true));
   }

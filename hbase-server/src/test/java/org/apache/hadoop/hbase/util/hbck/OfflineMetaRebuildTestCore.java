@@ -35,9 +35,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -169,10 +169,10 @@ public class OfflineMetaRebuildTestCore {
     HTableDescriptor htd = tbl.getTableDescriptor();
     dumpMeta(htd);
 
-    Map<HRegionInfo, HServerAddress> hris = tbl.getRegionsInfo();
-    for (Entry<HRegionInfo, HServerAddress> e : hris.entrySet()) {
+    Map<HRegionInfo, ServerName> hris = tbl.getRegionLocations();
+    for (Entry<HRegionInfo, ServerName> e : hris.entrySet()) {
       HRegionInfo hri = e.getKey();
-      HServerAddress hsa = e.getValue();
+      ServerName hsa = e.getValue();
       if (Bytes.compareTo(hri.getStartKey(), startKey) == 0
           && Bytes.compareTo(hri.getEndKey(), endKey) == 0) {
 
@@ -190,6 +190,7 @@ public class OfflineMetaRebuildTestCore {
         HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
         Delete delete = new Delete(deleteRow);
         meta.delete(delete);
+        meta.close();
       }
       LOG.info(hri.toString() + hsa.toString());
     }
@@ -257,6 +258,7 @@ public class OfflineMetaRebuildTestCore {
     Result rt : rst) {
       count++;
     }
+    t.close();
     return count;
   }
 
@@ -274,6 +276,7 @@ public class OfflineMetaRebuildTestCore {
       LOG.info(Bytes.toString(res.getRow()));
       count++;
     }
+    meta.close();
     return count;
   }
 }
