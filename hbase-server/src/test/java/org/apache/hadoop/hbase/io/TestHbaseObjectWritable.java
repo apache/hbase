@@ -475,7 +475,7 @@ public class TestHbaseObjectWritable extends TestCase {
     assertEquals(13,HbaseObjectWritable.getClassCode(Text.class).intValue());
     assertEquals(14,HbaseObjectWritable.getClassCode(Writable.class).intValue());
     assertEquals(15,HbaseObjectWritable.getClassCode(Writable [].class).intValue());
-    assertEquals(16,HbaseObjectWritable.getClassCode(HbaseMapWritable.class).intValue());
+    // 16 Removed
     // 17 is NullInstance which isn't visible from here
 
     // Hbase types

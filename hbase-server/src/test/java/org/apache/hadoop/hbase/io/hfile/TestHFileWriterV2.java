@@ -19,7 +19,9 @@
 
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -35,11 +37,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -70,14 +75,12 @@ public class TestHFileWriterV2 {
 
   @Test
   public void testHFileFormatV2() throws IOException {
-    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
-    "testHFileFormatV2");
+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "testHFileFormatV2");
     final Compression.Algorithm compressAlgo = Compression.Algorithm.GZ;
     final int entryCount = 10000;
     writeDataAndReadFromHFile(hfilePath, compressAlgo, entryCount, false);
   }
-  
-  
+
   @Test
   public void testMidKeyInHFile() throws IOException{
     Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
@@ -98,9 +101,6 @@ public class TestHFileWriterV2 {
             .withComparator(KeyValue.KEY_COMPARATOR)
             .create();
 
-    long totalKeyLength = 0;
-    long totalValueLength = 0;
-
     Random rand = new Random(9713312); // Just a fixed seed.
 
     List<byte[]> keys = new ArrayList<byte[]>();
@@ -112,9 +112,6 @@ public class TestHFileWriterV2 {
       // A random-length random value.
       byte[] valueBytes = randomValue(rand);
       writer.append(keyBytes, valueBytes);
-
-      totalKeyLength += keyBytes.length;
-      totalValueLength += valueBytes.length;
 
       keys.add(keyBytes);
       values.add(valueBytes);
@@ -172,7 +169,7 @@ public class TestHFileWriterV2 {
         trailer.getMetaIndexCount());
     // File info
     FileInfo fileInfo = new FileInfo();
-    fileInfo.readFields(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
+    fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
     byte [] keyValueFormatVersion = fileInfo.get(
         HFileWriterV2.KEY_VALUE_VERSION);
     boolean includeMemstoreTS = keyValueFormatVersion != null &&
@@ -233,7 +230,10 @@ public class TestHFileWriterV2 {
       HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false);
       assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
-      block.readInto(t);
+      ByteBuffer buf = block.getBufferWithoutHeader();
+      if (Writables.getWritable(buf.array(), buf.arrayOffset(), buf.limit(), t) == null) {
+        throw new IOException("Failed to deserialize block " + this + " into a " + t.getClass().getSimpleName());
+      }
       Text expectedText =
           (metaCounter == 0 ? new Text("Paris") : metaCounter == 1 ? new Text(
               "Moscow") : new Text("Washington, D.C."));

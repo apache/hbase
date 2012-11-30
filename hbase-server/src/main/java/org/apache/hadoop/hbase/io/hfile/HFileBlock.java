@@ -46,9 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompoundBloomFilter;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Writable;
 
 import com.google.common.base.Preconditions;
 
@@ -370,20 +368,6 @@ public class HFileBlock implements Cacheable {
     return dupBuf;
   }
 
-  /**
-   * Deserializes fields of the given writable using the data portion of this
-   * block. Does not check that all the block data has been read.
-   */
-  void readInto(Writable w) throws IOException {
-    Preconditions.checkNotNull(w);
-
-    if (Writables.getWritable(buf.array(), buf.arrayOffset() + headerSize(),
-        buf.limit() - headerSize(), w) == null) {
-      throw new IOException("Failed to deserialize block " + this + " into a "
-          + w.getClass().getSimpleName());
-    }
-  }
-
   private void sanityCheckAssertion(long valueFromBuf, long valueFromField,
       String fieldName) throws IOException {
     if (valueFromBuf != valueFromField) {
@@ -634,9 +618,6 @@ public class HFileBlock implements Cacheable {
     /** Writer state. Used to ensure the correct usage protocol. */
     private State state = State.INIT;
 
-    /** Compression algorithm for all blocks this instance writes. */
-    private final Compression.Algorithm compressAlgo;
-
     /** Data block encoder used for data blocks */
     private final HFileDataBlockEncoder dataBlockEncoder;
 
@@ -720,8 +701,6 @@ public class HFileBlock implements Cacheable {
     public Writer(Compression.Algorithm compressionAlgorithm,
           HFileDataBlockEncoder dataBlockEncoder, boolean includesMemstoreTS,
           ChecksumType checksumType, int bytesPerChecksum) {
-      compressAlgo = compressionAlgorithm == null ? Compression.Algorithm.NONE :
-        compressionAlgorithm;
       this.dataBlockEncoder = dataBlockEncoder != null
           ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
       defaultBlockEncodingCtx =

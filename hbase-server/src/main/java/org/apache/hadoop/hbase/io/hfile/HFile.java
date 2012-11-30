@@ -18,14 +18,22 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.SequenceInputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -46,9 +54,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
+import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -58,6 +69,7 @@ import org.apache.hadoop.io.Writable;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 
 /**
  * File format for hbase.
@@ -145,7 +157,8 @@ public class HFile {
   /** Minimum supported HFile format version */
   public static final int MIN_FORMAT_VERSION = 1;
 
-  /** Maximum supported HFile format version */
+  /** Maximum supported HFile format version
+   */
   public static final int MAX_FORMAT_VERSION = 2;
 
   /** Default compression name: none. */
@@ -282,13 +295,18 @@ public class HFile {
     /** @return the path to this {@link HFile} */
     Path getPath();
 
-    void appendMetaBlock(String bloomFilterMetaKey, Writable metaWriter);
-
     /**
      * Adds an inline block writer such as a multi-level block index writer or
      * a compound Bloom filter writer.
      */
     void addInlineBlockWriter(InlineBlockWriter bloomWriter);
+
+    // The below three methods take Writables.  We'd like to undo Writables but undoing the below would be pretty
+    // painful.  Could take a byte [] or a Message but we want to be backward compatible around hfiles so would need
+    // to map between Message and Writable or byte [] and current Writable serialization.  This would be a bit of work
+    // to little gain.  Thats my thinking at moment.  St.Ack 20121129
+
+    void appendMetaBlock(String bloomFilterMetaKey, Writable metaWriter);
 
     /**
      * Store general Bloom filter in the file. This does not deal with Bloom filter
@@ -642,19 +660,21 @@ public class HFile {
         DataBlockEncoding.NONE, null);
   }
 
-  /*
+  /**
    * Metadata for this file.  Conjured by the writer.  Read in by the reader.
    */
-  static class FileInfo extends HbaseMapWritable<byte [], byte []> {
+  static class FileInfo implements SortedMap<byte [], byte []> {
     static final String RESERVED_PREFIX = "hfile.";
     static final byte[] RESERVED_PREFIX_BYTES = Bytes.toBytes(RESERVED_PREFIX);
     static final byte [] LASTKEY = Bytes.toBytes(RESERVED_PREFIX + "LASTKEY");
-    static final byte [] AVG_KEY_LEN =
-      Bytes.toBytes(RESERVED_PREFIX + "AVG_KEY_LEN");
-    static final byte [] AVG_VALUE_LEN =
-      Bytes.toBytes(RESERVED_PREFIX + "AVG_VALUE_LEN");
-    static final byte [] COMPARATOR =
-      Bytes.toBytes(RESERVED_PREFIX + "COMPARATOR");
+    static final byte [] AVG_KEY_LEN = Bytes.toBytes(RESERVED_PREFIX + "AVG_KEY_LEN");
+    static final byte [] AVG_VALUE_LEN = Bytes.toBytes(RESERVED_PREFIX + "AVG_VALUE_LEN");
+    static final byte [] COMPARATOR = Bytes.toBytes(RESERVED_PREFIX + "COMPARATOR");
+    private final SortedMap<byte [], byte []> map = new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+
+    public FileInfo() {
+      super();
+    }
 
     /**
      * Append the given key/value pair to the file info, optionally checking the
@@ -680,6 +700,167 @@ public class HFile {
       return this;
     }
 
+    public void clear() {
+      this.map.clear();
+    }
+
+    public Comparator<? super byte[]> comparator() {
+      return map.comparator();
+    }
+
+    public boolean containsKey(Object key) {
+      return map.containsKey(key);
+    }
+
+    public boolean containsValue(Object value) {
+      return map.containsValue(value);
+    }
+
+    public Set<java.util.Map.Entry<byte[], byte[]>> entrySet() {
+      return map.entrySet();
+    }
+
+    public boolean equals(Object o) {
+      return map.equals(o);
+    }
+
+    public byte[] firstKey() {
+      return map.firstKey();
+    }
+
+    public byte[] get(Object key) {
+      return map.get(key);
+    }
+
+    public int hashCode() {
+      return map.hashCode();
+    }
+
+    public SortedMap<byte[], byte[]> headMap(byte[] toKey) {
+      return this.map.headMap(toKey);
+    }
+
+    public boolean isEmpty() {
+      return map.isEmpty();
+    }
+
+    public Set<byte[]> keySet() {
+      return map.keySet();
+    }
+
+    public byte[] lastKey() {
+      return map.lastKey();
+    }
+
+    public byte[] put(byte[] key, byte[] value) {
+      return this.map.put(key, value);
+    }
+
+    public void putAll(Map<? extends byte[], ? extends byte[]> m) {
+      this.map.putAll(m);
+    }
+
+    public byte[] remove(Object key) {
+      return this.map.remove(key);
+    }
+
+    public int size() {
+      return map.size();
+    }
+
+    public SortedMap<byte[], byte[]> subMap(byte[] fromKey, byte[] toKey) {
+      return this.map.subMap(fromKey, toKey);
+    }
+
+    public SortedMap<byte[], byte[]> tailMap(byte[] fromKey) {
+      return this.map.tailMap(fromKey);
+    }
+
+    public Collection<byte[]> values() {
+      return map.values();
+    }
+
+    /**
+     * Write out this instance on the passed in <code>out</code> stream.
+     * We write it as a protobuf.
+     * @param out
+     * @throws IOException
+     * @see {@link #read(DataInputStream)}
+     */
+    void write(final DataOutputStream out) throws IOException {
+      HFileProtos.FileInfoProto.Builder builder = HFileProtos.FileInfoProto.newBuilder();
+      for (Map.Entry<byte [], byte[]> e: this.map.entrySet()) {
+        HBaseProtos.BytesBytesPair.Builder bbpBuilder = HBaseProtos.BytesBytesPair.newBuilder();
+        bbpBuilder.setFirst(ByteString.copyFrom(e.getKey()));
+        bbpBuilder.setSecond(ByteString.copyFrom(e.getValue()));
+        builder.addMapEntry(bbpBuilder.build());
+      }
+      out.write(ProtobufUtil.PB_MAGIC);
+      builder.build().writeDelimitedTo(out);
+    }
+
+    /**
+     * Populate this instance with what we find on the passed in <code>in</code> stream.
+     * Can deserialize protobuf of old Writables format.
+     * @param in
+     * @throws IOException
+     * @see {@link #write(DataOutputStream)}
+     */
+    void read(final DataInputStream in) throws IOException {
+      // This code is tested over in TestHFileReaderV1 where we read an old hfile w/ this new code.
+      int pblen = ProtobufUtil.lengthOfPBMagic();
+      byte [] pbuf = new byte[pblen];
+      if (in.markSupported()) in.mark(pblen);
+      int read = in.read(pbuf);
+      if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
+      if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
+        parsePB(HFileProtos.FileInfoProto.parseDelimitedFrom(in));
+      } else {
+        if (in.markSupported()) {
+          in.reset();
+          parseWritable(in);
+        } else {
+          // We cannot use BufferedInputStream, it consumes more than we read from the underlying IS
+          ByteArrayInputStream bais = new ByteArrayInputStream(pbuf);
+          SequenceInputStream sis = new SequenceInputStream(bais, in); // Concatenate input streams
+          // TODO: Am I leaking anything here wrapping the passed in stream?  We are not calling close on the wrapped
+          // streams but they should be let go after we leave this context?  I see that we keep a reference to the
+          // passed in inputstream but since we no longer have a reference to this after we leave, we should be ok.
+          parseWritable(new DataInputStream(sis));
+        }
+      }
+    }
+
+    /** Now parse the old Writable format.  It was a list of Map entries.  Each map entry was a key and a value of
+     * a byte [].  The old map format had a byte before each entry that held a code which was short for the key or
+     * value type.  We know it was a byte [] so in below we just read and dump it.
+     * @throws IOException 
+     */
+    void parseWritable(final DataInputStream in) throws IOException {
+      // First clear the map.  Otherwise we will just accumulate entries every time this method is called.
+      this.map.clear();
+      // Read the number of entries in the map
+      int entries = in.readInt();
+      // Then read each key/value pair
+      for (int i = 0; i < entries; i++) {
+        byte [] key = Bytes.readByteArray(in);
+        // We used to read a byte that encoded the class type.  Read and ignore it because it is always byte [] in hfile
+        in.readByte();
+        byte [] value = Bytes.readByteArray(in);
+        this.map.put(key, value);
+      }
+    }
+
+    /**
+     * Fill our map with content of the pb we read off disk
+     * @param fip protobuf message to read
+     */
+    void parsePB(final HFileProtos.FileInfoProto fip) {
+      this.map.clear();
+      for (BytesBytesPair pair: fip.getMapEntryList()) {
+        this.map.put(pair.getFirst().toByteArray(), pair.getSecond().toByteArray());
+      }
+    }
   }
 
   /** Return true if the given file info key is reserved for internal use. */
@@ -761,5 +942,4 @@ public class HFile {
           + MAX_FORMAT_VERSION + ")");
     }
   }
-
 }

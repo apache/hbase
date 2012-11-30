@@ -81,7 +81,6 @@ public class HFileWriterV1 extends AbstractHFileWriter {
   // Additional byte array output stream used to fill block cache
   private ByteArrayOutputStream baos;
   private DataOutputStream baosDos;
-  private int blockNumber = 0;
 
   static class WriterFactoryV1 extends HFile.WriterFactory {
     WriterFactoryV1(Configuration conf, CacheConfig cacheConf) {
@@ -161,7 +160,6 @@ public class HFileWriterV1 extends AbstractHFileWriter {
               block.getBlockType()), block);
       baosDos.close();
     }
-    blockNumber++;
   }
 
   /**

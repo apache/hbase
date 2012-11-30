@@ -19,9 +19,11 @@
 
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.URL;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -30,13 +32,10 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
+import org.mortbay.log.Log;
 
 @Category(SmallTests.class)
 public class TestHFileReaderV1 {
@@ -90,7 +89,4 @@ public class TestHFileReaderV1 {
     }
     reader.close();
   }
-
-
 }
-

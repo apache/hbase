@@ -1127,7 +1127,7 @@ public class HFileBlockIndex {
      *         or null.
      */
     @Override
-    public boolean cacheOnWrite() {
+    public boolean getCacheOnWrite() {
       return blockCache != null;
     }
 

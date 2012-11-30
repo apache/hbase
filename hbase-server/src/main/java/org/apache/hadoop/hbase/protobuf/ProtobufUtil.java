@@ -168,7 +168,7 @@ public final class ProtobufUtil {
    * For example, all znode content is protobuf messages with the below magic
    * for preamble.
    */
-  static final byte [] PB_MAGIC = new byte [] {'P', 'B', 'U', 'F'};
+  public static final byte [] PB_MAGIC = new byte [] {'P', 'B', 'U', 'F'};
   private static final String PB_MAGIC_STR = Bytes.toString(PB_MAGIC);
 
   /**

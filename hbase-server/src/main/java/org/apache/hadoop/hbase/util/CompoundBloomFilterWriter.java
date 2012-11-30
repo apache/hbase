@@ -271,8 +271,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   }
 
   @Override
-  public boolean cacheOnWrite() {
+  public boolean getCacheOnWrite() {
     return cacheOnWrite;
   }
-
 }

@@ -94,7 +94,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
     // Read in the fileinfo and get what we need from it.
     istream.seek(trailer.getFileInfoOffset());
     fileInfo = new FileInfo();
-    fileInfo.readFields(istream);
+    fileInfo.read(istream);
     lastKey = fileInfo.get(FileInfo.LASTKEY);
     avgKeyLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_KEY_LEN));
     avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));

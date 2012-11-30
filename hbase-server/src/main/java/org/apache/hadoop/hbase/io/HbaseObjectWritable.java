@@ -167,7 +167,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(Text.class, code++);
     addToMap(Writable.class, code++);
     addToMap(Writable [].class, code++);
-    addToMap(HbaseMapWritable.class, code++);
+    code++; // Removed
     addToMap(NullInstance.class, code++);
 
     // Hbase types

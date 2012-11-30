@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -77,19 +76,6 @@ public class TestSerialization {
     KeyValue newone = (KeyValue)Writables.getWritable(bytes, new KeyValue());
     assertTrue(KeyValue.COMPARATOR.compare(original, newone) == 0);
   }
-
-  @SuppressWarnings("unchecked")
-  @Test public void testHbaseMapWritable() throws Exception {
-    HbaseMapWritable<byte [], byte []> hmw =
-      new HbaseMapWritable<byte[], byte[]>();
-    hmw.put("key".getBytes(), "value".getBytes());
-    byte [] bytes = Writables.getBytes(hmw);
-    hmw = (HbaseMapWritable<byte[], byte[]>)
-      Writables.getWritable(bytes, new HbaseMapWritable<byte [], byte []>());
-    assertTrue(hmw.size() == 1);
-    assertTrue(Bytes.equals("value".getBytes(), hmw.get("key".getBytes())));
-  }
-
 
   @Test public void testTableDescriptor() throws Exception {
     final String name = "testTableDescriptor";

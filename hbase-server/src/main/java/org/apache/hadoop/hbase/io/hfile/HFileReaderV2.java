@@ -77,7 +77,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
   static final int MIN_MINOR_VERSION = 0;
 
   /** Maximum minor version supported by this HFile format */
-  static final int MAX_MINOR_VERSION = 1;
+  // We went to version 2 when we moved to pb'ing the fileinfo trailer on the file. This version can read Writables
+  // version 1 too.
+  static final int MAX_MINOR_VERSION = 2;
 
   /**
    * Opens a HFile. You must load the index before you can use it by calling
@@ -135,7 +137,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
     // File info
     fileInfo = new FileInfo();
-    fileInfo.readFields(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
+    fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
     lastKey = fileInfo.get(FileInfo.LASTKEY);
     avgKeyLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_KEY_LEN));
     avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));

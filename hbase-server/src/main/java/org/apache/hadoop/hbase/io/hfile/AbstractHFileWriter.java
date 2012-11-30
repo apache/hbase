@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -134,7 +134,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
    */
   protected void finishFileInfo() throws IOException {
     if (lastKeyBuffer != null) {
-      // Make a copy. The copy is stuffed into HMapWritable. Needs a clean
+      // Make a copy. The copy is stuffed into our fileinfo map. Needs a clean
       // byte buffer. Won't take a tuple.
       fileInfo.append(FileInfo.LASTKEY, Arrays.copyOfRange(lastKeyBuffer,
           lastKeyOffset, lastKeyOffset + lastKeyLength), false);
@@ -175,8 +175,8 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
    * @param out the data output to write the file info to
    * @throws IOException
    */
-  protected final void writeFileInfo(FixedFileTrailer trailer, DataOutput out)
-      throws IOException {
+  protected final void writeFileInfo(FixedFileTrailer trailer, DataOutputStream out)
+  throws IOException {
     trailer.setFileInfoOffset(outputStream.getPos());
     finishFileInfo();
     fileInfo.write(out);

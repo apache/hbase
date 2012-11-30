@@ -189,7 +189,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     for (InlineBlockWriter ibw : inlineBlockWriters) {
       while (ibw.shouldWriteBlock(closing)) {
         long offset = outputStream.getPos();
-        boolean cacheThisBlock = ibw.cacheOnWrite();
+        boolean cacheThisBlock = ibw.getCacheOnWrite();
         ibw.writeInlineBlock(fsBlockWriter.startWriting(
             ibw.getInlineBlockType()));
         fsBlockWriter.writeHeaderAndData(outputStream);
@@ -463,5 +463,4 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       }
     });
   }
-
 }
