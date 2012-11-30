@@ -32,7 +32,7 @@
         The Apache HBase (TM) Shell is <link xlink:href="http://jruby.org">(J)Ruby</link>'s
         IRB with some HBase particular commands added.  Anything you can do in
         IRB, you should be able to do in the HBase Shell.</para>
-        <para>To run the HBase shell, 
+        <para>To run the HBase shell,
         do as follows:
         <programlisting>$ ./bin/hbase shell</programlisting>
         </para>
@@ -104,5 +104,16 @@
                </para>
             </section>
          </section>
+        <section><title>Commands</title>
+            <section><title>count</title>
+                <para>Count command returns the number of rows in a table.
+		    It's quite fast when configured with the right CACHE
+            <programlisting>hbase> count '&lt;tablename&gt;', CACHE => 1000</programlisting>
+            The above count fetches 1000 rows at a time.  Set CACHE lower if your rows are big.
+            Default is to fetch one row at a time.
+                 </para>
+            </section>
+         </section>
+
     </section>
   </chapter>

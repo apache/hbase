@@ -29,16 +29,16 @@
   <title>Apache HBase (TM) Operational Management</title>
   This chapter will cover operational tools and practices required of a running Apache HBase cluster.
   The subject of operations is related to the topics of <xref linkend="trouble" />, <xref linkend="performance"/>,
-  and <xref linkend="configuration" /> but is a distinct topic in itself.  
-  
+  and <xref linkend="configuration" /> but is a distinct topic in itself.
+
   <section xml:id="tools">
     <title >HBase Tools and Utilities</title>
 
     <para>Here we list HBase tools for administration, analysis, fixup, and
     debugging.</para>
     <section xml:id="driver"><title>Driver</title>
-      <para>There is a <code>Driver</code> class that is executed by the HBase jar can be used to invoke frequently accessed utilities.  For example, 
-<programlisting>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar 
+      <para>There is a <code>Driver</code> class that is executed by the HBase jar can be used to invoke frequently accessed utilities.  For example,
+<programlisting>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar
 </programlisting>
 ... will return...
 <programlisting>
@@ -159,7 +159,7 @@ Valid program names are:
     </section>
     <section xml:id="importtsv">
        <title>ImportTsv</title>
-       <para>ImportTsv is a utility that will load data in TSV format into HBase.  It has two distinct usages:  loading data from TSV format in HDFS 
+       <para>ImportTsv is a utility that will load data in TSV format into HBase.  It has two distinct usages:  loading data from TSV format in HDFS
        into HBase via Puts, and preparing StoreFiles to be loaded via the <code>completebulkload</code>.
        </para>
        <para>To load data via Puts (i.e., non-bulk loading):
@@ -170,7 +170,7 @@ Valid program names are:
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c -Dimporttsv.bulk.output=hdfs://storefile-outputdir &lt;tablename&gt; &lt;hdfs-data-inputdir&gt;
 </programlisting>
        </para>
-       <para>These generated StoreFiles can be loaded into HBase via <xref linkend="completebulkload"/>. 
+       <para>These generated StoreFiles can be loaded into HBase via <xref linkend="completebulkload"/>.
        </para>
        <section xml:id="importtsv.options"><title>ImportTsv Options</title>
        Running ImportTsv with no arguments prints brief usage information:
@@ -197,7 +197,7 @@ Other options that may be specified with -D include:
   '-Dimporttsv.separator=|' - eg separate on pipes instead of tabs
   -Dimporttsv.timestamp=currentTimeAsLong - use the specified timestamp for the import
   -Dimporttsv.mapper.class=my.Mapper - A user-defined Mapper to use instead of org.apache.hadoop.hbase.mapreduce.TsvImporterMapper
-</programlisting>       
+</programlisting>
        </section>
        <section xml:id="importtsv.example"><title>ImportTsv Example</title>
          <para>For example, assume that we are loading data into a table called 'datatsv' with a ColumnFamily called 'd' with two columns "c1" and "c2".
@@ -229,15 +229,15 @@ row10	c1	c2
        </section>
        <section xml:id="importtsv.also"><title>See Also</title>
        For more information about bulk-loading HFiles into HBase, see <xref linkend="arch.bulk.load"/>
-       </section>       
+       </section>
     </section>
-    
+
     <section xml:id="completebulkload">
        <title>CompleteBulkLoad</title>
 	   <para>The <code>completebulkload</code> utility will move generated StoreFiles into an HBase table.  This utility is often used
-	   in conjunction with output from <xref linkend="importtsv"/>.  
+	   in conjunction with output from <xref linkend="importtsv"/>.
 	   </para>
-	   <para>There are two ways to invoke this utility, with explicit classname and via the driver: 
+	   <para>There are two ways to invoke this utility, with explicit classname and via the driver:
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
 </programlisting>
 .. and via the Driver..
@@ -266,15 +266,17 @@ row10	c1	c2
     </section>
     <section xml:id="rowcounter">
        <title>RowCounter</title>
-       <para>RowCounter is a utility that will count all the rows of a table.  This is a good utility to use
-       as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
+       <para>RowCounter is a mapreduce job to count all the rows of a table.  This is a good utility to use
+           as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
+           It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to
+           exploit.
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter &lt;tablename&gt; [&lt;column1&gt; &lt;column2&gt;...]
 </programlisting>
        </para>
        <para>Note:  caching for the input Scan is configured via <code>hbase.client.scanner.caching</code> in the job configuration.
        </para>
     </section>
-           
+
     </section>  <!--  tools -->
 
   <section xml:id="ops.regionmgt">
@@ -284,7 +286,7 @@ row10	c1	c2
       <para>Major compactions can be requested via the HBase shell or <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html#majorCompact%28java.lang.String%29">HBaseAdmin.majorCompact</link>.
       </para>
       <para>Note:  major compactions do NOT do region merges.  See <xref linkend="compaction"/> for more information about compactions.
-      
+
       </para>
     </section>
     <section xml:id="ops.regionmgt.merge">
@@ -293,16 +295,16 @@ row10	c1	c2
 <programlisting>$ bin/hbase org.apache.hbase.util.Merge &lt;tablename&gt; &lt;region1&gt; &lt;region2&gt;
 </programlisting>
       <para>If you feel you have too many regions and want to consolidate them, Merge is the utility you need.  Merge must
-      run be done when the cluster is down.  
+      run be done when the cluster is down.
       See the <link xlink:href="http://ofps.oreilly.com/titles/9781449396107/performance.html">O'Reilly HBase Book</link> for
       an example of usage.
       </para>
-      <para>Additionally, there is a Ruby script attached to <link xlink:href="https://issues.apache.org/jira/browse/HBASE-1621">HBASE-1621</link> 
+      <para>Additionally, there is a Ruby script attached to <link xlink:href="https://issues.apache.org/jira/browse/HBASE-1621">HBASE-1621</link>
       for region merging.
       </para>
     </section>
   </section>
-    
+
     <section xml:id="node.management"><title>Node Management</title>
      <section xml:id="decommission"><title>Node Decommission</title>
         <para>You can stop an individual RegionServer by running the following
@@ -328,7 +330,7 @@ row10	c1	c2
         notices the RegionServer's znode gone.  In Apache HBase 0.90.2, we added facility for having
         a node gradually shed its load and then shutdown itself down. Apache HBase 0.90.2 added the
             <filename>graceful_stop.sh</filename> script.  Here is its usage:
-            <programlisting>$ ./bin/graceful_stop.sh 
+            <programlisting>$ ./bin/graceful_stop.sh
 Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thrift] [--rest] &amp;hostname>
  thrift      If we should stop/start thrift before/after the hbase stop/start
  rest        If we should stop/start rest before/after the hbase stop/start
@@ -341,7 +343,7 @@ Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thri
             To decommission a loaded RegionServer, run the following:
             <programlisting>$ ./bin/graceful_stop.sh HOSTNAME</programlisting>
             where <varname>HOSTNAME</varname> is the host carrying the RegionServer
-            you would decommission.  
+            you would decommission.
             <note><title>On <varname>HOSTNAME</varname></title>
                 <para>The <varname>HOSTNAME</varname> passed to <filename>graceful_stop.sh</filename>
             must match the hostname that hbase is using to identify RegionServers.
@@ -363,7 +365,7 @@ Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thri
             and because the RegionServer went down cleanly, there will be no
             WAL logs to split.
             <note xml:id="lb"><title>Load Balancer</title>
-            <para> 
+            <para>
                 It is assumed that the Region Load Balancer is disabled while the
                 <command>graceful_stop</command> script runs (otherwise the balancer
                 and the decommission script will end up fighting over region deployments).
@@ -375,10 +377,10 @@ This turns the balancer OFF.  To reenable, do:
                 <programlisting>hbase(main):001:0> balance_switch true
 false
 0 row(s) in 0.3590 seconds</programlisting>
-            </para> 
+            </para>
         </note>
         </para>
-        </section>  
+        </section>
         <section xml:id="rolling">
             <title>Rolling Restart</title>
         <para>
@@ -521,33 +523,33 @@ false
     <title>Overview</title>
       <para>The following metrics are arguably the most important to monitor for each RegionServer for
       "macro monitoring", preferably with a system like <link xlink:href="http://opentsdb.net/">OpenTSDB</link>.
-      If your cluster is having performance issues it's likely that you'll see something unusual with 
+      If your cluster is having performance issues it's likely that you'll see something unusual with
       this group.
       </para>
-      <para>HBase: 
+      <para>HBase:
       <itemizedlist>
       <listitem>Requests</listitem>
       <listitem>Compactions queue</listitem>
       </itemizedlist>
-      </para> 
-      <para>OS: 
+      </para>
+      <para>OS:
       <itemizedlist>
       <listitem>IO Wait</listitem>
       <listitem>User CPU</listitem>
       </itemizedlist>
-      </para> 
-      <para>Java: 
+      </para>
+      <para>Java:
       <itemizedlist>
       <listitem>GC</listitem>
       </itemizedlist>
-      </para> 
+      </para>
       <para>
       </para>
       <para>
       For more information on HBase metrics, see <xref linkend="hbase_metrics"/>.
       </para>
     </section>
-    
+
     <section xml:id="ops.slow.query">
     <title>Slow Query Log</title>
 <para>The HBase slow query log consists of parseable JSON structures describing the properties of those client operations (Gets, Puts, Deletes, etc.) that either took too long to run, or produced too much output. The thresholds for "too long to run" and "too much output" are configurable, as described below. The output is produced inline in the main region server logs so that it is easy to discover further details from context with other logged events. It is also prepended with identifying tags <constant>(responseTooSlow)</constant>, <constant>(responseTooLarge)</constant>, <constant>(operationTooSlow)</constant>, and <constant>(operationTooLarge)</constant> in order to enable easy filtering with grep, in case the user desires to see only slow queries.
@@ -594,7 +596,7 @@ false
 
 
   </section>
-  
+
   <section xml:id="cluster_replication">
     <title>Cluster Replication</title>
     <para>See <link xlink:href="http://hbase.apache.org/replication.html">Cluster Replication</link>.
@@ -602,8 +604,8 @@ false
   </section>
   <section xml:id="ops.backup">
     <title >HBase Backup</title>
-    <para>There are two broad strategies for performing HBase backups: backing up with a full cluster shutdown, and backing up on a live cluster. 
-    Each approach has pros and cons.   
+    <para>There are two broad strategies for performing HBase backups: backing up with a full cluster shutdown, and backing up on a live cluster.
+    Each approach has pros and cons.
     </para>
     <para>For additional information, see <link xlink:href="http://blog.sematext.com/2011/03/11/hbase-backup-options/">HBase Backup Options</link> over on the Sematext Blog.
     </para>
@@ -617,27 +619,27 @@ false
         </para>
       </section>
       <section xml:id="ops.backup.fullshutdown.distcp"><title>Distcp</title>
-        <para>Distcp could be used to either copy the contents of the HBase directory in HDFS to either the same cluster in another directory, or 
+        <para>Distcp could be used to either copy the contents of the HBase directory in HDFS to either the same cluster in another directory, or
         to a different cluster.
         </para>
-        <para>Note:  Distcp works in this situation because the cluster is down and there are no in-flight edits to files.  
+        <para>Note:  Distcp works in this situation because the cluster is down and there are no in-flight edits to files.
         Distcp-ing of files in the HBase directory is not generally recommended on a live cluster.
         </para>
       </section>
       <section xml:id="ops.backup.fullshutdown.restore"><title>Restore (if needed)</title>
-        <para>The backup of the hbase directory from HDFS is copied onto the 'real' hbase directory via distcp.  The act of copying these files 
+        <para>The backup of the hbase directory from HDFS is copied onto the 'real' hbase directory via distcp.  The act of copying these files
         creates new HDFS metadata, which is why a restore of the NameNode edits from the time of the HBase backup isn't required for this kind of
         restore, because it's a restore (via distcp) of a specific HDFS directory (i.e., the HBase part) not the entire HDFS file-system.
         </para>
       </section>
     </section>
     <section xml:id="ops.backup.live.replication"><title>Live Cluster Backup - Replication</title>
-      <para>This approach assumes that there is a second cluster.  
+      <para>This approach assumes that there is a second cluster.
       See the HBase page on <link xlink:href="http://hbase.apache.org/replication.html">replication</link> for more information.
       </para>
     </section>
     <section xml:id="ops.backup.live.copytable"><title>Live Cluster Backup - CopyTable</title>
-      <para>The <xref linkend="copytable" /> utility could either be used to copy data from one table to another on the 
+      <para>The <xref linkend="copytable" /> utility could either be used to copy data from one table to another on the
       same cluster, or to copy data to another table on another cluster.
       </para>
       <para>Since the cluster is up, there is a risk that edits could be missed in the copy process.
@@ -658,10 +660,10 @@ false
       with a solid understanding of how HBase handles data internally (KeyValue).
       </para>
       <section xml:id="ops.capacity.storage.kv"><title>KeyValue</title>
-        <para>HBase storage will be dominated by KeyValues.  See <xref linkend="keyvalue" /> and <xref linkend="keysize" /> for 
-        how HBase stores data internally.  
+        <para>HBase storage will be dominated by KeyValues.  See <xref linkend="keyvalue" /> and <xref linkend="keysize" /> for
+        how HBase stores data internally.
         </para>
-        <para>It is critical to understand that there is a KeyValue instance for every attribute stored in a row, and the 
+        <para>It is critical to understand that there is a KeyValue instance for every attribute stored in a row, and the
         rowkey-length, ColumnFamily name-length and attribute lengths will drive the size of the database more than any other
         factor.
         </para>
