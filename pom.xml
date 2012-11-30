@@ -401,7 +401,7 @@
               <include>${integrationtest.include}</include>
             </includes>
             <excludes>
-              <exlude>${unittest.include}</exlude>
+              <exclude>${unittest.include}</exclude>
               <exclude>**/*$*</exclude>
             </excludes>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
