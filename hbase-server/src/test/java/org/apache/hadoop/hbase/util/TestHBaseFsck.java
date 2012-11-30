@@ -71,6 +71,8 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
+import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
@@ -1660,6 +1662,89 @@ public class TestHBaseFsck {
     doQuarantineTest(table, hbck, 3, 0, 0, 0, 1);
   }
 
+  /**
+   * Test pluggable error reporter. It can be plugged in
+   * from system property or configuration.
+   */
+  @Test
+  public void testErrorReporter() throws Exception {
+    try {
+      MockErrorReporter.calledCount = 0;
+      doFsck(conf, false);
+      assertEquals(MockErrorReporter.calledCount, 0);
+
+      conf.set("hbasefsck.errorreporter", MockErrorReporter.class.getName());
+      doFsck(conf, false);
+      assertTrue(MockErrorReporter.calledCount > 20);
+    } finally {
+      conf.set("hbasefsck.errorreporter", "");
+      MockErrorReporter.calledCount = 0;
+    }
+  }
+
+  static class MockErrorReporter implements ErrorReporter {
+    static int calledCount = 0;
+
+    public void clear() {
+      calledCount++;
+    }
+
+    public void report(String message) {
+      calledCount++;
+    }
+
+    public void reportError(String message) {
+      calledCount++;
+    }
+
+    public void reportError(ERROR_CODE errorCode, String message) {
+      calledCount++;
+    }
+
+    public void reportError(ERROR_CODE errorCode, String message, TableInfo table) {
+      calledCount++;
+    }
+
+    public void reportError(ERROR_CODE errorCode,
+        String message, TableInfo table, HbckInfo info) {
+      calledCount++;
+    }
+
+    public void reportError(ERROR_CODE errorCode, String message,
+        TableInfo table, HbckInfo info1, HbckInfo info2) {
+      calledCount++;
+    }
+
+    public int summarize() {
+      return ++calledCount;
+    }
+
+    public void detail(String details) {
+      calledCount++;
+    }
+
+    public ArrayList<ERROR_CODE> getErrorList() {
+      calledCount++;
+      return new ArrayList<ERROR_CODE>();
+    }
+
+    public void progress() {
+      calledCount++;
+    }
+
+    public void print(String message) {
+      calledCount++;
+    }
+
+    public void resetErrors() {
+      calledCount++;
+    }
+
+    public boolean tableHasErrors(TableInfo table) {
+      calledCount++;
+      return false;
+    }
+  }
 
   @org.junit.Rule
   public TestName name = new TestName();
