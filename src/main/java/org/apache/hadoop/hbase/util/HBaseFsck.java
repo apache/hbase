@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -93,6 +94,9 @@ import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.base.Joiner;
@@ -146,7 +150,7 @@ import com.google.common.collect.TreeMultimap;
  * can be used to limit the kinds of repairs hbck will do.  See the code in
  * {@link #printUsageAndExit()} for more details.
  */
-public class HBaseFsck {
+public class HBaseFsck extends Configured implements Tool {
   public static final long DEFAULT_TIME_LAG = 60000; // default value of 1 minute
   public static final long DEFAULT_SLEEP_BEFORE_RERUN = 10000;
   private static final int MAX_NUM_THREADS = 50; // #threads to contact regions
@@ -159,7 +163,6 @@ public class HBaseFsck {
    * Internal resources
    **********************/
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
-  private Configuration conf;
   private ClusterStatus status;
   private HConnection connection;
   private HBaseAdmin admin;
@@ -200,7 +203,7 @@ public class HBaseFsck {
   /*********
    * State
    *********/
-  private ErrorReporter errors = new PrintingErrorReporter();
+  final private ErrorReporter errors;
   int fixes = 0;
 
   /**
@@ -241,8 +244,9 @@ public class HBaseFsck {
    * @throws ZooKeeperConnectionException if unable to connect to ZooKeeper
    */
   public HBaseFsck(Configuration conf) throws MasterNotRunningException,
-      ZooKeeperConnectionException, IOException {
-    this.conf = conf;
+      ZooKeeperConnectionException, IOException, ClassNotFoundException {
+    super(conf);
+    errors = getErrorReporter(conf);
 
     int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
     executor = new ScheduledThreadPoolExecutor(numThreads);
@@ -259,8 +263,9 @@ public class HBaseFsck {
    *           if unable to connect to ZooKeeper
    */
   public HBaseFsck(Configuration conf, ExecutorService exec) throws MasterNotRunningException,
-      ZooKeeperConnectionException, IOException {
-    this.conf = conf;
+      ZooKeeperConnectionException, IOException, ClassNotFoundException {
+    super(conf);
+    errors = getErrorReporter(getConf());
     this.executor = exec;
   }
 
@@ -269,8 +274,8 @@ public class HBaseFsck {
    * online state.
    */
   public void connect() throws IOException {
-    admin = new HBaseAdmin(conf);
-    meta = new HTable(conf, HConstants.META_TABLE_NAME);
+    admin = new HBaseAdmin(getConf());
+    meta = new HTable(getConf(), HConstants.META_TABLE_NAME);
     status = admin.getMaster().getClusterStatus();
     connection = admin.getConnection();
   }
@@ -338,7 +343,7 @@ public class HBaseFsck {
         || shouldFixHdfsOverlaps() || shouldFixTableOrphans())) {
       LOG.info("Loading regioninfos HDFS");
       // if nothing is happening this should always complete in two iterations.
-      int maxIterations = conf.getInt("hbase.hbck.integrityrepair.iterations.max", 3);
+      int maxIterations = getConf().getInt("hbase.hbck.integrityrepair.iterations.max", 3);
       int curIter = 0;
       do {
         clearState(); // clears hbck state and reset fixes to 0 and.
@@ -458,7 +463,7 @@ public class HBaseFsck {
    */
   private void adoptHdfsOrphan(HbckInfo hi) throws IOException {
     Path p = hi.getHdfsRegionDir();
-    FileSystem fs = p.getFileSystem(conf);
+    FileSystem fs = p.getFileSystem(getConf());
     FileStatus[] dirs = fs.listStatus(p);
     if (dirs == null) {
       LOG.warn("Attempt to adopt ophan hdfs region skipped becuase no files present in " +
@@ -483,7 +488,7 @@ public class HBaseFsck {
         byte[] start, end;
         HFile.Reader hf = null;
         try {
-          CacheConfig cacheConf = new CacheConfig(conf);
+          CacheConfig cacheConf = new CacheConfig(getConf());
           hf = HFile.createReader(fs, hfile.getPath(), cacheConf);
           hf.loadFileInfo();
           KeyValue startKv = KeyValue.createKeyValueFromKey(hf.getFirstKey());
@@ -531,7 +536,7 @@ public class HBaseFsck {
     // create new region on hdfs.  move data into place.
     HRegionInfo hri = new HRegionInfo(template.getName(), orphanRegionRange.getFirst(), orphanRegionRange.getSecond());
     LOG.info("Creating new region : " + hri);
-    HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, hri, template);
+    HRegion region = HBaseFsckRepair.createHDFSRegionDir(getConf(), hri, template);
     Path target = region.getRegionDir();
 
     // rename all the data to new region
@@ -643,7 +648,7 @@ public class HBaseFsck {
     }
 
     Path regioninfo = new Path(regionDir, HRegion.REGIONINFO_FILE);
-    FileSystem fs = regioninfo.getFileSystem(conf);
+    FileSystem fs = regioninfo.getFileSystem(getConf());
 
     FSDataInputStream in = fs.open(regioninfo);
     HRegionInfo hri = new HRegionInfo();
@@ -718,11 +723,11 @@ public class HBaseFsck {
       if (modTInfo == null) {
         // only executed once per table.
         modTInfo = new TableInfo(tableName);
-        Path hbaseRoot = FSUtils.getRootDir(conf);
+        Path hbaseRoot = FSUtils.getRootDir(getConf());
         tablesInfo.put(tableName, modTInfo);
         try {
           HTableDescriptor htd =
-              FSTableDescriptors.getTableDescriptor(hbaseRoot.getFileSystem(conf),
+              FSTableDescriptors.getTableDescriptor(hbaseRoot.getFileSystem(getConf()),
               hbaseRoot, tableName);
           modTInfo.htds.add(htd);
         } catch (IOException ioe) {
@@ -751,7 +756,7 @@ public class HBaseFsck {
    */
   private Set<String> getColumnFamilyList(Set<String> columns, HbckInfo hbi) throws IOException {
     Path regionDir = hbi.getHdfsRegionDir();
-    FileSystem fs = regionDir.getFileSystem(conf);
+    FileSystem fs = regionDir.getFileSystem(getConf());
     FileStatus[] subDirs = fs.listStatus(regionDir, new FSUtils.FamilyDirFilter(fs));
     for (FileStatus subdir : subDirs) {
       String columnfamily = subdir.getPath().getName();
@@ -774,7 +779,7 @@ public class HBaseFsck {
     for (String columnfamimly : columns) {
       htd.addFamily(new HColumnDescriptor(columnfamimly));
     }
-    FSTableDescriptors.createTableDescriptor(htd, conf, true);
+    FSTableDescriptors.createTableDescriptor(htd, getConf(), true);
     return true;
   }
   
@@ -790,12 +795,12 @@ public class HBaseFsck {
   public void fixOrphanTables() throws IOException {
     if (shouldFixTableOrphans() && !orphanTableDirs.isEmpty()) {
 
-      Path hbaseRoot = FSUtils.getRootDir(conf);
+      Path hbaseRoot = FSUtils.getRootDir(getConf());
       List<String> tmpList = new ArrayList<String>();
       tmpList.addAll(orphanTableDirs.keySet());
       HTableDescriptor[] htds = getHTableDescriptors(tmpList);
       Iterator<Entry<String, Set<String>>> iter = orphanTableDirs.entrySet().iterator();
-      int j = 0; 
+      int j = 0;
       int numFailedCase = 0;
       while (iter.hasNext()) {
         Entry<String, Set<String>> entry = (Entry<String, Set<String>>) iter.next();
@@ -806,7 +811,7 @@ public class HBaseFsck {
             HTableDescriptor htd = htds[j];
             LOG.info("fixing orphan table: " + tableName + " from cache");
             FSTableDescriptors.createTableDescriptor(
-                hbaseRoot.getFileSystem(conf), hbaseRoot, htd, true);
+                hbaseRoot.getFileSystem(getConf()), hbaseRoot, htd, true);
             j++;
             iter.remove();
           }
@@ -845,8 +850,8 @@ public class HBaseFsck {
    * @return an open .META. HRegion
    */
   private HRegion createNewRootAndMeta() throws IOException {
-    Path rootdir = new Path(conf.get(HConstants.HBASE_DIR));
-    Configuration c = conf;
+    Path rootdir = new Path(getConf().get(HConstants.HBASE_DIR));
+    Configuration c = getConf();
     HRegionInfo rootHRI = new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
     MasterFileSystem.setInfoFamilyCachingForRoot(false);
     HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
@@ -989,7 +994,7 @@ public class HBaseFsck {
     for (TableInfo tInfo : tablesInfo.values()) {
       TableIntegrityErrorHandler handler;
       if (fixHoles || fixOverlaps) {
-        handler = tInfo.new HDFSIntegrityFixer(tInfo, errors, conf,
+        handler = tInfo.new HDFSIntegrityFixer(tInfo, errors, getConf(),
           fixHoles, fixOverlaps);
       } else {
         handler = tInfo.new IntegrityFixSuggester(tInfo, errors);
@@ -1004,7 +1009,7 @@ public class HBaseFsck {
 
   private Path getSidelineDir() throws IOException {
     if (sidelineDir == null) {
-      Path hbaseDir = FSUtils.getRootDir(conf);
+      Path hbaseDir = FSUtils.getRootDir(getConf());
       Path hbckDir = new Path(hbaseDir, HConstants.HBCK_SIDELINEDIR_NAME);
       sidelineDir = new Path(hbckDir, hbaseDir.getName() + "-"
           + startMillis);
@@ -1121,8 +1126,8 @@ public class HBaseFsck {
    */
   Path sidelineOldRootAndMeta() throws IOException {
     // put current -ROOT- and .META. aside.
-    Path hbaseDir = new Path(conf.get(HConstants.HBASE_DIR));
-    FileSystem fs = hbaseDir.getFileSystem(conf);
+    Path hbaseDir = new Path(getConf().get(HConstants.HBASE_DIR));
+    FileSystem fs = hbaseDir.getFileSystem(getConf());
     Path backupDir = getSidelineDir();
     fs.mkdirs(backupDir);
 
@@ -1154,7 +1159,7 @@ public class HBaseFsck {
    */
   private void loadDisabledTables()
   throws ZooKeeperConnectionException, IOException {
-    HConnectionManager.execute(new HConnectable<Void>(conf) {
+    HConnectionManager.execute(new HConnectable<Void>(getConf()) {
       @Override
       public Void connect(HConnection connection) throws IOException {
         ZooKeeperWatcher zkw = connection.getZooKeeperWatcher();
@@ -1182,8 +1187,8 @@ public class HBaseFsck {
    * regionInfoMap
    */
   public void loadHdfsRegionDirs() throws IOException, InterruptedException {
-    Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
-    FileSystem fs = rootDir.getFileSystem(conf);
+    Path rootDir = new Path(getConf().get(HConstants.HBASE_DIR));
+    FileSystem fs = rootDir.getFileSystem(getConf());
 
     // list all tables from HDFS
     List<FileStatus> tableDirs = Lists.newArrayList();
@@ -1211,8 +1216,8 @@ public class HBaseFsck {
         LOG.info("Trying to create a new " + HConstants.VERSION_FILE_NAME
             + " file.");
         setShouldRerun();
-        FSUtils.setVersion(fs, rootDir, conf.getInt(
-            HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000), conf.getInt(
+        FSUtils.setVersion(fs, rootDir, getConf().getInt(
+            HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000), getConf().getInt(
             HConstants.VERSION_FILE_WRITE_ATTEMPTS,
             HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
       }
@@ -1338,8 +1343,8 @@ public class HBaseFsck {
       return;
     }
 
-    Path hbaseDir = new Path(conf.get(HConstants.HBASE_DIR));
-    FileSystem fs = hbaseDir.getFileSystem(conf);
+    Path hbaseDir = new Path(getConf().get(HConstants.HBASE_DIR));
+    FileSystem fs = hbaseDir.getFileSystem(getConf());
     UserGroupInformation ugi = User.getCurrent().getUGI();
     FileStatus[] files = fs.listStatus(hbaseDir);
     for (FileStatus file : files) {
@@ -1566,7 +1571,7 @@ public class HBaseFsck {
         }
 
         LOG.info("Patching .META. with .regioninfo: " + hbi.getHdfsHRI());
-        HBaseFsckRepair.fixMetaHoleOnline(conf, hbi.getHdfsHRI());
+        HBaseFsckRepair.fixMetaHoleOnline(getConf(), hbi.getHdfsHRI());
 
         tryAssignmentRepair(hbi, "Trying to reassign region...");
       }
@@ -1582,7 +1587,7 @@ public class HBaseFsck {
         }
 
         LOG.info("Patching .META. with with .regioninfo: " + hbi.getHdfsHRI());
-        HBaseFsckRepair.fixMetaHoleOnline(conf, hbi.getHdfsHRI());
+        HBaseFsckRepair.fixMetaHoleOnline(getConf(), hbi.getHdfsHRI());
 
         tryAssignmentRepair(hbi, "Trying to fix unassigned region...");
       }
@@ -1744,7 +1749,7 @@ public class HBaseFsck {
     debugLsr(contained.getHdfsRegionDir());
 
     // rename the contained into the container.
-    FileSystem fs = targetRegionDir.getFileSystem(conf);
+    FileSystem fs = targetRegionDir.getFileSystem(getConf());
     FileStatus[] dirs = fs.listStatus(contained.getHdfsRegionDir());
 
     if (dirs == null) {
@@ -2359,7 +2364,7 @@ public class HBaseFsck {
     HTableDescriptor[] htd = new HTableDescriptor[0];
      try {
        LOG.info("getHTableDescriptors == tableNames => " + tableNames);
-       htd = new HBaseAdmin(conf).getTableDescriptors(tableNames);
+       htd = new HBaseAdmin(getConf()).getTableDescriptors(tableNames);
      } catch (IOException e) {
        LOG.debug("Exception getting table descriptors", e);
      }
@@ -2502,12 +2507,12 @@ public class HBaseFsck {
     };
 
     // Scan -ROOT- to pick up META regions
-    MetaScanner.metaScan(conf, visitor, null, null,
+    MetaScanner.metaScan(getConf(), visitor, null, null,
       Integer.MAX_VALUE, HConstants.ROOT_TABLE_NAME);
 
     if (!checkMetaOnly) {
       // Scan .META. to pick up user regions
-      MetaScanner.metaScan(conf, visitor);
+      MetaScanner.metaScan(getConf(), visitor);
     }
 
     errors.print("");
@@ -2759,6 +2764,12 @@ public class HBaseFsck {
       }
       System.out.println();
     }
+  }
+
+  private static ErrorReporter getErrorReporter(
+      final Configuration conf) throws ClassNotFoundException {
+    Class<? extends ErrorReporter> reporter = conf.getClass("hbasefsck.errorreporter", PrintingErrorReporter.class, ErrorReporter.class);
+    return (ErrorReporter)ReflectionUtils.newInstance(reporter, conf);
   }
 
   public interface ErrorReporter {
@@ -3261,7 +3272,7 @@ public class HBaseFsck {
   }
 
   protected HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
-    return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles);
+    return new HFileCorruptionChecker(getConf(), executor, sidelineCorruptHFiles);
   }
 
   public HFileCorruptionChecker getHFilecorruptionChecker() {
@@ -3334,7 +3345,6 @@ public class HBaseFsck {
    * @throws Exception
    */
   public static void main(String[] args) throws Exception {
-
     // create a fsck object
     Configuration conf = HBaseConfiguration.create();
     Path hbasedir = new Path(conf.get(HConstants.HBASE_DIR));
@@ -3342,12 +3352,14 @@ public class HBaseFsck {
     conf.set("fs.defaultFS", defaultFs.toString());     // for hadoop 0.21+
     conf.set("fs.default.name", defaultFs.toString());  // for hadoop 0.20
 
-    int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
-    ExecutorService exec = new ScheduledThreadPoolExecutor(numThreads);
-    HBaseFsck hbck = new HBaseFsck(conf, exec);
-    hbck.exec(exec, args);
-    int retcode = hbck.getRetCode();
-    Runtime.getRuntime().exit(retcode);
+    int ret = ToolRunner.run(new HBaseFsck(conf), args);
+    System.exit(ret);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception {
+    exec(executor, args);
+    return getRetCode();
   }
 
   public HBaseFsck exec(ExecutorService exec, String[] args) throws KeeperException, IOException,
@@ -3506,13 +3518,13 @@ public class HBaseFsck {
       setHFileCorruptionChecker(hfcc); // so we can get result
       Collection<String> tables = getIncludedTables();
       Collection<Path> tableDirs = new ArrayList<Path>();
-      Path rootdir = FSUtils.getRootDir(conf);
+      Path rootdir = FSUtils.getRootDir(getConf());
       if (tables.size() > 0) {
         for (String t : tables) {
           tableDirs.add(FSUtils.getTablePath(rootdir, t));
         }
       } else {
-        tableDirs = FSUtils.getTableDirs(FSUtils.getCurrentFileSystem(conf), rootdir);
+        tableDirs = FSUtils.getTableDirs(FSUtils.getCurrentFileSystem(getConf()), rootdir);
       }
       hfcc.checkTables(tableDirs);
       PrintWriter out = new PrintWriter(System.out);
@@ -3552,7 +3564,7 @@ public class HBaseFsck {
    * ls -r for debugging purposes
    */
   void debugLsr(Path p) throws IOException {
-    debugLsr(conf, p);
+    debugLsr(getConf(), p);
   }
 
   /**
