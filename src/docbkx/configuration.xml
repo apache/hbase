@@ -941,6 +941,8 @@ index e70ebc6..96f8c27 100644
       </section>
 
       <section xml:id="recommended_configurations"><title>Recommended Configurations</title>
+          <section xml:id="recommended_configurations.zk">
+              <title>ZooKeeper Configuration</title>
           <section xml:id="zookeeper.session.timeout"><title><varname>zookeeper.session.timeout</varname></title>
           <para>The default timeout is three minutes (specified in milliseconds). This means
               that if a server crashes, it will be three minutes before the Master notices
@@ -966,6 +968,18 @@ index e70ebc6..96f8c27 100644
           <section xml:id="zookeeper.instances"><title>Number of ZooKeeper Instances</title>
           <para>See <xref linkend="zookeeper"/>.
           </para>
+      </section>
+      </section>
+      <section xml:id="recommended.configurations.hdfs">
+          <title>HDFS Configurations</title>
+          <section xml:id="dfs.datanode.failed.volumes.tolerated">
+              <title>dfs.datanode.failed.volumes.tolerated</title>
+              <para>This is the "...number of volumes that are allowed to fail before a datanode stops offering service. By default
+                  any volume failure will cause a datanode to shutdown" from the <filename>hdfs-default.xml</filename>
+                  description.  If you have > three or four disks, you might want to set this to 1 or if you have many disks,
+                  two or more.
+              </para>
+          </section>
       </section>
           <section xml:id="hbase.regionserver.handler.count"><title><varname>hbase.regionserver.handler.count</varname></title>
           <para>
