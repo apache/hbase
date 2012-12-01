@@ -2797,7 +2797,7 @@ public class HBaseFsck extends Configured implements Tool {
     public boolean tableHasErrors(TableInfo table);
   }
 
-  private static class PrintingErrorReporter implements ErrorReporter {
+  static class PrintingErrorReporter implements ErrorReporter {
     public int errorCount = 0;
     private int showProgress;
 
