@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
+import org.apache.hadoop.hbase.util.HBaseFsck.PrintingErrorReporter;
 import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
@@ -1677,7 +1678,8 @@ public class TestHBaseFsck {
       doFsck(conf, false);
       assertTrue(MockErrorReporter.calledCount > 20);
     } finally {
-      conf.set("hbasefsck.errorreporter", "");
+      conf.set("hbasefsck.errorreporter",
+        PrintingErrorReporter.class.getName());
       MockErrorReporter.calledCount = 0;
     }
   }
