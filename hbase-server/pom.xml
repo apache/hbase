@@ -486,10 +486,10 @@
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
-      <id>skip-server-tests</id>
+      <id>skipServerTests</id>
       <activation>
         <property>
-          <name>skip-server-tests</name>
+          <name>skipServerTests</name>
         </property>
       </activation>
       <properties>

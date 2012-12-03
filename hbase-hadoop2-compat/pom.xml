@@ -150,4 +150,19 @@ limitations under the License.
       <version>${hadoop-two.version}</version>
     </dependency>
   </dependencies>
+
+  <profiles>
+        <!-- Skip the tests in this module -->
+        <profile>
+            <id>skipHadoopTwoCompatTests</id>
+            <activation>
+                <property>
+                    <name>skipHadoopTwoCompatTests</name>
+                </property>
+            </activation>
+            <properties>
+                <surefire.skipFirstPart>true</surefire.skipFirstPart>
+            </properties>
+        </profile>
+  </profiles>
 </project>

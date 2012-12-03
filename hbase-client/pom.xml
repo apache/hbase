@@ -80,10 +80,10 @@
     <profiles>
         <!-- Skip the tests in this module -->
         <profile>
-            <id>skip-client-tests</id>
+            <id>skipClientTests</id>
             <activation>
                 <property>
-                    <name>skip-client-tests</name>
+                    <name>skipClientTests</name>
                 </property>
             </activation>
             <properties>

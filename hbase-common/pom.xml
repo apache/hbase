@@ -83,10 +83,10 @@
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
-      <id>skip-common-tests</id>
+      <id>skipCommonTests</id>
       <activation>
         <property>
-          <name>skip-common-tests</name>
+          <name>skipCommonTests</name>
         </property>
       </activation>
       <properties>

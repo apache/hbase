@@ -138,10 +138,10 @@
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
-      <id>skip-integration-tests</id>
+      <id>skipIntegrationTests</id>
       <activation>
         <property>
-          <name>skip-integration-tests</name>
+          <name>skipIntegrationTests</name>
         </property>
       </activation>
       <properties>

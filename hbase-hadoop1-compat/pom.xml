@@ -109,4 +109,19 @@ limitations under the License.
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <profiles>
+    <!-- Skip the tests in this module -->
+    <profile>
+        <id>skipHadoopOneCompatTests</id>
+        <activation>
+            <property>
+                <name>skipHadoopOneCompatTests</name>
+            </property>
+        </activation>
+        <properties>
+            <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        </properties>
+    </profile>
+  </profiles>
 </project>

@@ -73,6 +73,20 @@
     </dependency>
  </dependencies>
  <profiles>
+     <!-- Skip the tests in this module -->
+     <profile>
+         <id>skipExamplesTests</id>
+         <activation>
+             <property>
+                 <name>skipExamplesTests</name>
+             </property>
+         </activation>
+         <properties>
+             <surefire.skipFirstPart>true</surefire.skipFirstPart>
+             <surefire.skipSecondPart>true</surefire.skipSecondPart>
+         </properties>
+     </profile>
+
      <!-- Profiles for building against different hadoop versions -->
      <!-- There are a lot of common dependencies used here, should investigate
 if we can combine these profiles somehow -->

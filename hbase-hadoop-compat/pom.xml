@@ -65,4 +65,19 @@
       </dependency>
     </dependencies>
 
+    <profiles>
+        <!-- Skip the tests in this module -->
+        <profile>
+            <id>skipHadoopCompatTests</id>
+            <activation>
+                <property>
+                    <name>skipHadoopCompatTests</name>
+                </property>
+            </activation>
+            <properties>
+                <surefire.skipFirstPart>true</surefire.skipFirstPart>
+            </properties>
+        </profile>
+    </profiles>
+
 </project>
