@@ -429,7 +429,7 @@ public class TestStore extends TestCase {
     get.setMaxVersions(); // all versions.
     List<KeyValue> results = new ArrayList<KeyValue>();
 
-    NavigableSet<byte[]> cols = new TreeSet<byte[]>();
+    NavigableSet<byte[]> cols = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     cols.add(qf1);
 
     results = HBaseTestingUtility.getFromStoreFile(store, get);

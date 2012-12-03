@@ -382,7 +382,7 @@ public class TestStoreFile extends HBaseTestCase {
     int falseNeg = 0;
     for (int i = 0; i < 2000; i++) {
       String row = String.format(localFormatter, i);
-      TreeSet<byte[]> columns = new TreeSet<byte[]>();
+      TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
       columns.add("family:col".getBytes());
 
       Scan scan = new Scan(row.getBytes(),row.getBytes());
@@ -534,7 +534,7 @@ public class TestStoreFile extends HBaseTestCase {
         for (int j = 0; j < colCount*2; ++j) {   // column qualifiers
           String row = String.format(localFormatter, i);
           String col = String.format(localFormatter, j);
-          TreeSet<byte[]> columns = new TreeSet<byte[]>();
+          TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
           columns.add(("col" + col).getBytes());
 
           Scan scan = new Scan(row.getBytes(),row.getBytes());
@@ -706,7 +706,7 @@ public class TestStoreFile extends HBaseTestCase {
         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     StoreFile.Reader reader = hsf.createReader();
     StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
-    TreeSet<byte[]> columns = new TreeSet<byte[]>();
+    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     columns.add(qualifier);
 
     scan.setTimeRange(20, 100);
