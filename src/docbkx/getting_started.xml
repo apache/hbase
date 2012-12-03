@@ -68,7 +68,7 @@
       mirror of <emphasis>HBase Releases</emphasis>. Click on the folder named
       <filename>stable</filename> and then download the file that ends in
       <filename>.tar.gz</filename> to your local filesystem; e.g.
-      <filename>hbase-<?eval ${project.version}?>.tar.gz</filename>.</para>
+      <filename>hbase-0.94.2.tar.gz</filename>.</para>
 
       <para>Decompress and untar your download and then change into the
       unpacked directory.</para>
