@@ -300,7 +300,7 @@ try {
       <title>Versions<indexterm><primary>Versions</primary></indexterm></title>
 
       <para>A <emphasis>{row, column, version} </emphasis>tuple exactly
-      specifies a <literal>cell</literal> in HBase. Its possible to have an
+      specifies a <literal>cell</literal> in HBase. It's possible to have an
       unbounded number of cells where the row and column are the same but the
       cell address differs only in its version dimension.</para>
 
@@ -633,7 +633,7 @@ admin.enableTable(table);
     <para>
       In the HBase chapter of Tom White's book <link xlink:url="http://oreilly.com/catalog/9780596521981">Hadoop: The Definitive Guide</link> (O'Reilly) there is a an optimization note on watching out for a phenomenon where an import process walks in lock-step with all clients in concert pounding one of the table's regions (and thus, a single node), then moving onto the next region, etc.  With monotonically increasing row-keys (i.e., using a timestamp), this will happen.  See this comic by IKai Lan on why monotonically increasing row keys are problematic in BigTable-like datastores:
       <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link>.  The pile-up on a single region brought on
-      by monotonically increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general its best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key.
+      by monotonically increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general it's best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key.
     </para>
 
 
@@ -1448,7 +1448,7 @@ if (!b) {
        After the region has been split eventually this row will be deleted.
        </para>
        <para>Notes on HRegionInfo:  the empty key is used to denote table start and table end.  A region with an empty start key
-       is the first region in a table.  If region has both an empty start and an empty end key, its the only region in the table
+       is the first region in a table.  If region has both an empty start and an empty end key, it's the only region in the table
        </para>
        <para>In the (hopefully unlikely) event that programmatic processing of catalog metadata is required, see the
          <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29">Writables</link> utility.
@@ -2037,7 +2037,7 @@ rs.close();
         </listitem>
       </itemizedlist>
 
-      <para>When starting off, its probably best to stick to the default region-size, perhaps going
+      <para>When starting off, it's probably best to stick to the default region-size, perhaps going
       smaller for hot tables (or manually split hot regions to spread the load over
       the cluster), or go with larger region sizes if your cell sizes tend to be
       largish (100k and up).</para>
@@ -3030,7 +3030,7 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
             <listitem>
                 <para>
                     Build and install <link xlink:href="http://code.google.com/p/snappy/">snappy</link> on all nodes
-                    of your cluster.
+                    of your cluster (see below)
                 </para>
             </listitem>
             <listitem>
@@ -3051,6 +3051,34 @@ hbase> describe 't1'</programlisting>
         </orderedlist>
 
     </para>
+    <section xml:id="snappy.compression.installation">
+    <title>
+    Installation
+    </title>
+    <para>
+        In order to install Snappy on you HBase server, you need to make sure both Snappy and Hadoop native libraries are
+        copied at the right place. Native libraries need to be installed under ${HBASE_HOME}/lib/native/Linux-amd64-64 or
+        ${HBASE_HOME}/lib/native/Linux-i386-32 depending on your server architecture.
+    </para>
+        
+    <para>
+        You will find the snappy library file under the .libs directory from your Snappy build (For example 
+        /home/hbase/snappy-1.0.5/.libs/). The file is called libsnappy.so.1.x.x where 1.x.x is the version of the snappy
+        code you are building. You can either copy this file into your hbase directory under libsnappy.so name, or simply
+        create a symbolic link to it.
+    </para>
+        
+    <para>
+        The second file you need is the hadoop native library. You will find this file in your hadoop installation directory
+        under lib/native/Linux-amd64-64/ or lib/native/Linux-i386-32/. The file you are looking for is libhadoop.so.1.x.x.
+        Again, you can simply copy this file or link to it, under the name libhadoop.so.
+    </para>
+        
+    <para>
+        At the end of the installation, you should have both libsnappy.so and libhadoop.so links or files present into
+        lib/native/Linux-amd64-64 or into lib/native/Linux-i386-32
+    </para>
+    </section>
     </section>
     <section xml:id="changing.compression">
       <title>Changing Compression Schemes</title>
@@ -3066,7 +3094,7 @@ hbase> describe 't1'</programlisting>
       <title xml:id="ycsb"><link xlink:href="https://github.com/brianfrankcooper/YCSB/">YCSB: The Yahoo! Cloud Serving Benchmark</link> and HBase</title>
       <para>TODO: Describe how YCSB is poor for putting up a decent cluster load.</para>
       <para>TODO: Describe setup of YCSB for HBase</para>
-      <para>Ted Dunning redid YCSB so its mavenized and added facility for verifying workloads.  See <link xlink:href="https://github.com/tdunning/YCSB">Ted Dunning's YCSB</link>.</para>
+      <para>Ted Dunning redid YCSB so it's mavenized and added facility for verifying workloads.  See <link xlink:href="https://github.com/tdunning/YCSB">Ted Dunning's YCSB</link>.</para>
 
   </appendix>
 
