@@ -126,8 +126,6 @@ org.apache.hadoop.hbase.HBaseConfiguration;
           </div>
         </%if>
 
-        <h2>Backup Masters</h2>
-        <& BackupMasterListTmpl; master = master &>
 
         <h2>Region Servers</h2>
         <& RegionServerListTmpl; master= master; servers = servers &>

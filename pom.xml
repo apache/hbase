@@ -51,7 +51,6 @@
   <modules>
     <module>hbase-server</module>
     <module>hbase-protocol</module>
-    <module>hbase-client</module>
     <module>hbase-hadoop2-compat</module>
     <module>hbase-hadoop1-compat</module>
     <module>hbase-hadoop-compat</module>
@@ -848,7 +847,6 @@
     <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.8</jruby.version>
     <junit.version>4.10-HBASE-1</junit.version>
-    <htrace.version>1.49</htrace.version>
     <slf4j.version>1.4.3</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.9.0</mockito-all.version>
@@ -971,11 +969,6 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
-      </dependency>
-      <dependency>
-        <artifactId>hbase-client</artifactId>
-        <groupId>org.apache.hbase</groupId>
-        <version>${project.version}</version>
       </dependency>
       <!-- General dependencies -->
       <dependency>
@@ -1227,11 +1220,6 @@
         <scope>test</scope>
         <!-- FIXME: the following needs to go away once HBASE-4955 is fixed -->
         <optional>true</optional>
-      </dependency>
-      <dependency>
-        <groupId>org.cloudera.htrace</groupId>
-        <artifactId>htrace</artifactId>
-        <version>${htrace.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
