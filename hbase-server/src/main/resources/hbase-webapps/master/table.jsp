@@ -18,11 +18,15 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
+  import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="java.util.HashMap"
+  import="java.util.List"
+  import="java.util.Map"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.client.HConnectionManager"
+  import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.ServerLoad"
@@ -30,10 +34,7 @@
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
-  import="org.apache.hadoop.hbase.protobuf.ProtobufUtil"
-  import="java.util.List"
-  import="java.util.Map"
-  import="org.apache.hadoop.hbase.HConstants"%><%
+  import="org.apache.hadoop.hbase.protobuf.ProtobufUtil"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
@@ -217,11 +218,11 @@
     String url = "http://" + metaLocation.getHostname() + ":" + infoPort + "/";
 %>
 <tr>
-  <td><%= meta.getRegionNameAsString() %></td>
+  <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
     <td><a href="<%= url %>"><%= metaLocation.getHostname().toString() + ":" + infoPort %></a></td>
     <td>-</td>
-    <td><%= Bytes.toString(meta.getStartKey()) %></td>
-    <td><%= Bytes.toString(meta.getEndKey()) %></td>
+    <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
+    <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
 </tr>
 <%  } %>
 </table>
@@ -281,7 +282,7 @@
     }
 %>
 <tr>
-  <td><%= Bytes.toStringBinary(regionInfo.getRegionName())%></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
   <%
   if (urlRegionServer != null) {
   %>
@@ -295,8 +296,8 @@
   <%
   }
   %>
-  <td><%= Bytes.toStringBinary(regionInfo.getStartKey())%></td>
-  <td><%= Bytes.toStringBinary(regionInfo.getEndKey())%></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey())) %></td>
+  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey())) %></td>
   <td><%= req%></td>
 </tr>
 <% } %>

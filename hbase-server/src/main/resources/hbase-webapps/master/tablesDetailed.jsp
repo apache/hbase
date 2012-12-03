@@ -18,6 +18,7 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
+  import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="java.util.*"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.conf.Configuration"
@@ -89,8 +90,8 @@
 </tr>
 <%   for(HTableDescriptor htDesc : tables ) { %>
 <tr>
-    <td><%= htDesc.getNameAsString() %></td>
-    <td><%= htDesc.toString() %></td>
+    <td><%= escapeXml(htDesc.getNameAsString()) %></td>
+    <td><%= escapeXml(htDesc.toString()) %></td>
 </tr>
 <%   }  %>
 
