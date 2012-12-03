@@ -251,21 +251,21 @@ public class HRegion implements HeapSize { // , Writable{
    * The directory for the table this region is part of.
    * This directory contains the directory for this region.
    */
-  final Path tableDir;
+  private final Path tableDir;
 
-  final HLog log;
-  final FileSystem fs;
-  final Configuration conf;
-  final Configuration baseConf;
-  final int rowLockWaitDuration;
+  private final HLog log;
+  private final FileSystem fs;
+  private final Configuration conf;
+  private final Configuration baseConf;
+  private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
   // negative number indicates infinite timeout
   static final long DEFAULT_ROW_PROCESSOR_TIMEOUT = 60 * 1000L;
   final ExecutorService rowProcessorExecutor = Executors.newCachedThreadPool();
 
-  final HRegionInfo regionInfo;
-  final Path regiondir;
+  private final HRegionInfo regionInfo;
+  private final Path regiondir;
   KeyValue.KVComparator comparator;
 
   private ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;

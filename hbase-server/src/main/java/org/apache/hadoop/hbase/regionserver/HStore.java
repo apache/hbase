@@ -1192,7 +1192,7 @@ public class HStore implements Store, StoreConfiguration {
           this.forceMajor = false;
         }
 
-        LOG.debug(getHRegion().regionInfo.getEncodedName() + " - " +
+        LOG.debug(getHRegionInfo().getEncodedName() + " - " +
             getColumnFamilyName() + ": Initiating " +
             (isMajor ? "major" : "minor") + " compaction");
 
@@ -1731,7 +1731,7 @@ public class HStore implements Store, StoreConfiguration {
   }
 
   HRegionInfo getHRegionInfo() {
-    return this.region.regionInfo;
+    return this.region.getRegionInfo();
   }
 
   /**
