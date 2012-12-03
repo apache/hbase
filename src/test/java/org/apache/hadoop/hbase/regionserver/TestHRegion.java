@@ -1541,8 +1541,7 @@ public class TestHRegion extends HBaseTestCase {
     }
     RegionScanner rs = (RegionScanner) region.getScanner(scan);
     List<KeyValue> kvListScan = new ArrayList<KeyValue>();
-    List<Result> results = new ArrayList<Result>();
-    rs.nextRows(results, nbRows, null);
+    Result[] results = rs.nextRows(nbRows, null);
     for (Result res : results) {
       for (KeyValue kv : res.list()) {
         kvListScan.add(kv);

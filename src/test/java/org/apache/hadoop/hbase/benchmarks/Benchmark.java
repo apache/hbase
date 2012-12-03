@@ -219,11 +219,16 @@ public abstract class Benchmark {
         // bulk load some data into the tables
         long numKVsInRegion = Math.round(numKVs * 1.0 / numRegions);
         for (HRegionInfo hRegionInfo : regionsToRS.keySet()) {
-          // skip the first region which has an empty start key
-          if ("".equals(new String(hRegionInfo.getStartKey()))) {
+          // skip the first region which has an empty start key in case of 
+          // multiple regions
+          if (numRegions > 1 && 
+              "".equals(new String(hRegionInfo.getStartKey()))) {
             continue;
           }
-          long startKey = getLongFromRowKey(hRegionInfo.getStartKey());
+          long startKey = 0;
+          try {
+            startKey = getLongFromRowKey(hRegionInfo.getStartKey());
+          } catch (NumberFormatException e) { }
           long rowID = startKey;
           for (; rowID < startKey + numKVsInRegion; rowID++) {
             byte[] row = getRowKeyFromLong(rowID);
@@ -247,7 +252,8 @@ public abstract class Benchmark {
       long numKVsInRegion = Math.round(numKVs * 1.0 / numRegions);
       for (HRegionInfo hRegionInfo : regionsToRS.keySet()) {
         // skip the first region which has an empty start key
-        if ("".equals(new String(hRegionInfo.getStartKey()))) {
+        if (numRegions > 1 && 
+            "".equals(new String(hRegionInfo.getStartKey()))) {
           continue;
         }
         // get the region server
@@ -301,7 +307,10 @@ public abstract class Benchmark {
     byte [] value = new byte[kvSize];
     (new Random()).nextBytes(value);
 
-    long startKey = getLongFromRowKey(hRegionInfo.getStartKey());
+    long startKey = 0;
+    try {
+      startKey = getLongFromRowKey(hRegionInfo.getStartKey());
+    } catch (NumberFormatException e) { }
     long rowID = startKey;
     for (; rowID < startKey + numKVsInRegion; rowID++) {
       byte[] row = getRowKeyFromLong(rowID);

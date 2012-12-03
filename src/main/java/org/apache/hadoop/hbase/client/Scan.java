@@ -88,7 +88,8 @@ public class Scan extends Operation implements Writable {
   private static final byte STORE_OFFSET_VERSION = (byte)3;
   private static final byte RESPONSE_SIZE_VERSION = (byte)4;
   private static final byte FLASHBACK_VERSION = (byte) 5;
-  private static final byte SCAN_VERSION = FLASHBACK_VERSION;
+  private static final byte PREFETCH_VERSION = (byte) 6;
+  private static final byte SCAN_VERSION = PREFETCH_VERSION;
 
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
@@ -97,6 +98,7 @@ public class Scan extends Operation implements Writable {
   private int storeLimit = -1;
   private int storeOffset = 0;
   private int caching = -1;
+  private boolean serverPrefetching = false;
   private int maxResponseSize = HConstants.DEFAULT_HBASE_SCANNER_MAX_RESULT_SIZE;
   private int currentPartialResponseSize = 0;
   private boolean partialRow = false;
@@ -152,6 +154,9 @@ public class Scan extends Operation implements Writable {
     storeLimit = scan.getMaxResultsPerColumnFamily();
     storeOffset = scan.getRowOffsetPerColumnFamily();
     caching = scan.getCaching();
+    serverPrefetching = scan.getServerPrefetching();
+    maxResponseSize = scan.getMaxResponseSize();
+    partialRow = scan.isPartialRow();
     cacheBlocks = scan.getCacheBlocks();
     filter = scan.getFilter(); // clone?
     TimeRange ctr = scan.getTimeRange();
@@ -168,6 +173,7 @@ public class Scan extends Operation implements Writable {
         addFamily(fam);
       }
     }
+    effectiveTS = scan.getEffectiveTS();
   }
 
   /**
@@ -370,6 +376,20 @@ public class Scan extends Operation implements Writable {
     this.caching = Integer.MAX_VALUE; 
   }
 
+  /**
+   * Set if pre-fetching is enabled on the region server. If enabled, the 
+   * region server will try to read the next scan result ahead of time. This 
+   * improves scan performance if we are doing large scans.
+   * @param enablePrefetching if pre-fetching is enabled or not
+   */
+  public void setServerPrefetching(boolean enablePrefetching) {
+    this.serverPrefetching = enablePrefetching;
+  }
+
+  public boolean getServerPrefetching() {
+    return serverPrefetching;
+  }
+  
   /**
    * @return maximum response size that client can handle for a single call to next()
    */
@@ -675,6 +695,9 @@ public class Scan extends Operation implements Writable {
     if (version >= FLASHBACK_VERSION) {
       effectiveTS = in.readLong();
     }
+    if (version >= PREFETCH_VERSION) {
+      serverPrefetching = in.readBoolean();
+    }
     this.caching = in.readInt();
     this.cacheBlocks = in.readBoolean();
     if(in.readBoolean()) {
@@ -703,7 +726,9 @@ public class Scan extends Operation implements Writable {
     // We try to talk a protocol version as low as possible so that we can be
     // backward compatible as far as possible.
     byte version = (byte) 1;
-    if (effectiveTS != HConstants.LATEST_TIMESTAMP) {
+    if (serverPrefetching) {
+      version = PREFETCH_VERSION;
+    } else if (effectiveTS != HConstants.LATEST_TIMESTAMP) {
       version = FLASHBACK_VERSION;
     } else if (this.maxResponseSize
         != HConstants.DEFAULT_HBASE_SCANNER_MAX_RESULT_SIZE) {
@@ -731,6 +756,9 @@ public class Scan extends Operation implements Writable {
     }
     if (version >= FLASHBACK_VERSION) {
       out.writeLong(effectiveTS);
+    }
+    if (version >= PREFETCH_VERSION) {
+      out.writeBoolean(serverPrefetching);
     }
     out.writeInt(this.caching);
     out.writeBoolean(this.cacheBlocks);

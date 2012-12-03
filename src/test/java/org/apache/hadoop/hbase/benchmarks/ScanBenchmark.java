@@ -31,7 +31,7 @@ public class ScanBenchmark extends Benchmark {
     13000, 14000, 15000, 16000,
     17000, 18000, 19000, 20000
   };
-  private static Integer[] SET_PREFETCH_VALUES = { 0 };
+  private static Integer[] SET_PREFETCH_VALUES = { 0, 1 };
   
   public void initBenchmarkResults() {
     List<String> header = new ArrayList<String>();
@@ -49,7 +49,7 @@ public class ScanBenchmark extends Benchmark {
     // warm block cache, force jit compilation
     System.out.println("Warming blockcache and forcing JIT compilation...");
     for (int i = 0; i < 20; i++) {
-      runExperiment(false, 10000, 0);  
+      runExperiment(false, 10000, 0);
     }
     for (int caching : SET_CACHING_VALUES) {  
       for (int prefetch : SET_PREFETCH_VALUES) {
@@ -71,6 +71,10 @@ public class ScanBenchmark extends Benchmark {
     scan.setMaxVersions(1);
     // set caching
     scan.setCaching(caching);
+    // set prefetch if needed
+    if (prefetch > 0) {
+      scan.setServerPrefetching(true);
+    }
     
     long numKVs = 0;
     long numBytes = 0;

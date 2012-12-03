@@ -54,6 +54,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -271,6 +272,11 @@ public class HRegionServer implements HRegionInterface,
   /* Check for major compactions.
    */
   Chore majorCompactionChecker;
+  /*
+   * Threadpool for doing scanner prefetches
+   */
+  public static ThreadPoolExecutor scanPrefetchThreadPool;
+
 
   // An array of HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
@@ -814,6 +820,9 @@ public class HRegionServer implements HRegionInterface,
       hlogRollers[i].interruptIfNecessary();  
     }
     this.majorCompactionChecker.interrupt();
+    
+    // shutdown the prefetch threads
+    scanPrefetchThreadPool.shutdownNow();
 
     if (killed) {
       // Just skip out w/o closing regions.
@@ -1546,6 +1555,12 @@ public class HRegionServer implements HRegionInterface,
       this.splitLogWorkers.add(splitLogWorker);
       splitLogWorker.start();
     }
+    // start the scanner prefetch threadpool
+    int numHandlers = conf.getInt("hbase.regionserver.handler.count", 10);
+    scanPrefetchThreadPool = 
+      Threads.getBlockingThreadPool(numHandlers, 60, TimeUnit.SECONDS, 
+          new DaemonThreadFactory("scan-prefetch-"));
+
     LOG.info("HRegionServer started at: " +
       this.serverInfo.getServerAddress().toString());
   }
@@ -2616,14 +2631,11 @@ public class HRegionServer implements HRegionInterface,
         throw e;
       }
       this.leases.renewLease(scannerName);
-      List<Result> results = new ArrayList<Result>();
-      s.nextRows(results, nbRows, HRegion.METRIC_NEXTSIZE); 
-      numReads.addAndGet(results.size());
-      // IF its filter if any is done with the scan
-      // and wants to tell the client to stop the scan.  This is done by passing
-      // a null result.
-      return s.isFilterDone() && results.isEmpty()?
-        null: results.toArray(new Result[0]);
+      Result[] results = s.nextRows(nbRows, HRegion.METRIC_NEXTSIZE);
+      if (results != null) {
+        numReads.addAndGet(results.length);
+      }
+      return results;
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException) {
         String scannerName = String.valueOf(scannerId);

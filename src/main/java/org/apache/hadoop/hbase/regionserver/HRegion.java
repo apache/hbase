@@ -91,12 +91,15 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.metrics.RequestMetrics;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner.ScanPrefetcher;
+import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner.ScanResult;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -526,7 +529,7 @@ public class HRegion implements HeapSize {
     this.waitOnMemstoreBlock =
         conf.getBoolean(HConstants.HREGION_MEMSTORE_WAIT_ON_BLOCK, true);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
-
+    
     this.readRequests =new RequestMetrics();
     this.writeRequests =new RequestMetrics();
   }
@@ -3028,6 +3031,7 @@ public class HRegion implements HeapSize {
     private boolean filterClosed = false;
     private long readPt;
     private Scan originalScan;
+    private Future<ScanResult> prefetchScanFuture = null;
 
     RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
       //DebugPrint.println("HRegionScanner.<init>");
@@ -3102,6 +3106,93 @@ public class HRegion implements HeapSize {
     }
 
     /**
+     * This class abstracts the results of a single scanner's result. It tracks
+     * the list of Result objects if the pre-fetch next was successful, and
+     * tracks the exception if the next failed.
+     */
+    class ScanResult {
+      final boolean isException;
+      IOException ioException = null;
+      Result[] outResults;
+      boolean moreRows;
+
+      public ScanResult(IOException ioException) {
+        isException = true;
+        this.ioException = ioException;
+      }
+
+      public ScanResult(boolean moreRows, Result[] outResults) {
+        isException = false;
+        this.moreRows = moreRows;
+        this.outResults = outResults;
+      }
+    }
+
+    /**
+     * This Callable abstracts calling a pre-fetch next. This is called on a
+     * threadpool. It makes a pre-fetch next call with the same parameters as
+     * the incoming next call. Note that the number of rows to return (nbRows)
+     * and/or the memory size for the result is the same as the previous call if
+     * pre-fetching is enabled. If these params change dynamically, they will
+     * take effect in the subsequent iteration.
+     */
+    class ScanPrefetcher implements Callable<ScanResult> {
+      int nbRows;
+      int limit;
+      String metric;
+
+      ScanPrefetcher(int nbRows, int limit, String metric) {
+        this.nbRows = nbRows;
+        this.limit = limit;
+        this.metric = metric;
+      }
+
+      public ScanResult call() {
+        ScanResult scanResult = null;
+        List<Result> outResults = new ArrayList<Result>();
+        List<KeyValue> tmpList = new ArrayList<KeyValue>();
+        int currentNbRows = 0;
+        boolean moreRows = true;
+        try {
+          // This is necessary b/c partialResponseSize is not serialized through
+          // RPC
+          getOriginalScan().setCurrentPartialResponseSize(0);
+          int maxResponseSize = getOriginalScan().getMaxResponseSize();
+          do {
+            moreRows = nextInternal(tmpList, limit, metric);
+            if (!tmpList.isEmpty()) {
+              currentNbRows++;
+              if (outResults != null) {
+                outResults.add(new Result(tmpList));
+                tmpList.clear();
+              }
+            }
+            resetFilters();
+            if (isFilterDone()) {
+              break;
+            }
+
+            // While Condition
+            // 1. respect maxResponseSize and nbRows whichever comes first,
+            // 2. recheck the currentPartialResponseSize is to catch the case
+            // where maxResponseSize is saturated and partialRow == false
+            // since we allow this case valid in the nextInternal() layer
+          } while (moreRows
+              && (getOriginalScan().getCurrentPartialResponseSize() < 
+                  maxResponseSize && currentNbRows < nbRows));
+          readRequests.incrTotalRequstCount(currentNbRows);
+          scanResult = new ScanResult(moreRows, 
+              outResults.toArray(new Result[0]));
+        } catch (IOException e) {
+          // we should queue the exception as the result so that we can return
+          // this when the result is asked for
+          scanResult = new ScanResult(e);
+        }
+        return scanResult;
+      }
+    }
+
+    /**
      * A method to return all the rows that can fit in the response size.
      * it respects the two stop conditions:
      * 1) scan.getMaxResponseSize
@@ -3115,41 +3206,42 @@ public class HRegion implements HeapSize {
      *
      * This is used by Scans.
      */
-    public synchronized void nextRows(List<Result> outResults, int nbRows, 
-        String metric) throws IOException {
-      preCondition(); 
-      List<KeyValue> tmpList = new ArrayList<KeyValue>();
+    public synchronized Result[] nextRows(int nbRows, String metric) 
+    throws IOException {
+      preCondition();
+      boolean prefetchingEnabled = getOriginalScan().getServerPrefetching();
       int limit = this.getOriginalScan().getBatch();
-      int currentNbRows = 0;
-      boolean moreRows = true;
-      // This is necessary b/c partialResponseSize is not serialized through RPC    
-      getOriginalScan().setCurrentPartialResponseSize(0);
-      int maxResponseSize = getOriginalScan().getMaxResponseSize();
-      do {
-        moreRows = nextInternal(tmpList, limit, metric);
-        if (!tmpList.isEmpty()) {
-          currentNbRows++;
-          if (outResults != null) {
-            outResults.add(new Result(tmpList));
-            tmpList.clear();
-          }
+      ScanResult scanResult;
+      // if we have a prefetched result, then use it
+      if (prefetchingEnabled && prefetchScanFuture != null) {
+        try {
+          scanResult = prefetchScanFuture.get();
+          prefetchScanFuture = null;
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        } catch (ExecutionException e) {
+          throw new IOException(e);
         }
-        resetFilters();
-        if (isFilterDone()) {
-          readRequests.incrTotalRequstCount(currentNbRows);
-          return;
+        if (scanResult.isException) {
+          throw scanResult.ioException;
         }
-         
-        // While Condition
-        // 1. respect maxResponseSize and nbRows whichever comes first,
-        // 2. recheck the currentPartialResponseSize is to catch the case
-        //   where maxResponseSize is saturated and partialRow == false 
-        //   since we allow this case valid in the nextInternal() layer
-      } while (moreRows && 
-          (getOriginalScan().getCurrentPartialResponseSize() < maxResponseSize 
-           && currentNbRows < nbRows));
-       
-      readRequests.incrTotalRequstCount(currentNbRows);
+      }
+      // if there are no prefetched results, then preform the scan inline
+      else {
+        ScanPrefetcher scanFetch = new ScanPrefetcher(nbRows, limit, metric);
+        scanResult = scanFetch.call();
+      }
+
+      // schedule a background prefetch for the next result if prefetch is
+      // enabled on scans
+      boolean scanDone = 
+        (scanResult.outResults == null || scanResult.outResults.length == 0);
+      if (prefetchingEnabled && !scanDone) {
+        ScanPrefetcher callable = new ScanPrefetcher(nbRows, limit, metric);
+        prefetchScanFuture = HRegionServer.scanPrefetchThreadPool.submit(callable);
+      }
+      
+      return scanResult.outResults;
     }
     
     /**
@@ -3196,7 +3288,7 @@ public class HRegion implements HeapSize {
     /*
      * @return True if a filter rules the scanner is over, done.
      */
-    synchronized boolean isFilterDone() {
+    private boolean isFilterDone() {
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
