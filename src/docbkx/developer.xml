@@ -157,7 +157,7 @@ mvn clean package -DskipTests
       <section xml:id="build.snappy">
         <title>Building in snappy compression support</title>
         <para>Pass <code>-Dsnappy</code> to trigger the snappy maven profile for building
-            snappy native libs into hbase.</para>
+            snappy native libs into hbase.  See also <xref linkend="snappy.compression" /></para>
       </section>
 
       <section xml:id="build.tgz">

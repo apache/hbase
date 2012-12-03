@@ -761,14 +761,14 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
     ... (note:  the lead byte is listed to the right as a comment.)  Given that the first split is a '0' and the last split is an 'f',
     everything is great, right?  Not so fast.
     </para>
-    <para>The problem is that all the data is going to pile up in the first 2 regions and the last region thus creating a "lumpy" (and 
-    possibly "hot") region problem.  To understand why, refer to an  <link xlink:href="http://www.asciitable.com">ASCII Table</link>.  
+    <para>The problem is that all the data is going to pile up in the first 2 regions and the last region thus creating a "lumpy" (and
+    possibly "hot") region problem.  To understand why, refer to an  <link xlink:href="http://www.asciitable.com">ASCII Table</link>.
     '0' is byte 48, and 'f' is byte 102, but there is a huge gap in byte values (bytes 58 to 96) that will <emphasis>never appear in this
-    keyspace</emphasis> because the only values are [0-9] and [a-f].  Thus, the middle regions regions will 
+    keyspace</emphasis> because the only values are [0-9] and [a-f].  Thus, the middle regions regions will
     never be used.  To make pre-spliting work with this example keyspace, a custom definition of splits (i.e., and not relying on the
-    built-in split method) is required.   
+    built-in split method) is required.
     </para>
-    <para>Lesson #1:  Pre-splitting tables is generally a best practice, but you need to pre-split them in such a way that all the 
+    <para>Lesson #1:  Pre-splitting tables is generally a best practice, but you need to pre-split them in such a way that all the
     regions are accessible in the keyspace.  While this example demonstrated the problem with a hex-key keyspace, the same problem can happen
      with <emphasis>any</emphasis> keyspace.  Know your data.
     </para>
@@ -971,19 +971,19 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       </para>
       <para>Preference:  Rows (generally speaking).  To be clear, this guideline is in the context is in extremely wide cases, not in the
       standard use-case where one needs to store a few dozen or hundred columns.  But there is also a middle path between these two
-      options, and that is "Rows as Columns." 
+      options, and that is "Rows as Columns."
       </para>
     </section>
     <section xml:id="schema.smackdown.rowsascols"><title>Rows as Columns</title>
       <para>The middle path between Rows vs. Columns is packing data that would be a separate row into columns, for certain rows.
       OpenTSDB is the best example of this case where a single row represents a defined time-range, and then discrete events are treated as
-      columns.  This approach is often more complex, and may require the additional complexity of re-writing your data, but has the 
-      advantage of being I/O efficient.  For an overview of this approach, see 
-      <link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</link> 
+      columns.  This approach is often more complex, and may require the additional complexity of re-writing your data, but has the
+      advantage of being I/O efficient.  For an overview of this approach, see
+      <link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</link>
       from HBaseCon2012.
       </para>
     </section>
-    
+
   </section>
   <section xml:id="schema.ops"><title>Operational and Performance Configuration Options</title>
     <para>See the Performance section <xref linkend="perf.schema"/> for more information operational and performance
@@ -3060,20 +3060,20 @@ hbase> describe 't1'</programlisting>
         copied at the right place. Native libraries need to be installed under ${HBASE_HOME}/lib/native/Linux-amd64-64 or
         ${HBASE_HOME}/lib/native/Linux-i386-32 depending on your server architecture.
     </para>
-        
+
     <para>
-        You will find the snappy library file under the .libs directory from your Snappy build (For example 
+        You will find the snappy library file under the .libs directory from your Snappy build (For example
         /home/hbase/snappy-1.0.5/.libs/). The file is called libsnappy.so.1.x.x where 1.x.x is the version of the snappy
         code you are building. You can either copy this file into your hbase directory under libsnappy.so name, or simply
         create a symbolic link to it.
     </para>
-        
+
     <para>
         The second file you need is the hadoop native library. You will find this file in your hadoop installation directory
         under lib/native/Linux-amd64-64/ or lib/native/Linux-i386-32/. The file you are looking for is libhadoop.so.1.x.x.
         Again, you can simply copy this file or link to it, under the name libhadoop.so.
     </para>
-        
+
     <para>
         At the end of the installation, you should have both libsnappy.so and libhadoop.so links or files present into
         lib/native/Linux-amd64-64 or into lib/native/Linux-i386-32
