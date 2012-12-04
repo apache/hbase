@@ -3056,12 +3056,6 @@ hbase> describe 't1'</programlisting>
     Installation
     </title>
     <para>
-        In order to install Snappy on you HBase server, you need to make sure both Snappy and Hadoop native libraries are
-        copied at the right place. Native libraries need to be installed under ${HBASE_HOME}/lib/native/Linux-amd64-64 or
-        ${HBASE_HOME}/lib/native/Linux-i386-32 depending on your server architecture.
-    </para>
-
-    <para>
         You will find the snappy library file under the .libs directory from your Snappy build (For example
         /home/hbase/snappy-1.0.5/.libs/). The file is called libsnappy.so.1.x.x where 1.x.x is the version of the snappy
         code you are building. You can either copy this file into your hbase directory under libsnappy.so name, or simply
@@ -3077,6 +3071,16 @@ hbase> describe 't1'</programlisting>
     <para>
         At the end of the installation, you should have both libsnappy.so and libhadoop.so links or files present into
         lib/native/Linux-amd64-64 or into lib/native/Linux-i386-32
+    </para>
+    <para>To point hbase at snappy support, in hbase-env.sh set
+        <programlisting>export HBASE_LIBRARY_PATH=/pathtoyourhadoop/lib/native/Linux-amd64-64</programlisting>
+        In <filename>/pathtoyourhadoop/lib/native/Linux-amd64-64</filename> you should have something like:
+        <programlisting>
+        libsnappy.a
+        libsnappy.so
+        libsnappy.so.1
+        libsnappy.so.1.1.2
+    </programlisting>
     </para>
     </section>
     </section>
