@@ -50,7 +50,7 @@ public class ClassTestFinder extends ClassFinder {
     return new Class<?>[0];
   }
 
-  private static class TestFileNameFilter implements FileNameFilter {
+  public static class TestFileNameFilter implements FileNameFilter {
     private static final Pattern hadoopCompactRe =
         Pattern.compile("hbase-hadoop\\d?-compat");
 
@@ -68,7 +68,7 @@ public class ClassTestFinder extends ClassFinder {
    *  - one or more of its methods is annotated with org.junit.Test OR
    *  - the class is annotated with Suite.SuiteClasses
   * */
-  private static class TestClassFilter implements ClassFilter {
+  public static class TestClassFilter implements ClassFilter {
     private Class<?> categoryAnnotation = null;
     public TestClassFilter(Class<?> categoryAnnotation) {
       this.categoryAnnotation = categoryAnnotation;

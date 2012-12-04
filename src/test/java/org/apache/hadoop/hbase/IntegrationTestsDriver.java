@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
@@ -38,30 +39,55 @@ import org.apache.commons.logging.LogFactory;
  * already deployed distributed cluster.
  */
 public class IntegrationTestsDriver extends AbstractHBaseTool {
+  private static final String TESTS_ARG = "test";
   private static final Log LOG = LogFactory.getLog(IntegrationTestsDriver.class);
+  private IntegrationTestFilter intTestFilter = new IntegrationTestFilter();
 
   public static void main(String[] args) throws Exception {
     int ret = ToolRunner.run(new IntegrationTestsDriver(), args);
     System.exit(ret);
   }
 
+  private class IntegrationTestFilter extends ClassTestFinder.TestClassFilter {
+    private Pattern testFilterRe = Pattern.compile(".*");
+    public IntegrationTestFilter() {
+      super(IntegrationTests.class);
+    }
+
+    public void setPattern(String pattern) {
+      testFilterRe = Pattern.compile(pattern);
+    }
+
+    @Override
+    public boolean isCandidateClass(Class<?> c) {
+      return super.isCandidateClass(c) && testFilterRe.matcher(c.getName()).find();
+    }
+  }
+
   @Override
   protected void addOptions() {
+    addOptWithArg(TESTS_ARG, "a Java regular expression to filter tests on");
   }
 
   @Override
   protected void processOptions(CommandLine cmd) {
+    String testFilterString = cmd.getOptionValue(TESTS_ARG, null);
+    if (testFilterString != null) {
+      intTestFilter.setPattern(testFilterString);
+    }
   }
 
   /**
-   * Returns test classes annotated with @Category(IntegrationTests.class)
+   * Returns test classes annotated with @Category(IntegrationTests.class),
+   * according to the filter specific on the command line (if any).
    */
   private Class<?>[] findIntegrationTestClasses()
     throws ClassNotFoundException, LinkageError, IOException {
-     ClassTestFinder classFinder = new ClassTestFinder(IntegrationTests.class);
-     Set<Class<?>> classes = classFinder.findClasses(true);
-     return classes.toArray(new Class<?>[classes.size()]);
-   }
+    ClassTestFinder.TestFileNameFilter nameFilter = new ClassTestFinder.TestFileNameFilter();
+    ClassFinder classFinder = new ClassFinder(nameFilter, intTestFilter);
+    Set<Class<?>> classes = classFinder.findClasses(true);
+    return classes.toArray(new Class<?>[classes.size()]);
+  }
 
 
   @Override
