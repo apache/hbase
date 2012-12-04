@@ -846,9 +846,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @return all scanners for this store
    */
   protected List<KeyValueScanner> getScanners(boolean cacheBlocks,
-      boolean isGet,
-      boolean isCompaction,
-      ScanQueryMatcher matcher) throws IOException {
+      boolean isCompaction, ScanQueryMatcher matcher) throws IOException {
     List<StoreFile> storeFiles;
     List<KeyValueScanner> memStoreScanners;
     this.lock.readLock().lock();
@@ -866,7 +864,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners =
         StoreFileScanner.getScannersForStoreFiles(storeFiles, cacheBlocks,
-            isGet, isCompaction, matcher);
+            true, isCompaction, matcher);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);
