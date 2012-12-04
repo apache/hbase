@@ -59,6 +59,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.protobuf.*;
@@ -84,6 +85,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Append;
@@ -260,6 +262,24 @@ public class HRegion implements HeapSize { // , Writable{
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
+  // The internal wait duration to acquire a lock before read/update
+  // from the region. It is not per row. The purpose of this wait time
+  // is to avoid waiting a long time while the region is busy, so that
+  // we can release the IPC handler soon enough to improve the
+  // availability of the region server. It can be adjusted by
+  // tuning configuration "hbase.busy.wait.duration".
+  final long busyWaitDuration;
+  static final long DEFAULT_BUSY_WAIT_DURATION = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+
+  // If updating multiple rows in one call, wait longer,
+  // i.e. waiting for busyWaitDuration * # of rows. However,
+  // we can limit the max multiplier.
+  final int maxBusyWaitMultiplier;
+
+  // Max busy wait duration. There is no point to wait longer than the RPC
+  // purge timeout, when a RPC call will be terminated by the RPC engine.
+  final long maxBusyWaitDuration;
+
   // negative number indicates infinite timeout
   static final long DEFAULT_ROW_PROCESSOR_TIMEOUT = 60 * 1000L;
   final ExecutorService rowProcessorExecutor = Executors.newCachedThreadPool();
@@ -388,6 +408,9 @@ public class HRegion implements HeapSize { // , Writable{
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
 
     this.metricsRegion = new MetricsRegion(new MetricsRegionWrapperImpl(this));
+    this.maxBusyWaitDuration = 2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+    this.busyWaitDuration = DEFAULT_BUSY_WAIT_DURATION;
+    this.maxBusyWaitMultiplier = 2;
   }
 
   /**
@@ -449,6 +472,17 @@ public class HRegion implements HeapSize { // , Writable{
     setHTableSpecificConf();
     this.regiondir = getRegionDir(this.tableDir, encodedNameStr);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
+
+    this.busyWaitDuration = conf.getLong(
+      "hbase.busy.wait.duration", DEFAULT_BUSY_WAIT_DURATION);
+    this.maxBusyWaitMultiplier = conf.getInt("hbase.busy.wait.multiplier.max", 2);
+    if (busyWaitDuration * maxBusyWaitMultiplier <= 0L) {
+      throw new IllegalArgumentException("Invalid hbase.busy.wait.duration ("
+        + busyWaitDuration + ") or hbase.busy.wait.multiplier.max ("
+        + maxBusyWaitMultiplier + "). Their product should be positive");
+    }
+    this.maxBusyWaitDuration = conf.getLong("ipc.client.call.purge.timeout",
+      2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
     /*
      * timestamp.slop provides a server-side constraint on the timestamp. This
@@ -971,6 +1005,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     this.closing.set(true);
     status.setStatus("Disabling writes for close");
+    // block waiting for the lock for closing
     lock.writeLock().lock();
     try {
       if (this.isClosed()) {
@@ -1170,19 +1205,6 @@ public class HRegion implements HeapSize { // , Writable{
     return this.lastFlushTime;
   }
 
-  /** @return info about the last flushes <time, size> */
-  public List<Pair<Long,Long>> getRecentFlushInfo() {
-    List<Pair<Long,Long>> ret = null;
-    this.lock.readLock().lock();
-    try {
-      ret = this.recentFlushes;
-      this.recentFlushes = new ArrayList<Pair<Long,Long>>();
-    } finally {
-      this.lock.readLock().unlock();
-    }
-    return ret;
-  }
-
   //////////////////////////////////////////////////////////////////////////////
   // HRegion maintenance.
   //
@@ -1290,6 +1312,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     Preconditions.checkArgument(cr.getHRegion().equals(this));
     MonitoredTask status = null;
+    // block waiting for the lock for compaction
     lock.readLock().lock();
     try {
       status = TaskMonitor.get().createStatus(
@@ -1372,7 +1395,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
     status.setStatus("Acquiring readlock on region");
-    lock.readLock().lock();
+    lock(lock.readLock());
     try {
       if (this.closed.get()) {
         LOG.debug("Skipping flush on " + this + " because closed");
@@ -1506,6 +1529,7 @@ public class HRegion implements HeapSize { // , Writable{
     // end up in both snapshot and memstore (makes it difficult to do atomic
     // rows then)
     status.setStatus("Obtaining lock to block concurrent updates");
+    // block waiting for the lock for internal flush
     this.updatesLock.writeLock().lock();
     long flushsize = this.memstoreSize.get();
     status.setStatus("Preparing to flush by snapshotting stores");
@@ -2193,7 +2217,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
 
-      this.updatesLock.readLock().lock();
+      lock(this.updatesLock.readLock(), numReadyToWrite);
       locked = true;
 
       //
@@ -2489,7 +2513,8 @@ public class HRegion implements HeapSize { // , Writable{
    * this and the synchronize on 'this' inside in internalFlushCache to send
    * the notify.
    */
-  private void checkResources() {
+  private void checkResources()
+      throws RegionTooBusyException, InterruptedIOException {
 
     // If catalog region, do not impose resource constraints or block updates.
     if (this.getRegionInfo().isMetaRegion()) return;
@@ -2507,12 +2532,30 @@ public class HRegion implements HeapSize { // , Writable{
           " is >= than blocking " +
           StringUtils.humanReadableInt(this.blockingMemStoreSize) + " size");
       }
+      long now = EnvironmentEdgeManager.currentTimeMillis();
+      long timeToWait = startTime + busyWaitDuration - now;
+      if (timeToWait <= 0L) {
+        final long totalTime = now - startTime;
+        this.updatesBlockedMs.add(totalTime);
+        LOG.info("Failed to unblock updates for region " + this + " '"
+          + Thread.currentThread().getName() + "' in " + totalTime
+          + "ms. The region is still busy.");
+        throw new RegionTooBusyException("region is flushing");
+      }
       blocked = true;
       synchronized(this) {
         try {
-          wait(threadWakeFrequency);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
+          wait(Math.min(timeToWait, threadWakeFrequency));
+        } catch (InterruptedException ie) {
+          final long totalTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+          if (totalTime > 0) {
+            this.updatesBlockedMs.add(totalTime);
+          }
+          LOG.info("Interrupted while waiting to unblock updates for region "
+            + this + " '" + Thread.currentThread().getName() + "'");
+          InterruptedIOException iie = new InterruptedIOException();
+          iie.initCause(ie);
+          throw iie;
         }
       }
     }
@@ -3162,6 +3205,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param lockId  The lock ID to release.
    */
   public void releaseRowLock(final Integer lockId) {
+    if (lockId == null) return; // null lock id, do nothing
     HashedBytes rowKey = lockIds.remove(lockId);
     if (rowKey == null) {
       LOG.warn("Release unknown lockId: " + lockId);
@@ -4372,7 +4416,7 @@ public class HRegion implements HeapSize { // , Writable{
         acquiredLocks.add(lid);
       }
       // 3. Region lock
-      this.updatesLock.readLock().lock();
+      lock(this.updatesLock.readLock(), acquiredLocks.size());
       locked = true;
 
       long now = EnvironmentEdgeManager.currentTimeMillis();
@@ -4538,7 +4582,7 @@ public class HRegion implements HeapSize { // , Writable{
     WriteEntry w = null;
     try {
       Integer lid = getLock(lockid, row, true);
-      this.updatesLock.readLock().lock();
+      lock(this.updatesLock.readLock());
       // wait for all prior MVCC transactions to finish - while we hold the row lock
       // (so that we are guaranteed to see the latest state)
       mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
@@ -4704,7 +4748,7 @@ public class HRegion implements HeapSize { // , Writable{
     WriteEntry w = null;
     try {
       Integer lid = getLock(lockid, row, true);
-      this.updatesLock.readLock().lock();
+      lock(this.updatesLock.readLock());
       // wait for all prior MVCC transactions to finish - while we hold the row lock
       // (so that we are guaranteed to see the latest state)
       mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
@@ -4831,8 +4875,8 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      40 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
-      (7 * Bytes.SIZEOF_LONG) +
+      40 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      (8 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
@@ -5218,13 +5262,16 @@ public class HRegion implements HeapSize { // , Writable{
    * #closeRegionOperation needs to be called in the try's finally block
    * Acquires a read lock and checks if the region is closing or closed.
    * @throws NotServingRegionException when the region is closing or closed
+   * @throws RegionTooBusyException if failed to get the lock in time
+   * @throws InterruptedIOException if interrupted while waiting for a lock
    */
-  private void startRegionOperation() throws NotServingRegionException {
+  private void startRegionOperation()
+      throws NotServingRegionException, RegionTooBusyException, InterruptedIOException {
     if (this.closing.get()) {
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
           " is closing");
     }
-    lock.readLock().lock();
+    lock(lock.readLock());
     if (this.closed.get()) {
       lock.readLock().unlock();
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
@@ -5236,7 +5283,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Closes the lock. This needs to be called in the finally block corresponding
    * to the try block of #startRegionOperation
    */
-  private void closeRegionOperation(){
+  private void closeRegionOperation() {
     lock.readLock().unlock();
   }
 
@@ -5246,15 +5293,17 @@ public class HRegion implements HeapSize { // , Writable{
    * #closeBulkRegionOperation needs to be called in the try's finally block
    * Acquires a writelock and checks if the region is closing or closed.
    * @throws NotServingRegionException when the region is closing or closed
+   * @throws RegionTooBusyException if failed to get the lock in time
+   * @throws InterruptedIOException if interrupted while waiting for a lock
    */
   private void startBulkRegionOperation(boolean writeLockNeeded)
-  throws NotServingRegionException {
+      throws NotServingRegionException, RegionTooBusyException, InterruptedIOException {
     if (this.closing.get()) {
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
           " is closing");
     }
-    if (writeLockNeeded) lock.writeLock().lock();
-    else lock.readLock().lock();
+    if (writeLockNeeded) lock(lock.writeLock());
+    else lock(lock.readLock());
     if (this.closed.get()) {
       if (writeLockNeeded) lock.writeLock().unlock();
       else lock.readLock().unlock();
@@ -5291,6 +5340,33 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     dataInMemoryWithoutWAL.add(putSize);
+  }
+
+  private void lock(final Lock lock)
+      throws RegionTooBusyException, InterruptedIOException {
+    lock(lock, 1);
+  }
+
+  /**
+   * Try to acquire a lock.  Throw RegionTooBusyException
+   * if failed to get the lock in time. Throw InterruptedIOException
+   * if interrupted while waiting for the lock.
+   */
+  private void lock(final Lock lock, final int multiplier)
+      throws RegionTooBusyException, InterruptedIOException {
+    try {
+      final long waitTime = Math.min(maxBusyWaitDuration,
+        busyWaitDuration * Math.min(multiplier, maxBusyWaitMultiplier));
+      if (!lock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
+        throw new RegionTooBusyException(
+          "failed to get a lock in " + waitTime + "ms");
+      }
+    } catch (InterruptedException ie) {
+      LOG.info("Interrupted while waiting for a lock");
+      InterruptedIOException iie = new InterruptedIOException();
+      iie.initCause(ie);
+      throw iie;
+    }
   }
 
   /**
@@ -5331,7 +5407,6 @@ public class HRegion implements HeapSize { // , Writable{
       return 0;
     }
   };
-
 
   /**
    * Facility for dumping and compacting catalog tables.

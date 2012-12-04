@@ -133,13 +133,6 @@ public class RegionStates {
   }
 
   /**
-   * @return the server the specified region assigned to; null if not assigned.
-   */
-  public synchronized ServerName getAssignedServer(final HRegionInfo hri) {
-    return regionAssignments.get(hri);
-  }
-
-  /**
    * Wait for the state map to be updated by assignment manager.
    */
   public synchronized void waitForUpdate(
