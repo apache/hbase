@@ -669,10 +669,11 @@ If you have an already-setup HBase cluster, you can launch the integration tests
 run test-compile first. The configuration will be picked by the bin/hbase script.
 <programlisting>mvn test-compile</programlisting>
 Then launch the tests with:
-<programlisting>bin/hbase [--config config_dir] org.apache.hadoop.hbase.IntegrationTestsDriver</programlisting>
+<programlisting>bin/hbase [--config config_dir] org.apache.hadoop.hbase.IntegrationTestsDriver [-test=class_regex]</programlisting>
 
 This execution will launch the tests under <code>hbase-it/src/test</code>, having <code>@Category(IntegrationTests.class)</code> annotation,
-and a name starting with <code>IntegrationTests</code>. It uses Junit to run the tests. Currently there is no support for running integration tests against a distributed cluster using maven (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6201">HBASE-6201</link>).
+and a name starting with <code>IntegrationTests</code>. If specified, class_regex will be   used to filter test classes. The regex is checked against full class name; so, part of class name can be used.
+IntegrationTestsDriver uses Junit to run the tests. Currently there is no support for running integration tests against a distributed cluster using maven (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6201">HBASE-6201</link>).
 </para>
 
 <para>
