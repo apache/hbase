@@ -34,6 +34,7 @@ public class MetricsSink {
   public static final String SINK_APPLIED_OPS = "sink.appliedOps";
 
   private MetricsReplicationSource rms;
+  private long lastTimestampForAge = System.currentTimeMillis();
 
   public MetricsSink() {
     rms = CompatibilitySingletonFactory.getInstance(MetricsReplicationSource.class);
@@ -43,10 +44,22 @@ public class MetricsSink {
    * Set the age of the last applied operation
    *
    * @param timestamp The timestamp of the last operation applied.
+   * @return the age that was set
    */
-  public void setAgeOfLastAppliedOp(long timestamp) {
-    long age = System.currentTimeMillis() - timestamp;
+  public long setAgeOfLastAppliedOp(long timestamp) {
+    lastTimestampForAge = timestamp;
+    long age = System.currentTimeMillis() - lastTimestampForAge;
     rms.setGauge(SINK_AGE_OF_LAST_APPLIED_OP, age);
+    return age;
+  }
+
+  /**
+   * Refreshing the age makes sure the value returned is the actual one and
+   * not the one set a replication time
+   * @return refreshed age
+   */
+  public long refreshAgeOfLastAppliedOp() {
+    return setAgeOfLastAppliedOp(lastTimestampForAge);
   }
 
   /**
