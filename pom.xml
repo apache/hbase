@@ -1019,6 +1019,7 @@
     <thrift.version>0.8.0</thrift.version>
     <zookeeper.version>3.4.3</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
+    <clover.version>2.6.3</clover.version>
 
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
@@ -2356,6 +2357,61 @@
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups></surefire.firstPartGroups>
       </properties>
+    </profile>
+
+    <!-- Profile for running clover. You need to have a clover license under ~/.clover.license for ${clover.version}
+or you can provide the license with -Dmaven.clover.licenseLocation=/path/to/license. Committers can find
+the license under https://svn.apache.org/repos/private/committers/donated-licenses/clover/
+Note that clover 2.6.3 does not run with maven 3, so you have to use maven2. The report will be generated
+under target/site/clover/index.html when you run
+MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
+    <profile>
+      <id>clover</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>clover</name>
+        </property>
+      </activation>
+      <properties>
+        <maven.clover.licenseLocation>${user.home}/.clover.license</maven.clover.licenseLocation>
+        <clover.version>2.6.3</clover.version>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.atlassian.maven.plugins</groupId>
+            <artifactId>maven-clover2-plugin</artifactId>
+            <version>${clover.version}</version>
+            <configuration>
+              <includesAllSourceRoots>true</includesAllSourceRoots>
+              <includesTestSourceRoots>true</includesTestSourceRoots>
+              <targetPercentage>50%</targetPercentage>
+              <generateHtml>true</generateHtml>
+              <generateXml>true</generateXml>
+              <excludes>
+                <exclude>**/generated/**</exclude>
+              </excludes>
+            </configuration>
+            <executions>
+              <execution>
+                <id>clover-setup</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>setup</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>clover</id>
+                <phase>site</phase>
+                <goals>
+                  <goal>clover</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 
