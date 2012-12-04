@@ -4663,7 +4663,20 @@ public class TestFromClientSide {
     // turn on scan metrics
     Scan scan = new Scan();
     scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    scan.setCaching(numRecords+1);
     ResultScanner scanner = ht.getScanner(scan);
+    for (Result result : scanner.next(numRecords - 1)) {
+    }
+    scanner.close();
+    // need to have at one next roundtrip in order to collect metrics
+    // here we have less than <numRecord>+1 KVs, so no metrics were collected
+    assertNull(scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA));
+
+    // set caching to 1, becasue metrics are collected in each roundtrip only
+    scan = new Scan();
+    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    scan.setCaching(1);
+    scanner = ht.getScanner(scan);
     // per HBASE-5717, this should still collect even if you don't run all the way to
     // the end of the scanner. So this is asking for 2 of the 3 rows we inserted.
     for (Result result : scanner.next(numRecords - 1)) {
@@ -4677,6 +4690,7 @@ public class TestFromClientSide {
     // now, test that the metrics are still collected even if you don't call close, but do
     // run past the end of all the records
     Scan scanWithoutClose = new Scan();
+    scanWithoutClose.setCaching(1);
     scanWithoutClose.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
     ResultScanner scannerWithoutClose = ht.getScanner(scanWithoutClose);
     for (Result result : scannerWithoutClose.next(numRecords + 1)) {
@@ -4688,6 +4702,8 @@ public class TestFromClientSide {
     // finally, test that the metrics are collected correctly if you both run past all the records,
     // AND close the scanner
     Scan scanWithClose = new Scan();
+    // make sure we can set caching up to the number of a scanned values
+    scanWithClose.setCaching(numRecords);
     scanWithClose.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
     ResultScanner scannerWithClose = ht.getScanner(scanWithClose);
     for (Result result : scannerWithClose.next(numRecords + 1)) {

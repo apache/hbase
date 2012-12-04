@@ -98,6 +98,7 @@ public class TestScannerTimeout {
   public void test2481() throws Exception {
     LOG.info("START ************ test2481");
     Scan scan = new Scan();
+    scan.setCaching(1);
     HTable table =
       new HTable(new Configuration(TEST_UTIL.getConfiguration()), TABLE_NAME);
     ResultScanner r = table.getScanner(scan);

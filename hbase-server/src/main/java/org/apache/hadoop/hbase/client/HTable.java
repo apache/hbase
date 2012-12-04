@@ -258,7 +258,8 @@ public class HTable implements HTableInterface {
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = this.configuration.getInt(
-        "hbase.client.scanner.caching", 1);
+        HConstants.HBASE_CLIENT_SCANNER_CACHING,
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
 
     this.maxKeyValueSize = this.configuration.getInt(
         "hbase.client.keyvalue.maxsize", -1);

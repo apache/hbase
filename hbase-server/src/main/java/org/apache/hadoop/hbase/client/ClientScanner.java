@@ -121,7 +121,9 @@ public class ClientScanner extends AbstractClientScanner {
       if (this.scan.getCaching() > 0) {
         this.caching = this.scan.getCaching();
       } else {
-        this.caching = conf.getInt("hbase.client.scanner.caching", 1);
+        this.caching = conf.getInt(
+            HConstants.HBASE_CLIENT_SCANNER_CACHING,
+            HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
       }
 
       // initialize the scanner

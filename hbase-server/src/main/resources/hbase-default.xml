@@ -133,7 +133,7 @@
   </property>
   <property>
     <name>hbase.client.scanner.caching</name>
-    <value>1</value>
+    <value>100</value>
     <description>Number of rows that will be fetched when calling next
     on a scanner if it is not served from (local, client) memory. Higher
     caching values will enable faster scanners but will eat up more memory
@@ -526,6 +526,13 @@
     <value>org.apache.hadoop.hbase.ipc.ProtobufRpcEngine</value>
     <description>Implementation of org.apache.hadoop.hbase.ipc.RpcEngine to be
     used for client / server RPC call marshalling.
+    </description>
+  </property>
+  <property>
+    <name>hbase.ipc.client.tcpnodelay</name>
+    <value>true</value>
+    <description>Set no delay on rpc socket connections.  See
+    http://docs.oracle.com/javase/1.5.0/docs/api/java/net/Socket.html#getTcpNoDelay()
     </description>
   </property>
 

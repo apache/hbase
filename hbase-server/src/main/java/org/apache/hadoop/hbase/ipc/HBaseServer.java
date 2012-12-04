@@ -1938,7 +1938,7 @@ public abstract class HBaseServer implements RpcServer {
     this.port = listener.getAddress().getPort();
     this.rpcMetrics = new HBaseRpcMetrics(
         serverName, Integer.toString(this.port));
-    this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
+    this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", true);
     this.tcpKeepAlive = conf.getBoolean("ipc.server.tcpkeepalive", true);
 
     this.warnDelayedCalls = conf.getInt(WARN_DELAYED_CALLS,

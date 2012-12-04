@@ -549,6 +549,16 @@ public final class HConstants {
   public static int DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT = 10;
 
   /**
+   * Parameter name to set the default scanner caching for all clients.
+   */
+  public static String HBASE_CLIENT_SCANNER_CACHING = "hbase.client.scanner.caching";
+
+  /**
+   * Default value for {@link #HBASE_CLIENT_SCANNER_CACHING}
+   */
+  public static int DEFAULT_HBASE_CLIENT_SCANNER_CACHING = 100;
+
+  /**
    * Parameter name for number of rows that will be fetched when calling next on
    * a scanner if it is not served from memory. Higher caching values will
    * enable faster scanners but will eat up more memory and some calls of next
