@@ -335,8 +335,6 @@ Server {
   public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
     this.conf = new Configuration(conf);
-    LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
-      ", hbase.cluster.distributed=" + this.conf.getBoolean("hbase.cluster.distributed", false));
     // Disable the block cache on the master
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     // Set how many times to retry talking to another server over HConnection.
@@ -372,6 +370,9 @@ Server {
     // initialize server principal (if using secure Hadoop)
     User.login(conf, "hbase.master.keytab.file",
       "hbase.master.kerberos.principal", this.isa.getHostName());
+
+    LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
+        ", hbase.cluster.distributed=" + this.conf.getBoolean("hbase.cluster.distributed", false));
 
     // set the thread name now we have an address
     setName(MASTER + "-" + this.serverName.toString());
