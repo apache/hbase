@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -130,6 +131,9 @@ public class Get extends OperationWithAttributes
     NavigableSet<byte []> set = familyMap.get(family);
     if(set == null) {
       set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+    }
+    if (qualifier == null) {
+      qualifier = HConstants.EMPTY_BYTE_ARRAY;
     }
     set.add(qualifier);
     familyMap.put(family, set);
