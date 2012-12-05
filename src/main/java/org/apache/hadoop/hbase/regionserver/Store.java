@@ -1139,13 +1139,13 @@ public class Store extends SchemaConfigured implements HeapSize {
    *
    * @param filesToCompact which files to compact
    * @param majorCompaction true to major compact (prune all deletes, max versions, etc)
-   * @param maxId Readers maximum sequence id.
+   * @param maxCompactingSequcenceId The maximum sequence id among the filesToCompact
    * @return Product of compaction or null if all cells expired or deleted and
    * nothing made it through the compaction.
    * @throws IOException
    */
   StoreFile.Writer compactStores(final Collection<StoreFile> filesToCompact,
-                               final boolean majorCompaction, final long maxId)
+                               final boolean majorCompaction, final long maxCompactingSequcenceId)
       throws IOException {
     // calculate maximum key count (for blooms), and minFlushTime after compaction
     long maxKeyCount = 0;
@@ -1199,15 +1199,18 @@ public class Store extends SchemaConfigured implements HeapSize {
         // we have to use a do/while loop.
         ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
         boolean hasMore;
+        // Create the writer whether or not there are output KVs, 
+        // iff the maxSequenceID among the compaction candidates is 
+        // equal to the maxSequenceID among all the on-disk hfiles. [HBASE-7267]
+        if (maxCompactingSequcenceId == this.getMaxSequenceId(true)) {
+          writer = createWriterInTmp(maxKeyCount, compression, true);
+        }
         do {
           hasMore = scanner.next(kvs, 1);
-          // Create the writer even if no kv(Empty store file is also ok),
-          // because we need record the max seq id for the store file, see
-          // HBASE-6059
-          if (writer == null) {
-            writer = createWriterInTmp(maxKeyCount, compression, true);
-          }
           if (!kvs.isEmpty()) {
+            if (writer == null) {
+              writer = createWriterInTmp(maxKeyCount, compression, true);
+            }
             // output to writer:
             for (KeyValue kv : kvs) {
               if (kv.getMemstoreTS() <= smallestReadPoint) {
@@ -1253,7 +1256,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         if (minFlushTime == Long.MAX_VALUE) {
           minFlushTime = HConstants.NO_MIN_FLUSH_TIME;
         }
-        writer.appendMetadata(minFlushTime, maxId, majorCompaction);
+        writer.appendMetadata(minFlushTime, maxCompactingSequcenceId, majorCompaction);
         writer.close();
       }
     }

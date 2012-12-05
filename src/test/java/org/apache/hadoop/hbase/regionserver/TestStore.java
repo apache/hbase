@@ -163,25 +163,24 @@ public class TestStore extends TestCase {
     // Verify the total number of store files
     assertEquals(storeFileNum, this.store.getStorefiles().size());
 
+    // Advanced the max sequence ID by flushing one more file
+    this.store.add(new KeyValue(row, family, qf3, System.currentTimeMillis(), (byte[]) null));
+    flush(storeFileNum + 1);
+    
     // Each compaction request will find one expired store file and delete it
     // by the compaction.
     for (int i = 1; i <= storeFileNum; i++) {
       // verify the expired store file.
       CompactionRequest cr = this.store.requestCompaction();
-      // the first is expired normally.
-      // If not the first compaction, there is another empty store file,
-      assertEquals(Math.min(i, 2), cr.getFiles().size());
-      for (int j = 0; i < cr.getFiles().size(); j++) {
-        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() < (System
-            .currentTimeMillis() - this.store.ttl));
-      }
+      
+      assertEquals(1, cr.getFiles().size());
+      assertTrue(cr.getFiles().get(0).getReader().getMaxTimestamp() <
+          (System.currentTimeMillis() - store.ttl));
+      
       // Verify that the expired store file is compacted to an empty store file.
       this.store.compact(cr);
-
       // It is an empty store file.
-      assertEquals(0, this.store.getStorefiles().get(0).getReader()
-          .getEntries());
-
+      assertEquals(storeFileNum + 1 - i, this.store.getStorefiles().size());
       // Let the next store file expired.
       Thread.sleep(sleepTime);
     }
