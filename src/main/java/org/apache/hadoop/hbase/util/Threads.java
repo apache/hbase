@@ -244,7 +244,7 @@ public class Threads {
 
   public static void renameThread(Thread t, String newName) {
     String oldName = t.getName();
-    if (!t.equals(newName)) {
+    if (!oldName.equals(newName)) {
       LOG.info("Thread '" + oldName + "' is now known as '" + newName + "'");
       t.setName(newName);
     }

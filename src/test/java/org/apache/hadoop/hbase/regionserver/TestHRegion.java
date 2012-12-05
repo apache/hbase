@@ -1521,7 +1521,7 @@ public class TestHRegion extends HBaseTestCase {
       for (byte[] cf : families) {
         for (long t : timestamps) {
           put.add(cf, null, t, null);
-          if (cf.equals(families[1]) || cf.equals(families[3])) {
+          if (Bytes.compareTo(cf, families[1]) == 0 || Bytes.compareTo(cf, families[3]) == 0) {
             expected.add(new KeyValue(row, cf, null, t, KeyValue.Type.Put,
                   null));
           }
