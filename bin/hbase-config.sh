@@ -84,6 +84,15 @@ if [ -z "$HBASE_THRIFT_OPTS" ]; then
   export HBASE_THRIFT_OPTS="$HBASE_THRIFT_JMX_OPTS"
 fi
 
+# REST JMX opts
+if [ -z "$HBASE_REST_JMX_OPTS" ]; then
+  HBASE_REST_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=10105"
+fi
+# REST opts
+if [ -z "$HBASE_REST_OPTS" ]; then
+  export HBASE_REST_OPTS="$HBASE_REST_JMX_OPTS"
+fi
+
 # Source the hbase-env.sh.  Will have JAVA_HOME defined.
 if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   . "${HBASE_CONF_DIR}/hbase-env.sh"

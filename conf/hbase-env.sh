@@ -57,6 +57,7 @@ export HBASE_OPTS="$HBASE_OPTS -XX:+UseConcMarkSweepGC"
 # export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10102"
 # export HBASE_THRIFT_OPTS="$HBASE_THRIFT_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10103"
 # export HBASE_ZOOKEEPER_OPTS="$HBASE_ZOOKEEPER_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10104"
+# export HBASE_REST_OPTS="$HBASE_REST_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10105"
 
 # File naming hosts on which HRegionServers will run.  $HBASE_HOME/conf/regionservers by default.
 # export HBASE_REGIONSERVERS=${HBASE_HOME}/conf/regionservers
