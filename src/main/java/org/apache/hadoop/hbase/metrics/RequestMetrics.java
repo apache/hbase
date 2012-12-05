@@ -39,11 +39,11 @@ public class RequestMetrics {
     return totalRequestCount;
   }
 
-  public synchronized void incrTotalRequstCount(long incr) {
+  public synchronized void incrTotalRequestCount(long incr) {
     this.totalRequestCount += incr;
   }
 
-  public synchronized void incrTotalRequstCount() {
+  public synchronized void incrTotalRequestCount() {
     this.totalRequestCount ++;
   }
 

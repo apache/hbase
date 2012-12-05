@@ -652,10 +652,10 @@ public class HRegionServer implements HRegionInterface,
           try {
             MemoryUsage memory =
               ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+            doMetrics();
             HServerLoad hsl = new HServerLoad((numReads.get() + numWrites.get()),
               (int)(memory.getUsed()/1024/1024),
               (int)(memory.getMax()/1024/1024));
-            doMetrics();
             for (HRegion r: onlineRegions.values()) {
               hsl.addRegionInfo(createRegionLoad(r));
             }
@@ -1338,16 +1338,10 @@ public class HRegionServer implements HRegionInterface,
   }
 
   protected void metrics() {
-    int numReads = this.numReads.get();
-    this.numReads.addAndGet(-numReads);
-
-    int numWrites = this.numWrites.get();
-    this.numWrites.addAndGet(-numWrites);
+    int numReads = 0;
+    int numWrites = 0;
 
     this.metrics.regions.set(this.onlineRegions.size());
-    this.metrics.incrementRequests(numReads + numWrites);
-    this.metrics.numReads.inc(numReads);
-    this.metrics.numWrites.inc(numWrites);
     // Is this too expensive every three seconds getting a lock on onlineRegions
     // and then per store carried?  Can I make metrics be sloppier and avoid
     // the synchronizations?
@@ -1370,6 +1364,8 @@ public class HRegionServer implements HRegionInterface,
       for (Map.Entry<Integer, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
         memstoreSize += r.memstoreSize.get();
+        numReads += r.readRequests.getTotalRequestCount();
+        numWrites += r.writeRequests.getTotalRequestCount();
         synchronized (r.stores) {
           stores += r.stores.size();
           for(Map.Entry<byte [], Store> ee: r.stores.entrySet()) {
@@ -1427,6 +1423,12 @@ public class HRegionServer implements HRegionInterface,
       HRegion.setNumericMetric(e.getKey(), e.getValue().longValue());
     }
 
+    this.numReads.set(numReads);
+    this.numWrites.set(numWrites);
+
+    this.metrics.requests.set(numReads + numWrites);
+    this.metrics.numReads.set(numReads);
+    this.metrics.numWrites.set(numWrites);
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
     this.metrics.memstoreSizeMB.set((int)(memstoreSize/(1024*1024)));
@@ -2320,7 +2322,6 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public HRegionInfo getRegionInfo(final byte [] regionName)
   throws NotServingRegionException {
-    numReads.incrementAndGet();
     return getRegion(regionName).getRegionInfo();
   }
 
@@ -2330,7 +2331,6 @@ public class HRegionServer implements HRegionInterface,
     final byte [] row, final byte [] family)
   throws IOException {
     checkOpen();
-    numReads.incrementAndGet();
     try {
       // locate the region we're operating on
       HRegion region = getRegion(regionName);
@@ -2346,7 +2346,6 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public Result get(byte [] regionName, Get get) throws IOException {
     checkOpen();
-    numReads.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
       return region.get(get, getLockFromId(get.getLockId()));
@@ -2359,7 +2358,6 @@ public class HRegionServer implements HRegionInterface,
   public Result[] get(byte[] regionName, List<Get> gets)
       throws IOException {
     checkOpen();
-    numReads.addAndGet(gets.size());
     Result[] rets = new Result[gets.size()];
     try {
       HRegion region = getRegion(regionName);
@@ -2382,14 +2380,12 @@ public class HRegionServer implements HRegionInterface,
       throw new IOException("Invalid arguments to atomicMutation " +
       "regionName is null");
     }
-    numWrites.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
       for (RowMutations arm: armList) {
-        numWrites.incrementAndGet();
         region.mutateRow(arm);
       }
     } catch (Throwable t) {
@@ -2406,7 +2402,6 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public boolean exists(byte [] regionName, Get get) throws IOException {
     checkOpen();
-    numReads.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
       Result r = region.get(get, getLockFromId(get.getLockId()));
@@ -2423,7 +2418,6 @@ public class HRegionServer implements HRegionInterface,
       throw new IllegalArgumentException("update has null row");
 
     checkOpen();
-    numWrites.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
       if (!region.getRegionInfo().isMetaTable()) {
@@ -2463,7 +2457,6 @@ public class HRegionServer implements HRegionInterface,
         opWithLocks[i++] = new Pair<Mutation, Integer>(p, lock);
       }
 
-      numWrites.addAndGet(mutations.size());
       OperationStatusCode[] codes = region.batchMutateWithLocks(opWithLocks,
           methodName);
       for (i = 0; i < codes.length; i++) {
@@ -2480,7 +2473,6 @@ public class HRegionServer implements HRegionInterface,
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Writable w, Integer lock) throws IOException {
     checkOpen();
-    numWrites.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
       if (!region.getRegionInfo().isMetaTable()) {
@@ -2549,7 +2541,6 @@ public class HRegionServer implements HRegionInterface,
     if (npe != null) {
       throw new IOException("Invalid arguments to openScanner", npe);
     }
-    numReads.incrementAndGet();
     try {
       HRegion r = getRegion(regionName);
       return addScanner(r.getScanner(scan));
@@ -2631,11 +2622,7 @@ public class HRegionServer implements HRegionInterface,
         throw e;
       }
       this.leases.renewLease(scannerName);
-      Result[] results = s.nextRows(nbRows, HRegion.METRIC_NEXTSIZE);
-      if (results != null) {
-        numReads.addAndGet(results.length);
-      }
-      return results;
+      return s.nextRows(nbRows, HRegion.METRIC_NEXTSIZE);
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException) {
         String scannerName = String.valueOf(scannerId);
@@ -2649,7 +2636,6 @@ public class HRegionServer implements HRegionInterface,
   public void close(final long scannerId) throws IOException {
     try {
       checkOpen();
-      numReads.incrementAndGet();
       String scannerName = String.valueOf(scannerId);
       InternalScanner s = scanners.remove(scannerName);
       if (s != null) {
@@ -2695,7 +2681,6 @@ public class HRegionServer implements HRegionInterface,
     checkOpen();
     try {
       boolean writeToWAL = delete.getWriteToWAL();
-      numWrites.incrementAndGet();
       HRegion region = getRegion(regionName);
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
@@ -2728,7 +2713,6 @@ public class HRegionServer implements HRegionInterface,
       io.initCause(npe);
       throw io;
     }
-    numReads.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
       Integer r = region.obtainRowLock(row);
@@ -2787,7 +2771,6 @@ public class HRegionServer implements HRegionInterface,
       io.initCause(npe);
       throw io;
     }
-    numReads.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
       String lockName = String.valueOf(lockId);
@@ -3232,7 +3215,6 @@ public class HRegionServer implements HRegionInterface,
       throw new IOException("Invalid arguments to incrementColumnValue " +
       "regionName is null");
     }
-    numWrites.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
       long retval = region.incrementColumnValue(row, family, qualifier, amount,

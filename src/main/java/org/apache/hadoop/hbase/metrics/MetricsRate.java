@@ -56,6 +56,10 @@ public class MetricsRate extends MetricsBase {
     value++;
   }
 
+  public synchronized void set(final int value) {
+    this.value = value;
+  }
+
   private synchronized void intervalHeartBeat() {
     long now = System.currentTimeMillis();
     long diff = (now-ts)/1000;
