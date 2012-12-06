@@ -248,9 +248,6 @@ public class KeyValue implements Cell, Writable, HeapSize {
   private int offset = 0;
   private int length = 0;
 
-  // the row cached
-  private volatile byte [] rowCache = null;
-
   /**
    * @return True if a delete type, a {@link KeyValue.Type#Delete} or
    * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
@@ -1240,7 +1237,6 @@ public class KeyValue implements Cell, Writable, HeapSize {
       int tsOffset = getTimestampOffset();
       System.arraycopy(now, 0, this.bytes, tsOffset, Bytes.SIZEOF_LONG);
       // clear cache or else getTimestamp() possibly returns an old value
-      timestampCache = -1L;
       return true;
     }
     return false;
@@ -1312,29 +1308,20 @@ public class KeyValue implements Cell, Writable, HeapSize {
    * @return Row in a new byte array.
    */
   public byte [] getRow() {
-    if (rowCache == null) {
-      int o = getRowOffset();
-      short l = getRowLength();
-      // initialize and copy the data into a local variable
-      // in case multiple threads race here.
-      byte local[] = new byte[l];
-      System.arraycopy(getBuffer(), o, local, 0, l);
-      rowCache = local; // volatile assign
-    }
-    return rowCache;
+    int o = getRowOffset();
+    short l = getRowLength();
+    byte result[] = new byte[l];
+    System.arraycopy(getBuffer(), o, result, 0, l);
+    return result;
   }
 
   /**
    *
    * @return Timestamp
    */
-  private long timestampCache = -1;
   @Override
   public long getTimestamp() {
-    if (timestampCache == -1) {
-      timestampCache = getTimestamp(getKeyLength());
-    }
-    return timestampCache;
+    return getTimestamp(getKeyLength());
   }
 
   /**
@@ -2639,12 +2626,11 @@ public class KeyValue implements Cell, Writable, HeapSize {
   public long heapSize() {
     int sum = 0;
     sum += ClassSize.OBJECT;// the KeyValue object itself
-    sum += 2 * ClassSize.REFERENCE;// 2 * pointers to "bytes" and "rowCache" byte[]
-    sum += 2 * ClassSize.align(ClassSize.ARRAY);// 2 * "bytes" and "rowCache" byte[]
+    sum += ClassSize.REFERENCE;// pointer to "bytes"
+    sum += ClassSize.align(ClassSize.ARRAY);// "bytes"
     sum += ClassSize.align(length);// number of bytes of data in the "bytes" array
-    //ignore the data in the rowCache because it is cleared for inactive memstore KeyValues
     sum += 3 * Bytes.SIZEOF_INT;// offset, length, keyLength
-    sum += 2 * Bytes.SIZEOF_LONG;// timestampCache, memstoreTS
+    sum += Bytes.SIZEOF_LONG;// memstoreTS
     return ClassSize.align(sum);
   }
 
@@ -2652,10 +2638,8 @@ public class KeyValue implements Cell, Writable, HeapSize {
   // and it expects the length of the KeyValue to be explicitly passed
   // to it.
   public void readFields(int length, final DataInput in) throws IOException {
-    this.rowCache = null;
     this.length = length;
     this.offset = 0;
-    this.timestampCache = -1;
     this.keyLength = 0;
     this.bytes = new byte[this.length];
     in.readFully(this.bytes, 0, this.length);

@@ -112,7 +112,8 @@ public class TestQueryMatcher extends HBaseTestCase {
     memstore.add(new KeyValue(row2, fam1, col1, data));
 
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
-    qm.setRow(memstore.get(0).getRow());
+    KeyValue k = memstore.get(0);
+    qm.setRow(k.getBuffer(), k.getRowOffset(), k.getRowLength());
 
     for (KeyValue kv : memstore){
       actual.add(qm.match(kv));
@@ -157,7 +158,8 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
 
-    qm.setRow(memstore.get(0).getRow());
+    KeyValue k = memstore.get(0);
+    qm.setRow(k.getBuffer(), k.getRowOffset(), k.getRowLength());
 
     for(KeyValue kv : memstore) {
       actual.add(qm.match(kv));
@@ -209,7 +211,8 @@ public class TestQueryMatcher extends HBaseTestCase {
         new KeyValue(row2, fam1, col1, now-10, data)
     };
 
-    qm.setRow(kvs[0].getRow());
+    KeyValue k = kvs[0];
+    qm.setRow(k.getBuffer(), k.getRowOffset(), k.getRowLength());
 
     List<MatchCode> actual = new ArrayList<MatchCode>(kvs.length);
     for (KeyValue kv : kvs) {
@@ -261,7 +264,8 @@ public class TestQueryMatcher extends HBaseTestCase {
         new KeyValue(row1, fam2, col5, now-10000, data),
         new KeyValue(row2, fam1, col1, now-10, data)
     };
-    qm.setRow(kvs[0].getRow());
+    KeyValue k = kvs[0];
+    qm.setRow(k.getBuffer(), k.getRowOffset(), k.getRowLength());
 
     List<ScanQueryMatcher.MatchCode> actual =
         new ArrayList<ScanQueryMatcher.MatchCode>(kvs.length);

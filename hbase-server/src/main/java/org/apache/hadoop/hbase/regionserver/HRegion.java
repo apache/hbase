@@ -3536,17 +3536,25 @@ public class HRegion implements HeapSize { // , Writable{
           rpcCall.throwExceptionIfCallerDisconnected();
         }
 
-        byte [] currentRow = peekRow();
-        if (isStopRow(currentRow)) {
+        KeyValue current = this.storeHeap.peek();
+        byte[] currentRow = null;
+        int offset = 0;
+        short length = 0;
+        if (current != null) {
+          currentRow = current.getBuffer();
+          offset = current.getRowOffset();
+          length = current.getRowLength();
+        }
+        if (isStopRow(currentRow, offset, length)) {
           if (filter != null && filter.hasFilterRow()) {
             filter.filterRow(results);
           }
           
           return false;
-        } else if (filterRowKey(currentRow)) {
-          nextRow(currentRow);
+        } else if (filterRowKey(currentRow, offset, length)) {
+          nextRow(currentRow, offset, length);
         } else {
-          byte [] nextRow;
+          KeyValue nextKv;
           do {
             this.storeHeap.next(results, limit - results.size(), metric);
             if (limit > 0 && results.size() == limit) {
@@ -3556,9 +3564,10 @@ public class HRegion implements HeapSize { // , Writable{
               }
               return true; // we are expecting more yes, but also limited to how many we can return.
             }
-          } while (Bytes.equals(currentRow, nextRow = peekRow()));
+            nextKv = this.storeHeap.peek();
+          } while (nextKv != null && nextKv.matchingRow(currentRow, offset, length));
 
-          final boolean stopRow = isStopRow(nextRow);
+          final boolean stopRow = nextKv == null || isStopRow(nextKv.getBuffer(), nextKv.getRowOffset(), nextKv.getRowLength());
 
           // now that we have an entire row, lets process with a filters:
 
@@ -3573,7 +3582,7 @@ public class HRegion implements HeapSize { // , Writable{
             // the reasons for calling this method are:
             // 1. reset the filters.
             // 2. provide a hook to fast forward the row (used by subclasses)
-            nextRow(currentRow);
+            nextRow(currentRow, offset, length);
 
             // This row was totally filtered out, if this is NOT the last row,
             // we should continue on.
@@ -3585,33 +3594,25 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
 
-    private boolean filterRow() {
+    private boolean filterRowKey(byte[] row, int offset, short length) {
       return filter != null
-          && filter.filterRow();
-    }
-    private boolean filterRowKey(byte[] row) {
-      return filter != null
-          && filter.filterRowKey(row, 0, row.length);
+          && filter.filterRowKey(row, offset, length);
     }
 
-    protected void nextRow(byte [] currentRow) throws IOException {
-      while (Bytes.equals(currentRow, peekRow())) {
-        this.storeHeap.next(MOCKED_LIST);
+    protected void nextRow(byte [] currentRow, int offset, short length) throws IOException {
+      KeyValue next;
+      while((next = this.storeHeap.peek()) != null && next.matchingRow(currentRow, offset, length)) {
+        this.storeHeap.next(MOCKED_LIST);       
       }
       results.clear();
       resetFilters();
     }
 
-    private byte[] peekRow() {
-      KeyValue kv = this.storeHeap.peek();
-      return kv == null ? null : kv.getRow();
-    }
-
-    private boolean isStopRow(byte [] currentRow) {
+    private boolean isStopRow(byte [] currentRow, int offset, short length) {
       return currentRow == null ||
           (stopRow != null &&
           comparator.compareRows(stopRow, 0, stopRow.length,
-              currentRow, 0, currentRow.length) <= isScan);
+              currentRow, offset, length) <= isScan);
     }
 
     @Override
