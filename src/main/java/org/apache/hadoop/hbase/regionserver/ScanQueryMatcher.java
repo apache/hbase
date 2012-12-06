@@ -82,6 +82,8 @@ public class ScanQueryMatcher {
   /* row is not private for tests */
   /** Row the query is on */
   byte [] row;
+  int rowOffset;
+  short rowLength;
   
   /**
    * Oldest put in any of the involved store files
@@ -222,7 +224,7 @@ public class ScanQueryMatcher {
     short rowLength = Bytes.toShort(bytes, offset, Bytes.SIZEOF_SHORT);
     offset += Bytes.SIZEOF_SHORT;
 
-    int ret = this.rowComparator.compareRows(row, 0, row.length,
+    int ret = this.rowComparator.compareRows(row, this.rowOffset, this.rowLength,
         bytes, offset, rowLength);
     if (ret <= -1) {
       return MatchCode.DONE;
@@ -385,8 +387,10 @@ public class ScanQueryMatcher {
    * Set current row
    * @param row
    */
-  public void setRow(byte [] row) {
+  public void setRow(byte [] row, int offset, short length) {
     this.row = row;
+    this.rowOffset = offset;
+    this.rowLength = length;
     reset();
   }
 

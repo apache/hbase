@@ -96,7 +96,7 @@ public class Result implements Writable, WritableWithSize {
    * @param kvs List of KeyValues
    */
   public Result(List<KeyValue> kvs) {
-    this(kvs.toArray(new KeyValue[0]));
+    this(kvs.toArray(new KeyValue[kvs.size()]));
   }
 
   /**
