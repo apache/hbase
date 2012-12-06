@@ -587,10 +587,8 @@ public class TestCompaction extends HBaseTestCase {
 
     List<StoreFile> storeFiles = store.getStorefiles();
     long maxId = StoreFile.getMaxSequenceIdInList(storeFiles);
-    Compactor tool = new Compactor(this.conf);
 
-    StoreFile.Writer compactedFile =
-      tool.compact(store, storeFiles, false, maxId);
+    StoreFile.Writer compactedFile = store.compactStore(storeFiles, false, maxId);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = FileSystem.get(conf);
