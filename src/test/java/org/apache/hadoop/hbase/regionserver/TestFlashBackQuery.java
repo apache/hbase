@@ -165,7 +165,8 @@ public class TestFlashBackQuery extends FlashBackQueryTestUtil {
       int size, long effectiveTS) {
     boolean isDelete = random.nextBoolean();
     KeyValue kv = getRandomKv(row, hcd, start, size, isDelete);
-    if (kv.getTimestamp() <= effectiveTS) {
+    if (kv.getTimestamp() <= effectiveTS &&
+        kv.getTimestamp() >= effectiveTS - (hcd.getTimeToLive() * 1000)) {
       processHeapKvs(heapKvs, row, hcd, kv);
     }
     return kv;
