@@ -25,6 +25,9 @@ import java.util.zip.Checksum;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.ChecksumFactory;
+
 /**
  * Checksum types. The Checksum type is a one byte number
  * that stores a representation of the checksum algorithm
@@ -67,7 +70,7 @@ public enum ChecksumType {
         ctor = ChecksumFactory.newConstructor(PURECRC32);
         LOG.info("Checksum using " + PURECRC32);
       } catch (Exception e) {
-        LOG.trace(PURECRC32 + " not available.");
+        LOG.info(PURECRC32 + " not available.");
       }
       try {
         // The default checksum class name is java.util.zip.CRC32. 
@@ -77,7 +80,7 @@ public enum ChecksumType {
           LOG.info("Checksum can use " + JDKCRC);
         }
       } catch (Exception e) {
-        LOG.trace(JDKCRC + " not available.");
+        LOG.warn(JDKCRC + " not available. ",  e);
       }
     }
 
@@ -110,7 +113,7 @@ public enum ChecksumType {
         ctor = ChecksumFactory.newConstructor(PURECRC32C);
         LOG.info("Checksum can use " + PURECRC32C);
       } catch (Exception e) {
-        LOG.trace(PURECRC32C + " not available.");
+        LOG.info(PURECRC32C + " not available. ");
       }
     }
 

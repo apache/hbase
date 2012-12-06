@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.EOFException;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -63,7 +62,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -232,12 +230,12 @@ public class HRegion implements HeapSize { // , Writable{
    * The directory for the table this region is part of.
    * This directory contains the directory for this region.
    */
-  private final Path tableDir;
+  final Path tableDir;
 
-  private final HLog log;
-  private final FileSystem fs;
-  private final Configuration conf;
-  private final int rowLockWaitDuration;
+  final HLog log;
+  final FileSystem fs;
+  final Configuration conf;
+  final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
   // The internal wait duration to acquire a lock before read/update
@@ -258,8 +256,8 @@ public class HRegion implements HeapSize { // , Writable{
   // purge timeout, when a RPC call will be terminated by the RPC engine.
   final long maxBusyWaitDuration;
 
-  private final HRegionInfo regionInfo;
-  private final Path regiondir;
+  final HRegionInfo regionInfo;
+  final Path regiondir;
   KeyValue.KVComparator comparator;
 
   private ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
@@ -726,7 +724,7 @@ public class HRegion implements HeapSize { // , Writable{
   public long addAndGetGlobalMemstoreSize(long memStoreSize) {
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
-    }
+    }  
     return this.memstoreSize.getAndAdd(memStoreSize);
   }
 
@@ -752,7 +750,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // and then create the file
     Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
-
+    
     // if datanode crashes or if the RS goes down just before the close is called while trying to
     // close the created regioninfo file in the .tmp directory then on next
     // creation we will be getting AlreadyCreatedException.
@@ -760,7 +758,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (FSUtils.isExists(fs, tmpPath)) {
       FSUtils.delete(fs, tmpPath, true);
     }
-
+    
     FSDataOutputStream out = FSUtils.create(fs, tmpPath, perms);
 
     try {
@@ -774,26 +772,6 @@ public class HRegion implements HeapSize { // , Writable{
     if (!fs.rename(tmpPath, regioninfoPath)) {
       throw new IOException("Unable to rename " + tmpPath + " to " +
         regioninfoPath);
-    }
-  }
-
-  /**
-   * @param fs
-   * @param dir
-   * @return An HRegionInfo instance gotten from the <code>.regioninfo</code> file under region dir
-   * @throws IOException
-   */
-  public static HRegionInfo loadDotRegionInfoFileContent(final FileSystem fs, final Path dir)
-  throws IOException {
-    Path regioninfo = new Path(dir, HRegion.REGIONINFO_FILE);
-    if (!fs.exists(regioninfo)) throw new FileNotFoundException(regioninfo.toString());
-    FSDataInputStream in = fs.open(regioninfo);
-    try {
-      HRegionInfo hri = new HRegionInfo();
-      hri.readFields(in);
-      return hri;
-    } finally {
-      in.close();
     }
   }
 
@@ -1043,16 +1021,19 @@ public class HRegion implements HeapSize { // , Writable{
     return getOpenAndCloseThreadPool(maxThreads, threadNamePrefix);
   }
 
-  static ThreadPoolExecutor getOpenAndCloseThreadPool(int maxThreads,
+  private ThreadPoolExecutor getOpenAndCloseThreadPool(int maxThreads,
       final String threadNamePrefix) {
-    return Threads.getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-      new ThreadFactory() {
-        private int count = 1;
+    ThreadPoolExecutor openAndCloseThreadPool = Threads
+        .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
+            new ThreadFactory() {
+              private int count = 1;
 
-        public Thread newThread(Runnable r) {
-          return new Thread(r, threadNamePrefix + "-" + count++);
-        }
-      });
+              public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, threadNamePrefix + "-" + count++);
+                return t;
+              }
+            });
+    return openAndCloseThreadPool;
   }
 
    /**
@@ -1998,7 +1979,7 @@ public class HRegion implements HeapSize { // , Writable{
     System.arraycopy(putsAndLocks, 0, mutationsAndLocks, 0, putsAndLocks.length);
     return batchMutate(mutationsAndLocks);
   }
-
+  
   /**
    * Perform a batch of mutations.
    * It supports only Put and Delete mutations and will ignore other types passed.
@@ -2352,7 +2333,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       // do after lock
       final long netTimeMs = EnvironmentEdgeManager.currentTimeMillis()- startTimeMs;
-
+            
       // See if the column families were consistent through the whole thing.
       // if they were then keep them. If they were not then pass a null.
       // null will be treated as unknown.
@@ -2655,7 +2636,7 @@ public class HRegion implements HeapSize { // , Writable{
     // do after lock
     final long after = EnvironmentEdgeManager.currentTimeMillis();
     this.opMetrics.updatePutMetrics(familyMap.keySet(), after - now);
-
+    
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
@@ -3778,7 +3759,6 @@ public class HRegion implements HeapSize { // , Writable{
    * @param conf
    * @param hTableDescriptor
    * @param hlog shared HLog
-   * @param boolean initialize - true to initialize the region
    * @return new HRegion
    *
    * @throws IOException
@@ -3786,36 +3766,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
                                       final Configuration conf,
                                       final HTableDescriptor hTableDescriptor,
-                                      final HLog hlog,
-                                      final boolean initialize)
-      throws IOException {
-    return createHRegion(info, rootDir, conf, hTableDescriptor,
-        hlog, initialize, false);
-  }
-
-  /**
-   * Convenience method creating new HRegions. Used by createTable.
-   * The {@link HLog} for the created region needs to be closed
-   * explicitly, if it is not null.
-   * Use {@link HRegion#getLog()} to get access.
-   *
-   * @param info Info for region to create.
-   * @param rootDir Root directory for HBase instance
-   * @param conf
-   * @param hTableDescriptor
-   * @param hlog shared HLog
-   * @param boolean initialize - true to initialize the region
-   * @param boolean ignoreHLog
-      - true to skip generate new hlog if it is null, mostly for createTable
-   * @return new HRegion
-   *
-   * @throws IOException
-   */
-  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-                                      final Configuration conf,
-                                      final HTableDescriptor hTableDescriptor,
-                                      final HLog hlog,
-                                      final boolean initialize, final boolean ignoreHLog)
+                                      final HLog hlog)
       throws IOException {
     LOG.info("creating HRegion " + info.getTableNameAsString()
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
@@ -3827,24 +3778,14 @@ public class HRegion implements HeapSize { // , Writable{
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
     HLog effectiveHLog = hlog;
-    if (hlog == null && !ignoreHLog) {
+    if (hlog == null) {
       effectiveHLog = new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
           new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf);
     }
     HRegion region = HRegion.newHRegion(tableDir,
         effectiveHLog, fs, conf, info, hTableDescriptor, null);
-    if (initialize) {
-      region.initialize();
-    }
+    region.initialize();
     return region;
-  }
-
-  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-                                      final Configuration conf,
-                                      final HTableDescriptor hTableDescriptor,
-                                      final HLog hlog)
-    throws IOException {
-    return createHRegion(info, rootDir, conf, hTableDescriptor, hlog, true);
   }
 
   /**
@@ -4358,7 +4299,7 @@ public class HRegion implements HeapSize { // , Writable{
     // do after lock
     final long after = EnvironmentEdgeManager.currentTimeMillis();
     this.opMetrics.updateGetMetrics(get.familySet(), after - now);
-
+    
     return results;
   }
 
@@ -4686,10 +4627,10 @@ public class HRegion implements HeapSize { // , Writable{
       closeRegionOperation();
     }
 
-
+    
     long after = EnvironmentEdgeManager.currentTimeMillis();
     this.opMetrics.updateAppendMetrics(append.getFamilyMap().keySet(), after - before);
-
+    
     if (flush) {
       // Request a cache flush. Do it outside update lock.
       requestFlush();
@@ -4814,7 +4755,7 @@ public class HRegion implements HeapSize { // , Writable{
       long after = EnvironmentEdgeManager.currentTimeMillis();
       this.opMetrics.updateIncrementMetrics(increment.getFamilyMap().keySet(), after - before);
     }
-
+    
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
@@ -5307,7 +5248,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private void recordPutWithoutWal(final Map<byte [], List<KeyValue>> familyMap) {
     if (numPutsWithoutWAL.getAndIncrement() == 0) {
-      LOG.info("writing data to region " + this +
+      LOG.info("writing data to region " + this + 
                " with WAL disabled. Data may be lost in the event of a crash.");
     }
 
@@ -5419,11 +5360,11 @@ public class HRegion implements HeapSize { // , Writable{
     final HLog log = new HLog(fs, logdir, oldLogDir, c);
     try {
       processTable(fs, tableDir, log, c, majorCompact);
-    } finally {
+     } finally {
        log.close();
        // TODO: is this still right?
        BlockCache bc = new CacheConfig(c).getBlockCache();
        if (bc != null) bc.shutdown();
-    }
+     }
   }
 }

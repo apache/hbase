@@ -142,12 +142,16 @@ public class CreateTableHandler extends EventHandler {
     List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
     final int batchSize =
       this.conf.getInt("hbase.master.createtable.batchsize", 100);
+    HLog hlog = null;
     for (int regionIdx = 0; regionIdx < this.newRegions.length; regionIdx++) {
       HRegionInfo newRegion = this.newRegions[regionIdx];
       // 1. Create HRegion
       HRegion region = HRegion.createHRegion(newRegion,
         this.fileSystemManager.getRootDir(), this.conf,
-        this.hTableDescriptor, null, false, true);
+        this.hTableDescriptor, hlog);
+      if (hlog == null) {
+        hlog = region.getLog();
+      }
 
       regionInfos.add(region.getRegionInfo());
       if (regionIdx % batchSize == 0) {
@@ -159,6 +163,7 @@ public class CreateTableHandler extends EventHandler {
       // 3. Close the new region to flush to disk.  Close log file too.
       region.close();
     }
+    hlog.closeAndDelete();
     if (regionInfos.size() > 0) {
       MetaEditor.addRegionsToMeta(this.catalogTracker, regionInfos);
     }
