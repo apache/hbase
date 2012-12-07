@@ -43,11 +43,6 @@
 #
 #   HBASE_ROOT_LOGGER The root appender. Default is INFO,console
 #
-#   MAVEN_HOME       Where mvn is installed.
-#
-#   MAVEN_OPTS       Extra options (eg '-Dhadoop.profile=2.0') passed to maven.
-#                    Empty by default.
-#
 #   JRUBY_HOME       JRuby path: $JRUBY_HOME/lib/jruby.jar should exist.
 #                    Defaults to the jar packaged with HBase.
 #
@@ -108,11 +103,6 @@ shift
 JAVA=$JAVA_HOME/bin/java
 JAVA_HEAP_MAX=-Xmx1000m 
 
-MVN="mvn"
-if [ "$MAVEN_HOME" != "" ]; then
-  MVN=${MAVEN_HOME}/bin/mvn
-fi
-
 # override default settings for this command, if applicable
 if [ -f "$HBASE_HOME/conf/hbase-env-$COMMAND.sh" ]; then
   . "$HBASE_HOME/conf/hbase-env-$COMMAND.sh"
@@ -156,18 +146,8 @@ add_maven_deps_to_classpath() {
   f="${HBASE_HOME}/target/cached_classpath.txt"
   if [ ! -f "${f}" ]
   then
-    #we need hbase-it to always be the last module run. since it has the largest classpath
-    modules=`find hbase-* -type f -name 'pom.xml' |sed 's#\(.*\)/.*#\1#' | sed '/hbase-it/d' |sort -u  | paste -s -d , -`
-    modules="${modules},hbase-it"
-    ${MVN} -f "${HBASE_HOME}/pom.xml" package dependency:build-classpath -DskipTests -Dmdep.outputFile="${f}" -pl "${modules}" &> /dev/null
-    if [ $? -ne 0 ]
-    then
-      #delete the file, maven writes it even on failure. Keeping it would breaks the caching mechanism the next time we call the script
-      rm -rf "${f}"
-      echo "The maven command used to generate the classpath failed, please check your environment."
-      echo "Maven command was: ${MVN} -f '${HBASE_HOME}/pom.xml' package dependency:build-classpath -DskipTests -Dmdep.outputFile='${f}' -pl '${modules}'"
+      echo "As this is a development environment, we need ${f} to be generated from maven (command: mvn compile)"
       exit 1
-    fi
   fi
   CLASSPATH=${CLASSPATH}:`cat "${f}"`
 }
