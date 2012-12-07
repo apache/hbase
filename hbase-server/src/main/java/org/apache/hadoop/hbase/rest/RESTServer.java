@@ -57,7 +57,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * </ul>
  */
 @InterfaceAudience.Private
-public class Main implements Constants {
+public class RESTServer implements Constants {
 
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();

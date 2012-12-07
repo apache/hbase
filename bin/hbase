@@ -302,7 +302,7 @@ elif [ "$COMMAND" = "thrift2" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_THRIFT_OPTS"
   fi
 elif [ "$COMMAND" = "rest" ] ; then
-  CLASS='org.apache.hadoop.hbase.rest.Main'
+  CLASS='org.apache.hadoop.hbase.rest.RESTServer'
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_REST_OPTS"
   fi
