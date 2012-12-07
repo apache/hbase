@@ -130,11 +130,8 @@ message RegionLoad {
    */
   optional uint32 totalStaticBloomSizeKB = 14;
 
-  /** Region-level coprocessors. */
-  repeated Coprocessor coprocessors = 15;
-
   /** the most recent sequence Id from cache flush */
-  optional uint64 completeSequenceId = 16;
+  optional uint64 completeSequenceId = 15;
 }
 
 /* Server-level protobufs */

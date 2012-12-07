@@ -4040,17 +4040,7 @@ public final class HBaseProtos {
     boolean hasTotalStaticBloomSizeKB();
     int getTotalStaticBloomSizeKB();
     
-    // repeated .Coprocessor coprocessors = 15;
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> 
-        getCoprocessorsList();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getCoprocessors(int index);
-    int getCoprocessorsCount();
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
-        getCoprocessorsOrBuilderList();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getCoprocessorsOrBuilder(
-        int index);
-    
-    // optional uint64 completeSequenceId = 16;
+    // optional uint64 completeSequenceId = 15;
     boolean hasCompleteSequenceId();
     long getCompleteSequenceId();
   }
@@ -4226,29 +4216,8 @@ public final class HBaseProtos {
       return totalStaticBloomSizeKB_;
     }
     
-    // repeated .Coprocessor coprocessors = 15;
-    public static final int COPROCESSORS_FIELD_NUMBER = 15;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> coprocessors_;
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> getCoprocessorsList() {
-      return coprocessors_;
-    }
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
-        getCoprocessorsOrBuilderList() {
-      return coprocessors_;
-    }
-    public int getCoprocessorsCount() {
-      return coprocessors_.size();
-    }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getCoprocessors(int index) {
-      return coprocessors_.get(index);
-    }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getCoprocessorsOrBuilder(
-        int index) {
-      return coprocessors_.get(index);
-    }
-    
-    // optional uint64 completeSequenceId = 16;
-    public static final int COMPLETESEQUENCEID_FIELD_NUMBER = 16;
+    // optional uint64 completeSequenceId = 15;
+    public static final int COMPLETESEQUENCEID_FIELD_NUMBER = 15;
     private long completeSequenceId_;
     public boolean hasCompleteSequenceId() {
       return ((bitField0_ & 0x00004000) == 0x00004000);
@@ -4272,7 +4241,6 @@ public final class HBaseProtos {
       rootIndexSizeKB_ = 0;
       totalStaticIndexSizeKB_ = 0;
       totalStaticBloomSizeKB_ = 0;
-      coprocessors_ = java.util.Collections.emptyList();
       completeSequenceId_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
@@ -4287,12 +4255,6 @@ public final class HBaseProtos {
       if (!getRegionSpecifier().isInitialized()) {
         memoizedIsInitialized = 0;
         return false;
-      }
-      for (int i = 0; i < getCoprocessorsCount(); i++) {
-        if (!getCoprocessors(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -4343,11 +4305,8 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00002000) == 0x00002000)) {
         output.writeUInt32(14, totalStaticBloomSizeKB_);
       }
-      for (int i = 0; i < coprocessors_.size(); i++) {
-        output.writeMessage(15, coprocessors_.get(i));
-      }
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
-        output.writeUInt64(16, completeSequenceId_);
+        output.writeUInt64(15, completeSequenceId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -4414,13 +4373,9 @@ public final class HBaseProtos {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(14, totalStaticBloomSizeKB_);
       }
-      for (int i = 0; i < coprocessors_.size(); i++) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(15, coprocessors_.get(i));
-      }
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(16, completeSequenceId_);
+          .computeUInt64Size(15, completeSequenceId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4515,8 +4470,6 @@ public final class HBaseProtos {
         result = result && (getTotalStaticBloomSizeKB()
             == other.getTotalStaticBloomSizeKB());
       }
-      result = result && getCoprocessorsList()
-          .equals(other.getCoprocessorsList());
       result = result && (hasCompleteSequenceId() == other.hasCompleteSequenceId());
       if (hasCompleteSequenceId()) {
         result = result && (getCompleteSequenceId()
@@ -4586,10 +4539,6 @@ public final class HBaseProtos {
       if (hasTotalStaticBloomSizeKB()) {
         hash = (37 * hash) + TOTALSTATICBLOOMSIZEKB_FIELD_NUMBER;
         hash = (53 * hash) + getTotalStaticBloomSizeKB();
-      }
-      if (getCoprocessorsCount() > 0) {
-        hash = (37 * hash) + COPROCESSORS_FIELD_NUMBER;
-        hash = (53 * hash) + getCoprocessorsList().hashCode();
       }
       if (hasCompleteSequenceId()) {
         hash = (37 * hash) + COMPLETESEQUENCEID_FIELD_NUMBER;
@@ -4704,7 +4653,6 @@ public final class HBaseProtos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getRegionSpecifierFieldBuilder();
-          getCoprocessorsFieldBuilder();
         }
       }
       private static Builder create() {
@@ -4745,14 +4693,8 @@ public final class HBaseProtos {
         bitField0_ = (bitField0_ & ~0x00001000);
         totalStaticBloomSizeKB_ = 0;
         bitField0_ = (bitField0_ & ~0x00002000);
-        if (coprocessorsBuilder_ == null) {
-          coprocessors_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00004000);
-        } else {
-          coprocessorsBuilder_.clear();
-        }
         completeSequenceId_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00008000);
+        bitField0_ = (bitField0_ & ~0x00004000);
         return this;
       }
       
@@ -4851,16 +4793,7 @@ public final class HBaseProtos {
           to_bitField0_ |= 0x00002000;
         }
         result.totalStaticBloomSizeKB_ = totalStaticBloomSizeKB_;
-        if (coprocessorsBuilder_ == null) {
-          if (((bitField0_ & 0x00004000) == 0x00004000)) {
-            coprocessors_ = java.util.Collections.unmodifiableList(coprocessors_);
-            bitField0_ = (bitField0_ & ~0x00004000);
-          }
-          result.coprocessors_ = coprocessors_;
-        } else {
-          result.coprocessors_ = coprocessorsBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00008000) == 0x00008000)) {
+        if (((from_bitField0_ & 0x00004000) == 0x00004000)) {
           to_bitField0_ |= 0x00004000;
         }
         result.completeSequenceId_ = completeSequenceId_;
@@ -4922,32 +4855,6 @@ public final class HBaseProtos {
         if (other.hasTotalStaticBloomSizeKB()) {
           setTotalStaticBloomSizeKB(other.getTotalStaticBloomSizeKB());
         }
-        if (coprocessorsBuilder_ == null) {
-          if (!other.coprocessors_.isEmpty()) {
-            if (coprocessors_.isEmpty()) {
-              coprocessors_ = other.coprocessors_;
-              bitField0_ = (bitField0_ & ~0x00004000);
-            } else {
-              ensureCoprocessorsIsMutable();
-              coprocessors_.addAll(other.coprocessors_);
-            }
-            onChanged();
-          }
-        } else {
-          if (!other.coprocessors_.isEmpty()) {
-            if (coprocessorsBuilder_.isEmpty()) {
-              coprocessorsBuilder_.dispose();
-              coprocessorsBuilder_ = null;
-              coprocessors_ = other.coprocessors_;
-              bitField0_ = (bitField0_ & ~0x00004000);
-              coprocessorsBuilder_ = 
-                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getCoprocessorsFieldBuilder() : null;
-            } else {
-              coprocessorsBuilder_.addAllMessages(other.coprocessors_);
-            }
-          }
-        }
         if (other.hasCompleteSequenceId()) {
           setCompleteSequenceId(other.getCompleteSequenceId());
         }
@@ -4963,12 +4870,6 @@ public final class HBaseProtos {
         if (!getRegionSpecifier().isInitialized()) {
           
           return false;
-        }
-        for (int i = 0; i < getCoprocessorsCount(); i++) {
-          if (!getCoprocessors(i).isInitialized()) {
-            
-            return false;
-          }
         }
         return true;
       }
@@ -5070,14 +4971,8 @@ public final class HBaseProtos {
               totalStaticBloomSizeKB_ = input.readUInt32();
               break;
             }
-            case 122: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addCoprocessors(subBuilder.buildPartial());
-              break;
-            }
-            case 128: {
-              bitField0_ |= 0x00008000;
+            case 120: {
+              bitField0_ |= 0x00004000;
               completeSequenceId_ = input.readUInt64();
               break;
             }
@@ -5450,208 +5345,22 @@ public final class HBaseProtos {
         return this;
       }
       
-      // repeated .Coprocessor coprocessors = 15;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> coprocessors_ =
-        java.util.Collections.emptyList();
-      private void ensureCoprocessorsIsMutable() {
-        if (!((bitField0_ & 0x00004000) == 0x00004000)) {
-          coprocessors_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor>(coprocessors_);
-          bitField0_ |= 0x00004000;
-         }
-      }
-      
-      private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> coprocessorsBuilder_;
-      
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> getCoprocessorsList() {
-        if (coprocessorsBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(coprocessors_);
-        } else {
-          return coprocessorsBuilder_.getMessageList();
-        }
-      }
-      public int getCoprocessorsCount() {
-        if (coprocessorsBuilder_ == null) {
-          return coprocessors_.size();
-        } else {
-          return coprocessorsBuilder_.getCount();
-        }
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getCoprocessors(int index) {
-        if (coprocessorsBuilder_ == null) {
-          return coprocessors_.get(index);
-        } else {
-          return coprocessorsBuilder_.getMessage(index);
-        }
-      }
-      public Builder setCoprocessors(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor value) {
-        if (coprocessorsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureCoprocessorsIsMutable();
-          coprocessors_.set(index, value);
-          onChanged();
-        } else {
-          coprocessorsBuilder_.setMessage(index, value);
-        }
-        return this;
-      }
-      public Builder setCoprocessors(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder builderForValue) {
-        if (coprocessorsBuilder_ == null) {
-          ensureCoprocessorsIsMutable();
-          coprocessors_.set(index, builderForValue.build());
-          onChanged();
-        } else {
-          coprocessorsBuilder_.setMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addCoprocessors(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor value) {
-        if (coprocessorsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureCoprocessorsIsMutable();
-          coprocessors_.add(value);
-          onChanged();
-        } else {
-          coprocessorsBuilder_.addMessage(value);
-        }
-        return this;
-      }
-      public Builder addCoprocessors(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor value) {
-        if (coprocessorsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureCoprocessorsIsMutable();
-          coprocessors_.add(index, value);
-          onChanged();
-        } else {
-          coprocessorsBuilder_.addMessage(index, value);
-        }
-        return this;
-      }
-      public Builder addCoprocessors(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder builderForValue) {
-        if (coprocessorsBuilder_ == null) {
-          ensureCoprocessorsIsMutable();
-          coprocessors_.add(builderForValue.build());
-          onChanged();
-        } else {
-          coprocessorsBuilder_.addMessage(builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addCoprocessors(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder builderForValue) {
-        if (coprocessorsBuilder_ == null) {
-          ensureCoprocessorsIsMutable();
-          coprocessors_.add(index, builderForValue.build());
-          onChanged();
-        } else {
-          coprocessorsBuilder_.addMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addAllCoprocessors(
-          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> values) {
-        if (coprocessorsBuilder_ == null) {
-          ensureCoprocessorsIsMutable();
-          super.addAll(values, coprocessors_);
-          onChanged();
-        } else {
-          coprocessorsBuilder_.addAllMessages(values);
-        }
-        return this;
-      }
-      public Builder clearCoprocessors() {
-        if (coprocessorsBuilder_ == null) {
-          coprocessors_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00004000);
-          onChanged();
-        } else {
-          coprocessorsBuilder_.clear();
-        }
-        return this;
-      }
-      public Builder removeCoprocessors(int index) {
-        if (coprocessorsBuilder_ == null) {
-          ensureCoprocessorsIsMutable();
-          coprocessors_.remove(index);
-          onChanged();
-        } else {
-          coprocessorsBuilder_.remove(index);
-        }
-        return this;
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder getCoprocessorsBuilder(
-          int index) {
-        return getCoprocessorsFieldBuilder().getBuilder(index);
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getCoprocessorsOrBuilder(
-          int index) {
-        if (coprocessorsBuilder_ == null) {
-          return coprocessors_.get(index);  } else {
-          return coprocessorsBuilder_.getMessageOrBuilder(index);
-        }
-      }
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
-           getCoprocessorsOrBuilderList() {
-        if (coprocessorsBuilder_ != null) {
-          return coprocessorsBuilder_.getMessageOrBuilderList();
-        } else {
-          return java.util.Collections.unmodifiableList(coprocessors_);
-        }
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder addCoprocessorsBuilder() {
-        return getCoprocessorsFieldBuilder().addBuilder(
-            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.getDefaultInstance());
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder addCoprocessorsBuilder(
-          int index) {
-        return getCoprocessorsFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.getDefaultInstance());
-      }
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder> 
-           getCoprocessorsBuilderList() {
-        return getCoprocessorsFieldBuilder().getBuilderList();
-      }
-      private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
-          getCoprocessorsFieldBuilder() {
-        if (coprocessorsBuilder_ == null) {
-          coprocessorsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder>(
-                  coprocessors_,
-                  ((bitField0_ & 0x00004000) == 0x00004000),
-                  getParentForChildren(),
-                  isClean());
-          coprocessors_ = null;
-        }
-        return coprocessorsBuilder_;
-      }
-      
-      // optional uint64 completeSequenceId = 16;
+      // optional uint64 completeSequenceId = 15;
       private long completeSequenceId_ ;
       public boolean hasCompleteSequenceId() {
-        return ((bitField0_ & 0x00008000) == 0x00008000);
+        return ((bitField0_ & 0x00004000) == 0x00004000);
       }
       public long getCompleteSequenceId() {
         return completeSequenceId_;
       }
       public Builder setCompleteSequenceId(long value) {
-        bitField0_ |= 0x00008000;
+        bitField0_ |= 0x00004000;
         completeSequenceId_ = value;
         onChanged();
         return this;
       }
       public Builder clearCompleteSequenceId() {
-        bitField0_ = (bitField0_ & ~0x00008000);
+        bitField0_ = (bitField0_ & ~0x00004000);
         completeSequenceId_ = 0L;
         onChanged();
         return this;
@@ -11223,7 +10932,7 @@ public final class HBaseProtos {
       "\0222\n\004type\030\001 \002(\0162$.RegionSpecifier.RegionS" +
       "pecifierType\022\r\n\005value\030\002 \002(\014\"?\n\023RegionSpe" +
       "cifierType\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCODED_R" +
-      "EGION_NAME\020\002\"\324\003\n\nRegionLoad\022)\n\017regionSpe" +
+      "EGION_NAME\020\002\"\260\003\n\nRegionLoad\022)\n\017regionSpe" +
       "cifier\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006stores" +
       "\030\002 \001(\r\022\022\n\nstorefiles\030\003 \001(\r\022\037\n\027storeUncom" +
       "pressedSizeMB\030\004 \001(\r\022\027\n\017storefileSizeMB\030\005" +
@@ -11233,33 +10942,32 @@ public final class HBaseProtos {
       "alCompactingKVs\030\n \001(\004\022\033\n\023currentCompacte" +
       "dKVs\030\013 \001(\004\022\027\n\017rootIndexSizeKB\030\014 \001(\r\022\036\n\026t" +
       "otalStaticIndexSizeKB\030\r \001(\r\022\036\n\026totalStat" +
-      "icBloomSizeKB\030\016 \001(\r\022\"\n\014coprocessors\030\017 \003(" +
-      "\0132\014.Coprocessor\022\032\n\022completeSequenceId\030\020 " +
-      "\001(\004\"\372\001\n\nServerLoad\022\030\n\020numberOfRequests\030\001" +
-      " \001(\r\022\035\n\025totalNumberOfRequests\030\002 \001(\r\022\022\n\nu" +
-      "sedHeapMB\030\003 \001(\r\022\021\n\tmaxHeapMB\030\004 \001(\r\022 \n\013re" +
-      "gionLoads\030\005 \003(\0132\013.RegionLoad\022\"\n\014coproces",
-      "sors\030\006 \003(\0132\014.Coprocessor\022\027\n\017reportStartT" +
-      "ime\030\007 \001(\004\022\025\n\rreportEndTime\030\010 \001(\004\022\026\n\016info" +
-      "ServerPort\030\t \001(\r\"%\n\tTimeRange\022\014\n\004from\030\001 " +
-      "\001(\004\022\n\n\002to\030\002 \001(\004\"0\n\006Filter\022\014\n\004name\030\001 \002(\t\022" +
-      "\030\n\020serializedFilter\030\002 \001(\014\"w\n\010KeyValue\022\013\n" +
-      "\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tqualifier\030" +
-      "\003 \002(\014\022\021\n\ttimestamp\030\004 \001(\004\022\031\n\007keyType\030\005 \001(" +
-      "\0162\010.KeyType\022\r\n\005value\030\006 \001(\014\"?\n\nServerName" +
-      "\022\020\n\010hostName\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\021\n\tstar" +
-      "tCode\030\003 \001(\004\"\033\n\013Coprocessor\022\014\n\004name\030\001 \002(\t",
-      "\"-\n\016NameStringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005valu" +
-      "e\030\002 \002(\t\",\n\rNameBytesPair\022\014\n\004name\030\001 \002(\t\022\r" +
-      "\n\005value\030\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005first" +
-      "\030\001 \002(\014\022\016\n\006second\030\002 \002(\014*r\n\013CompareType\022\010\n" +
-      "\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n" +
-      "\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GR" +
-      "EATER\020\005\022\t\n\005NO_OP\020\006*_\n\007KeyType\022\013\n\007MINIMUM" +
-      "\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN" +
-      "\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B>\n*o" +
-      "rg.apache.hadoop.hbase.protobuf.generate",
-      "dB\013HBaseProtosH\001\240\001\001"
+      "icBloomSizeKB\030\016 \001(\r\022\032\n\022completeSequenceI" +
+      "d\030\017 \001(\004\"\372\001\n\nServerLoad\022\030\n\020numberOfReques" +
+      "ts\030\001 \001(\r\022\035\n\025totalNumberOfRequests\030\002 \001(\r\022" +
+      "\022\n\nusedHeapMB\030\003 \001(\r\022\021\n\tmaxHeapMB\030\004 \001(\r\022 " +
+      "\n\013regionLoads\030\005 \003(\0132\013.RegionLoad\022\"\n\014copr" +
+      "ocessors\030\006 \003(\0132\014.Coprocessor\022\027\n\017reportSt",
+      "artTime\030\007 \001(\004\022\025\n\rreportEndTime\030\010 \001(\004\022\026\n\016" +
+      "infoServerPort\030\t \001(\r\"%\n\tTimeRange\022\014\n\004fro" +
+      "m\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"0\n\006Filter\022\014\n\004name\030\001 " +
+      "\002(\t\022\030\n\020serializedFilter\030\002 \001(\014\"w\n\010KeyValu" +
+      "e\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tqualif" +
+      "ier\030\003 \002(\014\022\021\n\ttimestamp\030\004 \001(\004\022\031\n\007keyType\030" +
+      "\005 \001(\0162\010.KeyType\022\r\n\005value\030\006 \001(\014\"?\n\nServer" +
+      "Name\022\020\n\010hostName\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\021\n\t" +
+      "startCode\030\003 \001(\004\"\033\n\013Coprocessor\022\014\n\004name\030\001" +
+      " \002(\t\"-\n\016NameStringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005",
+      "value\030\002 \002(\t\",\n\rNameBytesPair\022\014\n\004name\030\001 \002" +
+      "(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005f" +
+      "irst\030\001 \002(\014\022\016\n\006second\030\002 \002(\014*r\n\013CompareTyp" +
+      "e\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020" +
+      "\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013" +
+      "\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*_\n\007KeyType\022\013\n\007MIN" +
+      "IMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELETE_CO" +
+      "LUMN\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B" +
+      ">\n*org.apache.hadoop.hbase.protobuf.gene" +
+      "ratedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11319,7 +11027,7 @@ public final class HBaseProtos {
           internal_static_RegionLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionLoad_descriptor,
-              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "Coprocessors", "CompleteSequenceId", },
+              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", },
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad.class,
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad.Builder.class);
           internal_static_ServerLoad_descriptor =

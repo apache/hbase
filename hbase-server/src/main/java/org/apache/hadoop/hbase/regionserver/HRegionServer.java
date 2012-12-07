@@ -1293,11 +1293,6 @@ public class  HRegionServer implements ClientProtocol,
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)
       .setCompleteSequenceId(r.completeSequenceId);
-    Set<String> coprocessors = r.getCoprocessorHost().getCoprocessors();
-    for (String coprocessor : coprocessors) {
-      regionLoad.addCoprocessors(
-        Coprocessor.newBuilder().setName(coprocessor).build());
-    }
 
     return regionLoad.build();
   }

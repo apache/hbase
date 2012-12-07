@@ -229,28 +229,14 @@ public class ServerLoad {
    * @return string array of loaded RegionServer-level and
    *         Region-level coprocessors
    */
-  public String[] getAllCoprocessors() {
+  public String[] getRsCoprocessors() {
     // Need a set to remove duplicates, but since generated Coprocessor class
     // is not Comparable, make it a Set<String> instead of Set<Coprocessor>
     TreeSet<String> coprocessSet = new TreeSet<String>();
     for (Coprocessor coprocessor : obtainServerLoadPB().getCoprocessorsList()) {
       coprocessSet.add(coprocessor.getName());
     }
-
-    for (HBaseProtos.RegionLoad rl : obtainServerLoadPB().getRegionLoadsList()) {
-      for (Coprocessor coprocessor : rl.getCoprocessorsList()) {
-        coprocessSet.add(coprocessor.getName());
-      }
-    }
-
     return coprocessSet.toArray(new String[0]);
-  }
-
-  /**
-   * @deprecated Use getAllCoprocessors instead
-   */
-  public String[] getCoprocessors() {
-    return getAllCoprocessors();
   }
 
   /**
@@ -307,7 +293,7 @@ public class ServerLoad {
     }
     sb = Strings.appendKeyValue(sb, "compactionProgressPct", compactionProgressPct);
 
-    String[] coprocessorStrings = getAllCoprocessors();
+    String[] coprocessorStrings = getRsCoprocessors();
     if (coprocessorStrings != null) {
       sb = Strings.appendKeyValue(sb, "coprocessors", Arrays.toString(coprocessorStrings));
     }

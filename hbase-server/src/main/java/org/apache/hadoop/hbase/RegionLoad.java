@@ -38,16 +38,6 @@ public class RegionLoad {
     this.regionLoadPB = regionLoadPB;
   }
 
-  // Getters
-  private String[] getCoprocessors() {
-    int numCoprocessors = regionLoadPB.getCoprocessorsCount();
-    String [] ret = new String[numCoprocessors];
-    for (int i = 0; i < numCoprocessors; ++i) {
-      ret[i] = regionLoadPB.getCoprocessors(i).getName();
-    }
-    return ret;
-  }
-
   /**
    * @return the region name
    */
