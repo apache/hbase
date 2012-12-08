@@ -463,7 +463,7 @@
             <testFailureIgnore>false</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
             <argLine>-enableassertions -Xmx1900m
-              -Djava.security.egd=file:/dev/./urandom</argLine>
+              -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
           </configuration>
           <executions>
