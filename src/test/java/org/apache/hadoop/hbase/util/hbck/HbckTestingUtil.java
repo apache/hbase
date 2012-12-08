@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 
 public class HbckTestingUtil {
+  private static ExecutorService exec = new ScheduledThreadPoolExecutor(10);
   public static HBaseFsck doFsck(
       Configuration conf, boolean fix) throws Exception {
     return doFsck(conf, fix, null);
@@ -44,7 +45,7 @@ public class HbckTestingUtil {
       boolean fixMeta, boolean fixHdfsHoles, boolean fixHdfsOverlaps,
       boolean fixHdfsOrphans, boolean fixTableOrphans, boolean fixVersionFile,
       String table) throws Exception {
-    HBaseFsck fsck = new HBaseFsck(conf);
+    HBaseFsck fsck = new HBaseFsck(conf, exec);
     fsck.connect();
     fsck.setDisplayFullReport(); // i.e. -details
     fsck.setTimeLag(0);
@@ -71,7 +72,6 @@ public class HbckTestingUtil {
    */
   public static HBaseFsck doHFileQuarantine(Configuration conf, String table) throws Exception {
     String[] args = {"-sidelineCorruptHFiles", "-ignorePreCheckPermission", table};
-    ExecutorService exec = new ScheduledThreadPoolExecutor(10);
     HBaseFsck hbck = new HBaseFsck(conf, exec);
     hbck.exec(exec, args);
     return hbck;
