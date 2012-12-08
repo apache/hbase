@@ -767,7 +767,7 @@
                  I believe it is a failsafe bug, we may consider using surefire -->
             <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
             <argLine>-enableassertions -Xmx1900m
-              -Djava.security.egd=file:/dev/./urandom</argLine>
+              -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
             <testFailureIgnore>false</testFailureIgnore>
           </configuration>
       </plugin>
