@@ -912,4 +912,14 @@
     <value>600000</value>
     <description>Timeout value for the Catalog Janitor from the master to META.</description>
   </property>
+  <property>
+    <name>hbase.config.read.zookeeper.config</name>
+    <value>false</value>
+    <description>
+        Set to true to allow HBaseConfiguration to read the
+        zoo.cfg file for ZooKeeper properties. Switching this to true
+        is not recommended, since the functionality of reading ZK
+        properties from a zoo.cfg file has been deprecated.
+    </description>
+  </property>
 </configuration>

@@ -723,6 +723,10 @@ public final class HConstants {
   public static final byte [] NO_NEXT_INDEXED_KEY = toBytes("NO_NEXT_INDEXED_KEY");
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
+  public static final String HBASE_CONFIG_READ_ZOOKEEPER_CONFIG =
+      "hbase.config.read.zookeeper.config";
+  public static final boolean DEFAULT_HBASE_CONFIG_READ_ZOOKEEPER_CONFIG =
+      false;
 
   /**
    * QOS attributes: these attributes are used to demarcate RPC call processing

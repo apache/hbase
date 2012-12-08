@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.StringUtils;
 
 /**
- * Utility methods for reading, parsing, and building zookeeper configuration.
+ * Utility methods for reading, and building the ZooKeeper configuration.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -49,25 +49,43 @@ public class ZKConfig {
   private static final int VARIABLE_END_LENGTH = VARIABLE_END.length();
 
   /**
-   * Make a Properties object holding ZooKeeper config equivalent to zoo.cfg.
-   * If there is a zoo.cfg in the classpath, simply read it in. Otherwise parse
-   * the corresponding config options from the HBase XML configs and generate
-   * the appropriate ZooKeeper properties.
+   * Make a Properties object holding ZooKeeper config.
+   * Parses the corresponding config options from the HBase XML configs
+   * and generates the appropriate ZooKeeper properties.
    * @param conf Configuration to read from.
-   * @return Properties holding mappings representing ZooKeeper zoo.cfg file.
+   * @return Properties holding mappings representing ZooKeeper config file.
    */
   public static Properties makeZKProps(Configuration conf) {
-    // First check if there is a zoo.cfg in the CLASSPATH. If so, simply read
-    // it and grab its configuration properties.
-    ClassLoader cl = HQuorumPeer.class.getClassLoader();
-    final InputStream inputStream =
-      cl.getResourceAsStream(HConstants.ZOOKEEPER_CONFIG_NAME);
-    if (inputStream != null) {
-      try {
-        return parseZooCfg(conf, inputStream);
-      } catch (IOException e) {
-        LOG.warn("Cannot read " + HConstants.ZOOKEEPER_CONFIG_NAME +
-                 ", loading from XML files", e);
+    if (conf.getBoolean(HConstants.HBASE_CONFIG_READ_ZOOKEEPER_CONFIG,
+        false)) {
+      LOG.warn(
+          "Parsing ZooKeeper's " + HConstants.ZOOKEEPER_CONFIG_NAME +
+          " file for ZK properties " +
+          "has been deprecated. Please instead place all ZK related HBase " +
+          "configuration under the hbase-site.xml, using prefixes " +
+          "of the form '" + HConstants.ZK_CFG_PROPERTY_PREFIX + "', and " +
+          "set property '" + HConstants.HBASE_CONFIG_READ_ZOOKEEPER_CONFIG +
+          "' to false");
+      // First check if there is a zoo.cfg in the CLASSPATH. If so, simply read
+      // it and grab its configuration properties.
+      ClassLoader cl = HQuorumPeer.class.getClassLoader();
+      final InputStream inputStream =
+        cl.getResourceAsStream(HConstants.ZOOKEEPER_CONFIG_NAME);
+      if (inputStream != null) {
+        try {
+          return parseZooCfg(conf, inputStream);
+        } catch (IOException e) {
+          LOG.warn("Cannot read " + HConstants.ZOOKEEPER_CONFIG_NAME +
+                   ", loading from XML files", e);
+        }
+      }
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Skipped reading ZK properties file '" +
+            HConstants.ZOOKEEPER_CONFIG_NAME +
+            "' since '" + HConstants.HBASE_CONFIG_READ_ZOOKEEPER_CONFIG +
+            "' was not set to true");
       }
     }
 
@@ -117,7 +135,10 @@ public class ZKConfig {
    * @param inputStream InputStream to read from.
    * @return Properties parsed from config stream with variables substituted.
    * @throws IOException if anything goes wrong parsing config
+   * @deprecated in 0.96 onwards. HBase will no longer rely on zoo.cfg
+   * availability.
    */
+  @Deprecated
   public static Properties parseZooCfg(Configuration conf,
       InputStream inputStream) throws IOException {
     Properties properties = new Properties();
@@ -220,8 +241,10 @@ public class ZKConfig {
     }
 
     if (servers.isEmpty()) {
-      LOG.fatal("No server.X lines found in conf/zoo.cfg. HBase must have a " +
-                "ZooKeeper cluster configured for its operation.");
+      LOG.fatal("No servers were found in provided ZooKeeper configuration. " +
+          "HBase must have a ZooKeeper cluster configured for its " +
+          "operation. Ensure that you've configured '" +
+          HConstants.ZOOKEEPER_QUORUM + "' properly.");
       return null;
     }
 
