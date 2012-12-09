@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -27,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -34,7 +36,11 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.BulkAssigner;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -46,6 +52,7 @@ public class EnableTableHandler extends EventHandler {
   private final String tableNameStr;
   private final AssignmentManager assignmentManager;
   private final CatalogTracker ct;
+  private boolean retainAssignment = false;
 
   public EnableTableHandler(Server server, byte [] tableName,
       CatalogTracker catalogTracker, AssignmentManager assignmentManager,
@@ -56,6 +63,7 @@ public class EnableTableHandler extends EventHandler {
     this.tableNameStr = Bytes.toString(tableName);
     this.ct = catalogTracker;
     this.assignmentManager = assignmentManager;
+    this.retainAssignment = skipTableStateCheck;
     // Check if table exists
     if (!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
       throw new TableNotFoundException(Bytes.toString(tableName));
@@ -99,10 +107,12 @@ public class EnableTableHandler extends EventHandler {
       LOG.error("Error trying to enable the table " + this.tableNameStr, e);
     } catch (KeeperException e) {
       LOG.error("Error trying to enable the table " + this.tableNameStr, e);
+    } catch (InterruptedException e) {
+      LOG.error("Error trying to enable the table " + this.tableNameStr, e);
     }
   }
 
-  private void handleEnableTable() throws IOException, KeeperException {
+  private void handleEnableTable() throws IOException, KeeperException, InterruptedException {
     // I could check table is disabling and if so, not enable but require
     // that user first finish disabling but that might be obnoxious.
 
@@ -111,18 +121,18 @@ public class EnableTableHandler extends EventHandler {
     boolean done = false;
     // Get the regions of this table. We're done when all listed
     // tables are onlined.
-    List<HRegionInfo> regionsInMeta;
-    regionsInMeta = MetaReader.getTableRegions(this.ct, tableName, true);
-    int countOfRegionsInTable = regionsInMeta.size();
-    List<HRegionInfo> regions = regionsToAssign(regionsInMeta);
+    List<Pair<HRegionInfo, ServerName>> tableRegionsAndLocations = MetaReader
+        .getTableRegionsAndLocations(this.ct, tableName, true);
+    int countOfRegionsInTable = tableRegionsAndLocations.size();
+    List<HRegionInfo> regions = regionsToAssignWithServerName(tableRegionsAndLocations);
     int regionsCount = regions.size();
     if (regionsCount == 0) {
       done = true;
     }
     LOG.info("Table has " + countOfRegionsInTable + " regions of which " +
       regionsCount + " are offline.");
-    BulkEnabler bd = new BulkEnabler(this.server, regions,
-      countOfRegionsInTable);
+    BulkEnabler bd = new BulkEnabler(this.server, regions, countOfRegionsInTable,
+        this.retainAssignment);
     try {
       if (bd.bulkAssign()) {
         done = true;
@@ -140,17 +150,34 @@ public class EnableTableHandler extends EventHandler {
 
   /**
    * @param regionsInMeta This datastructure is edited by this method.
-   * @return The <code>regionsInMeta</code> list minus the regions that have
-   * been onlined; i.e. List of regions that need onlining.
+   * @return List of regions neither in transition nor assigned.
    * @throws IOException
    */
-  private List<HRegionInfo> regionsToAssign(
-    final List<HRegionInfo> regionsInMeta)
-  throws IOException {
-    final List<HRegionInfo> onlineRegions =
-      this.assignmentManager.getRegionsOfTable(tableName);
-    regionsInMeta.removeAll(onlineRegions);
-    return regionsInMeta;
+  private List<HRegionInfo> regionsToAssignWithServerName(
+      final List<Pair<HRegionInfo, ServerName>> regionsInMeta) throws IOException {
+    ServerManager serverManager = ((HMaster) this.server).getServerManager();
+    List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> enablingTableRegions = this.assignmentManager
+        .getEnablingTableRegions(this.tableNameStr);
+    final List<HRegionInfo> onlineRegions = this.assignmentManager.getRegionsOfTable(tableName);
+    for (Pair<HRegionInfo, ServerName> regionLocation : regionsInMeta) {
+      HRegionInfo hri = regionLocation.getFirst();
+      ServerName sn = regionLocation.getSecond();
+      if (this.retainAssignment) {
+        // Region may be available in enablingTableRegions during master startup only.
+        if (enablingTableRegions != null && enablingTableRegions.contains(hri)) {
+          regions.add(hri);
+          if (sn != null && serverManager.isServerOnline(sn)) {
+            this.assignmentManager.addPlan(hri.getEncodedName(), new RegionPlan(hri, null, sn));
+          }
+        }
+      } else if (onlineRegions.contains(hri)) {
+        continue;
+      } else {
+        regions.add(hri);
+      }
+    }
+    return regions;
   }
 
   /**
@@ -160,12 +187,14 @@ public class EnableTableHandler extends EventHandler {
     private final List<HRegionInfo> regions;
     // Count of regions in table at time this assign was launched.
     private final int countOfRegionsInTable;
+    private final boolean retainAssignment;
 
     BulkEnabler(final Server server, final List<HRegionInfo> regions,
-        final int countOfRegionsInTable) {
+        final int countOfRegionsInTable,final boolean retainAssignment) {
       super(server);
       this.regions = regions;
       this.countOfRegionsInTable = countOfRegionsInTable;
+      this.retainAssignment = retainAssignment;
     }
 
     @Override
@@ -173,7 +202,7 @@ public class EnableTableHandler extends EventHandler {
       boolean roundRobinAssignment = this.server.getConfiguration().getBoolean(
           "hbase.master.enabletable.roundrobin", false);
 
-      if (!roundRobinAssignment) {
+      if (retainAssignment || !roundRobinAssignment) {
         for (HRegionInfo region : regions) {
           if (assignmentManager.isRegionInTransition(region) != null) {
             continue;
@@ -181,7 +210,11 @@ public class EnableTableHandler extends EventHandler {
           final HRegionInfo hri = region;
           pool.execute(new Runnable() {
             public void run() {
-              assignmentManager.assign(hri, true);
+              if (retainAssignment) {
+                assignmentManager.assign(hri, true, false, false);
+              } else {
+                assignmentManager.assign(hri, true);
+              }
             }
           });
         }
