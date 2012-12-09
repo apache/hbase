@@ -74,6 +74,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import com.google.protobuf.ServiceException;
 
@@ -91,6 +92,10 @@ public class TestAssignmentManager {
   private static final HRegionInfo REGIONINFO =
     new HRegionInfo(Bytes.toBytes("t"),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
+  private static final HRegionInfo REGIONINFO_2 = new HRegionInfo(Bytes.toBytes("t"),
+      Bytes.toBytes("a"),Bytes.toBytes( "b"));
+  private static int assignmentCount;
+  private static boolean enabling = false;  
 
   // Mocked objects or; get redone for each test.
   private Server server;
@@ -768,14 +773,27 @@ public class TestAssignmentManager {
     // with an encoded name by doing a Get on .META.
     HRegionInterface ri = Mockito.mock(HRegionInterface.class);
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
+    Result[] result = null;
+    if (enabling) {
+      result = new Result[2];
+      result[0] = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+      result[1] = getMetaTableRowResult(REGIONINFO_2, SERVERNAME_A);
+    }
     Result r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     Mockito.when(ri .openScanner((byte[]) Mockito.any(), (Scan) Mockito.any())).
       thenReturn(System.currentTimeMillis());
-    // Return good result 'r' first and then return null to indicate end of scan
-    Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).thenReturn(new Result[] { r });
-    // If a get, return the above result too for REGIONINFO
-    Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).
-      thenReturn(r);
+   if (enabling) {
+      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).thenReturn(result, result, result,
+          (Result[]) null);
+      // If a get, return the above result too for REGIONINFO_2
+      Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).thenReturn(
+          getMetaTableRowResult(REGIONINFO_2, SERVERNAME_A));
+    } else {
+      // Return good result 'r' first and then return null to indicate end of scan
+      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).thenReturn(new Result[] { r });
+      // If a get, return the above result too for REGIONINFO
+      Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).thenReturn(r);
+    }
     // Get a connection w/ mocked up common methods.
     HConnection connection = HConnectionTestingUtility.
       getMockedConnectionAndDecorate(HTU.getConfiguration(), ri, SERVERNAME_B,
@@ -892,6 +910,53 @@ public class TestAssignmentManager {
   }
 
   /**
+   * Test verifies whether all the enabling table regions assigned only once during master startup.
+   * 
+   * @throws KeeperException
+   * @throws IOException
+   * @throws Exception
+   */
+  @Test
+  public void testMasterRestartWhenTableInEnabling() throws KeeperException, IOException, Exception {
+    enabling = true;
+    this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        DefaultLoadBalancer.class, LoadBalancer.class);
+    Map<ServerName, HServerLoad> serverAndLoad = new HashMap<ServerName, HServerLoad>();
+    serverAndLoad.put(SERVERNAME_A, null);
+    Mockito.when(this.serverManager.getOnlineServers()).thenReturn(serverAndLoad);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(false);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
+    HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
+    Server server = new HMaster(HTU.getConfiguration());
+    Whitebox.setInternalState(server, "serverManager", this.serverManager);
+    assignmentCount = 0;
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
+        this.serverManager);
+    am.regionOnline(new HRegionInfo("t1".getBytes(), HConstants.EMPTY_START_ROW,
+        HConstants.EMPTY_END_ROW), SERVERNAME_A);
+    am.gate.set(false);
+    try {
+      // set table in enabling state.
+      am.getZKTable().setEnablingTable(REGIONINFO.getTableNameAsString());
+      ZKAssign.createNodeOffline(this.watcher, REGIONINFO_2, SERVERNAME_B);
+
+      am.joinCluster();
+      while (!am.getZKTable().isEnabledTable(REGIONINFO.getTableNameAsString())) {
+        Thread.sleep(10);
+      }
+      assertEquals("Number of assignments should be equal.", 2, assignmentCount);
+      assertTrue("Table should be enabled.",
+          am.getZKTable().isEnabledTable(REGIONINFO.getTableNameAsString()));
+    } finally {
+      enabling = false;
+      am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
+      am.shutdown();
+      ZKAssign.deleteAllNodes(this.watcher);
+      assignmentCount = 0;
+    }
+  }
+
+  /**
    * Mocked load balancer class used in the testcase to make sure that the testcase waits until
    * random assignment is called and the gate variable is set to true.
    */
@@ -960,8 +1025,13 @@ public class TestAssignmentManager {
     @Override
     public void assign(HRegionInfo region, boolean setOfflineInZK, boolean forceNewPlan,
         boolean hijack) {
-      assignInvoked = true;
-      super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+      if (enabling) {
+        assignmentCount++;
+        this.regionOnline(region, SERVERNAME_A);
+      } else {
+        assignInvoked = true;
+        super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+      }
     }
     
     @Override
