@@ -143,6 +143,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MutableClassToInstanceMap;
+import com.google.common.io.Closeables;
 
 import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 
@@ -384,6 +385,7 @@ public class HRegion implements HeapSize { // , Writable{
   private RegionSplitPolicy splitPolicy;
 
   private final MetricsRegion metricsRegion;
+  private final MetricsRegionWrapperImpl metricsRegionWrapper;
 
   /**
    * Should only be used for testing purposes
@@ -407,7 +409,8 @@ public class HRegion implements HeapSize { // , Writable{
     this.coprocessorHost = null;
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
 
-    this.metricsRegion = new MetricsRegion(new MetricsRegionWrapperImpl(this));
+    this.metricsRegionWrapper = new MetricsRegionWrapperImpl(this);
+    this.metricsRegion = new MetricsRegion(this.metricsRegionWrapper);
     this.maxBusyWaitDuration = 2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.busyWaitDuration = DEFAULT_BUSY_WAIT_DURATION;
     this.maxBusyWaitMultiplier = 2;
@@ -506,8 +509,10 @@ public class HRegion implements HeapSize { // , Writable{
       // don't initialize coprocessors if not running within a regionserver
       // TODO: revisit if coprocessors should load in other cases
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
-      this.metricsRegion = new MetricsRegion(new MetricsRegionWrapperImpl(this));
+      this.metricsRegionWrapper = new MetricsRegionWrapperImpl(this);
+      this.metricsRegion = new MetricsRegion(this.metricsRegionWrapper);
     } else {
+      this.metricsRegionWrapper = null;
       this.metricsRegion = null;
     }
     if (LOG.isDebugEnabled()) {
@@ -1061,6 +1066,9 @@ public class HRegion implements HeapSize { // , Writable{
       }
       if ( this.metricsRegion != null) {
         this.metricsRegion.close();
+      }
+      if ( this.metricsRegionWrapper != null) {
+        Closeables.closeQuietly(this.metricsRegionWrapper);
       }
       status.markComplete("Closed");
       LOG.info("Closed " + this);
@@ -4876,7 +4884,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      40 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      41 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (9 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 

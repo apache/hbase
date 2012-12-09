@@ -23,11 +23,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class MetricsRegionWrapperImpl implements MetricsRegionWrapper {
+public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable {
 
   public static final int PERIOD = 45;
 
@@ -38,11 +41,14 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper {
   private long memstoreSize;
   private long storeFileSize;
 
+  private ScheduledFuture<?> regionMetricsUpdateTask;
+
   public MetricsRegionWrapperImpl(HRegion region) {
     this.region = region;
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new HRegionMetricsWrapperRunnable();
-    this.executor.scheduleWithFixedDelay(this.runnable, PERIOD, PERIOD, TimeUnit.SECONDS);
+    this.regionMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, PERIOD,
+      PERIOD, TimeUnit.SECONDS);
   }
 
   @Override
@@ -117,6 +123,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper {
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
     }
+  }
+
+  @Override
+  public void close() throws IOException {
+    regionMetricsUpdateTask.cancel(true);
   }
 
 }
