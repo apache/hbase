@@ -22,11 +22,11 @@ module Shell
     class Count < Command
       def help
         return <<-EOF
-Count the number of rows in a table. This operation may take a LONG
-time (Run '$HADOOP_HOME/bin/hadoop jar hbase.jar rowcount' to run a
-counting mapreduce job). Current count is shown every 1000 rows by
-default. Count interval may be optionally specified. Scan caching
-is enabled on count scans by default. Default cache size is 10 rows.
+Count the number of rows in a table.  Return value is the number of rows.
+This operation may take a LONG time (Run '$HADOOP_HOME/bin/hadoop jar
+hbase.jar rowcount' to run a counting mapreduce job). Current count is shown
+every 1000 rows by default. Count interval may be optionally specified. Scan
+caching is enabled on count scans by default. Default cache size is 10 rows.
 If your rows are small in size, you may want to increase this
 parameter. Examples:
 
@@ -66,6 +66,7 @@ EOF
           formatter.row([ "Current count: #{cnt}, row: #{row}" ])
         end
         formatter.footer(now, count)
+        return count
       end
     end
   end
