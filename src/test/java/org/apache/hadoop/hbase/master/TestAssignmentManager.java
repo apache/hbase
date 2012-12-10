@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
@@ -63,6 +65,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 
 /**
@@ -78,6 +81,10 @@ public class TestAssignmentManager {
   private static final HRegionInfo REGIONINFO =
     new HRegionInfo(Bytes.toBytes("t"),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
+  private static final HRegionInfo REGIONINFO_2 = new HRegionInfo(Bytes.toBytes("t"),
+      Bytes.toBytes("a"),Bytes.toBytes( "b"));
+  private static int assignmentCount;
+  private static boolean enabling = false;  
   private static final Abortable ABORTABLE = new Abortable() {
     boolean aborted = false;
     @Override
@@ -204,6 +211,53 @@ public class TestAssignmentManager {
   }
 
   /**
+   * Test verifies whether all the enabling table regions assigned only once during master startup.
+   * 
+   * @throws KeeperException
+   * @throws IOException
+   * @throws Exception
+   */
+  @Test
+  public void testMasterRestartWhenTableInEnabling() throws KeeperException, IOException, Exception {
+    enabling = true;
+    this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        DefaultLoadBalancer.class, LoadBalancer.class);
+    Map<ServerName, HServerLoad> serverAndLoad = new HashMap<ServerName, HServerLoad>();
+    serverAndLoad.put(SERVERNAME_A, null);
+    Mockito.when(this.serverManager.getOnlineServers()).thenReturn(serverAndLoad);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(false);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
+    HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
+    Server server = new HMaster(HTU.getConfiguration());
+    Whitebox.setInternalState(server, "serverManager", this.serverManager);
+    assignmentCount = 0;
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
+        this.serverManager);
+    am.regionOnline(new HRegionInfo("t1".getBytes(), HConstants.EMPTY_START_ROW,
+        HConstants.EMPTY_END_ROW), SERVERNAME_A);
+    am.gate.set(false);
+    try {
+      // set table in enabling state.
+      am.getZKTable().setEnablingTable(REGIONINFO.getTableNameAsString());
+      ZKAssign.createNodeOffline(this.watcher, REGIONINFO_2, SERVERNAME_B);
+
+      am.joinCluster();
+      while (!am.getZKTable().isEnabledTable(REGIONINFO.getTableNameAsString())) {
+        Thread.sleep(10);
+      }
+      assertEquals("Number of assignments should be equal.", 2, assignmentCount);
+      assertTrue("Table should be enabled.",
+          am.getZKTable().isEnabledTable(REGIONINFO.getTableNameAsString()));
+    } finally {
+      enabling = false;
+      am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
+      am.shutdown();
+      ZKAssign.deleteAllNodes(this.watcher);
+      assignmentCount = 0;
+    }
+  }
+
+  /**
    * @param sn ServerName to use making startcode and server in meta
    * @param hri Region to serialize into HRegionInfo
    * @return A mocked up Result that fakes a Get on a row in the
@@ -267,20 +321,33 @@ public class TestAssignmentManager {
     // rebuild its list of user regions and it will also get the HRI that goes
     // with an encoded name by doing a Get on .META.
     HRegionInterface ri = Mockito.mock(HRegionInterface.class);
+    Result[] result = null;
+    if (enabling) {
+      result = new Result[2];
+      result[0] = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+      result[1] = getMetaTableRowResult(REGIONINFO_2, SERVERNAME_A);
+    }
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
     Result r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
-
     final long scannerid = 123L;
     Mockito.when(ri.openScanner((byte[]) Mockito.any(), (Scan) Mockito.any()))
         .thenReturn(scannerid);
-    // Make it so a verifiable answer comes back when next is called. Return
-    // the verifiable answer and then a null so we stop scanning. Our
-    // verifiable answer is something that looks like a row in META with
-    // a server and startcode that is that of the above defined servername.
-    Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt()))
-        .thenReturn(new Result[] { r }, (Result[]) null)
-        .thenReturn(new Result[] { r }, (Result[]) null)
-        .thenReturn(new Result[] { r }, (Result[]) null);
+    if (enabling) {
+      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt()))
+          .thenReturn(result, (Result[]) null).thenReturn(result, result, (Result[]) null);
+      // If a get, return the above result too for REGIONINFO_2
+      Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).thenReturn(
+          getMetaTableRowResult(REGIONINFO_2, SERVERNAME_A), (Result[]) null);
+    } else {
+      // Make it so a verifiable answer comes back when next is called. Return
+      // the verifiable answer and then a null so we stop scanning. Our
+      // verifiable answer is something that looks like a row in META with
+      // a server and startcode that is that of the above defined servername.
+      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt()))
+          .thenReturn(new Result[] { r }, (Result[]) null)
+          .thenReturn(new Result[] { r }, (Result[]) null)
+          .thenReturn(new Result[] { r }, (Result[]) null);
+    }
 
     // Associate a spied-upon HConnection with UTIL.getConfiguration. Need
     // to shove this in here first so it gets picked up all over; e.g. by
@@ -387,8 +454,13 @@ public class TestAssignmentManager {
     @Override
     public void assign(HRegionInfo region, boolean setOfflineInZK, boolean forceNewPlan,
         boolean hijack) {
-      assignInvoked = true;
-      super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+      if (enabling) {
+        assignmentCount++;
+        this.regionOnline(region, SERVERNAME_A);
+      } else {
+        assignInvoked = true;
+        super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+      }
     }
     
     @Override
