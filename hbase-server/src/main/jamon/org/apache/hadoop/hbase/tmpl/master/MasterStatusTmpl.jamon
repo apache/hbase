@@ -134,6 +134,8 @@ org.apache.hadoop.hbase.HBaseConfiguration;
             <& deadRegionServers &>
         </%if>
 
+        <h2>Backup Masters</h2>
+        <& BackupMasterListTmpl; master = master &>
 
         <h2>Tables</h2>
         <div class="tabbable">
