@@ -313,6 +313,9 @@ public class TestHFileOutputFormat  {
     job.setReducerClass(KeyValueSortReducer.class);
     job.setOutputFormatClass(HFileOutputFormat.class);
     job.setNumReduceTasks(4);
+    job.getConfiguration().setStrings("io.serializations", conf.get("io.serializations"),
+        MutationSerialization.class.getName(), ResultSerialization.class.getName(),
+        KeyValueSerialization.class.getName());
 
     FileOutputFormat.setOutputPath(job, testDir);
     assertTrue(job.waitForCompletion(false));
@@ -451,6 +454,9 @@ public class TestHFileOutputFormat  {
   throws Exception {
     Job job = new Job(conf, "testLocalMRIncrementalLoad");
     job.setWorkingDirectory(util.getDataTestDirOnTestFS("runIncrementalPELoad"));
+    job.getConfiguration().setStrings("io.serializations", conf.get("io.serializations"),
+        MutationSerialization.class.getName(), ResultSerialization.class.getName(),
+        KeyValueSerialization.class.getName());
     setupRandomGeneratorMapper(job);
     HFileOutputFormat.configureIncrementalLoad(job, table);
     FileOutputFormat.setOutputPath(job, outDir);
