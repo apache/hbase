@@ -76,7 +76,7 @@ HBASE_REGIONSERVERS="${HBASE_REGIONSERVERS:-$HBASE_CONF_DIR/regionservers}"
 # List of hbase secondary masters.
 HBASE_BACKUP_MASTERS="${HBASE_BACKUP_MASTERS:-$HBASE_CONF_DIR/backup-masters}"
 # Thrift JMX opts
-if [ -z "$HBASE_THRIFT_JMX_OPTS" ]; then
+if [[ -n "$HBASE_JMX_OPTS" && -z "$HBASE_THRIFT_JMX_OPTS" ]]; then
   HBASE_THRIFT_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=10103"
 fi
 # Thrift opts
@@ -85,7 +85,7 @@ if [ -z "$HBASE_THRIFT_OPTS" ]; then
 fi
 
 # REST JMX opts
-if [ -z "$HBASE_REST_JMX_OPTS" ]; then
+if [[ -n "$HBASE_JMX_OPTS" && -z "$HBASE_REST_JMX_OPTS" ]]; then
   HBASE_REST_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=10105"
 fi
 # REST opts
