@@ -3467,6 +3467,10 @@ public class HRegion implements HeapSize { // , Writable{
       return maxResultSize;
     }
 
+    @Override
+    public long getMvccReadPoint() {
+      return this.readPt;
+    }
     /**
      * Reset both the filter and the old filter.
      */
@@ -3477,7 +3481,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     @Override
-    public synchronized boolean next(List<KeyValue> outResults, int limit)
+    public boolean next(List<KeyValue> outResults, int limit)
         throws IOException {
       return next(outResults, limit, null);
     }
@@ -3497,30 +3501,42 @@ public class HRegion implements HeapSize { // , Writable{
         // This could be a new thread from the last time we called next().
         MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
 
-        results.clear();
-
-        boolean returnResult = nextInternal(limit, metric);
-
-        outResults.addAll(results);
-        resetFilters();
-        if (isFilterDone()) {
-          return false;
-        }
-        return returnResult;
+        return nextRaw(outResults, limit, metric);
       } finally {
         closeRegionOperation();
       }
     }
 
     @Override
-    public synchronized boolean next(List<KeyValue> outResults)
+    public boolean nextRaw(List<KeyValue> outResults)
+        throws IOException {
+      return nextRaw(outResults, batch, null);
+    }
+
+    @Override
+    public boolean nextRaw(List<KeyValue> outResults, int limit,
+        String metric) throws IOException {
+      results.clear();
+
+      boolean returnResult = nextInternal(limit, metric);
+
+      outResults.addAll(results);
+      resetFilters();
+      if (isFilterDone()) {
+        return false;
+      }
+      return returnResult;
+    }
+
+    @Override
+    public boolean next(List<KeyValue> outResults)
         throws IOException {
       // apply the batching limit by default
       return next(outResults, batch, null);
     }
 
     @Override
-    public synchronized boolean next(List<KeyValue> outResults, String metric)
+    public boolean next(List<KeyValue> outResults, String metric)
         throws IOException {
       // apply the batching limit by default
       return next(outResults, batch, metric);
@@ -5274,7 +5290,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws RegionTooBusyException if failed to get the lock in time
    * @throws InterruptedIOException if interrupted while waiting for a lock
    */
-  private void startRegionOperation()
+  public void startRegionOperation()
       throws NotServingRegionException, RegionTooBusyException, InterruptedIOException {
     if (this.closing.get()) {
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
@@ -5292,7 +5308,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Closes the lock. This needs to be called in the finally block corresponding
    * to the try block of #startRegionOperation
    */
-  private void closeRegionOperation() {
+  public void closeRegionOperation() {
     lock.readLock().unlock();
   }
 

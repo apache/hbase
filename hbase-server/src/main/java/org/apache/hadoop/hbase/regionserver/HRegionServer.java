@@ -2912,20 +2912,30 @@ public class  HRegionServer implements ClientProtocol,
                 maxResultSize = maxScannerResultSize;
               }
               List<KeyValue> values = new ArrayList<KeyValue>();
-              for (int i = 0; i < rows
-                  && currentScanResultSize < maxResultSize; i++) {
-                // Collect values to be returned here
-                boolean moreRows = scanner.next(values);
-                if (!values.isEmpty()) {
-                  for (KeyValue kv : values) {
-                    currentScanResultSize += kv.heapSize();
+              MultiVersionConsistencyControl.setThreadReadPoint(scanner.getMvccReadPoint());
+              region.startRegionOperation();
+              try {
+                int i = 0;
+                synchronized(scanner) {
+                  for (; i < rows
+                      && currentScanResultSize < maxResultSize; i++) {
+                    // Collect values to be returned here
+                    boolean moreRows = scanner.nextRaw(values);
+                    if (!values.isEmpty()) {
+                      for (KeyValue kv : values) {
+                        currentScanResultSize += kv.heapSize();
+                      }
+                      results.add(new Result(values));
+                    }
+                    if (!moreRows) {
+                      break;
+                    }
+                    values.clear();
                   }
-                  results.add(new Result(values));
                 }
-                if (!moreRows) {
-                  break;
-                }
-                values.clear();
+                region.readRequestsCount.add(i);
+              } finally {
+                region.closeRegionOperation();
               }
 
               // coprocessor postNext hook
