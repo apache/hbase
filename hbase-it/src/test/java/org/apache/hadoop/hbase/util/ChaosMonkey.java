@@ -142,6 +142,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     protected HBaseCluster cluster;
     protected ClusterStatus initialStatus;
     protected ServerName[] initialServers;
+    protected Random random = new Random();
 
     void init(ActionContext context) throws Exception {
       this.context = context;
@@ -151,7 +152,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       initialServers = regionServers.toArray(new ServerName[regionServers.size()]);
     }
 
-    void perform() throws Exception { };
+    protected void perform() throws Exception { };
 
     // TODO: perhaps these methods should be elsewhere?
     /** Returns current region servers */
@@ -189,6 +190,40 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       LOG.info("Started region server:" + server + ". Reported num of rs:"
           + cluster.getClusterStatus().getServersSize());
     }
+
+    protected void unbalanceRegions(ClusterStatus clusterStatus,
+        List<ServerName> fromServers, List<ServerName> toServers,
+        double fractionOfRegions) throws Exception {
+      List<byte[]> victimRegions = new LinkedList<byte[]>();
+      for (ServerName server : fromServers) {
+        ServerLoad serverLoad = clusterStatus.getLoad(server);
+        // Ugh.
+        List<byte[]> regions = new LinkedList<byte[]>(serverLoad.getRegionsLoad().keySet());
+        int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
+        LOG.debug("Removing " + victimRegionCount + " regions from " + server.getServerName());
+        for (int i = 0; i < victimRegionCount; ++i) {
+          int victimIx = random.nextInt(regions.size());
+          String regionId = HRegionInfo.encodeRegionName(regions.remove(victimIx));
+          victimRegions.add(Bytes.toBytes(regionId));
+        }
+      }
+
+      LOG.info("Moving " + victimRegions.size() + " regions from " + fromServers.size()
+          + " servers to " + toServers.size() + " different servers");
+      HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+      for (byte[] victimRegion : victimRegions) {
+        int targetIx = random.nextInt(toServers.size());
+        admin.move(victimRegion, Bytes.toBytes(toServers.get(targetIx).getServerName()));
+      }
+    }
+
+    protected void forceBalancer() throws Exception {
+      HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+      boolean result = admin.balancer();
+      if (!result) {
+        LOG.error("Balancer didn't succeed");
+      }
+    }
   }
 
   private static class RestartActionBase extends Action {
@@ -221,7 +256,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       super(sleepTime);
     }
     @Override
-    void perform() throws Exception {
+    protected void perform() throws Exception {
       LOG.info("Performing action: Restart active master");
 
       ServerName master = cluster.getClusterStatus().getMaster();
@@ -235,7 +270,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     @Override
-    void perform() throws Exception {
+    protected void perform() throws Exception {
       LOG.info("Performing action: Restart random region server");
       ServerName server = selectRandomItem(getCurrentServers());
 
@@ -248,7 +283,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       super(sleepTime);
     }
     @Override
-    void perform() throws Exception {
+    protected void perform() throws Exception {
       LOG.info("Performing action: Restart region server holding META");
       ServerName server = cluster.getServerHoldingMeta();
       if (server == null) {
@@ -264,7 +299,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       super(sleepTime);
     }
     @Override
-    void perform() throws Exception {
+    protected void perform() throws Exception {
       LOG.info("Performing action: Restart region server holding ROOT");
       ServerName server = cluster.getServerHoldingMeta();
       if (server == null) {
@@ -287,7 +322,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     @Override
-    void perform() throws Exception {
+    protected void perform() throws Exception {
       LOG.info(String.format("Performing action: Batch restarting %d%% of region servers",
           (int)(ratio * 100)));
       List<ServerName> selectedServers = selectRandomItems(getCurrentServers(), ratio);
@@ -329,10 +364,9 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     @Override
-    void perform() throws Exception {
+    protected void perform() throws Exception {
       LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
           (int)(ratio * 100)));
-      Random random = new Random();
       List<ServerName> selectedServers = selectRandomItems(getCurrentServers(), ratio);
 
       Queue<ServerName> serversToBeKilled = new LinkedList<ServerName>(selectedServers);
@@ -365,7 +399,6 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   public static class UnbalanceRegionsAction extends Action {
     private double fractionOfRegions;
     private double fractionOfServers;
-    private Random random = new Random();
 
     /**
      * Unbalances the regions on the cluster by choosing "target" servers, and moving
@@ -379,51 +412,25 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     @Override
-    void perform() throws Exception {
+    protected void perform() throws Exception {
       LOG.info("Unbalancing regions");
       ClusterStatus status = this.cluster.getClusterStatus();
       List<ServerName> victimServers = new LinkedList<ServerName>(status.getServers());
       int targetServerCount = (int)Math.ceil(fractionOfServers * victimServers.size());
-      List<byte[]> targetServers = new ArrayList<byte[]>(targetServerCount);
+      List<ServerName> targetServers = new ArrayList<ServerName>(targetServerCount);
       for (int i = 0; i < targetServerCount; ++i) {
         int victimIx = random.nextInt(victimServers.size());
-        String serverName = victimServers.remove(victimIx).getServerName();
-        targetServers.add(Bytes.toBytes(serverName));
+        targetServers.add(victimServers.remove(victimIx));
       }
-
-      List<byte[]> victimRegions = new LinkedList<byte[]>();
-      for (ServerName server : victimServers) {
-        ServerLoad serverLoad = status.getLoad(server);
-        // Ugh.
-        List<byte[]> regions = new LinkedList<byte[]>(serverLoad.getRegionsLoad().keySet());
-        int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
-        LOG.debug("Removing " + victimRegionCount + " regions from " + server.getServerName());
-        for (int i = 0; i < victimRegionCount; ++i) {
-          int victimIx = random.nextInt(regions.size());
-          String regionId = HRegionInfo.encodeRegionName(regions.remove(victimIx));
-          victimRegions.add(Bytes.toBytes(regionId));
-        }
-      }
-
-      LOG.info("Moving " + victimRegions.size() + " regions from " + victimServers.size()
-          + " servers to " + targetServers.size() + " different servers");
-      HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
-      for (byte[] victimRegion : victimRegions) {
-        int targetIx = random.nextInt(targetServers.size());
-        admin.move(victimRegion, targetServers.get(targetIx));
-      }
+      unbalanceRegions(status, victimServers, targetServers, fractionOfRegions);
     }
   }
 
   public static class ForceBalancerAction extends Action {
     @Override
-    void perform() throws Exception {
+    protected void perform() throws Exception {
       LOG.info("Balancing regions");
-      HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
-      boolean result = admin.balancer();
-      if (!result) {
-        LOG.error("Balancer didn't succeed");
-      }
+      forceBalancer();
     }
   }
 
