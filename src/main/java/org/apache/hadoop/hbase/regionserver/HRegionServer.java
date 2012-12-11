@@ -165,6 +165,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.joda.time.field.MillisDurationField;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -2430,23 +2431,32 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
       }
 
-      for (int i = 0; i < nbRows
-          && currentScanResultSize < maxScannerResultSize; i++) {
-        requestCount.incrementAndGet();
-        // Collect values to be returned here
-        boolean moreRows = s.next(values, SchemaMetrics.METRIC_NEXTSIZE);
-        if (!values.isEmpty()) {
-          for (KeyValue kv : values) {
-            currentScanResultSize += kv.heapSize();
+      MultiVersionConsistencyControl.setThreadReadPoint(s.getMvccReadPoint());
+      region.startRegionOperation();
+      try {
+        int i = 0;
+        synchronized(s) {
+          for (; i < nbRows
+              && currentScanResultSize < maxScannerResultSize; i++) {
+            // Collect values to be returned here
+            boolean moreRows = s.nextRaw(values, SchemaMetrics.METRIC_NEXTSIZE);
+            if (!values.isEmpty()) {
+              for (KeyValue kv : values) {
+                currentScanResultSize += kv.heapSize();
+              }
+              results.add(new Result(values));
+            }
+            if (!moreRows) {
+              break;
+            }
+            values.clear();
           }
-          results.add(new Result(values));
         }
-        if (!moreRows) {
-          break;
-        }
-        values.clear();
+        requestCount.addAndGet(i);
+        region.readRequestsCount.add(i);
+      } finally {
+        region.closeRegionOperation();
       }
-
       // coprocessor postNext hook
       if (region != null && region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postScannerNext(s, results, nbRows, true);
