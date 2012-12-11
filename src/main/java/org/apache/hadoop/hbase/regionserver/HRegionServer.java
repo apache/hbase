@@ -44,6 +44,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1096,8 +1097,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, rootIndexSizeKB,
         totalStaticIndexSizeKB, totalStaticBloomSizeKB,
         (int) r.readRequestsCount.get(), (int) r.writeRequestsCount.get(),
-        totalCompactingKVs, currentCompactedKVs,
-        r.getCoprocessorHost().getCoprocessors());
+        totalCompactingKVs, currentCompactedKVs);
   }
 
   /**
@@ -3776,8 +3776,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // used by org/apache/hbase/tmpl/regionserver/RSStatusTmpl.jamon (HBASE-4070).
   public String[] getCoprocessors() {
-    HServerLoad hsl = buildServerLoad();
-    return hsl == null? null: hsl.getCoprocessors();
+    TreeSet<String> coprocessors = new TreeSet<String>(
+        this.hlog.getCoprocessorHost().getCoprocessors());
+    Collection<HRegion> regions = getOnlineRegionsLocalContext();
+    for (HRegion region: regions) {
+      coprocessors.addAll(region.getCoprocessorHost().getCoprocessors());
+    }
+    return coprocessors.toArray(new String[0]);
   }
 
   /**

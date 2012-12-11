@@ -60,30 +60,14 @@ implements WritableComparable<HServerLoad> {
   private int maxHeapMB = 0;
 
   // Regionserver-level coprocessors, e.g., WALObserver implementations.
-  // Region-level coprocessors, on the other hand, are stored inside RegionLoad
-  // objects.
-  private Set<String> coprocessors =
-      new TreeSet<String>();
+  private Set<String> coprocessors = new TreeSet<String>();
 
   /**
    * HBASE-4070: Improve region server metrics to report loaded coprocessors.
-   *
-   * @return Returns the set of all coprocessors on this
-   * regionserver, where this set is the union of the
-   * regionserver-level coprocessors on one hand, and all of the region-level
-   * coprocessors, on the other.
-   *
-   * We must iterate through all regions loaded on this regionserver to
-   * obtain all of the region-level coprocessors.
+   * @return the set of all the server-wide coprocessors on this regionserver
    */
-  public String[] getCoprocessors() {
-    TreeSet<String> returnValue = new TreeSet<String>(coprocessors);
-    for (Map.Entry<byte[], RegionLoad> rls: getRegionsLoad().entrySet()) {
-      for (String coprocessor: rls.getValue().getCoprocessors()) {
-        returnValue.add(coprocessor);
-      }
-    }
-    return returnValue.toArray(new String[0]);
+  public String[] getRsCoprocessors() {
+    return coprocessors.toArray(new String[0]);
   }
 
   /** per-region load metrics */
@@ -145,10 +129,6 @@ implements WritableComparable<HServerLoad> {
      */
     private int totalStaticBloomSizeKB;
 
-    // Region-level coprocessors.
-    Set<String> coprocessors =
-        new TreeSet<String>();
-
     /**
      * Constructor, for Writable
      */
@@ -168,7 +148,6 @@ implements WritableComparable<HServerLoad> {
      * @param writeRequestsCount
      * @param totalCompactingKVs
      * @param currentCompactedKVs
-     * @param coprocessors
      */
     public RegionLoad(final byte[] name, final int stores,
         final int storefiles, final int storeUncompressedSizeMB,
@@ -177,8 +156,7 @@ implements WritableComparable<HServerLoad> {
         final int rootIndexSizeKB, final int totalStaticIndexSizeKB,
         final int totalStaticBloomSizeKB,
         final long readRequestsCount, final long writeRequestsCount,
-        final long totalCompactingKVs, final long currentCompactedKVs,
-        final Set<String> coprocessors) {
+        final long totalCompactingKVs, final long currentCompactedKVs) {
       this.name = name;
       this.stores = stores;
       this.storefiles = storefiles;
@@ -193,12 +171,6 @@ implements WritableComparable<HServerLoad> {
       this.writeRequestsCount = writeRequestsCount;
       this.totalCompactingKVs = totalCompactingKVs;
       this.currentCompactedKVs = currentCompactedKVs;
-      this.coprocessors = coprocessors;
-    }
-
-    // Getters
-    private String[] getCoprocessors() {
-      return coprocessors.toArray(new String[0]);
     }
 
     /**
@@ -400,9 +372,9 @@ implements WritableComparable<HServerLoad> {
       this.totalCompactingKVs = in.readLong();
       this.currentCompactedKVs = in.readLong();
       int coprocessorsSize = in.readInt();
-      coprocessors = new TreeSet<String>();
+      // Backward compatibility - there may be coprocessors in the region load, ignore them.
       for (int i = 0; i < coprocessorsSize; i++) {
-        coprocessors.add(in.readUTF());
+        in.readUTF();
       }
     }
     
@@ -431,9 +403,9 @@ implements WritableComparable<HServerLoad> {
       this.totalCompactingKVs = WritableUtils.readVLong(in);
       this.currentCompactedKVs = WritableUtils.readVLong(in);
       int coprocessorsSize = WritableUtils.readVInt(in);
-      coprocessors = new TreeSet<String>();
+      // Backward compatibility - there may be coprocessors in the region load, ignore them.
       for (int i = 0; i < coprocessorsSize; i++) {
-        coprocessors.add(in.readUTF());
+        in.readUTF();
       }
     }
 
@@ -454,10 +426,9 @@ implements WritableComparable<HServerLoad> {
       WritableUtils.writeVInt(out, totalStaticBloomSizeKB);
       WritableUtils.writeVLong(out, totalCompactingKVs);
       WritableUtils.writeVLong(out, currentCompactedKVs);
-      WritableUtils.writeVInt(out, coprocessors.size());
-      for (String coprocessor: coprocessors) {
-        out.writeUTF(coprocessor);
-      }
+      // Backward compatibility - write out 0 as coprocessor count,
+      // we don't report region-level coprocessors anymore.
+      WritableUtils.writeVInt(out, 0);
     }
 
     /**
@@ -503,11 +474,6 @@ implements WritableComparable<HServerLoad> {
       }
       sb = Strings.appendKeyValue(sb, "compactionProgressPct",
           compactionProgressPct);
-      String coprocessors = Arrays.toString(getCoprocessors());
-      if (coprocessors != null) {
-        sb = Strings.appendKeyValue(sb, "coprocessors",
-            Arrays.toString(getCoprocessors()));
-      }
       return sb.toString();
     }
   }
