@@ -87,4 +87,29 @@ public interface BaseSource {
    */
   void updateQuantile(String name, long value);
 
+  /**
+   * Get the metrics context.  For hadoop metrics2 system this is usually an all lowercased string.
+   * eg. regionserver, master, thriftserver
+   *
+   * @return The string context used to register this source to hadoop's metrics2 system.
+   */
+  String getMetricsContext();
+
+  /**
+   * Get the description of what this source exposes.
+   */
+  String getMetricsDescription();
+
+  /**
+   * Get the name of the context in JMX that this source will be exposed through.
+   * This is in ObjectName format. With the default context being Hadoop -> HBase
+   */
+  String getMetricsJmxContext();
+
+  /**
+   * Get the name of the metrics that are being exported by this source.
+   * Eg. IPC, GC, WAL
+   */
+  String getMetricsName();
+
 }

@@ -141,7 +141,7 @@ public class TestRegionServerMetrics {
           .getAggregateSource();
       String prefix = "table."+tableNameString + ".region." + i.getEncodedName();
       metricsHelper.assertCounter(prefix + ".getCount", 10, agg);
-      metricsHelper.assertCounter(prefix + ".multiPutCount", 30, agg);
+      metricsHelper.assertCounter(prefix + ".mutateCount", 30, agg);
     }
 
 

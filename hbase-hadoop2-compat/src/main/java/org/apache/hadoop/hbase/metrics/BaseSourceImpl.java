@@ -148,14 +148,29 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
     JmxCacheBuster.clearJmxCache();
   }
 
-  public DynamicMetricsRegistry getMetricsRegistry() {
-    return metricsRegistry;
-  }
-
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     metricsRegistry.snapshot(metricsCollector.addRecord(metricsRegistry.info()), all);
   }
 
+  public DynamicMetricsRegistry getMetricsRegistry() {
+    return metricsRegistry;
+  }
+
+  public String getMetricsContext() {
+    return metricsContext;
+  }
+
+  public String getMetricsDescription() {
+    return metricsDescription;
+  }
+
+  public String getMetricsJmxContext() {
+    return metricsJmxContext;
+  }
+
+  public String getMetricsName() {
+    return metricsName;
+  }
 
 }

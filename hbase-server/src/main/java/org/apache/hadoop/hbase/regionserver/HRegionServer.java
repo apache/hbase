@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -108,7 +107,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
-import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
+import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -216,7 +215,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.cliffc.high_scale_lib.Counter;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.base.Function;
 import com.google.protobuf.ByteString;
@@ -1620,14 +1618,6 @@ public class  HRegionServer implements ClientProtocol,
     LOG.info("Done with post open deploy task for region=" +
       r.getRegionNameAsString() + ", daughter=" + daughter);
 
-  }
-
-  /**
-   * Return a reference to the metrics instance used for counting RPC calls.
-   * @return Metrics instance.
-   */
-  public HBaseRpcMetrics getRpcMetrics() {
-    return rpcServer.getRpcMetrics();
   }
 
   @Override

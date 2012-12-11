@@ -65,7 +65,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     String suffix = "Count";
 
-    regionPutKey = regionNamePrefix + MetricsRegionServerSource.PUT_KEY + suffix;
+    regionPutKey = regionNamePrefix + MetricsRegionServerSource.MUTATE_KEY + suffix;
     regionPut = registry.getLongCounter(regionPutKey, 0l);
 
     regionDeleteKey = regionNamePrefix + MetricsRegionServerSource.DELETE_KEY + suffix;

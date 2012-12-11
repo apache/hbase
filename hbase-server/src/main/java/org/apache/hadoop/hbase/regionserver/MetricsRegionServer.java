@@ -54,22 +54,37 @@ public class MetricsRegionServer {
   }
 
   public void updatePut(long t){
+    if (t > 1000) {
+      serverSource.incrSlowPut();
+    }
     serverSource.updatePut(t);
   }
 
   public void updateDelete(long t){
+    if (t > 1000) {
+      serverSource.incrSlowDelete();
+    }
     serverSource.updateDelete(t);
   }
 
   public void updateGet(long t){
+    if (t > 1000) {
+      serverSource.incrSlowGet();
+    }
     serverSource.updateGet(t);
   }
 
   public void updateIncrement(long t){
+    if (t > 1000) {
+      serverSource.incrSlowIncrement();
+    }
     serverSource.updateIncrement(t);
   }
 
   public void updateAppend(long t){
+    if (t > 1000) {
+      serverSource.incrSlowAppend();
+    }
     serverSource.updateAppend(t);
   }
 }

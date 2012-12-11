@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsBuilder;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 
 /**
  * Hadoop1 implementation of MetricsRegionServerSource.
@@ -37,6 +38,11 @@ public class MetricsRegionServerSourceImpl
   private final MetricHistogram getHisto;
   private final MetricHistogram incrementHisto;
   private final MetricHistogram appendHisto;
+  private final MetricMutableCounterLong slowPut;
+  private final MetricMutableCounterLong slowDelete;
+  private final MetricMutableCounterLong slowGet;
+  private final MetricMutableCounterLong slowIncrement;
+  private final MetricMutableCounterLong slowAppend;
 
   public MetricsRegionServerSourceImpl(MetricsRegionServerWrapper rsWrap) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, rsWrap);
@@ -50,16 +56,20 @@ public class MetricsRegionServerSourceImpl
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
     this.rsWrap = rsWrap;
 
-    putHisto = getMetricsRegistry().getHistogram(PUT_KEY);
-    deleteHisto = getMetricsRegistry().getHistogram(DELETE_KEY);
-    getHisto = getMetricsRegistry().getHistogram(GET_KEY);
-    incrementHisto = getMetricsRegistry().getHistogram(INCREMENT_KEY);
-    appendHisto = getMetricsRegistry().getHistogram(APPEND_KEY);
-  }
+    putHisto = getMetricsRegistry().newHistogram(MUTATE_KEY);
+    slowPut = getMetricsRegistry().newCounter(SLOW_MUTATE_KEY, SLOW_MUTATE_DESC, 0l);
 
-  @Override
-  public void init() {
-    super.init();
+    deleteHisto = getMetricsRegistry().newHistogram(DELETE_KEY);
+    slowDelete = getMetricsRegistry().newCounter(SLOW_DELETE_KEY, SLOW_DELETE_DESC, 0l);
+
+    getHisto = getMetricsRegistry().newHistogram(GET_KEY);
+    slowGet = getMetricsRegistry().newCounter(SLOW_GET_KEY, SLOW_GET_DESC, 0l);
+
+    incrementHisto = getMetricsRegistry().newHistogram(INCREMENT_KEY);
+    slowIncrement = getMetricsRegistry().newCounter(SLOW_INCREMENT_KEY, SLOW_INCREMENT_DESC, 0l);
+
+    appendHisto = getMetricsRegistry().newHistogram(APPEND_KEY);
+    slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0l);
   }
 
   @Override
@@ -85,6 +95,31 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void updateAppend(long t) {
     appendHisto.add(t);
+  }
+
+  @Override
+  public void incrSlowPut() {
+    slowPut.incr();
+  }
+
+  @Override
+  public void incrSlowDelete() {
+    slowDelete.incr();
+  }
+
+  @Override
+  public void incrSlowGet() {
+    slowGet.incr();
+  }
+
+  @Override
+  public void incrSlowIncrement() {
+    slowIncrement.incr();
+  }
+
+  @Override
+  public void incrSlowAppend() {
+    slowAppend.incr();
   }
 
   /**

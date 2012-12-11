@@ -80,6 +80,31 @@ public interface MetricsRegionServerSource extends BaseSource {
    */
   void updateAppend(long t);
 
+  /**
+   * Increment the number of slow Puts that have happened.
+   */
+  void incrSlowPut();
+
+  /**
+   * Increment the number of slow Deletes that have happened.
+   */
+  void incrSlowDelete();
+
+  /**
+   * Increment the number of slow Gets that have happened.
+   */
+  void incrSlowGet();
+
+  /**
+   * Increment the number of slow Increments that have happened.
+   */
+  void incrSlowIncrement();
+
+  /**
+   * Increment the number of slow Appends that have happened.
+   */
+  void incrSlowAppend();
+
   // Strings used for exporting to metrics system.
   static final String REGION_COUNT = "regionCount";
   static final String REGION_COUNT_DESC = "Number of regions";
@@ -161,6 +186,22 @@ public interface MetricsRegionServerSource extends BaseSource {
   static final String DELETE_KEY = "delete";
   static final String GET_KEY = "get";
   static final String INCREMENT_KEY = "increment";
-  static final String PUT_KEY = "multiput";
+  static final String MUTATE_KEY = "mutate";
   static final String APPEND_KEY = "append";
+  static final String SLOW_MUTATE_KEY = "slowPutCount";
+  static final String SLOW_GET_KEY = "slowGetCount";
+  static final String SLOW_DELETE_KEY = "slowDeleteCount";
+  static final String SLOW_INCREMENT_KEY = "slowIncrementCount";
+  static final String SLOW_APPEND_KEY = "slowAppendCount";
+  static final String SLOW_MUTATE_DESC =
+      "The number of Multis that took over 1000ms to complete";
+  static final String SLOW_DELETE_DESC =
+      "The number of Deletes that took over 1000ms to complete";
+  static final String SLOW_GET_DESC = "The number of Gets that took over 1000ms to complete";
+  static final String SLOW_INCREMENT_DESC =
+      "The number of Increments that took over 1000ms to complete";
+  static final String SLOW_APPEND_DESC =
+      "The number of Appends that took over 1000ms to complete";
+
+
 }

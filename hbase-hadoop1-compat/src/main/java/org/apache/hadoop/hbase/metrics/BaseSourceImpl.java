@@ -165,4 +165,20 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
   public DynamicMetricsRegistry getMetricsRegistry() {
     return metricsRegistry;
   }
+
+  public String getMetricsContext() {
+    return metricsContext;
+  }
+
+  public String getMetricsDescription() {
+    return metricsDescription;
+  }
+
+  public String getMetricsJmxContext() {
+    return metricsJmxContext;
+  }
+
+  public String getMetricsName() {
+    return metricsName;
+  }
 }

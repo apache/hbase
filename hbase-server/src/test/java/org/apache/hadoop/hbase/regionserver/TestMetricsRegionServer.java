@@ -38,7 +38,6 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testWrapperSource() {
-
     MetricsRegionServer rsm = new MetricsRegionServer(new MetricsRegionServerWrapperStub());
     MetricsRegionServerSource serverSource = rsm.getMetricsSource();
     HELPER.assertTag("serverName", "test", serverSource);
@@ -80,4 +79,44 @@ public class TestMetricsRegionServer {
     assertNotNull("There should be a hadoop1/hadoop2 metrics source", rsm.getMetricsSource() );
     assertNotNull("The RegionServerMetricsWrapper should be accessable", rsm.getRegionServerWrapper());
   }
+
+  @Test
+  public void testSlowCount() {
+    MetricsRegionServer rsm = new MetricsRegionServer(new MetricsRegionServerWrapperStub());
+    MetricsRegionServerSource serverSource = rsm.getMetricsSource();
+    for (int i=0; i < 12; i ++) {
+      rsm.updateAppend(12);
+      rsm.updateAppend(1002);
+    }
+    for (int i=0; i < 13; i ++) {
+      rsm.updateDelete(13);
+      rsm.updateDelete(1003);
+    }
+    for (int i=0; i < 14; i ++) {
+      rsm.updateGet(14);
+      rsm.updateGet(1004);
+    }
+    for (int i=0; i < 15; i ++) {
+      rsm.updateIncrement(15);
+      rsm.updateIncrement(1005);
+    }
+    for (int i=0; i < 16; i ++) {
+      rsm.updatePut(16);
+      rsm.updatePut(1006);
+    }
+
+    HELPER.assertCounter("appendNumOps", 24, serverSource);
+    HELPER.assertCounter("deleteNumOps", 26, serverSource);
+    HELPER.assertCounter("getNumOps", 28, serverSource);
+    HELPER.assertCounter("incrementNumOps", 30, serverSource);
+    HELPER.assertCounter("mutateNumOps", 32, serverSource);
+
+
+    HELPER.assertCounter("slowAppendCount", 12, serverSource);
+    HELPER.assertCounter("slowDeleteCount", 13, serverSource);
+    HELPER.assertCounter("slowGetCount", 14, serverSource);
+    HELPER.assertCounter("slowIncrementCount", 15, serverSource);
+    HELPER.assertCounter("slowPutCount", 16, serverSource);
+  }
 }
+

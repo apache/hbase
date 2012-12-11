@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.protobuf.Message;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 
@@ -67,5 +66,5 @@ public interface RpcServer {
   /**
    * Returns the metrics instance for reporting RPC call statistics
    */
-  HBaseRpcMetrics getRpcMetrics();
+  MetricsHBaseServer getMetrics();
 }

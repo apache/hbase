@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsTag;
 
 import java.util.HashMap;
@@ -193,7 +194,7 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   public long getCounter(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
-    assertNotNull(counters.get(cName));
+    assertNotNull("Should get counter "+cName + " but did not",counters.get(cName));
     return  counters.get(cName).longValue();
   }
 
@@ -201,7 +202,7 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   public double getGaugeDouble(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
-    assertNotNull(gauges.get(cName));
+    assertNotNull("Should get gauge "+cName + " but did not",gauges.get(cName));
     return  gauges.get(cName).doubleValue();
   }
 
@@ -209,8 +210,8 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
   public long getGaugeLong(String name, BaseSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
-    assertNotNull(gauges.get(cName));
-    return  gauges.get(cName).longValue();
+    assertNotNull("Should get gauge " + cName + " but did not", gauges.get(cName));
+    return gauges.get(cName).longValue();
   }
 
 
@@ -222,10 +223,10 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
 
   private void getMetrics(BaseSource source) {
     reset();
-    if (!(source instanceof BaseSourceImpl)) {
-      assertTrue(false);
+    if (!(source instanceof MetricsSource)) {
+      assertTrue("The Source passed must be a MetricsSource", false);
     }
-    BaseSourceImpl impl = (BaseSourceImpl) source;
+    MetricsSource impl = (MetricsSource) source;
 
     impl.getMetrics(new MockMetricsBuilder(), true);
 

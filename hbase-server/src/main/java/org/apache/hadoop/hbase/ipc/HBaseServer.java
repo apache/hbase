@@ -245,7 +245,7 @@ public abstract class HBaseServer implements RpcServer {
                                                   // connections to nuke
                                                   // during a cleanup
 
-  protected HBaseRpcMetrics  rpcMetrics;
+  protected MetricsHBaseServer metrics;
 
   protected Configuration conf;
 
@@ -275,7 +275,7 @@ public abstract class HBaseServer implements RpcServer {
   private Handler[] handlers = null;
   private Handler[] priorityHandlers = null;
   /** replication related queue; */
-  private BlockingQueue<Call> replicationQueue;
+  protected BlockingQueue<Call> replicationQueue;
   private int numOfReplicationHandlers = 0;
   private Handler[] replicationHandlers = null;
   
@@ -765,7 +765,6 @@ public abstract class HBaseServer implements RpcServer {
           reader.finishAdd();
         }
       }
-      rpcMetrics.numOpenConnections.set(numConnections);
     }
 
     void doRead(SelectionKey key) throws InterruptedException {
@@ -1304,7 +1303,7 @@ public abstract class HBaseServer implements RpcServer {
           }
           doRawSaslReply(SaslStatus.ERROR, null, sendToClient.getClass().getName(),
               sendToClient.getLocalizedMessage());
-          rpcMetrics.authenticationFailures.inc();
+          metrics.authenticationFailure();
           String clientIP = this.toString();
           // attempting user could be null
           AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser);
@@ -1326,7 +1325,7 @@ public abstract class HBaseServer implements RpcServer {
               + user + ". Negotiated QoP is "
               + saslServer.getNegotiatedProperty(Sasl.QOP));
           }          
-          rpcMetrics.authenticationSuccesses.inc();
+          metrics.authenticationSuccess();
           AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
           saslContextEstablished = true;
         }
@@ -1653,14 +1652,11 @@ public abstract class HBaseServer implements RpcServer {
 
       if (priorityCallQueue != null && getQosLevel(rpcRequestBody) > highPriorityLevel) {
         priorityCallQueue.put(call);
-        updateCallQueueLenMetrics(priorityCallQueue);
       } else if (replicationQueue != null
           && getQosLevel(rpcRequestBody) == HConstants.REPLICATION_QOS) {
         replicationQueue.put(call);
-        updateCallQueueLenMetrics(replicationQueue);
       } else {
         callQueue.put(call);              // queue the call; maybe blocked here
-        updateCallQueueLenMetrics(callQueue);
       }
     }
 
@@ -1678,10 +1674,10 @@ public abstract class HBaseServer implements RpcServer {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Successfully authorized " + header);
         }
-        rpcMetrics.authorizationSuccesses.inc();
+        metrics.authorizationSuccess();
       } catch (AuthorizationException ae) {
         LOG.debug("Connection authorization failed: "+ae.getMessage(), ae);
-        rpcMetrics.authorizationFailures.inc();
+        metrics.authorizationFailure();
         setupResponse(authFailedResponse, authFailedCall, Status.FATAL,
             ae.getClass().getName(), ae.getMessage());
         responder.doRespond(authFailedCall);
@@ -1731,23 +1727,6 @@ public abstract class HBaseServer implements RpcServer {
     }
   }
 
-  /**
-   * Reports length of the call queue to HBaseRpcMetrics.
-   * @param queue Which queue to report
-   */
-  private void updateCallQueueLenMetrics(BlockingQueue<Call> queue) {
-    if (queue == callQueue) {
-      rpcMetrics.callQueueLen.set(callQueue.size());
-    } else if (queue == priorityCallQueue) {
-      rpcMetrics.priorityCallQueueLen.set(priorityCallQueue.size());
-    } else if (queue == replicationQueue) {
-      rpcMetrics.replicationCallQueueLen.set(replicationQueue.size());
-    } else {
-      LOG.warn("Unknown call queue");
-    }
-    rpcMetrics.responseQueueLen.set(responseQueueLen);
-  }
-
   /** Handles queued calls . */
   private class Handler extends Thread {
     private final BlockingQueue<Call> myCallQueue;
@@ -1778,7 +1757,6 @@ public abstract class HBaseServer implements RpcServer {
         try {
           status.pause("Waiting for a call");
           Call call = myCallQueue.take(); // pop the queue; maybe blocked here
-          updateCallQueueLenMetrics(myCallQueue);
           status.setStatus("Setting up call");
           status.setConnection(call.connection.getHostAddress(), 
               call.connection.getRemotePort());
@@ -1936,8 +1914,9 @@ public abstract class HBaseServer implements RpcServer {
     // Start the listener here and let it bind to the port
     listener = new Listener();
     this.port = listener.getAddress().getPort();
-    this.rpcMetrics = new HBaseRpcMetrics(
-        serverName, Integer.toString(this.port));
+
+    this.metrics = new MetricsHBaseServer(
+        serverName, new MetricsHBaseServerWrapperImpl(this));
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", true);
     this.tcpKeepAlive = conf.getBoolean("ipc.server.tcpkeepalive", true);
 
@@ -1970,7 +1949,6 @@ public abstract class HBaseServer implements RpcServer {
    * @param response buffer to serialize the response into
    * @param call {@link Call} to which we are setting up the response
    * @param status {@link Status} of the IPC call
-   * @param rv return value for the IPC Call, if the call was successful
    * @param errorClass error class, if the the call failed
    * @param error error message, if the call failed
    * @throws IOException
@@ -1990,7 +1968,6 @@ public abstract class HBaseServer implements RpcServer {
       }
     }
     connection.close();
-    rpcMetrics.numOpenConnections.set(numConnections);
   }
 
   Configuration getConf() {
@@ -2063,9 +2040,6 @@ public abstract class HBaseServer implements RpcServer {
     listener.doStop();
     responder.interrupt();
     notifyAll();
-    if (this.rpcMetrics != null) {
-      this.rpcMetrics.shutdown();
-    }
   }
 
   private void stopHandlers(Handler[] handlers) {
@@ -2111,8 +2085,8 @@ public abstract class HBaseServer implements RpcServer {
   /**
    * Returns the metrics instance for reporting RPC call statistics
    */
-  public HBaseRpcMetrics getRpcMetrics() {
-    return rpcMetrics;
+  public MetricsHBaseServer getMetrics() {
+    return metrics;
   }
 
   /**
@@ -2167,7 +2141,7 @@ public abstract class HBaseServer implements RpcServer {
     int count =  (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
            channel.write(buffer) : channelIO(null, channel, buffer);
     if (count > 0) {
-      rpcMetrics.sentBytes.inc(count);
+      metrics.sentBytes(count);
     }
     return count;
   }
@@ -2190,8 +2164,8 @@ public abstract class HBaseServer implements RpcServer {
     int count = (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
            channel.read(buffer) : channelIO(channel, null, buffer);
     if (count > 0) {
-      rpcMetrics.receivedBytes.inc(count);
-  }
+      metrics.receivedBytes(count);
+    }
     return count;
   }
 

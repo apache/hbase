@@ -250,10 +250,6 @@ class ProtobufRpcEngine implements RpcEngine {
       this.implementation = instance.getClass();
       this.verbose = verbose;
 
-      // create metrics for the advertised interfaces this server implements.
-      String [] metricSuffixes = new String [] {ABOVE_ONE_SEC_METRIC};
-      this.rpcMetrics.createMetrics(ifaces, false, metricSuffixes);
-
       this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME,
           DEFAULT_WARN_RESPONSE_TIME);
       this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
@@ -372,9 +368,9 @@ class ProtobufRpcEngine implements RpcEngine {
               ", request=" + param.toString() +
               " response=" + result.toString());
         }
-        rpcMetrics.rpcQueueTime.inc(qTime);
-        rpcMetrics.rpcProcessingTime.inc(processingTime);
-        rpcMetrics.inc(method.getName(), processingTime);
+        metrics.dequeuedCall(qTime);
+        metrics.processedCall(processingTime);
+
         if (verbose) {
           log("Return: "+result, LOG);
         }
@@ -398,17 +394,6 @@ class ProtobufRpcEngine implements RpcEngine {
               methodName, buffer.toString(), (tooLarge ? "TooLarge" : "TooSlow"),
               status.getClient(), startTime, processingTime, qTime,
               responseSize);
-          // provides a count of log-reported slow responses
-          if (tooSlow) {
-            rpcMetrics.rpcSlowResponseTime.inc(processingTime);
-          }
-        }
-        if (processingTime > 1000) {
-          // we use a hard-coded one second period so that we can clearly
-          // indicate the time period we're warning about in the name of the
-          // metric itself
-          rpcMetrics.inc(method.getName() + ABOVE_ONE_SEC_METRIC,
-              processingTime);
         }
         return result;
       } catch (InvocationTargetException e) {
