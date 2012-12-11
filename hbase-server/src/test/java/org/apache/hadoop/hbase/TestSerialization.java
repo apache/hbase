@@ -23,6 +23,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -50,6 +54,27 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestSerialization {
+  @Test public void testKeyValue() throws Exception {
+    final String name = "testKeyValue2";
+    byte[] row = name.getBytes();
+    byte[] fam = "fam".getBytes();
+    byte[] qf = "qf".getBytes();
+    long ts = System.currentTimeMillis();
+    byte[] val = "val".getBytes();
+    KeyValue kv = new KeyValue(row, fam, qf, ts, val);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    long l = KeyValue.write(kv, dos);
+    dos.close();
+    byte [] mb = baos.toByteArray();
+    ByteArrayInputStream bais = new ByteArrayInputStream(mb);
+    DataInputStream dis = new DataInputStream(bais);
+    KeyValue deserializedKv = KeyValue.create(dis);
+    assertTrue(Bytes.equals(kv.getBuffer(), deserializedKv.getBuffer()));
+    assertEquals(kv.getOffset(), deserializedKv.getOffset());
+    assertEquals(kv.getLength(), deserializedKv.getLength());
+  }
+  
   @Test
   public void testSplitLogTask() throws DeserializationException {
     SplitLogTask slt = new SplitLogTask.Unassigned(new ServerName("mgr,1,1"));
@@ -64,17 +89,6 @@ public class TestSerialization {
     byte [] bytes = f.toByteArray();
     Filter ff = RowFilter.parseFrom(bytes);
     assertNotNull(ff);
-  }
-
-  @Test public void testKeyValue() throws Exception {
-    final String name = "testKeyValue";
-    byte [] row = Bytes.toBytes(name);
-    byte [] family = Bytes.toBytes(name);
-    byte [] qualifier = Bytes.toBytes(name);
-    KeyValue original = new KeyValue(row, family, qualifier);
-    byte [] bytes = Writables.getBytes(original);
-    KeyValue newone = (KeyValue)Writables.getWritable(bytes, new KeyValue());
-    assertTrue(KeyValue.COMPARATOR.compare(original, newone) == 0);
   }
 
   @Test public void testTableDescriptor() throws Exception {
@@ -518,24 +532,6 @@ public class TestSerialization {
 
   }
 
-  @Test public void testKeyValue2() throws Exception {
-    final String name = "testKeyValue2";
-    byte[] row = name.getBytes();
-    byte[] fam = "fam".getBytes();
-    byte[] qf = "qf".getBytes();
-    long ts = System.currentTimeMillis();
-    byte[] val = "val".getBytes();
-
-    KeyValue kv = new KeyValue(row, fam, qf, ts, val);
-
-    byte [] mb = Writables.getBytes(kv);
-    KeyValue deserializedKv =
-      (KeyValue)Writables.getWritable(mb, new KeyValue());
-    assertTrue(Bytes.equals(kv.getBuffer(), deserializedKv.getBuffer()));
-    assertEquals(kv.getOffset(), deserializedKv.getOffset());
-    assertEquals(kv.getLength(), deserializedKv.getLength());
-  }
-
   protected static final int MAXVERSIONS = 3;
   protected final static byte [] fam1 = Bytes.toBytes("colfamily1");
   protected final static byte [] fam2 = Bytes.toBytes("colfamily2");
@@ -576,6 +572,4 @@ public class TestSerialization {
     );
     return htd;
   }
-
 }
-

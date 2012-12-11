@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.io.Writable;
 import org.apache.hbase.Cell;
 import org.apache.hbase.cell.CellComparator;
 
@@ -65,7 +64,7 @@ import com.google.common.primitives.Longs;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class KeyValue implements Cell, Writable, HeapSize {
+public class KeyValue implements Cell, HeapSize {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
   // TODO: Group Key-only comparators and operations into a Key class, just
   // for neatness sake, if can figure what to call it.
@@ -843,7 +842,7 @@ public class KeyValue implements Cell, Writable, HeapSize {
 
   /**
    * Needed doing 'contains' on List.  Only compares the key portion, not the value.
-   * 
+   *
    * For temporary backwards compatibility with the original KeyValue.equals method, we ignore the
    * mvccVersion.
    */
@@ -2290,6 +2289,46 @@ public class KeyValue implements Cell, Writable, HeapSize {
   }
 
   /**
+   * @param in Where to read bytes from
+   * @return KeyValue created by deserializing from <code>in</code>
+   * @throws IOException
+   */
+  public static KeyValue create(final DataInput in) throws IOException {
+    return create(in.readInt(), in);
+  }
+
+  /**
+   * Create a KeyValue reading <code>length</code> from <code>in</code>
+   * @param length
+   * @param in
+   * @return Created KeyValue
+   * @throws IOException
+   */
+  public static KeyValue create(int length, final DataInput in) throws IOException {
+    // This is how the old Writables.readFrom used to deserialize.  Didn't even vint.
+    byte [] bytes = new byte[length];
+    in.readFully(bytes);
+    return new KeyValue(bytes, 0, length);
+  }
+
+  /**
+   * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable.
+   * @param kv
+   * @param out
+   * @return Length written on stream
+   * @throws IOException
+   * @see {@link #create(DataInput)} for the inverse function
+   */
+  public static long write(final KeyValue kv, final DataOutput out) throws IOException {
+    // This is how the old Writables write used to serialize KVs.  Need to figure way to make it work for all
+    // implementations.
+    int length = kv.getLength();
+    out.writeInt(length);
+    out.write(kv.getBuffer(), kv.getOffset(), length);
+    return length + Bytes.SIZEOF_INT;
+  }
+
+  /**
    * Compare key portion of a {@link KeyValue} for keys in <code>-ROOT-<code>
    * table.
    */
@@ -2632,29 +2671,5 @@ public class KeyValue implements Cell, Writable, HeapSize {
     sum += 3 * Bytes.SIZEOF_INT;// offset, length, keyLength
     sum += Bytes.SIZEOF_LONG;// memstoreTS
     return ClassSize.align(sum);
-  }
-
-  // this overload assumes that the length bytes have already been read,
-  // and it expects the length of the KeyValue to be explicitly passed
-  // to it.
-  public void readFields(int length, final DataInput in) throws IOException {
-    this.length = length;
-    this.offset = 0;
-    this.keyLength = 0;
-    this.bytes = new byte[this.length];
-    in.readFully(this.bytes, 0, this.length);
-  }
-
-  // Writable
-  @Override
-  public void readFields(final DataInput in) throws IOException {
-    int length = in.readInt();
-    readFields(length, in);
-  }
-
-  @Override
-  public void write(final DataOutput out) throws IOException {
-    out.writeInt(this.length);
-    out.write(this.bytes, this.offset, this.length);
   }
 }

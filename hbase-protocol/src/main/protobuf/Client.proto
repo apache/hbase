@@ -51,12 +51,8 @@ message Get {
   optional uint32 storeOffset = 10;
 }
 
-/**
- * For performance reason, we don't use KeyValue
- * here. We use the actual KeyValue bytes.
- */
 message Result {
-  repeated bytes keyValueBytes = 1;
+  repeated KeyValue keyValue = 1;
 }
 
 /**

@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hbase.Cell;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -933,16 +934,12 @@ public final class ProtobufUtil {
    */
   public static ClientProtos.Result toResult(final Result result) {
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    List<ByteString> protos = new ArrayList<ByteString>();
-    List<KeyValue> keyValues = result.list();
-    if (keyValues != null) {
-      for (KeyValue keyValue: keyValues) {
-        ByteString value = ByteString.copyFrom(keyValue.getBuffer(),
-          keyValue.getOffset(), keyValue.getLength());
-        protos.add(value);
+    Cell [] cells = result.raw();
+    if (cells != null) {
+      for (Cell c : cells) {
+        builder.addKeyValue(toKeyValue(c));
       }
     }
-    builder.addAllKeyValueBytes(protos);
     return builder.build();
   }
 
@@ -953,10 +950,10 @@ public final class ProtobufUtil {
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto) {
-    List<ByteString> values = proto.getKeyValueBytesList();
+    List<HBaseProtos.KeyValue> values = proto.getKeyValueList();
     List<KeyValue> keyValues = new ArrayList<KeyValue>(values.size());
-    for (ByteString value: values) {
-      keyValues.add(new KeyValue(value.toByteArray()));
+    for (HBaseProtos.KeyValue kv: values) {
+      keyValues.add(toKeyValue(kv));
     }
     return new Result(keyValues);
   }
@@ -1851,5 +1848,34 @@ public final class ProtobufUtil {
       throw (IOException)cause;
     }
     throw new IOException(se);
+  }
+
+  public static HBaseProtos.KeyValue toKeyValue(final Cell kv) {
+    // Doing this is going to kill us if we do it for all data passed.
+    // St.Ack 20121205
+    // TODO: Do a Cell version
+    HBaseProtos.KeyValue.Builder kvbuilder = HBaseProtos.KeyValue.newBuilder();
+    kvbuilder.setRow(ByteString.copyFrom(kv.getRowArray(), kv.getRowOffset(),
+      kv.getRowLength()));
+    kvbuilder.setFamily(ByteString.copyFrom(kv.getFamilyArray(),
+      kv.getFamilyOffset(), kv.getFamilyLength()));
+    kvbuilder.setQualifier(ByteString.copyFrom(kv.getQualifierArray(),
+      kv.getQualifierOffset(), kv.getQualifierLength()));
+    kvbuilder.setKeyType(HBaseProtos.KeyType.valueOf(kv.getTypeByte()));
+    kvbuilder.setTimestamp(kv.getTimestamp());
+    kvbuilder.setValue(ByteString.copyFrom(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+    return kvbuilder.build();
+  }
+
+  public static KeyValue toKeyValue(final HBaseProtos.KeyValue kv) {
+    // Doing this is going to kill us if we do it for all data passed.
+    // St.Ack 20121205
+    // TODO: Do a Cell version
+    return new KeyValue(kv.getRow().toByteArray(),
+      kv.getFamily().toByteArray(),
+      kv.getQualifier().toByteArray(),
+      kv.getTimestamp(),
+      KeyValue.Type.codeToType((byte)kv.getKeyType().getNumber()),
+      kv.getValue().toByteArray());
   }
 }

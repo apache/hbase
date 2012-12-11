@@ -117,6 +117,7 @@ public class WALEdit implements Writable, HeapSize {
       scopes.clear();
     }
     int versionOrLength = in.readInt();
+    // TODO: Change version when we protobuf.  Also, change way we serialize KV!  Pb it too.
     if (versionOrLength == VERSION_2) {
       // this is new style HLog entry containing multiple KeyValues.
       int numEdits = in.readInt();
@@ -124,9 +125,7 @@ public class WALEdit implements Writable, HeapSize {
         if (compressionContext != null) {
           this.add(KeyValueCompression.readKV(in, compressionContext));
         } else {
-          KeyValue kv = new KeyValue();
-          kv.readFields(in);
-          this.add(kv);
+          this.add(KeyValue.create(in));
     	  }
       }
       int numFamilies = in.readInt();
@@ -143,9 +142,7 @@ public class WALEdit implements Writable, HeapSize {
     } else {
       // this is an old style HLog entry. The int that we just
       // read is actually the length of a single KeyValue
-      KeyValue kv = new KeyValue();
-      kv.readFields(versionOrLength, in);
-      this.add(kv);
+      this.add(KeyValue.create(versionOrLength, in));
     }
 
   }
@@ -158,7 +155,7 @@ public class WALEdit implements Writable, HeapSize {
       if (compressionContext != null) {
         KeyValueCompression.writeKV(out, kv, compressionContext);
       } else{
-        kv.write(out);
+        KeyValue.write(kv, out);
       }
     }
     if (scopes == null) {

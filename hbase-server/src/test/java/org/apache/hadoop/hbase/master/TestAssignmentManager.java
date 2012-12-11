@@ -834,7 +834,7 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws Exception
    */
-  @Test(timeout = 5000)
+  @Test(timeout = 10000)
   public void testDisablingTableRegionsAssignmentDuringCleanClusterStartup()
       throws KeeperException, IOException, Exception {
     this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,

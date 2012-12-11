@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -198,7 +199,7 @@ public class TestMetaReaderEditorNoCluster {
       ct.start();
       // Scan meta for user tables and verify we got back expected answer.
       NavigableMap<HRegionInfo, Result> hris = MetaReader.getServerUserRegions(ct, sn);
-      assertTrue(hris.size() == 1);
+      assertEquals(1, hris.size());
       assertTrue(hris.firstEntry().getKey().equals(HRegionInfo.FIRST_META_REGIONINFO));
       assertTrue(Bytes.equals(rowToVerify, hris.firstEntry().getValue().getRow()));
       // Finally verify that scan was called four times -- three times
@@ -211,6 +212,4 @@ public class TestMetaReaderEditorNoCluster {
       zkw.close();
     }
   }
-
 }
-

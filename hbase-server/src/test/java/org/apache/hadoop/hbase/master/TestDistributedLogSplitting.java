@@ -274,7 +274,7 @@ public class TestDistributedLogSplitting {
 
 
 
-  @Test(timeout=25000)
+  @Test(timeout=30000)
   public void testDelayedDeleteOnFailure() throws Exception {
     LOG.info("testDelayedDeleteOnFailure");
     startCluster(1);
