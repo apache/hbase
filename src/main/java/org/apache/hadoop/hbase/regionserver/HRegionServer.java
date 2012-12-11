@@ -2322,7 +2322,7 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public HRegionInfo getRegionInfo(final byte [] regionName)
   throws NotServingRegionException {
-    return getRegion(regionName).getRegionInfo();
+    return getRegion(regionName).getRegionInfo(true);
   }
 
 

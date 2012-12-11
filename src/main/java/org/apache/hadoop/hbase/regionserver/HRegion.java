@@ -737,7 +737,13 @@ public class HRegion implements HeapSize {
 
   /** @return a HRegionInfo object for this region */
   public HRegionInfo getRegionInfo() {
-    readRequests.incrTotalRequestCount();
+    return getRegionInfo(false);
+  }
+  
+  protected HRegionInfo getRegionInfo(boolean callFromRPC) {
+    if (callFromRPC) {
+      readRequests.incrTotalRequestCount();
+    }
     return this.regionInfo;
   }
 
