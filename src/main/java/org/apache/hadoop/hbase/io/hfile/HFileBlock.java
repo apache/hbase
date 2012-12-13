@@ -29,6 +29,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -1255,6 +1257,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     /** The path (if any) where this data is coming from */
     protected Path path;
 
+    private final Lock streamLock = new ReentrantLock();
+
     /** The default buffer size for our buffered streams */
     public static final int DEFAULT_BUFFER_SIZE = 1 << 20;
 
@@ -1329,23 +1333,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
             "-byte array at offset " + destOffset);
       }
 
-      if (pread) {
-        // Positional read. Better for random reads.
-        int extraSize = peekIntoNextBlock ? hdrSize : 0;
-
-        int ret = istream.read(fileOffset, dest, destOffset, size + extraSize);
-        if (ret < size) {
-          throw new IOException("Positional read of " + size + " bytes " +
-              "failed at offset " + fileOffset + " (returned " + ret + ")");
-        }
-
-        if (ret == size || ret < size + extraSize) {
-          // Could not read the next block's header, or did not try.
-          return -1;
-        }
-      } else {
+      if (!pread && streamLock.tryLock()) {
         // Seek + read. Better for scanning.
-        synchronized (istream) {
+        try {
           istream.seek(fileOffset);
 
           long realOffset = istream.getPos();
@@ -1363,6 +1353,22 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           // Try to read the next block header.
           if (!readWithExtra(istream, dest, destOffset, size, hdrSize))
             return -1;
+        } finally {
+          streamLock.unlock();
+        }
+      } else {
+        // Positional read. Better for random reads; or when the streamLock is already locked.
+        int extraSize = peekIntoNextBlock ? hdrSize : 0;
+
+        int ret = istream.read(fileOffset, dest, destOffset, size + extraSize);
+        if (ret < size) {
+          throw new IOException("Positional read of " + size + " bytes " +
+              "failed at offset " + fileOffset + " (returned " + ret + ")");
+        }
+
+        if (ret == size || ret < size + extraSize) {
+          // Could not read the next block's header, or did not try.
+          return -1;
         }
       }
 
