@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
@@ -2599,6 +2600,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return -1;
   }
 
+  /**
+   * @deprecated {@link RowLock} and associated operations are deprecated.
+   */
   public long lockRow(byte[] regionName, byte[] row) throws IOException {
     checkOpen();
     NullPointerException npe = null;
@@ -2658,6 +2662,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return rl;
   }
 
+  /**
+   * @deprecated {@link RowLock} and associated operations are deprecated.
+   */
   @Override
   @QosPriority(priority=HConstants.HIGH_QOS)
   public void unlockRow(byte[] regionName, long lockId) throws IOException {

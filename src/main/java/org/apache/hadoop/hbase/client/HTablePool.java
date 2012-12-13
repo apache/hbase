@@ -458,11 +458,17 @@ public class HTablePool implements Closeable {
       returnTable(table);
     }
 
+    /**
+     * @deprecated {@link RowLock} and associated operations are deprecated
+     */
     @Override
     public RowLock lockRow(byte[] row) throws IOException {
       return table.lockRow(row);
     }
 
+    /**
+     * @deprecated {@link RowLock} and associated operations are deprecated
+     */
     @Override
     public void unlockRow(RowLock rl) throws IOException {
       table.unlockRow(rl);

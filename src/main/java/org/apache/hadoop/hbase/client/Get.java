@@ -98,6 +98,7 @@ public class Get extends OperationWithAttributes
    * all columns in all families of the specified row.
    * @param row row key
    * @param rowLock previously acquired row lock, or null
+   * @deprecated {@link RowLock} is deprecated, use {@link #Get(byte[])}.
    */
   public Get(byte [] row, RowLock rowLock) {
     this.row = row;
