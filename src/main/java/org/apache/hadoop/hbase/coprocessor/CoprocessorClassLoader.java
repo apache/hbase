@@ -65,9 +65,13 @@ public class CoprocessorClassLoader extends URLClassLoader {
     "org.w3c",
     "org.xml",
     "sunw.",
-    // Hadoop/HBase:
-    "org.apache.hadoop",
+    // logging
+    "org.apache.commons.logging",
+    "org.apache.log4j",
     "com.hadoop",
+    // Hadoop/HBase/ZK:
+    "org.apache.hadoop",
+    "org.apache.zookeeper",
   };
   
   /**
@@ -80,7 +84,12 @@ public class CoprocessorClassLoader extends URLClassLoader {
       new Pattern[] {
     Pattern.compile("^[^-]+-default\\.xml$")
   };
-  
+
+  /**
+   * Parent classloader used to load any class not matching the exemption list.
+   */
+  private final ClassLoader parent;
+
   /**
    * Creates a CoprocessorClassLoader that loads classes from the given paths.
    * @param paths paths from which to load classes.
@@ -88,8 +97,12 @@ public class CoprocessorClassLoader extends URLClassLoader {
    */
   public CoprocessorClassLoader(List<URL> paths, ClassLoader parent) {
     super(paths.toArray(new URL[]{}), parent);
+    this.parent = parent;
+    if (parent == null) {
+      throw new IllegalArgumentException("No parent classloader!");
+    }
   }
-  
+
   @Override
   synchronized public Class<?> loadClass(String name) 
       throws ClassNotFoundException {
@@ -99,9 +112,9 @@ public class CoprocessorClassLoader extends URLClassLoader {
         LOG.debug("Skipping exempt class " + name + 
             " - delegating directly to parent");
       }
-      return super.loadClass(name);
+      return parent.loadClass(name);
     }
-    
+
     // Check whether the class has already been loaded:
     Class<?> clasz = findLoadedClass(name);
     if (clasz != null) {
@@ -123,7 +136,7 @@ public class CoprocessorClassLoader extends URLClassLoader {
           LOG.debug("Class " + name + " not found - delegating to parent");
         }
         try {
-          clasz = super.loadClass(name);
+          clasz = parent.loadClass(name);
         } catch (ClassNotFoundException e2) {
           // Class not found in this ClassLoader or in the parent ClassLoader
           // Log some debug output before rethrowing ClassNotFoundException
