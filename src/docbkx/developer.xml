@@ -386,7 +386,7 @@ The first three categories, small, medium, and large are for tests run when
 you type <code>$ mvn test</code>; i.e. these three categorizations are for
 HBase unit tests. The integration category is for not for unit tests but for integration
 tests.  These are run when you invoke <code>$ mvn verify</code>.  Integration tests
-are described TODO: POINTER_TO_INTEGRATION_TEST_SECTION and will not be discussed further
+are described in <xref linkend="integration.tests">integration tests section</xref> and will not be discussed further
 in this section on HBase unit tests.</para>
 <para>
 Apache HBase uses a patched maven surefire plugin and maven profiles to implement
@@ -457,21 +457,21 @@ There is one report for small tests, and one report for medium and large tests i
 <section xml:id="hbase.unittests.cmds.test.localtests.mytest">
 <title>Running a single test or all tests in a package</title>
 <para>To run an individual test, e.g. <classname>MyTest</classname>, do
-<programlisting>mvn test -P localTests -Dtest=MyTest</programlisting>  You can also
+<programlisting>mvn test -Dtest=MyTest</programlisting>  You can also
 pass multiple, individual tests as a comma-delimited list:
-<programlisting>mvn test -P localTests -Dtest=MyTest1,MyTest2,MyTest3</programlisting>
+<programlisting>mvn test -Dtest=MyTest1,MyTest2,MyTest3</programlisting>
 You can also pass a package, which will run all tests under the package:
-<programlisting>mvn test -P localTests -Dtest=org.apache.hadoop.hbase.client.*</programlisting>
+<programlisting>mvn test -Dtest=org.apache.hadoop.hbase.client.*</programlisting>
 </para>
 
 <para>
-The <code>-P localTests</code>  will remove the JUnit category effect (without this specific profile,
-the categories are taken into account).  It will actually use the official release of maven surefire,
-rather than our custom surefire plugin,
-and the old connector (The HBase build uses a patched version of the maven surefire plugin).
-Each junit tests is executed in a separate JVM (A fork per test class).  There is no
-parallelization when <code>localTests</code> profile is set.  You will see a new message at the end of the
-report: "[INFO] Tests are skipped". It's harmless.
+When <code>-Dtest</code> is specified, <code>localTests</code> profile will be used. It will use the official release
+of maven surefire, rather than our custom surefire plugin, and the old connector (The HBase build uses a patched
+version of the maven surefire plugin). Each junit tests is executed in a separate JVM (A fork per test class).
+There is no parallelization when tests are running in this mode. You will see a new message at the end of the
+-report: "[INFO] Tests are skipped". It's harmless. While you need to make sure the sum of <code>Tests run:</code> in
+the <code>Results :</code> section of test reports matching the number of tests you specified because no
+error will be reported when a non-existent test case is specified.
 </para>
 </section>
 
@@ -621,7 +621,7 @@ Integration tests can be run in two modes: using a mini cluster, or against an a
 Maven failsafe is used to run the tests using the mini cluster. IntegrationTestsDriver class is used for
 executing the tests against a distributed cluster. Integration tests SHOULD NOT assume that they are running against a
 mini cluster, and SHOULD NOT use private API's to access cluster state. To interact with the distributed or mini
-cluster uniformly, <code>HBaseIntegrationTestingUtility</code>, and <code>HBaseCluster</code> classes,
+cluster uniformly, <code>IntegrationTestingUtility</code>, and <code>HBaseCluster</code> classes,
 and public client API's can be used.
 </para>
 

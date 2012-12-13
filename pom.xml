@@ -1579,7 +1579,9 @@
       <!-- Use it to launch tests locally-->
       <id>localTests</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <property>
+            <name>test</name>
+        </property>
       </activation>
       <properties>
         <surefire.provider>surefire-junit4</surefire.provider>
