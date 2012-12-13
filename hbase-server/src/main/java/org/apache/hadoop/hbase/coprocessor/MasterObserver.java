@@ -19,11 +19,17 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.*;
-
-import java.io.IOException;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.RegionPlan;
 
 /**
  * Defines coprocessor hooks for interacting with operations on the
@@ -444,8 +450,11 @@ public interface MasterObserver extends Coprocessor {
   /**
    * Called after the balancing plan has been submitted.
    * @param ctx the environment to interact with the framework and master
+   * @param plans the RegionPlans which master has executed. RegionPlan serves as hint
+   * as for the final destination for the underlying region but may not represent the
+   * final state of assignment
    */
-  void postBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+  void postBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx, List<RegionPlan> plans)
       throws IOException;
 
   /**

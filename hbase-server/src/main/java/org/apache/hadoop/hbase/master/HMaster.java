@@ -1332,7 +1332,7 @@ Server {
         }
       }
       if (this.cpHost != null) {
-        this.cpHost.postBalance();
+        this.cpHost.postBalance(rpCount < plans.size() ? plans.subList(0, rpCount) : plans);
       }
     }
     return balancerRan;

@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.coprocessor.*;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Provides the coprocessor framework and environment for master oriented
@@ -827,13 +828,13 @@ public class MasterCoprocessorHost
     return bypass;
   }
 
-  void postBalance() throws IOException {
+  void postBalance(List<RegionPlan> plans) throws IOException {
     ObserverContext<MasterCoprocessorEnvironment> ctx = null;
     for (MasterEnvironment env: coprocessors) {
       if (env.getInstance() instanceof MasterObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((MasterObserver)env.getInstance()).postBalance(ctx);
+          ((MasterObserver)env.getInstance()).postBalance(ctx, plans);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }

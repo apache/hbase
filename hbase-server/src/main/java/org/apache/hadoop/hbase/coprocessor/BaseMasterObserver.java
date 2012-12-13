@@ -27,8 +27,10 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.master.RegionPlan;
 
 import java.io.IOException;
+import java.util.List;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -236,7 +238,7 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
-  public void postBalance(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  public void postBalance(ObserverContext<MasterCoprocessorEnvironment> ctx, List<RegionPlan> plans)
       throws IOException {
   }
 

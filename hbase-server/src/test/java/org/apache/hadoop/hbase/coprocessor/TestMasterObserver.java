@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -434,8 +435,8 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void postBalance(ObserverContext<MasterCoprocessorEnvironment> env)
-        throws IOException {
+    public void postBalance(ObserverContext<MasterCoprocessorEnvironment> env,
+        List<RegionPlan> plans) throws IOException {
       postBalanceCalled = true;
     }
 

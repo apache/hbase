@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -727,7 +728,7 @@ public class AccessController extends BaseRegionObserver
     requirePermission(Permission.Action.ADMIN);
   }
   @Override
-  public void postBalance(ObserverContext<MasterCoprocessorEnvironment> c)
+  public void postBalance(ObserverContext<MasterCoprocessorEnvironment> c, List<RegionPlan> plans)
       throws IOException {}
 
   @Override

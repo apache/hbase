@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 
@@ -34,7 +35,8 @@ import org.apache.hadoop.hbase.ServerName;
  * The comparable implementation of this class compares only the region
  * information and not the source/dest server info.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate("Coprocessors")
+@InterfaceStability.Evolving
 public class RegionPlan implements Comparable<RegionPlan> {
   private final HRegionInfo hri;
   private final ServerName source;
