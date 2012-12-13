@@ -535,11 +535,17 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         return tableName;
       }
 
+      /**
+       * @deprecated {@link RowLock} and associated operations are deprecated.
+       */
       public RowLock lockRow(byte[] row) throws IOException {
         throw new RuntimeException(
           "row locking is not allowed within the coprocessor environment");
       }
 
+      /**
+       * @deprecated {@link RowLock} and associated operations are deprecated.
+       */
       public void unlockRow(RowLock rl) throws IOException {
         throw new RuntimeException(
           "row locking is not allowed within the coprocessor environment");

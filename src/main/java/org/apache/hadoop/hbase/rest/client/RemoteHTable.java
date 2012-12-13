@@ -575,10 +575,16 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("getRowOrBefore not supported");
   }
 
+  /**
+   * @deprecated {@link RowLock} and associated operations are deprecated
+   */
   public RowLock lockRow(byte[] row) throws IOException {
     throw new IOException("lockRow not implemented");
   }
 
+  /**
+   * @deprecated {@link RowLock} and associated operations are deprecated
+   */
   public void unlockRow(RowLock rl) throws IOException {
     throw new IOException("unlockRow not implemented");
   }

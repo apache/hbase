@@ -86,6 +86,25 @@ public class Delete extends Mutation
   }
 
   /**
+   * Create a Delete operation for the specified row and timestamp.<p>
+   *
+   * If no further operations are done, this will delete all columns in all
+   * families of the specified row with a timestamp less than or equal to the
+   * specified timestamp.<p>
+   *
+   * This timestamp is ONLY used for a delete row operation.  If specifying
+   * families or columns, you must specify each timestamp individually.
+   * @param row row key
+   * @param timestamp maximum version timestamp (only for delete row)
+   * @param rowLock previously acquired row lock, or null
+   * @deprecated {@link RowLock} is deprecated, use #de
+   */
+  public Delete(byte [] row, long timestamp) {
+    this.row = row;
+    this.ts = timestamp;
+  }
+
+  /**
    * Create a Delete operation for the specified row and timestamp, using
    * an optional row lock.<p>
    *
@@ -98,6 +117,7 @@ public class Delete extends Mutation
    * @param row row key
    * @param timestamp maximum version timestamp (only for delete row)
    * @param rowLock previously acquired row lock, or null
+   * @deprecated {@link RowLock} is deprecated, use {@link #Delete(byte[], long)}.
    */
   public Delete(byte [] row, long timestamp, RowLock rowLock) {
     this.row = row;

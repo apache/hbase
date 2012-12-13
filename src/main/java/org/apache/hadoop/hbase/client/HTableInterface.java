@@ -380,6 +380,7 @@ public interface HTableInterface extends Closeable {
    * @throws IOException if a remote or network exception occurs.
    * @see RowLock
    * @see #unlockRow
+   * @deprecated {@link RowLock} and associated operations are deprecated
    */
   RowLock lockRow(byte[] row) throws IOException;
 
@@ -390,6 +391,7 @@ public interface HTableInterface extends Closeable {
    * @throws IOException if a remote or network exception occurs.
    * @see RowLock
    * @see #unlockRow
+   * @deprecated {@link RowLock} and associated operations are deprecated
    */
   void unlockRow(RowLock rl) throws IOException;
 

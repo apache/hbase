@@ -1722,11 +1722,23 @@ public class HRegion implements HeapSize { // , Writable{
   //////////////////////////////////////////////////////////////////////////////
   // set() methods for client use.
   //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * @param delete delete object
+   * @param writeToWAL append to the write ahead lock or not
+   * @throws IOException read exceptions
+   */
+  public void delete(Delete delete, boolean writeToWAL)
+  throws IOException {
+    delete(delete, null, writeToWAL);
+  }
+
   /**
    * @param delete delete object
    * @param lockid existing lock id, or null for grab a lock
    * @param writeToWAL append to the write ahead lock or not
    * @throws IOException read exceptions
+   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public void delete(Delete delete, Integer lockid, boolean writeToWAL)
   throws IOException {
@@ -1901,6 +1913,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param put
    * @param lockid
    * @throws IOException
+   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public void put(Put put, Integer lockid) throws IOException {
     this.put(put, lockid, put.getWriteToWAL());
@@ -1913,6 +1926,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param lockid
    * @param writeToWAL
    * @throws IOException
+   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public void put(Put put, Integer lockid, boolean writeToWAL)
   throws IOException {
@@ -2386,6 +2400,24 @@ public class HRegion implements HeapSize { // , Writable{
   //the getting of the lock happens before, so that you would just pass it into
   //the methods. So in the case of checkAndMutate you could just do lockRow,
   //get, put, unlockRow or something
+ /**
+  *
+  * @param row
+  * @param family
+  * @param qualifier
+  * @param compareOp
+  * @param comparator
+  * @param writeToWAL
+  * @throws IOException
+  * @return true if the new put was execute, false otherwise
+  */
+ public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
+     CompareOp compareOp, WritableByteArrayComparable comparator, Writable w,
+     boolean writeToWAL)
+ throws IOException {
+   return checkAndMutate(row, family, qualifier, compareOp, comparator, w, null, writeToWAL);
+ }
+  
   /**
    *
    * @param row
@@ -2397,6 +2429,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param writeToWAL
    * @throws IOException
    * @return true if the new put was execute, false otherwise
+   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
       CompareOp compareOp, WritableByteArrayComparable comparator, Writable w,
@@ -4317,9 +4350,19 @@ public class HRegion implements HeapSize { // , Writable{
   //
   /**
    * @param get get object
+   * @return result
+   * @throws IOException read exceptions
+   */
+  public Result get(final Get get) throws IOException {
+    return get(get, null);
+  }
+
+  /**
+   * @param get get object
    * @param lockid existing lock id, or null for no previous lock
    * @return result
    * @throws IOException read exceptions
+   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public Result get(final Get get, final Integer lockid) throws IOException {
     checkRow(get.getRow(), "Get");
@@ -4564,6 +4607,23 @@ public class HRegion implements HeapSize { // , Writable{
 
   // TODO: There's a lot of boiler plate code identical
   // to increment... See how to better unify that.
+
+  /**
+  *
+  * Perform one or more append operations on a row.
+  * <p>
+  * Appends performed are done under row lock but reads do not take locks out
+  * so this can be seen partially complete by gets and scans.
+  *
+  * @param append
+  * @param writeToWAL
+  * @return new keyvalues after increment
+  * @throws IOException
+  */
+ public Result append(Append append, boolean writeToWAL)
+     throws IOException {
+   return append(append, null, writeToWAL);
+ }
   /**
    *
    * Perform one or more append operations on a row.
@@ -4576,6 +4636,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param writeToWAL
    * @return new keyvalues after increment
    * @throws IOException
+   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public Result append(Append append, Integer lockid, boolean writeToWAL)
       throws IOException {
@@ -4715,6 +4776,22 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
+  *
+  * Perform one or more increment operations on a row.
+  * <p>
+  * Increments performed are done under row lock but reads do not take locks
+  * out so this can be seen partially complete by gets and scans.
+  * @param increment
+  * @param writeToWAL
+  * @return new keyvalues after increment
+  * @throws IOException
+  */
+  public Result increment(Increment increment, boolean writeToWAL)
+  throws IOException {
+    return increment(increment, null, writeToWAL);
+  }
+
+  /**
    *
    * Perform one or more increment operations on a row.
    * <p>
@@ -4725,6 +4802,8 @@ public class HRegion implements HeapSize { // , Writable{
    * @param writeToWAL
    * @return new keyvalues after increment
    * @throws IOException
+   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
+
    */
   public Result increment(Increment increment, Integer lockid,
       boolean writeToWAL)
