@@ -208,7 +208,7 @@ public class AssignmentVerificationReport {
       } catch (Exception e) {
         LOG.error("Cannot verify the region assignment for region " +
             ((region == null) ? " null " : region.getRegionNameAsString()) +
-            "becuase of " + e);
+            "because of " + e);
       }
     }
 
@@ -308,6 +308,141 @@ public class AssignmentVerificationReport {
       (totalRegions / (float) totalRegionServers);
     // Set the isFilledUp as true
     isFilledUp = true;
+  }
+
+  /**
+   * Use this to project the dispersion scores
+   * @param tableName
+   * @param snapshot
+   * @param newPlan
+   */
+  public void fillUpDispersion(String tableName,
+      RegionAssignmentSnapshot snapshot, AssignmentPlan newPlan) {
+    // Set the table name
+    this.tableName = tableName;
+    // Get all the regions for this table
+    List<HRegionInfo> regionInfoList = snapshot.getTableToRegionMap().get(
+        tableName);
+    // Get the total region num for the current table
+    this.totalRegions = regionInfoList.size();
+    AssignmentPlan plan = null;
+    if (newPlan == null) {
+      plan = snapshot.getExistingAssignmentPlan();
+    } else {
+      plan = newPlan;
+    }
+    // Get the region to region server mapping
+    Map<HServerAddress, Integer> primaryRSToRegionCounterMap =
+        new HashMap<HServerAddress, Integer>();
+    Map<HServerAddress, Set<HServerAddress>> primaryToSecTerRSMap =
+        new HashMap<HServerAddress, Set<HServerAddress>>();
+
+    // Check the favored nodes and its locality information
+    // Also keep tracker of the most loaded and least loaded region servers
+    for (HRegionInfo region : regionInfoList) {
+      try {
+        // Get the favored nodes from the assignment plan and verify it.
+        List<HServerAddress> favoredNodes = plan.getAssignment(region);
+        if (favoredNodes == null
+            || favoredNodes.size() != HConstants.FAVORED_NODES_NUM) {
+          regionsWithoutValidFavoredNodes.add(region);
+          continue;
+        }
+        // Get the primary, secondary and tertiary region server
+        HServerAddress primaryRS = favoredNodes
+            .get(AssignmentPlan.POSITION.PRIMARY.ordinal());
+        HServerAddress secondaryRS = favoredNodes
+            .get(AssignmentPlan.POSITION.SECONDARY.ordinal());
+        HServerAddress tertiaryRS = favoredNodes
+            .get(AssignmentPlan.POSITION.TERTIARY.ordinal());
+
+        // Update the primary rs to its region set map
+        Integer regionCounter = primaryRSToRegionCounterMap.get(primaryRS);
+        if (regionCounter == null) {
+          regionCounter = new Integer(0);
+        }
+        regionCounter = regionCounter.intValue() + 1;
+        primaryRSToRegionCounterMap.put(primaryRS, regionCounter);
+
+        // Update the primary rs to secondary and tertiary rs map
+        Set<HServerAddress> secAndTerSet = primaryToSecTerRSMap.get(primaryRS);
+        if (secAndTerSet == null) {
+          secAndTerSet = new HashSet<HServerAddress>();
+        }
+        secAndTerSet.add(secondaryRS);
+        secAndTerSet.add(tertiaryRS);
+        primaryToSecTerRSMap.put(primaryRS, secAndTerSet);
+      } catch (Exception e) {
+        LOG.error("Cannot verify the region assignment for region "
+            + ((region == null) ? " null " : region.getRegionNameAsString())
+            + "because of " + e);
+      }
+    }
+    float dispersionScoreSummary = 0;
+    float dispersionNumSummary = 0;
+    // Calculate the secondary score for each primary region server
+    for (Map.Entry<HServerAddress, Integer> entry :
+      primaryRSToRegionCounterMap.entrySet()) {
+      HServerAddress primaryRS = entry.getKey();
+      Integer regionsOnPrimary = entry.getValue();
+
+      // Process the dispersion number and score
+      float dispersionScore = 0;
+      int dispersionNum = 0;
+      if (primaryToSecTerRSMap.get(primaryRS) != null
+          && regionsOnPrimary.intValue() != 0) {
+        dispersionNum = primaryToSecTerRSMap.get(primaryRS).size();
+        dispersionScore = dispersionNum /
+          ((float) regionsOnPrimary.intValue() * 2);
+      }
+
+      // Update the max dispersion num
+      if (dispersionNum > this.maxDispersionNum) {
+        this.maxDispersionNumServerSet.clear();
+        this.maxDispersionNumServerSet.add(primaryRS);
+        this.maxDispersionNum = dispersionNum;
+      } else if (dispersionNum == this.maxDispersionNum) {
+        this.maxDispersionNumServerSet.add(primaryRS);
+      }
+
+      // Update the min dispersion score
+      if (dispersionScore < this.minDispersionScore) {
+        this.minDispersionScoreServerSet.clear();
+        this.minDispersionScoreServerSet.add(primaryRS);
+        this.minDispersionScore = dispersionScore;
+      } else if (dispersionScore == this.minDispersionScore) {
+        this.minDispersionScoreServerSet.add(primaryRS);
+      }
+
+      // Update the min dispersion num
+      if (dispersionNum < this.minDispersionNum) {
+        this.minDispersionNumServerSet.clear();
+        this.minDispersionNumServerSet.add(primaryRS);
+        this.minDispersionNum = dispersionNum;
+      } else if (dispersionNum == this.minDispersionNum) {
+        this.minDispersionNumServerSet.add(primaryRS);
+      }
+
+      dispersionScoreSummary += dispersionScore;
+      dispersionNumSummary += dispersionNum;
+    }
+
+    // Update the avg dispersion score
+    if (primaryRSToRegionCounterMap.keySet().size() != 0) {
+      this.avgDispersionScore = dispersionScoreSummary /
+         (float) primaryRSToRegionCounterMap.keySet().size();
+      this.avgDispersionNum = dispersionNumSummary /
+         (float) primaryRSToRegionCounterMap.keySet().size();
+    }
+  }
+
+  public void printDispersionInformation() {
+    DecimalFormat df = new java.text.DecimalFormat("#.##");
+    // Print the region balance information
+    System.out.println("\tAvg dispersion num: " + df.format(avgDispersionNum)
+        + " hosts;\tMax dispersion num: " + df.format(maxDispersionNum)
+        + " hosts;\tMin dispersion num: " + df.format(minDispersionNum)
+        + " hosts;");
   }
 
   public void print(boolean isDetailMode) {

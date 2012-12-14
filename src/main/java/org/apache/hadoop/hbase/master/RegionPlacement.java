@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
@@ -57,6 +58,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
   // The amount by which the cost of a primary placement is penalized if it is
   // not the host currently serving the region. This is done to minimize moves.
   private static final float NOT_CURRENT_HOST_PENALTY = 0.1f;
+
+  private static boolean USE_MUNKRES_FOR_PLACING_SECONDARY_AND_TERTIARY = false;
 
   private Configuration conf;
   private final boolean enforceLocality;
@@ -297,18 +300,207 @@ public class RegionPlacement implements RegionPlacementPolicy{
     return secondaryAndTertiaryMap;
   }
 
+  // For regions that share the primary, avoid placing the secondary and tertiary on a same RS
+  public Map<HRegionInfo, Pair<HServerAddress, HServerAddress>> placeSecondaryAndTertiaryWithRestrictions(
+      Map<HRegionInfo, HServerAddress> primaryRSMap, AssignmentDomain domain)
+      throws IOException {
+    Map<HServerAddress, String> mapServerToRack = domain
+        .getRegionServerToRackMap();
+    Map<HServerAddress, Set<HRegionInfo>> serverToPrimaries =
+        mapRSToPrimaries(primaryRSMap);
+    Map<HRegionInfo, Pair<HServerAddress, HServerAddress>> secondaryAndTertiaryMap =
+        new HashMap<HRegionInfo, Pair<HServerAddress, HServerAddress>>();
+
+    for (Entry<HRegionInfo, HServerAddress> entry : primaryRSMap.entrySet()) {
+      // Get the target region and its primary region server rack
+      HRegionInfo regionInfo = entry.getKey();
+      HServerAddress primaryRS = entry.getValue();
+
+      // Set the random seed in the assignment domain
+      domain.setRandomSeed(regionInfo.hashCode());
+      try {
+        // Create the secondary and tertiary region server pair object.
+        Pair<HServerAddress, HServerAddress> pair;
+        // Get the rack for the primary region server
+        String primaryRack = domain.getRack(primaryRS);
+
+        if (domain.getTotalRackNum() == 1) {
+          // Single rack case: have to pick the secondary and tertiary
+          // from the same rack
+          List<HServerAddress> serverList = domain
+              .getServersFromRack(primaryRack);
+          if (serverList.size() <= 2) {
+            // Single region server case: cannot not place the favored nodes
+            // on any server; !domain.canPlaceFavoredNodes()
+            continue;
+          } else {
+            // Randomly select two region servers from the server list and make
+            // sure
+            // they are not overlap with the primary region server;
+            Set<HServerAddress> serverSkipSet = new HashSet<HServerAddress>();
+            serverSkipSet.add(primaryRS);
+
+            // Place the secondary RS
+            HServerAddress secondaryRS = domain.getOneRandomServer(primaryRack,
+                serverSkipSet);
+            // Skip the secondary for the tertiary placement
+            serverSkipSet.add(secondaryRS);
+
+            // Place the tertiary RS
+            HServerAddress tertiaryRS = domain.getOneRandomServer(primaryRack,
+                serverSkipSet);
+
+            if (secondaryRS == null || tertiaryRS == null) {
+              LOG.error("Cannot place the secondary and terinary"
+                  + "region server for region "
+                  + regionInfo.getRegionNameAsString());
+            }
+            // Create the secondary and tertiary pair
+            pair = new Pair<HServerAddress, HServerAddress>();
+            pair.setFirst(secondaryRS);
+            pair.setSecond(tertiaryRS);
+          }
+        } else {
+          // Random to choose the secondary and tertiary region server
+          // from another rack to place the secondary and tertiary
+          // Random to choose one rack except for the current rack
+          Set<String> rackSkipSet = new HashSet<String>();
+          rackSkipSet.add(primaryRack);
+          String secondaryRack = domain.getOneRandomRack(rackSkipSet);
+          List<HServerAddress> serverList = domain
+              .getServersFromRack(secondaryRack);
+          Set<HServerAddress> serverSet = new HashSet<HServerAddress>();
+          serverSet.addAll(serverList);
+
+          if (serverList.size() >= 2) {
+
+            // Randomly pick up two servers from this secondary rack
+            // Skip the secondary for the tertiary placement
+            // skip the servers which share the primary already
+            Set<HRegionInfo> primaries = serverToPrimaries.get(primaryRS);
+            Set<HServerAddress> skipServerSet = new HashSet<HServerAddress>();
+            while (true) {
+              Pair<HServerAddress, HServerAddress> secondaryAndTertiary = null;
+              if (primaries.size() > 1) {
+                // check where his tertiary and secondary are
+                for (HRegionInfo primary : primaries) {
+                  secondaryAndTertiary = secondaryAndTertiaryMap.get(primary);
+                  if (secondaryAndTertiary != null) {
+                    if (mapServerToRack.get(secondaryAndTertiary.getFirst())
+                        .equals(secondaryRack)) {
+                      skipServerSet.add(secondaryAndTertiary.getFirst());
+                    }
+                    if (mapServerToRack.get(secondaryAndTertiary.getSecond())
+                        .equals(secondaryRack)) {
+                      skipServerSet.add(secondaryAndTertiary.getSecond());
+                    }
+                  }
+                }
+              }
+              if (skipServerSet.size() + 2 <= serverSet.size())
+                break;
+              skipServerSet.clear();
+              rackSkipSet.add(secondaryRack);
+              // we used all racks
+              if (rackSkipSet.size() == domain.getTotalRackNum()) {
+                // remove the last two added and break
+                skipServerSet.remove(secondaryAndTertiary.getFirst());
+                skipServerSet.remove(secondaryAndTertiary.getSecond());
+                break;
+              }
+              secondaryRack = domain.getOneRandomRack(rackSkipSet);
+              serverList = domain.getServersFromRack(secondaryRack);
+              serverSet = new HashSet<HServerAddress>();
+              serverSet.addAll(serverList);
+            }
+
+            // Place the secondary RS
+            HServerAddress secondaryRS = domain.getOneRandomServer(
+                secondaryRack, skipServerSet);
+            skipServerSet.add(secondaryRS);
+            // Place the tertiary RS
+            HServerAddress tertiaryRS = domain.getOneRandomServer(
+                secondaryRack, skipServerSet);
+
+            if (secondaryRS == null || tertiaryRS == null) {
+              LOG.error("Cannot place the secondary and tertiary"
+                  + " region server for region "
+                  + regionInfo.getRegionNameAsString());
+            }
+            // Create the secondary and tertiary pair
+            pair = new Pair<HServerAddress, HServerAddress>();
+            pair.setFirst(secondaryRS);
+            pair.setSecond(tertiaryRS);
+          } else {
+            // Pick the secondary rs from this secondary rack
+            // and pick the tertiary from another random rack
+            pair = new Pair<HServerAddress, HServerAddress>();
+            HServerAddress secondary = domain.getOneRandomServer(secondaryRack);
+            pair.setFirst(secondary);
+
+            // Pick the tertiary
+            if (domain.getTotalRackNum() == 2) {
+              // Pick the tertiary from the same rack of the primary RS
+              Set<HServerAddress> serverSkipSet = new HashSet<HServerAddress>();
+              serverSkipSet.add(primaryRS);
+              HServerAddress tertiary = domain.getOneRandomServer(primaryRack,
+                  serverSkipSet);
+              pair.setSecond(tertiary);
+            } else {
+              // Pick the tertiary from another rack
+              rackSkipSet.add(secondaryRack);
+              String tertiaryRandomRack = domain.getOneRandomRack(rackSkipSet);
+              HServerAddress tertinary = domain
+                  .getOneRandomServer(tertiaryRandomRack);
+              pair.setSecond(tertinary);
+            }
+          }
+        }
+        if (pair != null) {
+          secondaryAndTertiaryMap.put(regionInfo, pair);
+          LOG.debug("Place the secondary and tertiary region server for region "
+              + regionInfo.getRegionNameAsString());
+        }
+      } catch (Exception e) {
+        LOG.warn("Cannot place the favored nodes for region "
+            + regionInfo.getRegionNameAsString() + " because " + e);
+        continue;
+      }
+    }
+    return secondaryAndTertiaryMap;
+  }
+
+  public Map<HServerAddress, Set<HRegionInfo>> mapRSToPrimaries(
+      Map<HRegionInfo, HServerAddress> primaryRSMap) {
+    Map<HServerAddress, Set<HRegionInfo>> primaryServerMap =
+        new HashMap<HServerAddress, Set<HRegionInfo>>();
+    for (Entry<HRegionInfo, HServerAddress> e : primaryRSMap.entrySet()) {
+      Set<HRegionInfo> currentSet = primaryServerMap.get(e.getValue());
+      if (currentSet == null) {
+        currentSet = new HashSet<HRegionInfo>();
+      }
+      currentSet.add(e.getKey());
+      primaryServerMap.put(e.getValue(), currentSet);
+    }
+    return primaryServerMap;
+  }
+
   /**
    * Generate the assignment plan for the existing table
+   *
    * @param tableName
    * @param assignmentSnapshot
    * @param regionLocalityMap
    * @param plan
+   * @param munkresForSecondaryAndTertiary if set on true the assignment plan
+   * for the tertiary and secondary will be generated with Munkres algorithm,
+   * otherwise will be generated using placeSecondaryAndTertiaryRS
    * @throws IOException
    */
   private void genAssignmentPlan(String tableName,
       RegionAssignmentSnapshot assignmentSnapshot,
-      Map<String, Map<String, Float>> regionLocalityMap,
-      AssignmentPlan plan) throws IOException {
+      Map<String, Map<String, Float>> regionLocalityMap, AssignmentPlan plan,
+      boolean munkresForSecondaryAndTertiary) throws IOException {
       // Get the all the regions for the current table
       List<HRegionInfo> regions =
         assignmentSnapshot.getTableToRegionMap().get(tableName);
@@ -475,54 +667,80 @@ public class RegionPlacement implements RegionPlacementPolicy{
           }
         }
       }
+      if (munkresForSecondaryAndTertiary) {
+        randomizedMatrix = new RandomizedMatrix(numRegions, regionSlots);
+        secondaryCost = randomizedMatrix.transform(secondaryCost);
+        int[] secondaryAssignment = new MunkresAssignment(secondaryCost).solve();
+        secondaryAssignment = randomizedMatrix.invertIndices(secondaryAssignment);
 
-      randomizedMatrix = new RandomizedMatrix(numRegions, regionSlots);
-      secondaryCost = randomizedMatrix.transform(secondaryCost);
-      int[] secondaryAssignment = new MunkresAssignment(secondaryCost).solve();
-      secondaryAssignment = randomizedMatrix.invertIndices(secondaryAssignment);
-
-      // Modify the tertiary costs for each region/server pair to ensure that a
-      // region is assigned to a tertiary server on the same rack as its secondary
-      // server, but not the same server in that rack.
-      for (int i = 0; i < numRegions; i++) {
-        int slot = secondaryAssignment[i];
-        String rack = domain.getRack(servers.get(slot / slotsPerServer));
-        for (int k = 0; k < servers.size(); k++) {
-          if (k == slot / slotsPerServer) {
-            // Same node, do not place tertiary here ever.
-            for (int m = 0; m < slotsPerServer; m++) {
-              tertiaryCost[i][k * slotsPerServer + m] = MAX_COST;
-            }
-          } else {
-            if (domain.getRack(servers.get(k)).equals(rack)) {
-              continue;
-            }
-            // Different rack, do not place tertiary here if possible.
-            for (int m = 0; m < slotsPerServer; m++) {
-              tertiaryCost[i][k * slotsPerServer + m] = AVOID_COST;
+        // Modify the tertiary costs for each region/server pair to ensure that a
+        // region is assigned to a tertiary server on the same rack as its secondary
+        // server, but not the same server in that rack.
+        for (int i = 0; i < numRegions; i++) {
+          int slot = secondaryAssignment[i];
+          String rack = domain.getRack(servers.get(slot / slotsPerServer));
+          for (int k = 0; k < servers.size(); k++) {
+            if (k == slot / slotsPerServer) {
+              // Same node, do not place tertiary here ever.
+              for (int m = 0; m < slotsPerServer; m++) {
+                tertiaryCost[i][k * slotsPerServer + m] = MAX_COST;
+              }
+            } else {
+              if (domain.getRack(servers.get(k)).equals(rack)) {
+                continue;
+              }
+              // Different rack, do not place tertiary here if possible.
+              for (int m = 0; m < slotsPerServer; m++) {
+                tertiaryCost[i][k * slotsPerServer + m] = AVOID_COST;
+              }
             }
           }
         }
+
+        randomizedMatrix = new RandomizedMatrix(numRegions, regionSlots);
+        tertiaryCost = randomizedMatrix.transform(tertiaryCost);
+        int[] tertiaryAssignment = new MunkresAssignment(tertiaryCost).solve();
+        tertiaryAssignment = randomizedMatrix.invertIndices(tertiaryAssignment);
+
+        for (int i = 0; i < numRegions; i++) {
+          List<HServerAddress> favoredServers =
+            new ArrayList<HServerAddress>(HConstants.FAVORED_NODES_NUM);
+          favoredServers.add(servers.get(primaryAssignment[i] / slotsPerServer));
+          favoredServers.add(servers.get(secondaryAssignment[i] / slotsPerServer));
+          favoredServers.add(servers.get(tertiaryAssignment[i] / slotsPerServer));
+          // Update the assignment plan
+          plan.updateAssignmentPlan(regions.get(i), favoredServers);
+        }
+        LOG.info("Generated the assignment plan for " + numRegions +
+            " regions from table " + tableName + " with " +
+            servers.size() + " region servers");
+        LOG.info("Assignment plan for secondary and tertiary generated " +
+            "using MunkresAssignment");
+      } else {
+        Map<HRegionInfo, HServerAddress> primaryRSMap = new HashMap<HRegionInfo, HServerAddress>();
+        for (int i = 0; i < numRegions; i++) {
+          primaryRSMap.put(regions.get(i), servers.get(primaryAssignment[i] / slotsPerServer));
+        }
+        Map<HRegionInfo, Pair<HServerAddress, HServerAddress>> secondaryAndTertiaryMap =
+          placeSecondaryAndTertiaryWithRestrictions(primaryRSMap, domain);
+        for (int i = 0; i < numRegions; i++) {
+          List<HServerAddress> favoredServers =
+            new ArrayList<HServerAddress>(HConstants.FAVORED_NODES_NUM);
+          HRegionInfo currentRegion = regions.get(i);
+          favoredServers.add(primaryRSMap.get(currentRegion));
+          Pair<HServerAddress, HServerAddress> secondaryAndTertiary =
+              secondaryAndTertiaryMap.get(currentRegion);
+          favoredServers.add(secondaryAndTertiary.getFirst());
+          favoredServers.add(secondaryAndTertiary.getSecond());
+          // Update the assignment plan
+          plan.updateAssignmentPlan(regions.get(i), favoredServers);
+        }
+        LOG.info("Generated the assignment plan for " + numRegions +
+            " regions from table " + tableName + " with " +
+            servers.size() + " region servers");
+        LOG.info("Assignment plan for secondary and tertiary generated " +
+            "using placeSecondaryAndTertiaryWithRestrictions method");
       }
-
-      randomizedMatrix = new RandomizedMatrix(numRegions, regionSlots);
-      tertiaryCost = randomizedMatrix.transform(tertiaryCost);
-      int[] tertiaryAssignment = new MunkresAssignment(tertiaryCost).solve();
-      tertiaryAssignment = randomizedMatrix.invertIndices(tertiaryAssignment);
-
-
-      for (int i = 0; i < numRegions; i++) {
-        List<HServerAddress> favoredServers =
-          new ArrayList<HServerAddress>(HConstants.FAVORED_NODES_NUM);
-        favoredServers.add(servers.get(primaryAssignment[i] / slotsPerServer));
-        favoredServers.add(servers.get(secondaryAssignment[i] / slotsPerServer));
-        favoredServers.add(servers.get(tertiaryAssignment[i] / slotsPerServer));
-        // Update the assignment plan
-        plan.updateAssignmentPlan(regions.get(i), favoredServers);
-      }
-      LOG.info("Generated the assignment plan for " + numRegions +
-          " regions from table " + tableName + " with " +
-          servers.size() + " region servers");
     }
 
   @Override
@@ -551,7 +769,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
           continue;
         }
         // TODO: maybe run the placement in parallel for each table
-        genAssignmentPlan(table, assignmentSnapshot, regionLocalityMap, plan);
+        genAssignmentPlan(table, assignmentSnapshot, regionLocalityMap, plan,
+            USE_MUNKRES_FOR_PLACING_SECONDARY_AND_TERTIARY);
       } catch (Exception e) {
         LOG.error("Get some exceptions for placing primary region server" +
             "for table " + table + " because " + e);
@@ -714,6 +933,16 @@ public class RegionPlacement implements RegionPlacementPolicy{
     }
   }
 
+  public void printDispersionScores(String table,
+      RegionAssignmentSnapshot snapshot, AssignmentPlan newPlan) {
+    if (!this.targetTableSet.isEmpty() && !this.targetTableSet.contains(table)) {
+      return;
+    }
+    AssignmentVerificationReport report = new AssignmentVerificationReport();
+    report.fillUpDispersion(table, snapshot, newPlan);
+    report.printDispersionInformation();
+  }
+
   public void setTargetTableName(String[] tableNames) {
     if (tableNames != null) {
       for (String table : tableNames)
@@ -856,6 +1085,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
     opt.addOption("l", "locality", true, "enforce the maxium locality");
     opt.addOption("m", "min-move", true, "enforce minium assignment move");
     opt.addOption("diff", false, "calculate difference between assignment plans");
+    opt.addOption("munkres", false,
+        "use munkres to place secondaries and tertiaries");
     try {
       // Set the log4j
       Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
@@ -914,6 +1145,10 @@ public class RegionPlacement implements RegionPlacementPolicy{
         rp.setTargetTableName(tableNames);
       }
 
+      if (cmd.hasOption("munkres")) {
+        USE_MUNKRES_FOR_PLACING_SECONDARY_AND_TERTIARY = true;
+      }
+
       // Read all the modes
       if (cmd.hasOption("v") || cmd.hasOption("verify")) {
         // Verify the region placement.
@@ -938,18 +1173,18 @@ public class RegionPlacement implements RegionPlacementPolicy{
         rp.updateAssignmentPlan(plan);
       } else if (cmd.hasOption("diff")) {
         AssignmentPlan newPlan = rp.getNewAssignmentPlan();
-
         Map<String, Map<String, Float>> locality = FSUtils
             .getRegionDegreeLocalityMappingFromFS(conf);
         Map<String, Integer> movesPerTable = rp.getRegionsMovement(newPlan);
         rp.checkDifferencesWithOldPlan(movesPerTable, locality, newPlan);
         System.out.println("Do you want to update the assignment plan? [y/n]");
-        Scanner s = new Scanner (System.in);
+        Scanner s = new Scanner(System.in);
         String input = s.nextLine().trim();
         if (input.equals("y")) {
           System.out.println("Updating assignment plan...");
           rp.updateAssignmentPlan(newPlan);
         }
+        s.close();
       } else if (cmd.hasOption("p") || cmd.hasOption("print")) {
         AssignmentPlan plan = rp.getExistingAssignmentPlan();
         RegionPlacement.printAssignmentPlan(plan);
@@ -1177,11 +1412,12 @@ public class RegionPlacement implements RegionPlacementPolicy{
    * @param movesPerTable - how many primary regions will move per table
    * @param regionLocalityMap - locality map from FS
    * @param newPlan - new assignment plan
+   * @param do we want to run verification report
    * @throws IOException
    */
   public void checkDifferencesWithOldPlan(Map<String, Integer> movesPerTable,
       Map<String, Map<String, Float>> regionLocalityMap, AssignmentPlan newPlan)
-      throws IOException {
+          throws IOException {
     // localities for primary, secondary and tertiary
     RegionAssignmentSnapshot snapshot = this.getRegionAssignmentSnapshot();
     AssignmentPlan oldPlan = snapshot.getExistingAssignmentPlan();
@@ -1245,6 +1481,10 @@ public class RegionPlacement implements RegionPlacementPolicy{
         System.out.println(df.format(100 * deltaLocality[i] / regions.size())
             + "%");
       }
+      System.out.println("\t Baseline dispersion");
+      printDispersionScores(table, snapshot, null);
+      System.out.println("\t Projected dispersion");
+      printDispersionScores(table, snapshot, newPlan);
     }
   }
 }
