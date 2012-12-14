@@ -318,7 +318,7 @@ public final class ByteBufferUtils {
       }
     }
   }
-  
+
   /**
    * Copy from the InputStream to a new heap ByteBuffer until the InputStream is exhausted.
    */
@@ -378,7 +378,7 @@ public final class ByteBufferUtils {
    * @param leftOffset Offset in left array.
    * @param leftLength Length of left array.
    * @param right Array to be compared.
-   * @param rightArray Offset in right array.
+   * @param rightOffset Offset in right array.
    * @param rightLength Length of right array.
    */
   public static int findCommonPrefix(
@@ -402,7 +402,7 @@ public final class ByteBufferUtils {
    * @param lengthLeft Length of the first part.
    * @param offsetRight Beginning of the second part.
    * @param lengthRight Length of the second part.
-   * @return
+   * @return True if equal
    */
   public static boolean arePartsEqual(ByteBuffer buffer,
       int offsetLeft, int lengthLeft,

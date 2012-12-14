@@ -44,7 +44,7 @@ public abstract class JobUtil {
   /**
    * Initializes the staging directory and returns the path.
    *
-   * @parms conf system configuration
+   * @param conf system configuration
    * @return staging directory path
    * @throws IOException
    * @throws InterruptedException

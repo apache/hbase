@@ -393,7 +393,7 @@
             <!--Pass -DskipJavadoc=true or -DskipJavadoc on command-line to skip javadoc building-->
             <skip>${skipJavadoc}</skip>
             <docfilessubdirs>true</docfilessubdirs>
-            <excludePackageNames>org.apache.hadoop.hbase.protobuf.generated.*:org.apache.hadoop.hbase.thrift.generated:org.apache.hadoop.hbase.rest.generated</excludePackageNames>
+            <excludePackageNames>org.junit.*:org.apache.hadoop.metrics2.*:org.apache.hadoop.hbase.protobuf.generated.*:org.apache.hadoop.hbase.thrift.generated:org.apache.hadoop.hbase.rest.generated</excludePackageNames>
             <debug>true</debug>
             <maxmemory>2g</maxmemory>
             <verbose>true</verbose>

@@ -46,7 +46,7 @@ import org.apache.hbase.cell.CellTool;
  * or debugging code. These should be placed in a sub-interface or the {@link CellTool} class.
  * <p/>
  * Cell implements Comparable<Cell> which is only meaningful when comparing to other keys in the
- * same table. It uses {@link #CellComparator} which does not work on the -ROOT- and .META. tables.
+ * same table. It uses CellComparator which does not work on the -ROOT- and .META. tables.
  * <p/>
  * In the future, we may consider adding a boolean isOnHeap() method and a getValueBuffer() method
  * that can be used to pass a value directly from an off-heap ByteBuffer to the network without
@@ -133,7 +133,6 @@ public interface Cell {
   //5) Type
 
   /**
-   * see {@link #KeyValue.TYPE}
    * @return The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
    */
   byte getTypeByte();

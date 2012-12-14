@@ -189,7 +189,7 @@ public class KeyValueTool {
    *
    * Remember timestamps are sorted reverse chronologically.
    * @param in
-   * @return
+   * @return previous key
    */
   public static KeyValue previousKey(final KeyValue in) {
     return KeyValue.createFirstOnRow(CellTool.getRowArray(in), CellTool.getFamilyArray(in),

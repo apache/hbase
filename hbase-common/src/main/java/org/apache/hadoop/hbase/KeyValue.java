@@ -2317,7 +2317,7 @@ public class KeyValue implements Cell, HeapSize {
    * @param out
    * @return Length written on stream
    * @throws IOException
-   * @see {@link #create(DataInput)} for the inverse function
+   * @see #create(DataInput) for the inverse function
    */
   public static long write(final KeyValue kv, final DataOutput out) throws IOException {
     // This is how the old Writables write used to serialize KVs.  Need to figure way to make it work for all

@@ -147,7 +147,7 @@ public class ByteRange implements Comparable<ByteRange> {
   /**
    * Create a new ByteRange with new backing byte[] and copy the state of this range into the new
    * range.  Copy the hash over if it is already calculated.
-   * @return 
+   * @return Deep copy
    */
   public ByteRange deepCopy() {
     ByteRange clone = new ByteRange(deepCopyToNewArray());
@@ -161,7 +161,6 @@ public class ByteRange implements Comparable<ByteRange> {
    * Wrapper for System.arraycopy.  Copy the contents of this range into the provided array.
    * @param destination Copy to this array
    * @param destinationOffset First index in the destination array.
-   * @return void to avoid confusion between which ByteRange should be returned
    */
   public void deepCopyTo(byte[] destination, int destinationOffset) {
     System.arraycopy(bytes, offset, destination, destinationOffset, length);
@@ -174,7 +173,6 @@ public class ByteRange implements Comparable<ByteRange> {
    * @param copyLength Copy this many bytes
    * @param destination Copy to this array
    * @param destinationOffset First index in the destination array.
-   * @return void to avoid confusion between which ByteRange should be returned
    */
   public void deepCopySubRangeTo(int innerOffset, int copyLength, byte[] destination,
       int destinationOffset) {
