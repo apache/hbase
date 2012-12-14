@@ -96,7 +96,7 @@ public class TestRemoteTable {
     remoteTable = new RemoteHTable(
       new Client(new Cluster().add("localhost", 
           REST_TEST_UTIL.getServletPort())),
-        TEST_UTIL.getConfiguration(), TABLE, null);
+        TEST_UTIL.getConfiguration(), TABLE);
   }
 
   @AfterClass
