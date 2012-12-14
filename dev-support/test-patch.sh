@@ -614,10 +614,10 @@ runTests () {
   condemnedCount=`$PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
   echo "WARNING: $condemnedCount rogue build processes detected, terminating."
   $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
-  echo "$MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess -Dsurefire.secondPartThreadCount=4"
+  echo "$MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess"
   export MAVEN_OPTS="${MAVEN_OPTS}"
   ulimit -a
-  $MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess -Dsurefire.secondPartThreadCount=4
+  $MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess
   if [[ $? != 0 ]] ; then
      ### Find and format names of failed tests
      failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
@@ -626,13 +626,27 @@ runTests () {
 
      {color:red}-1 core tests{color}.  The patch failed these unit tests:
      $failed_tests"
-     return 1
+     BAD=1
   else
-  JIRA_COMMENT="$JIRA_COMMENT
+    JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 core tests{color}.  The patch passed unit tests in $modules."
-  return 0
+    BAD=0
   fi
+  ZOMBIE_TESTS_COUNT=`jps | grep surefirebooter | wc -l`
+  if [[ ZOMBIE_TESTS_COUNT != 0 ]] ; then
+    echo "There are $ZOMBIE_TESTS_COUNT zombie tests, they should have been killed by surefire but survived"
+    echo "************ BEGIN zombies jstack extract"
+    jps | grep surefirebooter | cut -d ' ' -f 1 | xargs -n 1 jstack | grep ".test" | grep "\.java"
+    echo "************ END  zombies jstack extract"
+     JIRA_COMMENT="$JIRA_COMMENT
+
+     {color:red}-1 core zombie tests{color}.  There are zombie tests. See build logs for details."
+    BAD=1
+  else
+    echo "We're ok: there is no zombie tests"
+  fi
+  return $BAD
 }
 
 ###############################################################################
