@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
@@ -105,7 +106,7 @@ import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Acc
  * </p>
  */
 public class AccessController extends BaseRegionObserver
-    implements MasterObserver, AccessControllerProtocol,
+    implements MasterObserver, RegionServerObserver, AccessControllerProtocol,
     AccessControlService.Interface, CoprocessorService {
   /**
    * Represents the result of an authorization check for logging and error
@@ -514,17 +515,31 @@ public class AccessController extends BaseRegionObserver
 
   /* ---- MasterObserver implementation ---- */
   public void start(CoprocessorEnvironment env) throws IOException {
-    // if running on HMaster
+
+    ZooKeeperWatcher zk = null;
     if (env instanceof MasterCoprocessorEnvironment) {
-      MasterCoprocessorEnvironment e = (MasterCoprocessorEnvironment)env;
-      this.authManager = TableAuthManager.get(
-          e.getMasterServices().getZooKeeper(),
-          e.getConfiguration());
+      // if running on HMaster
+      MasterCoprocessorEnvironment mEnv = (MasterCoprocessorEnvironment) env;
+      zk = mEnv.getMasterServices().getZooKeeper();      
+    } else if (env instanceof RegionServerCoprocessorEnvironment) {      
+      RegionServerCoprocessorEnvironment rsEnv = (RegionServerCoprocessorEnvironment) env;
+      zk = rsEnv.getRegionServerServices().getZooKeeper();      
+    } else if (env instanceof RegionCoprocessorEnvironment) {
+      // if running at region
+      regionEnv = (RegionCoprocessorEnvironment) env;
+      zk = regionEnv.getRegionServerServices().getZooKeeper();
     }
 
-    // if running at region
-    if (env instanceof RegionCoprocessorEnvironment) {
-      regionEnv = (RegionCoprocessorEnvironment)env;
+    // If zk is null or IOException while obtaining auth manager,
+    // throw RuntimeException so that the coprocessor is unloaded.
+    if (zk != null) {
+      try {
+        this.authManager = TableAuthManager.get(zk, env.getConfiguration());
+      } catch (IOException ioe) {
+        throw new RuntimeException("Error obtaining TableAuthManager", ioe);
+      }
+    } else {
+      throw new RuntimeException("Error obtaining TableAuthManager, zk found null.");
     }
   }
 
@@ -764,27 +779,35 @@ public class AccessController extends BaseRegionObserver
   /* ---- RegionObserver implementation ---- */
 
   @Override
+  public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e)
+      throws IOException {
+    RegionCoprocessorEnvironment env = e.getEnvironment();
+    final HRegion region = env.getRegion();
+    if (region == null) {
+      LOG.error("NULL region from RegionCoprocessorEnvironment in preOpen()");
+      return;
+    } else {
+      HRegionInfo regionInfo = region.getRegionInfo();
+      if (isSpecialTable(regionInfo)) {
+        isSystemOrSuperUser(regionEnv.getConfiguration());
+      } else {
+        requirePermission(Action.ADMIN);
+      }
+    }
+  }
+
+  @Override
   public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
-    RegionCoprocessorEnvironment e = c.getEnvironment();
-    final HRegion region = e.getRegion();
+    RegionCoprocessorEnvironment env = c.getEnvironment();
+    final HRegion region = env.getRegion();
     if (region == null) {
       LOG.error("NULL region from RegionCoprocessorEnvironment in postOpen()");
       return;
     }
-
-    try {
-      this.authManager = TableAuthManager.get(
-          e.getRegionServerServices().getZooKeeper(),
-          regionEnv.getConfiguration());
-    } catch (IOException ioe) {
-      // pass along as a RuntimeException, so that the coprocessor is unloaded
-      throw new RuntimeException("Error obtaining TableAuthManager", ioe);
-    }
-
     if (AccessControlLists.isAclRegion(region)) {
       aclRegion = true;
       try {
-        initialize(e);
+        initialize(env);
       } catch (IOException ex) {
         // if we can't obtain permissions, it's better to fail
         // than perform checks incorrectly
@@ -1268,5 +1291,44 @@ public class AccessController extends BaseRegionObserver
       }
     }
     return tableName;
+  }
+
+
+  @Override
+  public void preClose(ObserverContext<RegionCoprocessorEnvironment> e, boolean abortRequested)
+      throws IOException {
+    requirePermission(Action.ADMIN);
+  }
+
+  private void isSystemOrSuperUser(Configuration conf) throws IOException {
+    User user = User.getCurrent();
+    if (user == null) {
+      throw new IOException("Unable to obtain the current user, " +
+        "authorization checks for internal operations will not work correctly!");
+    }
+
+    String currentUser = user.getShortName();
+    List<String> superusers = Lists.asList(currentUser, conf.getStrings(
+      AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
+
+    User activeUser = getActiveUser();
+    if (!(superusers.contains(activeUser.getShortName()))) {
+      throw new AccessDeniedException("User '" + (user != null ? user.getShortName() : "null") +
+        "is not system or super user.");
+    }
+  }
+
+  private boolean isSpecialTable(HRegionInfo regionInfo) {
+    byte[] tableName = regionInfo.getTableName();
+    return tableName.equals(AccessControlLists.ACL_TABLE_NAME)
+        || tableName.equals(Bytes.toBytes("-ROOT-"))
+        || tableName.equals(Bytes.toBytes(".META."));
+  }
+
+  @Override
+  public void preStopRegionServer(
+      ObserverContext<RegionServerCoprocessorEnvironment> env)
+      throws IOException {
+    requirePermission(Permission.Action.ADMIN);
   }
 }

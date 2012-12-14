@@ -432,6 +432,8 @@ public class  HRegionServer implements ClientProtocol,
    * The reference to the QosFunction
    */
   private final QosFunction qosFunction;
+  
+  private RegionServerCoprocessorHost rsHost;
 
   /**
    * Starts a HRegionServer at the default location
@@ -517,6 +519,7 @@ public class  HRegionServer implements ClientProtocol,
       "hbase.regionserver.kerberos.principal", this.isa.getHostName());
     regionServerAccounting = new RegionServerAccounting();
     cacheConfig = new CacheConfig(conf);
+    this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
   }
 
   /**
@@ -1574,10 +1577,15 @@ public class  HRegionServer implements ClientProtocol,
 
   @Override
   public void stop(final String msg) {
-    this.stopped = true;
-    LOG.info("STOPPED: " + msg);
-    // Wakes run() if it is sleeping
-    sleeper.skipSleepCycle();
+    try {
+      this.rsHost.preStop(msg);
+      this.stopped = true;
+      LOG.info("STOPPED: " + msg);
+      // Wakes run() if it is sleeping
+      sleeper.skipSleepCycle();
+    } catch (IOException exp) {
+      LOG.warn("The region server did not stop", exp);
+    }
   }
 
   public void waitForServerOnline(){
@@ -2097,6 +2105,10 @@ public class  HRegionServer implements ClientProtocol,
   public ZooKeeperWatcher getZooKeeperWatcher() {
     return this.zooKeeper;
   }
+  
+  public RegionServerCoprocessorHost getCoprocessorHost(){
+    return this.rsHost;
+  }
 
 
   public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
@@ -2398,6 +2410,17 @@ public class  HRegionServer implements ClientProtocol,
    */
   protected boolean closeRegion(HRegionInfo region, final boolean abort,
       final boolean zk, final int versionOfClosingNode, ServerName sn) {
+    //Check for permissions to close.
+    HRegion actualRegion = this.getFromOnlineRegions(region.getEncodedName());
+    if ((actualRegion != null) && (actualRegion.getCoprocessorHost() != null)) {
+      try {
+        actualRegion.getCoprocessorHost().preClose(false);
+      } catch (IOException exp) {
+        LOG.warn("Unable to close region", exp);
+        return false;
+      }
+    }
+
     if (this.regionsInTransitionInRS.containsKey(region.getEncodedNameAsBytes())) {
       LOG.warn("Received close for region we are already opening or closing; " +
         region.getEncodedName());
@@ -3380,6 +3403,10 @@ public class  HRegionServer implements ClientProtocol,
         checkIfRegionInTransition(region.getEncodedNameAsBytes(), OPEN);
         HRegion onlineRegion = getFromOnlineRegions(region.getEncodedName());
         if (null != onlineRegion) {
+          //Check if the region can actually be opened. 
+          if( onlineRegion.getCoprocessorHost() != null){
+            onlineRegion.getCoprocessorHost().preOpen();
+          }
           // See HBASE-5094. Cross check with META if still this RS is owning
           // the region.
           Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(
@@ -3459,6 +3486,10 @@ public class  HRegionServer implements ClientProtocol,
       String encodedRegionName =
         ProtobufUtil.getRegionEncodedName(request.getRegion());
       byte[] encodedName = Bytes.toBytes(encodedRegionName);
+      HRegion region = getRegionByEncodedName(encodedRegionName);
+      if(region.getCoprocessorHost() != null){
+        region.getCoprocessorHost().preClose(false);
+      }
       Boolean openAction = regionsInTransitionInRS.get(encodedName);
       if (openAction != null) {
         if (openAction.booleanValue()) {
@@ -3466,7 +3497,7 @@ public class  HRegionServer implements ClientProtocol,
         }
         checkIfRegionInTransition(encodedName, CLOSE);
       }
-      HRegion region = getRegionByEncodedName(encodedRegionName);
+           
       requestCount.increment();
       LOG.info("Received close region: " + region.getRegionNameAsString() +
         ". Version of ZK closing node:" + versionOfClosingNode +

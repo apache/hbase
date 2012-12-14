@@ -62,14 +62,14 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public void stop(CoprocessorEnvironment e) throws IOException { }
 
   @Override
-  public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) { }
+  public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException { }
 
   @Override
   public void postOpen(ObserverContext<RegionCoprocessorEnvironment> e) { }
 
   @Override
-  public void preClose(ObserverContext<RegionCoprocessorEnvironment> e,
-      boolean abortRequested) { }
+  public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
+      throws IOException { }
 
   @Override
   public void postClose(ObserverContext<RegionCoprocessorEnvironment> e,

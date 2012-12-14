@@ -58,8 +58,9 @@ public interface RegionObserver extends Coprocessor {
   /**
    * Called before the region is reported as open to the master.
    * @param c the environment provided by the region server
+   * @throws IOException if an error occurred on the coprocessor
    */
-  void preOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void preOpen(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
    * Called after the region is reported as open to the master.
@@ -261,9 +262,10 @@ public interface RegionObserver extends Coprocessor {
    * Called before the region is reported as closed to the master.
    * @param c the environment provided by the region server
    * @param abortRequested true if the region server is aborting
+   * @throws IOException 
    */
   void preClose(final ObserverContext<RegionCoprocessorEnvironment> c,
-      boolean abortRequested);
+      boolean abortRequested) throws IOException;
 
   /**
    * Called after the region is reported as closed to the master.

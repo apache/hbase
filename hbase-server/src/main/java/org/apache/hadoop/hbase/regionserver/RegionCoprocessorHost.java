@@ -36,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -53,8 +52,8 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -267,17 +266,19 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Invoked before a region open
+   * Invoked before a region open.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
    */
-  public void preOpen() {
+  public void preOpen() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
          try {
-          ((RegionObserver)env.getInstance()).preOpen(ctx);
+          ((RegionObserver) env.getInstance()).preOpen(ctx);
          } catch (Throwable e) {
-           handleCoprocessorThrowableNoRethrow(env, e);
+           handleCoprocessorThrowable(env, e);
          }
         if (ctx.shouldComplete()) {
           break;
@@ -295,7 +296,7 @@ public class RegionCoprocessorHost
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postOpen(ctx);
+          ((RegionObserver) env.getInstance()).postOpen(ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowableNoRethrow(env, e);
         }
@@ -310,15 +311,15 @@ public class RegionCoprocessorHost
    * Invoked before a region is closed
    * @param abortRequested true if the server is aborting
    */
-  public void preClose(boolean abortRequested) {
+  public void preClose(boolean abortRequested) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).preClose(ctx, abortRequested);
+          ((RegionObserver) env.getInstance()).preClose(ctx, abortRequested);
         } catch (Throwable e) {
-          handleCoprocessorThrowableNoRethrow(env, e);
+          handleCoprocessorThrowable(env, e);
         }
       }
     }
@@ -334,7 +335,7 @@ public class RegionCoprocessorHost
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postClose(ctx, abortRequested);
+          ((RegionObserver) env.getInstance()).postClose(ctx, abortRequested);
         } catch (Throwable e) {
           handleCoprocessorThrowableNoRethrow(env, e);
         }
