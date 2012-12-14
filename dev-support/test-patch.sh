@@ -634,7 +634,7 @@ runTests () {
     BAD=0
   fi
   ZOMBIE_TESTS_COUNT=`jps | grep surefirebooter | wc -l`
-  if [[ ZOMBIE_TESTS_COUNT != 0 ]] ; then
+  if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
     echo "There are $ZOMBIE_TESTS_COUNT zombie tests, they should have been killed by surefire but survived"
     echo "************ BEGIN zombies jstack extract"
     jps | grep surefirebooter | cut -d ' ' -f 1 | xargs -n 1 jstack | grep ".test" | grep "\.java"
