@@ -337,7 +337,11 @@ public class ClusterStatus extends VersionedWritable {
       RegionState value = RegionState.convert(region.getRegionState());
       rit.put(key,value);
     }
-    final String[] masterCoprocessors = proto.getMasterCoprocessorsList().toArray(new String[0]);
+    final int numMasterCoprocessors = proto.getMasterCoprocessorsCount();
+    final String[] masterCoprocessors = new String[numMasterCoprocessors];
+    for (int i = 0; i < numMasterCoprocessors; i++) {
+      masterCoprocessors[i] = proto.getMasterCoprocessors(i).getName();
+    }
     return new ClusterStatus(proto.getHbaseVersion().getVersion(),
       ClusterId.convert(proto.getClusterId()).toString(),servers,deadServers,
       ProtobufUtil.toServerName(proto.getMaster()),backupMasters,rit,masterCoprocessors,
