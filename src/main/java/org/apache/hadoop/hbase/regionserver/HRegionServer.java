@@ -71,6 +71,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
@@ -1463,6 +1464,35 @@ public class HRegionServer implements HRegionInterface,
       int percent = (int) (ratio * 100);
       this.metrics.blockCacheHitRatio.set(percent);
     }
+    
+    long bytesRead = 0;
+    long bytesLocalRead = 0;
+    long bytesRackLocalRead = 0;
+    long bytesWritten = 0;
+    long filesCreated = 0;
+    long filesRead = 0;
+    long cntWriteException = 0;
+    long cntReadException = 0;
+    
+    for (Statistics fsStatistic : FileSystem.getAllStatistics()) {
+      bytesRead += fsStatistic.getBytesRead();
+      bytesLocalRead += fsStatistic.getLocalBytesRead();
+      bytesRackLocalRead += fsStatistic.getLocalBytesRead();
+      bytesWritten += fsStatistic.getBytesWritten();
+      filesCreated += fsStatistic.getFilesCreated();
+      filesRead += fsStatistic.getFilesRead();
+      cntWriteException += fsStatistic.getCntWriteException();
+      cntReadException += fsStatistic.getCntReadException();
+    }
+    
+    this.metrics.bytesRead.set(bytesRead);
+    this.metrics.bytesLocalRead.set(bytesLocalRead);
+    this.metrics.bytesRackLocalRead.set(bytesRackLocalRead);
+    this.metrics.bytesWritten.set(bytesWritten);
+    this.metrics.filesCreated.set(filesCreated);
+    this.metrics.filesRead.set(filesRead);
+    this.metrics.cntWriteException.set(cntWriteException);
+    this.metrics.cntReadException.set(cntReadException);
   }
 
   /**

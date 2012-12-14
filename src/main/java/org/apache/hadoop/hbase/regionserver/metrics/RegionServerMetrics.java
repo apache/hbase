@@ -228,6 +228,26 @@ public class RegionServerMetrics implements Updater {
 
   protected final PersistentMetricsTimeVaryingRate flushSize =
     new PersistentMetricsTimeVaryingRate("flushSize", registry);
+  
+  /**
+   * DFSClient metrics
+   */
+  public final MetricsLongValue bytesRead = 
+      new MetricsLongValue("dfsBytesRead", registry);
+  public final MetricsLongValue bytesLocalRead = 
+      new MetricsLongValue("dfsBytesLocalRead", registry);
+  public final MetricsLongValue bytesRackLocalRead = 
+      new MetricsLongValue("dfsBytesRackLocalRead", registry);
+  public final MetricsLongValue bytesWritten = 
+      new MetricsLongValue("dfsBytesWritten", registry);
+  public final MetricsLongValue filesCreated = 
+      new MetricsLongValue("dfsFilesCreated", registry);
+  public final MetricsLongValue filesRead = 
+      new MetricsLongValue("dfsFilesRead", registry);
+  public final MetricsLongValue cntWriteException = 
+      new MetricsLongValue("dfsCntWriteException", registry);
+  public final MetricsLongValue cntReadException = 
+      new MetricsLongValue("dfsCntReadException", registry);
 
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -347,6 +367,15 @@ public class RegionServerMetrics implements Updater {
       this.compactionSize.pushMetric(this.metricsRecord);
       this.flushTime.pushMetric(this.metricsRecord);
       this.flushSize.pushMetric(this.metricsRecord);
+      
+      this.bytesRead.pushMetric(this.metricsRecord);
+      this.bytesLocalRead.pushMetric(this.metricsRecord);
+      this.bytesRackLocalRead.pushMetric(this.metricsRecord);
+      this.bytesWritten.pushMetric(this.metricsRecord);
+      this.filesCreated.pushMetric(this.metricsRecord);
+      this.filesRead.pushMetric(this.metricsRecord);
+      this.cntWriteException.pushMetric(this.metricsRecord);
+      this.cntReadException.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
   }
@@ -479,6 +508,24 @@ public class RegionServerMetrics implements Updater {
         Long.valueOf(this.blockCacheEvictedMemoryCount.get()));
     sb = Strings.appendKeyValue(sb, this.blockCacheHitRatio.getName(),
         Long.valueOf(this.blockCacheHitRatio.get()));
+    
+    sb = Strings.appendKeyValue(sb, this.bytesRead.getName(),
+        Long.valueOf(this.bytesRead.get()));
+    sb = Strings.appendKeyValue(sb, this.bytesLocalRead.getName(),
+        Long.valueOf(this.bytesLocalRead.get()));
+    sb = Strings.appendKeyValue(sb, this.bytesRackLocalRead.getName(),
+        Long.valueOf(this.bytesRackLocalRead.get()));
+    sb = Strings.appendKeyValue(sb, this.bytesWritten.getName(),
+        Long.valueOf(this.bytesWritten.get()));
+    sb = Strings.appendKeyValue(sb, this.filesCreated.getName(),
+        Long.valueOf(this.filesCreated.get()));
+    sb = Strings.appendKeyValue(sb, this.filesRead.getName(),
+        Long.valueOf(this.filesRead.get()));
+    sb = Strings.appendKeyValue(sb, this.cntWriteException.getName(),
+        Long.valueOf(this.cntWriteException.get()));
+    sb = Strings.appendKeyValue(sb, this.cntReadException.getName(),
+        Long.valueOf(this.cntReadException.get()));
+    
     return sb.toString();
   }
 }
