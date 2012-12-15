@@ -222,6 +222,45 @@ public class TestRemoteTable {
   }
 
   @Test
+  public void testMultiGet() throws Exception {
+    ArrayList<Get> gets = new ArrayList<Get>();
+    gets.add(new Get(ROW_1));
+    gets.add(new Get(ROW_2));
+    Result[] results = remoteTable.get(gets);
+    assertNotNull(results);
+    assertEquals(2, results.length);
+    assertEquals(1, results[0].size());
+    assertEquals(2, results[1].size());
+
+    //Test Versions
+    gets = new ArrayList<Get>();
+    Get g = new Get(ROW_1);
+    g.setMaxVersions(3);
+    gets.add(g);
+    gets.add(new Get(ROW_2));
+    results = remoteTable.get(gets);
+    assertNotNull(results);
+    assertEquals(2, results.length);
+    assertEquals(1, results[0].size());
+    assertEquals(3, results[1].size());
+
+    //404
+    gets = new ArrayList<Get>();
+    gets.add(new Get(Bytes.toBytes("RESALLYREALLYNOTTHERE")));
+    results = remoteTable.get(gets);
+    assertNotNull(results);
+    assertEquals(0, results.length);
+
+    gets = new ArrayList<Get>();
+    gets.add(new Get(Bytes.toBytes("RESALLYREALLYNOTTHERE")));
+    gets.add(new Get(ROW_1));
+    gets.add(new Get(ROW_2));
+    results = remoteTable.get(gets);
+    assertNotNull(results);
+    assertEquals(0, results.length);
+  }
+
+  @Test
   public void testPut() throws IOException {
     Put put = new Put(ROW_3);
     put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
