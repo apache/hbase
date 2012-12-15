@@ -265,6 +265,9 @@ public final class HConstants {
 
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
+  
+  /** Default minimum number of files to be compacted */
+  public static final int DEFAULT_MIN_FILES_TO_COMPACT = 3;
 
   /** Default value for files without minFlushTime in metadata */
   public static final long NO_MIN_FLUSH_TIME = -1;

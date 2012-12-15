@@ -1231,6 +1231,9 @@ public class Store extends SchemaConfigured implements HeapSize {
               if (Store.closeCheckInterval > 0) {
                 bytesWritten += kv.getLength();
                 if (bytesWritten > Store.closeCheckInterval) {
+                  getSchemaMetrics().updatePersistentStoreMetric(
+                    SchemaMetrics.StoreMetricType.COMPACTION_WRITE_SIZE, 
+                    bytesWritten);
                   bytesWritten = 0;
                   if (!this.region.areWritesEnabled()) {
                     writer.close();
@@ -1246,6 +1249,8 @@ public class Store extends SchemaConfigured implements HeapSize {
           }
           kvs.clear();
         } while (hasMore);
+        getSchemaMetrics().updatePersistentStoreMetric(
+          SchemaMetrics.StoreMetricType.COMPACTION_WRITE_SIZE, bytesWritten);
       } finally {
         if (scanner != null) {
           scanner.close();

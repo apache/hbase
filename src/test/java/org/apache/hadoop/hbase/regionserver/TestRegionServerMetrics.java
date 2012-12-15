@@ -30,8 +30,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -289,5 +291,64 @@ public class TestRegionServerMetrics {
       }
       testUtil.dropDefaultTable();
     }
+  }
+  
+  @Test
+  public void testCompactionWriteMetric() throws Exception { 
+    long ts = 2342;
+    String cfName = "cf1";
+    byte[] CF = Bytes.toBytes(cfName);
+    String tableName = "CompactionWriteSize";
+    byte[] TABLE = Bytes.toBytes(tableName);
+    HTable hTable = testUtil.createTable(TABLE, CF);
+
+    final String storeMetricName = ALL_METRICS.getStoreMetricName(
+        StoreMetricType.COMPACTION_WRITE_SIZE);
+    String storeMetricFullName = 
+      SchemaMetrics.generateSchemaMetricsPrefix(tableName, cfName) 
+      + storeMetricName;
+    long startValue = HRegion.getNumericPersistentMetric(storeMetricFullName);
+
+    int compactionThreshold = conf.getInt("hbase.hstore.compaction.min", 
+    		HConstants.DEFAULT_MIN_FILES_TO_COMPACT);
+    for (int i=0; i<=compactionThreshold; i++) {
+      String rowName = "row" + i;
+      byte[] ROW = Bytes.toBytes(rowName);
+      Put p = new Put(ROW);
+      p.add(CF, CF, ts, ROW);
+      hTable.put(p);
+      for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
+        hr.flushcache();
+      }
+    }
+
+    for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
+      hr.flushcache();
+      hr.compactStores();
+    }
+
+    long compactionWriteSizeAfterCompaction = 
+      HRegion.getNumericPersistentMetric(storeMetricFullName);
+    Assert.assertTrue(startValue < compactionWriteSizeAfterCompaction);
+    
+    for (int i=0; i<=compactionThreshold; i++) {
+      String rowName = "row" + i;
+      byte[] ROW = Bytes.toBytes(rowName);
+      Delete del = new Delete(ROW);
+      hTable.delete(del);
+      for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
+        hr.flushcache();
+      }
+    }
+    
+    for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
+        hr.flushcache();
+        hr.compactStores();
+      }
+
+    long compactionWriteSizeAfterCompactionAfterDelete = 
+      HRegion.getNumericPersistentMetric(storeMetricFullName);
+    Assert.assertTrue(compactionWriteSizeAfterCompactionAfterDelete 
+    	              == compactionWriteSizeAfterCompaction);
   }
 }

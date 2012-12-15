@@ -172,7 +172,8 @@ public class SchemaMetrics {
     STATIC_BLOOM_SIZE_KB("staticBloomSizeKB"),
     MEMSTORE_SIZE_MB("memstoreSizeMB"),
     STATIC_INDEX_SIZE_KB("staticIndexSizeKB"),
-    FLUSH_SIZE("flushSize", PERSISTENT_METRIC_FLAG);
+    FLUSH_SIZE("flushSize", PERSISTENT_METRIC_FLAG),
+    COMPACTION_WRITE_SIZE("compactionWriteSize", PERSISTENT_METRIC_FLAG);
 
     private final String metricStr;
     private final int flags;

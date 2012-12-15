@@ -71,7 +71,7 @@ public class CompactionConfiguration {
     minCompactSize = conf.getLong(strPrefix + "min.size", store.getHRegion().memstoreFlushSize);
     shouldExcludeBulk = conf.getBoolean(strPrefix + "exclude.bulk", false);
     minFilesToCompact = Math.max(2, conf.getInt(strPrefix + "min",
-          /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
+          /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", HConstants.DEFAULT_MIN_FILES_TO_COMPACT)));
     maxFilesToCompact = conf.getInt(strPrefix + "max", 10);
     compactionRatio = conf.getFloat(strPrefix + "ratio", 1.2F);
     offPeekCompactionRatio = conf.getFloat(strPrefix + "ratio.offpeak", 5.0F);
