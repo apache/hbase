@@ -142,6 +142,29 @@ public class RemoteHTable implements HTableInterface {
     return sb.toString();
   }
 
+  protected String buildMultiRowSpec(final byte[][] rows, int maxVersions) {
+    StringBuilder sb = new StringBuilder();
+    sb.append('/');
+    sb.append(Bytes.toStringBinary(name));
+    sb.append("/multiget/");
+    if (rows == null || rows.length == 0) {
+      return sb.toString();
+    }
+    sb.append("?");
+    for(int i=0; i<rows.length; i++) {
+      byte[] rk = rows[i];
+      if (i != 0) {
+        sb.append('&');
+      }
+      sb.append("row=");
+      sb.append(Bytes.toStringBinary(rk));
+    }
+    sb.append("&v=");
+    sb.append(maxVersions);
+
+    return sb.toString();
+  }
+
   protected Result[] buildResultFromModel(final CellSetModel model) {
     List<Result> results = new ArrayList<Result>();
     for (RowModel row: model.getRows()) {
@@ -267,30 +290,68 @@ public class RemoteHTable implements HTableInterface {
     if (get.getFilter() != null) {
       LOG.warn("filters not supported on gets");
     }
+    Result[] results = getResults(spec);
+    if (results.length > 0) {
+      if (results.length > 1) {
+        LOG.warn("too many results for get (" + results.length + ")");
+      }
+      return results[0];
+    } else {
+      return new Result();
+    }
+  }
+
+  public Result[] get(List<Get> gets) throws IOException {
+    byte[][] rows = new byte[gets.size()][];
+    int maxVersions = 1;
+    int count = 0;
+
+    for (Get g : gets) {
+
+      if (count == 0) {
+        maxVersions = g.getMaxVersions();
+      } else if (g.getMaxVersions() != maxVersions) {
+        LOG.warn("MaxVersions on Gets do not match, using the first in the list ("
+            + maxVersions +")");
+      }
+
+      if (g.getFilter() != null) {
+        LOG.warn("filters not supported on gets");
+      }
+
+      rows[count] = g.getRow();
+      count++;
+    }
+
+    String spec = buildMultiRowSpec(rows, maxVersions);
+
+    return getResults(spec);
+  }
+
+  private Result[] getResults(String spec) throws IOException {
     for (int i = 0; i < maxRetries; i++) {
       Response response = client.get(spec, Constants.MIMETYPE_PROTOBUF);
       int code = response.getCode();
       switch (code) {
-      case 200:
-        CellSetModel model = new CellSetModel();
-        model.getObjectFromMessage(response.getBody());
-        Result[] results = buildResultFromModel(model);
-        if (results.length > 0) {
-          if (results.length > 1) {
-            LOG.warn("too many results for get (" + results.length + ")");
+        case 200:
+          CellSetModel model = new CellSetModel();
+          model.getObjectFromMessage(response.getBody());
+          Result[] results = buildResultFromModel(model);
+          if (results.length > 0) {
+            return results;
           }
-          return results[0];
-        }
-        // fall through
-      case 404:
-        return new Result();
-      case 509:
-        try {
-          Thread.sleep(sleepTime);
-        } catch (InterruptedException e) { }
-        break;
-      default:
-        throw new IOException("get request returned " + code);
+          // fall through
+        case 404:
+          return new Result[0];
+
+        case 509:
+          try {
+            Thread.sleep(sleepTime);
+          } catch (InterruptedException e) {
+          }
+          break;
+        default:
+          throw new IOException("get request returned " + code);
       }
     }
     throw new IOException("get request timed out");
@@ -693,11 +754,6 @@ public class RemoteHTable implements HTableInterface {
   @Override
   public Object[] batch(List<? extends Row> actions) throws IOException {
     throw new IOException("batch not supported");
-  }
-
-  @Override
-  public Result[] get(List<Get> gets) throws IOException {
-    throw new IOException("get(List<Get>) not supported");
   }
 
   @Override
