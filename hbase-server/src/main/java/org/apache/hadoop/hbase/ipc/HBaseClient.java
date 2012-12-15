@@ -349,7 +349,7 @@ public class HBaseClient {
 
       UserGroupInformation ticket = remoteId.getTicket().getUGI();
       Class<?> protocol = remoteId.getProtocol();
-      this.useSasl = UserGroupInformation.isSecurityEnabled();
+      this.useSasl = User.isHBaseSecurityEnabled(conf);
       if (useSasl && protocol != null) {
         TokenInfo tokenInfo = protocol.getAnnotation(TokenInfo.class);
         if (tokenInfo != null) {

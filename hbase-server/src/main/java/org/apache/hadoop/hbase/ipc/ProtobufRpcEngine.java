@@ -264,7 +264,7 @@ class ProtobufRpcEngine implements RpcEngine {
         new ConcurrentHashMap<String, Method>();
 
     private AuthenticationTokenSecretManager createSecretManager(){
-      if (!User.isSecurityEnabled() ||
+      if (!isSecurityEnabled ||
           !(instance instanceof org.apache.hadoop.hbase.Server)) {
         return null;
       }

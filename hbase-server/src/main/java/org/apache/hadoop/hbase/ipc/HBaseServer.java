@@ -124,7 +124,7 @@ import org.cloudera.htrace.Trace;
 @InterfaceAudience.Private
 public abstract class HBaseServer implements RpcServer {
   private final boolean authorize;
-  private boolean isSecurityEnabled;
+  protected boolean isSecurityEnabled;
   /**
    * The first four bytes of Hadoop RPC connections
    */
@@ -1929,7 +1929,7 @@ public abstract class HBaseServer implements RpcServer {
     responder = new Responder();
     this.authorize =
         conf.getBoolean(HADOOP_SECURITY_AUTHORIZATION, false);
-    this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
+    this.isSecurityEnabled = User.isHBaseSecurityEnabled(this.conf);
     if (isSecurityEnabled) {
       HBaseSaslRpcServer.init(conf);
     }

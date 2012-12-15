@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
@@ -184,12 +185,15 @@ public abstract class User {
   }
 
   /**
-   * Returns whether or not secure authentication is enabled for HBase
-   * (whether <code>hbase.security.authentication</code> is set to
-   * <code>kerberos</code>.
+   * Returns whether or not secure authentication is enabled for HBase.  Note that
+   * HBase security requires HDFS security to provide any guarantees, so this requires that
+   * both <code>hbase.security.authentication</code> and <code>hadoop.security.authentication</code>
+   * are set to <code>kerberos</code>.
    */
   public static boolean isHBaseSecurityEnabled(Configuration conf) {
-    return "kerberos".equalsIgnoreCase(conf.get(HBASE_SECURITY_CONF_KEY));
+    return "kerberos".equalsIgnoreCase(conf.get(HBASE_SECURITY_CONF_KEY)) &&
+        "kerberos".equalsIgnoreCase(
+            conf.get(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION));
   }
 
   /* Concrete implementations */
