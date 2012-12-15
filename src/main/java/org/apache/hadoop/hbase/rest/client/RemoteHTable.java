@@ -72,7 +72,6 @@ public class RemoteHTable implements HTableInterface {
   final Client client;
   final Configuration conf;
   final byte[] name;
-  final String accessToken;
   final int maxRetries;
   final long sleepTime;
 
@@ -81,10 +80,6 @@ public class RemoteHTable implements HTableInterface {
       final long startTime, final long endTime, final int maxVersions) {
     StringBuffer sb = new StringBuffer();
     sb.append('/');
-    if (accessToken != null) {
-      sb.append(accessToken);
-      sb.append('/');
-    }
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
     sb.append(Bytes.toStringBinary(row));
@@ -210,7 +205,9 @@ public class RemoteHTable implements HTableInterface {
    * @param client
    * @param name
    * @param accessToken
+   * @deprecated accessToken is not used and will be removed
    */
+  @Deprecated
   public RemoteHTable(Client client, String name, String accessToken) {
     this(client, HBaseConfiguration.create(), Bytes.toBytes(name), accessToken);
   }
@@ -220,8 +217,20 @@ public class RemoteHTable implements HTableInterface {
    * @param client
    * @param conf
    * @param name
-   * @param accessToken
    */
+  public RemoteHTable(Client client, Configuration conf, String name) {
+    this(client, conf, Bytes.toBytes(name), null);
+  }
+
+  /**
+   * Constructor
+   * @param client
+   * @param conf
+   * @param name
+   * @param accessToken
+   * @deprecated accessToken is not used and will be removed
+   */
+  @Deprecated
   public RemoteHTable(Client client, Configuration conf, String name,
       String accessToken) {
     this(client, conf, Bytes.toBytes(name), accessToken);
@@ -229,14 +238,28 @@ public class RemoteHTable implements HTableInterface {
 
   /**
    * Constructor
+   * @param client
    * @param conf
+   * @param name
    */
+  public RemoteHTable(Client client, Configuration conf, byte[] name) {
+    this(client, conf, name, null);
+  }
+
+  /**
+   * Constructor
+   * @param client
+   * @param conf
+   * @param name
+   * @param accessToken
+   * @deprecated accessToken is not used and will be removed
+   */
+  @Deprecated
   public RemoteHTable(Client client, Configuration conf, byte[] name,
       String accessToken) {
     this.client = client;
     this.conf = conf;
     this.name = name;
-    this.accessToken = accessToken;
     this.maxRetries = conf.getInt("hbase.rest.client.max.retries", 10);
     this.sleepTime = conf.getLong("hbase.rest.client.sleep", 1000);
   }
@@ -252,10 +275,6 @@ public class RemoteHTable implements HTableInterface {
   public HTableDescriptor getTableDescriptor() throws IOException {
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    if (accessToken != null) {
-      sb.append(accessToken);
-      sb.append('/');
-    }
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
     sb.append("schema");
@@ -367,10 +386,6 @@ public class RemoteHTable implements HTableInterface {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    if (accessToken != null) {
-      sb.append(accessToken);
-      sb.append('/');      
-    }
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
     sb.append(Bytes.toStringBinary(put.getRow()));
@@ -425,10 +440,6 @@ public class RemoteHTable implements HTableInterface {
     // build path for multiput
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    if (accessToken != null) {
-      sb.append(accessToken);
-      sb.append('/');      
-    }
     sb.append(Bytes.toStringBinary(name));
     sb.append("/$multiput"); // can be any nonexistent row
     for (int i = 0; i < maxRetries; i++) {
@@ -494,10 +505,6 @@ public class RemoteHTable implements HTableInterface {
       }
       StringBuffer sb = new StringBuffer();
       sb.append('/');
-      if (accessToken != null) {
-        sb.append(accessToken);
-        sb.append('/');
-      }
       sb.append(Bytes.toStringBinary(name));
       sb.append('/');
       sb.append("scanner");
@@ -658,10 +665,6 @@ public class RemoteHTable implements HTableInterface {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    if (accessToken != null) {
-      sb.append(accessToken);
-      sb.append('/');
-    }
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
     sb.append(Bytes.toStringBinary(put.getRow()));
@@ -697,10 +700,6 @@ public class RemoteHTable implements HTableInterface {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
     sb.append('/');
-    if (accessToken != null) {
-      sb.append(accessToken);
-      sb.append('/');
-    }
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
     sb.append(Bytes.toStringBinary(row));
