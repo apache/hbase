@@ -83,7 +83,7 @@ public class HBaseFsckRepair {
    *
    * This assumes that info is in META.
    *
-   * @param conf
+   * @param admin
    * @param region
    * @throws IOException
    * @throws KeeperException

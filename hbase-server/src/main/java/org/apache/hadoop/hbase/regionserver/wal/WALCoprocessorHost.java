@@ -51,6 +51,7 @@ public class WALCoprocessorHost
 
     /**
      * Constructor
+     * @param implClass - not used
      * @param impl the coprocessor instance
      * @param priority chaining priority
      * @param seq load sequence

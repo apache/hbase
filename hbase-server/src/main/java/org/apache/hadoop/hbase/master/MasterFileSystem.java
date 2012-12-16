@@ -323,7 +323,7 @@ public class MasterFileSystem {
   /**
    * Get the rootdir.  Make sure its wholesome and exists before returning.
    * @param rd
-   * @param conf
+   * @param c
    * @param fs
    * @return hbase.rootdir (after checks for existence and bootstrapping if
    * needed populating the directory with necessary bootup files).

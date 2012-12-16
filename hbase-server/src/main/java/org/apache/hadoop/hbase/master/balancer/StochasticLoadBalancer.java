@@ -569,6 +569,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Compute a cost of a potential cluster configuration based upon where
    * {@link org.apache.hadoop.hbase.regionserver.StoreFile}s are located.
    *
+   * @param initialRegionMapping - not used
    * @param clusterState The state of the cluster
    * @return A cost between 0 and 1. 0 Means all regions are on the sever with
    *         the most local store files.

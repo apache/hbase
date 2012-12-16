@@ -146,13 +146,13 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
    * @param tableName
    * @param permsData
    */
-  public void writeToZookeeper(byte[] tableName, byte[] parmsData) {    
+  public void writeToZookeeper(byte[] tableName, byte[] permsData) {
     String zkNode = ZKUtil.joinZNode(watcher.baseZNode, ACL_NODE);
     zkNode = ZKUtil.joinZNode(zkNode, Bytes.toString(tableName));
 
     try {
       ZKUtil.createWithParents(watcher, zkNode);
-      ZKUtil.updateExistingNodeData(watcher, zkNode, parmsData, -1);
+      ZKUtil.updateExistingNodeData(watcher, zkNode, permsData, -1);
     } catch (KeeperException e) {
       LOG.error("Failed updating permissions for table '" + 
                 Bytes.toString(tableName) + "'", e);

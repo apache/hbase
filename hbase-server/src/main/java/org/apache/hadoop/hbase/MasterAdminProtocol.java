@@ -112,7 +112,7 @@ public interface MasterAdminProtocol extends
    * @param req ModifyColumnRequest that contains:<br>
    * - tableName: table name<br>
    * - descriptor: new column descriptor
-   * @throws IOException e
+   * @throws ServiceException  e
    */
   @Override
   public ModifyColumnResponse modifyColumn(RpcController controller, ModifyColumnRequest req)

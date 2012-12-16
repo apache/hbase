@@ -560,7 +560,7 @@ Server {
    * Create CatalogTracker.
    * In its own method so can intercept and mock it over in tests.
    * @param zk If zk is null, we'll create an instance (and shut it down
-   * when {@link #stop()} is called) else we'll use what is passed.
+   * when {@link #stop(String)} is called) else we'll use what is passed.
    * @param conf
    * @param abortable If fatal exception we'll call abort on this.  May be null.
    * If it is we'll use the Connection associated with the passed
@@ -1771,7 +1771,7 @@ Server {
 
   @Override
   public void checkTableModifiable(final byte [] tableName)
-  throws IOException {
+      throws IOException, TableNotFoundException, TableNotDisabledException {
     String tableNameStr = Bytes.toString(tableName);
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");

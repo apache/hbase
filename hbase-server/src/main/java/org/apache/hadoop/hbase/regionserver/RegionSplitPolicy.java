@@ -92,7 +92,7 @@ public abstract class RegionSplitPolicy extends Configured {
   /**
    * Create the RegionSplitPolicy configured for the given table.
    * Each
-   * @param htd
+   * @param region
    * @param conf
    * @return
    * @throws IOException

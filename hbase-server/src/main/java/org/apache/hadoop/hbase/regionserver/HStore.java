@@ -135,7 +135,7 @@ public class HStore implements Store, StoreConfiguration {
    */
   private volatile ImmutableList<StoreFile> storefiles = null;
 
-  List<StoreFile> filesCompacting = Lists.newArrayList();
+  final List<StoreFile> filesCompacting = Lists.newArrayList();
 
   // All access must be synchronized.
   private final CopyOnWriteArraySet<ChangedReadersObserver> changedReaderObservers =

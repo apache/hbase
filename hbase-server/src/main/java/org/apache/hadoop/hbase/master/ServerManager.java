@@ -346,8 +346,8 @@ public class ServerManager {
 
   /**
    * Adds the onlineServers list.
-   * @param hsl
    * @param serverName The remote servers name.
+   * @param sl
    */
   void recordNewServer(final ServerName serverName, final ServerLoad sl) {
     LOG.info("Registering server=" + serverName);

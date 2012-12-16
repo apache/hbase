@@ -512,7 +512,6 @@ public class SplitTransaction {
   /**
    * Open daughter regions, add them to online list and update meta.
    * @param server
-   * @param services Can be null when testing.
    * @param daughter
    * @throws IOException
    * @throws KeeperException
@@ -692,10 +691,10 @@ public class SplitTransaction {
 
   /**
    * @param hri Spec. for daughter region to open.
-   * @param flusher Flusher this region should use.
+   * @param rsServices RegionServerServices this region should use.
    * @return Created daughter HRegion.
    * @throws IOException
-   * @see #cleanupDaughterRegion(FileSystem, Path, HRegionInfo)
+   * @see #cleanupDaughterRegion(FileSystem, Path, String)
    */
   HRegion createDaughterRegion(final HRegionInfo hri,
       final RegionServerServices rsServices)

@@ -289,7 +289,7 @@ public class HRegion implements HeapSize { // , Writable{
   private final Path regiondir;
   KeyValue.KVComparator comparator;
 
-  private ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
+  private final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
 
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
@@ -442,7 +442,7 @@ public class HRegion implements HeapSize { // , Writable{
    * (implying that the HRegion has been written-to before), then read it from
    * the supplied path.
    * @param fs is the filesystem.
-   * @param conf is global configuration settings.
+   * @param confParam is global configuration settings.
    * @param regionInfo - HRegionInfo that describes the region
    * is new), then read them from the supplied path.
    * @param rsServices reference to {@link RegionServerServices} or null
@@ -3764,7 +3764,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param conf
    * @param hTableDescriptor
    * @param hlog shared HLog
-   * @param boolean initialize - true to initialize the region
+   * @param initialize - true to initialize the region
    * @return new HRegion
    *
    * @throws IOException
@@ -3790,11 +3790,9 @@ public class HRegion implements HeapSize { // , Writable{
    * @param conf
    * @param hTableDescriptor
    * @param hlog shared HLog
-   * @param boolean initialize - true to initialize the region
-   * @param boolean ignoreHLog
-      - true to skip generate new hlog if it is null, mostly for createTable
+   * @param initialize - true to initialize the region
+   * @param ignoreHLog - true to skip generate new hlog if it is null, mostly for createTable
    * @return new HRegion
-   *
    * @throws IOException
    */
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,

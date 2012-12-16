@@ -91,8 +91,7 @@ public class Compressor {
    * 
    * @param in the DataInput to read from
    * @param dict the dictionary we use for our read.
-   * 
-   * @param the uncompressed array.
+   * @return the uncompressed array.
    */
   static byte[] readCompressed(DataInput in, Dictionary dict)
       throws IOException {

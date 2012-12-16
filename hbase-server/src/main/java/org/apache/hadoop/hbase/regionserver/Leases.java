@@ -55,7 +55,7 @@ import java.io.IOException;
 public class Leases extends HasThread {
   private static final Log LOG = LogFactory.getLog(Leases.class.getName());
   private final int leaseCheckFrequency;
-  private volatile DelayQueue<Lease> leaseQueue = new DelayQueue<Lease>();
+  private final DelayQueue<Lease> leaseQueue = new DelayQueue<Lease>();
   protected final Map<String, Lease> leases = new HashMap<String, Lease>();
   private volatile boolean stopRequested = false;
 
@@ -269,7 +269,7 @@ public class Leases extends HasThread {
       if (getClass() != obj.getClass()) {
         return false;
       }
-      return this.hashCode() == ((Lease) obj).hashCode();
+      return this.hashCode() == obj.hashCode();
     }
 
     @Override

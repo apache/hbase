@@ -64,7 +64,7 @@ public class RESTServlet implements Constants {
   /**
    * Constructor with existing configuration
    * @param conf existing configuration
-   * @throws IOException.
+   * @throws IOException
    */
   RESTServlet(Configuration conf) throws IOException {
     this.conf = conf;

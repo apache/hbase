@@ -114,7 +114,7 @@ public class HLogSplitter {
 
   // Wait/notify for when data has been produced by the reader thread,
   // consumed by the reader thread, or an exception occurred
-  Object dataAvailable = new Object();
+  final Object dataAvailable = new Object();
 
   private MonitoredTask status;
 
@@ -692,7 +692,7 @@ public class HLogSplitter {
    * @param conf
    * @return A new Reader instance
    * @throws IOException
-   * @throws CorruptedLogFile
+   * @throws CorruptedLogFileException
    */
   protected Reader getReader(FileSystem fs, FileStatus file, Configuration conf,
       boolean skipErrors)

@@ -166,7 +166,7 @@ public enum ChecksumType {
   /**
    * Map a checksum name to a specific type.
    * Do our own names.
-   * @param b
+   * @param name
    * @return Type associated with passed code.
    */
   public static ChecksumType nameToType(final String name) {

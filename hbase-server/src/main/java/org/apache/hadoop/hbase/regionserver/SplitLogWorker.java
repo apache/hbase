@@ -75,7 +75,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private final ServerName serverName;
   private final TaskExecutor splitTaskExecutor;
 
-  private Object taskReadyLock = new Object();
+  private final Object taskReadyLock = new Object();
   volatile int taskReadySeq = 0;
   private volatile String currentTask = null;
   private int currentVersion;
@@ -176,7 +176,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    * one at a time. This policy puts an upper-limit on the number of
    * simultaneous log splitting that could be happening in a cluster.
    * <p>
-   * Synchronization using {@link #task_ready_signal_seq} ensures that it will
+   * Synchronization using {@link #taskReadyLock} ensures that it will
    * try to grab every task that has been put up
    */
   private void taskLoop() {
@@ -371,7 +371,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   /**
    * endTask() can fail and the only way to recover out of it is for the
    * {@link SplitLogManager} to timeout the task node.
-   * @param ts
+   * @param slt
    * @param ctr
    */
   private void endTask(SplitLogTask slt, AtomicLong ctr) {

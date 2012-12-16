@@ -250,7 +250,8 @@ public class RegionCoprocessorHost
    * org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost#preOpen()} and
    * {@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost#postOpen()} are such hooks.
    *
-   * See also {@link org.apache.hadoop.hbase.master.MasterCoprocessorHost#handleCoprocessorThrowable()}
+   * See also
+   * {@link org.apache.hadoop.hbase.master.MasterCoprocessorHost#handleCoprocessorThrowable(CoprocessorEnvironment, Throwable)}
    * @param env The coprocessor that threw the exception.
    * @param e The exception that was thrown.
    */
@@ -523,7 +524,7 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preFlush(ObserverContext, HStore, KeyValueScanner)}
+   * {@link RegionObserver#preFlush(ObserverContext<RegionCoprocessorEnvironment>, HStore, KeyValueScanner)}
    */
   public InternalScanner preFlushScannerOpen(HStore store, KeyValueScanner memstoreScanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;

@@ -25,6 +25,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 
 /**
@@ -56,9 +58,12 @@ public interface MasterServices extends Server {
    * Check table is modifiable; i.e. exists and is offline.
    * @param tableName Name of table to check.
    * @throws TableNotDisabledException
-   * @throws TableNotFoundException 
+   * @throws TableNotFoundException
+   * @throws IOException
    */
-  public void checkTableModifiable(final byte [] tableName) throws IOException;
+  // We actually throw the exceptions mentioned in the
+  public void checkTableModifiable(final byte [] tableName)
+      throws IOException, TableNotFoundException, TableNotDisabledException;
 
   /**
    * Create a table using the given table definition.

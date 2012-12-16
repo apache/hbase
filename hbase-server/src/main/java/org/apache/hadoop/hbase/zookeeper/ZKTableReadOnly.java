@@ -43,8 +43,8 @@ public class ZKTableReadOnly {
   private ZKTableReadOnly() {}
   
   /**
-   * Go to zookeeper and see if state of table is {@link TableState#DISABLED}.
-   * This method does not use cache as {@link #isDisabledTable(String)} does.
+   * Go to zookeeper and see if state of table is {@link ZooKeeperProtos.Table.State#DISABLED}.
+   * This method does not use cache.
    * This method is for clients other than {@link AssignmentManager}
    * @param zkw
    * @param tableName
@@ -59,8 +59,8 @@ public class ZKTableReadOnly {
   }
 
   /**
-   * Go to zookeeper and see if state of table is {@link TableState#ENABLED}.
-   * This method does not use cache as {@link #isEnabledTable(String)} does.
+   * Go to zookeeper and see if state of table is {@link ZooKeeperProtos.Table.State#ENABLED}.
+   * This method does not use cache.
    * This method is for clients other than {@link AssignmentManager}
    * @param zkw
    * @param tableName
@@ -74,9 +74,9 @@ public class ZKTableReadOnly {
   }
 
   /**
-   * Go to zookeeper and see if state of table is {@link TableState#DISABLING}
-   * of {@link TableState#DISABLED}.
-   * This method does not use cache as {@link #isEnabledTable(String)} does.
+   * Go to zookeeper and see if state of table is {@link ZooKeeperProtos.Table.State#DISABLING}
+   * of {@link ZooKeeperProtos.Table.State#DISABLED}.
+   * This method does not use cache.
    * This method is for clients other than {@link AssignmentManager}.
    * @param zkw
    * @param tableName
@@ -135,7 +135,7 @@ public class ZKTableReadOnly {
   /**
    * @param zkw
    * @param child
-   * @return Null or {@link TableState} found in znode.
+   * @return Null or {@link ZooKeeperProtos.Table.State} found in znode.
    * @throws KeeperException
    */
   static ZooKeeperProtos.Table.State getTableState(final ZooKeeperWatcher zkw,

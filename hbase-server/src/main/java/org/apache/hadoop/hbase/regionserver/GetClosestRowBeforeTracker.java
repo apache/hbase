@@ -222,8 +222,7 @@ class GetClosestRowBeforeTracker {
 
   /**
    * @param kv Current kv
-   * @param First on row kv.
-   * @param state
+   * @param firstOnRow on row kv.
    * @return True if we went too far, past the target key.
    */
   boolean isTooFar(final KeyValue kv, final KeyValue firstOnRow) {

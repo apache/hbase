@@ -48,7 +48,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   private final SortedMap<K, SoftValue<K,V>> internalMap;
   private final ReferenceQueue<V> rq = new ReferenceQueue<V>();
-  private Object sync;
+  private final Object sync;
 
   /** Constructor */
   public SoftValueSortedMap() {

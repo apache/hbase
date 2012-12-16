@@ -451,8 +451,6 @@ public class ZKAssign {
     ZKUtil.deleteChildrenRecursively(zkw, zkw.assignmentZNode);
   }
 
-  // RegionServer methods
-
   /**
    * Creates a new unassigned node in the CLOSING state for the specified
    * region.
@@ -463,10 +461,10 @@ public class ZKAssign {
    * <p>If creation is successful, returns the version number of the CLOSING
    * node created.
    *
-   * <p>Does not set any watches.
+   * <p>Set a watch.
    *
-   * <p>This method should only be used by a RegionServer when initiating a
-   * close of a region after receiving a CLOSE RPC from the Master.
+   * <p>This method should only be used by a Master when initiating a
+   * close of a region before sending a close request to the region server.
    *
    * @param zkw zk reference
    * @param region region to be created as closing
@@ -485,6 +483,8 @@ public class ZKAssign {
     String node = getNodeName(zkw, region.getEncodedName());
     return ZKUtil.createAndWatch(zkw, node, rt.toByteArray());
   }
+
+  // RegionServer methods
 
   /**
    * Transitions an existing unassigned node for the specified region which is

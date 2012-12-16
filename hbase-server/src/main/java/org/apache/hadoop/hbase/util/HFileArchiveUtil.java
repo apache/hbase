@@ -42,7 +42,7 @@ public class HFileArchiveUtil {
    * @param conf {@link Configuration} to read for the archive directory name
    * @param tableName table name under which the store currently lives
    * @param regionName region encoded name under which the store currently lives
-   * @param family name of the family in the store
+   * @param familyName name of the family in the store
    * @return {@link Path} to the directory to archive the given store or
    *         <tt>null</tt> if it should not be archived
    */

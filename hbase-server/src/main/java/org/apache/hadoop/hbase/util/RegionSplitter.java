@@ -145,7 +145,7 @@ public class RegionSplitter {
    * {@link HexStringSplit} to partition their table and set it as default, but
    * provided this for your custom algorithm. To use, create a new derived class
    * from this interface and call {@link RegionSplitter#createPresplitTable} or
-   * {@link RegionSplitter#rollingSplit(String, String, Configuration)} with the
+   * {@link RegionSplitter#rollingSplit(String, SplitAlgorithm, Configuration)} with the
    * argument splitClassName giving the name of your class.
    */
   public static interface SplitAlgorithm {

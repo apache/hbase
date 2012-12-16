@@ -346,7 +346,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Get to a client Get
    *
-   * @param get the protocol buffer Get to convert
+   * @param proto the protocol buffer Get to convert
    * @return the converted client Get
    * @throws IOException
    */

@@ -173,7 +173,7 @@ public class DefaultLoadBalancer extends BaseLoadBalancer {
    *       Does this mean we need HeapSize on HMaster?  Or just careful monitor?
    *       (current thinking is we will hold all assignments in memory)
    *
-   * @param clusterState Map of regionservers and their load/region information to
+   * @param clusterMap Map of regionservers and their load/region information to
    *                   a list of their most loaded regions
    * @return a list of regions to be moved, including source and destination,
    *         or null if cluster is already balanced

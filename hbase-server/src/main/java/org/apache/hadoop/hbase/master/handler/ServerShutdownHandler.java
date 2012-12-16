@@ -398,8 +398,9 @@ public class ServerShutdownHandler extends EventHandler {
 
   /**
    * Check that daughter regions are up in .META. and if not, add them.
-   * @param hris All regions for this server in meta.
    * @param result The contents of the parent row in .META.
+   * @param assignmentManager
+   * @param catalogTracker
    * @return the number of daughters missing and fixed
    * @throws IOException
    */
@@ -417,8 +418,8 @@ public class ServerShutdownHandler extends EventHandler {
 
   /**
    * Check individual daughter is up in .META.; fixup if its not.
-   * @param result The contents of the parent row in .META.
-   * @param qualifier Which daughter to check for.
+   * @param result The contents of the parent row in .META. - not used
+   * @param daughter Which daughter to check for.
    * @return 1 if the daughter is missing and fixed. Otherwise 0
    * @throws IOException
    */

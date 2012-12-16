@@ -66,7 +66,6 @@ public class Writables {
    * @return The bytes of <code>w</code> gotten by running its
    * {@link Writable#write(java.io.DataOutput)} method.
    * @throws IOException e
-   * @see #getHRegionInfos(byte[], int, int)
    */
   public static byte [] getBytes(final Writable... ws) throws IOException {
     List<byte []> bytes = new ArrayList<byte []>();

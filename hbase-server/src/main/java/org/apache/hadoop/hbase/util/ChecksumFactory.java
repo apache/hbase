@@ -49,9 +49,7 @@ public class ChecksumFactory {
 
   /**
    * Returns a Constructor that can be used to create a Checksum object.
-   * @return The Constructor that can be used to create a 
-   * new Checksum object.
-   * @param theClass classname for which an constructor is created
+   * @param className classname for which an constructor is created
    * @return a new Constructor object
    */
   static public Constructor<?> newConstructor(String className) 

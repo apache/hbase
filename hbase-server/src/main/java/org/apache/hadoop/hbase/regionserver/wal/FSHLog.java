@@ -249,7 +249,6 @@ class FSHLog implements HLog, Syncable {
    * @param fs filesystem handle
    * @param root path for stored and archived hlogs
    * @param logName dir where hlogs are stored
-   * @param oldLogName dir where hlogs are archived
    * @param conf configuration to use
    * @param listeners Listeners on WAL events. Listeners passed here will
    * be registered before we do anything else; e.g. the
@@ -275,7 +274,7 @@ class FSHLog implements HLog, Syncable {
    *
    * @param fs filesystem handle
    * @param root path to where logs and oldlogs
-   * @param oldLogDir path to where hlogs are archived
+   * @param oldLogName path to where hlogs are archived
    * @param conf configuration to use
    * @param listeners Listeners on WAL events. Listeners passed here will
    * be registered before we do anything else; e.g. the
@@ -943,7 +942,7 @@ class FSHLog implements HLog, Syncable {
 
     private final long optionalFlushInterval;
 
-    private AtomicBoolean closeLogSyncer = new AtomicBoolean(false);
+    private final AtomicBoolean closeLogSyncer = new AtomicBoolean(false);
 
     // List of pending writes to the HLog. There corresponds to transactions
     // that have not yet returned to the client. We keep them cached here

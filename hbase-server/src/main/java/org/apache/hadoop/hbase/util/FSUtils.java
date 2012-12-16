@@ -127,8 +127,7 @@ public abstract class FSUtils {
    * <ol>
    * <li>overwrite the file if it exists</li>
    * <li>apply the umask in the configuration (if it is enabled)</li>
-   * <li>use the fs configured buffer size (or {@value DEFAULT_BUFFER_SIZE} if
-   * not set)</li>
+   * <li>use the fs configured buffer size (or 4096 if not set)</li>
    * <li>use the default replication</li>
    * <li>use the default block size</li>
    * <li>not track progress</li>
@@ -148,8 +147,7 @@ public abstract class FSUtils {
    * Create the specified file on the filesystem. By default, this will:
    * <ol>
    * <li>apply the umask in the configuration (if it is enabled)</li>
-   * <li>use the fs configured buffer size (or {@value DEFAULT_BUFFER_SIZE} if
-   * not set)</li>
+   * <li>use the fs configured buffer size (or 4096 if not set)</li>
    * <li>use the default replication</li>
    * <li>use the default block size</li>
    * <li>not track progress</li>
