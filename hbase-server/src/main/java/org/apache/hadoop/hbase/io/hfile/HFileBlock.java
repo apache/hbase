@@ -596,17 +596,14 @@ public class HFileBlock implements Cacheable {
   /**
    * Unified version 2 {@link HFile} block writer. The intended usage pattern
    * is as follows:
-   * <ul>
-   * <li>Construct an {@link HFileBlock.Writer}, providing a compression
-   * algorithm
-   * <li>Call {@link Writer#startWriting(BlockType, boolean)} and get a data stream to
-   * write to
-   * <li>Write your data into the stream
-   * <li>Call {@link Writer#writeHeaderAndData(FSDataOutputStream)} as many times as you need to
-   * store the serialized block into an external stream, or call
-   * {@link Writer#getHeaderAndData()} to get it as a byte array.
-   * <li>Repeat to write more blocks
-   * </ul>
+   * <ol>
+   * <li>Construct an {@link HFileBlock.Writer}, providing a compression algorithm.
+   * <li>Call {@link Writer#startWriting} and get a data stream to write to.
+   * <li>Write your data into the stream.
+   * <li>Call {@link Writer#writeHeaderAndData(FSDataOutputStream)} as many times as you need to.
+   * store the serialized block into an external stream.
+   * <li>Repeat to write more blocks.
+   * </ol>
    * <p>
    */
   public static class Writer {
@@ -696,7 +693,7 @@ public class HFileBlock implements Cacheable {
 
     /**
      * @param compressionAlgorithm compression algorithm to use
-     * @param dataBlockEncoderAlgo data block encoding algorithm to use
+     * @param dataBlockEncoder data block encoding algorithm to use
      * @param checksumType type of checksum
      * @param bytesPerChecksum bytes per checksum
      */

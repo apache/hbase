@@ -293,7 +293,7 @@ public class FilterList extends Filter {
    * @param pbBytes A pb serialized {@link FilterList} instance
    * @return An instance of {@link FilterList} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static FilterList parseFrom(final byte [] pbBytes)
   throws DeserializationException {

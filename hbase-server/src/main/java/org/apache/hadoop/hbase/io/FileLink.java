@@ -56,13 +56,13 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * original location or in the archive folder.
  * The FileLink class tries to abstract this concept and given a set of locations
  * it is able to switch between them making this operation transparent for the user.
- * More concrete implementations of the FileLink are the {@link HFileLink} and the {@link HLogLink}.
+ * {@link HFileLink} is a more concrete implementation of the {@code FileLink}.
  *
  * <p><b>Back-references:</b>
- * To help the {@link CleanerChore} to keep track of the links to a particular file,
- * during the FileLink creation, a new file is placed inside a back-reference directory.
- * There's one back-reference directory for each file that has links,
- * and in the directory there's one file per link.
+ * To help the {@link org.apache.hadoop.hbase.master.cleaner.CleanerChore} to keep track of
+ * the links to a particular file, during the {@code FileLink} creation, a new file is placed
+ * inside a back-reference directory. There's one back-reference directory for each file that
+ * has links, and in the directory there's one file per link.
  *
  * <p>HFileLink Example
  * <ul>

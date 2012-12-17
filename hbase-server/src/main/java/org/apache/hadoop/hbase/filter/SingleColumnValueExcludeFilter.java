@@ -136,7 +136,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @param pbBytes A pb serialized {@link SingleColumnValueExcludeFilter} instance
    * @return An instance of {@link SingleColumnValueExcludeFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static SingleColumnValueExcludeFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

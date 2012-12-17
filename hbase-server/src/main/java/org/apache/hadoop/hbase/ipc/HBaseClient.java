@@ -1173,7 +1173,6 @@ public class HBaseClient {
 
   /**
    * Construct an IPC client with the default SocketFactory
-   * @param valueClass value class
    * @param conf configuration
    */
   public HBaseClient(Configuration conf) {

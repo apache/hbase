@@ -401,7 +401,6 @@ public class HFileReaderV1 extends AbstractHFileReader {
      * first key in the block = key, then you'll get thrown exceptions.
      * @param key to find
      * @param seekBefore find the key before the exact match.
-     * @return
      */
     protected abstract int blockSeek(byte[] key, int offset, int length,
         boolean seekBefore);

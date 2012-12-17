@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A Get, Put or Delete associated with it's region.  Used internally by  
- * {@link HTable::batch} to associate the action with it's region and maintain 
+ * {@link HTable#batch} to associate the action with it's region and maintain
  * the index from the original request. 
  */
 @InterfaceAudience.Public
@@ -34,7 +34,7 @@ public class Action<R> implements Comparable {
   private int originalIndex;
   private R result;
 
-  /*
+  /**
    * This constructor is replaced by {@link #Action(Row, int)}
    */
   @Deprecated

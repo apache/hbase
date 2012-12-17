@@ -180,7 +180,7 @@ public abstract class Filter {
    * @param pbBytes A pb serialized {@link Filter} instance
    * @return An instance of {@link Filter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static Filter parseFrom(final byte [] pbBytes) throws DeserializationException {
     throw new DeserializationException(

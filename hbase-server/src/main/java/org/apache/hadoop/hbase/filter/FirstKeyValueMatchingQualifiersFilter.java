@@ -93,7 +93,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
    * @param pbBytes A pb serialized {@link FirstKeyValueMatchingQualifiersFilter} instance
    * @return An instance of {@link FirstKeyValueMatchingQualifiersFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static FirstKeyValueMatchingQualifiersFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

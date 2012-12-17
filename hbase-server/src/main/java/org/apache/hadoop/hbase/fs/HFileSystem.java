@@ -66,7 +66,7 @@ public class HFileSystem extends FilterFileSystem {
   /**
    * Create a FileSystem object for HBase regionservers.
    * @param conf The configuration to be used for the filesystem
-   * @param useHBaseChecksums if true, then use
+   * @param useHBaseChecksum if true, then use
    *        checksum verfication in hbase, otherwise
    *        delegate checksum verification to the FileSystem.
    */

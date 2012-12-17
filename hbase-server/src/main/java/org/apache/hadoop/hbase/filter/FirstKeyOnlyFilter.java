@@ -86,7 +86,7 @@ public class FirstKeyOnlyFilter extends FilterBase {
    * @param pbBytes A pb serialized {@link FirstKeyOnlyFilter} instance
    * @return An instance of {@link FirstKeyOnlyFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static FirstKeyOnlyFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

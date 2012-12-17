@@ -62,7 +62,7 @@ import java.util.regex.Pattern;
  * ValueFilter vf = new ValueFilter(CompareOp.EQUAL,
  *     new RegexStringComparator("regex", Pattern.CASE_INSENSITIVE | Pattern.DOTALL));
  * </pre>
- * @see java.util.regex.Pattern;
+ * @see java.util.regex.Pattern
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -132,7 +132,7 @@ public class RegexStringComparator extends ByteArrayComparable {
    * @param pbBytes A pb serialized {@link RegexStringComparator} instance
    * @return An instance of {@link RegexStringComparator} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static RegexStringComparator parseFrom(final byte [] pbBytes)
   throws DeserializationException {

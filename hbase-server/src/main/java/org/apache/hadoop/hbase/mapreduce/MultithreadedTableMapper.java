@@ -52,10 +52,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * Mapper implementations using this MapRunnable must be thread-safe.
  * <p>
  * The Map-Reduce job has to be configured with the mapper to use via
- * {@link #setMapperClass(Configuration, Class)} and
- * the number of thread the thread-pool can use with the
- * {@link #getNumberOfThreads(Configuration) method. The default
- * value is 10 threads.
+ * {@link #setMapperClass} and the number of thread the thread-pool can use with the
+ * {@link #getNumberOfThreads} method. The default value is 10 threads.
  * <p>
  */
 

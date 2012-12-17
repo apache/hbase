@@ -332,7 +332,7 @@ public class SingleColumnValueFilter extends FilterBase {
    * @param pbBytes A pb serialized {@link SingleColumnValueFilter} instance
    * @return An instance of {@link SingleColumnValueFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static SingleColumnValueFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

@@ -122,7 +122,7 @@ public class RandomRowFilter extends FilterBase {
    * @param pbBytes A pb serialized {@link RandomRowFilter} instance
    * @return An instance of {@link RandomRowFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static RandomRowFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

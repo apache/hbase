@@ -102,7 +102,7 @@ public class ColumnPrefixFilter extends FilterBase {
    * @param pbBytes A pb serialized {@link ColumnPrefixFilter} instance
    * @return An instance of {@link ColumnPrefixFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static ColumnPrefixFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

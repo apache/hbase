@@ -147,7 +147,6 @@ public abstract class ServerCallable<T> implements Callable<T> {
    * Run this instance with retries, timed waits,
    * and refinds of missing regions.
    *
-   * @param <T> the type of the return value
    * @return an object of type T
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
@@ -202,7 +201,6 @@ public abstract class ServerCallable<T> implements Callable<T> {
 
   /**
    * Run this instance against the server once.
-   * @param <T> the type of the return value
    * @return an object of type T
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error

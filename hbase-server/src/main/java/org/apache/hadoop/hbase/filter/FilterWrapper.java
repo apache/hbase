@@ -66,7 +66,7 @@ public class FilterWrapper extends Filter {
    * @param pbBytes A pb serialized {@link FilterWrapper} instance
    * @return An instance of {@link FilterWrapper} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static FilterWrapper parseFrom(final byte [] pbBytes)
   throws DeserializationException {

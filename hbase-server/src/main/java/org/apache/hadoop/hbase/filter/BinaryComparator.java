@@ -62,7 +62,7 @@ public class BinaryComparator extends ByteArrayComparable {
    * @param pbBytes A pb serialized {@link BinaryComparator} instance
    * @return An instance of {@link BinaryComparator} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static BinaryComparator parseFrom(final byte [] pbBytes)
   throws DeserializationException {

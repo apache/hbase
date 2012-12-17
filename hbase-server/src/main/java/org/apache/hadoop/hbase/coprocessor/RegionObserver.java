@@ -185,7 +185,7 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param store the store being compacted
    * @param scanners the list {@link StoreFileScanner}s to be read from
-   * @param scantype the {@link ScanType} indicating whether this is a major or minor compaction
+   * @param scanType the {@link ScanType} indicating whether this is a major or minor compaction
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved
    * store files
    * @param s the base scanner, if not {@code null}, from previous RegionObserver in the chain

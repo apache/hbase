@@ -398,6 +398,7 @@
             <maxmemory>2g</maxmemory>
             <verbose>true</verbose>
             <reportOutputDirectory>target/apidocs</reportOutputDirectory>
+            <detectLinks>true</detectLinks>
           </configuration>
         </plugin>
         <plugin>

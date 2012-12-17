@@ -107,7 +107,7 @@ public class RowFilter extends CompareFilter {
    * @param pbBytes A pb serialized {@link RowFilter} instance
    * @return An instance of {@link RowFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static RowFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

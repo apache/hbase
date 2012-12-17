@@ -90,7 +90,7 @@ public class PrefixFilter extends FilterBase {
    * @param pbBytes A pb serialized {@link PrefixFilter} instance
    * @return An instance of {@link PrefixFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static PrefixFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

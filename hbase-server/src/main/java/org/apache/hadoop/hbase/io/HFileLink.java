@@ -69,7 +69,7 @@ public class HFileLink extends FileLink {
   }
 
   /**
-   * @param rootdir Path to the root directory where hbase files are stored
+   * @param rootDir Path to the root directory where hbase files are stored
    * @param archiveDir Path to the hbase archive directory
    * @param path The path of the HFile Link.
    */
@@ -82,7 +82,7 @@ public class HFileLink extends FileLink {
 
   /**
    * @param originPath Path to the hfile in the table directory
-   * @param archiveDir Path to the hfile in the archive directory
+   * @param archivePath Path to the hfile in the archive directory
    */
   public HFileLink(final Path originPath, final Path archivePath) {
     this.originPath = originPath;
@@ -105,7 +105,7 @@ public class HFileLink extends FileLink {
   }
 
   /**
-   * @param p Path to check.
+   * @param path Path to check.
    * @return True if the path is a HFileLink.
    */
   public static boolean isHFileLink(final Path path) {
@@ -158,7 +158,7 @@ public class HFileLink extends FileLink {
    * or a path to the archived file like: /hbase/.archive/table/region/cf/hfile
    *
    * @param fs {@link FileSystem} on which to check the HFileLink
-   * @param rootdir root hbase directory
+   * @param rootDir root hbase directory
    * @param archiveDir Path to the hbase archive directory
    * @param path HFileLink path
    * @return Referenced path (original path or archived path)
@@ -325,7 +325,7 @@ public class HFileLink extends FileLink {
   /**
    * Get the full path of the HFile referenced by the back reference
    *
-   * @param rootdir root hbase directory
+   * @param rootDir root hbase directory
    * @param linkRefPath Link Back Reference path
    * @return full path of the referenced hfile
    * @throws IOException on unexpected error.

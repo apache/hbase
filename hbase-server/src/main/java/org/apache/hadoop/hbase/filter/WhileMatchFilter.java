@@ -108,7 +108,7 @@ public class WhileMatchFilter extends FilterBase {
    * @param pbBytes A pb serialized {@link WhileMatchFilter} instance
    * @return An instance of {@link WhileMatchFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static WhileMatchFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

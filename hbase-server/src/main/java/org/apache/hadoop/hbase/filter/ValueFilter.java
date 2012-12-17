@@ -88,7 +88,7 @@ public class ValueFilter extends CompareFilter {
    * @param pbBytes A pb serialized {@link ValueFilter} instance
    * @return An instance of {@link ValueFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static ValueFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

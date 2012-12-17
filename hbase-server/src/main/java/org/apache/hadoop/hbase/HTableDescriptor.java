@@ -901,7 +901,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface 
    * and is used for serialization of the HTableDescriptor over RPC
-   * @deprecated Writables are going away.  Use pb {@link #toByteArray(byte[])} instead.
+   * @deprecated Writables are going away.
+   * Use {@link com.google.protobuf.MessageLite#toByteArray} instead.
    */
   @Deprecated
   @Override

@@ -61,7 +61,7 @@ public class NullComparator extends ByteArrayComparable {
    * @param pbBytes A pb serialized {@link NullComparator} instance
    * @return An instance of {@link NullComparator} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static NullComparator parseFrom(final byte [] pbBytes)
   throws DeserializationException {

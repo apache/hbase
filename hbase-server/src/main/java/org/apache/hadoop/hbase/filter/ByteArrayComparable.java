@@ -62,7 +62,7 @@ public abstract class ByteArrayComparable implements Comparable<byte[]> {
    * @param pbBytes A pb serialized {@link ByteArrayComparable} instance
    * @return An instance of {@link ByteArrayComparable} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static ByteArrayComparable parseFrom(final byte [] pbBytes)
   throws DeserializationException {

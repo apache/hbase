@@ -290,8 +290,7 @@ public interface HTableInterface extends Closeable {
    * Performs multiple mutations atomically on a single row. Currently
    * {@link Put} and {@link Delete} are supported.
    *
-   * @param arm object that specifies the set of mutations to perform
-   * atomically
+   * @param rm object that specifies the set of mutations to perform atomically
    * @throws IOException
    */
   public void mutateRow(final RowMutations rm) throws IOException;
@@ -537,7 +536,8 @@ public interface HTableInterface extends Closeable {
   /**
    * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
    * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive),
-   * and invokes the passed {@link Batch.Call#call(Object)} method with each {@link Service}
+   * and invokes the passed {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call}
+   * method with each {@link Service}
    * instance.
    *
    * @param service the protocol buffer {@code Service} implementation to call
@@ -545,11 +545,13 @@ public interface HTableInterface extends Closeable {
    *                 selection will start with the first table region.
    * @param endKey select regions up to and including the region containing this row.
    *               If {@code null}, selection will continue through the last table region.
-   * @param callable this instance's {@link Batch.Call#call(Object)} method will be invoked once
-   *                 per table region, using the {@link Service} instance connected to that region.
+   * @param callable this instance's
+   *                 {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call}
+   *                 method will be invoked once per table region, using the {@link Service}
+   *                 instance connected to that region.
    * @param <T> the {@link Service} subclass to connect to
    * @param <R> Return type for the {@code callable} parameter's
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)} method
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    * @return a map of result values keyed by region name
    */
   <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
@@ -559,14 +561,14 @@ public interface HTableInterface extends Closeable {
   /**
    * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
    * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive),
-   * and invokes the passed {@link Batch.Call#call(Object)} method with each {@link Service}
-   * instance.
+   * and invokes the passed {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call}
+   * method with each {@link Service} instance.
    *
    * <p>
    * The given
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
-   * method will be called with the return value from each region's {@link Batch.Call#call(Object)}
-   * invocation.
+   * method will be called with the return value from each region's
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} invocation.
    *</p>
    *
    * @param service the protocol buffer {@code Service} implementation to call
@@ -574,12 +576,14 @@ public interface HTableInterface extends Closeable {
    *                 selection will start with the first table region.
    * @param endKey select regions up to and including the region containing this row.
    *               If {@code null}, selection will continue through the last table region.
-   * @param callable this instance's {@link Batch.Call#call(Object)} method will be invoked once
-   *                 per table region, using the {@link Service} instance connected to that region.
+   * @param callable this instance's
+   *                 {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
+   *                 will be invoked once per table region, using the {@link Service} instance
+   *                 connected to that region.
    * @param callback
    * @param <T> the {@link Service} subclass to connect to
    * @param <R> Return type for the {@code callable} parameter's
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)} method
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    */
   <T extends Service, R> void coprocessorService(final Class<T> service,
       byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
@@ -589,7 +593,7 @@ public interface HTableInterface extends Closeable {
    * See {@link #setAutoFlush(boolean, boolean)}
    *
    * @param autoFlush
-   *          Whether or not to enable 'auto-flush'.
+   *        Whether or not to enable 'auto-flush'.
    */
   public void setAutoFlush(boolean autoFlush);
 
@@ -600,13 +604,13 @@ public interface HTableInterface extends Closeable {
    * and are immediately executed. Failed operations are not retried. This is
    * slower but safer.
    * <p>
-   * Turning off {@link #autoFlush} means that multiple {@link Put}s will be
+   * Turning off {@code autoFlush} means that multiple {@link Put}s will be
    * accepted before any RPC is actually sent to do the write operations. If the
    * application dies before pending writes get flushed to HBase, data will be
    * lost.
    * <p>
-   * When you turn {@link #autoFlush} off, you should also consider the
-   * {@link #clearBufferOnFail} option. By default, asynchronous {@link Put}
+   * When you turn {@code #autoFlush} off, you should also consider the
+   * {@code clearBufferOnFail} option. By default, asynchronous {@link Put}
    * requests will be retried on failure until successful. However, this can
    * pollute the writeBuffer and slow down batching performance. Additionally,
    * you may want to issue a number of Put requests and call
@@ -615,9 +619,9 @@ public interface HTableInterface extends Closeable {
    * has been called, regardless of success.
    *
    * @param autoFlush
-   *          Whether or not to enable 'auto-flush'.
+   *        Whether or not to enable 'auto-flush'.
    * @param clearBufferOnFail
-   *          Whether to keep Put failures in the writeBuffer
+   *        Whether to keep Put failures in the writeBuffer
    * @see #flushCommits
    */
   public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail);

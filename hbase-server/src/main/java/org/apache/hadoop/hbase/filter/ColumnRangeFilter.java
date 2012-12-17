@@ -180,7 +180,7 @@ public class ColumnRangeFilter extends FilterBase {
    * @param pbBytes A pb serialized {@link ColumnRangeFilter} instance
    * @return An instance of {@link ColumnRangeFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static ColumnRangeFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {

@@ -40,7 +40,7 @@ import com.google.protobuf.Service;
 
 /**
  * This class demonstrates how to implement atomic read-modify-writes
- * using {@link HRegion#processRowsWithLocks()} and Coprocessor endpoints.
+ * using {@link HRegion#processRowsWithLocks} and Coprocessor endpoints.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -54,7 +54,7 @@ extends RowProcessorService implements CoprocessorService, Coprocessor {
    * RowProcessorEndpoint. This way the RowProcessor can be class-loaded with
    * the Coprocessor endpoint together.
    *
-   * See {@link TestRowProcessorEndpoint} for example.
+   * See {@code TestRowProcessorEndpoint} for example.
    *
    * The request contains information for constructing processor 
    * (see {@link #constructRowProcessorFromRequest}. The processor object defines

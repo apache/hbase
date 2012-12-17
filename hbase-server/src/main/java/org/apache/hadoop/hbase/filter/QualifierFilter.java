@@ -92,7 +92,7 @@ public class QualifierFilter extends CompareFilter {
    * @param pbBytes A pb serialized {@link QualifierFilter} instance
    * @return An instance of {@link QualifierFilter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray
    */
   public static QualifierFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {
