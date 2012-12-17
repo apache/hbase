@@ -220,6 +220,17 @@ public final class HConstants {
   /** Like the previous, but for old logs that are about to be deleted */
   public static final String HREGION_OLDLOGDIR_NAME = ".oldlogs";
 
+  /** Boolean config to determine if we should use a subdir structure
+   * in the .oldlogs directory */
+  public static final String HREGION_OLDLOGDIR_USE_SUBDIR_STRUCTURE =
+    "hbase.regionserver.oldlogs.use.subdir.structure";
+
+  /** Boolean config to determine if we should use a subdir structure in
+   * the .oldlogs directory by default */
+  public static final boolean HREGION_OLDLOGDIR_USE_SUBDIR_STRUCTURE_DEFAULT =
+    true;
+
+
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
 
@@ -475,7 +486,7 @@ public final class HConstants {
      * scanner's next method.
      */
   public static String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = "hbase.client.scanner.max.result.size";
-  
+
   /**
    * Maximum number of bytes returned when calling a scanner's next method.
    * Note that when a single row is larger than this limit the row is still
@@ -488,7 +499,7 @@ public final class HConstants {
 
   /**
    * Maximum number of bytes returned when calling a scanner's next method.
-   * Used with partialRow parameter on the client side.  Note that when a 
+   * Used with partialRow parameter on the client side.  Note that when a
    * single row is larger than this limit, the row is still returned completely
    * if partialRow is true, otherwise, the row will be truncated in order to
    * fit the memory.
@@ -596,11 +607,11 @@ public final class HConstants {
 
   /** The number of HLogs for each region server */
   public static final String HLOG_CNT_PER_SERVER = "hbase.regionserver.hlog.cnt.perserver";
-  
+
   public static final String HLOG_FORMAT_BACKWARD_COMPATIBILITY =
       "hbase.regionserver.hlog.format.backward.compatibility";
-  
-  /** 
+
+  /**
    * The byte array represents for NO_NEXT_INDEXED_KEY;
    * The actual value is irrelevant because this is always compared by reference.
    */

@@ -242,7 +242,7 @@ public class HLog implements Syncable {
 
   // Lock to guarantee the ordering of log entries in HLOG
   private final Object appendLock = new Object();
-  
+
   private final boolean enabled;
 
   /*
@@ -330,25 +330,25 @@ public class HLog implements Syncable {
   /**
    * Double list buffer for WAL that allows entries to be
    * appended while sync is in progress
-   * 
+   *
    * CurrentList is for buffering appended entries;
    * syncList contains entries being synced to persistent storage;
    */
   private class DoubleListBuffer {
     private LinkedList<Entry> currentList = new LinkedList<Entry>();
     private LinkedList<Entry> syncList = new LinkedList<Entry>();
-    
+
     /**
-     * Append a log entry into the buffer 
+     * Append a log entry into the buffer
      * @param entry log entry
      */
     synchronized private void appendToBuffer(Entry entry) {
       currentList.add(entry);
     }
-    
+
     /**
      * Sync buffered log entries into persistent storage
-     * 
+     *
      * @return number of log entries synced
      */
     private int appendAndSync() throws IOException {
@@ -363,14 +363,14 @@ public class HLog implements Syncable {
         syncList = currentList;
         currentList = tmp;
       }
-      
+
       // append entries to writer
       int syncedEntries = syncList.size();
       while (!syncList.isEmpty()) {
         Entry entry = syncList.remove();
         writer.append(entry);
       }
-      
+
       // sync the data
       long now = System.currentTimeMillis();
       writer.sync();
@@ -378,7 +378,7 @@ public class HLog implements Syncable {
       return syncedEntries;
     }
   }
-  
+
   private DoubleListBuffer logBuffer = new DoubleListBuffer();
 
   /**
@@ -437,17 +437,17 @@ public class HLog implements Syncable {
     this.logrollsize = (long)(this.blocksize * multi);
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 1 * 1000);
-    
+
     if (!fs.exists(oldLogDir)) {
       fs.mkdirs(oldLogDir);
     }
     this.oldLogDir = oldLogDir;
-    
+
     if (!fs.exists(dir)) {
       fs.mkdirs(dir);
     }
     this.dir = dir;
-    
+
     this.hlogIndexID = hlogIndexID;
     this.hlogName = "HLog-" + this.hlogIndexID + " ";
 
@@ -461,14 +461,14 @@ public class HLog implements Syncable {
     if (actionListener != null) {
       addLogActionsListerner(actionListener);
     }
-    
+
     // If prefix is null||empty, then just name it hlog.
     if (conf.getBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, true)) {
       this.prefix = prefix == null || prefix.isEmpty() ? "hlog" : URLEncoder.encode(prefix, "UTF8");
       LOG.warn("Still using old hlog prefix due to HLOG_FORMAT_BACK_COMPATIBILITY: " + this.prefix);
     } else {
       // Also append the current hlogIndexId-totalHLogCnt to the prefix.
-      this.prefix = (prefix == null || prefix.isEmpty() ? 
+      this.prefix = (prefix == null || prefix.isEmpty() ?
           "hlog" : URLEncoder.encode(prefix, "UTF8"))
           + "." + hlogIndexID + "-" + totalHLogCnt;
       LOG.info("HLog prefix is " + this.prefix);
@@ -495,7 +495,7 @@ public class HLog implements Syncable {
     } else {
       LOG.info("getNumCurrentReplicas--HDFS-826 not available" );
     }
-    
+
     logSyncerThread = new LogSyncer(this.optionalFlushInterval);
     Threads.setDaemonThreadRunning(logSyncerThread.getThread(),
         Thread.currentThread().getName() + ".logSyncer-" + hlogIndexID);
@@ -909,7 +909,7 @@ public class HLog implements Syncable {
   }
 
   private void archiveLogFile(final Path p, final Long seqno) throws IOException {
-    Path newPath = getHLogArchivePath(this.oldLogDir, p);
+    Path newPath = getHLogArchivePath(this.oldLogDir, p, this.fs, this.conf);
     LOG.info(hlogName + "moving old hlog file " + FSUtils.getPath(p) +
       " whose highest sequence/edit id is " + seqno + " to " +
       FSUtils.getPath(newPath));
@@ -951,11 +951,10 @@ public class HLog implements Syncable {
     close();
     FileStatus[] files = fs.listStatus(this.dir);
     for(FileStatus file : files) {
-      fs.rename(file.getPath(),
-          getHLogArchivePath(this.oldLogDir, file.getPath()));
+      Path newPath = getHLogArchivePath(this.oldLogDir, file.getPath(), fs, this.conf);
+      fs.rename(file.getPath(), newPath);
+      LOG.debug(hlogName + "Moved log file " + file + " to " + newPath);
     }
-    LOG.debug(hlogName + "Moved " + files.length + " log files to " +
-        FSUtils.getPath(this.oldLogDir));
     fs.delete(dir, true);
   }
 
@@ -978,11 +977,11 @@ public class HLog implements Syncable {
     } catch (InterruptedException e) {
       LOG.error(hlogName + "Exception while waiting for syncer thread to die", e);
     }
-    
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("closing hlog writer in " + this.dir.toString());
     }
-    
+
     cacheFlushLock.writeLock().lock();
     try {
       synchronized (updateLock) {
@@ -1040,7 +1039,7 @@ public class HLog implements Syncable {
 
     long len = edits.getTotalKeyValueLength();
     long txid = 0;
-    
+
     long start = System.currentTimeMillis();
     byte[] regionName = info.getRegionName();
 
@@ -1053,20 +1052,20 @@ public class HLog implements Syncable {
       long seqNum = obtainSeqNum();
       this.firstSeqWrittenInCurrentMemstore.putIfAbsent(regionName, seqNum);
       HLogKey logKey = makeKey(regionName, tableName, seqNum, now);
-      
+
       doWrite(info, logKey, edits);
       // Only count 1 row as an unflushed entry.
       txid = this.unflushedEntries.incrementAndGet();
     }
-    
-    // Update the metrics 
+
+    // Update the metrics
     this.numEntries.incrementAndGet();
     writeSize.inc(len);
 
     // sync txn to file system
     start = System.currentTimeMillis();
     this.sync(info.isMetaRegion(), txid);
-    
+
     // Update the metrics and log down the outliers
     long end = System.currentTimeMillis();
     long syncTime = end - start;
@@ -1077,7 +1076,7 @@ public class HLog implements Syncable {
         Thread.currentThread().getName(), syncTime, this.numEntries.get(),
         StringUtils.humanReadableInt(len)));
     }
-    
+
     // Update the per-request profiling data
     Call call = HRegionServer.callContext.get();
     ProfilingData pData = call == null ? null : call.getProfilingData();
@@ -1165,7 +1164,7 @@ public class HLog implements Syncable {
       } catch (InterruptedException e) {
         LOG.debug(getName() + " interrupted while waiting for sync requests");
         if (unflushedEntries.get() != syncTillHere) {
-          syncFailureAbortStrategy.abort("LogSyncer interrupted before it" + 
+          syncFailureAbortStrategy.abort("LogSyncer interrupted before it" +
               " could sync everything. Aborting JVM", e);
         }
       } finally {
@@ -1248,7 +1247,7 @@ public class HLog implements Syncable {
           syncFailureAbortStrategy.abort(hlogName + "Could not sync hlog. Aborting", e);
         }
       }
-      
+
       // if the number of replicas in HDFS has fallen below the initial
       // value, then roll logs.
       try {
@@ -1265,7 +1264,7 @@ public class HLog implements Syncable {
           LOG.warn("Unable to invoke DFSOutputStream.getNumCurrentReplicas" + e +
                    " still proceeding ahead...");
       }
-      
+
       try {
         if (isUnderReplication || (this.writer.getLength() > this.logrollsize)) {
           requestLogRoll();
@@ -1275,7 +1274,7 @@ public class HLog implements Syncable {
       }
     }
   }
-  
+
   /**
    * This method gets the datanode replication count for the current HLog.
    *
@@ -1298,7 +1297,7 @@ public class HLog implements Syncable {
   boolean canGetCurReplicas() {
     return this.getNumCurrentReplicas != null;
   }
-  
+
   private void requestLogRoll() {
     if (this.listener != null) {
       this.listener.logRollRequested();
@@ -1309,7 +1308,7 @@ public class HLog implements Syncable {
   throws IOException {
     this.logBuffer.appendToBuffer(new Entry(logKey, logEdit));
   }
-  
+
   /** @return How many items have been added to the log */
   int getNumEntries() {
     return numEntries.get();
@@ -1458,7 +1457,7 @@ public class HLog implements Syncable {
           files = NO_FILES;
         }
         for(FileStatus file : files) {
-          Path newPath = getHLogArchivePath(oldLogDir, file.getPath());
+          Path newPath = getHLogArchivePath(oldLogDir, file.getPath(), fs, conf);
           LOG.info("Moving " +  FSUtils.getPath(file.getPath()) + " to " +
                      FSUtils.getPath(newPath));
           fs.rename(file.getPath(), newPath);
@@ -1743,8 +1742,29 @@ public class HLog implements Syncable {
     return pattern.matcher(filename).matches();
   }
 
-  static Path getHLogArchivePath(Path oldLogDir, Path p) {
-    return new Path(oldLogDir, p.getName());
+  static Path getHLogArchivePath(Path oldLogDir, Path p, FileSystem fs,
+                                 Configuration conf) throws IOException {
+    String filename = p.getName();
+
+    // if subdirectories are disabled...
+    if (conf != null && !conf.getBoolean(
+        HConstants.HREGION_OLDLOGDIR_USE_SUBDIR_STRUCTURE,
+        HConstants.HREGION_OLDLOGDIR_USE_SUBDIR_STRUCTURE_DEFAULT)) {
+      return new Path(oldLogDir, filename);
+    }
+
+    if (!validateHLogFilename(filename)) {
+      LOG.warn("Malformed Log file name: " + filename);
+      return new Path(oldLogDir, filename);
+    }
+
+    // since the filename is a valid name, we know there
+    // is a last '.' (won't return -1)
+    String subDirectoryName = filename.substring(0, filename.lastIndexOf('.'));
+    Path oldLogsSubDir = new Path(oldLogDir, subDirectoryName);
+    fs.mkdirs(oldLogsSubDir);
+
+    return new Path(oldLogsSubDir, filename);
   }
 
   /**
@@ -1979,7 +1999,7 @@ public class HLog implements Syncable {
     }
 
     for (Path p: processedLogs) {
-      Path newPath = getHLogArchivePath(oldLogDir, p);
+      Path newPath = getHLogArchivePath(oldLogDir, p, fs, conf);
       if (fs.exists(p)) {
         if (!fs.rename(p, newPath)) {
           LOG.warn("Unable to move  " + p + " to " + newPath);

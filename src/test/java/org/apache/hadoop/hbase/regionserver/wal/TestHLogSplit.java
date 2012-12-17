@@ -82,7 +82,7 @@ public class TestHLogSplit {
   private static final int NUM_WRITERS = 10;
   private static final int ENTRIES = 10; // entries per writer per region
   private static final int NUM_CLOSE_THREADS = 10;
-  
+
   private HLog.Writer[] writer = new HLog.Writer[NUM_WRITERS];
   private long seq = 0;
   private static final byte[] TABLE_NAME = "t1".getBytes();
@@ -174,6 +174,7 @@ public class TestHLogSplit {
     HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     Path originalLog = (fs.listStatus(oldLogDir))[0].getPath();
+    originalLog = (fs.listStatus(originalLog))[0].getPath();
     Path splitLog = getLogForRegion(hbaseDir, TABLE_NAME, REGION);
 
     assertEquals("edits differ after split", true, logsAreEqual(originalLog, splitLog));
@@ -359,6 +360,7 @@ public class TestHLogSplit {
     HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     FileStatus[] archivedLogs = fs.listStatus(oldLogDir);
+    archivedLogs = fs.listStatus(archivedLogs[0].getPath());
 
     assertEquals("wrong number of files in the archive log", NUM_WRITERS, archivedLogs.length);
   }
@@ -730,6 +732,8 @@ public class TestHLogSplit {
         logfile.getPath().toString(), conf);
 
     Path originalLog = (fs.listStatus(oldLogDir))[0].getPath();
+    originalLog = (fs.listStatus(originalLog))[0].getPath();
+
     Path splitLog = getLogForRegion(hbaseDir, TABLE_NAME, REGION);
 
     assertEquals(true, logsAreEqual(originalLog, splitLog));

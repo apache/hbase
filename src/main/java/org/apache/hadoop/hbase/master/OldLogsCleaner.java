@@ -91,32 +91,48 @@ public class OldLogsCleaner extends Chore {
     }
   }
 
+  /**
+   * Delete log files directories recursively.
+   * @param files The list of files/directories to traverse.
+   * @param deleteCountLeft Max number of files to delete
+   * @param maxDepth Max Directory depth to recurse
+   * @return Number of files left to delete (deleteCountLeft - number deleted)
+   * @throws IOException
+   */
+  private int cleanFiles(FileStatus[] files, int deleteCountLeft,
+                         int maxDepth) throws IOException {
+    if (files == null || files.length == 0) return deleteCountLeft;
+    if (maxDepth <= 0) {
+      LOG.warn("Old Logs directory structure is too deep: " + files[0].getPath());
+      return deleteCountLeft;
+    }
+    for (FileStatus file : files) {
+      if (deleteCountLeft <= 0) return 0; // we don't have anymore to delete
+      if (file.isDir()) {
+        deleteCountLeft = cleanFiles(this.fs.listStatus(file.getPath()),
+                                     deleteCountLeft, maxDepth - 1);
+        continue;
+      }
+      Path filePath = file.getPath();
+      if (HLog.validateHLogFilename(filePath.getName())) {
+        if (logCleaner.isLogDeletable(filePath) ) {
+          this.fs.delete(filePath, true);
+          deleteCountLeft--;
+        }
+      } else {
+        LOG.warn("Found a wrongly formatted file: "
+            + file.getPath().getName());
+        this.fs.delete(filePath, true);
+        deleteCountLeft--;
+      }
+    }
+    return deleteCountLeft;
+  }
+
   @Override
   protected void chore() {
     try {
-      FileStatus[] files = this.fs.listStatus(this.oldLogDir);
-      if (files == null) {
-        // We don't have any files to process.
-        return;
-      }
-      int nbDeletedLog = 0;
-      for (FileStatus file : files) {
-        Path filePath = file.getPath();
-        if (HLog.validateHLogFilename(filePath.getName())) {
-          if (logCleaner.isLogDeletable(filePath) ) {
-            this.fs.delete(filePath, true);
-            nbDeletedLog++;
-          }
-        } else {
-          LOG.warn("Found a wrongly formated file: "
-              + file.getPath().getName());
-          this.fs.delete(filePath, true);
-          nbDeletedLog++;
-        }
-        if (nbDeletedLog >= maxDeletedLogs) {
-          break;
-        }
-      }
+      cleanFiles(this.fs.listStatus(this.oldLogDir), maxDeletedLogs, 2);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.warn("Error while cleaning the logs", e);

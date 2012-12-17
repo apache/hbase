@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -151,8 +152,12 @@ public class TestMutationWriteToWAL extends ThriftServerTestBase {
     final Path oldLogDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     int nLogFilesRead = 0;
     List<String> actualLogEntries = new ArrayList<String>();
-    for (FileStatus logFile : fs.listStatus(oldLogDir)) {
+    ArrayDeque<FileStatus> checkQueue = new ArrayDeque<FileStatus>(
+      java.util.Arrays.asList(fs.listStatus(oldLogDir)));
+    while (!checkQueue.isEmpty()) {
+      FileStatus logFile = checkQueue.pop();
       if (logFile.isDir()) {
+        checkQueue.addAll(java.util.Arrays.asList(fs.listStatus(logFile.getPath())));
         continue;
       }
       HLog.Reader r = HLog.getReader(fs, logFile.getPath(), conf);
