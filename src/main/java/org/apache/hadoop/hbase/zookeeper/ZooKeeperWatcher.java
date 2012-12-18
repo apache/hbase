@@ -214,11 +214,11 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
         conf.get("zookeeper.znode.unassigned", "unassigned"));
     String tableZNodeDefault = "table";
     masterTableZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.masterTableEnableDisable", tableZNodeDefault));
+        conf.get("zookeeper.znode.masterTableEnableDisable", "table94"));
     clientTableZNode = ZKUtil.joinZNode(baseZNode,
             conf.get("zookeeper.znode.clientTableEnableDisable", tableZNodeDefault));
     masterTableZNode92 = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.masterTableEnableDisable92", "table92"));
+        conf.get("zookeeper.znode.masterTableEnableDisable92", tableZNodeDefault));
     clusterIdZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.clusterId", "hbaseid"));
     splitLogZNode = ZKUtil.joinZNode(baseZNode,
