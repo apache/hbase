@@ -1426,7 +1426,10 @@ public class ZKUtil {
   public static void multiOrSequential(ZooKeeperWatcher zkw, List<ZKUtilOp> ops,
       boolean runSequentialOnMultiFailure) throws KeeperException {
     if (ops == null) return;
-    boolean useMulti = zkw.getConfiguration().getBoolean(HConstants.ZOOKEEPER_USEMULTI, false);
+    // NOTE: this and future versions of HBase are only supported to work with
+    // versions of ZooKeeper with multi support (CDH4+), so it is safe to use
+    // ZK.multi.
+    boolean useMulti = zkw.getConfiguration().getBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
 
     if (useMulti) {
       List<Op> zkOps = new LinkedList<Op>();
