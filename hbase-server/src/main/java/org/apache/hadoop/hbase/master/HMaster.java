@@ -1558,19 +1558,22 @@ Server {
   }
 
   @Override
+  public void deleteTable(final byte[] tableName) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preDeleteTable(tableName);
+    }
+    this.executorService.submit(new DeleteTableHandler(tableName, this, this));
+    if (cpHost != null) {
+      cpHost.postDeleteTable(tableName);
+    }
+  }
+
+  @Override
   public DeleteTableResponse deleteTable(RpcController controller, DeleteTableRequest request)
   throws ServiceException {
-    byte [] tableName = request.getTableName().toByteArray();
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preDeleteTable(tableName);
-      }
-      this.executorService.submit(new DeleteTableHandler(tableName, this, this));
-
-      if (cpHost != null) {
-        cpHost.postDeleteTable(tableName);
-      }
+      deleteTable(request.getTableName().toByteArray());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1605,45 +1608,55 @@ Server {
     }
   }
 
+  @Override
+  public void addColumn(final byte[] tableName, final HColumnDescriptor column)
+      throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      if (cpHost.preAddColumn(tableName, column)) {
+        return;
+      }
+    }
+    new TableAddFamilyHandler(tableName, column, this, this).process();
+    if (cpHost != null) {
+      cpHost.postAddColumn(tableName, column);
+    }
+  }
+
+  @Override
   public AddColumnResponse addColumn(RpcController controller, AddColumnRequest req)
   throws ServiceException {
-    byte [] tableName = req.getTableName().toByteArray();
-    HColumnDescriptor column = HColumnDescriptor.convert(req.getColumnFamilies());
-
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        if (cpHost.preAddColumn(tableName, column)) {
-          return AddColumnResponse.newBuilder().build();
-        }
-      }
-      new TableAddFamilyHandler(tableName, column, this, this).process();
-      if (cpHost != null) {
-        cpHost.postAddColumn(tableName, column);
-      }
+      addColumn(req.getTableName().toByteArray(),
+        HColumnDescriptor.convert(req.getColumnFamilies()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
     return AddColumnResponse.newBuilder().build();
   }
 
+  @Override
+  public void modifyColumn(byte[] tableName, HColumnDescriptor descriptor)
+      throws IOException {
+    checkInitialized();
+    checkCompression(descriptor);
+    if (cpHost != null) {
+      if (cpHost.preModifyColumn(tableName, descriptor)) {
+        return;
+      }
+    }
+    new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
+    if (cpHost != null) {
+      cpHost.postModifyColumn(tableName, descriptor);
+    }
+  }
+
+  @Override
   public ModifyColumnResponse modifyColumn(RpcController controller, ModifyColumnRequest req)
   throws ServiceException {
-    byte [] tableName = req.getTableName().toByteArray();
-    HColumnDescriptor descriptor = HColumnDescriptor.convert(req.getColumnFamilies());
-
     try {
-      checkInitialized();
-      checkCompression(descriptor);
-      if (cpHost != null) {
-        if (cpHost.preModifyColumn(tableName, descriptor)) {
-          return ModifyColumnResponse.newBuilder().build();
-        }
-      }
-      new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
-      if (cpHost != null) {
-        cpHost.postModifyColumn(tableName, descriptor);
-      }
+      modifyColumn(req.getTableName().toByteArray(),
+        HColumnDescriptor.convert(req.getColumnFamilies()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1651,21 +1664,25 @@ Server {
   }
 
   @Override
+  public void deleteColumn(final byte[] tableName, final byte[] columnName)
+      throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      if (cpHost.preDeleteColumn(tableName, columnName)) {
+        return;
+      }
+    }
+    new TableDeleteFamilyHandler(tableName, columnName, this, this).process();
+    if (cpHost != null) {
+      cpHost.postDeleteColumn(tableName, columnName);
+    }
+  }
+
+  @Override
   public DeleteColumnResponse deleteColumn(RpcController controller, DeleteColumnRequest req)
   throws ServiceException {
-    final byte [] tableName = req.getTableName().toByteArray();
-    final byte [] columnName = req.getColumnName().toByteArray();
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        if (cpHost.preDeleteColumn(tableName, columnName)) {
-          return DeleteColumnResponse.newBuilder().build();
-        }
-      }
-      new TableDeleteFamilyHandler(tableName, columnName, this, this).process();
-      if (cpHost != null) {
-        cpHost.postDeleteColumn(tableName, columnName);
-      }
+      deleteColumn(req.getTableName().toByteArray(), req.getColumnName().toByteArray());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1673,20 +1690,23 @@ Server {
   }
 
   @Override
+  public void enableTable(final byte[] tableName) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preEnableTable(tableName);
+    }
+    this.executorService.submit(new EnableTableHandler(this, tableName,
+      catalogTracker, assignmentManager, false));
+    if (cpHost != null) {
+      cpHost.postEnableTable(tableName);
+   }
+  }
+
+  @Override
   public EnableTableResponse enableTable(RpcController controller, EnableTableRequest request)
   throws ServiceException {
-    byte [] tableName = request.getTableName().toByteArray();
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preEnableTable(tableName);
-      }
-      this.executorService.submit(new EnableTableHandler(this, tableName,
-        catalogTracker, assignmentManager, false));
-
-      if (cpHost != null) {
-        cpHost.postEnableTable(tableName);
-     }
+      enableTable(request.getTableName().toByteArray());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1694,20 +1714,23 @@ Server {
   }
 
   @Override
+  public void disableTable(final byte[] tableName) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preDisableTable(tableName);
+    }
+    this.executorService.submit(new DisableTableHandler(this, tableName,
+      catalogTracker, assignmentManager, false));
+    if (cpHost != null) {
+      cpHost.postDisableTable(tableName);
+    }
+  }
+
+  @Override
   public DisableTableResponse disableTable(RpcController controller, DisableTableRequest request)
   throws ServiceException {
-    byte [] tableName = request.getTableName().toByteArray();
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preDisableTable(tableName);
-      }
-      this.executorService.submit(new DisableTableHandler(this, tableName,
-        catalogTracker, assignmentManager, false));
-
-      if (cpHost != null) {
-        cpHost.postDisableTable(tableName);
-      }
+      disableTable(request.getTableName().toByteArray());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1750,25 +1773,29 @@ Server {
   }
 
   @Override
+  public void modifyTable(final byte[] tableName, final HTableDescriptor descriptor)
+      throws IOException {
+    checkInitialized();
+    checkCompression(descriptor);
+    if (cpHost != null) {
+      cpHost.preModifyTable(tableName, descriptor);
+    }
+    TableEventHandler tblHandle = new ModifyTableHandler(tableName, descriptor, this, this);
+    this.executorService.submit(tblHandle);
+    tblHandle.waitForPersist();
+    if (cpHost != null) {
+      cpHost.postModifyTable(tableName, descriptor);
+    }
+  }
+
+  @Override
   public ModifyTableResponse modifyTable(RpcController controller, ModifyTableRequest req)
   throws ServiceException {
-    final byte [] tableName = req.getTableName().toByteArray();
-    HTableDescriptor htd = HTableDescriptor.convert(req.getTableSchema());
     try {
-      checkInitialized();
-      checkCompression(htd);
-      if (cpHost != null) {
-        cpHost.preModifyTable(tableName, htd);
-      }
-      TableEventHandler tblHandle = new ModifyTableHandler(tableName, htd, this, this);
-      this.executorService.submit(tblHandle);
-      tblHandle.waitForPersist();
-
-      if (cpHost != null) {
-        cpHost.postModifyTable(tableName, htd);
-      }
+      modifyTable(req.getTableName().toByteArray(),
+        HTableDescriptor.convert(req.getTableSchema()));
     } catch (IOException ioe) {
-        throw new ServiceException(ioe);
+      throw new ServiceException(ioe);
     }
     return ModifyTableResponse.newBuilder().build();
   }

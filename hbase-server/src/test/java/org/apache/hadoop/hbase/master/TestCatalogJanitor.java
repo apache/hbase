@@ -294,6 +294,27 @@ public class TestCatalogJanitor {
     public boolean registerService(Service instance) {
       return false;
     }
+
+    @Override
+    public void deleteTable(byte[] tableName) throws IOException { }
+
+    @Override
+    public void modifyTable(byte[] tableName, HTableDescriptor descriptor) throws IOException { }
+
+    @Override
+    public void enableTable(byte[] tableName) throws IOException { }
+
+    @Override
+    public void disableTable(byte[] tableName) throws IOException { }
+
+    @Override
+    public void addColumn(byte[] tableName, HColumnDescriptor column) throws IOException { }
+
+    @Override
+    public void modifyColumn(byte[] tableName, HColumnDescriptor descriptor) throws IOException { }
+
+    @Override
+    public void deleteColumn(byte[] tableName, byte[] columnName) throws IOException { }
   }
 
   @Test
