@@ -1,0 +1,26 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>12.12.&nbsp;Amazon EC2</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="trouble.html" title="Chapter&nbsp;12.&nbsp;Troubleshooting and Debugging Apache HBase (TM)"><link rel="prev" href="trouble.zookeeper.html" title="12.11.&nbsp;ZooKeeper"><link rel="next" href="trouble.versions.html" title="12.13.&nbsp;HBase and Hadoop version issues"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">12.12.&nbsp;Amazon EC2</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="trouble.zookeeper.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;12.&nbsp;Troubleshooting and Debugging Apache HBase (TM)</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="trouble.versions.html">Next</a></td></tr></table><hr></div><div class="section" title="12.12.&nbsp;Amazon EC2"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="trouble.ec2"></a>12.12.&nbsp;Amazon EC2</h2></div></div></div><div class="section" title="12.12.1.&nbsp;ZooKeeper does not seem to work on Amazon EC2"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.ec2.zookeeper"></a>12.12.1.&nbsp;ZooKeeper does not seem to work on Amazon EC2</h3></div></div></div><p>HBase does not start when deployed as Amazon EC2 instances.  Exceptions like the below appear in the Master and/or RegionServer logs: </p><pre class="programlisting">
+  2009-10-19 11:52:27,030 INFO org.apache.zookeeper.ClientCnxn: Attempting
+  connection to server ec2-174-129-15-236.compute-1.amazonaws.com/10.244.9.171:2181
+  2009-10-19 11:52:27,032 WARN org.apache.zookeeper.ClientCnxn: Exception
+  closing session 0x0 to sun.nio.ch.SelectionKeyImpl@656dc861
+  java.net.ConnectException: Connection refused
+             </pre><p>
+             Security group policy is blocking the ZooKeeper port on a public address. 
+             Use the internal EC2 host names when configuring the ZooKeeper quorum peer list. 
+             </p></div><div class="section" title="12.12.2.&nbsp;Instability on Amazon EC2"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.ec2.instability"></a>12.12.2.&nbsp;Instability on Amazon EC2</h3></div></div></div><p>Questions on HBase and Amazon EC2 come up frequently on the HBase dist-list. Search for old threads using <a class="link" href="http://search-hadoop.com/" target="_top">Search Hadoop</a>
+             </p></div><div class="section" title="12.12.3.&nbsp;Remote Java Connection into EC2 Cluster Not Working"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.ec2.connection"></a>12.12.3.&nbsp;Remote Java Connection into EC2 Cluster Not Working</h3></div></div></div><p>
+             See Andrew's answer here, up on the user list: <a class="link" href="http://search-hadoop.com/m/sPdqNFAwyg2" target="_top">Remote Java client connection into EC2 instance</a>.
+             </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'trouble.ec2';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="trouble.zookeeper.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="trouble.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="trouble.versions.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">12.11.&nbsp;ZooKeeper&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;12.13.&nbsp;HBase and Hadoop version issues</td></tr></table></div></body></html>

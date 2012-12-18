@@ -1,0 +1,146 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>E.3.&nbsp; HBase file format with inline blocks (version 2)</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="hfilev2.html" title="Appendix&nbsp;E.&nbsp;HFile format version 2"><link rel="prev" href="apes02.html" title="E.2.&nbsp;HFile format version 1 overview"><link rel="next" href="other.info.html" title="Appendix&nbsp;F.&nbsp;Other Information About HBase"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">E.3.&nbsp;
+      HBase file format with inline blocks (version 2)
+      </th></tr><tr><td width="20%" align="left"><a accesskey="p" href="apes02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Appendix&nbsp;E.&nbsp;HFile format version 2</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="other.info.html">Next</a></td></tr></table><hr></div><div class="section" title="E.3.&nbsp; HBase file format with inline blocks (version 2)"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d2121e11733"></a>E.3.&nbsp;
+      HBase file format with inline blocks (version 2)
+      </h2></div></div></div><div class="section" title="E.3.1.&nbsp; Overview"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e11736"></a>E.3.1.&nbsp; Overview</h3></div></div></div><p>The version of HBase introducing the above features reads both version 1 and 2 HFiles, but only writes version 2 HFiles. A version 2 HFile is structured as follows:
+           <span class="inlinemediaobject"><img src="../images/hfilev2.png" align="middle" alt="HFile Version 2"></span>
+
+   </p></div><div class="section" title="E.3.2.&nbsp;Unified version 2 block format"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e11751"></a>E.3.2.&nbsp;Unified version 2 block format</h3></div></div></div><p>In the version 2 every block in the data section contains the following fields: </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>8 bytes: Block type, a sequence of bytes equivalent to version 1's "magic records". Supported block types are: </p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p>DATA &#8211; data blocks
+                  </p></li><li class="listitem"><p>
+                     LEAF_INDEX &#8211; leaf-level index blocks in a multi-level-block-index
+                 </p></li><li class="listitem"><p>
+                     BLOOM_CHUNK &#8211; Bloom filter chunks
+                  </p></li><li class="listitem"><p>
+                     META &#8211; meta blocks (not used for Bloom filters in version 2 anymore)
+                  </p></li><li class="listitem"><p>
+                     INTERMEDIATE_INDEX &#8211; intermediate-level index blocks in a multi-level blockindex
+                  </p></li><li class="listitem"><p>
+                     ROOT_INDEX &#8211; root&gt;level index blocks in a multi&gt;level block index
+                  </p></li><li class="listitem"><p>
+                     FILE_INFO &#8211; the &#8220;file info&#8221; block, a small key&gt;value map of metadata
+                  </p></li><li class="listitem"><p>
+                     BLOOM_META &#8211; a Bloom filter metadata block in the load&gt;on&gt;open section
+                  </p></li><li class="listitem"><p>
+                     TRAILER &#8211; a fixed&gt;size file trailer. As opposed to the above, this is not an
+                     HFile v2 block but a fixed&gt;size (for each HFile version) data structure
+                  </p></li><li class="listitem"><p>
+                      INDEX_V1 &#8211; this block type is only used for legacy HFile v1 block
+                  </p></li></ol></div></li><li class="listitem"><p>Compressed size of the block's data, not including the header (int).
+         </p><p>
+Can be used for skipping the current data block when scanning HFile data.
+                  </p></li><li class="listitem"><p>Uncompressed size of the block's data, not including the header (int)</p><p>
+ This is equal to the compressed size if the compression algorithm is NON
+                  </p></li><li class="listitem"><p>File offset of the previous block of the same type (long)</p><p>
+ Can be used for seeking to the previous data/index block
+                  </p></li><li class="listitem"><p>Compressed data (or uncompressed data if the compression algorithm is NONE).</p></li></ol></div><p>The above format of blocks is used in the following HFile sections:</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>Scanned block section. The section is named so because it contains all data blocks that need to be read when an HFile is scanned sequentially. &nbsp;Also contains leaf block index and Bloom chunk blocks. </p></li><li class="listitem"><p>Non-scanned block section. This section still contains unified-format v2 blocks but it does not have to be read when doing a sequential scan. This section contains &#8220;meta&#8221; blocks and intermediate-level index blocks.
+         </p></li></ol></div><p>We are supporting &#8220;meta&#8221; blocks in version 2 the same way they were supported in version 1, even though we do not store Bloom filter data in these blocks anymore. </p></div><div class="section" title="E.3.3.&nbsp; Block index in version 2"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e11820"></a>E.3.3.&nbsp; Block index in version 2</h3></div></div></div><p>There are three types of block indexes in HFile version 2, stored in two different formats (root and non-root): </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>Data index &#8212; version 2 multi-level block index, consisting of:</p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p>
+ Version 2 root index, stored in the data block index section of the file
+             </p></li><li class="listitem"><p>
+Optionally, version 2 intermediate levels, stored in the non%root format in   the data index section of the file.    Intermediate levels can only be present if leaf level blocks are present
+             </p></li><li class="listitem"><p>
+Optionally, version 2 leaf levels, stored in the non%root format inline with   data blocks
+             </p></li></ol></div></li><li class="listitem"><p>Meta index &#8212; version 2 root index format only, stored in the meta index section of the file</p></li><li class="listitem"><p>Bloom index &#8212; version 2 root index format only, stored in the &#8220;load-on-open&#8221; section as part of Bloom filter metadata.</p></li></ol></div></div><div class="section" title="E.3.4.&nbsp; Root block index format in version 2"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e11845"></a>E.3.4.&nbsp;
+      Root block index format in version 2</h3></div></div></div><p>This format applies to:</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>Root level of the version 2 data index</p></li><li class="listitem"><p>Entire meta and Bloom indexes in version 2, which are always single-level. </p></li></ol></div><p>A version 2 root index block is a sequence of entries of the following format, similar to entries of a version 1 block index, but storing on-disk size instead of uncompressed size. </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>Offset (long) </p><p>
+This offset may point to a data block or to a deeper&gt;level index block.
+             </p></li><li class="listitem"><p>On-disk size (int) </p></li><li class="listitem"><p>Key (a serialized byte array stored using Bytes.writeByteArray) </p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p>Key (VInt)
+             </p></li><li class="listitem"><p>Key bytes
+             </p></li></ol></div></li></ol></div><p>A single-level version 2 block index consists of just a single root index block. To read a root index block of version 2, one needs to know the number of entries. For the data index and the meta index the number of entries is stored in the trailer, and for the Bloom index it is stored in the compound Bloom filter metadata.</p><p>For a multi-level block index we also store the following fields in the root index block in the load-on-open section of the HFile, in addition to the data structure described above:</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>Middle leaf index block offset</p></li><li class="listitem"><p>Middle leaf block on-disk size (meaning the leaf index block containing the reference to the &#8220;middle&#8221; data block of the file) </p></li><li class="listitem"><p>The index of the mid-key (defined below) in the middle leaf-level block.</p></li></ol></div><p></p><p>These additional fields are used to efficiently retrieve the mid-key of the HFile used in HFile splits, which we define as the first key of the block with a zero-based index of (n &#8211; 1) / 2, if the total number of blocks in the HFile is n. This definition is consistent with how the mid-key was determined in HFile version 1, and is reasonable in general, because blocks are likely to be the same size on average, but we don&#8217;t have any estimates on individual key/value pair sizes. </p><p></p><p>When writing a version 2 HFile, the total number of data blocks pointed to by every leaf-level index block is kept track of. When we finish writing and the total number of leaf-level blocks is determined, it is clear which leaf-level block contains the mid-key, and the fields listed above are computed. &nbsp;When reading the HFile and the mid-key is requested, we retrieve the middle leaf index block (potentially from the block cache) and get the mid-key value from the appropriate position inside that leaf block.</p></div><div class="section" title="E.3.5.&nbsp; Non-root block index format in version 2"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e11898"></a>E.3.5.&nbsp;
+      Non-root block index format in version 2</h3></div></div></div><p>This format applies to intermediate-level and leaf index blocks of a version 2 multi-level data block index. Every non-root index block is structured as follows. </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>numEntries: the number of entries (int). </p></li><li class="listitem"><p>entryOffsets: the &#8220;secondary index&#8221; of offsets of entries in the block, to facilitate a quick binary search on the key (numEntries + 1 int values). The last value is the total length of all entries in this index block. For example, in a non-root index block with entry sizes 60, 80, 50 the &#8220;secondary index&#8221; will contain the following int array: {0, 60, 140, 190}.</p></li><li class="listitem"><p>Entries. Each entry contains: </p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p>
+Offset of the block referenced by this entry in the file (long)
+             </p></li><li class="listitem"><p>
+On&gt;disk size of the referenced block (int)
+             </p></li><li class="listitem"><p>
+Key. The length can be calculated from entryOffsets.
+             </p></li></ol></div></li></ol></div></div><div class="section" title="E.3.6.&nbsp; Bloom filters in version 2"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e11923"></a>E.3.6.&nbsp;
+      Bloom filters in version 2</h3></div></div></div><p>In contrast with version 1, in a version 2 HFile Bloom filter metadata is stored in the load-on-open section of the HFile for quick startup. </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>A compound Bloom filter. </p><div class="orderedlist"><ol class="orderedlist" type="a"><li class="listitem"><p>
+ Bloom filter version = 3 (int). There used to be a DynamicByteBloomFilter class that had the Bloom   filter version number 2
+             </p></li><li class="listitem"><p>
+The total byte size of all compound Bloom filter chunks (long)
+             </p></li><li class="listitem"><p>
+ Number of hash functions (int
+             </p></li><li class="listitem"><p>
+Type of hash functions (int)
+             </p></li><li class="listitem"><p>
+The total key count inserted into the Bloom filter (long)
+             </p></li><li class="listitem"><p>
+The maximum total number of keys in the Bloom filter (long)
+             </p></li><li class="listitem"><p>
+The number of chunks (int)
+             </p></li><li class="listitem"><p>
+Comparator class used for Bloom filter keys, a UTF&gt;8 encoded string stored   using Bytes.writeByteArray
+             </p></li><li class="listitem"><p>
+ Bloom block index in the version 2 root block index format
+             </p></li></ol></div></li></ol></div></div><div class="section" title="E.3.7.&nbsp;File Info format in versions 1 and 2"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e11960"></a>E.3.7.&nbsp;File Info format in versions 1 and 2</h3></div></div></div><p>The file info block is a serialized <a class="ulink" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/HbaseMapWritable.html" target="_top">HbaseMapWritable</a> (essentially a map from byte arrays to byte arrays) with the following keys, among others. StoreFile-level logic adds more keys to this.</p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><tbody><tr><td>
+               <p>hfile.LASTKEY </p>
+            </td><td>
+               <p>The last key of the file (byte array) </p>
+            </td></tr><tr><td>
+               <p>hfile.AVG_KEY_LEN </p>
+            </td><td>
+               <p>The average key length in the file (int) </p>
+            </td></tr><tr><td>
+               <p>hfile.AVG_VALUE_LEN </p>
+            </td><td>
+               <p>The average value length in the file (int) </p>
+            </td></tr></tbody></table></div><p>File info format did not change in version 2. However, we moved the file info to the final section of the file, which can be loaded as one block at the time the HFile is being opened. Also, we do not store comparator in the version 2 file info anymore. Instead, we store it in the fixed file trailer. This is because we need to know the comparator at the time of parsing the load-on-open section of the HFile.</p></div><div class="section" title="E.3.8.&nbsp; Fixed file trailer format differences between versions 1 and 2"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e12006"></a>E.3.8.&nbsp;
+      Fixed file trailer format differences between versions 1 and 2</h3></div></div></div><p>The following table shows common and different fields between fixed file trailers in versions 1 and 2. Note that the size of the trailer is different depending on the version, so it is &#8220;fixed&#8221; only within one version. However, the version is always stored as the last four-byte integer in the file. </p><p></p><div class="informaltable"><table border="1"><colgroup><col class="c1"><col class="c2"></colgroup><tbody><tr><td>
+               <p>Version 1 </p>
+            </td><td>
+               <p>Version 2 </p>
+            </td></tr><tr><td colspan="2" align="center">
+               <p>File info offset (long) </p>
+            </td></tr><tr><td>
+               <p>Data index offset (long) </p>
+            </td><td>
+                <p>loadOnOpenOffset (long)</p>
+                <p><span class="emphasis"><em>The offset of the section that we need toload when opening the file.</em></span></p>
+            </td></tr><tr><td colspan="2" align="center">
+               <p>Number of data index entries (int) </p>
+            </td></tr><tr><td>
+               <p>metaIndexOffset (long)</p>
+               <p>This field is not being used by the version 1 reader, so we removed it from version 2.</p>
+            </td><td>
+               <p>uncompressedDataIndexSize (long)</p>
+               <p>The total uncompressed size of the whole data block index, including root-level, intermediate-level, and leaf-level blocks.</p>
+            </td></tr><tr><td colspan="2" align="center">
+               <p>Number of meta index entries (int) </p>
+            </td></tr><tr><td colspan="2" align="center">
+               <p>Total uncompressed bytes (long) </p>
+            </td></tr><tr><td>
+               <p>numEntries (int) </p>
+            </td><td>
+               <p>numEntries (long) </p>
+            </td></tr><tr><td colspan="2" align="center">
+               <p>Compression codec: 0 = LZO, 1 = GZ, 2 = NONE (int) </p>
+            </td></tr><tr><td>
+               <p></p>
+            </td><td>
+               <p>The number of levels in the data block index (int) </p>
+            </td></tr><tr><td>
+               <p></p>
+            </td><td>
+               <p>firstDataBlockOffset (long)</p>
+               <p>The offset of the first first data block. Used when scanning. </p>
+            </td></tr><tr><td>
+               <p></p>
+            </td><td>
+               <p>lastDataBlockEnd (long)</p>
+               <p>The offset of the first byte after the last key/value data block. We don't need to go beyond this offset when scanning. </p>
+            </td></tr><tr><td>
+               <p>Version: 1 (int) </p>
+            </td><td>
+               <p>Version: 2 (int) </p>
+            </td></tr></tbody></table></div><p></p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = '';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="apes02.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="hfilev2.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="other.info.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.2.&nbsp;HFile format version 1 overview &nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Appendix&nbsp;F.&nbsp;Other Information About HBase</td></tr></table></div></body></html>

@@ -1,0 +1,766 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>HConstants xref</title>
+<link type="text/css" rel="stylesheet" href="../../../../stylesheet.css" />
+</head>
+<body>
+<div id="overview"><a href="../../../../../apidocs/org/apache/hadoop/hbase/HConstants.html">View Javadoc</a></div><pre>
+
+<a class="jxr_linenumber" name="1" href="#1">1</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="2" href="#2">2</a>   <em class="jxr_javadoccomment"> * Licensed to the Apache Software Foundation (ASF) under one</em>
+<a class="jxr_linenumber" name="3" href="#3">3</a>   <em class="jxr_javadoccomment"> * or more contributor license agreements.  See the NOTICE file</em>
+<a class="jxr_linenumber" name="4" href="#4">4</a>   <em class="jxr_javadoccomment"> * distributed with this work for additional information</em>
+<a class="jxr_linenumber" name="5" href="#5">5</a>   <em class="jxr_javadoccomment"> * regarding copyright ownership.  The ASF licenses this file</em>
+<a class="jxr_linenumber" name="6" href="#6">6</a>   <em class="jxr_javadoccomment"> * to you under the Apache License, Version 2.0 (the</em>
+<a class="jxr_linenumber" name="7" href="#7">7</a>   <em class="jxr_javadoccomment"> * "License"); you may not use this file except in compliance</em>
+<a class="jxr_linenumber" name="8" href="#8">8</a>   <em class="jxr_javadoccomment"> * with the License.  You may obtain a copy of the License at</em>
+<a class="jxr_linenumber" name="9" href="#9">9</a>   <em class="jxr_javadoccomment"> *</em>
+<a class="jxr_linenumber" name="10" href="#10">10</a>  <em class="jxr_javadoccomment"> *     <a href="http://www.apache.org/licenses/LICENSE-2.0" target="alexandria_uri">http://www.apache.org/licenses/LICENSE-2.0</a></em>
+<a class="jxr_linenumber" name="11" href="#11">11</a>  <em class="jxr_javadoccomment"> *</em>
+<a class="jxr_linenumber" name="12" href="#12">12</a>  <em class="jxr_javadoccomment"> * Unless required by applicable law or agreed to in writing, software</em>
+<a class="jxr_linenumber" name="13" href="#13">13</a>  <em class="jxr_javadoccomment"> * distributed under the License is distributed on an "AS IS" BASIS,</em>
+<a class="jxr_linenumber" name="14" href="#14">14</a>  <em class="jxr_javadoccomment"> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</em>
+<a class="jxr_linenumber" name="15" href="#15">15</a>  <em class="jxr_javadoccomment"> * See the License for the specific language governing permissions and</em>
+<a class="jxr_linenumber" name="16" href="#16">16</a>  <em class="jxr_javadoccomment"> * limitations under the License.</em>
+<a class="jxr_linenumber" name="17" href="#17">17</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="18" href="#18">18</a>  <strong class="jxr_keyword">package</strong> org.apache.hadoop.hbase;
+<a class="jxr_linenumber" name="19" href="#19">19</a>  
+<a class="jxr_linenumber" name="20" href="#20">20</a>  <strong class="jxr_keyword">import</strong> java.nio.charset.Charset;
+<a class="jxr_linenumber" name="21" href="#21">21</a>  <strong class="jxr_keyword">import</strong> java.util.ArrayList;
+<a class="jxr_linenumber" name="22" href="#22">22</a>  <strong class="jxr_keyword">import</strong> java.util.Arrays;
+<a class="jxr_linenumber" name="23" href="#23">23</a>  <strong class="jxr_keyword">import</strong> java.util.List;
+<a class="jxr_linenumber" name="24" href="#24">24</a>  <strong class="jxr_keyword">import</strong> java.util.UUID;
+<a class="jxr_linenumber" name="25" href="#25">25</a>  <strong class="jxr_keyword">import</strong> java.util.regex.Pattern;
+<a class="jxr_linenumber" name="26" href="#26">26</a>  
+<a class="jxr_linenumber" name="27" href="#27">27</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.classification.InterfaceAudience;
+<a class="jxr_linenumber" name="28" href="#28">28</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.classification.InterfaceStability;
+<a class="jxr_linenumber" name="29" href="#29">29</a>  
+<a class="jxr_linenumber" name="30" href="#30">30</a>  <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="31" href="#31">31</a>  <em class="jxr_javadoccomment"> * HConstants holds a bunch of HBase-related constants</em>
+<a class="jxr_linenumber" name="32" href="#32">32</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="33" href="#33">33</a>  @InterfaceAudience.Public
+<a class="jxr_linenumber" name="34" href="#34">34</a>  @InterfaceStability.Stable
+<a class="jxr_linenumber" name="35" href="#35">35</a>  <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../org/apache/hadoop/hbase/HConstants.html">HConstants</a> {
+<a class="jxr_linenumber" name="36" href="#36">36</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> When we encode strings, we always specify UTF8 encoding */</em>
+<a class="jxr_linenumber" name="37" href="#37">37</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String UTF8_ENCODING = <span class="jxr_string">"UTF-8"</span>;
+<a class="jxr_linenumber" name="38" href="#38">38</a>  
+<a class="jxr_linenumber" name="39" href="#39">39</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> When we encode strings, we always specify UTF8 encoding */</em>
+<a class="jxr_linenumber" name="40" href="#40">40</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Charset UTF8_CHARSET = Charset.forName(UTF8_ENCODING);
+<a class="jxr_linenumber" name="41" href="#41">41</a>  
+<a class="jxr_linenumber" name="42" href="#42">42</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> byte[] toBytes(String target) {
+<a class="jxr_linenumber" name="43" href="#43">43</a>      <strong class="jxr_keyword">return</strong> target.getBytes(UTF8_CHARSET);
+<a class="jxr_linenumber" name="44" href="#44">44</a>    }
+<a class="jxr_linenumber" name="45" href="#45">45</a>  
+<a class="jxr_linenumber" name="46" href="#46">46</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> String toString(byte[] target) {
+<a class="jxr_linenumber" name="47" href="#47">47</a>      <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> String(target, UTF8_CHARSET);
+<a class="jxr_linenumber" name="48" href="#48">48</a>    }
+<a class="jxr_linenumber" name="49" href="#49">49</a>  
+<a class="jxr_linenumber" name="50" href="#50">50</a>    <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="51" href="#51">51</a>  <em class="jxr_javadoccomment">   * Status codes used for return values of bulk operations.</em>
+<a class="jxr_linenumber" name="52" href="#52">52</a>  <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="53" href="#53">53</a>    <strong class="jxr_keyword">public</strong> enum <a href="../../../../org/apache/hadoop/hbase/HConstants.html">OperationStatusCode</a> {
+<a class="jxr_linenumber" name="54" href="#54">54</a>      NOT_RUN,
+<a class="jxr_linenumber" name="55" href="#55">55</a>      SUCCESS,
+<a class="jxr_linenumber" name="56" href="#56">56</a>      BAD_FAMILY,
+<a class="jxr_linenumber" name="57" href="#57">57</a>      SANITY_CHECK_FAILURE,
+<a class="jxr_linenumber" name="58" href="#58">58</a>      FAILURE;
+<a class="jxr_linenumber" name="59" href="#59">59</a>    }
+<a class="jxr_linenumber" name="60" href="#60">60</a>  
+<a class="jxr_linenumber" name="61" href="#61">61</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> long constant for zero */</em>
+<a class="jxr_linenumber" name="62" href="#62">62</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Long ZERO_L = Long.valueOf(0L);
+<a class="jxr_linenumber" name="63" href="#63">63</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String NINES = <span class="jxr_string">"99999999999999"</span>;
+<a class="jxr_linenumber" name="64" href="#64">64</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZEROES = <span class="jxr_string">"00000000000000"</span>;
+<a class="jxr_linenumber" name="65" href="#65">65</a>  
+<a class="jxr_linenumber" name="66" href="#66">66</a>    <em class="jxr_comment">// For migration</em>
+<a class="jxr_linenumber" name="67" href="#67">67</a>  
+<a class="jxr_linenumber" name="68" href="#68">68</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> name of version file */</em>
+<a class="jxr_linenumber" name="69" href="#69">69</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String VERSION_FILE_NAME = <span class="jxr_string">"hbase.version"</span>;
+<a class="jxr_linenumber" name="70" href="#70">70</a>  
+<a class="jxr_linenumber" name="71" href="#71">71</a>    <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="72" href="#72">72</a>  <em class="jxr_javadoccomment">   * Current version of file system.</em>
+<a class="jxr_linenumber" name="73" href="#73">73</a>  <em class="jxr_javadoccomment">   * Version 4 supports only one kind of bloom filter.</em>
+<a class="jxr_linenumber" name="74" href="#74">74</a>  <em class="jxr_javadoccomment">   * Version 5 changes versions in catalog table regions.</em>
+<a class="jxr_linenumber" name="75" href="#75">75</a>  <em class="jxr_javadoccomment">   * Version 6 enables blockcaching on catalog tables.</em>
+<a class="jxr_linenumber" name="76" href="#76">76</a>  <em class="jxr_javadoccomment">   * Version 7 introduces hfile -- hbase 0.19 to 0.20..</em>
+<a class="jxr_linenumber" name="77" href="#77">77</a>  <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="78" href="#78">78</a>    <em class="jxr_comment">// public static final String FILE_SYSTEM_VERSION = "6";</em>
+<a class="jxr_linenumber" name="79" href="#79">79</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String FILE_SYSTEM_VERSION = <span class="jxr_string">"7"</span>;
+<a class="jxr_linenumber" name="80" href="#80">80</a>  
+<a class="jxr_linenumber" name="81" href="#81">81</a>    <em class="jxr_comment">// Configuration parameters</em>
+<a class="jxr_linenumber" name="82" href="#82">82</a>  
+<a class="jxr_linenumber" name="83" href="#83">83</a>    <em class="jxr_comment">//TODO: Is having HBase homed on port 60k OK?</em>
+<a class="jxr_linenumber" name="84" href="#84">84</a>  
+<a class="jxr_linenumber" name="85" href="#85">85</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Cluster is in distributed mode or not */</em>
+<a class="jxr_linenumber" name="86" href="#86">86</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CLUSTER_DISTRIBUTED = <span class="jxr_string">"hbase.cluster.distributed"</span>;
+<a class="jxr_linenumber" name="87" href="#87">87</a>  
+<a class="jxr_linenumber" name="88" href="#88">88</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Config for pluggable load balancers */</em>
+<a class="jxr_linenumber" name="89" href="#89">89</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASE_MASTER_LOADBALANCER_CLASS = <span class="jxr_string">"hbase.master.loadbalancer.class"</span>;
+<a class="jxr_linenumber" name="90" href="#90">90</a>  
+<a class="jxr_linenumber" name="91" href="#91">91</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Cluster is standalone or pseudo-distributed */</em>
+<a class="jxr_linenumber" name="92" href="#92">92</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> CLUSTER_IS_LOCAL = false;
+<a class="jxr_linenumber" name="93" href="#93">93</a>  
+<a class="jxr_linenumber" name="94" href="#94">94</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Cluster is fully-distributed */</em>
+<a class="jxr_linenumber" name="95" href="#95">95</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> CLUSTER_IS_DISTRIBUTED = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="96" href="#96">96</a>  
+<a class="jxr_linenumber" name="97" href="#97">97</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default value for cluster distributed mode */</em>
+<a class="jxr_linenumber" name="98" href="#98">98</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> DEFAULT_CLUSTER_DISTRIBUTED = CLUSTER_IS_LOCAL;
+<a class="jxr_linenumber" name="99" href="#99">99</a>  
+<a class="jxr_linenumber" name="100" href="#100">100</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> default host address */</em>
+<a class="jxr_linenumber" name="101" href="#101">101</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String DEFAULT_HOST = <span class="jxr_string">"0.0.0.0"</span>;
+<a class="jxr_linenumber" name="102" href="#102">102</a> 
+<a class="jxr_linenumber" name="103" href="#103">103</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for port master listens on. */</em>
+<a class="jxr_linenumber" name="104" href="#104">104</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String MASTER_PORT = <span class="jxr_string">"hbase.master.port"</span>;
+<a class="jxr_linenumber" name="105" href="#105">105</a> 
+<a class="jxr_linenumber" name="106" href="#106">106</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> default port that the master listens on */</em>
+<a class="jxr_linenumber" name="107" href="#107">107</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_MASTER_PORT = 60000;
+<a class="jxr_linenumber" name="108" href="#108">108</a> 
+<a class="jxr_linenumber" name="109" href="#109">109</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> default port for master web api */</em>
+<a class="jxr_linenumber" name="110" href="#110">110</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_MASTER_INFOPORT = 60010;
+<a class="jxr_linenumber" name="111" href="#111">111</a> 
+<a class="jxr_linenumber" name="112" href="#112">112</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Configuration key for master web API port */</em>
+<a class="jxr_linenumber" name="113" href="#113">113</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String MASTER_INFO_PORT = <span class="jxr_string">"hbase.master.info.port"</span>;
+<a class="jxr_linenumber" name="114" href="#114">114</a> 
+<a class="jxr_linenumber" name="115" href="#115">115</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for the master type being backup (waits for primary to go inactive). */</em>
+<a class="jxr_linenumber" name="116" href="#116">116</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String MASTER_TYPE_BACKUP = <span class="jxr_string">"hbase.master.backup"</span>;
+<a class="jxr_linenumber" name="117" href="#117">117</a> 
+<a class="jxr_linenumber" name="118" href="#118">118</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> by default every master is a possible primary master unless the conf explicitly overrides it */</em>
+<a class="jxr_linenumber" name="119" href="#119">119</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> DEFAULT_MASTER_TYPE_BACKUP = false;
+<a class="jxr_linenumber" name="120" href="#120">120</a> 
+<a class="jxr_linenumber" name="121" href="#121">121</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for ZooKeeper session time out.*/</em>
+<a class="jxr_linenumber" name="122" href="#122">122</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZOOKEEPER_SESSION_TIMEOUT =
+<a class="jxr_linenumber" name="123" href="#123">123</a>     <span class="jxr_string">"zookeeper.session.timeout"</span>;
+<a class="jxr_linenumber" name="124" href="#124">124</a> 
+<a class="jxr_linenumber" name="125" href="#125">125</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Name of ZooKeeper quorum configuration parameter. */</em>
+<a class="jxr_linenumber" name="126" href="#126">126</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZOOKEEPER_QUORUM = <span class="jxr_string">"hbase.zookeeper.quorum"</span>;
+<a class="jxr_linenumber" name="127" href="#127">127</a> 
+<a class="jxr_linenumber" name="128" href="#128">128</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Name of ZooKeeper config file in conf/ directory. */</em>
+<a class="jxr_linenumber" name="129" href="#129">129</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZOOKEEPER_CONFIG_NAME = <span class="jxr_string">"zoo.cfg"</span>;
+<a class="jxr_linenumber" name="130" href="#130">130</a> 
+<a class="jxr_linenumber" name="131" href="#131">131</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Common prefix of ZooKeeper configuration properties */</em>
+<a class="jxr_linenumber" name="132" href="#132">132</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZK_CFG_PROPERTY_PREFIX =
+<a class="jxr_linenumber" name="133" href="#133">133</a>       <span class="jxr_string">"hbase.zookeeper.property."</span>;
+<a class="jxr_linenumber" name="134" href="#134">134</a> 
+<a class="jxr_linenumber" name="135" href="#135">135</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> ZK_CFG_PROPERTY_PREFIX_LEN =
+<a class="jxr_linenumber" name="136" href="#136">136</a>       ZK_CFG_PROPERTY_PREFIX.length();
+<a class="jxr_linenumber" name="137" href="#137">137</a> 
+<a class="jxr_linenumber" name="138" href="#138">138</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="139" href="#139">139</a> <em class="jxr_javadoccomment">   * The ZK client port key in the ZK properties map. The name reflects the</em>
+<a class="jxr_linenumber" name="140" href="#140">140</a> <em class="jxr_javadoccomment">   * fact that this is not an HBase configuration key.</em>
+<a class="jxr_linenumber" name="141" href="#141">141</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="142" href="#142">142</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CLIENT_PORT_STR = <span class="jxr_string">"clientPort"</span>;
+<a class="jxr_linenumber" name="143" href="#143">143</a> 
+<a class="jxr_linenumber" name="144" href="#144">144</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for the client port that the zookeeper listens on */</em>
+<a class="jxr_linenumber" name="145" href="#145">145</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZOOKEEPER_CLIENT_PORT =
+<a class="jxr_linenumber" name="146" href="#146">146</a>       ZK_CFG_PROPERTY_PREFIX + CLIENT_PORT_STR;
+<a class="jxr_linenumber" name="147" href="#147">147</a> 
+<a class="jxr_linenumber" name="148" href="#148">148</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default client port that the zookeeper listens on */</em>
+<a class="jxr_linenumber" name="149" href="#149">149</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
+<a class="jxr_linenumber" name="150" href="#150">150</a> 
+<a class="jxr_linenumber" name="151" href="#151">151</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for the wait time for the recoverable zookeeper */</em>
+<a class="jxr_linenumber" name="152" href="#152">152</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZOOKEEPER_RECOVERABLE_WAITTIME = <span class="jxr_string">"hbase.zookeeper.recoverable.waittime"</span>;
+<a class="jxr_linenumber" name="153" href="#153">153</a> 
+<a class="jxr_linenumber" name="154" href="#154">154</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default wait time for the recoverable zookeeper */</em>
+<a class="jxr_linenumber" name="155" href="#155">155</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">long</strong> DEFAULT_ZOOKEPER_RECOVERABLE_WAITIME = 10000;
+<a class="jxr_linenumber" name="156" href="#156">156</a> 
+<a class="jxr_linenumber" name="157" href="#157">157</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for the root dir in ZK for this cluster */</em>
+<a class="jxr_linenumber" name="158" href="#158">158</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZOOKEEPER_ZNODE_PARENT = <span class="jxr_string">"zookeeper.znode.parent"</span>;
+<a class="jxr_linenumber" name="159" href="#159">159</a> 
+<a class="jxr_linenumber" name="160" href="#160">160</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String DEFAULT_ZOOKEEPER_ZNODE_PARENT = <span class="jxr_string">"/hbase"</span>;
+<a class="jxr_linenumber" name="161" href="#161">161</a> 
+<a class="jxr_linenumber" name="162" href="#162">162</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="163" href="#163">163</a> <em class="jxr_javadoccomment">   * Parameter name for the limit on concurrent client-side zookeeper</em>
+<a class="jxr_linenumber" name="164" href="#164">164</a> <em class="jxr_javadoccomment">   * connections</em>
+<a class="jxr_linenumber" name="165" href="#165">165</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="166" href="#166">166</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZOOKEEPER_MAX_CLIENT_CNXNS =
+<a class="jxr_linenumber" name="167" href="#167">167</a>       ZK_CFG_PROPERTY_PREFIX + <span class="jxr_string">"maxClientCnxns"</span>;
+<a class="jxr_linenumber" name="168" href="#168">168</a> 
+<a class="jxr_linenumber" name="169" href="#169">169</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for the ZK data directory */</em>
+<a class="jxr_linenumber" name="170" href="#170">170</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZOOKEEPER_DATA_DIR =
+<a class="jxr_linenumber" name="171" href="#171">171</a>       ZK_CFG_PROPERTY_PREFIX + <span class="jxr_string">"dataDir"</span>;
+<a class="jxr_linenumber" name="172" href="#172">172</a> 
+<a class="jxr_linenumber" name="173" href="#173">173</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default limit on concurrent client-side zookeeper connections */</em>
+<a class="jxr_linenumber" name="174" href="#174">174</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 300;
+<a class="jxr_linenumber" name="175" href="#175">175</a> 
+<a class="jxr_linenumber" name="176" href="#176">176</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Configuration key for ZooKeeper session timeout */</em>
+<a class="jxr_linenumber" name="177" href="#177">177</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ZK_SESSION_TIMEOUT = <span class="jxr_string">"zookeeper.session.timeout"</span>;
+<a class="jxr_linenumber" name="178" href="#178">178</a> 
+<a class="jxr_linenumber" name="179" href="#179">179</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default value for ZooKeeper session timeout */</em>
+<a class="jxr_linenumber" name="180" href="#180">180</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_ZK_SESSION_TIMEOUT = 180 * 1000;
+<a class="jxr_linenumber" name="181" href="#181">181</a> 
+<a class="jxr_linenumber" name="182" href="#182">182</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for port region server listens on. */</em>
+<a class="jxr_linenumber" name="183" href="#183">183</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String REGIONSERVER_PORT = <span class="jxr_string">"hbase.regionserver.port"</span>;
+<a class="jxr_linenumber" name="184" href="#184">184</a> 
+<a class="jxr_linenumber" name="185" href="#185">185</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default port region server listens on. */</em>
+<a class="jxr_linenumber" name="186" href="#186">186</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_REGIONSERVER_PORT = 60020;
+<a class="jxr_linenumber" name="187" href="#187">187</a> 
+<a class="jxr_linenumber" name="188" href="#188">188</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> default port for region server web api */</em>
+<a class="jxr_linenumber" name="189" href="#189">189</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_REGIONSERVER_INFOPORT = 60030;
+<a class="jxr_linenumber" name="190" href="#190">190</a> 
+<a class="jxr_linenumber" name="191" href="#191">191</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> A configuration key for regionserver info port */</em>
+<a class="jxr_linenumber" name="192" href="#192">192</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String REGIONSERVER_INFO_PORT =
+<a class="jxr_linenumber" name="193" href="#193">193</a>     <span class="jxr_string">"hbase.regionserver.info.port"</span>;
+<a class="jxr_linenumber" name="194" href="#194">194</a> 
+<a class="jxr_linenumber" name="195" href="#195">195</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> A flag that enables automatic selection of regionserver info port */</em>
+<a class="jxr_linenumber" name="196" href="#196">196</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String REGIONSERVER_INFO_PORT_AUTO =
+<a class="jxr_linenumber" name="197" href="#197">197</a>       REGIONSERVER_INFO_PORT + <span class="jxr_string">".auto"</span>;
+<a class="jxr_linenumber" name="198" href="#198">198</a> 
+<a class="jxr_linenumber" name="199" href="#199">199</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for what region server implementation to use. */</em>
+<a class="jxr_linenumber" name="200" href="#200">200</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String REGION_SERVER_IMPL= <span class="jxr_string">"hbase.regionserver.impl"</span>;
+<a class="jxr_linenumber" name="201" href="#201">201</a> 
+<a class="jxr_linenumber" name="202" href="#202">202</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for what master implementation to use. */</em>
+<a class="jxr_linenumber" name="203" href="#203">203</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String MASTER_IMPL= <span class="jxr_string">"hbase.master.impl"</span>;
+<a class="jxr_linenumber" name="204" href="#204">204</a> 
+<a class="jxr_linenumber" name="205" href="#205">205</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for what hbase client implementation to use. */</em>
+<a class="jxr_linenumber" name="206" href="#206">206</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASECLIENT_IMPL= <span class="jxr_string">"hbase.hbaseclient.impl"</span>;
+<a class="jxr_linenumber" name="207" href="#207">207</a> 
+<a class="jxr_linenumber" name="208" href="#208">208</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for how often threads should wake up */</em>
+<a class="jxr_linenumber" name="209" href="#209">209</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String THREAD_WAKE_FREQUENCY = <span class="jxr_string">"hbase.server.thread.wakefrequency"</span>;
+<a class="jxr_linenumber" name="210" href="#210">210</a> 
+<a class="jxr_linenumber" name="211" href="#211">211</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default value for thread wake frequency */</em>
+<a class="jxr_linenumber" name="212" href="#212">212</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_THREAD_WAKE_FREQUENCY = 10 * 1000;
+<a class="jxr_linenumber" name="213" href="#213">213</a> 
+<a class="jxr_linenumber" name="214" href="#214">214</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for how often we should try to write a version file, before failing */</em>
+<a class="jxr_linenumber" name="215" href="#215">215</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String VERSION_FILE_WRITE_ATTEMPTS = <span class="jxr_string">"hbase.server.versionfile.writeattempts"</span>;
+<a class="jxr_linenumber" name="216" href="#216">216</a> 
+<a class="jxr_linenumber" name="217" href="#217">217</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for how often we should try to write a version file, before failing */</em>
+<a class="jxr_linenumber" name="218" href="#218">218</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_VERSION_FILE_WRITE_ATTEMPTS = 3;
+<a class="jxr_linenumber" name="219" href="#219">219</a> 
+<a class="jxr_linenumber" name="220" href="#220">220</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for how often a region should should perform a major compaction */</em>
+<a class="jxr_linenumber" name="221" href="#221">221</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String MAJOR_COMPACTION_PERIOD = <span class="jxr_string">"hbase.hregion.majorcompaction"</span>;
+<a class="jxr_linenumber" name="222" href="#222">222</a> 
+<a class="jxr_linenumber" name="223" href="#223">223</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for the maximum batch of KVs to be used in flushes and compactions */</em>
+<a class="jxr_linenumber" name="224" href="#224">224</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String COMPACTION_KV_MAX = <span class="jxr_string">"hbase.hstore.compaction.kv.max"</span>;
+<a class="jxr_linenumber" name="225" href="#225">225</a> 
+<a class="jxr_linenumber" name="226" href="#226">226</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for HBase instance root directory */</em>
+<a class="jxr_linenumber" name="227" href="#227">227</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASE_DIR = <span class="jxr_string">"hbase.rootdir"</span>;
+<a class="jxr_linenumber" name="228" href="#228">228</a> 
+<a class="jxr_linenumber" name="229" href="#229">229</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for HBase client IPC pool type */</em>
+<a class="jxr_linenumber" name="230" href="#230">230</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASE_CLIENT_IPC_POOL_TYPE = <span class="jxr_string">"hbase.client.ipc.pool.type"</span>;
+<a class="jxr_linenumber" name="231" href="#231">231</a> 
+<a class="jxr_linenumber" name="232" href="#232">232</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for HBase client IPC pool size */</em>
+<a class="jxr_linenumber" name="233" href="#233">233</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASE_CLIENT_IPC_POOL_SIZE = <span class="jxr_string">"hbase.client.ipc.pool.size"</span>;
+<a class="jxr_linenumber" name="234" href="#234">234</a> 
+<a class="jxr_linenumber" name="235" href="#235">235</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Parameter name for HBase client operation timeout, which overrides RPC timeout */</em>
+<a class="jxr_linenumber" name="236" href="#236">236</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASE_CLIENT_OPERATION_TIMEOUT = <span class="jxr_string">"hbase.client.operation.timeout"</span>;
+<a class="jxr_linenumber" name="237" href="#237">237</a> 
+<a class="jxr_linenumber" name="238" href="#238">238</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default HBase client operation timeout, which is tantamount to a blocking call */</em>
+<a class="jxr_linenumber" name="239" href="#239">239</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = Integer.MAX_VALUE;
+<a class="jxr_linenumber" name="240" href="#240">240</a> 
+<a class="jxr_linenumber" name="241" href="#241">241</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Used to construct the name of the log directory for a region server</em>
+<a class="jxr_linenumber" name="242" href="#242">242</a> <em class="jxr_javadoccomment">   * Use '.' as a special character to seperate the log files from table data */</em>
+<a class="jxr_linenumber" name="243" href="#243">243</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HREGION_LOGDIR_NAME = <span class="jxr_string">".logs"</span>;
+<a class="jxr_linenumber" name="244" href="#244">244</a> 
+<a class="jxr_linenumber" name="245" href="#245">245</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Used to construct the name of the splitlog directory for a region server */</em>
+<a class="jxr_linenumber" name="246" href="#246">246</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String SPLIT_LOGDIR_NAME = <span class="jxr_string">"splitlog"</span>;
+<a class="jxr_linenumber" name="247" href="#247">247</a> 
+<a class="jxr_linenumber" name="248" href="#248">248</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CORRUPT_DIR_NAME = <span class="jxr_string">".corrupt"</span>;
+<a class="jxr_linenumber" name="249" href="#249">249</a> 
+<a class="jxr_linenumber" name="250" href="#250">250</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Like the previous, but for old logs that are about to be deleted */</em>
+<a class="jxr_linenumber" name="251" href="#251">251</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HREGION_OLDLOGDIR_NAME = <span class="jxr_string">".oldlogs"</span>;
+<a class="jxr_linenumber" name="252" href="#252">252</a> 
+<a class="jxr_linenumber" name="253" href="#253">253</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Used by HBCK to sideline backup data */</em>
+<a class="jxr_linenumber" name="254" href="#254">254</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBCK_SIDELINEDIR_NAME = <span class="jxr_string">".hbck"</span>;
+<a class="jxr_linenumber" name="255" href="#255">255</a> 
+<a class="jxr_linenumber" name="256" href="#256">256</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Used to construct the name of the compaction directory during compaction */</em>
+<a class="jxr_linenumber" name="257" href="#257">257</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HREGION_COMPACTIONDIR_NAME = <span class="jxr_string">"compaction.dir"</span>;
+<a class="jxr_linenumber" name="258" href="#258">258</a> 
+<a class="jxr_linenumber" name="259" href="#259">259</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Conf key for the max file size after which we split the region */</em>
+<a class="jxr_linenumber" name="260" href="#260">260</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HREGION_MAX_FILESIZE =
+<a class="jxr_linenumber" name="261" href="#261">261</a>       <span class="jxr_string">"hbase.hregion.max.filesize"</span>;
+<a class="jxr_linenumber" name="262" href="#262">262</a> 
+<a class="jxr_linenumber" name="263" href="#263">263</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default maximum file size */</em>
+<a class="jxr_linenumber" name="264" href="#264">264</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">long</strong> DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024L;
+<a class="jxr_linenumber" name="265" href="#265">265</a> 
+<a class="jxr_linenumber" name="266" href="#266">266</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="267" href="#267">267</a> <em class="jxr_javadoccomment">   * The max number of threads used for opening and closing stores or store</em>
+<a class="jxr_linenumber" name="268" href="#268">268</a> <em class="jxr_javadoccomment">   * files in parallel</em>
+<a class="jxr_linenumber" name="269" href="#269">269</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="270" href="#270">270</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HSTORE_OPEN_AND_CLOSE_THREADS_MAX =
+<a class="jxr_linenumber" name="271" href="#271">271</a>     <span class="jxr_string">"hbase.hstore.open.and.close.threads.max"</span>;
+<a class="jxr_linenumber" name="272" href="#272">272</a> 
+<a class="jxr_linenumber" name="273" href="#273">273</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="274" href="#274">274</a> <em class="jxr_javadoccomment">   * The default number for the max number of threads used for opening and</em>
+<a class="jxr_linenumber" name="275" href="#275">275</a> <em class="jxr_javadoccomment">   * closing stores or store files in parallel</em>
+<a class="jxr_linenumber" name="276" href="#276">276</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="277" href="#277">277</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX = 1;
+<a class="jxr_linenumber" name="278" href="#278">278</a> 
+<a class="jxr_linenumber" name="279" href="#279">279</a> 
+<a class="jxr_linenumber" name="280" href="#280">280</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Conf key for the memstore size at which we flush the memstore */</em>
+<a class="jxr_linenumber" name="281" href="#281">281</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HREGION_MEMSTORE_FLUSH_SIZE =
+<a class="jxr_linenumber" name="282" href="#282">282</a>       <span class="jxr_string">"hbase.hregion.memstore.flush.size"</span>;
+<a class="jxr_linenumber" name="283" href="#283">283</a> 
+<a class="jxr_linenumber" name="284" href="#284">284</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HREGION_EDITS_REPLAY_SKIP_ERRORS =
+<a class="jxr_linenumber" name="285" href="#285">285</a>       <span class="jxr_string">"hbase.hregion.edits.replay.skip.errors"</span>;
+<a class="jxr_linenumber" name="286" href="#286">286</a> 
+<a class="jxr_linenumber" name="287" href="#287">287</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS =
+<a class="jxr_linenumber" name="288" href="#288">288</a>       false;
+<a class="jxr_linenumber" name="289" href="#289">289</a> 
+<a class="jxr_linenumber" name="290" href="#290">290</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default size of a reservation block   */</em>
+<a class="jxr_linenumber" name="291" href="#291">291</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
+<a class="jxr_linenumber" name="292" href="#292">292</a> 
+<a class="jxr_linenumber" name="293" href="#293">293</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Maximum value length, enforced on <a href="../../../../org/apache/hadoop/hbase/KeyValue.html">KeyValue</a> construction */</em>
+<a class="jxr_linenumber" name="294" href="#294">294</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE - 1;
+<a class="jxr_linenumber" name="295" href="#295">295</a> 
+<a class="jxr_linenumber" name="296" href="#296">296</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> name of the file for unique cluster ID */</em>
+<a class="jxr_linenumber" name="297" href="#297">297</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CLUSTER_ID_FILE_NAME = <span class="jxr_string">"hbase.id"</span>;
+<a class="jxr_linenumber" name="298" href="#298">298</a> 
+<a class="jxr_linenumber" name="299" href="#299">299</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Configuration key storing the cluster ID */</em>
+<a class="jxr_linenumber" name="300" href="#300">300</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CLUSTER_ID = <span class="jxr_string">"hbase.cluster.id"</span>;
+<a class="jxr_linenumber" name="301" href="#301">301</a> 
+<a class="jxr_linenumber" name="302" href="#302">302</a>   <em class="jxr_comment">// Always store the location of the root table's HRegion.</em>
+<a class="jxr_linenumber" name="303" href="#303">303</a>   <em class="jxr_comment">// This HRegion is never split.</em>
+<a class="jxr_linenumber" name="304" href="#304">304</a> 
+<a class="jxr_linenumber" name="305" href="#305">305</a>   <em class="jxr_comment">// region name = table + startkey + regionid. This is the row key.</em>
+<a class="jxr_linenumber" name="306" href="#306">306</a>   <em class="jxr_comment">// each row in the root and meta tables describes exactly 1 region</em>
+<a class="jxr_linenumber" name="307" href="#307">307</a>   <em class="jxr_comment">// Do we ever need to know all the information that we are storing?</em>
+<a class="jxr_linenumber" name="308" href="#308">308</a> 
+<a class="jxr_linenumber" name="309" href="#309">309</a>   <em class="jxr_comment">// Note that the name of the root table starts with "-" and the name of the</em>
+<a class="jxr_linenumber" name="310" href="#310">310</a>   <em class="jxr_comment">// meta table starts with "." Why? it's a trick. It turns out that when we</em>
+<a class="jxr_linenumber" name="311" href="#311">311</a>   <em class="jxr_comment">// store region names in memory, we use a SortedMap. Since "-" sorts before</em>
+<a class="jxr_linenumber" name="312" href="#312">312</a>   <em class="jxr_comment">// "." (and since no other table name can start with either of these</em>
+<a class="jxr_linenumber" name="313" href="#313">313</a>   <em class="jxr_comment">// characters, the root region will always be the first entry in such a Map,</em>
+<a class="jxr_linenumber" name="314" href="#314">314</a>   <em class="jxr_comment">// followed by all the meta regions (which will be ordered by their starting</em>
+<a class="jxr_linenumber" name="315" href="#315">315</a>   <em class="jxr_comment">// row key as well), followed by all user tables. So when the Master is</em>
+<a class="jxr_linenumber" name="316" href="#316">316</a>   <em class="jxr_comment">// choosing regions to assign, it will always choose the root region first,</em>
+<a class="jxr_linenumber" name="317" href="#317">317</a>   <em class="jxr_comment">// followed by the meta regions, followed by user regions. Since the root</em>
+<a class="jxr_linenumber" name="318" href="#318">318</a>   <em class="jxr_comment">// and meta regions always need to be on-line, this ensures that they will</em>
+<a class="jxr_linenumber" name="319" href="#319">319</a>   <em class="jxr_comment">// be the first to be reassigned if the server(s) they are being served by</em>
+<a class="jxr_linenumber" name="320" href="#320">320</a>   <em class="jxr_comment">// should go down.</em>
+<a class="jxr_linenumber" name="321" href="#321">321</a> 
+<a class="jxr_linenumber" name="322" href="#322">322</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The root table's name.*/</em>
+<a class="jxr_linenumber" name="323" href="#323">323</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] ROOT_TABLE_NAME = toBytes(<span class="jxr_string">"-ROOT-"</span>);
+<a class="jxr_linenumber" name="324" href="#324">324</a> 
+<a class="jxr_linenumber" name="325" href="#325">325</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The META table's name. */</em>
+<a class="jxr_linenumber" name="326" href="#326">326</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] META_TABLE_NAME = toBytes(<span class="jxr_string">".META."</span>);
+<a class="jxr_linenumber" name="327" href="#327">327</a> 
+<a class="jxr_linenumber" name="328" href="#328">328</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> delimiter used between portions of a region name */</em>
+<a class="jxr_linenumber" name="329" href="#329">329</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> META_ROW_DELIMITER = ',';
+<a class="jxr_linenumber" name="330" href="#330">330</a> 
+<a class="jxr_linenumber" name="331" href="#331">331</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The catalog family as a string*/</em>
+<a class="jxr_linenumber" name="332" href="#332">332</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CATALOG_FAMILY_STR = <span class="jxr_string">"info"</span>;
+<a class="jxr_linenumber" name="333" href="#333">333</a> 
+<a class="jxr_linenumber" name="334" href="#334">334</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The catalog family */</em>
+<a class="jxr_linenumber" name="335" href="#335">335</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] CATALOG_FAMILY = toBytes(CATALOG_FAMILY_STR);
+<a class="jxr_linenumber" name="336" href="#336">336</a> 
+<a class="jxr_linenumber" name="337" href="#337">337</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The RegionInfo qualifier as a string */</em>
+<a class="jxr_linenumber" name="338" href="#338">338</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String REGIONINFO_QUALIFIER_STR = <span class="jxr_string">"regioninfo"</span>;
+<a class="jxr_linenumber" name="339" href="#339">339</a> 
+<a class="jxr_linenumber" name="340" href="#340">340</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The regioninfo column qualifier */</em>
+<a class="jxr_linenumber" name="341" href="#341">341</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] REGIONINFO_QUALIFIER =
+<a class="jxr_linenumber" name="342" href="#342">342</a>     toBytes(REGIONINFO_QUALIFIER_STR);
+<a class="jxr_linenumber" name="343" href="#343">343</a> 
+<a class="jxr_linenumber" name="344" href="#344">344</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The server column qualifier */</em>
+<a class="jxr_linenumber" name="345" href="#345">345</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] SERVER_QUALIFIER = toBytes(<span class="jxr_string">"server"</span>);
+<a class="jxr_linenumber" name="346" href="#346">346</a> 
+<a class="jxr_linenumber" name="347" href="#347">347</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The startcode column qualifier */</em>
+<a class="jxr_linenumber" name="348" href="#348">348</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] STARTCODE_QUALIFIER = toBytes(<span class="jxr_string">"serverstartcode"</span>);
+<a class="jxr_linenumber" name="349" href="#349">349</a> 
+<a class="jxr_linenumber" name="350" href="#350">350</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The lower-half split region column qualifier */</em>
+<a class="jxr_linenumber" name="351" href="#351">351</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] SPLITA_QUALIFIER = toBytes(<span class="jxr_string">"splitA"</span>);
+<a class="jxr_linenumber" name="352" href="#352">352</a> 
+<a class="jxr_linenumber" name="353" href="#353">353</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The upper-half split region column qualifier */</em>
+<a class="jxr_linenumber" name="354" href="#354">354</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] SPLITB_QUALIFIER = toBytes(<span class="jxr_string">"splitB"</span>);
+<a class="jxr_linenumber" name="355" href="#355">355</a> 
+<a class="jxr_linenumber" name="356" href="#356">356</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="357" href="#357">357</a> <em class="jxr_javadoccomment">   * The meta table version column qualifier.</em>
+<a class="jxr_linenumber" name="358" href="#358">358</a> <em class="jxr_javadoccomment">   * We keep current version of the meta table in this column in &lt;code&gt;-ROOT-&lt;/code&gt;</em>
+<a class="jxr_linenumber" name="359" href="#359">359</a> <em class="jxr_javadoccomment">   * table: i.e. in the 'info:v' column.</em>
+<a class="jxr_linenumber" name="360" href="#360">360</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="361" href="#361">361</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] META_VERSION_QUALIFIER = toBytes(<span class="jxr_string">"v"</span>);
+<a class="jxr_linenumber" name="362" href="#362">362</a> 
+<a class="jxr_linenumber" name="363" href="#363">363</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="364" href="#364">364</a> <em class="jxr_javadoccomment">   * The current version of the meta table.</em>
+<a class="jxr_linenumber" name="365" href="#365">365</a> <em class="jxr_javadoccomment">   * - pre-hbase 0.92.  There is no META_VERSION column in the root table</em>
+<a class="jxr_linenumber" name="366" href="#366">366</a> <em class="jxr_javadoccomment">   * in this case. The meta has HTableDescriptor serialized into the HRegionInfo;</em>
+<a class="jxr_linenumber" name="367" href="#367">367</a> <em class="jxr_javadoccomment">   * - version 0 is 0.92 and 0.94. Meta data has serialized HRegionInfo's using</em>
+<a class="jxr_linenumber" name="368" href="#368">368</a> <em class="jxr_javadoccomment">   * Writable serialization, and HRegionInfo's does not contain HTableDescriptors.</em>
+<a class="jxr_linenumber" name="369" href="#369">369</a> <em class="jxr_javadoccomment">   * - version 1 for 0.96+ keeps HRegionInfo data structures, but changes the</em>
+<a class="jxr_linenumber" name="370" href="#370">370</a> <em class="jxr_javadoccomment">   * byte[] serialization from Writables to Protobuf.</em>
+<a class="jxr_linenumber" name="371" href="#371">371</a> <em class="jxr_javadoccomment">   * See HRegionInfo.VERSION</em>
+<a class="jxr_linenumber" name="372" href="#372">372</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="373" href="#373">373</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">short</strong> META_VERSION = 1;
+<a class="jxr_linenumber" name="374" href="#374">374</a> 
+<a class="jxr_linenumber" name="375" href="#375">375</a>   <em class="jxr_comment">// Other constants</em>
+<a class="jxr_linenumber" name="376" href="#376">376</a> 
+<a class="jxr_linenumber" name="377" href="#377">377</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="378" href="#378">378</a> <em class="jxr_javadoccomment">   * An empty instance.</em>
+<a class="jxr_linenumber" name="379" href="#379">379</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="380" href="#380">380</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] EMPTY_BYTE_ARRAY = <strong class="jxr_keyword">new</strong> byte [0];
+<a class="jxr_linenumber" name="381" href="#381">381</a> 
+<a class="jxr_linenumber" name="382" href="#382">382</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="383" href="#383">383</a> <em class="jxr_javadoccomment">   * Used by scanners, etc when they want to start at the beginning of a region</em>
+<a class="jxr_linenumber" name="384" href="#384">384</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="385" href="#385">385</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] EMPTY_START_ROW = EMPTY_BYTE_ARRAY;
+<a class="jxr_linenumber" name="386" href="#386">386</a> 
+<a class="jxr_linenumber" name="387" href="#387">387</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="388" href="#388">388</a> <em class="jxr_javadoccomment">   * Last row in a table.</em>
+<a class="jxr_linenumber" name="389" href="#389">389</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="390" href="#390">390</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] EMPTY_END_ROW = EMPTY_START_ROW;
+<a class="jxr_linenumber" name="391" href="#391">391</a> 
+<a class="jxr_linenumber" name="392" href="#392">392</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="393" href="#393">393</a> <em class="jxr_javadoccomment">    * Used by scanners and others when they're trying to detect the end of a</em>
+<a class="jxr_linenumber" name="394" href="#394">394</a> <em class="jxr_javadoccomment">    * table</em>
+<a class="jxr_linenumber" name="395" href="#395">395</a> <em class="jxr_javadoccomment">    */</em>
+<a class="jxr_linenumber" name="396" href="#396">396</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] LAST_ROW = EMPTY_BYTE_ARRAY;
+<a class="jxr_linenumber" name="397" href="#397">397</a> 
+<a class="jxr_linenumber" name="398" href="#398">398</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="399" href="#399">399</a> <em class="jxr_javadoccomment">   * Max length a row can have because of the limitation in TFile.</em>
+<a class="jxr_linenumber" name="400" href="#400">400</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="401" href="#401">401</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> MAX_ROW_LENGTH = Short.MAX_VALUE;
+<a class="jxr_linenumber" name="402" href="#402">402</a> 
+<a class="jxr_linenumber" name="403" href="#403">403</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="404" href="#404">404</a> <em class="jxr_javadoccomment">   * Timestamp to use when we want to refer to the latest cell.</em>
+<a class="jxr_linenumber" name="405" href="#405">405</a> <em class="jxr_javadoccomment">   * This is the timestamp sent by clients when no timestamp is specified on</em>
+<a class="jxr_linenumber" name="406" href="#406">406</a> <em class="jxr_javadoccomment">   * commit.</em>
+<a class="jxr_linenumber" name="407" href="#407">407</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="408" href="#408">408</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">long</strong> LATEST_TIMESTAMP = Long.MAX_VALUE;
+<a class="jxr_linenumber" name="409" href="#409">409</a> 
+<a class="jxr_linenumber" name="410" href="#410">410</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="411" href="#411">411</a> <em class="jxr_javadoccomment">   * Timestamp to use when we want to refer to the oldest cell.</em>
+<a class="jxr_linenumber" name="412" href="#412">412</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="413" href="#413">413</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">long</strong> OLDEST_TIMESTAMP = Long.MIN_VALUE;
+<a class="jxr_linenumber" name="414" href="#414">414</a> 
+<a class="jxr_linenumber" name="415" href="#415">415</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="416" href="#416">416</a> <em class="jxr_javadoccomment">   * LATEST_TIMESTAMP in bytes form</em>
+<a class="jxr_linenumber" name="417" href="#417">417</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="418" href="#418">418</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] LATEST_TIMESTAMP_BYTES = {
+<a class="jxr_linenumber" name="419" href="#419">419</a>     <em class="jxr_comment">// big-endian</em>
+<a class="jxr_linenumber" name="420" href="#420">420</a>     (byte) (LATEST_TIMESTAMP &gt;&gt;&gt; 56),
+<a class="jxr_linenumber" name="421" href="#421">421</a>     (byte) (LATEST_TIMESTAMP &gt;&gt;&gt; 48),
+<a class="jxr_linenumber" name="422" href="#422">422</a>     (byte) (LATEST_TIMESTAMP &gt;&gt;&gt; 40),
+<a class="jxr_linenumber" name="423" href="#423">423</a>     (byte) (LATEST_TIMESTAMP &gt;&gt;&gt; 32),
+<a class="jxr_linenumber" name="424" href="#424">424</a>     (byte) (LATEST_TIMESTAMP &gt;&gt;&gt; 24),
+<a class="jxr_linenumber" name="425" href="#425">425</a>     (byte) (LATEST_TIMESTAMP &gt;&gt;&gt; 16),
+<a class="jxr_linenumber" name="426" href="#426">426</a>     (byte) (LATEST_TIMESTAMP &gt;&gt;&gt; 8),
+<a class="jxr_linenumber" name="427" href="#427">427</a>     (byte) LATEST_TIMESTAMP,
+<a class="jxr_linenumber" name="428" href="#428">428</a>   };
+<a class="jxr_linenumber" name="429" href="#429">429</a> 
+<a class="jxr_linenumber" name="430" href="#430">430</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="431" href="#431">431</a> <em class="jxr_javadoccomment">   * Define for 'return-all-versions'.</em>
+<a class="jxr_linenumber" name="432" href="#432">432</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="433" href="#433">433</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> ALL_VERSIONS = Integer.MAX_VALUE;
+<a class="jxr_linenumber" name="434" href="#434">434</a> 
+<a class="jxr_linenumber" name="435" href="#435">435</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="436" href="#436">436</a> <em class="jxr_javadoccomment">   * Unlimited time-to-live.</em>
+<a class="jxr_linenumber" name="437" href="#437">437</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="438" href="#438">438</a> <em class="jxr_comment">//  public static final int FOREVER = -1;</em>
+<a class="jxr_linenumber" name="439" href="#439">439</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> FOREVER = Integer.MAX_VALUE;
+<a class="jxr_linenumber" name="440" href="#440">440</a> 
+<a class="jxr_linenumber" name="441" href="#441">441</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="442" href="#442">442</a> <em class="jxr_javadoccomment">   * Seconds in a week</em>
+<a class="jxr_linenumber" name="443" href="#443">443</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="444" href="#444">444</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> WEEK_IN_SECONDS = 7 * 24 * 3600;
+<a class="jxr_linenumber" name="445" href="#445">445</a> 
+<a class="jxr_linenumber" name="446" href="#446">446</a>   <em class="jxr_comment">//TODO: although the following are referenced widely to format strings for</em>
+<a class="jxr_linenumber" name="447" href="#447">447</a>   <em class="jxr_comment">//      the shell. They really aren't a part of the public API. It would be</em>
+<a class="jxr_linenumber" name="448" href="#448">448</a>   <em class="jxr_comment">//      nice if we could put them somewhere where they did not need to be</em>
+<a class="jxr_linenumber" name="449" href="#449">449</a>   <em class="jxr_comment">//      public. They could have package visibility</em>
+<a class="jxr_linenumber" name="450" href="#450">450</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String NAME = <span class="jxr_string">"NAME"</span>;
+<a class="jxr_linenumber" name="451" href="#451">451</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String VERSIONS = <span class="jxr_string">"VERSIONS"</span>;
+<a class="jxr_linenumber" name="452" href="#452">452</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String IN_MEMORY = <span class="jxr_string">"IN_MEMORY"</span>;
+<a class="jxr_linenumber" name="453" href="#453">453</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CONFIG = <span class="jxr_string">"CONFIG"</span>;
+<a class="jxr_linenumber" name="454" href="#454">454</a> 
+<a class="jxr_linenumber" name="455" href="#455">455</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="456" href="#456">456</a> <em class="jxr_javadoccomment">   * This is a retry backoff multiplier table similar to the BSD TCP syn</em>
+<a class="jxr_linenumber" name="457" href="#457">457</a> <em class="jxr_javadoccomment">   * backoff table, a bit more aggressive than simple exponential backoff.</em>
+<a class="jxr_linenumber" name="458" href="#458">458</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="459" href="#459">459</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> RETRY_BACKOFF[] = { 1, 1, 1, 2, 2, 4, 4, 8, 16, 32 };
+<a class="jxr_linenumber" name="460" href="#460">460</a> 
+<a class="jxr_linenumber" name="461" href="#461">461</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String REGION_IMPL = <span class="jxr_string">"hbase.hregion.impl"</span>;
+<a class="jxr_linenumber" name="462" href="#462">462</a> 
+<a class="jxr_linenumber" name="463" href="#463">463</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> modifyTable op for replacing the table descriptor */</em>
+<a class="jxr_linenumber" name="464" href="#464">464</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> enum <a href="../../../../org/apache/hadoop/hbase/HConstants.html">Modify</a> {
+<a class="jxr_linenumber" name="465" href="#465">465</a>     CLOSE_REGION,
+<a class="jxr_linenumber" name="466" href="#466">466</a>     TABLE_COMPACT,
+<a class="jxr_linenumber" name="467" href="#467">467</a>     TABLE_FLUSH,
+<a class="jxr_linenumber" name="468" href="#468">468</a>     TABLE_MAJOR_COMPACT,
+<a class="jxr_linenumber" name="469" href="#469">469</a>     TABLE_SET_HTD,
+<a class="jxr_linenumber" name="470" href="#470">470</a>     TABLE_SPLIT
+<a class="jxr_linenumber" name="471" href="#471">471</a>   }
+<a class="jxr_linenumber" name="472" href="#472">472</a> 
+<a class="jxr_linenumber" name="473" href="#473">473</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="474" href="#474">474</a> <em class="jxr_javadoccomment">   * Scope tag for locally scoped data.</em>
+<a class="jxr_linenumber" name="475" href="#475">475</a> <em class="jxr_javadoccomment">   * This data will not be replicated.</em>
+<a class="jxr_linenumber" name="476" href="#476">476</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="477" href="#477">477</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> REPLICATION_SCOPE_LOCAL = 0;
+<a class="jxr_linenumber" name="478" href="#478">478</a> 
+<a class="jxr_linenumber" name="479" href="#479">479</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="480" href="#480">480</a> <em class="jxr_javadoccomment">   * Scope tag for globally scoped data.</em>
+<a class="jxr_linenumber" name="481" href="#481">481</a> <em class="jxr_javadoccomment">   * This data will be replicated to all peers.</em>
+<a class="jxr_linenumber" name="482" href="#482">482</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="483" href="#483">483</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> REPLICATION_SCOPE_GLOBAL = 1;
+<a class="jxr_linenumber" name="484" href="#484">484</a> 
+<a class="jxr_linenumber" name="485" href="#485">485</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="486" href="#486">486</a> <em class="jxr_javadoccomment">   * Default cluster ID, cannot be used to identify a cluster so a key with</em>
+<a class="jxr_linenumber" name="487" href="#487">487</a> <em class="jxr_javadoccomment">   * this value means it wasn't meant for replication.</em>
+<a class="jxr_linenumber" name="488" href="#488">488</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="489" href="#489">489</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> UUID DEFAULT_CLUSTER_ID = <strong class="jxr_keyword">new</strong> UUID(0L,0L);
+<a class="jxr_linenumber" name="490" href="#490">490</a> 
+<a class="jxr_linenumber" name="491" href="#491">491</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="492" href="#492">492</a> <em class="jxr_javadoccomment">     * Parameter name for maximum number of bytes returned when calling a</em>
+<a class="jxr_linenumber" name="493" href="#493">493</a> <em class="jxr_javadoccomment">     * scanner's next method.</em>
+<a class="jxr_linenumber" name="494" href="#494">494</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="495" href="#495">495</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = <span class="jxr_string">"hbase.client.scanner.max.result.size"</span>;
+<a class="jxr_linenumber" name="496" href="#496">496</a> 
+<a class="jxr_linenumber" name="497" href="#497">497</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="498" href="#498">498</a> <em class="jxr_javadoccomment">   * Maximum number of bytes returned when calling a scanner's next method.</em>
+<a class="jxr_linenumber" name="499" href="#499">499</a> <em class="jxr_javadoccomment">   * Note that when a single row is larger than this limit the row is still</em>
+<a class="jxr_linenumber" name="500" href="#500">500</a> <em class="jxr_javadoccomment">   * returned completely.</em>
+<a class="jxr_linenumber" name="501" href="#501">501</a> <em class="jxr_javadoccomment">   *</em>
+<a class="jxr_linenumber" name="502" href="#502">502</a> <em class="jxr_javadoccomment">   * The default value is unlimited.</em>
+<a class="jxr_linenumber" name="503" href="#503">503</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="504" href="#504">504</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">long</strong> DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
+<a class="jxr_linenumber" name="505" href="#505">505</a> 
+<a class="jxr_linenumber" name="506" href="#506">506</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="507" href="#507">507</a> <em class="jxr_javadoccomment">   * Parameter name for client pause value, used mostly as value to wait</em>
+<a class="jxr_linenumber" name="508" href="#508">508</a> <em class="jxr_javadoccomment">   * before running a retry of a failed get, region lookup, etc.</em>
+<a class="jxr_linenumber" name="509" href="#509">509</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="510" href="#510">510</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_CLIENT_PAUSE = <span class="jxr_string">"hbase.client.pause"</span>;
+<a class="jxr_linenumber" name="511" href="#511">511</a> 
+<a class="jxr_linenumber" name="512" href="#512">512</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="513" href="#513">513</a> <em class="jxr_javadoccomment">   * Default value of {@link #HBASE_CLIENT_PAUSE}.</em>
+<a class="jxr_linenumber" name="514" href="#514">514</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="515" href="#515">515</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">long</strong> DEFAULT_HBASE_CLIENT_PAUSE = 1000;
+<a class="jxr_linenumber" name="516" href="#516">516</a> 
+<a class="jxr_linenumber" name="517" href="#517">517</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="518" href="#518">518</a> <em class="jxr_javadoccomment">   * Parameter name for maximum retries, used as maximum for all retryable</em>
+<a class="jxr_linenumber" name="519" href="#519">519</a> <em class="jxr_javadoccomment">   * operations such as fetching of the root region from root region server,</em>
+<a class="jxr_linenumber" name="520" href="#520">520</a> <em class="jxr_javadoccomment">   * getting a cell's value, starting a row update, etc.</em>
+<a class="jxr_linenumber" name="521" href="#521">521</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="522" href="#522">522</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_CLIENT_RETRIES_NUMBER = <span class="jxr_string">"hbase.client.retries.number"</span>;
+<a class="jxr_linenumber" name="523" href="#523">523</a> 
+<a class="jxr_linenumber" name="524" href="#524">524</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="525" href="#525">525</a> <em class="jxr_javadoccomment">   * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.</em>
+<a class="jxr_linenumber" name="526" href="#526">526</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="527" href="#527">527</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 10;
+<a class="jxr_linenumber" name="528" href="#528">528</a> 
+<a class="jxr_linenumber" name="529" href="#529">529</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="530" href="#530">530</a> <em class="jxr_javadoccomment">   * Parameter name for maximum attempts, used to limit the number of times the</em>
+<a class="jxr_linenumber" name="531" href="#531">531</a> <em class="jxr_javadoccomment">   * client will try to obtain the proxy for a given region server.</em>
+<a class="jxr_linenumber" name="532" href="#532">532</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="533" href="#533">533</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_CLIENT_RPC_MAXATTEMPTS = <span class="jxr_string">"hbase.client.rpc.maxattempts"</span>;
+<a class="jxr_linenumber" name="534" href="#534">534</a> 
+<a class="jxr_linenumber" name="535" href="#535">535</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="536" href="#536">536</a> <em class="jxr_javadoccomment">   * Default value of {@link #HBASE_CLIENT_RPC_MAXATTEMPTS}.</em>
+<a class="jxr_linenumber" name="537" href="#537">537</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="538" href="#538">538</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HBASE_CLIENT_RPC_MAXATTEMPTS = 1;
+<a class="jxr_linenumber" name="539" href="#539">539</a> 
+<a class="jxr_linenumber" name="540" href="#540">540</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="541" href="#541">541</a> <em class="jxr_javadoccomment">   * Parameter name for client prefetch limit, used as the maximum number of regions</em>
+<a class="jxr_linenumber" name="542" href="#542">542</a> <em class="jxr_javadoccomment">   * info that will be prefetched.</em>
+<a class="jxr_linenumber" name="543" href="#543">543</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="544" href="#544">544</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_CLIENT_PREFETCH_LIMIT = <span class="jxr_string">"hbase.client.prefetch.limit"</span>;
+<a class="jxr_linenumber" name="545" href="#545">545</a> 
+<a class="jxr_linenumber" name="546" href="#546">546</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="547" href="#547">547</a> <em class="jxr_javadoccomment">   * Default value of {@link #HBASE_CLIENT_PREFETCH_LIMIT}.</em>
+<a class="jxr_linenumber" name="548" href="#548">548</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="549" href="#549">549</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT = 10;
+<a class="jxr_linenumber" name="550" href="#550">550</a> 
+<a class="jxr_linenumber" name="551" href="#551">551</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="552" href="#552">552</a> <em class="jxr_javadoccomment">   * Parameter name to set the default scanner caching for all clients.</em>
+<a class="jxr_linenumber" name="553" href="#553">553</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="554" href="#554">554</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_CLIENT_SCANNER_CACHING = <span class="jxr_string">"hbase.client.scanner.caching"</span>;
+<a class="jxr_linenumber" name="555" href="#555">555</a> 
+<a class="jxr_linenumber" name="556" href="#556">556</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="557" href="#557">557</a> <em class="jxr_javadoccomment">   * Default value for {@link #HBASE_CLIENT_SCANNER_CACHING}</em>
+<a class="jxr_linenumber" name="558" href="#558">558</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="559" href="#559">559</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HBASE_CLIENT_SCANNER_CACHING = 100;
+<a class="jxr_linenumber" name="560" href="#560">560</a> 
+<a class="jxr_linenumber" name="561" href="#561">561</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="562" href="#562">562</a> <em class="jxr_javadoccomment">   * Parameter name for number of rows that will be fetched when calling next on</em>
+<a class="jxr_linenumber" name="563" href="#563">563</a> <em class="jxr_javadoccomment">   * a scanner if it is not served from memory. Higher caching values will</em>
+<a class="jxr_linenumber" name="564" href="#564">564</a> <em class="jxr_javadoccomment">   * enable faster scanners but will eat up more memory and some calls of next</em>
+<a class="jxr_linenumber" name="565" href="#565">565</a> <em class="jxr_javadoccomment">   * may take longer and longer times when the cache is empty.</em>
+<a class="jxr_linenumber" name="566" href="#566">566</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="567" href="#567">567</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_META_SCANNER_CACHING = <span class="jxr_string">"hbase.meta.scanner.caching"</span>;
+<a class="jxr_linenumber" name="568" href="#568">568</a> 
+<a class="jxr_linenumber" name="569" href="#569">569</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="570" href="#570">570</a> <em class="jxr_javadoccomment">   * Default value of {@link #HBASE_META_SCANNER_CACHING}.</em>
+<a class="jxr_linenumber" name="571" href="#571">571</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="572" href="#572">572</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HBASE_META_SCANNER_CACHING = 100;
+<a class="jxr_linenumber" name="573" href="#573">573</a> 
+<a class="jxr_linenumber" name="574" href="#574">574</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="575" href="#575">575</a> <em class="jxr_javadoccomment">   * Parameter name for unique identifier for this {@link org.apache.hadoop.conf.Configuration}</em>
+<a class="jxr_linenumber" name="576" href="#576">576</a> <em class="jxr_javadoccomment">   * instance. If there are two or more {@link org.apache.hadoop.conf.Configuration} instances that,</em>
+<a class="jxr_linenumber" name="577" href="#577">577</a> <em class="jxr_javadoccomment">   * for all intents and purposes, are the same except for their instance ids, then they will not be</em>
+<a class="jxr_linenumber" name="578" href="#578">578</a> <em class="jxr_javadoccomment">   * able to share the same org.apache.hadoop.hbase.client.HConnection instance. On the other hand,</em>
+<a class="jxr_linenumber" name="579" href="#579">579</a> <em class="jxr_javadoccomment">   * even if the instance ids are the same, it could result in non-shared</em>
+<a class="jxr_linenumber" name="580" href="#580">580</a> <em class="jxr_javadoccomment">   * org.apache.hadoop.hbase.client.HConnection instances if some of the other connection parameters</em>
+<a class="jxr_linenumber" name="581" href="#581">581</a> <em class="jxr_javadoccomment">   * differ.</em>
+<a class="jxr_linenumber" name="582" href="#582">582</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="583" href="#583">583</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_CLIENT_INSTANCE_ID = <span class="jxr_string">"hbase.client.instance.id"</span>;
+<a class="jxr_linenumber" name="584" href="#584">584</a> 
+<a class="jxr_linenumber" name="585" href="#585">585</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="586" href="#586">586</a> <em class="jxr_javadoccomment">   * The row lock timeout period in milliseconds.</em>
+<a class="jxr_linenumber" name="587" href="#587">587</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="588" href="#588">588</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD =
+<a class="jxr_linenumber" name="589" href="#589">589</a> 	  <span class="jxr_string">"hbase.regionserver.rowlock.timeout.period"</span>;
+<a class="jxr_linenumber" name="590" href="#590">590</a> 
+<a class="jxr_linenumber" name="591" href="#591">591</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="592" href="#592">592</a> <em class="jxr_javadoccomment">   * Default value of {@link #HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD}.</em>
+<a class="jxr_linenumber" name="593" href="#593">593</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="594" href="#594">594</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD = 60000;
+<a class="jxr_linenumber" name="595" href="#595">595</a> 
+<a class="jxr_linenumber" name="596" href="#596">596</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="597" href="#597">597</a> <em class="jxr_javadoccomment">   * The client scanner timeout period in milliseconds.</em>
+<a class="jxr_linenumber" name="598" href="#598">598</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="599" href="#599">599</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = <span class="jxr_string">"hbase.client.scanner.timeout.period"</span>;
+<a class="jxr_linenumber" name="600" href="#600">600</a> 
+<a class="jxr_linenumber" name="601" href="#601">601</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="602" href="#602">602</a> <em class="jxr_javadoccomment">   * Default value of {@link #HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD}.</em>
+<a class="jxr_linenumber" name="603" href="#603">603</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="604" href="#604">604</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = 60000;
+<a class="jxr_linenumber" name="605" href="#605">605</a> 
+<a class="jxr_linenumber" name="606" href="#606">606</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="607" href="#607">607</a> <em class="jxr_javadoccomment">   * timeout for each RPC</em>
+<a class="jxr_linenumber" name="608" href="#608">608</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="609" href="#609">609</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> String HBASE_RPC_TIMEOUT_KEY = <span class="jxr_string">"hbase.rpc.timeout"</span>;
+<a class="jxr_linenumber" name="610" href="#610">610</a> 
+<a class="jxr_linenumber" name="611" href="#611">611</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="612" href="#612">612</a> <em class="jxr_javadoccomment">   * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}</em>
+<a class="jxr_linenumber" name="613" href="#613">613</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="614" href="#614">614</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">int</strong> DEFAULT_HBASE_RPC_TIMEOUT = 60000;
+<a class="jxr_linenumber" name="615" href="#615">615</a> 
+<a class="jxr_linenumber" name="616" href="#616">616</a>   <em class="jxr_comment">/*</em>
+<a class="jxr_linenumber" name="617" href="#617">617</a> <em class="jxr_comment">   * cluster replication constants.</em>
+<a class="jxr_linenumber" name="618" href="#618">618</a> <em class="jxr_comment">   */</em>
+<a class="jxr_linenumber" name="619" href="#619">619</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String
+<a class="jxr_linenumber" name="620" href="#620">620</a>       REPLICATION_ENABLE_KEY = <span class="jxr_string">"hbase.replication"</span>;
+<a class="jxr_linenumber" name="621" href="#621">621</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String
+<a class="jxr_linenumber" name="622" href="#622">622</a>       REPLICATION_SOURCE_SERVICE_CLASSNAME = <span class="jxr_string">"hbase.replication.source.service"</span>;
+<a class="jxr_linenumber" name="623" href="#623">623</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String
+<a class="jxr_linenumber" name="624" href="#624">624</a>       REPLICATION_SINK_SERVICE_CLASSNAME = <span class="jxr_string">"hbase.replication.sink.service"</span>;
+<a class="jxr_linenumber" name="625" href="#625">625</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String REPLICATION_SERVICE_CLASSNAME_DEFAULT =
+<a class="jxr_linenumber" name="626" href="#626">626</a>     <span class="jxr_string">"org.apache.hadoop.hbase.replication.regionserver.Replication"</span>;
+<a class="jxr_linenumber" name="627" href="#627">627</a> 
+<a class="jxr_linenumber" name="628" href="#628">628</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> HBCK special code name used as server name when manipulating ZK nodes */</em>
+<a class="jxr_linenumber" name="629" href="#629">629</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBCK_CODE_NAME = <span class="jxr_string">"HBCKServerName"</span>;
+<a class="jxr_linenumber" name="630" href="#630">630</a> 
+<a class="jxr_linenumber" name="631" href="#631">631</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String KEY_FOR_HOSTNAME_SEEN_BY_MASTER =
+<a class="jxr_linenumber" name="632" href="#632">632</a>     <span class="jxr_string">"hbase.regionserver.hostname.seen.by.master"</span>;
+<a class="jxr_linenumber" name="633" href="#633">633</a> 
+<a class="jxr_linenumber" name="634" href="#634">634</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASE_MASTER_LOGCLEANER_PLUGINS =
+<a class="jxr_linenumber" name="635" href="#635">635</a>       <span class="jxr_string">"hbase.master.logcleaner.plugins"</span>;
+<a class="jxr_linenumber" name="636" href="#636">636</a> 
+<a class="jxr_linenumber" name="637" href="#637">637</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASE_REGION_SPLIT_POLICY_KEY =
+<a class="jxr_linenumber" name="638" href="#638">638</a>     <span class="jxr_string">"hbase.regionserver.region.split.policy"</span>;
+<a class="jxr_linenumber" name="639" href="#639">639</a> 
+<a class="jxr_linenumber" name="640" href="#640">640</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="641" href="#641">641</a> <em class="jxr_javadoccomment">   * Configuration key for the size of the block cache</em>
+<a class="jxr_linenumber" name="642" href="#642">642</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="643" href="#643">643</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HFILE_BLOCK_CACHE_SIZE_KEY =
+<a class="jxr_linenumber" name="644" href="#644">644</a>     <span class="jxr_string">"hfile.block.cache.size"</span>;
+<a class="jxr_linenumber" name="645" href="#645">645</a> 
+<a class="jxr_linenumber" name="646" href="#646">646</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">float</strong> HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.25f;
+<a class="jxr_linenumber" name="647" href="#647">647</a> 
+<a class="jxr_linenumber" name="648" href="#648">648</a>   <em class="jxr_comment">/*</em>
+<a class="jxr_linenumber" name="649" href="#649">649</a> <em class="jxr_comment">    * Minimum percentage of free heap necessary for a successful cluster startup.</em>
+<a class="jxr_linenumber" name="650" href="#650">650</a> <em class="jxr_comment">    */</em>
+<a class="jxr_linenumber" name="651" href="#651">651</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">float</strong> HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
+<a class="jxr_linenumber" name="652" href="#652">652</a> 
+<a class="jxr_linenumber" name="653" href="#653">653</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile
+<a class="jxr_linenumber" name="654" href="#654">654</a>       (<span class="jxr_string">"^coprocessor&#92;&#92;$([0-9]+)$"</span>, Pattern.CASE_INSENSITIVE);
+<a class="jxr_linenumber" name="655" href="#655">655</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Pattern CP_HTD_ATTR_VALUE_PATTERN =
+<a class="jxr_linenumber" name="656" href="#656">656</a>       Pattern.compile(<span class="jxr_string">"(^[^&#92;&#92;|]*)&#92;&#92;|([^&#92;&#92;|]+)&#92;&#92;|[&#92;&#92;s]*([&#92;&#92;d]*)[&#92;&#92;s]*(&#92;&#92;|.*)?$"</span>);
+<a class="jxr_linenumber" name="657" href="#657">657</a> 
+<a class="jxr_linenumber" name="658" href="#658">658</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN = <span class="jxr_string">"[^=,]+"</span>;
+<a class="jxr_linenumber" name="659" href="#659">659</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN = <span class="jxr_string">"[^,]+"</span>;
+<a class="jxr_linenumber" name="660" href="#660">660</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile(
+<a class="jxr_linenumber" name="661" href="#661">661</a>       <span class="jxr_string">"("</span> + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + <span class="jxr_string">")=("</span> +
+<a class="jxr_linenumber" name="662" href="#662">662</a>       CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + <span class="jxr_string">"),?"</span>);
+<a class="jxr_linenumber" name="663" href="#663">663</a> 
+<a class="jxr_linenumber" name="664" href="#664">664</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The delay when re-trying a socket operation in a loop (HBASE-4712) */</em>
+<a class="jxr_linenumber" name="665" href="#665">665</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> SOCKET_RETRY_WAIT_MS = 200;
+<a class="jxr_linenumber" name="666" href="#666">666</a> 
+<a class="jxr_linenumber" name="667" href="#667">667</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Host name of the local machine */</em>
+<a class="jxr_linenumber" name="668" href="#668">668</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String LOCALHOST = <span class="jxr_string">"localhost"</span>;
+<a class="jxr_linenumber" name="669" href="#669">669</a> 
+<a class="jxr_linenumber" name="670" href="#670">670</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="671" href="#671">671</a> <em class="jxr_javadoccomment">   * If this parameter is set to true, then hbase will read</em>
+<a class="jxr_linenumber" name="672" href="#672">672</a> <em class="jxr_javadoccomment">   * data and then verify checksums. Checksum verification</em>
+<a class="jxr_linenumber" name="673" href="#673">673</a> <em class="jxr_javadoccomment">   * inside hdfs will be switched off.  However, if the hbase-checksum</em>
+<a class="jxr_linenumber" name="674" href="#674">674</a> <em class="jxr_javadoccomment">   * verification fails, then it will switch back to using</em>
+<a class="jxr_linenumber" name="675" href="#675">675</a> <em class="jxr_javadoccomment">   * hdfs checksums for verifiying data that is being read from storage.</em>
+<a class="jxr_linenumber" name="676" href="#676">676</a> <em class="jxr_javadoccomment">   *</em>
+<a class="jxr_linenumber" name="677" href="#677">677</a> <em class="jxr_javadoccomment">   * If this parameter is set to false, then hbase will not</em>
+<a class="jxr_linenumber" name="678" href="#678">678</a> <em class="jxr_javadoccomment">   * verify any checksums, instead it will depend on checksum verification</em>
+<a class="jxr_linenumber" name="679" href="#679">679</a> <em class="jxr_javadoccomment">   * being done in the hdfs client.</em>
+<a class="jxr_linenumber" name="680" href="#680">680</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="681" href="#681">681</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASE_CHECKSUM_VERIFICATION =
+<a class="jxr_linenumber" name="682" href="#682">682</a>       <span class="jxr_string">"hbase.regionserver.checksum.verify"</span>;
+<a class="jxr_linenumber" name="683" href="#683">683</a> 
+<a class="jxr_linenumber" name="684" href="#684">684</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String LOCALHOST_IP = <span class="jxr_string">"127.0.0.1"</span>;
+<a class="jxr_linenumber" name="685" href="#685">685</a> 
+<a class="jxr_linenumber" name="686" href="#686">686</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Conf key that enables distributed log splitting */</em>
+<a class="jxr_linenumber" name="687" href="#687">687</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String DISTRIBUTED_LOG_SPLITTING_KEY =
+<a class="jxr_linenumber" name="688" href="#688">688</a>       <span class="jxr_string">"hbase.master.distributed.log.splitting"</span>;
+<a class="jxr_linenumber" name="689" href="#689">689</a> 
+<a class="jxr_linenumber" name="690" href="#690">690</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="691" href="#691">691</a> <em class="jxr_javadoccomment">   * The name of the configuration parameter that specifies</em>
+<a class="jxr_linenumber" name="692" href="#692">692</a> <em class="jxr_javadoccomment">   * the number of bytes in a newly created checksum chunk.</em>
+<a class="jxr_linenumber" name="693" href="#693">693</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="694" href="#694">694</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String BYTES_PER_CHECKSUM =
+<a class="jxr_linenumber" name="695" href="#695">695</a>       <span class="jxr_string">"hbase.hstore.bytes.per.checksum"</span>;
+<a class="jxr_linenumber" name="696" href="#696">696</a> 
+<a class="jxr_linenumber" name="697" href="#697">697</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="698" href="#698">698</a> <em class="jxr_javadoccomment">   * The name of the configuration parameter that specifies</em>
+<a class="jxr_linenumber" name="699" href="#699">699</a> <em class="jxr_javadoccomment">   * the name of an algorithm that is used to compute checksums</em>
+<a class="jxr_linenumber" name="700" href="#700">700</a> <em class="jxr_javadoccomment">   * for newly created blocks.</em>
+<a class="jxr_linenumber" name="701" href="#701">701</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="702" href="#702">702</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String CHECKSUM_TYPE_NAME =
+<a class="jxr_linenumber" name="703" href="#703">703</a>       <span class="jxr_string">"hbase.hstore.checksum.algorithm"</span>;
+<a class="jxr_linenumber" name="704" href="#704">704</a> 
+<a class="jxr_linenumber" name="705" href="#705">705</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Enable file permission modification from standard hbase */</em>
+<a class="jxr_linenumber" name="706" href="#706">706</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ENABLE_DATA_FILE_UMASK = <span class="jxr_string">"hbase.data.umask.enable"</span>;
+<a class="jxr_linenumber" name="707" href="#707">707</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> File permission umask to use when creating hbase data files */</em>
+<a class="jxr_linenumber" name="708" href="#708">708</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String DATA_FILE_UMASK_KEY = <span class="jxr_string">"hbase.data.umask"</span>;
+<a class="jxr_linenumber" name="709" href="#709">709</a> 
+<a class="jxr_linenumber" name="710" href="#710">710</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Configuration name of HLog Compression */</em>
+<a class="jxr_linenumber" name="711" href="#711">711</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ENABLE_WAL_COMPRESSION =
+<a class="jxr_linenumber" name="712" href="#712">712</a>     <span class="jxr_string">"hbase.regionserver.wal.enablecompression"</span>;
+<a class="jxr_linenumber" name="713" href="#713">713</a> 
+<a class="jxr_linenumber" name="714" href="#714">714</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Region in Transition metrics threshold time */</em>
+<a class="jxr_linenumber" name="715" href="#715">715</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String METRICS_RIT_STUCK_WARNING_THRESHOLD=<span class="jxr_string">"hbase.metrics.rit.stuck.warning.threshold"</span>;
+<a class="jxr_linenumber" name="716" href="#716">716</a> 
+<a class="jxr_linenumber" name="717" href="#717">717</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String LOAD_BALANCER_SLOP_KEY = <span class="jxr_string">"hbase.regions.slop"</span>;
+<a class="jxr_linenumber" name="718" href="#718">718</a> 
+<a class="jxr_linenumber" name="719" href="#719">719</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="720" href="#720">720</a> <em class="jxr_javadoccomment">   * The byte array represents for NO_NEXT_INDEXED_KEY;</em>
+<a class="jxr_linenumber" name="721" href="#721">721</a> <em class="jxr_javadoccomment">   * The actual value is irrelevant because this is always compared by reference.</em>
+<a class="jxr_linenumber" name="722" href="#722">722</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="723" href="#723">723</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte [] NO_NEXT_INDEXED_KEY = toBytes(<span class="jxr_string">"NO_NEXT_INDEXED_KEY"</span>);
+<a class="jxr_linenumber" name="724" href="#724">724</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> delimiter used between portions of a region name */</em>
+<a class="jxr_linenumber" name="725" href="#725">725</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DELIMITER = ',';
+<a class="jxr_linenumber" name="726" href="#726">726</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HBASE_CONFIG_READ_ZOOKEEPER_CONFIG =
+<a class="jxr_linenumber" name="727" href="#727">727</a>       <span class="jxr_string">"hbase.config.read.zookeeper.config"</span>;
+<a class="jxr_linenumber" name="728" href="#728">728</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> DEFAULT_HBASE_CONFIG_READ_ZOOKEEPER_CONFIG =
+<a class="jxr_linenumber" name="729" href="#729">729</a>       false;
+<a class="jxr_linenumber" name="730" href="#730">730</a> 
+<a class="jxr_linenumber" name="731" href="#731">731</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="732" href="#732">732</a> <em class="jxr_javadoccomment">   * QOS attributes: these attributes are used to demarcate RPC call processing</em>
+<a class="jxr_linenumber" name="733" href="#733">733</a> <em class="jxr_javadoccomment">   * by different set of handlers. For example, HIGH_QOS tagged methods are</em>
+<a class="jxr_linenumber" name="734" href="#734">734</a> <em class="jxr_javadoccomment">   * handled by high priority handlers.</em>
+<a class="jxr_linenumber" name="735" href="#735">735</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="736" href="#736">736</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> NORMAL_QOS = 0;
+<a class="jxr_linenumber" name="737" href="#737">737</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> QOS_THRESHOLD = 10;
+<a class="jxr_linenumber" name="738" href="#738">738</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> HIGH_QOS = 100;
+<a class="jxr_linenumber" name="739" href="#739">739</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> REPLICATION_QOS = 5; <em class="jxr_comment">// normal_QOS &lt; replication_QOS &lt; high_QOS</em>
+<a class="jxr_linenumber" name="740" href="#740">740</a> 
+<a class="jxr_linenumber" name="741" href="#741">741</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Directory under /hbase where archived hfiles are stored */</em>
+<a class="jxr_linenumber" name="742" href="#742">742</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String HFILE_ARCHIVE_DIRECTORY = <span class="jxr_string">".archive"</span>;
+<a class="jxr_linenumber" name="743" href="#743">743</a> 
+<a class="jxr_linenumber" name="744" href="#744">744</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> List&lt;String&gt; HBASE_NON_USER_TABLE_DIRS = <strong class="jxr_keyword">new</strong> ArrayList&lt;String&gt;(
+<a class="jxr_linenumber" name="745" href="#745">745</a>       Arrays.asList(<strong class="jxr_keyword">new</strong> String[] { HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME,
+<a class="jxr_linenumber" name="746" href="#746">746</a>           toString(META_TABLE_NAME), toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
+<a class="jxr_linenumber" name="747" href="#747">747</a>           HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY }));
+<a class="jxr_linenumber" name="748" href="#748">748</a>   
+<a class="jxr_linenumber" name="749" href="#749">749</a>   <strong class="jxr_keyword">private</strong> <a href="../../../../org/apache/hadoop/hbase/HConstants.html">HConstants</a>() {
+<a class="jxr_linenumber" name="750" href="#750">750</a>     <em class="jxr_comment">// Can't be instantiated with this ctor.</em>
+<a class="jxr_linenumber" name="751" href="#751">751</a>   }
+<a class="jxr_linenumber" name="752" href="#752">752</a> }
+</pre>
+<hr/><div id="footer">This page was automatically generated by <a href="http://maven.apache.org/">Maven</a></div></body>
+</html>
+

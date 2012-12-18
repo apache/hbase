@@ -1,0 +1,40 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>6.4.&nbsp; Number of Versions</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="schema.html" title="Chapter&nbsp;6.&nbsp;HBase and Schema Design"><link rel="prev" href="rowkey.design.html" title="6.3.&nbsp;Rowkey Design"><link rel="next" href="supported.datatypes.html" title="6.5.&nbsp; Supported Datatypes"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">6.4.&nbsp;
+  Number of Versions
+  </th></tr><tr><td width="20%" align="left"><a accesskey="p" href="rowkey.design.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;6.&nbsp;HBase and Schema Design</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="supported.datatypes.html">Next</a></td></tr></table><hr></div><div class="section" title="6.4.&nbsp; Number of Versions"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="schema.versions"></a>6.4.&nbsp;
+  Number of Versions
+  </h2></div></div></div><div class="section" title="6.4.1.&nbsp;Maximum Number of Versions"><div class="titlepage"><div><div><h3 class="title"><a name="schema.versions.max"></a>6.4.1.&nbsp;Maximum Number of Versions</h3></div></div></div><p>The maximum number of row versions to store is configured per column
+      family via <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html" target="_top">HColumnDescriptor</a>.
+      The default for max versions is 3.
+      This is an important parameter because as described in <a class="xref" href="datamodel.html" title="Chapter&nbsp;5.&nbsp;Data Model">Chapter&nbsp;5, <i>Data Model</i></a>
+      section HBase does <span class="emphasis"><em>not</em></span> overwrite row values, but rather
+      stores different values per row by time (and qualifier).  Excess versions are removed during major
+      compactions.  The number of max versions may need to be increased or decreased depending on application needs.
+      </p><p>It is not recommended setting the number of max versions to an exceedingly high level (e.g., hundreds or more) unless those old values are
+      very dear to you because this will greatly increase StoreFile size.
+      </p></div><div class="section" title="6.4.2.&nbsp; Minimum Number of Versions"><div class="titlepage"><div><div><h3 class="title"><a name="schema.minversions"></a>6.4.2.&nbsp;
+    Minimum Number of Versions
+    </h3></div></div></div><p>Like maximum number of row versions, the minimum number of row versions to keep is configured per column
+      family via <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html" target="_top">HColumnDescriptor</a>.
+      The default for min versions is 0, which means the feature is disabled.
+      The minimum number of row versions parameter is used together with the time-to-live parameter and can be combined with the
+      number of row versions parameter to allow configurations such as
+      "keep the last T minutes worth of data, at most N versions, <span class="emphasis"><em>but keep at least M versions around</em></span>"
+      (where M is the value for minimum number of row versions, M&lt;N).
+      This parameter should only be set when time-to-live is enabled for a column family and must be less than the
+      number of row versions.
+    </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'schema.versions';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="rowkey.design.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="schema.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="supported.datatypes.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">6.3.&nbsp;Rowkey Design&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;6.5.&nbsp;
+  Supported Datatypes
+  </td></tr></table></div></body></html>

@@ -1,0 +1,32 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Chapter&nbsp;4.&nbsp;The Apache HBase Shell</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="prev" href="upgrade0.90.html" title="3.4.&nbsp;Upgrading to HBase 0.90.x from 0.20.x or 0.89.x"><link rel="next" href="shell_tricks.html" title="4.2.&nbsp;Shell Tricks"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Chapter&nbsp;4.&nbsp;The Apache HBase Shell</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="upgrade0.90.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="shell_tricks.html">Next</a></td></tr></table><hr></div><div class="chapter" title="Chapter&nbsp;4.&nbsp;The Apache HBase Shell"><div class="titlepage"><div><div><h2 class="title"><a name="shell"></a>Chapter&nbsp;4.&nbsp;The Apache HBase Shell</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="section"><a href="shell.html#scripting">4.1. Scripting</a></span></dt><dt><span class="section"><a href="shell_tricks.html">4.2. Shell Tricks</a></span></dt><dd><dl><dt><span class="section"><a href="shell_tricks.html#d2121e2793">4.2.1. <code class="filename">irbrc</code></a></span></dt><dt><span class="section"><a href="shell_tricks.html#d2121e2811">4.2.2. LOG data to timestamp</a></span></dt><dt><span class="section"><a href="shell_tricks.html#d2121e2829">4.2.3. Debug</a></span></dt><dt><span class="section"><a href="shell_tricks.html#d2121e2851">4.2.4. Commands</a></span></dt></dl></dd></dl></div><p>
+        The Apache HBase (TM) Shell is <a class="link" href="http://jruby.org" target="_top">(J)Ruby</a>'s
+        IRB with some HBase particular commands added.  Anything you can do in
+        IRB, you should be able to do in the HBase Shell.</p><p>To run the HBase shell,
+        do as follows:
+        </p><pre class="programlisting">$ ./bin/hbase shell</pre><p>
+        </p><p>Type <span class="command"><strong>help</strong></span> and then <span class="command"><strong>&lt;RETURN&gt;</strong></span>
+            to see a listing of shell
+            commands and options. Browse at least the paragraphs at the end of
+            the help emission for the gist of how variables and command
+            arguments are entered into the
+            HBase shell; in particular note how table names, rows, and
+            columns, etc., must be quoted.</p><p>See <a class="xref" href="quickstart.html#shell_exercises" title="1.2.3.&nbsp;Shell Exercises">Section&nbsp;1.2.3, &#8220;Shell Exercises&#8221;</a>
+            for example basic shell operation.</p><div class="section" title="4.1.&nbsp;Scripting"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="scripting"></a>4.1.&nbsp;Scripting</h2></div></div></div><p>For examples scripting Apache HBase, look in the
+            HBase <code class="filename">bin</code> directory.  Look at the files
+            that end in <code class="filename">*.rb</code>.  To run one of these
+            files, do as follows:
+            </p><pre class="programlisting">$ ./bin/hbase org.jruby.Main PATH_TO_SCRIPT</pre><p>
+        </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'shell';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="upgrade0.90.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="shell_tricks.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">3.4.&nbsp;Upgrading to HBase 0.90.x from 0.20.x or 0.89.x&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;4.2.&nbsp;Shell Tricks</td></tr></table></div></body></html>

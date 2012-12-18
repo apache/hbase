@@ -1,0 +1,158 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>9.4.&nbsp;Client Request Filters</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="architecture.html" title="Chapter&nbsp;9.&nbsp;Architecture"><link rel="prev" href="client.html" title="9.3.&nbsp;Client"><link rel="next" href="master.html" title="9.5.&nbsp;Master"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">9.4.&nbsp;Client Request Filters</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="client.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;9.&nbsp;Architecture</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="master.html">Next</a></td></tr></table><hr></div><div class="section" title="9.4.&nbsp;Client Request Filters"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="client.filter"></a>9.4.&nbsp;Client Request Filters</h2></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html" target="_top">Get</a> and <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html" target="_top">Scan</a> instances can be
+       optionally configured with <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html" target="_top">filters</a> which are applied on the RegionServer.
+      </p><p>Filters can be confusing because there are many different types, and it is best to approach them by understanding the groups
+      of Filter functionality.
+      </p><div class="section" title="9.4.1.&nbsp;Structural"><div class="titlepage"><div><div><h3 class="title"><a name="client.filter.structural"></a>9.4.1.&nbsp;Structural</h3></div></div></div><p>Structural Filters contain other Filters.</p><div class="section" title="9.4.1.1.&nbsp;FilterList"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.structural.fl"></a>9.4.1.1.&nbsp;FilterList</h4></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FilterList.html" target="_top">FilterList</a>
+          represents a list of Filters with a relationship of <code class="code">FilterList.Operator.MUST_PASS_ALL</code> or
+          <code class="code">FilterList.Operator.MUST_PASS_ONE</code> between the Filters.  The following example shows an 'or' between two
+          Filters (checking for either 'my value' or 'my other value' on the same attribute).
+</p><pre class="programlisting">
+FilterList list = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+SingleColumnValueFilter filter1 = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	Bytes.toBytes("my value")
+	);
+list.add(filter1);
+SingleColumnValueFilter filter2 = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	Bytes.toBytes("my other value")
+	);
+list.add(filter2);
+scan.setFilter(list);
+</pre><p>
+          </p></div></div><div class="section" title="9.4.2.&nbsp;Column Value"><div class="titlepage"><div><div><h3 class="title"><a name="client.filter.cv"></a>9.4.2.&nbsp;Column Value</h3></div></div></div><div class="section" title="9.4.2.1.&nbsp;SingleColumnValueFilter"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.cv.scvf"></a>9.4.2.1.&nbsp;SingleColumnValueFilter</h4></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html" target="_top">SingleColumnValueFilter</a>
+          can be used to test column values for equivalence (<code class="code"><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/CompareFilter.CompareOp.html" target="_top">CompareOp.EQUAL</a>
+          </code>), inequality (<code class="code">CompareOp.NOT_EQUAL</code>), or ranges
+          (e.g., <code class="code">CompareOp.GREATER</code>).  The folowing is example of testing equivalence a column to a String value "my value"...
+</p><pre class="programlisting">
+SingleColumnValueFilter filter = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	Bytes.toBytes("my value")
+	);
+scan.setFilter(filter);
+</pre><p>
+          </p></div></div><div class="section" title="9.4.3.&nbsp;Column Value Comparators"><div class="titlepage"><div><div><h3 class="title"><a name="client.filter.cvp"></a>9.4.3.&nbsp;Column Value Comparators</h3></div></div></div><p>There are several Comparator classes in the Filter package that deserve special mention.
+        These Comparators are used in concert with other Filters, such as  <a class="xref" href="client.filter.html#client.filter.cv.scvf" title="9.4.2.1.&nbsp;SingleColumnValueFilter">Section&nbsp;9.4.2.1, &#8220;SingleColumnValueFilter&#8221;</a>.
+        </p><div class="section" title="9.4.3.1.&nbsp;RegexStringComparator"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.cvp.rcs"></a>9.4.3.1.&nbsp;RegexStringComparator</h4></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html" target="_top">RegexStringComparator</a>
+          supports regular expressions for value comparisons.
+</p><pre class="programlisting">
+RegexStringComparator comp = new RegexStringComparator("my.");   // any value that starts with 'my'
+SingleColumnValueFilter filter = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	comp
+	);
+scan.setFilter(filter);
+</pre><p>
+          See the Oracle JavaDoc for <a class="link" href="http://download.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html" target="_top">supported RegEx patterns in Java</a>.
+          </p></div><div class="section" title="9.4.3.2.&nbsp;SubstringComparator"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.cvp.rcs"></a>9.4.3.2.&nbsp;SubstringComparator</h4></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html" target="_top">SubstringComparator</a>
+          can be used to determine if a given substring exists in a value.  The comparison is case-insensitive.
+          </p><pre class="programlisting">
+SubstringComparator comp = new SubstringComparator("y val");   // looking for 'my value'
+SingleColumnValueFilter filter = new SingleColumnValueFilter(
+	cf,
+	column,
+	CompareOp.EQUAL,
+	comp
+	);
+scan.setFilter(filter);
+</pre></div><div class="section" title="9.4.3.3.&nbsp;BinaryPrefixComparator"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.cvp.bfp"></a>9.4.3.3.&nbsp;BinaryPrefixComparator</h4></div></div></div><p>See <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html" target="_top">BinaryPrefixComparator</a>.</p></div><div class="section" title="9.4.3.4.&nbsp;BinaryComparator"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.cvp.bc"></a>9.4.3.4.&nbsp;BinaryComparator</h4></div></div></div><p>See <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html" target="_top">BinaryComparator</a>.</p></div></div><div class="section" title="9.4.4.&nbsp;KeyValue Metadata"><div class="titlepage"><div><div><h3 class="title"><a name="client.filter.kvm"></a>9.4.4.&nbsp;KeyValue Metadata</h3></div></div></div><p>As HBase stores data internally as KeyValue pairs, KeyValue Metadata Filters evaluate the existence of keys (i.e., ColumnFamily:Column qualifiers)
+        for a row, as opposed to values the previous section.
+        </p><div class="section" title="9.4.4.1.&nbsp;FamilyFilter"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.kvm.ff"></a>9.4.4.1.&nbsp;FamilyFilter</h4></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FamilyFilter.html" target="_top">FamilyFilter</a> can be used
+          to filter on the ColumnFamily.  It is generally a better idea to select ColumnFamilies in the Scan than to do it with a Filter.</p></div><div class="section" title="9.4.4.2.&nbsp;QualifierFilter"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.kvm.qf"></a>9.4.4.2.&nbsp;QualifierFilter</h4></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/QualifierFilter.html" target="_top">QualifierFilter</a> can be used
+          to filter based on Column (aka Qualifier) name.
+          </p></div><div class="section" title="9.4.4.3.&nbsp;ColumnPrefixFilter"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.kvm.cpf"></a>9.4.4.3.&nbsp;ColumnPrefixFilter</h4></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnPrefixFilter.html" target="_top">ColumnPrefixFilter</a> can be used
+          to filter based on the lead portion of Column (aka Qualifier) names.
+          </p><p>A ColumnPrefixFilter seeks ahead to the first column matching the prefix in each row and for each involved column family. It can be used to efficiently
+	 	  get a subset of the columns in very wide rows.
+	      </p><p>Note: The same column qualifier can be used in different column families. This filter returns all matching columns.
+          </p><p>Example: Find all columns in a row and family that start with "abc"
+</p><pre class="programlisting">
+HTableInterface t = ...;
+byte[] row = ...;
+byte[] family = ...;
+byte[] prefix = Bytes.toBytes("abc");
+Scan scan = new Scan(row, row); // (optional) limit to one row
+scan.addFamily(family); // (optional) limit to one family
+Filter f = new ColumnPrefixFilter(prefix);
+scan.setFilter(f);
+scan.setBatch(10); // set this if there could be many columns returned
+ResultScanner rs = t.getScanner(scan);
+for (Result r = rs.next(); r != null; r = rs.next()) {
+  for (KeyValue kv : r.raw()) {
+    // each kv represents a column
+  }
+}
+rs.close();
+</pre><p>
+</p></div><div class="section" title="9.4.4.4.&nbsp;MultipleColumnPrefixFilter"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.kvm.mcpf"></a>9.4.4.4.&nbsp;MultipleColumnPrefixFilter</h4></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/MultipleColumnPrefixFilter.html" target="_top">MultipleColumnPrefixFilter</a> behaves like ColumnPrefixFilter
+          but allows specifying multiple prefixes.
+          </p><p>Like ColumnPrefixFilter, MultipleColumnPrefixFilter efficiently seeks ahead to the first column matching the lowest prefix and also seeks past ranges of columns between prefixes.
+	      It can be used to efficiently get discontinuous sets of columns from very wide rows.
+		  </p><p>Example: Find all columns in a row and family that start with "abc" or "xyz"
+</p><pre class="programlisting">
+HTableInterface t = ...;
+byte[] row = ...;
+byte[] family = ...;
+byte[][] prefixes = new byte[][] {Bytes.toBytes("abc"), Bytes.toBytes("xyz")};
+Scan scan = new Scan(row, row); // (optional) limit to one row
+scan.addFamily(family); // (optional) limit to one family
+Filter f = new MultipleColumnPrefixFilter(prefixes);
+scan.setFilter(f);
+scan.setBatch(10); // set this if there could be many columns returned
+ResultScanner rs = t.getScanner(scan);
+for (Result r = rs.next(); r != null; r = rs.next()) {
+  for (KeyValue kv : r.raw()) {
+    // each kv represents a column
+  }
+}
+rs.close();
+</pre><p>
+</p></div><div class="section" title="9.4.4.5.&nbsp;ColumnRangeFilter"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.kvm.crf "></a>9.4.4.5.&nbsp;ColumnRangeFilter</h4></div></div></div><p>A <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnRangeFilter.html" target="_top">ColumnRangeFilter</a> allows efficient intra row scanning.
+            </p><p>A ColumnRangeFilter can seek ahead to the first matching column for each involved column family. It can be used to efficiently
+			get a 'slice' of the columns of a very wide row.
+			 i.e. you have a million columns in a row but you only want to look at columns bbbb-bbdd.
+            </p><p>Note: The same column qualifier can be used in different column families. This filter returns all matching columns.
+            </p><p>Example: Find all columns in a row and family between "bbbb" (inclusive) and "bbdd" (inclusive)
+</p><pre class="programlisting">
+HTableInterface t = ...;
+byte[] row = ...;
+byte[] family = ...;
+byte[] startColumn = Bytes.toBytes("bbbb");
+byte[] endColumn = Bytes.toBytes("bbdd");
+Scan scan = new Scan(row, row); // (optional) limit to one row
+scan.addFamily(family); // (optional) limit to one family
+Filter f = new ColumnRangeFilter(startColumn, true, endColumn, true);
+scan.setFilter(f);
+scan.setBatch(10); // set this if there could be many columns returned
+ResultScanner rs = t.getScanner(scan);
+for (Result r = rs.next(); r != null; r = rs.next()) {
+  for (KeyValue kv : r.raw()) {
+    // each kv represents a column
+  }
+}
+rs.close();
+</pre><p>
+</p><p>Note:  Introduced in HBase 0.92</p></div></div><div class="section" title="9.4.5.&nbsp;RowKey"><div class="titlepage"><div><div><h3 class="title"><a name="client.filter.row"></a>9.4.5.&nbsp;RowKey</h3></div></div></div><div class="section" title="9.4.5.1.&nbsp;RowFilter"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.row.rf"></a>9.4.5.1.&nbsp;RowFilter</h4></div></div></div><p>It is generally a better idea to use the startRow/stopRow methods on Scan for row selection, however
+          <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RowFilter.html" target="_top">RowFilter</a> can also be used.</p></div></div><div class="section" title="9.4.6.&nbsp;Utility"><div class="titlepage"><div><div><h3 class="title"><a name="client.filter.utility"></a>9.4.6.&nbsp;Utility</h3></div></div></div><div class="section" title="9.4.6.1.&nbsp;FirstKeyOnlyFilter"><div class="titlepage"><div><div><h4 class="title"><a name="client.filter.utility.fkof"></a>9.4.6.1.&nbsp;FirstKeyOnlyFilter</h4></div></div></div><p>This is primarily used for rowcount jobs.
+          See <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html" target="_top">FirstKeyOnlyFilter</a>.</p></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'client.filter';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="client.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="architecture.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="master.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">9.3.&nbsp;Client&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;9.5.&nbsp;Master</td></tr></table></div></body></html>

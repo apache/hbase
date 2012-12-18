@@ -1,0 +1,89 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>12.5.&nbsp;Client</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="trouble.html" title="Chapter&nbsp;12.&nbsp;Troubleshooting and Debugging Apache HBase (TM)"><link rel="prev" href="trouble.tools.html" title="12.4.&nbsp;Tools"><link rel="next" href="trouble.mapreduce.html" title="12.6.&nbsp;MapReduce"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">12.5.&nbsp;Client</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="trouble.tools.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;12.&nbsp;Troubleshooting and Debugging Apache HBase (TM)</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="trouble.mapreduce.html">Next</a></td></tr></table><hr></div><div class="section" title="12.5.&nbsp;Client"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="trouble.client"></a>12.5.&nbsp;Client</h2></div></div></div><p>For more information on the HBase client, see <a class="xref" href="client.html" title="9.3.&nbsp;Client">Section&nbsp;9.3, &#8220;Client&#8221;</a>. 
+       </p><div class="section" title="12.5.1.&nbsp;ScannerTimeoutException or UnknownScannerException"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.client.scantimeout"></a>12.5.1.&nbsp;ScannerTimeoutException or UnknownScannerException</h3></div></div></div><p>This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout.  
+            For example, if <code class="code">Scan.setCaching</code> is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 <code class="code">.next()</code> calls on the ResultScanner
+            because data is being transferred in blocks of 500 rows to the client.  Reducing the setCaching value may be an option, but setting this value too low makes for inefficient
+            processing on numbers of rows.
+            </p><p>See <a class="xref" href="perf.reading.html#perf.hbase.client.caching" title="11.8.1.&nbsp;Scan Caching">Section&nbsp;11.8.1, &#8220;Scan Caching&#8221;</a>.
+            </p></div><div class="section" title="12.5.2.&nbsp;LeaseException when calling Scanner.next"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.client.lease.exception"></a>12.5.2.&nbsp;<code class="classname">LeaseException</code> when calling <code class="classname">Scanner.next</code></h3></div></div></div><p>
+In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual
+<a class="xref" href="trouble.client.html#trouble.client.scantimeout" title="12.5.1.&nbsp;ScannerTimeoutException or UnknownScannerException">Section&nbsp;12.5.1, &#8220;ScannerTimeoutException or UnknownScannerException&#8221;</a>.  Usually the source of the exception is
+<code class="classname">org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)</code> (line number may vary).
+It tends to happen in the context of a slow/freezing RegionServer#next call.
+It can be prevented by having <code class="varname">hbase.rpc.timeout</code> &gt; <code class="varname">hbase.regionserver.lease.period</code>.
+Harsh J investigated the issue as part of the mailing list thread
+<a class="link" href="http://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E" target="_top">HBase, mail # user - Lease does not exist exceptions</a>
+            </p></div><div class="section" title="12.5.3.&nbsp;Shell or client application throws lots of scary exceptions during normal operation"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.client.scarylogs"></a>12.5.3.&nbsp;Shell or client application throws lots of scary exceptions during normal operation</h3></div></div></div><p>Since 0.20.0 the default log level for <code class="code">org.apache.hadoop.hbase.*</code>is DEBUG. </p><p>
+            On your clients, edit <code class="filename">$HBASE_HOME/conf/log4j.properties</code> and change this: <code class="code">log4j.logger.org.apache.hadoop.hbase=DEBUG</code> to this: <code class="code">log4j.logger.org.apache.hadoop.hbase=INFO</code>, or even <code class="code">log4j.logger.org.apache.hadoop.hbase=WARN</code>. 
+            </p></div><div class="section" title="12.5.4.&nbsp;Long Client Pauses With Compression"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.client.longpauseswithcompression"></a>12.5.4.&nbsp;Long Client Pauses With Compression</h3></div></div></div><p>This is a fairly frequent question on the Apache HBase dist-list.  The scenario is that a client is typically inserting a lot of data into a 
+            relatively un-optimized HBase cluster.  Compression can exacerbate the pauses, although it is not the source of the problem.</p><p>See <a class="xref" href="perf.writing.html#precreate.regions" title="11.7.2.&nbsp; Table Creation: Pre-Creating Regions">Section&nbsp;11.7.2, &#8220;
+    Table Creation: Pre-Creating Regions
+    &#8221;</a> on the pattern for pre-creating regions and confirm that the table isn't starting with a single region.</p><p>See <a class="xref" href="perf.configurations.html" title="11.4.&nbsp;HBase Configurations">Section&nbsp;11.4, &#8220;HBase Configurations&#8221;</a> for cluster configuration, particularly <code class="code">hbase.hstore.blockingStoreFiles</code>, <code class="code">hbase.hregion.memstore.block.multiplier</code>, 
+            <code class="code">MAX_FILESIZE</code> (region size), and <code class="code">MEMSTORE_FLUSHSIZE.</code>  </p><p>A slightly longer explanation of why pauses can happen is as follows:  Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are 
+            too many files to compact because the compactor is given too many small files to compact and has to compact the same data repeatedly.  This situation can occur even with minor compactions.
+            Compounding this situation, Apache HBase doesn't compress data in memory.  Thus, the 64MB that lives in the MemStore could become a 6MB file after compression - which results in a smaller StoreFile.  The upside is that
+            more data is packed into the same region, but performance is achieved by being able to write larger files - which is why HBase waits until the flushize before writing a new StoreFile.  And smaller StoreFiles
+            become targets for compaction.  Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.   
+            </p><p>
+            For additional information, see this thread on <a class="link" href="http://search-hadoop.com/m/WUnLM6ojHm1/Long+client+pauses+with+compression&amp;subj=Long+client+pauses+with+compression" target="_top">Long client pauses with compression</a>.
+            </p></div><div class="section" title="12.5.5.&nbsp;ZooKeeper Client Connection Errors"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.client.zookeeper"></a>12.5.5.&nbsp;ZooKeeper Client Connection Errors</h3></div></div></div><p>Errors like this...
+</p><pre class="programlisting">
+11/07/05 11:26:41 WARN zookeeper.ClientCnxn: Session 0x0 for server null,
+ unexpected error, closing socket connection and attempting reconnect
+ java.net.ConnectException: Connection refused: no further information
+        at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+        at sun.nio.ch.SocketChannelImpl.finishConnect(Unknown Source)
+        at org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:1078)
+ 11/07/05 11:26:43 INFO zookeeper.ClientCnxn: Opening socket connection to
+ server localhost/127.0.0.1:2181
+ 11/07/05 11:26:44 WARN zookeeper.ClientCnxn: Session 0x0 for server null,
+ unexpected error, closing socket connection and attempting reconnect
+ java.net.ConnectException: Connection refused: no further information
+        at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+        at sun.nio.ch.SocketChannelImpl.finishConnect(Unknown Source)
+        at org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:1078)
+ 11/07/05 11:26:45 INFO zookeeper.ClientCnxn: Opening socket connection to
+ server localhost/127.0.0.1:2181
+</pre><p>
+            ... are either due to ZooKeeper being down, or unreachable due to network issues.            
+            </p><p>The utility <a class="xref" href="trouble.tools.html#trouble.tools.builtin.zkcli" title="12.4.1.3.&nbsp;zkcli">Section&nbsp;12.4.1.3, &#8220;zkcli&#8221;</a> may help investigate ZooKeeper issues.
+            </p></div><div class="section" title="12.5.6.&nbsp;Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.client.oome.directmemory.leak"></a>12.5.6.&nbsp;Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)</h3></div></div></div><p>
+You are likely running into the issue that is described and worked through in
+the mail thread HBase, mail # user - Suspected memory leak
+and continued over in HBase, mail # dev - FeedbackRe: Suspected memory leak.
+A workaround is passing your client-side JVM a reasonable value for <code class="code">-XX:MaxDirectMemorySize</code>.  By default,
+the <code class="varname">MaxDirectMemorySize</code> is equal to your <code class="code">-Xmx</code> max heapsize setting (if <code class="code">-Xmx</code> is set).
+Try seting it to something smaller (for example, one user had success setting it to <code class="code">1g</code> when
+they had a client-side heap of <code class="code">12g</code>).  If you set it too small, it will bring on <code class="code">FullGCs</code> so keep
+it  a bit hefty.  You want to make this setting client-side only especially if you are running the new experiemental
+server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep
+separate client-side and server-side config dirs).
+            </p></div><div class="section" title="12.5.7.&nbsp;Client Slowdown When Calling Admin Methods (flush, compact, etc.)"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.client.slowdown.admin"></a>12.5.7.&nbsp;Client Slowdown When Calling Admin Methods (flush, compact, etc.)</h3></div></div></div><p>
+This is a client issue fixed by <a class="link" href="https://issues.apache.org/jira/browse/HBASE-5073" target="_top">HBASE-5073</a> in 0.90.6.
+There was a ZooKeeper leak in the client and the client was getting pummeled by ZooKeeper events with each additional 
+invocation of the admin API. 
+            </p></div><div class="section" title="12.5.8.&nbsp;Secure Client Cannot Connect ([Caused by GSSException: No valid credentials provided (Mechanism level: Failed to find any Kerberos tgt)])"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.client.security.rpc"></a>12.5.8.&nbsp;Secure Client Cannot Connect ([Caused by GSSException: No valid credentials provided (Mechanism level: Failed to find any Kerberos tgt)])</h3></div></div></div><p>
+There can be several causes that produce this symptom.
+           </p><p>
+First, check that you have a valid Kerberos ticket. One is required in order to set up communication with a secure Apache HBase cluster. Examine the ticket currently in the credential cache, if any, by running the klist command line utility. If no ticket is listed, you must obtain a ticket by running the kinit command with either a keytab specified, or by interactively entering a password for the desired principal.
+           </p><p>
+Then, consult the <a class="link" href="http://docs.oracle.com/javase/1.5.0/docs/guide/security/jgss/tutorials/Troubleshooting.html" target="_top">Java Security Guide troubleshooting section</a>. The most common problem addressed there is resolved by setting javax.security.auth.useSubjectCredsOnly system property value to false.
+           </p><p>
+Because of a change in the format in which MIT Kerberos writes its credentials cache, there is a bug in the Oracle JDK 6 Update 26 and earlier that causes Java to be unable to read the Kerberos credentials cache created by versions of MIT Kerberos 1.8.1 or higher. If you have this problematic combination of components in your environment, to work around this problem, first log in with kinit and then immediately refresh the credential cache with kinit -R. The refresh will rewrite the credential cache without the problematic formatting.
+           </p><p>
+Finally, depending on your Kerberos configuration, you may need to install the <a class="link" href="http://docs.oracle.com/javase/1.4.2/docs/guide/security/jce/JCERefGuide.html" target="_top">Java Cryptography Extension</a>, or JCE. Insure the JCE jars are on the classpath on both server and client systems.
+           </p><p>
+You may also need to download the <a class="link" href="http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html" target="_top">unlimited strength JCE policy files</a>. Uncompress and extract the downloaded file, and install the policy jars into &lt;java-home&gt;/lib/security.
+           </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'trouble.client';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="trouble.tools.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="trouble.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="trouble.mapreduce.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">12.4.&nbsp;Tools&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;12.6.&nbsp;MapReduce</td></tr></table></div></body></html>

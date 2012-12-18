@@ -1,0 +1,42 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Chapter&nbsp;5.&nbsp;Data Model</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="prev" href="shell_tricks.html" title="4.2.&nbsp;Shell Tricks"><link rel="next" href="physical.view.html" title="5.2.&nbsp;Physical View"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Chapter&nbsp;5.&nbsp;Data Model</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="shell_tricks.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="physical.view.html">Next</a></td></tr></table><hr></div><div class="chapter" title="Chapter&nbsp;5.&nbsp;Data Model"><div class="titlepage"><div><div><h2 class="title"><a name="datamodel"></a>Chapter&nbsp;5.&nbsp;Data Model</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="section"><a href="datamodel.html#conceptual.view">5.1. Conceptual View</a></span></dt><dt><span class="section"><a href="physical.view.html">5.2. Physical View</a></span></dt><dt><span class="section"><a href="table.html">5.3. Table</a></span></dt><dt><span class="section"><a href="row.html">5.4. Row</a></span></dt><dt><span class="section"><a href="columnfamily.html">5.5. Column Family</a></span></dt><dt><span class="section"><a href="cells.html">5.6. Cells</a></span></dt><dt><span class="section"><a href="data_model_operations.html">5.7. Data Model Operations</a></span></dt><dd><dl><dt><span class="section"><a href="data_model_operations.html#get">5.7.1. Get</a></span></dt><dt><span class="section"><a href="data_model_operations.html#put">5.7.2. Put</a></span></dt><dt><span class="section"><a href="data_model_operations.html#scan">5.7.3. Scans</a></span></dt><dt><span class="section"><a href="data_model_operations.html#delete">5.7.4. Delete</a></span></dt></dl></dd><dt><span class="section"><a href="versions.html">5.8. Versions</a></span></dt><dd><dl><dt><span class="section"><a href="versions.html#versions.ops">5.8.1. Versions and HBase Operations</a></span></dt><dt><span class="section"><a href="versions.html#d2121e3443">5.8.2. Current Limitations</a></span></dt></dl></dd><dt><span class="section"><a href="dm.sort.html">5.9. Sort Order</a></span></dt><dt><span class="section"><a href="dm.column.metadata.html">5.10. Column Metadata</a></span></dt><dt><span class="section"><a href="joins.html">5.11. Joins</a></span></dt></dl></div><p>In short, applications store data into an HBase table.
+        Tables are made of rows and columns.
+      All columns in HBase belong to a particular column family.
+      Table cells -- the intersection of row and column
+      coordinates -- are versioned.
+      A cell&#8217;s content is an uninterpreted array of bytes.
+  </p><p>Table row keys are also byte arrays so almost anything can
+      serve as a row key from strings to binary representations of longs or
+      even serialized data structures. Rows in HBase tables
+      are sorted by row key. The sort is byte-ordered. All table accesses are
+      via the table row key -- its primary key.
+</p><div class="section" title="5.1.&nbsp;Conceptual View"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="conceptual.view"></a>5.1.&nbsp;Conceptual View</h2></div></div></div><p>
+        The following example is a slightly modified form of the one on page
+        2 of the <a class="link" href="http://research.google.com/archive/bigtable.html" target="_top">BigTable</a> paper.
+    There is a table called <code class="varname">webtable</code> that contains two column families named
+    <code class="varname">contents</code> and <code class="varname">anchor</code>.
+    In this example, <code class="varname">anchor</code> contains two
+    columns (<code class="varname">anchor:cssnsi.com</code>, <code class="varname">anchor:my.look.ca</code>)
+    and <code class="varname">contents</code> contains one column (<code class="varname">contents:html</code>).
+    </p><div class="note" title="Column Names" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Column Names</h3><p>
+      By convention, a column name is made of its column family prefix and a
+      <span class="emphasis"><em>qualifier</em></span>. For example, the
+      column
+      <span class="emphasis"><em>contents:html</em></span> is of the column family <code class="varname">contents</code>
+          The colon character (<code class="literal">:</code>) delimits the column family from the
+          column family <span class="emphasis"><em>qualifier</em></span>.
+    </p></div><p>
+    </p><div class="table"><a name="d2121e2922"></a><p class="title"><b>Table&nbsp;5.1.&nbsp;Table <code class="varname">webtable</code></b></p><div class="table-contents"><table summary="Table webtable" border="1"><colgroup><col align="left" class="c1"><col align="left" class="c2"><col align="left" class="c3"><col align="left" class="c4"></colgroup><thead><tr><th align="left">Row Key</th><th align="left">Time Stamp</th><th align="left">ColumnFamily <code class="varname">contents</code></th><th align="left">ColumnFamily <code class="varname">anchor</code></th></tr></thead><tbody><tr><td align="left">"com.cnn.www"</td><td align="left">t9</td><td align="left">&nbsp;</td><td align="left"><code class="varname">anchor:cnnsi.com</code> = "CNN"</td></tr><tr><td align="left">"com.cnn.www"</td><td align="left">t8</td><td align="left">&nbsp;</td><td align="left"><code class="varname">anchor:my.look.ca</code> = "CNN.com"</td></tr><tr><td align="left">"com.cnn.www"</td><td align="left">t6</td><td align="left"><code class="varname">contents:html</code> = "&lt;html&gt;..."</td><td align="left">&nbsp;</td></tr><tr><td align="left">"com.cnn.www"</td><td align="left">t5</td><td align="left"><code class="varname">contents:html</code> = "&lt;html&gt;..."</td><td align="left">&nbsp;</td></tr><tr><td align="left">"com.cnn.www"</td><td align="left">t3</td><td align="left"><code class="varname">contents:html</code> = "&lt;html&gt;..."</td><td align="left">&nbsp;</td></tr></tbody></table></div></div><p><br class="table-break">
+	</p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'datamodel';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="shell_tricks.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="physical.view.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">4.2.&nbsp;Shell Tricks&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;5.2.&nbsp;Physical View</td></tr></table></div></body></html>

@@ -1,0 +1,122 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>5.8.&nbsp;Versions</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="datamodel.html" title="Chapter&nbsp;5.&nbsp;Data Model"><link rel="prev" href="data_model_operations.html" title="5.7.&nbsp;Data Model Operations"><link rel="next" href="dm.sort.html" title="5.9.&nbsp;Sort Order"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">5.8.&nbsp;Versions</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="data_model_operations.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;5.&nbsp;Data Model</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="dm.sort.html">Next</a></td></tr></table><hr></div><div class="section" title="5.8.&nbsp;Versions"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="versions"></a>5.8.&nbsp;Versions<a class="indexterm" name="d2121e3258"></a></h2></div></div></div><p>A <span class="emphasis"><em>{row, column, version} </em></span>tuple exactly
+      specifies a <code class="literal">cell</code> in HBase. It's possible to have an
+      unbounded number of cells where the row and column are the same but the
+      cell address differs only in its version dimension.</p><p>While rows and column keys are expressed as bytes, the version is
+      specified using a long integer. Typically this long contains time
+      instances such as those returned by
+      <code class="code">java.util.Date.getTime()</code> or
+      <code class="code">System.currentTimeMillis()</code>, that is: <span class="quote">&#8220;<span class="quote">the difference,
+      measured in milliseconds, between the current time and midnight, January
+      1, 1970 UTC</span>&#8221;</span>.</p><p>The HBase version dimension is stored in decreasing order, so that
+      when reading from a store file, the most recent values are found
+      first.</p><p>There is a lot of confusion over the semantics of
+      <code class="literal">cell</code> versions, in HBase. In particular, a couple
+      questions that often come up are:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>If multiple writes to a cell have the same version, are all
+            versions maintained or just the last?<sup>[<a name="d2121e3291" href="#ftn.d2121e3291" class="footnote">16</a>]</sup></p></li><li class="listitem"><p>Is it OK to write cells in a non-increasing version
+            order?<sup>[<a name="d2121e3297" href="#ftn.d2121e3297" class="footnote">17</a>]</sup></p></li></ul></div><p>Below we describe how the version dimension in HBase currently
+      works<sup>[<a name="d2121e3302" href="#ftn.d2121e3302" class="footnote">18</a>]</sup>.</p><div class="section" title="5.8.1.&nbsp;Versions and HBase Operations"><div class="titlepage"><div><div><h3 class="title"><a name="versions.ops"></a>5.8.1.&nbsp;Versions and HBase Operations</h3></div></div></div><p>In this section we look at the behavior of the version dimension
+        for each of the core HBase operations.</p><div class="section" title="5.8.1.1.&nbsp;Get/Scan"><div class="titlepage"><div><div><h4 class="title"><a name="d2121e3320"></a>5.8.1.1.&nbsp;Get/Scan</h4></div></div></div><p>Gets are implemented on top of Scans. The below discussion of
+            <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html" target="_top">Get</a> applies equally to <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html" target="_top">Scans</a>.</p><p>By default, i.e. if you specify no explicit version, when
+          doing a <code class="literal">get</code>, the cell whose version has the
+          largest value is returned (which may or may not be the latest one
+          written, see later). The default behavior can be modified in the
+          following ways:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>to return more than one version, see <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions()" target="_top">Get.setMaxVersions()</a></p></li><li class="listitem"><p>to return versions other than the latest, see <a class="link" href="???" target="_top">Get.setTimeRange()</a></p><p>To retrieve the latest version that is less than or equal
+              to a given value, thus giving the 'latest' state of the record
+              at a certain point in time, just use a range from 0 to the
+              desired version and set the max versions to 1.</p></li></ul></div></div><div class="section" title="5.8.1.2.&nbsp;Default Get Example"><div class="titlepage"><div><div><h4 class="title"><a name="default_get_example"></a>5.8.1.2.&nbsp;Default Get Example</h4></div></div></div><p>The following Get will only retrieve the current version of the row
+</p><pre class="programlisting">
+Get get = new Get(Bytes.toBytes("row1"));
+Result r = htable.get(get);
+byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value
+</pre><p>
+        </p></div><div class="section" title="5.8.1.3.&nbsp;Versioned Get Example"><div class="titlepage"><div><div><h4 class="title"><a name="versioned_get_example"></a>5.8.1.3.&nbsp;Versioned Get Example</h4></div></div></div><p>The following Get will return the last 3 versions of the row.
+</p><pre class="programlisting">
+Get get = new Get(Bytes.toBytes("row1"));
+get.setMaxVersions(3);  // will return last 3 versions of row
+Result r = htable.get(get);
+byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value
+List&lt;KeyValue&gt; kv = r.getColumn(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns all versions of this column
+</pre><p>
+        </p></div><div class="section" title="5.8.1.4.&nbsp;Put"><div class="titlepage"><div><div><h4 class="title"><a name="d2121e3365"></a>5.8.1.4.&nbsp;Put</h4></div></div></div><p>Doing a put always creates a new version of a
+          <code class="literal">cell</code>, at a certain timestamp. By default the
+          system uses the server's <code class="literal">currentTimeMillis</code>, but
+          you can specify the version (= the long integer) yourself, on a
+          per-column level. This means you could assign a time in the past or
+          the future, or use the long value for non-time purposes.</p><p>To overwrite an existing value, do a put at exactly the same
+          row, column, and version as that of the cell you would
+          overshadow.</p><div class="section" title="5.8.1.4.1.&nbsp;Implicit Version Example"><div class="titlepage"><div><div><h5 class="title"><a name="implicit_version_example"></a>5.8.1.4.1.&nbsp;Implicit Version Example</h5></div></div></div><p>The following Put will be implicitly versioned by HBase with the current time.
+</p><pre class="programlisting">
+Put put = new Put(Bytes.toBytes(row));
+put.add(Bytes.toBytes("cf"), Bytes.toBytes("attr1"), Bytes.toBytes( data));
+htable.put(put);
+</pre><p>
+          </p></div><div class="section" title="5.8.1.4.2.&nbsp;Explicit Version Example"><div class="titlepage"><div><div><h5 class="title"><a name="explicit_version_example"></a>5.8.1.4.2.&nbsp;Explicit Version Example</h5></div></div></div><p>The following Put has the version timestamp explicitly set.
+</p><pre class="programlisting">
+Put put = new Put( Bytes.toBytes(row));
+long explicitTimeInMs = 555;  // just an example
+put.add(Bytes.toBytes("cf"), Bytes.toBytes("attr1"), explicitTimeInMs, Bytes.toBytes(data));
+htable.put(put);
+</pre><p>
+          Caution:  the version timestamp is internally by HBase for things like time-to-live calculations.
+          It's usually best to avoid setting this timestamp yourself.  Prefer using a separate
+          timestamp attribute of the row, or have the timestamp a part of the rowkey, or both.
+          </p></div></div><div class="section" title="5.8.1.5.&nbsp;Delete"><div class="titlepage"><div><div><h4 class="title"><a name="version.delete"></a>5.8.1.5.&nbsp;Delete</h4></div></div></div><p>There are three different types of internal delete markers
+            <sup>[<a name="d2121e3399" href="#ftn.d2121e3399" class="footnote">19</a>]</sup>:
+            </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>Delete:  for a specific version of a column.</p></li><li class="listitem"><p>Delete column:  for all versions of a column.</p></li><li class="listitem"><p>Delete family:  for all columns of a particular ColumnFamily</p></li></ul></div><p>
+          When deleting an entire row, HBase will internally create a tombstone for each ColumnFamily (i.e., not each individual column).
+         </p><p>Deletes work by creating <span class="emphasis"><em>tombstone</em></span>
+          markers. For example, let's suppose we want to delete a row. For
+          this you can specify a version, or else by default the
+          <code class="literal">currentTimeMillis</code> is used. What this means is
+          <span class="quote">&#8220;<span class="quote">delete all cells where the version is less than or equal to
+          this version</span>&#8221;</span>. HBase never modifies data in place, so for
+          example a delete will not immediately delete (or mark as deleted)
+          the entries in the storage file that correspond to the delete
+          condition. Rather, a so-called <span class="emphasis"><em>tombstone</em></span> is
+          written, which will mask the deleted values<sup>[<a name="d2121e3430" href="#ftn.d2121e3430" class="footnote">20</a>]</sup>. If the version you specified when deleting a row is
+          larger than the version of any value in the row, then you can
+          consider the complete row to be deleted.</p><p>For an informative discussion on how deletes and versioning interact, see
+          the thread <a class="link" href="http://comments.gmane.org/gmane.comp.java.hadoop.hbase.user/28421" target="_top">Put w/ timestamp -&gt; Deleteall -&gt; Put w/ timestamp fails</a>
+          up on the user mailing list.</p><p>Also see <a class="xref" href="regions.arch.html#keyvalue" title="9.7.5.4.&nbsp;KeyValue">Section&nbsp;9.7.5.4, &#8220;KeyValue&#8221;</a> for more information on the internal KeyValue format.
+          </p></div></div><div class="section" title="5.8.2.&nbsp;Current Limitations"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e3443"></a>5.8.2.&nbsp;Current Limitations</h3></div></div></div><div class="section" title="5.8.2.1.&nbsp;Deletes mask Puts"><div class="titlepage"><div><div><h4 class="title"><a name="d2121e3446"></a>5.8.2.1.&nbsp;Deletes mask Puts</h4></div></div></div><p>Deletes mask puts, even puts that happened after the delete
+          was entered<sup>[<a name="d2121e3451" href="#ftn.d2121e3451" class="footnote">21</a>]</sup>. Remember that a delete writes a tombstone, which only
+          disappears after then next major compaction has run. Suppose you do
+          a delete of everything &lt;= T. After this you do a new put with a
+          timestamp &lt;= T. This put, even if it happened after the delete,
+          will be masked by the delete tombstone. Performing the put will not
+          fail, but when you do a get you will notice the put did have no
+          effect. It will start working again after the major compaction has
+          run. These issues should not be a problem if you use
+          always-increasing versions for new puts to a row. But they can occur
+          even if you do not care about time: just do delete and put
+          immediately after each other, and there is some chance they happen
+          within the same millisecond.</p></div><div class="section" title="5.8.2.2.&nbsp;Major compactions change query results"><div class="titlepage"><div><div><h4 class="title"><a name="d2121e3456"></a>5.8.2.2.&nbsp;Major compactions change query results</h4></div></div></div><p><span class="quote">&#8220;<span class="quote">...create three cell versions at t1, t2 and t3, with a
+          maximum-versions setting of 2. So when getting all versions, only
+          the values at t2 and t3 will be returned. But if you delete the
+          version at t2 or t3, the one at t1 will appear again. Obviously,
+          once a major compaction has run, such behavior will not be the case
+          anymore...<sup>[<a name="d2121e3462" href="#ftn.d2121e3462" class="footnote">22</a>]</sup></span>&#8221;</span></p></div></div><div class="footnotes"><br><hr width="100" align="left"><div class="footnote"><p><sup>[<a id="ftn.d2121e3291" href="#d2121e3291" class="para">16</a>] </sup>Currently, only the last written is fetchable.</p></div><div class="footnote"><p><sup>[<a id="ftn.d2121e3297" href="#d2121e3297" class="para">17</a>] </sup>Yes</p></div><div class="footnote"><p><sup>[<a id="ftn.d2121e3302" href="#d2121e3302" class="para">18</a>] </sup>See <a class="link" href="https://issues.apache.org/jira/browse/HBASE-2406" target="_top">HBASE-2406</a>
+          for discussion of HBase versions. <a class="link" href="http://outerthought.org/blog/417-ot.html" target="_top">Bending time
+          in HBase</a> makes for a good read on the version, or time,
+          dimension in HBase. It has more detail on versioning than is
+          provided here. As of this writing, the limiitation
+          <span class="emphasis"><em>Overwriting values at existing timestamps</em></span>
+          mentioned in the article no longer holds in HBase. This section is
+          basically a synopsis of this article by Bruno Dumon.</p></div><div class="footnote"><p><sup>[<a id="ftn.d2121e3399" href="#d2121e3399" class="para">19</a>] </sup>See Lars Hofhansl's blog for discussion of his attempt
+            adding another, <a class="link" href="http://hadoop-hbase.blogspot.com/2012/01/scanning-in-hbase.html" target="_top">Scanning in HBase: Prefix Delete Marker</a></p></div><div class="footnote"><p><sup>[<a id="ftn.d2121e3430" href="#d2121e3430" class="para">20</a>] </sup>When HBase does a major compaction, the tombstones are
+              processed to actually remove the dead values, together with the
+              tombstones themselves.</p></div><div class="footnote"><p><sup>[<a id="ftn.d2121e3451" href="#d2121e3451" class="para">21</a>] </sup><a class="link" href="https://issues.apache.org/jira/browse/HBASE-2256" target="_top">HBASE-2256</a></p></div><div class="footnote"><p><sup>[<a id="ftn.d2121e3462" href="#d2121e3462" class="para">22</a>] </sup>See <span class="emphasis"><em>Garbage Collection</em></span> in <a class="link" href="http://outerthought.org/blog/417-ot.html" target="_top">Bending
+              time in HBase</a> </p></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'versions';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="data_model_operations.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="datamodel.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="dm.sort.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">5.7.&nbsp;Data Model Operations&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;5.9.&nbsp;Sort Order</td></tr></table></div></body></html>

@@ -1,0 +1,98 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>13.3.&nbsp;Performance/Troubleshooting</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="casestudies.html" title="Chapter&nbsp;13.&nbsp;Apache HBase (TM) Case Studies"><link rel="prev" href="casestudies.schema.html" title="13.2.&nbsp;Schema Design"><link rel="next" href="ops_mgt.html" title="Chapter&nbsp;14.&nbsp;Apache HBase (TM) Operational Management"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">13.3.&nbsp;Performance/Troubleshooting</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="casestudies.schema.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;13.&nbsp;Apache HBase (TM) Case Studies</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ops_mgt.html">Next</a></td></tr></table><hr></div><div class="section" title="13.3.&nbsp;Performance/Troubleshooting"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="casestudies.perftroub"></a>13.3.&nbsp;Performance/Troubleshooting</h2></div></div></div><div class="section" title="13.3.1.&nbsp;Case Study #1 (Performance Issue On A Single Node)"><div class="titlepage"><div><div><h3 class="title"><a name="casestudies.slownode"></a>13.3.1.&nbsp;Case Study #1 (Performance Issue On A Single Node)</h3></div></div></div><div class="section" title="13.3.1.1.&nbsp;Scenario"><div class="titlepage"><div><div><h4 class="title"><a name="d2121e8443"></a>13.3.1.1.&nbsp;Scenario</h4></div></div></div><p>Following a scheduled reboot, one data node began exhibiting unusual behavior.  Routine MapReduce 
+         jobs run against HBase tables which regularly completed in five or six minutes began taking 30 or 40 minutes 
+         to finish. These jobs were consistently found to be waiting on map and reduce tasks assigned to the troubled data node 
+         (e.g., the slow map tasks all had the same Input Split).           
+         The situation came to a head during a distributed copy, when the copy was severely prolonged by the lagging node.
+		</p></div><div class="section" title="13.3.1.2.&nbsp;Hardware"><div class="titlepage"><div><div><h4 class="title"><a name="d2121e8448"></a>13.3.1.2.&nbsp;Hardware</h4></div></div></div><p>Datanodes:
+        </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">Two 12-core processors</li><li class="listitem">Six Enerprise SATA disks</li><li class="listitem">24GB of RAM</li><li class="listitem">Two bonded gigabit NICs</li></ul></div><p>
+        </p><p>Network:
+        </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">10 Gigabit top-of-rack switches</li><li class="listitem">20 Gigabit bonded interconnects between racks.</li></ul></div><p>
+        </p></div><div class="section" title="13.3.1.3.&nbsp;Hypotheses"><div class="titlepage"><div><div><h4 class="title"><a name="d2121e8471"></a>13.3.1.3.&nbsp;Hypotheses</h4></div></div></div><div class="section" title="13.3.1.3.1.&nbsp;HBase &#34;Hot Spot&#34; Region"><div class="titlepage"><div><div><h5 class="title"><a name="d2121e8474"></a>13.3.1.3.1.&nbsp;HBase "Hot Spot" Region</h5></div></div></div><p>We hypothesized that we were experiencing a familiar point of pain: a "hot spot" region in an HBase table, 
+		  where uneven key-space distribution can funnel a huge number of requests to a single HBase region, bombarding the RegionServer 
+		  process and cause slow response time. Examination of the HBase Master status page showed that the number of HBase requests to the 
+		  troubled node was almost zero.  Further, examination of the HBase logs showed that there were no region splits, compactions, or other region transitions 
+		  in progress.  This effectively ruled out a "hot spot" as the root cause of the observed slowness.
+          </p></div><div class="section" title="13.3.1.3.2.&nbsp;HBase Region With Non-Local Data"><div class="titlepage"><div><div><h5 class="title"><a name="d2121e8479"></a>13.3.1.3.2.&nbsp;HBase Region With Non-Local Data</h5></div></div></div><p>Our next hypothesis was that one of the MapReduce tasks was requesting data from HBase that was not local to the datanode, thus 
+		  forcing HDFS to request data blocks from other servers over the network.  Examination of the datanode logs showed that there were very 
+		  few blocks being requested over the network, indicating that the HBase region was correctly assigned, and that the majority of the necessary 
+		  data was located on the node. This ruled out the possibility of non-local data causing a slowdown.
+          </p></div><div class="section" title="13.3.1.3.3.&nbsp;Excessive I/O Wait Due To Swapping Or An Over-Worked Or Failing Hard Disk"><div class="titlepage"><div><div><h5 class="title"><a name="d2121e8484"></a>13.3.1.3.3.&nbsp;Excessive I/O Wait Due To Swapping Or An Over-Worked Or Failing Hard Disk</h5></div></div></div><p>After concluding that the Hadoop and HBase were not likely to be the culprits, we moved on to troubleshooting the datanode's hardware. 
+          Java, by design, will periodically scan its entire memory space to do garbage collection.  If system memory is heavily overcommitted, the Linux 
+          kernel may enter a vicious cycle, using up all of its resources swapping Java heap back and forth from disk to RAM as Java tries to run garbage 
+          collection.  Further, a failing hard disk will often retry reads and/or writes many times before giving up and returning an error. This can manifest 
+          as high iowait, as running processes wait for reads and writes to complete.  Finally, a disk nearing the upper edge of its performance envelope will 
+          begin to cause iowait as it informs the kernel that it cannot accept any more data, and the kernel queues incoming data into the dirty write pool in memory.  
+          However, using <code class="code">vmstat(1)</code> and <code class="code">free(1)</code>, we could see that no swap was being used, and the amount of disk IO was only a few kilobytes per second.
+          </p></div><div class="section" title="13.3.1.3.4.&nbsp;Slowness Due To High Processor Usage"><div class="titlepage"><div><div><h5 class="title"><a name="d2121e8495"></a>13.3.1.3.4.&nbsp;Slowness Due To High Processor Usage</h5></div></div></div><p>Next, we checked to see whether the system was performing slowly simply due to very high computational load.  <code class="code">top(1)</code> showed that the system load 
+          was higher than normal, but <code class="code">vmstat(1)</code> and <code class="code">mpstat(1)</code> showed that the amount of processor being used for actual computation was low.
+          </p></div><div class="section" title="13.3.1.3.5.&nbsp;Network Saturation (The Winner)"><div class="titlepage"><div><div><h5 class="title"><a name="d2121e8509"></a>13.3.1.3.5.&nbsp;Network Saturation (The Winner)</h5></div></div></div><p>Since neither the disks nor the processors were being utilized heavily, we moved on to the performance of the network interfaces.  The datanode had two 
+          gigabit ethernet adapters, bonded to form an active-standby interface.  <code class="code">ifconfig(8)</code> showed some unusual anomalies, namely interface errors, overruns, framing errors. 
+          While not unheard of, these kinds of errors are exceedingly rare on modern hardware which is operating as it should:
+</p><pre class="programlisting">		
+$ /sbin/ifconfig bond0
+bond0  Link encap:Ethernet  HWaddr 00:00:00:00:00:00  
+inet addr:10.x.x.x  Bcast:10.x.x.255  Mask:255.255.255.0
+UP BROADCAST RUNNING MASTER MULTICAST  MTU:1500  Metric:1
+RX packets:2990700159 errors:12 dropped:0 overruns:1 frame:6          &lt;--- Look Here! Errors!
+TX packets:3443518196 errors:0 dropped:0 overruns:0 carrier:0
+collisions:0 txqueuelen:0 
+RX bytes:2416328868676 (2.4 TB)  TX bytes:3464991094001 (3.4 TB)
+</pre><p>
+          </p><p>These errors immediately lead us to suspect that one or more of the ethernet interfaces might have negotiated the wrong line speed.  This was confirmed both by running an ICMP ping 
+          from an external host and observing round-trip-time in excess of 700ms, and by running <code class="code">ethtool(8)</code> on the members of the bond interface and discovering that the active interface 
+          was operating at 100Mbs/, full duplex.
+</p><pre class="programlisting">		
+$ sudo ethtool eth0
+Settings for eth0:
+Supported ports: [ TP ]
+Supported link modes:   10baseT/Half 10baseT/Full 
+                       100baseT/Half 100baseT/Full 
+                       1000baseT/Full 
+Supports auto-negotiation: Yes
+Advertised link modes:  10baseT/Half 10baseT/Full 
+                       100baseT/Half 100baseT/Full 
+                       1000baseT/Full 
+Advertised pause frame use: No
+Advertised auto-negotiation: Yes
+Link partner advertised link modes:  Not reported
+Link partner advertised pause frame use: No
+Link partner advertised auto-negotiation: No
+Speed: 100Mb/s                                     &lt;--- Look Here!  Should say 1000Mb/s!
+Duplex: Full
+Port: Twisted Pair
+PHYAD: 1
+Transceiver: internal
+Auto-negotiation: on
+MDI-X: Unknown
+Supports Wake-on: umbg
+Wake-on: g
+Current message level: 0x00000003 (3)
+Link detected: yes
+</pre><p>		
+		  </p><p>In normal operation, the ICMP ping round trip time should be around 20ms, and the interface speed and duplex should read, "1000MB/s", and, "Full", respectively.  
+		  </p></div></div><div class="section" title="13.3.1.4.&nbsp;Resolution"><div class="titlepage"><div><div><h4 class="title"><a name="d2121e8530"></a>13.3.1.4.&nbsp;Resolution</h4></div></div></div><p>After determining that the active ethernet adapter was at the incorrect speed, we used the <code class="code">ifenslave(8)</code> command to make the standby interface 
+   	  the active interface, which yielded an immediate improvement in MapReduce performance, and a 10 times improvement in network throughput:
+	  </p><p>On the next trip to the datacenter, we determined that the line speed issue was ultimately caused by a bad network cable, which was replaced.
+	  </p></div></div><div class="section" title="13.3.2.&nbsp;Case Study #2 (Performance Research 2012)"><div class="titlepage"><div><div><h3 class="title"><a name="casestudies.perf.1"></a>13.3.2.&nbsp;Case Study #2 (Performance Research 2012)</h3></div></div></div><p>Investigation results of a self-described "we're not sure what's wrong, but it seems slow" problem. 
+      <a class="link" href="http://gbif.blogspot.com/2012/03/hbase-performance-evaluation-continued.html" target="_top">http://gbif.blogspot.com/2012/03/hbase-performance-evaluation-continued.html</a>
+      </p></div><div class="section" title="13.3.3.&nbsp;Case Study #3 (Performance Research 2010))"><div class="titlepage"><div><div><h3 class="title"><a name="casestudies.perf.2"></a>13.3.3.&nbsp;Case Study #3 (Performance Research 2010))</h3></div></div></div><p>
+      Investigation results of general cluster performance from 2010.  Although this research is on an older version of the codebase, this writeup
+      is still very useful in terms of approach.
+      <a class="link" href="http://hstack.org/hbase-performance-testing/" target="_top">http://hstack.org/hbase-performance-testing/</a>
+      </p></div><div class="section" title="13.3.4.&nbsp;Case Study #4 (xcievers Config)"><div class="titlepage"><div><div><h3 class="title"><a name="casestudies.xceivers"></a>13.3.4.&nbsp;Case Study #4 (xcievers Config)</h3></div></div></div><p>Case study of configuring <code class="code">xceivers</code>, and diagnosing errors from mis-configurations.
+      <a class="link" href="http://www.larsgeorge.com/2012/03/hadoop-hbase-and-xceivers.html" target="_top">http://www.larsgeorge.com/2012/03/hadoop-hbase-and-xceivers.html</a>
+      </p><p>See also <a class="xref" href="configuration.html#dfs.datanode.max.xcievers" title="2.1.3.2.&nbsp;dfs.datanode.max.xcievers">Section&nbsp;2.1.3.2, &#8220;<code class="varname">dfs.datanode.max.xcievers</code>&#8221;</a>.
+      </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'casestudies.perftroub';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="casestudies.schema.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="casestudies.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ops_mgt.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">13.2.&nbsp;Schema Design&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Chapter&nbsp;14.&nbsp;Apache HBase (TM) Operational Management</td></tr></table></div></body></html>

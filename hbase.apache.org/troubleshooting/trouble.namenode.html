@@ -1,0 +1,38 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>1.7.&nbsp;NameNode</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="troubleshooting.html" title="Chapter&nbsp;1.&nbsp;Troubleshooting and Debugging Apache HBase (TM)"><link rel="up" href="troubleshooting.html" title="Chapter&nbsp;1.&nbsp;Troubleshooting and Debugging Apache HBase (TM)"><link rel="prev" href="trouble.mapreduce.html" title="1.6.&nbsp;MapReduce"><link rel="next" href="trouble.network.html" title="1.8.&nbsp;Network"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">1.7.&nbsp;NameNode</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="trouble.mapreduce.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="trouble.network.html">Next</a></td></tr></table><hr></div><div class="section" title="1.7.&nbsp;NameNode"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="trouble.namenode"></a>1.7.&nbsp;NameNode</h2></div></div></div><p>For more information on the NameNode, see <a class="xref" href="">???</a>. 
+       </p><div class="section" title="1.7.1.&nbsp;HDFS Utilization of Tables and Regions"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.namenode.disk"></a>1.7.1.&nbsp;HDFS Utilization of Tables and Regions</h3></div></div></div><p>To determine how much space HBase is using on HDFS use the <code class="code">hadoop</code> shell commands from the NameNode.  For example... </p><pre class="programlisting">hadoop fs -dus /hbase/</pre><p> ...returns the summarized disk utilization for all HBase objects.  </p><pre class="programlisting">hadoop fs -dus /hbase/myTable</pre><p> ...returns the summarized disk utilization for the HBase table 'myTable'. </p><pre class="programlisting">hadoop fs -du /hbase/myTable</pre><p> ...returns a list of the regions under the HBase table 'myTable' and their disk utilization. </p><p>For more information on HDFS shell commands, see the <a class="link" href="http://hadoop.apache.org/common/docs/current/file_system_shell.html" target="_top">HDFS FileSystem Shell documentation</a>.
+            </p></div><div class="section" title="1.7.2.&nbsp;Browsing HDFS for HBase Objects"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.namenode.hbase.objects"></a>1.7.2.&nbsp;Browsing HDFS for HBase Objects</h3></div></div></div><p>Somtimes it will be necessary to explore the HBase objects that exist on HDFS.  These objects could include the WALs (Write Ahead Logs), tables, regions, StoreFiles, etc.
+            The easiest way to do this is with the NameNode web application that runs on port 50070.  The NameNode web application will provide links to the all the DataNodes in the cluster so that
+            they can be browsed seamlessly. </p><p>The HDFS directory structure of HBase tables in the cluster is...
+            </p><pre class="programlisting">
+<code class="filename">/hbase</code>
+     <code class="filename">/&lt;Table&gt;</code>             (Tables in the cluster)
+          <code class="filename">/&lt;Region&gt;</code>           (Regions for the table)
+               <code class="filename">/&lt;ColumnFamiy&gt;</code>      (ColumnFamilies for the Region for the table)
+                    <code class="filename">/&lt;StoreFile&gt;</code>        (StoreFiles for the ColumnFamily for the Regions for the table)
+            </pre><p>
+            </p><p>The HDFS directory structure of HBase WAL is..
+            </p><pre class="programlisting">
+<code class="filename">/hbase</code>
+     <code class="filename">/.logs</code>     
+          <code class="filename">/&lt;RegionServer&gt;</code>    (RegionServers)
+               <code class="filename">/&lt;HLog&gt;</code>           (WAL HLog files for the RegionServer)
+            </pre><p>
+            </p><p>See the <a class="link" href="see http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html" target="_top">HDFS User Guide</a> for other non-shell diagnostic 
+		    utilities like <code class="code">fsck</code>. 
+            </p><div class="section" title="1.7.2.1.&nbsp;Use Cases"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.namenode.uncompaction"></a>1.7.2.1.&nbsp;Use Cases</h4></div></div></div><p>Two common use-cases for querying HDFS for HBase objects is research the degree of uncompaction of a table.  If there are a large number of StoreFiles for each ColumnFamily it could 
+              indicate the need for a major compaction.  Additionally, after a major compaction if the resulting StoreFile is "small" it could indicate the need for a reduction of ColumnFamilies for
+              the table.
+		    </p></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'trouble.namenode';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="trouble.mapreduce.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="trouble.network.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">1.6.&nbsp;MapReduce&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="troubleshooting.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;1.8.&nbsp;Network</td></tr></table></div></body></html>

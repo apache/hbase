@@ -1,0 +1,251 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>7.2.&nbsp;HBase MapReduce Examples</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="mapreduce.html" title="Chapter&nbsp;7.&nbsp;HBase and MapReduce"><link rel="prev" href="mapreduce.html" title="Chapter&nbsp;7.&nbsp;HBase and MapReduce"><link rel="next" href="mapreduce.htable.access.html" title="7.3.&nbsp;Accessing Other HBase Tables in a MapReduce Job"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">7.2.&nbsp;HBase MapReduce Examples</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="mapreduce.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;7.&nbsp;HBase and MapReduce</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="mapreduce.htable.access.html">Next</a></td></tr></table><hr></div><div class="section" title="7.2.&nbsp;HBase MapReduce Examples"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="mapreduce.example"></a>7.2.&nbsp;HBase MapReduce Examples</h2></div></div></div><div class="section" title="7.2.1.&nbsp;HBase MapReduce Read Example"><div class="titlepage"><div><div><h3 class="title"><a name="mapreduce.example.read"></a>7.2.1.&nbsp;HBase MapReduce Read Example</h3></div></div></div><p>The following is an example of using HBase as a MapReduce source in read-only manner.  Specifically,
+    there is a Mapper instance but no Reducer, and nothing is being emitted from the Mapper.  There job would be defined
+    as follows...
+	</p><pre class="programlisting">
+Configuration config = HBaseConfiguration.create();
+Job job = new Job(config, "ExampleRead");
+job.setJarByClass(MyReadJob.class);     // class that contains mapper
+
+Scan scan = new Scan();
+scan.setCaching(500);        // 1 is the default in Scan, which will be bad for MapReduce jobs
+scan.setCacheBlocks(false);  // don't set to true for MR jobs
+// set other scan attrs
+...
+
+TableMapReduceUtil.initTableMapperJob(
+  tableName,        // input HBase table name
+  scan,             // Scan instance to control CF and attribute selection
+  MyMapper.class,   // mapper
+  null,             // mapper output key
+  null,             // mapper output value
+  job);
+job.setOutputFormatClass(NullOutputFormat.class);   // because we aren't emitting anything from mapper
+
+boolean b = job.waitForCompletion(true);
+if (!b) {
+  throw new IOException("error with job!");
+}
+  </pre><p>
+  ...and the mapper instance would extend <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html" target="_top">TableMapper</a>...
+	</p><pre class="programlisting">
+public static class MyMapper extends TableMapper&lt;Text, Text&gt; {
+
+  public void map(ImmutableBytesWritable row, Result value, Context context) throws InterruptedException, IOException {
+    // process data for the row from the Result instance.
+   }
+}
+    </pre><p>
+  	  </p></div><div class="section" title="7.2.2.&nbsp;HBase MapReduce Read/Write Example"><div class="titlepage"><div><div><h3 class="title"><a name="mapreduce.example.readwrite"></a>7.2.2.&nbsp;HBase MapReduce Read/Write Example</h3></div></div></div><p>The following is an example of using HBase both as a source and as a sink with MapReduce.
+    This example will simply copy data from one table to another.
+    </p><pre class="programlisting">
+Configuration config = HBaseConfiguration.create();
+Job job = new Job(config,"ExampleReadWrite");
+job.setJarByClass(MyReadWriteJob.class);    // class that contains mapper
+
+Scan scan = new Scan();
+scan.setCaching(500);        // 1 is the default in Scan, which will be bad for MapReduce jobs
+scan.setCacheBlocks(false);  // don't set to true for MR jobs
+// set other scan attrs
+
+TableMapReduceUtil.initTableMapperJob(
+	sourceTable,      // input table
+	scan,	          // Scan instance to control CF and attribute selection
+	MyMapper.class,   // mapper class
+	null,	          // mapper output key
+	null,	          // mapper output value
+	job);
+TableMapReduceUtil.initTableReducerJob(
+	targetTable,      // output table
+	null,             // reducer class
+	job);
+job.setNumReduceTasks(0);
+
+boolean b = job.waitForCompletion(true);
+if (!b) {
+    throw new IOException("error with job!");
+}
+    </pre><p>
+	An explanation is required of what <code class="classname">TableMapReduceUtil</code> is doing, especially with the reducer.
+	<a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html" target="_top">TableOutputFormat</a> is being used
+	as the outputFormat class, and several parameters are being set on the config (e.g., TableOutputFormat.OUTPUT_TABLE), as
+	well as setting the reducer output key to <code class="classname">ImmutableBytesWritable</code> and reducer value to <code class="classname">Writable</code>.
+	These could be set by the programmer on the job and conf, but <code class="classname">TableMapReduceUtil</code> tries to make things easier.
+	</p><p>The following is the example mapper, which will create a <code class="classname">Put</code> and matching the input <code class="classname">Result</code>
+	and emit it.  Note:  this is what the CopyTable utility does.
+	</p><p>
+    </p><pre class="programlisting">
+public static class MyMapper extends TableMapper&lt;ImmutableBytesWritable, Put&gt;  {
+
+	public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
+		// this example is just copying the data from the source table...
+   		context.write(row, resultToPut(row,value));
+   	}
+
+  	private static Put resultToPut(ImmutableBytesWritable key, Result result) throws IOException {
+  		Put put = new Put(key.get());
+ 		for (KeyValue kv : result.raw()) {
+			put.add(kv);
+		}
+		return put;
+   	}
+}
+    </pre><p>
+    </p><p>There isn't actually a reducer step, so <code class="classname">TableOutputFormat</code> takes care of sending the <code class="classname">Put</code>
+    to the target table.
+    </p><p>
+    </p><p>This is just an example, developers could choose not to use <code class="classname">TableOutputFormat</code> and connect to the
+    target table themselves.
+    </p><p>
+    </p></div><div class="section" title="7.2.3.&nbsp;HBase MapReduce Read/Write Example With Multi-Table Output"><div class="titlepage"><div><div><h3 class="title"><a name="mapreduce.example.readwrite.multi"></a>7.2.3.&nbsp;HBase MapReduce Read/Write Example With Multi-Table Output</h3></div></div></div><p>TODO:  example for <code class="classname">MultiTableOutputFormat</code>.
+    </p></div><div class="section" title="7.2.4.&nbsp;HBase MapReduce Summary to HBase Example"><div class="titlepage"><div><div><h3 class="title"><a name="mapreduce.example.summary"></a>7.2.4.&nbsp;HBase MapReduce Summary to HBase Example</h3></div></div></div><p>The following example uses HBase as a MapReduce source and sink with a summarization step.  This example will
+    count the number of distinct instances of a value in a table and write those summarized counts in another table.
+    </p><pre class="programlisting">
+Configuration config = HBaseConfiguration.create();
+Job job = new Job(config,"ExampleSummary");
+job.setJarByClass(MySummaryJob.class);     // class that contains mapper and reducer
+
+Scan scan = new Scan();
+scan.setCaching(500);        // 1 is the default in Scan, which will be bad for MapReduce jobs
+scan.setCacheBlocks(false);  // don't set to true for MR jobs
+// set other scan attrs
+
+TableMapReduceUtil.initTableMapperJob(
+	sourceTable,        // input table
+	scan,               // Scan instance to control CF and attribute selection
+	MyMapper.class,     // mapper class
+	Text.class,         // mapper output key
+	IntWritable.class,  // mapper output value
+	job);
+TableMapReduceUtil.initTableReducerJob(
+	targetTable,        // output table
+	MyTableReducer.class,    // reducer class
+	job);
+job.setNumReduceTasks(1);   // at least one, adjust as required
+
+boolean b = job.waitForCompletion(true);
+if (!b) {
+	throw new IOException("error with job!");
+}
+    </pre><p>
+    In this example mapper a column with a String-value is chosen as the value to summarize upon.
+    This value is used as the key to emit from the mapper, and an <code class="classname">IntWritable</code> represents an instance counter.
+    </p><pre class="programlisting">
+public static class MyMapper extends TableMapper&lt;Text, IntWritable&gt;  {
+
+	private final IntWritable ONE = new IntWritable(1);
+   	private Text text = new Text();
+
+   	public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
+        	String val = new String(value.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr1")));
+          	text.set(val);     // we can only emit Writables...
+
+        	context.write(text, ONE);
+   	}
+}
+    </pre><p>
+    In the reducer, the "ones" are counted (just like any other MR example that does this), and then emits a <code class="classname">Put</code>.
+    </p><pre class="programlisting">
+public static class MyTableReducer extends TableReducer&lt;Text, IntWritable, ImmutableBytesWritable&gt;  {
+
+ 	public void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
+    		int i = 0;
+    		for (IntWritable val : values) {
+    			i += val.get();
+    		}
+    		Put put = new Put(Bytes.toBytes(key.toString()));
+    		put.add(Bytes.toBytes("cf"), Bytes.toBytes("count"), Bytes.toBytes(i));
+
+    		context.write(null, put);
+   	}
+}
+    </pre><p>
+    </p></div><div class="section" title="7.2.5.&nbsp;HBase MapReduce Summary to File Example"><div class="titlepage"><div><div><h3 class="title"><a name="mapreduce.example.summary.file"></a>7.2.5.&nbsp;HBase MapReduce Summary to File Example</h3></div></div></div><p>This very similar to the summary example above, with exception that this is using HBase as a MapReduce source
+       but HDFS as the sink.  The differences are in the job setup and in the reducer.  The mapper remains the same.
+       </p><pre class="programlisting">
+Configuration config = HBaseConfiguration.create();
+Job job = new Job(config,"ExampleSummaryToFile");
+job.setJarByClass(MySummaryFileJob.class);     // class that contains mapper and reducer
+
+Scan scan = new Scan();
+scan.setCaching(500);        // 1 is the default in Scan, which will be bad for MapReduce jobs
+scan.setCacheBlocks(false);  // don't set to true for MR jobs
+// set other scan attrs
+
+TableMapReduceUtil.initTableMapperJob(
+	sourceTable,        // input table
+	scan,               // Scan instance to control CF and attribute selection
+	MyMapper.class,     // mapper class
+	Text.class,         // mapper output key
+	IntWritable.class,  // mapper output value
+	job);
+job.setReducerClass(MyReducer.class);    // reducer class
+job.setNumReduceTasks(1);    // at least one, adjust as required
+FileOutputFormat.setOutputPath(job, new Path("/tmp/mr/mySummaryFile"));  // adjust directories as required
+
+boolean b = job.waitForCompletion(true);
+if (!b) {
+	throw new IOException("error with job!");
+}
+    </pre>
+    As stated above, the previous Mapper can run unchanged with this example.
+    As for the Reducer, it is a "generic" Reducer instead of extending TableMapper and emitting Puts.
+    <pre class="programlisting">
+ public static class MyReducer extends Reducer&lt;Text, IntWritable, Text, IntWritable&gt;  {
+
+	public void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
+		int i = 0;
+		for (IntWritable val : values) {
+			i += val.get();
+		}
+		context.write(key, new IntWritable(i));
+	}
+}
+    </pre></div><div class="section" title="7.2.6.&nbsp;HBase MapReduce Summary to HBase Without Reducer"><div class="titlepage"><div><div><h3 class="title"><a name="mapreduce.example.summary.noreducer"></a>7.2.6.&nbsp;HBase MapReduce Summary to HBase Without Reducer</h3></div></div></div><p>It is also possible to perform summaries without a reducer - if you use HBase as the reducer.
+       </p><p>An HBase target table would need to exist for the job summary.  The HTable method <code class="code">incrementColumnValue</code>
+       would be used to atomically increment values.  From a performance perspective, it might make sense to keep a Map
+       of values with their values to be incremeneted for each map-task, and make one update per key at during the <code class="code">
+       cleanup</code> method of the mapper.  However, your milage may vary depending on the number of rows to be processed and
+       unique keys.
+       </p><p>In the end, the summary results are in HBase.
+       </p></div><div class="section" title="7.2.7.&nbsp;HBase MapReduce Summary to RDBMS"><div class="titlepage"><div><div><h3 class="title"><a name="mapreduce.example.summary.rdbms"></a>7.2.7.&nbsp;HBase MapReduce Summary to RDBMS</h3></div></div></div><p>Sometimes it is more appropriate to generate summaries to an RDBMS.  For these cases, it is possible
+       to generate summaries directly to an RDBMS via a custom reducer.  The <code class="code">setup</code> method
+       can connect to an RDBMS (the connection information can be passed via custom parameters in the context) and the
+       cleanup method can close the connection.
+       </p><p>It is critical to understand that number of reducers for the job affects the summarization implementation, and
+       you'll have to design this into your reducer.  Specifically, whether it is designed to run as a singleton (one reducer)
+       or multiple reducers.  Neither is right or wrong, it depends on your use-case.  Recognize that the more reducers that
+       are assigned to the job, the more simultaneous connections to the RDBMS will be created - this will scale, but only to a point.
+       </p><pre class="programlisting">
+ public static class MyRdbmsReducer extends Reducer&lt;Text, IntWritable, Text, IntWritable&gt;  {
+
+	private Connection c = null;
+
+	public void setup(Context context) {
+  		// create DB connection...
+  	}
+
+	public void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
+		// do summarization
+		// in this example the keys are Text, but this is just an example
+	}
+
+	public void cleanup(Context context) {
+  		// close db connection
+  	}
+
+}
+    </pre><p>In the end, the summary results are written to your RDBMS table/s.
+       </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'mapreduce.example';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="mapreduce.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="mapreduce.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="mapreduce.htable.access.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter&nbsp;7.&nbsp;HBase and MapReduce&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;7.3.&nbsp;Accessing Other HBase Tables in a MapReduce Job</td></tr></table></div></body></html>

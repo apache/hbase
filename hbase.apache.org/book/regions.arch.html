@@ -1,0 +1,179 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>9.7.&nbsp;Regions</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="architecture.html" title="Chapter&nbsp;9.&nbsp;Architecture"><link rel="prev" href="regionserver.arch.html" title="9.6.&nbsp;RegionServer"><link rel="next" href="arch.bulk.load.html" title="9.8.&nbsp;Bulk Loading"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">9.7.&nbsp;Regions</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="regionserver.arch.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;9.&nbsp;Architecture</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="arch.bulk.load.html">Next</a></td></tr></table><hr></div><div class="section" title="9.7.&nbsp;Regions"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="regions.arch"></a>9.7.&nbsp;Regions</h2></div></div></div><p>Regions are the basic element of availability and
+     distribution for tables, and are comprised of a Store per Column Family. The heirarchy of objects
+     is as follows:
+</p><pre class="programlisting">
+<code class="filename">Table</code>       (HBase table)
+    <code class="filename">Region</code>       (Regions for the table)
+         <code class="filename">Store</code>          (Store per ColumnFamily for each Region for the table)
+              <code class="filename">MemStore</code>           (MemStore for each Store for each Region for the table)
+              <code class="filename">StoreFile</code>          (StoreFiles for each Store for each Region for the table)
+                    <code class="filename">Block</code>             (Blocks within a StoreFile within a Store for each Region for the table)
+ </pre><p>
+     For a description of what HBase files look like when written to HDFS, see <a class="xref" href="trouble.namenode.html#trouble.namenode.hbase.objects" title="12.7.2.&nbsp;Browsing HDFS for HBase Objects">Section&nbsp;12.7.2, &#8220;Browsing HDFS for HBase Objects&#8221;</a>.
+            </p><div class="section" title="9.7.1.&nbsp;Region Size"><div class="titlepage"><div><div><h3 class="title"><a name="arch.regions.size"></a>9.7.1.&nbsp;Region Size</h3></div></div></div><p>Determining the "right" region size can be tricky, and there are a few factors
+      to consider:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>HBase scales by having regions across many servers. Thus if
+          you have 2 regions for 16GB data, on a 20 node machine your data
+          will be concentrated on just a few machines - nearly the entire
+          cluster will be idle.  This really cant be stressed enough, since a
+          common problem is loading 200MB data into HBase then wondering why
+          your awesome 10 node cluster isn't doing anything.</p></li><li class="listitem"><p>On the other hand, high region count has been known to make things slow.
+          This is getting better with each release of HBase, but it is probably better to have
+          700 regions than 3000 for the same amount of data.</p></li><li class="listitem"><p>There is not much memory footprint difference between 1 region
+          and 10 in terms of indexes, etc, held by the RegionServer.</p></li></ul></div><p>When starting off, it's probably best to stick to the default region-size, perhaps going
+      smaller for hot tables (or manually split hot regions to spread the load over
+      the cluster), or go with larger region sizes if your cell sizes tend to be
+      largish (100k and up).</p><p>See <a class="xref" href="important_configurations.html#bigger.regions" title="2.5.2.6.&nbsp;Bigger Regions">Section&nbsp;2.5.2.6, &#8220;Bigger Regions&#8221;</a> for more information on configuration.
+      </p></div><div class="section" title="9.7.2.&nbsp;Region-RegionServer Assignment"><div class="titlepage"><div><div><h3 class="title"><a name="regions.arch.assignment"></a>9.7.2.&nbsp;Region-RegionServer Assignment</h3></div></div></div><p>This section describes how Regions are assigned to RegionServers.
+         </p><div class="section" title="9.7.2.1.&nbsp;Startup"><div class="titlepage"><div><div><h4 class="title"><a name="regions.arch.assignment.startup"></a>9.7.2.1.&nbsp;Startup</h4></div></div></div><p>When HBase starts regions are assigned as follows (short version):
+            </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">The Master invokes the <code class="code">AssignmentManager</code> upon startup.
+              </li><li class="listitem">The <code class="code">AssignmentManager</code> looks at the existing region assignments in META.
+              </li><li class="listitem">If the region assignment is still valid (i.e., if the RegionServer is still online)
+                then the assignment is kept.
+              </li><li class="listitem">If the assignment is invalid, then the <code class="code">LoadBalancerFactory</code> is invoked to assign the
+                region.  The <code class="code">DefaultLoadBalancer</code> will randomly assign the region to a RegionServer.
+              </li><li class="listitem">META is updated with the RegionServer assignment (if needed) and the RegionServer start codes
+              (start time of the RegionServer process) upon region opening by the RegionServer.
+              </li></ol></div><p>
+          </p></div><div class="section" title="9.7.2.2.&nbsp;Failover"><div class="titlepage"><div><div><h4 class="title"><a name="regions.arch.assignment.failover"></a>9.7.2.2.&nbsp;Failover</h4></div></div></div><p>When a RegionServer fails (short version):
+            </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">The regions immediately become unavailable because the RegionServer is down.
+              </li><li class="listitem">The Master will detect that the RegionServer has failed.
+              </li><li class="listitem">The region assignments will be considered invalid and will be re-assigned just
+                like the startup sequence.
+              </li></ol></div><p>
+           </p></div><div class="section" title="9.7.2.3.&nbsp;Region Load Balancing"><div class="titlepage"><div><div><h4 class="title"><a name="regions.arch.balancer"></a>9.7.2.3.&nbsp;Region Load Balancing</h4></div></div></div><p>
+          Regions can be periodically moved by the <a class="xref" href="master.html#master.processes.loadbalancer" title="9.5.4.1.&nbsp;LoadBalancer">Section&nbsp;9.5.4.1, &#8220;LoadBalancer&#8221;</a>.
+          </p></div></div><div class="section" title="9.7.3.&nbsp;Region-RegionServer Locality"><div class="titlepage"><div><div><h3 class="title"><a name="regions.arch.locality"></a>9.7.3.&nbsp;Region-RegionServer Locality</h3></div></div></div><p>Over time, Region-RegionServer locality is achieved via HDFS block replication.
+          The HDFS client does the following by default when choosing locations to write replicas:
+           </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">First replica is written to local node
+             </li><li class="listitem">Second replica is written to another node in same rack
+             </li><li class="listitem">Third replica is written to a node in another rack (if sufficient nodes)
+             </li></ol></div><p>
+          Thus, HBase eventually achieves locality for a region after a flush or a compaction.
+          In a RegionServer failover situation a RegionServer may be assigned regions with non-local
+          StoreFiles (because none of the replicas are local), however as new data is written
+          in the region, or the table is compacted and StoreFiles are re-written, they will become "local"
+          to the RegionServer.
+        </p><p>For more information, see <a class="link" href="http://hadoop.apache.org/common/docs/r0.20.205.0/hdfs_design.html#Replica+Placement%3A+The+First+Baby+Steps" target="_top">HDFS Design on Replica Placement</a>
+        and also Lars George's blog on <a class="link" href="http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html" target="_top">HBase and HDFS locality</a>.
+        </p></div><div class="section" title="9.7.4.&nbsp;Region Splits"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e5338"></a>9.7.4.&nbsp;Region Splits</h3></div></div></div><p>Splits run unaided on the RegionServer; i.e. the Master does not
+        participate. The RegionServer splits a region, offlines the split
+        region and then adds the daughter regions to META, opens daughters on
+        the parent's hosting RegionServer and then reports the split to the
+        Master. See <a class="xref" href="important_configurations.html#disable.splitting" title="2.5.2.7.&nbsp;Managed Splitting">Section&nbsp;2.5.2.7, &#8220;Managed Splitting&#8221;</a> for how to manually manage
+        splits (and for why you might do this)</p><div class="section" title="9.7.4.1.&nbsp;Custom Split Policies"><div class="titlepage"><div><div><h4 class="title"><a name="d2121e5345"></a>9.7.4.1.&nbsp;Custom Split Policies</h4></div></div></div><p>The default split policy can be overwritten using a custom <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html" target="_top">RegionSplitPolicy</a> (HBase 0.94+).
+          Typically a custom split policy should extend HBase's default split policy: <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/ConstantSizeRegionSplitPolicy.html" target="_top">ConstantSizeRegionSplitPolicy</a>.
+          </p><p>The policy can set globally through the HBaseConfiguration used or on a per table basis:
+</p><pre class="programlisting">
+HTableDescriptor myHtd = ...;
+myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName());
+</pre><p>
+          </p></div></div><div class="section" title="9.7.5.&nbsp;Store"><div class="titlepage"><div><div><h3 class="title"><a name="store"></a>9.7.5.&nbsp;Store</h3></div></div></div><p>A Store hosts a MemStore and 0 or more StoreFiles (HFiles). A Store corresponds to a column family for a table for a given region.
+          </p><div class="section" title="9.7.5.1.&nbsp;MemStore"><div class="titlepage"><div><div><h4 class="title"><a name="store.memstore"></a>9.7.5.1.&nbsp;MemStore</h4></div></div></div><p>The MemStore holds in-memory modifications to the Store.  Modifications are KeyValues.
+       When asked to flush, current memstore is moved to snapshot and is cleared.
+       HBase continues to serve edits out of new memstore and backing snapshot until flusher reports in that the
+       flush succeeded. At this point the snapshot is let go.</p></div><div class="section" title="9.7.5.2.&nbsp;StoreFile (HFile)"><div class="titlepage"><div><div><h4 class="title"><a name="hfile"></a>9.7.5.2.&nbsp;StoreFile (HFile)</h4></div></div></div><p>StoreFiles are where your data lives.
+      </p><div class="section" title="9.7.5.2.1.&nbsp;HFile Format"><div class="titlepage"><div><div><h5 class="title"><a name="d2121e5376"></a>9.7.5.2.1.&nbsp;HFile Format</h5></div></div></div><p>The <span class="emphasis"><em>hfile</em></span> file format is based on
+              the SSTable file described in the <a class="link" href="http://research.google.com/archive/bigtable.html" target="_top">BigTable [2006]</a> paper and on
+              Hadoop's <a class="link" href="http://hadoop.apache.org/common/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html" target="_top">tfile</a>
+              (The unit test suite and the compression harness were taken directly from tfile).
+              Schubert Zhang's blog post on HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs makes for a thorough introduction to HBase's hfile.  Matteo Bertozzi has also put up a
+              helpful description, <a class="link" href="http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw" target="_top">HBase I/O: HFile</a>.
+          </p><p>For more information, see the <a class="link" href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFile.html" target="_top">HFile source code</a>.
+          Also see <a class="xref" href="hfilev2.html" title="Appendix&nbsp;E.&nbsp;HFile format version 2">Appendix&nbsp;E, <i>HFile format version 2</i></a> for information about the HFile v2 format that was included in 0.92.
+          </p></div><div class="section" title="9.7.5.2.2.&nbsp;HFile Tool"><div class="titlepage"><div><div><h5 class="title"><a name="hfile_tool"></a>9.7.5.2.2.&nbsp;HFile Tool</h5></div></div></div><p>To view a textualized version of hfile content, you can do use
+        the <code class="classname">org.apache.hadoop.hbase.io.hfile.HFile
+        </code>tool. Type the following to see usage:</p><pre class="programlisting"><code class="code">$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile </code> </pre><p>For
+        example, to view the content of the file
+        <code class="filename">hdfs://10.81.47.41:8020/hbase/TEST/1418428042/DSMP/4759508618286845475</code>,
+        type the following:</p><pre class="programlisting"> <code class="code">$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f hdfs://10.81.47.41:8020/hbase/TEST/1418428042/DSMP/4759508618286845475 </code> </pre><p>If
+        you leave off the option -v to see just a summary on the hfile. See
+        usage for other things to do with the <code class="classname">HFile</code>
+        tool.</p></div><div class="section" title="9.7.5.2.3.&nbsp;StoreFile Directory Structure on HDFS"><div class="titlepage"><div><div><h5 class="title"><a name="store.file.dir"></a>9.7.5.2.3.&nbsp;StoreFile Directory Structure on HDFS</h5></div></div></div><p>For more information of what StoreFiles look like on HDFS with respect to the directory structure, see <a class="xref" href="trouble.namenode.html#trouble.namenode.hbase.objects" title="12.7.2.&nbsp;Browsing HDFS for HBase Objects">Section&nbsp;12.7.2, &#8220;Browsing HDFS for HBase Objects&#8221;</a>.
+        </p></div></div><div class="section" title="9.7.5.3.&nbsp;Blocks"><div class="titlepage"><div><div><h4 class="title"><a name="hfile.blocks"></a>9.7.5.3.&nbsp;Blocks</h4></div></div></div><p>StoreFiles are composed of blocks.  The blocksize is configured on a per-ColumnFamily basis.
+        </p><p>Compression happens at the block level within StoreFiles.  For more information on compression, see <a class="xref" href="compression.html" title="Appendix&nbsp;C.&nbsp;Compression In HBase">Appendix&nbsp;C, <i>Compression In HBase</i></a>.
+        </p><p>For more information on blocks, see the <a class="link" href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFileBlock.html" target="_top">HFileBlock source code</a>.
+        </p></div><div class="section" title="9.7.5.4.&nbsp;KeyValue"><div class="titlepage"><div><div><h4 class="title"><a name="keyvalue"></a>9.7.5.4.&nbsp;KeyValue</h4></div></div></div><p>The KeyValue class is the heart of data storage in HBase.  KeyValue wraps a byte array and takes offsets and lengths into passed array
+         at where to start interpreting the content as KeyValue.
+        </p><p>The KeyValue format inside a byte array is:
+           </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">keylength</li><li class="listitem">valuelength</li><li class="listitem">key</li><li class="listitem">value</li></ul></div><p>
+        </p><p>The Key is further decomposed as:
+           </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">rowlength</li><li class="listitem">row (i.e., the rowkey)</li><li class="listitem">columnfamilylength</li><li class="listitem">columnfamily</li><li class="listitem">columnqualifier</li><li class="listitem">timestamp</li><li class="listitem">keytype (e.g., Put, Delete, DeleteColumn, DeleteFamily)</li></ul></div><p>
+        </p><p>KeyValue instances are <span class="emphasis"><em>not</em></span> split across blocks.
+         For example, if there is an 8 MB KeyValue, even if the block-size is 64kb this KeyValue will be read
+         in as a coherent block.  For more information, see the <a class="link" href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/KeyValue.html" target="_top">KeyValue source code</a>.
+        </p><div class="section" title="9.7.5.4.1.&nbsp;Example"><div class="titlepage"><div><div><h5 class="title"><a name="keyvalue.example"></a>9.7.5.4.1.&nbsp;Example</h5></div></div></div><p>To emphasize the points above, examine what happens with two Puts for two different columns for the same row:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">Put #1:  <code class="code">rowkey=row1, cf:attr1=value1</code></li><li class="listitem">Put #2:  <code class="code">rowkey=row1, cf:attr2=value2</code></li></ul></div><p>Even though these are for the same row, a KeyValue is created for each column:</p><p>Key portion for Put #1:
+           </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">rowlength <code class="code">------------&gt; 4</code></li><li class="listitem">row <code class="code">-----------------&gt; row1</code></li><li class="listitem">columnfamilylength <code class="code">---&gt; 2</code></li><li class="listitem">columnfamily <code class="code">--------&gt; cf</code></li><li class="listitem">columnqualifier <code class="code">------&gt; attr1</code></li><li class="listitem">timestamp <code class="code">-----------&gt; server time of Put</code></li><li class="listitem">keytype <code class="code">-------------&gt; Put</code></li></ul></div><p>
+          </p><p>Key portion for Put #2:
+           </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">rowlength <code class="code">------------&gt; 4</code></li><li class="listitem">row <code class="code">-----------------&gt; row1</code></li><li class="listitem">columnfamilylength <code class="code">---&gt; 2</code></li><li class="listitem">columnfamily <code class="code">--------&gt; cf</code></li><li class="listitem">columnqualifier <code class="code">------&gt; attr2</code></li><li class="listitem">timestamp <code class="code">-----------&gt; server time of Put</code></li><li class="listitem">keytype <code class="code">-------------&gt; Put</code></li></ul></div><p>
+           
+          </p></div><p>It is critical to understand that the rowkey, ColumnFamily, and column (aka columnqualifier) are embedded within
+       the KeyValue instance.  The longer these identifiers are, the bigger the KeyValue is.</p></div><div class="section" title="9.7.5.5.&nbsp;Compaction"><div class="titlepage"><div><div><h4 class="title"><a name="compaction"></a>9.7.5.5.&nbsp;Compaction</h4></div></div></div><p>There are two types of compactions:  minor and major.  Minor compactions will usually pick up a couple of the smaller adjacent
+         StoreFiles and rewrite them as one.  Minors do not drop deletes or expired cells, only major compactions do this.  Sometimes a minor compaction
+         will pick up all the StoreFiles in the Store and in this case it actually promotes itself to being a major compaction.
+         </p><p>After a major compaction runs there will be a single StoreFile per Store, and this will help performance usually.  Caution:  major compactions rewrite all of the Stores data and on a loaded system, this may not be tenable;
+             major compactions will usually have to be done manually on large systems.  See <a class="xref" href="important_configurations.html#managed.compactions" title="2.5.2.8.&nbsp;Managed Compactions">Section&nbsp;2.5.2.8, &#8220;Managed Compactions&#8221;</a>.
+        </p><p>Compactions will <span class="emphasis"><em>not</em></span> perform region merges.  See <a class="xref" href="ops.regionmgt.html#ops.regionmgt.merge" title="14.2.2.&nbsp;Merge">Section&nbsp;14.2.2, &#8220;Merge&#8221;</a> for more information on region merging.
+        </p><div class="section" title="9.7.5.5.1.&nbsp;Compaction File Selection"><div class="titlepage"><div><div><h5 class="title"><a name="compaction.file.selection"></a>9.7.5.5.1.&nbsp;Compaction File Selection</h5></div></div></div><p>To understand the core algorithm for StoreFile selection, there is some ASCII-art in the <a class="link" href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836" target="_top">Store source code</a> that
+          will serve as useful reference.  It has been copied below:
+</p><pre class="programlisting">
+/* normal skew:
+ *
+ *         older ----&gt; newer
+ *     _
+ *    | |   _
+ *    | |  | |   _
+ *  --|-|- |-|- |-|---_-------_-------  minCompactSize
+ *    | |  | |  | |  | |  _  | |
+ *    | |  | |  | |  | | | | | |
+ *    | |  | |  | |  | | | | | |
+ */
+</pre><p>
+          Important knobs:
+          </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><code class="code">hbase.store.compaction.ratio</code> Ratio used in compaction
+            file selection algorithm (default 1.2f). </li><li class="listitem"><code class="code">hbase.hstore.compaction.min</code> (.90 hbase.hstore.compactionThreshold) (files) Minimum number
+            of StoreFiles per Store to be selected for a compaction to occur (default 2).</li><li class="listitem"><code class="code">hbase.hstore.compaction.max</code> (files) Maximum number of StoreFiles to compact per minor compaction (default 10).</li><li class="listitem"><code class="code">hbase.hstore.compaction.min.size</code> (bytes)
+            Any StoreFile smaller than this setting with automatically be a candidate for compaction.  Defaults to
+            <code class="code">hbase.hregion.memstore.flush.size</code> (128 mb). </li><li class="listitem"><code class="code">hbase.hstore.compaction.max.size</code> (.92) (bytes)
+            Any StoreFile larger than this setting with automatically be excluded from compaction (default Long.MAX_VALUE). </li></ul></div><p>
+          </p><p>The minor compaction StoreFile selection logic is size based, and selects a file for compaction when the file
+           &lt;= sum(smaller_files) * <code class="code">hbase.hstore.compaction.ratio</code>.
+          </p></div><div class="section" title="9.7.5.5.2.&nbsp;Minor Compaction File Selection - Example #1 (Basic Example)"><div class="titlepage"><div><div><h5 class="title"><a name="compaction.file.selection.example1"></a>9.7.5.5.2.&nbsp;Minor Compaction File Selection - Example #1 (Basic Example)</h5></div></div></div><p>This example mirrors an example from the unit test <code class="code">TestCompactSelection</code>.
+          </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><code class="code">hbase.store.compaction.ratio</code> = 1.0f </li><li class="listitem"><code class="code">hbase.hstore.compaction.min</code> = 3 (files) </li><li class="listitem"><code class="code">hbase.hstore.compaction.max</code> = 5 (files) </li><li class="listitem"><code class="code">hbase.hstore.compaction.min.size</code> = 10 (bytes) </li><li class="listitem"><code class="code">hbase.hstore.compaction.max.size</code> = 1000 (bytes) </li></ul></div><p>
+          The following StoreFiles exist: 100, 50, 23, 12, and 12 bytes apiece (oldest to newest).
+          With the above parameters, the files that would be selected for minor compaction are 23, 12, and 12.
+          </p><p>Why?
+          </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">100 --&gt;  No, because sum(50, 23, 12, 12) * 1.0 = 97. </li><li class="listitem">50 --&gt;  No, because sum(23, 12, 12) * 1.0 = 47. </li><li class="listitem">23 --&gt;  Yes, because sum(12, 12) * 1.0 = 24. </li><li class="listitem">12 --&gt;  Yes, because the previous file has been included, and because this
+          does not exceed the the max-file limit of 5  </li><li class="listitem">12 --&gt;  Yes, because the previous file had been included, and because this
+          does not exceed the the max-file limit of 5.</li></ul></div><p>
+          </p></div><div class="section" title="9.7.5.5.3.&nbsp;Minor Compaction File Selection - Example #2 (Not Enough Files To Compact)"><div class="titlepage"><div><div><h5 class="title"><a name="compaction.file.selection.example2"></a>9.7.5.5.3.&nbsp;Minor Compaction File Selection - Example #2 (Not Enough Files To Compact)</h5></div></div></div><p>This example mirrors an example from the unit test <code class="code">TestCompactSelection</code>.
+          </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><code class="code">hbase.store.compaction.ratio</code> = 1.0f </li><li class="listitem"><code class="code">hbase.hstore.compaction.min</code> = 3 (files) </li><li class="listitem"><code class="code">hbase.hstore.compaction.max</code> = 5 (files) </li><li class="listitem"><code class="code">hbase.hstore.compaction.min.size</code> = 10 (bytes) </li><li class="listitem"><code class="code">hbase.hstore.compaction.max.size</code> = 1000 (bytes) </li></ul></div><p>
+          </p><p>The following StoreFiles exist: 100, 25, 12, and 12 bytes apiece (oldest to newest).
+          With the above parameters, the files that would be selected for minor compaction are 23, 12, and 12.
+          </p><p>Why?
+          </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">100 --&gt; No, because sum(25, 12, 12) * 1.0 = 47</li><li class="listitem">25 --&gt;  No, because sum(12, 12) * 1.0 = 24</li><li class="listitem">12 --&gt;  No. Candidate because sum(12) * 1.0 = 12, there are only 2 files to compact and that is less than the threshold of 3</li><li class="listitem">12 --&gt;  No. Candidate because the previous StoreFile was, but there are not enough files to compact</li></ul></div><p>
+          </p></div><div class="section" title="9.7.5.5.4.&nbsp;Minor Compaction File Selection - Example #3 (Limiting Files To Compact)"><div class="titlepage"><div><div><h5 class="title"><a name="compaction.file.selection.example2"></a>9.7.5.5.4.&nbsp;Minor Compaction File Selection - Example #3 (Limiting Files To Compact)</h5></div></div></div><p>This example mirrors an example from the unit test <code class="code">TestCompactSelection</code>.
+          </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><code class="code">hbase.store.compaction.ratio</code> = 1.0f </li><li class="listitem"><code class="code">hbase.hstore.compaction.min</code> = 3 (files) </li><li class="listitem"><code class="code">hbase.hstore.compaction.max</code> = 5 (files) </li><li class="listitem"><code class="code">hbase.hstore.compaction.min.size</code> = 10 (bytes) </li><li class="listitem"><code class="code">hbase.hstore.compaction.max.size</code> = 1000 (bytes) </li></ul></div><p>
+          The following StoreFiles exist: 7, 6, 5, 4, 3, 2, and 1 bytes apiece (oldest to newest).
+          With the above parameters, the files that would be selected for minor compaction are 7, 6, 5, 4, 3.
+          </p><p>Why?
+          </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">7 --&gt;  Yes, because sum(6, 5, 4, 3, 2, 1) * 1.0 = 21.  Also, 7 is less than the min-size</li><li class="listitem">6 --&gt;  Yes, because sum(5, 4, 3, 2, 1) * 1.0 = 15.  Also, 6 is less than the min-size. </li><li class="listitem">5 --&gt;  Yes, because sum(4, 3, 2, 1) * 1.0 = 10.  Also, 5 is less than the min-size. </li><li class="listitem">4 --&gt;  Yes, because sum(3, 2, 1) * 1.0 = 6.  Also, 4 is less than the min-size. </li><li class="listitem">3 --&gt;  Yes, because sum(2, 1) * 1.0 = 3.  Also, 3 is less than the min-size. </li><li class="listitem">2 --&gt;  No.  Candidate because previous file was selected and 2 is less than the min-size, but the max-number of files to compact has been reached. </li><li class="listitem">1 --&gt;  No.  Candidate because previous file was selected and 1 is less than the min-size, but max-number of files to compact has been reached. </li></ul></div><p>
+          </p></div><div class="section" title="9.7.5.5.5.&nbsp;Impact of Key Configuration Options"><div class="titlepage"><div><div><h5 class="title"><a name="compaction.config.impact"></a>9.7.5.5.5.&nbsp;Impact of Key Configuration Options</h5></div></div></div><p><code class="code">hbase.store.compaction.ratio</code>.  A large ratio (e.g., 10) will produce a single giant file.  Conversely, a value of .25 will
+          produce behavior similar to the BigTable compaction algorithm - resulting in 4 StoreFiles.
+          </p><p><code class="code">hbase.hstore.compaction.min.size</code>.  Because
+          this limit represents the "automatic include" limit for all StoreFiles smaller than this value, this value may need to
+          be adjusted downwards in write-heavy environments where many 1 or 2 mb StoreFiles are being flushed, because every file
+          will be targeted for compaction and the resulting files may still be under the min-size and require further compaction, etc.
+          </p></div></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'regions.arch';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="regionserver.arch.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="architecture.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="arch.bulk.load.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">9.6.&nbsp;RegionServer&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;9.8.&nbsp;Bulk Loading</td></tr></table></div></body></html>

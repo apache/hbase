@@ -1,0 +1,36 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Chapter&nbsp;3.&nbsp;Upgrading</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="prev" href="important_configurations.html" title="2.5.&nbsp;The Important Configurations"><link rel="next" href="upgrade0.94.html" title="3.2.&nbsp;Upgrading from 0.92.x to 0.94.x"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Chapter&nbsp;3.&nbsp;Upgrading</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="important_configurations.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="upgrade0.94.html">Next</a></td></tr></table><hr></div><div class="chapter" title="Chapter&nbsp;3.&nbsp;Upgrading"><div class="titlepage"><div><div><h2 class="title"><a name="upgrading"></a>Chapter&nbsp;3.&nbsp;Upgrading</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="section"><a href="upgrading.html#upgrade0.96">3.1. Upgrading from 0.94.x to 0.96.x</a></span></dt><dt><span class="section"><a href="upgrade0.94.html">3.2. Upgrading from 0.92.x to 0.94.x</a></span></dt><dt><span class="section"><a href="upgrade0.92.html">3.3. Upgrading from 0.90.x to 0.92.x</a></span></dt><dd><dl><dt><span class="section"><a href="upgrade0.92.html#d2121e2590">3.3.1. You can&#8217;t go back!
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2604">3.3.2. MSLAB is ON by default
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2629">3.3.3. Distributed splitting is on by default
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2634">3.3.4. Memory accounting is different now
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2643">3.3.5. On the Hadoop version to use
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2655">3.3.6. HBase 0.92.0 ships with ZooKeeper 3.4.2
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2660">3.3.7. Online alter is off by default
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2667">3.3.8. WebUI
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2672">3.3.9. Security tarball
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2677">3.3.10. Experimental off-heap cache
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2682">3.3.11. Changes in HBase replication
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2687">3.3.12. RegionServer now aborts if OOME
+</a></span></dt><dt><span class="section"><a href="upgrade0.92.html#d2121e2692">3.3.13. HFile V2 and the &#8220;Bigger, Fewer&#8221; Tendency
+</a></span></dt></dl></dd><dt><span class="section"><a href="upgrade0.90.html">3.4. Upgrading to HBase 0.90.x from 0.20.x or 0.89.x</a></span></dt></dl></div><p>You cannot skip major verisons upgrading.  If you are upgrading from
+    version 0.20.x to 0.92.x, you must first go from 0.20.x to 0.90.x and then go
+    from 0.90.x to 0.92.x.</p><p>
+        Review <a class="xref" href="configuration.html" title="Chapter&nbsp;2.&nbsp;Apache HBase (TM) Configuration">Chapter&nbsp;2, <i>Apache HBase (TM) Configuration</i></a>, in particular the section on Hadoop version.
+    </p><div class="section" title="3.1.&nbsp;Upgrading from 0.94.x to 0.96.x"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="upgrade0.96"></a>3.1.&nbsp;Upgrading from 0.94.x to 0.96.x</h2></div><div><h3 class="subtitle">The Singularity</h3></div></div></div><p>You will have to stop your old 0.94 cluster completely to upgrade.  If you are replicating
+     between clusters, both clusters will have to go down to upgrade.  Make sure it is a clean shutdown
+     so there are no WAL files laying around (TODO: Can 0.96 read 0.94 WAL files?).  Make sure
+     zookeeper is cleared of state.  All clients must be upgraded to 0.96 too.
+ </p><p>The API has changed in a few areas; in particular how you use coprocessors (TODO: MapReduce too?)
+ </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'upgrading';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="important_configurations.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="upgrade0.94.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">2.5.&nbsp;The Important Configurations&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;3.2.&nbsp;Upgrading from 0.92.x to 0.94.x</td></tr></table></div></body></html>

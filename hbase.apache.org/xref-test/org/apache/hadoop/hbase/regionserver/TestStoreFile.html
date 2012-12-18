@@ -1,0 +1,962 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>TestStoreFile xref</title>
+<link type="text/css" rel="stylesheet" href="../../../../../stylesheet.css" />
+</head>
+<body>
+<div id="overview"><a href="../../../../../../testapidocs/org/apache/hadoop/hbase/regionserver/TestStoreFile.html">View Javadoc</a></div><pre>
+
+<a class="jxr_linenumber" name="1" href="#1">1</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="2" href="#2">2</a>   <em class="jxr_javadoccomment"> *</em>
+<a class="jxr_linenumber" name="3" href="#3">3</a>   <em class="jxr_javadoccomment"> * Licensed to the Apache Software Foundation (ASF) under one</em>
+<a class="jxr_linenumber" name="4" href="#4">4</a>   <em class="jxr_javadoccomment"> * or more contributor license agreements.  See the NOTICE file</em>
+<a class="jxr_linenumber" name="5" href="#5">5</a>   <em class="jxr_javadoccomment"> * distributed with this work for additional information</em>
+<a class="jxr_linenumber" name="6" href="#6">6</a>   <em class="jxr_javadoccomment"> * regarding copyright ownership.  The ASF licenses this file</em>
+<a class="jxr_linenumber" name="7" href="#7">7</a>   <em class="jxr_javadoccomment"> * to you under the Apache License, Version 2.0 (the</em>
+<a class="jxr_linenumber" name="8" href="#8">8</a>   <em class="jxr_javadoccomment"> * "License"); you may not use this file except in compliance</em>
+<a class="jxr_linenumber" name="9" href="#9">9</a>   <em class="jxr_javadoccomment"> * with the License.  You may obtain a copy of the License at</em>
+<a class="jxr_linenumber" name="10" href="#10">10</a>  <em class="jxr_javadoccomment"> *</em>
+<a class="jxr_linenumber" name="11" href="#11">11</a>  <em class="jxr_javadoccomment"> *     <a href="http://www.apache.org/licenses/LICENSE-2.0" target="alexandria_uri">http://www.apache.org/licenses/LICENSE-2.0</a></em>
+<a class="jxr_linenumber" name="12" href="#12">12</a>  <em class="jxr_javadoccomment"> *</em>
+<a class="jxr_linenumber" name="13" href="#13">13</a>  <em class="jxr_javadoccomment"> * Unless required by applicable law or agreed to in writing, software</em>
+<a class="jxr_linenumber" name="14" href="#14">14</a>  <em class="jxr_javadoccomment"> * distributed under the License is distributed on an "AS IS" BASIS,</em>
+<a class="jxr_linenumber" name="15" href="#15">15</a>  <em class="jxr_javadoccomment"> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</em>
+<a class="jxr_linenumber" name="16" href="#16">16</a>  <em class="jxr_javadoccomment"> * See the License for the specific language governing permissions and</em>
+<a class="jxr_linenumber" name="17" href="#17">17</a>  <em class="jxr_javadoccomment"> * limitations under the License.</em>
+<a class="jxr_linenumber" name="18" href="#18">18</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="19" href="#19">19</a>  <strong class="jxr_keyword">package</strong> org.apache.hadoop.hbase.regionserver;
+<a class="jxr_linenumber" name="20" href="#20">20</a>  
+<a class="jxr_linenumber" name="21" href="#21">21</a>  <strong class="jxr_keyword">import</strong> java.io.IOException;
+<a class="jxr_linenumber" name="22" href="#22">22</a>  <strong class="jxr_keyword">import</strong> java.nio.ByteBuffer;
+<a class="jxr_linenumber" name="23" href="#23">23</a>  <strong class="jxr_keyword">import</strong> java.util.ArrayList;
+<a class="jxr_linenumber" name="24" href="#24">24</a>  <strong class="jxr_keyword">import</strong> java.util.Arrays;
+<a class="jxr_linenumber" name="25" href="#25">25</a>  <strong class="jxr_keyword">import</strong> java.util.Collections;
+<a class="jxr_linenumber" name="26" href="#26">26</a>  <strong class="jxr_keyword">import</strong> java.util.Comparator;
+<a class="jxr_linenumber" name="27" href="#27">27</a>  <strong class="jxr_keyword">import</strong> java.util.List;
+<a class="jxr_linenumber" name="28" href="#28">28</a>  <strong class="jxr_keyword">import</strong> java.util.Map;
+<a class="jxr_linenumber" name="29" href="#29">29</a>  <strong class="jxr_keyword">import</strong> java.util.TreeSet;
+<a class="jxr_linenumber" name="30" href="#30">30</a>  
+<a class="jxr_linenumber" name="31" href="#31">31</a>  <strong class="jxr_keyword">import</strong> org.apache.commons.logging.Log;
+<a class="jxr_linenumber" name="32" href="#32">32</a>  <strong class="jxr_keyword">import</strong> org.apache.commons.logging.LogFactory;
+<a class="jxr_linenumber" name="33" href="#33">33</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.conf.Configuration;
+<a class="jxr_linenumber" name="34" href="#34">34</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.fs.FileSystem;
+<a class="jxr_linenumber" name="35" href="#35">35</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.fs.Path;
+<a class="jxr_linenumber" name="36" href="#36">36</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HBaseTestCase;
+<a class="jxr_linenumber" name="37" href="#37">37</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HBaseTestingUtility;
+<a class="jxr_linenumber" name="38" href="#38">38</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HRegionInfo;
+<a class="jxr_linenumber" name="39" href="#39">39</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.KeyValue;
+<a class="jxr_linenumber" name="40" href="#40">40</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.SmallTests;
+<a class="jxr_linenumber" name="41" href="#41">41</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.client.Scan;
+<a class="jxr_linenumber" name="42" href="#42">42</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.HFileLink;
+<a class="jxr_linenumber" name="43" href="#43">43</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+<a class="jxr_linenumber" name="44" href="#44">44</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.hfile.BlockCache;
+<a class="jxr_linenumber" name="45" href="#45">45</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.hfile.CacheConfig;
+<a class="jxr_linenumber" name="46" href="#46">46</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.hfile.CacheStats;
+<a class="jxr_linenumber" name="47" href="#47">47</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.hfile.HFile;
+<a class="jxr_linenumber" name="48" href="#48">48</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+<a class="jxr_linenumber" name="49" href="#49">49</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
+<a class="jxr_linenumber" name="50" href="#50">50</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.hfile.HFileScanner;
+<a class="jxr_linenumber" name="51" href="#51">51</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
+<a class="jxr_linenumber" name="52" href="#52">52</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+<a class="jxr_linenumber" name="53" href="#53">53</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.util.BloomFilterFactory;
+<a class="jxr_linenumber" name="54" href="#54">54</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.util.Bytes;
+<a class="jxr_linenumber" name="55" href="#55">55</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.util.ChecksumType;
+<a class="jxr_linenumber" name="56" href="#56">56</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.util.FSUtils;
+<a class="jxr_linenumber" name="57" href="#57">57</a>  <strong class="jxr_keyword">import</strong> org.junit.experimental.categories.Category;
+<a class="jxr_linenumber" name="58" href="#58">58</a>  <strong class="jxr_keyword">import</strong> org.mockito.Mockito;
+<a class="jxr_linenumber" name="59" href="#59">59</a>  
+<a class="jxr_linenumber" name="60" href="#60">60</a>  <strong class="jxr_keyword">import</strong> com.google.common.base.Joiner;
+<a class="jxr_linenumber" name="61" href="#61">61</a>  <strong class="jxr_keyword">import</strong> com.google.common.collect.Iterables;
+<a class="jxr_linenumber" name="62" href="#62">62</a>  <strong class="jxr_keyword">import</strong> com.google.common.collect.Lists;
+<a class="jxr_linenumber" name="63" href="#63">63</a>  
+<a class="jxr_linenumber" name="64" href="#64">64</a>  <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="65" href="#65">65</a>  <em class="jxr_javadoccomment"> * Test HStoreFile</em>
+<a class="jxr_linenumber" name="66" href="#66">66</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="67" href="#67">67</a>  @Category(SmallTests.<strong class="jxr_keyword">class</strong>)
+<a class="jxr_linenumber" name="68" href="#68">68</a>  <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../org/apache/hadoop/hbase/regionserver/TestStoreFile.html">TestStoreFile</a> <strong class="jxr_keyword">extends</strong> <a href="../../../../../org/apache/hadoop/hbase/HBaseTestCase.html">HBaseTestCase</a> {
+<a class="jxr_linenumber" name="69" href="#69">69</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Log LOG = LogFactory.getLog(TestStoreFile.<strong class="jxr_keyword">class</strong>);
+<a class="jxr_linenumber" name="70" href="#70">70</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <a href="../../../../../org/apache/hadoop/hbase/HBaseTestingUtility.html">HBaseTestingUtility</a> TEST_UTIL = <strong class="jxr_keyword">new</strong> <a href="../../../../../org/apache/hadoop/hbase/HBaseTestingUtility.html">HBaseTestingUtility</a>();
+<a class="jxr_linenumber" name="71" href="#71">71</a>    <strong class="jxr_keyword">private</strong> CacheConfig cacheConf =  <strong class="jxr_keyword">new</strong> CacheConfig(TEST_UTIL.getConfiguration());
+<a class="jxr_linenumber" name="72" href="#72">72</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> String ROOT_DIR =
+<a class="jxr_linenumber" name="73" href="#73">73</a>      TEST_UTIL.getDataTestDir(<span class="jxr_string">"TestStoreFile"</span>).toString();
+<a class="jxr_linenumber" name="74" href="#74">74</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> ChecksumType CKTYPE = ChecksumType.CRC32;
+<a class="jxr_linenumber" name="75" href="#75">75</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> CKBYTES = 512;
+<a class="jxr_linenumber" name="76" href="#76">76</a>  
+<a class="jxr_linenumber" name="77" href="#77">77</a>    @Override
+<a class="jxr_linenumber" name="78" href="#78">78</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> setUp() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="79" href="#79">79</a>      <strong class="jxr_keyword">super</strong>.setUp();
+<a class="jxr_linenumber" name="80" href="#80">80</a>    }
+<a class="jxr_linenumber" name="81" href="#81">81</a>  
+<a class="jxr_linenumber" name="82" href="#82">82</a>    @Override
+<a class="jxr_linenumber" name="83" href="#83">83</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> tearDown() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="84" href="#84">84</a>      <strong class="jxr_keyword">super</strong>.tearDown();
+<a class="jxr_linenumber" name="85" href="#85">85</a>    }
+<a class="jxr_linenumber" name="86" href="#86">86</a>  
+<a class="jxr_linenumber" name="87" href="#87">87</a>    <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="88" href="#88">88</a>  <em class="jxr_javadoccomment">   * Write a file and then assert that we can read from top and bottom halves</em>
+<a class="jxr_linenumber" name="89" href="#89">89</a>  <em class="jxr_javadoccomment">   * using two HalfMapFiles.</em>
+<a class="jxr_linenumber" name="90" href="#90">90</a>  <em class="jxr_javadoccomment">   * @throws Exception</em>
+<a class="jxr_linenumber" name="91" href="#91">91</a>  <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="92" href="#92">92</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testBasicHalfMapFile() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="93" href="#93">93</a>      <em class="jxr_comment">// Make up a directory hierarchy that has a regiondir and familyname.</em>
+<a class="jxr_linenumber" name="94" href="#94">94</a>      Path outputDir = <strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">this</strong>.testDir, <span class="jxr_string">"regionname"</span>),
+<a class="jxr_linenumber" name="95" href="#95">95</a>          <span class="jxr_string">"familyname"</span>);
+<a class="jxr_linenumber" name="96" href="#96">96</a>      StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf,
+<a class="jxr_linenumber" name="97" href="#97">97</a>          <strong class="jxr_keyword">this</strong>.fs, 2 * 1024)
+<a class="jxr_linenumber" name="98" href="#98">98</a>              .withOutputDir(outputDir)
+<a class="jxr_linenumber" name="99" href="#99">99</a>              .build();
+<a class="jxr_linenumber" name="100" href="#100">100</a>     writeStoreFile(writer);
+<a class="jxr_linenumber" name="101" href="#101">101</a>     checkHalfHFile(<strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, writer.getPath(), conf, cacheConf,
+<a class="jxr_linenumber" name="102" href="#102">102</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE));
+<a class="jxr_linenumber" name="103" href="#103">103</a>   }
+<a class="jxr_linenumber" name="104" href="#104">104</a> 
+<a class="jxr_linenumber" name="105" href="#105">105</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> writeStoreFile(<strong class="jxr_keyword">final</strong> StoreFile.Writer writer) <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="106" href="#106">106</a>     writeStoreFile(writer, Bytes.toBytes(getName()), Bytes.toBytes(getName()));
+<a class="jxr_linenumber" name="107" href="#107">107</a>   }
+<a class="jxr_linenumber" name="108" href="#108">108</a>   <em class="jxr_comment">/*</em>
+<a class="jxr_linenumber" name="109" href="#109">109</a> <em class="jxr_comment">   * Writes HStoreKey and ImmutableBytes data to passed writer and</em>
+<a class="jxr_linenumber" name="110" href="#110">110</a> <em class="jxr_comment">   * then closes it.</em>
+<a class="jxr_linenumber" name="111" href="#111">111</a> <em class="jxr_comment">   * @param writer</em>
+<a class="jxr_linenumber" name="112" href="#112">112</a> <em class="jxr_comment">   * @throws IOException</em>
+<a class="jxr_linenumber" name="113" href="#113">113</a> <em class="jxr_comment">   */</em>
+<a class="jxr_linenumber" name="114" href="#114">114</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> writeStoreFile(<strong class="jxr_keyword">final</strong> StoreFile.Writer writer, byte[] fam, byte[] qualifier)
+<a class="jxr_linenumber" name="115" href="#115">115</a>   <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="116" href="#116">116</a>     <strong class="jxr_keyword">long</strong> now = System.currentTimeMillis();
+<a class="jxr_linenumber" name="117" href="#117">117</a>     <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="118" href="#118">118</a>       <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">char</strong> d = FIRST_CHAR; d &lt;= LAST_CHAR; d++) {
+<a class="jxr_linenumber" name="119" href="#119">119</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">char</strong> e = FIRST_CHAR; e &lt;= LAST_CHAR; e++) {
+<a class="jxr_linenumber" name="120" href="#120">120</a>           byte[] b = <strong class="jxr_keyword">new</strong> byte[] { (byte) d, (byte) e };
+<a class="jxr_linenumber" name="121" href="#121">121</a>           writer.append(<strong class="jxr_keyword">new</strong> KeyValue(b, fam, qualifier, now, b));
+<a class="jxr_linenumber" name="122" href="#122">122</a>         }
+<a class="jxr_linenumber" name="123" href="#123">123</a>       }
+<a class="jxr_linenumber" name="124" href="#124">124</a>     } <strong class="jxr_keyword">finally</strong> {
+<a class="jxr_linenumber" name="125" href="#125">125</a>       writer.close();
+<a class="jxr_linenumber" name="126" href="#126">126</a>     }
+<a class="jxr_linenumber" name="127" href="#127">127</a>   }
+<a class="jxr_linenumber" name="128" href="#128">128</a> 
+<a class="jxr_linenumber" name="129" href="#129">129</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="130" href="#130">130</a> <em class="jxr_javadoccomment">   * Test that our mechanism of writing store files in one region to reference</em>
+<a class="jxr_linenumber" name="131" href="#131">131</a> <em class="jxr_javadoccomment">   * store files in other regions works.</em>
+<a class="jxr_linenumber" name="132" href="#132">132</a> <em class="jxr_javadoccomment">   * @throws IOException</em>
+<a class="jxr_linenumber" name="133" href="#133">133</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="134" href="#134">134</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testReference()
+<a class="jxr_linenumber" name="135" href="#135">135</a>   <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="136" href="#136">136</a>     Path storedir = <strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">this</strong>.testDir, <span class="jxr_string">"regionname"</span>), <span class="jxr_string">"familyname"</span>);
+<a class="jxr_linenumber" name="137" href="#137">137</a>     Path dir = <strong class="jxr_keyword">new</strong> Path(storedir, <span class="jxr_string">"1234567890"</span>);
+<a class="jxr_linenumber" name="138" href="#138">138</a>     <em class="jxr_comment">// Make a store file and write data to it.</em>
+<a class="jxr_linenumber" name="139" href="#139">139</a>     StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf,
+<a class="jxr_linenumber" name="140" href="#140">140</a>         <strong class="jxr_keyword">this</strong>.fs, 8 * 1024)
+<a class="jxr_linenumber" name="141" href="#141">141</a>             .withOutputDir(dir)
+<a class="jxr_linenumber" name="142" href="#142">142</a>             .build();
+<a class="jxr_linenumber" name="143" href="#143">143</a>     writeStoreFile(writer);
+<a class="jxr_linenumber" name="144" href="#144">144</a>     StoreFile hsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, writer.getPath(), conf, cacheConf,
+<a class="jxr_linenumber" name="145" href="#145">145</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="146" href="#146">146</a>     StoreFile.Reader reader = hsf.createReader();
+<a class="jxr_linenumber" name="147" href="#147">147</a>     <em class="jxr_comment">// Split on a row, not in middle of row.  Midkey returned by reader</em>
+<a class="jxr_linenumber" name="148" href="#148">148</a>     <em class="jxr_comment">// may be in middle of row.  Create new one with empty column and</em>
+<a class="jxr_linenumber" name="149" href="#149">149</a>     <em class="jxr_comment">// timestamp.</em>
+<a class="jxr_linenumber" name="150" href="#150">150</a>     KeyValue kv = KeyValue.createKeyValueFromKey(reader.midkey());
+<a class="jxr_linenumber" name="151" href="#151">151</a>     byte [] midRow = kv.getRow();
+<a class="jxr_linenumber" name="152" href="#152">152</a>     kv = KeyValue.createKeyValueFromKey(reader.getLastKey());
+<a class="jxr_linenumber" name="153" href="#153">153</a>     byte [] finalRow = kv.getRow();
+<a class="jxr_linenumber" name="154" href="#154">154</a>     <em class="jxr_comment">// Make a reference</em>
+<a class="jxr_linenumber" name="155" href="#155">155</a>     Path refPath = StoreFile.split(fs, dir, hsf, midRow, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="156" href="#156">156</a>     StoreFile refHsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, refPath, conf, cacheConf,
+<a class="jxr_linenumber" name="157" href="#157">157</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="158" href="#158">158</a>     <em class="jxr_comment">// Now confirm that I can read from the reference and that it only gets</em>
+<a class="jxr_linenumber" name="159" href="#159">159</a>     <em class="jxr_comment">// keys from top half of the file.</em>
+<a class="jxr_linenumber" name="160" href="#160">160</a>     HFileScanner s = refHsf.createReader().getScanner(false, false);
+<a class="jxr_linenumber" name="161" href="#161">161</a>     <strong class="jxr_keyword">for</strong>(<strong class="jxr_keyword">boolean</strong> first = <strong class="jxr_keyword">true</strong>; (!s.isSeeked() &amp;&amp; s.seekTo()) || s.next();) {
+<a class="jxr_linenumber" name="162" href="#162">162</a>       ByteBuffer bb = s.getKey();
+<a class="jxr_linenumber" name="163" href="#163">163</a>       kv = KeyValue.createKeyValueFromKey(bb);
+<a class="jxr_linenumber" name="164" href="#164">164</a>       <strong class="jxr_keyword">if</strong> (first) {
+<a class="jxr_linenumber" name="165" href="#165">165</a>         assertTrue(Bytes.equals(kv.getRow(), midRow));
+<a class="jxr_linenumber" name="166" href="#166">166</a>         first = false;
+<a class="jxr_linenumber" name="167" href="#167">167</a>       }
+<a class="jxr_linenumber" name="168" href="#168">168</a>     }
+<a class="jxr_linenumber" name="169" href="#169">169</a>     assertTrue(Bytes.equals(kv.getRow(), finalRow));
+<a class="jxr_linenumber" name="170" href="#170">170</a>   }
+<a class="jxr_linenumber" name="171" href="#171">171</a> 
+<a class="jxr_linenumber" name="172" href="#172">172</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testHFileLink() <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="173" href="#173">173</a>     <strong class="jxr_keyword">final</strong> String columnFamily = <span class="jxr_string">"f"</span>;
+<a class="jxr_linenumber" name="174" href="#174">174</a>     HRegionInfo hri = <strong class="jxr_keyword">new</strong> HRegionInfo(Bytes.toBytes(<span class="jxr_string">"table-link"</span>));
+<a class="jxr_linenumber" name="175" href="#175">175</a>     Path storedir = <strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">new</strong> Path(FSUtils.getRootDir(conf),
+<a class="jxr_linenumber" name="176" href="#176">176</a>       <strong class="jxr_keyword">new</strong> Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
+<a class="jxr_linenumber" name="177" href="#177">177</a> 
+<a class="jxr_linenumber" name="178" href="#178">178</a>     <em class="jxr_comment">// Make a store file and write data to it.</em>
+<a class="jxr_linenumber" name="179" href="#179">179</a>     StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf,
+<a class="jxr_linenumber" name="180" href="#180">180</a>          <strong class="jxr_keyword">this</strong>.fs, 8 * 1024)
+<a class="jxr_linenumber" name="181" href="#181">181</a>             .withOutputDir(storedir)
+<a class="jxr_linenumber" name="182" href="#182">182</a>             .build();
+<a class="jxr_linenumber" name="183" href="#183">183</a>     Path storeFilePath = writer.getPath();
+<a class="jxr_linenumber" name="184" href="#184">184</a>     writeStoreFile(writer);
+<a class="jxr_linenumber" name="185" href="#185">185</a>     writer.close();
+<a class="jxr_linenumber" name="186" href="#186">186</a> 
+<a class="jxr_linenumber" name="187" href="#187">187</a>     Path dstPath = <strong class="jxr_keyword">new</strong> Path(FSUtils.getRootDir(conf), <strong class="jxr_keyword">new</strong> Path(<span class="jxr_string">"test-region"</span>, columnFamily));
+<a class="jxr_linenumber" name="188" href="#188">188</a>     HFileLink.create(conf, <strong class="jxr_keyword">this</strong>.fs, dstPath, hri, storeFilePath.getName());
+<a class="jxr_linenumber" name="189" href="#189">189</a>     Path linkFilePath = <strong class="jxr_keyword">new</strong> Path(dstPath,
+<a class="jxr_linenumber" name="190" href="#190">190</a>                   HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
+<a class="jxr_linenumber" name="191" href="#191">191</a> 
+<a class="jxr_linenumber" name="192" href="#192">192</a>     <em class="jxr_comment">// Try to open store file from link</em>
+<a class="jxr_linenumber" name="193" href="#193">193</a>     StoreFile hsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, linkFilePath, conf, cacheConf,
+<a class="jxr_linenumber" name="194" href="#194">194</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="195" href="#195">195</a>     assertTrue(hsf.isLink());
+<a class="jxr_linenumber" name="196" href="#196">196</a> 
+<a class="jxr_linenumber" name="197" href="#197">197</a>     <em class="jxr_comment">// Now confirm that I can read from the link</em>
+<a class="jxr_linenumber" name="198" href="#198">198</a>     <strong class="jxr_keyword">int</strong> count = 1;
+<a class="jxr_linenumber" name="199" href="#199">199</a>     HFileScanner s = hsf.createReader().getScanner(false, false);
+<a class="jxr_linenumber" name="200" href="#200">200</a>     s.seekTo();
+<a class="jxr_linenumber" name="201" href="#201">201</a>     <strong class="jxr_keyword">while</strong> (s.next()) {
+<a class="jxr_linenumber" name="202" href="#202">202</a>       count++;
+<a class="jxr_linenumber" name="203" href="#203">203</a>     }
+<a class="jxr_linenumber" name="204" href="#204">204</a>     assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
+<a class="jxr_linenumber" name="205" href="#205">205</a>   }
+<a class="jxr_linenumber" name="206" href="#206">206</a> 
+<a class="jxr_linenumber" name="207" href="#207">207</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> checkHalfHFile(<strong class="jxr_keyword">final</strong> StoreFile f)
+<a class="jxr_linenumber" name="208" href="#208">208</a>   <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="209" href="#209">209</a>     byte [] midkey = f.createReader().midkey();
+<a class="jxr_linenumber" name="210" href="#210">210</a>     KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
+<a class="jxr_linenumber" name="211" href="#211">211</a>     byte [] midRow = midKV.getRow();
+<a class="jxr_linenumber" name="212" href="#212">212</a>     <em class="jxr_comment">// Create top split.</em>
+<a class="jxr_linenumber" name="213" href="#213">213</a>     Path topDir = HStore.getStoreHomedir(<strong class="jxr_keyword">this</strong>.testDir, <span class="jxr_string">"1"</span>,
+<a class="jxr_linenumber" name="214" href="#214">214</a>       Bytes.toBytes(f.getPath().getParent().getName()));
+<a class="jxr_linenumber" name="215" href="#215">215</a>     <strong class="jxr_keyword">if</strong> (<strong class="jxr_keyword">this</strong>.fs.exists(topDir)) {
+<a class="jxr_linenumber" name="216" href="#216">216</a>       <strong class="jxr_keyword">this</strong>.fs.delete(topDir, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="217" href="#217">217</a>     }
+<a class="jxr_linenumber" name="218" href="#218">218</a>     Path topPath = StoreFile.split(<strong class="jxr_keyword">this</strong>.fs, topDir, f, midRow, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="219" href="#219">219</a>     <em class="jxr_comment">// Create bottom split.</em>
+<a class="jxr_linenumber" name="220" href="#220">220</a>     Path bottomDir = HStore.getStoreHomedir(<strong class="jxr_keyword">this</strong>.testDir, <span class="jxr_string">"2"</span>,
+<a class="jxr_linenumber" name="221" href="#221">221</a>       Bytes.toBytes(f.getPath().getParent().getName()));
+<a class="jxr_linenumber" name="222" href="#222">222</a>     <strong class="jxr_keyword">if</strong> (<strong class="jxr_keyword">this</strong>.fs.exists(bottomDir)) {
+<a class="jxr_linenumber" name="223" href="#223">223</a>       <strong class="jxr_keyword">this</strong>.fs.delete(bottomDir, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="224" href="#224">224</a>     }
+<a class="jxr_linenumber" name="225" href="#225">225</a>     Path bottomPath = StoreFile.split(<strong class="jxr_keyword">this</strong>.fs, bottomDir, f, midRow, false);
+<a class="jxr_linenumber" name="226" href="#226">226</a>     <em class="jxr_comment">// Make readers on top and bottom.</em>
+<a class="jxr_linenumber" name="227" href="#227">227</a>     StoreFile.Reader top =
+<a class="jxr_linenumber" name="228" href="#228">228</a>         <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, topPath, conf, cacheConf, BloomType.NONE,
+<a class="jxr_linenumber" name="229" href="#229">229</a>             NoOpDataBlockEncoder.INSTANCE).createReader();
+<a class="jxr_linenumber" name="230" href="#230">230</a>     StoreFile.Reader bottom = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, bottomPath,
+<a class="jxr_linenumber" name="231" href="#231">231</a>         conf, cacheConf, BloomType.NONE,
+<a class="jxr_linenumber" name="232" href="#232">232</a>         NoOpDataBlockEncoder.INSTANCE).createReader();
+<a class="jxr_linenumber" name="233" href="#233">233</a>     ByteBuffer previous = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="234" href="#234">234</a>     LOG.info(<span class="jxr_string">"Midkey: "</span> + midKV.toString());
+<a class="jxr_linenumber" name="235" href="#235">235</a>     ByteBuffer bbMidkeyBytes = ByteBuffer.wrap(midkey);
+<a class="jxr_linenumber" name="236" href="#236">236</a>     <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="237" href="#237">237</a>       <em class="jxr_comment">// Now make two HalfMapFiles and assert they can read the full backing</em>
+<a class="jxr_linenumber" name="238" href="#238">238</a>       <em class="jxr_comment">// file, one from the top and the other from the bottom.</em>
+<a class="jxr_linenumber" name="239" href="#239">239</a>       <em class="jxr_comment">// Test bottom half first.</em>
+<a class="jxr_linenumber" name="240" href="#240">240</a>       <em class="jxr_comment">// Now test reading from the top.</em>
+<a class="jxr_linenumber" name="241" href="#241">241</a>       <strong class="jxr_keyword">boolean</strong> first = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="242" href="#242">242</a>       ByteBuffer key = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="243" href="#243">243</a>       HFileScanner topScanner = top.getScanner(false, false);
+<a class="jxr_linenumber" name="244" href="#244">244</a>       <strong class="jxr_keyword">while</strong> ((!topScanner.isSeeked() &amp;&amp; topScanner.seekTo()) ||
+<a class="jxr_linenumber" name="245" href="#245">245</a>           (topScanner.isSeeked() &amp;&amp; topScanner.next())) {
+<a class="jxr_linenumber" name="246" href="#246">246</a>         key = topScanner.getKey();
+<a class="jxr_linenumber" name="247" href="#247">247</a> 
+<a class="jxr_linenumber" name="248" href="#248">248</a>         <strong class="jxr_keyword">if</strong> (topScanner.getReader().getComparator().compare(key.array(),
+<a class="jxr_linenumber" name="249" href="#249">249</a>           key.arrayOffset(), key.limit(), midkey, 0, midkey.length) &lt; 0) {
+<a class="jxr_linenumber" name="250" href="#250">250</a>           fail(<span class="jxr_string">"key="</span> + Bytes.toStringBinary(key) + <span class="jxr_string">" &lt; midkey="</span> +
+<a class="jxr_linenumber" name="251" href="#251">251</a>               Bytes.toStringBinary(midkey));
+<a class="jxr_linenumber" name="252" href="#252">252</a>         }
+<a class="jxr_linenumber" name="253" href="#253">253</a>         <strong class="jxr_keyword">if</strong> (first) {
+<a class="jxr_linenumber" name="254" href="#254">254</a>           first = false;
+<a class="jxr_linenumber" name="255" href="#255">255</a>           LOG.info(<span class="jxr_string">"First in top: "</span> + Bytes.toString(Bytes.toBytes(key)));
+<a class="jxr_linenumber" name="256" href="#256">256</a>         }
+<a class="jxr_linenumber" name="257" href="#257">257</a>       }
+<a class="jxr_linenumber" name="258" href="#258">258</a>       LOG.info(<span class="jxr_string">"Last in top: "</span> + Bytes.toString(Bytes.toBytes(key)));
+<a class="jxr_linenumber" name="259" href="#259">259</a> 
+<a class="jxr_linenumber" name="260" href="#260">260</a>       first = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="261" href="#261">261</a>       HFileScanner bottomScanner = bottom.getScanner(false, false);
+<a class="jxr_linenumber" name="262" href="#262">262</a>       <strong class="jxr_keyword">while</strong> ((!bottomScanner.isSeeked() &amp;&amp; bottomScanner.seekTo()) ||
+<a class="jxr_linenumber" name="263" href="#263">263</a>           bottomScanner.next()) {
+<a class="jxr_linenumber" name="264" href="#264">264</a>         previous = bottomScanner.getKey();
+<a class="jxr_linenumber" name="265" href="#265">265</a>         key = bottomScanner.getKey();
+<a class="jxr_linenumber" name="266" href="#266">266</a>         <strong class="jxr_keyword">if</strong> (first) {
+<a class="jxr_linenumber" name="267" href="#267">267</a>           first = false;
+<a class="jxr_linenumber" name="268" href="#268">268</a>           LOG.info(<span class="jxr_string">"First in bottom: "</span> +
+<a class="jxr_linenumber" name="269" href="#269">269</a>             Bytes.toString(Bytes.toBytes(previous)));
+<a class="jxr_linenumber" name="270" href="#270">270</a>         }
+<a class="jxr_linenumber" name="271" href="#271">271</a>         assertTrue(key.compareTo(bbMidkeyBytes) &lt; 0);
+<a class="jxr_linenumber" name="272" href="#272">272</a>       }
+<a class="jxr_linenumber" name="273" href="#273">273</a>       <strong class="jxr_keyword">if</strong> (previous != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="274" href="#274">274</a>         LOG.info(<span class="jxr_string">"Last in bottom: "</span> + Bytes.toString(Bytes.toBytes(previous)));
+<a class="jxr_linenumber" name="275" href="#275">275</a>       }
+<a class="jxr_linenumber" name="276" href="#276">276</a>       <em class="jxr_comment">// Remove references.</em>
+<a class="jxr_linenumber" name="277" href="#277">277</a>       <strong class="jxr_keyword">this</strong>.fs.delete(topPath, false);
+<a class="jxr_linenumber" name="278" href="#278">278</a>       <strong class="jxr_keyword">this</strong>.fs.delete(bottomPath, false);
+<a class="jxr_linenumber" name="279" href="#279">279</a> 
+<a class="jxr_linenumber" name="280" href="#280">280</a>       <em class="jxr_comment">// Next test using a midkey that does not exist in the file.</em>
+<a class="jxr_linenumber" name="281" href="#281">281</a>       <em class="jxr_comment">// First, do a key that is &lt; than first key. Ensure splits behave</em>
+<a class="jxr_linenumber" name="282" href="#282">282</a>       <em class="jxr_comment">// properly.</em>
+<a class="jxr_linenumber" name="283" href="#283">283</a>       byte [] badmidkey = Bytes.toBytes(<span class="jxr_string">"  ."</span>);
+<a class="jxr_linenumber" name="284" href="#284">284</a>       topPath = StoreFile.split(<strong class="jxr_keyword">this</strong>.fs, topDir, f, badmidkey, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="285" href="#285">285</a>       bottomPath = StoreFile.split(<strong class="jxr_keyword">this</strong>.fs, bottomDir, f, badmidkey, false);
+<a class="jxr_linenumber" name="286" href="#286">286</a>       top = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, topPath, conf, cacheConf,
+<a class="jxr_linenumber" name="287" href="#287">287</a>           StoreFile.BloomType.NONE,
+<a class="jxr_linenumber" name="288" href="#288">288</a>           NoOpDataBlockEncoder.INSTANCE).createReader();
+<a class="jxr_linenumber" name="289" href="#289">289</a>       bottom = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, bottomPath, conf, cacheConf,
+<a class="jxr_linenumber" name="290" href="#290">290</a>           StoreFile.BloomType.NONE,
+<a class="jxr_linenumber" name="291" href="#291">291</a>           NoOpDataBlockEncoder.INSTANCE).createReader();
+<a class="jxr_linenumber" name="292" href="#292">292</a>       bottomScanner = bottom.getScanner(false, false);
+<a class="jxr_linenumber" name="293" href="#293">293</a>       <strong class="jxr_keyword">int</strong> count = 0;
+<a class="jxr_linenumber" name="294" href="#294">294</a>       <strong class="jxr_keyword">while</strong> ((!bottomScanner.isSeeked() &amp;&amp; bottomScanner.seekTo()) ||
+<a class="jxr_linenumber" name="295" href="#295">295</a>           bottomScanner.next()) {
+<a class="jxr_linenumber" name="296" href="#296">296</a>         count++;
+<a class="jxr_linenumber" name="297" href="#297">297</a>       }
+<a class="jxr_linenumber" name="298" href="#298">298</a>       <em class="jxr_comment">// When badkey is &lt; than the bottom, should return no values.</em>
+<a class="jxr_linenumber" name="299" href="#299">299</a>       assertTrue(count == 0);
+<a class="jxr_linenumber" name="300" href="#300">300</a>       <em class="jxr_comment">// Now read from the top.</em>
+<a class="jxr_linenumber" name="301" href="#301">301</a>       first = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="302" href="#302">302</a>       topScanner = top.getScanner(false, false);
+<a class="jxr_linenumber" name="303" href="#303">303</a>       <strong class="jxr_keyword">while</strong> ((!topScanner.isSeeked() &amp;&amp; topScanner.seekTo()) ||
+<a class="jxr_linenumber" name="304" href="#304">304</a>           topScanner.next()) {
+<a class="jxr_linenumber" name="305" href="#305">305</a>         key = topScanner.getKey();
+<a class="jxr_linenumber" name="306" href="#306">306</a>         assertTrue(topScanner.getReader().getComparator().compare(key.array(),
+<a class="jxr_linenumber" name="307" href="#307">307</a>           key.arrayOffset(), key.limit(), badmidkey, 0, badmidkey.length) &gt;= 0);
+<a class="jxr_linenumber" name="308" href="#308">308</a>         <strong class="jxr_keyword">if</strong> (first) {
+<a class="jxr_linenumber" name="309" href="#309">309</a>           first = false;
+<a class="jxr_linenumber" name="310" href="#310">310</a>           KeyValue keyKV = KeyValue.createKeyValueFromKey(key);
+<a class="jxr_linenumber" name="311" href="#311">311</a>           LOG.info(<span class="jxr_string">"First top when key &lt; bottom: "</span> + keyKV);
+<a class="jxr_linenumber" name="312" href="#312">312</a>           String tmp = Bytes.toString(keyKV.getRow());
+<a class="jxr_linenumber" name="313" href="#313">313</a>           <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; tmp.length(); i++) {
+<a class="jxr_linenumber" name="314" href="#314">314</a>             assertTrue(tmp.charAt(i) == 'a');
+<a class="jxr_linenumber" name="315" href="#315">315</a>           }
+<a class="jxr_linenumber" name="316" href="#316">316</a>         }
+<a class="jxr_linenumber" name="317" href="#317">317</a>       }
+<a class="jxr_linenumber" name="318" href="#318">318</a>       KeyValue keyKV = KeyValue.createKeyValueFromKey(key);
+<a class="jxr_linenumber" name="319" href="#319">319</a>       LOG.info(<span class="jxr_string">"Last top when key &lt; bottom: "</span> + keyKV);
+<a class="jxr_linenumber" name="320" href="#320">320</a>       String tmp = Bytes.toString(keyKV.getRow());
+<a class="jxr_linenumber" name="321" href="#321">321</a>       <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; tmp.length(); i++) {
+<a class="jxr_linenumber" name="322" href="#322">322</a>         assertTrue(tmp.charAt(i) == 'z');
+<a class="jxr_linenumber" name="323" href="#323">323</a>       }
+<a class="jxr_linenumber" name="324" href="#324">324</a>       <em class="jxr_comment">// Remove references.</em>
+<a class="jxr_linenumber" name="325" href="#325">325</a>       <strong class="jxr_keyword">this</strong>.fs.delete(topPath, false);
+<a class="jxr_linenumber" name="326" href="#326">326</a>       <strong class="jxr_keyword">this</strong>.fs.delete(bottomPath, false);
+<a class="jxr_linenumber" name="327" href="#327">327</a> 
+<a class="jxr_linenumber" name="328" href="#328">328</a>       <em class="jxr_comment">// Test when badkey is &gt; than last key in file ('||' &gt; 'zz').</em>
+<a class="jxr_linenumber" name="329" href="#329">329</a>       badmidkey = Bytes.toBytes(<span class="jxr_string">"|||"</span>);
+<a class="jxr_linenumber" name="330" href="#330">330</a>       topPath = StoreFile.split(<strong class="jxr_keyword">this</strong>.fs, topDir, f, badmidkey, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="331" href="#331">331</a>       bottomPath = StoreFile.split(<strong class="jxr_keyword">this</strong>.fs, bottomDir, f, badmidkey, false);
+<a class="jxr_linenumber" name="332" href="#332">332</a>       top = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, topPath, conf, cacheConf,
+<a class="jxr_linenumber" name="333" href="#333">333</a>           StoreFile.BloomType.NONE,
+<a class="jxr_linenumber" name="334" href="#334">334</a>           NoOpDataBlockEncoder.INSTANCE).createReader();
+<a class="jxr_linenumber" name="335" href="#335">335</a>       bottom = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, bottomPath, conf, cacheConf,
+<a class="jxr_linenumber" name="336" href="#336">336</a>           StoreFile.BloomType.NONE,
+<a class="jxr_linenumber" name="337" href="#337">337</a>           NoOpDataBlockEncoder.INSTANCE).createReader();
+<a class="jxr_linenumber" name="338" href="#338">338</a>       first = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="339" href="#339">339</a>       bottomScanner = bottom.getScanner(false, false);
+<a class="jxr_linenumber" name="340" href="#340">340</a>       <strong class="jxr_keyword">while</strong> ((!bottomScanner.isSeeked() &amp;&amp; bottomScanner.seekTo()) ||
+<a class="jxr_linenumber" name="341" href="#341">341</a>           bottomScanner.next()) {
+<a class="jxr_linenumber" name="342" href="#342">342</a>         key = bottomScanner.getKey();
+<a class="jxr_linenumber" name="343" href="#343">343</a>         <strong class="jxr_keyword">if</strong> (first) {
+<a class="jxr_linenumber" name="344" href="#344">344</a>           first = false;
+<a class="jxr_linenumber" name="345" href="#345">345</a>           keyKV = KeyValue.createKeyValueFromKey(key);
+<a class="jxr_linenumber" name="346" href="#346">346</a>           LOG.info(<span class="jxr_string">"First bottom when key &gt; top: "</span> + keyKV);
+<a class="jxr_linenumber" name="347" href="#347">347</a>           tmp = Bytes.toString(keyKV.getRow());
+<a class="jxr_linenumber" name="348" href="#348">348</a>           <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; tmp.length(); i++) {
+<a class="jxr_linenumber" name="349" href="#349">349</a>             assertTrue(tmp.charAt(i) == 'a');
+<a class="jxr_linenumber" name="350" href="#350">350</a>           }
+<a class="jxr_linenumber" name="351" href="#351">351</a>         }
+<a class="jxr_linenumber" name="352" href="#352">352</a>       }
+<a class="jxr_linenumber" name="353" href="#353">353</a>       keyKV = KeyValue.createKeyValueFromKey(key);
+<a class="jxr_linenumber" name="354" href="#354">354</a>       LOG.info(<span class="jxr_string">"Last bottom when key &gt; top: "</span> + keyKV);
+<a class="jxr_linenumber" name="355" href="#355">355</a>       <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; tmp.length(); i++) {
+<a class="jxr_linenumber" name="356" href="#356">356</a>         assertTrue(Bytes.toString(keyKV.getRow()).charAt(i) == 'z');
+<a class="jxr_linenumber" name="357" href="#357">357</a>       }
+<a class="jxr_linenumber" name="358" href="#358">358</a>       count = 0;
+<a class="jxr_linenumber" name="359" href="#359">359</a>       topScanner = top.getScanner(false, false);
+<a class="jxr_linenumber" name="360" href="#360">360</a>       <strong class="jxr_keyword">while</strong> ((!topScanner.isSeeked() &amp;&amp; topScanner.seekTo()) ||
+<a class="jxr_linenumber" name="361" href="#361">361</a>           (topScanner.isSeeked() &amp;&amp; topScanner.next())) {
+<a class="jxr_linenumber" name="362" href="#362">362</a>         count++;
+<a class="jxr_linenumber" name="363" href="#363">363</a>       }
+<a class="jxr_linenumber" name="364" href="#364">364</a>       <em class="jxr_comment">// When badkey is &lt; than the bottom, should return no values.</em>
+<a class="jxr_linenumber" name="365" href="#365">365</a>       assertTrue(count == 0);
+<a class="jxr_linenumber" name="366" href="#366">366</a>     } <strong class="jxr_keyword">finally</strong> {
+<a class="jxr_linenumber" name="367" href="#367">367</a>       <strong class="jxr_keyword">if</strong> (top != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="368" href="#368">368</a>         top.close(<strong class="jxr_keyword">true</strong>); <em class="jxr_comment">// evict since we are about to delete the file</em>
+<a class="jxr_linenumber" name="369" href="#369">369</a>       }
+<a class="jxr_linenumber" name="370" href="#370">370</a>       <strong class="jxr_keyword">if</strong> (bottom != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="371" href="#371">371</a>         bottom.close(<strong class="jxr_keyword">true</strong>); <em class="jxr_comment">// evict since we are about to delete the file</em>
+<a class="jxr_linenumber" name="372" href="#372">372</a>       }
+<a class="jxr_linenumber" name="373" href="#373">373</a>       fs.delete(f.getPath(), <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="374" href="#374">374</a>     }
+<a class="jxr_linenumber" name="375" href="#375">375</a>   }
+<a class="jxr_linenumber" name="376" href="#376">376</a> 
+<a class="jxr_linenumber" name="377" href="#377">377</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String localFormatter = <span class="jxr_string">"%010d"</span>;
+<a class="jxr_linenumber" name="378" href="#378">378</a> 
+<a class="jxr_linenumber" name="379" href="#379">379</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> bloomWriteRead(StoreFile.Writer writer, FileSystem fs)
+<a class="jxr_linenumber" name="380" href="#380">380</a>   <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="381" href="#381">381</a>     <strong class="jxr_keyword">float</strong> err = conf.getFloat(
+<a class="jxr_linenumber" name="382" href="#382">382</a>         BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, 0);
+<a class="jxr_linenumber" name="383" href="#383">383</a>     Path f = writer.getPath();
+<a class="jxr_linenumber" name="384" href="#384">384</a>     <strong class="jxr_keyword">long</strong> now = System.currentTimeMillis();
+<a class="jxr_linenumber" name="385" href="#385">385</a>     <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; 2000; i += 2) {
+<a class="jxr_linenumber" name="386" href="#386">386</a>       String row = String.format(localFormatter, i);
+<a class="jxr_linenumber" name="387" href="#387">387</a>       KeyValue kv = <strong class="jxr_keyword">new</strong> KeyValue(row.getBytes(), <span class="jxr_string">"family"</span>.getBytes(),
+<a class="jxr_linenumber" name="388" href="#388">388</a>         <span class="jxr_string">"col"</span>.getBytes(), now, <span class="jxr_string">"value"</span>.getBytes());
+<a class="jxr_linenumber" name="389" href="#389">389</a>       writer.append(kv);
+<a class="jxr_linenumber" name="390" href="#390">390</a>     }
+<a class="jxr_linenumber" name="391" href="#391">391</a>     writer.close();
+<a class="jxr_linenumber" name="392" href="#392">392</a> 
+<a class="jxr_linenumber" name="393" href="#393">393</a>     StoreFile.Reader reader = <strong class="jxr_keyword">new</strong> StoreFile.Reader(fs, f, cacheConf,
+<a class="jxr_linenumber" name="394" href="#394">394</a>         DataBlockEncoding.NONE);
+<a class="jxr_linenumber" name="395" href="#395">395</a>     reader.loadFileInfo();
+<a class="jxr_linenumber" name="396" href="#396">396</a>     reader.loadBloomfilter();
+<a class="jxr_linenumber" name="397" href="#397">397</a>     StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
+<a class="jxr_linenumber" name="398" href="#398">398</a> 
+<a class="jxr_linenumber" name="399" href="#399">399</a>     <em class="jxr_comment">// check false positives rate</em>
+<a class="jxr_linenumber" name="400" href="#400">400</a>     <strong class="jxr_keyword">int</strong> falsePos = 0;
+<a class="jxr_linenumber" name="401" href="#401">401</a>     <strong class="jxr_keyword">int</strong> falseNeg = 0;
+<a class="jxr_linenumber" name="402" href="#402">402</a>     <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; 2000; i++) {
+<a class="jxr_linenumber" name="403" href="#403">403</a>       String row = String.format(localFormatter, i);
+<a class="jxr_linenumber" name="404" href="#404">404</a>       TreeSet&lt;byte[]&gt; columns = <strong class="jxr_keyword">new</strong> TreeSet&lt;byte[]&gt;(Bytes.BYTES_COMPARATOR);
+<a class="jxr_linenumber" name="405" href="#405">405</a>       columns.add(<span class="jxr_string">"family:col"</span>.getBytes());
+<a class="jxr_linenumber" name="406" href="#406">406</a> 
+<a class="jxr_linenumber" name="407" href="#407">407</a>       Scan scan = <strong class="jxr_keyword">new</strong> Scan(row.getBytes(),row.getBytes());
+<a class="jxr_linenumber" name="408" href="#408">408</a>       scan.addColumn(<span class="jxr_string">"family"</span>.getBytes(), <span class="jxr_string">"family:col"</span>.getBytes());
+<a class="jxr_linenumber" name="409" href="#409">409</a>       <strong class="jxr_keyword">boolean</strong> exists = scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
+<a class="jxr_linenumber" name="410" href="#410">410</a>       <strong class="jxr_keyword">if</strong> (i % 2 == 0) {
+<a class="jxr_linenumber" name="411" href="#411">411</a>         <strong class="jxr_keyword">if</strong> (!exists) falseNeg++;
+<a class="jxr_linenumber" name="412" href="#412">412</a>       } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="413" href="#413">413</a>         <strong class="jxr_keyword">if</strong> (exists) falsePos++;
+<a class="jxr_linenumber" name="414" href="#414">414</a>       }
+<a class="jxr_linenumber" name="415" href="#415">415</a>     }
+<a class="jxr_linenumber" name="416" href="#416">416</a>     reader.close(<strong class="jxr_keyword">true</strong>); <em class="jxr_comment">// evict because we are about to delete the file</em>
+<a class="jxr_linenumber" name="417" href="#417">417</a>     fs.delete(f, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="418" href="#418">418</a>     assertEquals(<span class="jxr_string">"False negatives: "</span> + falseNeg, 0, falseNeg);
+<a class="jxr_linenumber" name="419" href="#419">419</a>     <strong class="jxr_keyword">int</strong> maxFalsePos = (<strong class="jxr_keyword">int</strong>) (2 * 2000 * err);
+<a class="jxr_linenumber" name="420" href="#420">420</a>     assertTrue(<span class="jxr_string">"Too many false positives: "</span> + falsePos + <span class="jxr_string">" (err="</span> + err
+<a class="jxr_linenumber" name="421" href="#421">421</a>         + <span class="jxr_string">", expected no more than "</span> + maxFalsePos + <span class="jxr_string">")"</span>,
+<a class="jxr_linenumber" name="422" href="#422">422</a>         falsePos &lt;= maxFalsePos);
+<a class="jxr_linenumber" name="423" href="#423">423</a>   }
+<a class="jxr_linenumber" name="424" href="#424">424</a> 
+<a class="jxr_linenumber" name="425" href="#425">425</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testBloomFilter() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="426" href="#426">426</a>     FileSystem fs = FileSystem.getLocal(conf);
+<a class="jxr_linenumber" name="427" href="#427">427</a>     conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE,
+<a class="jxr_linenumber" name="428" href="#428">428</a>         (<strong class="jxr_keyword">float</strong>) 0.01);
+<a class="jxr_linenumber" name="429" href="#429">429</a>     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="430" href="#430">430</a> 
+<a class="jxr_linenumber" name="431" href="#431">431</a>     <em class="jxr_comment">// write the file</em>
+<a class="jxr_linenumber" name="432" href="#432">432</a>     Path f = <strong class="jxr_keyword">new</strong> Path(ROOT_DIR, getName());
+<a class="jxr_linenumber" name="433" href="#433">433</a>     StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf, fs,
+<a class="jxr_linenumber" name="434" href="#434">434</a>         StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+<a class="jxr_linenumber" name="435" href="#435">435</a>             .withFilePath(f)
+<a class="jxr_linenumber" name="436" href="#436">436</a>             .withBloomType(StoreFile.BloomType.ROW)
+<a class="jxr_linenumber" name="437" href="#437">437</a>             .withMaxKeyCount(2000)
+<a class="jxr_linenumber" name="438" href="#438">438</a>             .withChecksumType(CKTYPE)
+<a class="jxr_linenumber" name="439" href="#439">439</a>             .withBytesPerChecksum(CKBYTES)
+<a class="jxr_linenumber" name="440" href="#440">440</a>             .build();
+<a class="jxr_linenumber" name="441" href="#441">441</a>     bloomWriteRead(writer, fs);
+<a class="jxr_linenumber" name="442" href="#442">442</a>   }
+<a class="jxr_linenumber" name="443" href="#443">443</a> 
+<a class="jxr_linenumber" name="444" href="#444">444</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testDeleteFamilyBloomFilter() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="445" href="#445">445</a>     FileSystem fs = FileSystem.getLocal(conf);
+<a class="jxr_linenumber" name="446" href="#446">446</a>     conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE,
+<a class="jxr_linenumber" name="447" href="#447">447</a>         (<strong class="jxr_keyword">float</strong>) 0.01);
+<a class="jxr_linenumber" name="448" href="#448">448</a>     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="449" href="#449">449</a>     <strong class="jxr_keyword">float</strong> err = conf.getFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE,
+<a class="jxr_linenumber" name="450" href="#450">450</a>         0);
+<a class="jxr_linenumber" name="451" href="#451">451</a> 
+<a class="jxr_linenumber" name="452" href="#452">452</a>     <em class="jxr_comment">// write the file</em>
+<a class="jxr_linenumber" name="453" href="#453">453</a>     Path f = <strong class="jxr_keyword">new</strong> Path(ROOT_DIR, getName());
+<a class="jxr_linenumber" name="454" href="#454">454</a> 
+<a class="jxr_linenumber" name="455" href="#455">455</a>     StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf,
+<a class="jxr_linenumber" name="456" href="#456">456</a>         fs, StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+<a class="jxr_linenumber" name="457" href="#457">457</a>             .withFilePath(f)
+<a class="jxr_linenumber" name="458" href="#458">458</a>             .withMaxKeyCount(2000)
+<a class="jxr_linenumber" name="459" href="#459">459</a>             .withChecksumType(CKTYPE)
+<a class="jxr_linenumber" name="460" href="#460">460</a>             .withBytesPerChecksum(CKBYTES)
+<a class="jxr_linenumber" name="461" href="#461">461</a>             .build();
+<a class="jxr_linenumber" name="462" href="#462">462</a> 
+<a class="jxr_linenumber" name="463" href="#463">463</a>     <em class="jxr_comment">// add delete family</em>
+<a class="jxr_linenumber" name="464" href="#464">464</a>     <strong class="jxr_keyword">long</strong> now = System.currentTimeMillis();
+<a class="jxr_linenumber" name="465" href="#465">465</a>     <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; 2000; i += 2) {
+<a class="jxr_linenumber" name="466" href="#466">466</a>       String row = String.format(localFormatter, i);
+<a class="jxr_linenumber" name="467" href="#467">467</a>       KeyValue kv = <strong class="jxr_keyword">new</strong> KeyValue(row.getBytes(), <span class="jxr_string">"family"</span>.getBytes(),
+<a class="jxr_linenumber" name="468" href="#468">468</a>           <span class="jxr_string">"col"</span>.getBytes(), now, KeyValue.Type.DeleteFamily, <span class="jxr_string">"value"</span>.getBytes());
+<a class="jxr_linenumber" name="469" href="#469">469</a>       writer.append(kv);
+<a class="jxr_linenumber" name="470" href="#470">470</a>     }
+<a class="jxr_linenumber" name="471" href="#471">471</a>     writer.close();
+<a class="jxr_linenumber" name="472" href="#472">472</a> 
+<a class="jxr_linenumber" name="473" href="#473">473</a>     StoreFile.Reader reader = <strong class="jxr_keyword">new</strong> StoreFile.Reader(fs, f, cacheConf, DataBlockEncoding.NONE);
+<a class="jxr_linenumber" name="474" href="#474">474</a>     reader.loadFileInfo();
+<a class="jxr_linenumber" name="475" href="#475">475</a>     reader.loadBloomfilter();
+<a class="jxr_linenumber" name="476" href="#476">476</a> 
+<a class="jxr_linenumber" name="477" href="#477">477</a>     <em class="jxr_comment">// check false positives rate</em>
+<a class="jxr_linenumber" name="478" href="#478">478</a>     <strong class="jxr_keyword">int</strong> falsePos = 0;
+<a class="jxr_linenumber" name="479" href="#479">479</a>     <strong class="jxr_keyword">int</strong> falseNeg = 0;
+<a class="jxr_linenumber" name="480" href="#480">480</a>     <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; 2000; i++) {
+<a class="jxr_linenumber" name="481" href="#481">481</a>       String row = String.format(localFormatter, i);
+<a class="jxr_linenumber" name="482" href="#482">482</a>       byte[] rowKey = Bytes.toBytes(row);
+<a class="jxr_linenumber" name="483" href="#483">483</a>       <strong class="jxr_keyword">boolean</strong> exists = reader.passesDeleteFamilyBloomFilter(rowKey, 0,
+<a class="jxr_linenumber" name="484" href="#484">484</a>           rowKey.length);
+<a class="jxr_linenumber" name="485" href="#485">485</a>       <strong class="jxr_keyword">if</strong> (i % 2 == 0) {
+<a class="jxr_linenumber" name="486" href="#486">486</a>         <strong class="jxr_keyword">if</strong> (!exists)
+<a class="jxr_linenumber" name="487" href="#487">487</a>           falseNeg++;
+<a class="jxr_linenumber" name="488" href="#488">488</a>       } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="489" href="#489">489</a>         <strong class="jxr_keyword">if</strong> (exists)
+<a class="jxr_linenumber" name="490" href="#490">490</a>           falsePos++;
+<a class="jxr_linenumber" name="491" href="#491">491</a>       }
+<a class="jxr_linenumber" name="492" href="#492">492</a>     }
+<a class="jxr_linenumber" name="493" href="#493">493</a>     assertEquals(1000, reader.getDeleteFamilyCnt());
+<a class="jxr_linenumber" name="494" href="#494">494</a>     reader.close(<strong class="jxr_keyword">true</strong>); <em class="jxr_comment">// evict because we are about to delete the file</em>
+<a class="jxr_linenumber" name="495" href="#495">495</a>     fs.delete(f, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="496" href="#496">496</a>     assertEquals(<span class="jxr_string">"False negatives: "</span> + falseNeg, 0, falseNeg);
+<a class="jxr_linenumber" name="497" href="#497">497</a>     <strong class="jxr_keyword">int</strong> maxFalsePos = (<strong class="jxr_keyword">int</strong>) (2 * 2000 * err);
+<a class="jxr_linenumber" name="498" href="#498">498</a>     assertTrue(<span class="jxr_string">"Too many false positives: "</span> + falsePos + <span class="jxr_string">" (err="</span> + err
+<a class="jxr_linenumber" name="499" href="#499">499</a>         + <span class="jxr_string">", expected no more than "</span> + maxFalsePos, falsePos &lt;= maxFalsePos);
+<a class="jxr_linenumber" name="500" href="#500">500</a>   }
+<a class="jxr_linenumber" name="501" href="#501">501</a> 
+<a class="jxr_linenumber" name="502" href="#502">502</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testBloomTypes() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="503" href="#503">503</a>     <strong class="jxr_keyword">float</strong> err = (<strong class="jxr_keyword">float</strong>) 0.01;
+<a class="jxr_linenumber" name="504" href="#504">504</a>     FileSystem fs = FileSystem.getLocal(conf);
+<a class="jxr_linenumber" name="505" href="#505">505</a>     conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, err);
+<a class="jxr_linenumber" name="506" href="#506">506</a>     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="507" href="#507">507</a> 
+<a class="jxr_linenumber" name="508" href="#508">508</a>     <strong class="jxr_keyword">int</strong> rowCount = 50;
+<a class="jxr_linenumber" name="509" href="#509">509</a>     <strong class="jxr_keyword">int</strong> colCount = 10;
+<a class="jxr_linenumber" name="510" href="#510">510</a>     <strong class="jxr_keyword">int</strong> versions = 2;
+<a class="jxr_linenumber" name="511" href="#511">511</a> 
+<a class="jxr_linenumber" name="512" href="#512">512</a>     <em class="jxr_comment">// run once using columns and once using rows</em>
+<a class="jxr_linenumber" name="513" href="#513">513</a>     StoreFile.BloomType[] bt =
+<a class="jxr_linenumber" name="514" href="#514">514</a>       {StoreFile.BloomType.ROWCOL, StoreFile.BloomType.ROW};
+<a class="jxr_linenumber" name="515" href="#515">515</a>     <strong class="jxr_keyword">int</strong>[] expKeys    = {rowCount*colCount, rowCount};
+<a class="jxr_linenumber" name="516" href="#516">516</a>     <em class="jxr_comment">// below line deserves commentary.  it is expected bloom false positives</em>
+<a class="jxr_linenumber" name="517" href="#517">517</a>     <em class="jxr_comment">//  column = rowCount*2*colCount inserts</em>
+<a class="jxr_linenumber" name="518" href="#518">518</a>     <em class="jxr_comment">//  row-level = only rowCount*2 inserts, but failures will be magnified by</em>
+<a class="jxr_linenumber" name="519" href="#519">519</a>     <em class="jxr_comment">//              2nd for loop for every column (2*colCount)</em>
+<a class="jxr_linenumber" name="520" href="#520">520</a>     <strong class="jxr_keyword">float</strong>[] expErr   = {2*rowCount*colCount*err, 2*rowCount*2*colCount*err};
+<a class="jxr_linenumber" name="521" href="#521">521</a> 
+<a class="jxr_linenumber" name="522" href="#522">522</a>     <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> x : <strong class="jxr_keyword">new</strong> <strong class="jxr_keyword">int</strong>[]{0,1}) {
+<a class="jxr_linenumber" name="523" href="#523">523</a>       <em class="jxr_comment">// write the file</em>
+<a class="jxr_linenumber" name="524" href="#524">524</a>       Path f = <strong class="jxr_keyword">new</strong> Path(ROOT_DIR, getName() + x);
+<a class="jxr_linenumber" name="525" href="#525">525</a>       StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf,
+<a class="jxr_linenumber" name="526" href="#526">526</a>           fs, StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+<a class="jxr_linenumber" name="527" href="#527">527</a>               .withFilePath(f)
+<a class="jxr_linenumber" name="528" href="#528">528</a>               .withBloomType(bt[x])
+<a class="jxr_linenumber" name="529" href="#529">529</a>               .withMaxKeyCount(expKeys[x])
+<a class="jxr_linenumber" name="530" href="#530">530</a>               .withChecksumType(CKTYPE)
+<a class="jxr_linenumber" name="531" href="#531">531</a>               .withBytesPerChecksum(CKBYTES)
+<a class="jxr_linenumber" name="532" href="#532">532</a>               .build();
+<a class="jxr_linenumber" name="533" href="#533">533</a> 
+<a class="jxr_linenumber" name="534" href="#534">534</a>       <strong class="jxr_keyword">long</strong> now = System.currentTimeMillis();
+<a class="jxr_linenumber" name="535" href="#535">535</a>       <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; rowCount*2; i += 2) { <em class="jxr_comment">// rows</em>
+<a class="jxr_linenumber" name="536" href="#536">536</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> j = 0; j &lt; colCount*2; j += 2) {   <em class="jxr_comment">// column qualifiers</em>
+<a class="jxr_linenumber" name="537" href="#537">537</a>           String row = String.format(localFormatter, i);
+<a class="jxr_linenumber" name="538" href="#538">538</a>           String col = String.format(localFormatter, j);
+<a class="jxr_linenumber" name="539" href="#539">539</a>           <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> k= 0; k &lt; versions; ++k) { <em class="jxr_comment">// versions</em>
+<a class="jxr_linenumber" name="540" href="#540">540</a>             KeyValue kv = <strong class="jxr_keyword">new</strong> KeyValue(row.getBytes(),
+<a class="jxr_linenumber" name="541" href="#541">541</a>               <span class="jxr_string">"family"</span>.getBytes(), (<span class="jxr_string">"col"</span> + col).getBytes(),
+<a class="jxr_linenumber" name="542" href="#542">542</a>                 now-k, Bytes.toBytes((<strong class="jxr_keyword">long</strong>)-1));
+<a class="jxr_linenumber" name="543" href="#543">543</a>             writer.append(kv);
+<a class="jxr_linenumber" name="544" href="#544">544</a>           }
+<a class="jxr_linenumber" name="545" href="#545">545</a>         }
+<a class="jxr_linenumber" name="546" href="#546">546</a>       }
+<a class="jxr_linenumber" name="547" href="#547">547</a>       writer.close();
+<a class="jxr_linenumber" name="548" href="#548">548</a> 
+<a class="jxr_linenumber" name="549" href="#549">549</a>       StoreFile.Reader reader = <strong class="jxr_keyword">new</strong> StoreFile.Reader(fs, f, cacheConf,
+<a class="jxr_linenumber" name="550" href="#550">550</a>           DataBlockEncoding.NONE);
+<a class="jxr_linenumber" name="551" href="#551">551</a>       reader.loadFileInfo();
+<a class="jxr_linenumber" name="552" href="#552">552</a>       reader.loadBloomfilter();
+<a class="jxr_linenumber" name="553" href="#553">553</a>       StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
+<a class="jxr_linenumber" name="554" href="#554">554</a>       assertEquals(expKeys[x], reader.generalBloomFilter.getKeyCount());
+<a class="jxr_linenumber" name="555" href="#555">555</a> 
+<a class="jxr_linenumber" name="556" href="#556">556</a>       <em class="jxr_comment">// check false positives rate</em>
+<a class="jxr_linenumber" name="557" href="#557">557</a>       <strong class="jxr_keyword">int</strong> falsePos = 0;
+<a class="jxr_linenumber" name="558" href="#558">558</a>       <strong class="jxr_keyword">int</strong> falseNeg = 0;
+<a class="jxr_linenumber" name="559" href="#559">559</a>       <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; rowCount*2; ++i) { <em class="jxr_comment">// rows</em>
+<a class="jxr_linenumber" name="560" href="#560">560</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> j = 0; j &lt; colCount*2; ++j) {   <em class="jxr_comment">// column qualifiers</em>
+<a class="jxr_linenumber" name="561" href="#561">561</a>           String row = String.format(localFormatter, i);
+<a class="jxr_linenumber" name="562" href="#562">562</a>           String col = String.format(localFormatter, j);
+<a class="jxr_linenumber" name="563" href="#563">563</a>           TreeSet&lt;byte[]&gt; columns = <strong class="jxr_keyword">new</strong> TreeSet&lt;byte[]&gt;(Bytes.BYTES_COMPARATOR);
+<a class="jxr_linenumber" name="564" href="#564">564</a>           columns.add((<span class="jxr_string">"col"</span> + col).getBytes());
+<a class="jxr_linenumber" name="565" href="#565">565</a> 
+<a class="jxr_linenumber" name="566" href="#566">566</a>           Scan scan = <strong class="jxr_keyword">new</strong> Scan(row.getBytes(),row.getBytes());
+<a class="jxr_linenumber" name="567" href="#567">567</a>           scan.addColumn(<span class="jxr_string">"family"</span>.getBytes(), (<span class="jxr_string">"col"</span>+col).getBytes());
+<a class="jxr_linenumber" name="568" href="#568">568</a>           <strong class="jxr_keyword">boolean</strong> exists =
+<a class="jxr_linenumber" name="569" href="#569">569</a>               scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE);
+<a class="jxr_linenumber" name="570" href="#570">570</a>           <strong class="jxr_keyword">boolean</strong> shouldRowExist = i % 2 == 0;
+<a class="jxr_linenumber" name="571" href="#571">571</a>           <strong class="jxr_keyword">boolean</strong> shouldColExist = j % 2 == 0;
+<a class="jxr_linenumber" name="572" href="#572">572</a>           shouldColExist = shouldColExist || bt[x] == StoreFile.BloomType.ROW;
+<a class="jxr_linenumber" name="573" href="#573">573</a>           <strong class="jxr_keyword">if</strong> (shouldRowExist &amp;&amp; shouldColExist) {
+<a class="jxr_linenumber" name="574" href="#574">574</a>             <strong class="jxr_keyword">if</strong> (!exists) falseNeg++;
+<a class="jxr_linenumber" name="575" href="#575">575</a>           } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="576" href="#576">576</a>             <strong class="jxr_keyword">if</strong> (exists) falsePos++;
+<a class="jxr_linenumber" name="577" href="#577">577</a>           }
+<a class="jxr_linenumber" name="578" href="#578">578</a>         }
+<a class="jxr_linenumber" name="579" href="#579">579</a>       }
+<a class="jxr_linenumber" name="580" href="#580">580</a>       reader.close(<strong class="jxr_keyword">true</strong>); <em class="jxr_comment">// evict because we are about to delete the file</em>
+<a class="jxr_linenumber" name="581" href="#581">581</a>       fs.delete(f, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="582" href="#582">582</a>       System.out.println(bt[x].toString());
+<a class="jxr_linenumber" name="583" href="#583">583</a>       System.out.println(<span class="jxr_string">"  False negatives: "</span> + falseNeg);
+<a class="jxr_linenumber" name="584" href="#584">584</a>       System.out.println(<span class="jxr_string">"  False positives: "</span> + falsePos);
+<a class="jxr_linenumber" name="585" href="#585">585</a>       assertEquals(0, falseNeg);
+<a class="jxr_linenumber" name="586" href="#586">586</a>       assertTrue(falsePos &lt; 2*expErr[x]);
+<a class="jxr_linenumber" name="587" href="#587">587</a>     }
+<a class="jxr_linenumber" name="588" href="#588">588</a>   }
+<a class="jxr_linenumber" name="589" href="#589">589</a> 
+<a class="jxr_linenumber" name="590" href="#590">590</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testBloomEdgeCases() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="591" href="#591">591</a>     <strong class="jxr_keyword">float</strong> err = (<strong class="jxr_keyword">float</strong>)0.005;
+<a class="jxr_linenumber" name="592" href="#592">592</a>     FileSystem fs = FileSystem.getLocal(conf);
+<a class="jxr_linenumber" name="593" href="#593">593</a>     Path f = <strong class="jxr_keyword">new</strong> Path(ROOT_DIR, getName());
+<a class="jxr_linenumber" name="594" href="#594">594</a>     conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, err);
+<a class="jxr_linenumber" name="595" href="#595">595</a>     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="596" href="#596">596</a>     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_MAX_KEYS, 1000);
+<a class="jxr_linenumber" name="597" href="#597">597</a> 
+<a class="jxr_linenumber" name="598" href="#598">598</a>     <em class="jxr_comment">// This test only runs for HFile format version 1.</em>
+<a class="jxr_linenumber" name="599" href="#599">599</a>     conf.setInt(HFile.FORMAT_VERSION_KEY, 1);
+<a class="jxr_linenumber" name="600" href="#600">600</a> 
+<a class="jxr_linenumber" name="601" href="#601">601</a>     <em class="jxr_comment">// this should not create a bloom because the max keys is too small</em>
+<a class="jxr_linenumber" name="602" href="#602">602</a>     StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf, fs,
+<a class="jxr_linenumber" name="603" href="#603">603</a>         StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+<a class="jxr_linenumber" name="604" href="#604">604</a>             .withFilePath(f)
+<a class="jxr_linenumber" name="605" href="#605">605</a>             .withBloomType(StoreFile.BloomType.ROW)
+<a class="jxr_linenumber" name="606" href="#606">606</a>             .withMaxKeyCount(2000)
+<a class="jxr_linenumber" name="607" href="#607">607</a>             .withChecksumType(CKTYPE)
+<a class="jxr_linenumber" name="608" href="#608">608</a>             .withBytesPerChecksum(CKBYTES)
+<a class="jxr_linenumber" name="609" href="#609">609</a>             .build();
+<a class="jxr_linenumber" name="610" href="#610">610</a>     assertFalse(writer.hasGeneralBloom());
+<a class="jxr_linenumber" name="611" href="#611">611</a>     writer.close();
+<a class="jxr_linenumber" name="612" href="#612">612</a>     fs.delete(f, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="613" href="#613">613</a> 
+<a class="jxr_linenumber" name="614" href="#614">614</a>     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_MAX_KEYS,
+<a class="jxr_linenumber" name="615" href="#615">615</a>         Integer.MAX_VALUE);
+<a class="jxr_linenumber" name="616" href="#616">616</a> 
+<a class="jxr_linenumber" name="617" href="#617">617</a>     <em class="jxr_comment">// TODO: commented out because we run out of java heap space on trunk</em>
+<a class="jxr_linenumber" name="618" href="#618">618</a>     <em class="jxr_comment">// the below config caused IllegalArgumentException in our production cluster</em>
+<a class="jxr_linenumber" name="619" href="#619">619</a>     <em class="jxr_comment">// however, the resulting byteSize is &lt; MAX_INT, so this should work properly</em>
+<a class="jxr_linenumber" name="620" href="#620">620</a>     writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf, fs,
+<a class="jxr_linenumber" name="621" href="#621">621</a>         StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+<a class="jxr_linenumber" name="622" href="#622">622</a>             .withFilePath(f)
+<a class="jxr_linenumber" name="623" href="#623">623</a>             .withBloomType(StoreFile.BloomType.ROW)
+<a class="jxr_linenumber" name="624" href="#624">624</a>             .withMaxKeyCount(27244696)
+<a class="jxr_linenumber" name="625" href="#625">625</a>             .build();
+<a class="jxr_linenumber" name="626" href="#626">626</a>     assertTrue(writer.hasGeneralBloom());
+<a class="jxr_linenumber" name="627" href="#627">627</a>     bloomWriteRead(writer, fs);
+<a class="jxr_linenumber" name="628" href="#628">628</a> 
+<a class="jxr_linenumber" name="629" href="#629">629</a>     <em class="jxr_comment">// this, however, is too large and should not create a bloom</em>
+<a class="jxr_linenumber" name="630" href="#630">630</a>     <em class="jxr_comment">// because Java can't create a contiguous array &gt; MAX_INT</em>
+<a class="jxr_linenumber" name="631" href="#631">631</a>     writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf, fs,
+<a class="jxr_linenumber" name="632" href="#632">632</a>         StoreFile.DEFAULT_BLOCKSIZE_SMALL)
+<a class="jxr_linenumber" name="633" href="#633">633</a>             .withFilePath(f)
+<a class="jxr_linenumber" name="634" href="#634">634</a>             .withBloomType(StoreFile.BloomType.ROW)
+<a class="jxr_linenumber" name="635" href="#635">635</a>             .withMaxKeyCount(Integer.MAX_VALUE)
+<a class="jxr_linenumber" name="636" href="#636">636</a>             .withChecksumType(CKTYPE)
+<a class="jxr_linenumber" name="637" href="#637">637</a>             .withBytesPerChecksum(CKBYTES)
+<a class="jxr_linenumber" name="638" href="#638">638</a>             .build();
+<a class="jxr_linenumber" name="639" href="#639">639</a>     assertFalse(writer.hasGeneralBloom());
+<a class="jxr_linenumber" name="640" href="#640">640</a>     writer.close();
+<a class="jxr_linenumber" name="641" href="#641">641</a>     fs.delete(f, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="642" href="#642">642</a>   }
+<a class="jxr_linenumber" name="643" href="#643">643</a> 
+<a class="jxr_linenumber" name="644" href="#644">644</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testSeqIdComparator() {
+<a class="jxr_linenumber" name="645" href="#645">645</a>     assertOrdering(StoreFile.Comparators.SEQ_ID,
+<a class="jxr_linenumber" name="646" href="#646">646</a>         mockStoreFile(<strong class="jxr_keyword">true</strong>, 1000, -1, <span class="jxr_string">"/foo/123"</span>),
+<a class="jxr_linenumber" name="647" href="#647">647</a>         mockStoreFile(<strong class="jxr_keyword">true</strong>, 1000, -1, <span class="jxr_string">"/foo/126"</span>),
+<a class="jxr_linenumber" name="648" href="#648">648</a>         mockStoreFile(<strong class="jxr_keyword">true</strong>, 2000, -1, <span class="jxr_string">"/foo/126"</span>),
+<a class="jxr_linenumber" name="649" href="#649">649</a>         mockStoreFile(false, -1, 1, <span class="jxr_string">"/foo/1"</span>),
+<a class="jxr_linenumber" name="650" href="#650">650</a>         mockStoreFile(false, -1, 3, <span class="jxr_string">"/foo/2"</span>),
+<a class="jxr_linenumber" name="651" href="#651">651</a>         mockStoreFile(false, -1, 5, <span class="jxr_string">"/foo/2"</span>),
+<a class="jxr_linenumber" name="652" href="#652">652</a>         mockStoreFile(false, -1, 5, <span class="jxr_string">"/foo/3"</span>));
+<a class="jxr_linenumber" name="653" href="#653">653</a>   }
+<a class="jxr_linenumber" name="654" href="#654">654</a> 
+<a class="jxr_linenumber" name="655" href="#655">655</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="656" href="#656">656</a> <em class="jxr_javadoccomment">   * Assert that the given comparator orders the given storefiles in the</em>
+<a class="jxr_linenumber" name="657" href="#657">657</a> <em class="jxr_javadoccomment">   * same way that they're passed.</em>
+<a class="jxr_linenumber" name="658" href="#658">658</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="659" href="#659">659</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> assertOrdering(Comparator&lt;StoreFile&gt; comparator, StoreFile ... sfs) {
+<a class="jxr_linenumber" name="660" href="#660">660</a>     ArrayList&lt;StoreFile&gt; sorted = Lists.newArrayList(sfs);
+<a class="jxr_linenumber" name="661" href="#661">661</a>     Collections.shuffle(sorted);
+<a class="jxr_linenumber" name="662" href="#662">662</a>     Collections.sort(sorted, comparator);
+<a class="jxr_linenumber" name="663" href="#663">663</a>     LOG.debug(<span class="jxr_string">"sfs: "</span> + Joiner.on(<span class="jxr_string">","</span>).join(sfs));
+<a class="jxr_linenumber" name="664" href="#664">664</a>     LOG.debug(<span class="jxr_string">"sorted: "</span> + Joiner.on(<span class="jxr_string">","</span>).join(sorted));
+<a class="jxr_linenumber" name="665" href="#665">665</a>     assertTrue(Iterables.elementsEqual(Arrays.asList(sfs), sorted));
+<a class="jxr_linenumber" name="666" href="#666">666</a>   }
+<a class="jxr_linenumber" name="667" href="#667">667</a> 
+<a class="jxr_linenumber" name="668" href="#668">668</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="669" href="#669">669</a> <em class="jxr_javadoccomment">   * Create a mock StoreFile with the given attributes.</em>
+<a class="jxr_linenumber" name="670" href="#670">670</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="671" href="#671">671</a>   <strong class="jxr_keyword">private</strong> StoreFile mockStoreFile(<strong class="jxr_keyword">boolean</strong> bulkLoad, <strong class="jxr_keyword">long</strong> bulkTimestamp,
+<a class="jxr_linenumber" name="672" href="#672">672</a>       <strong class="jxr_keyword">long</strong> seqId, String path) {
+<a class="jxr_linenumber" name="673" href="#673">673</a>     StoreFile mock = Mockito.mock(StoreFile.<strong class="jxr_keyword">class</strong>);
+<a class="jxr_linenumber" name="674" href="#674">674</a>     Mockito.doReturn(bulkLoad).when(mock).isBulkLoadResult();
+<a class="jxr_linenumber" name="675" href="#675">675</a>     Mockito.doReturn(bulkTimestamp).when(mock).getBulkLoadTimestamp();
+<a class="jxr_linenumber" name="676" href="#676">676</a>     Mockito.doReturn(seqId).when(mock).getMaxSequenceId();
+<a class="jxr_linenumber" name="677" href="#677">677</a>     Mockito.doReturn(<strong class="jxr_keyword">new</strong> Path(path)).when(mock).getPath();
+<a class="jxr_linenumber" name="678" href="#678">678</a>     String name = <span class="jxr_string">"mock storefile, bulkLoad="</span> + bulkLoad +
+<a class="jxr_linenumber" name="679" href="#679">679</a>       <span class="jxr_string">" bulkTimestamp="</span> + bulkTimestamp +
+<a class="jxr_linenumber" name="680" href="#680">680</a>       <span class="jxr_string">" seqId="</span> + seqId +
+<a class="jxr_linenumber" name="681" href="#681">681</a>       <span class="jxr_string">" path="</span> + path;
+<a class="jxr_linenumber" name="682" href="#682">682</a>     Mockito.doReturn(name).when(mock).toString();
+<a class="jxr_linenumber" name="683" href="#683">683</a>     <strong class="jxr_keyword">return</strong> mock;
+<a class="jxr_linenumber" name="684" href="#684">684</a>   }
+<a class="jxr_linenumber" name="685" href="#685">685</a> 
+<a class="jxr_linenumber" name="686" href="#686">686</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="687" href="#687">687</a> <em class="jxr_javadoccomment">   * Generate a list of KeyValues for testing based on given parameters</em>
+<a class="jxr_linenumber" name="688" href="#688">688</a> <em class="jxr_javadoccomment">   * @param timestamps</em>
+<a class="jxr_linenumber" name="689" href="#689">689</a> <em class="jxr_javadoccomment">   * @param numRows</em>
+<a class="jxr_linenumber" name="690" href="#690">690</a> <em class="jxr_javadoccomment">   * @param qualifier</em>
+<a class="jxr_linenumber" name="691" href="#691">691</a> <em class="jxr_javadoccomment">   * @param family</em>
+<a class="jxr_linenumber" name="692" href="#692">692</a> <em class="jxr_javadoccomment">   * @return</em>
+<a class="jxr_linenumber" name="693" href="#693">693</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="694" href="#694">694</a>   List&lt;KeyValue&gt; getKeyValueSet(<strong class="jxr_keyword">long</strong>[] timestamps, <strong class="jxr_keyword">int</strong> numRows,
+<a class="jxr_linenumber" name="695" href="#695">695</a>       byte[] qualifier, byte[] family) {
+<a class="jxr_linenumber" name="696" href="#696">696</a>     List&lt;KeyValue&gt; kvList = <strong class="jxr_keyword">new</strong> ArrayList&lt;KeyValue&gt;();
+<a class="jxr_linenumber" name="697" href="#697">697</a>     <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i=1;i&lt;=numRows;i++) {
+<a class="jxr_linenumber" name="698" href="#698">698</a>       byte[] b = Bytes.toBytes(i) ;
+<a class="jxr_linenumber" name="699" href="#699">699</a>       LOG.info(Bytes.toString(b));
+<a class="jxr_linenumber" name="700" href="#700">700</a>       LOG.info(Bytes.toString(b));
+<a class="jxr_linenumber" name="701" href="#701">701</a>       <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">long</strong> timestamp: timestamps)
+<a class="jxr_linenumber" name="702" href="#702">702</a>       {
+<a class="jxr_linenumber" name="703" href="#703">703</a>         kvList.add(<strong class="jxr_keyword">new</strong> KeyValue(b, family, qualifier, timestamp, b));
+<a class="jxr_linenumber" name="704" href="#704">704</a>       }
+<a class="jxr_linenumber" name="705" href="#705">705</a>     }
+<a class="jxr_linenumber" name="706" href="#706">706</a>     <strong class="jxr_keyword">return</strong> kvList;
+<a class="jxr_linenumber" name="707" href="#707">707</a>   }
+<a class="jxr_linenumber" name="708" href="#708">708</a> 
+<a class="jxr_linenumber" name="709" href="#709">709</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="710" href="#710">710</a> <em class="jxr_javadoccomment">   * Test to ensure correctness when using StoreFile with multiple timestamps</em>
+<a class="jxr_linenumber" name="711" href="#711">711</a> <em class="jxr_javadoccomment">   * @throws IOException</em>
+<a class="jxr_linenumber" name="712" href="#712">712</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="713" href="#713">713</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testMultipleTimestamps() <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="714" href="#714">714</a>     byte[] family = Bytes.toBytes(<span class="jxr_string">"familyname"</span>);
+<a class="jxr_linenumber" name="715" href="#715">715</a>     byte[] qualifier = Bytes.toBytes(<span class="jxr_string">"qualifier"</span>);
+<a class="jxr_linenumber" name="716" href="#716">716</a>     <strong class="jxr_keyword">int</strong> numRows = 10;
+<a class="jxr_linenumber" name="717" href="#717">717</a>     <strong class="jxr_keyword">long</strong>[] timestamps = <strong class="jxr_keyword">new</strong> <strong class="jxr_keyword">long</strong>[] {20,10,5,1};
+<a class="jxr_linenumber" name="718" href="#718">718</a>     Scan scan = <strong class="jxr_keyword">new</strong> Scan();
+<a class="jxr_linenumber" name="719" href="#719">719</a> 
+<a class="jxr_linenumber" name="720" href="#720">720</a>     Path storedir = <strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">this</strong>.testDir, <span class="jxr_string">"regionname"</span>),
+<a class="jxr_linenumber" name="721" href="#721">721</a>     <span class="jxr_string">"familyname"</span>);
+<a class="jxr_linenumber" name="722" href="#722">722</a>     Path dir = <strong class="jxr_keyword">new</strong> Path(storedir, <span class="jxr_string">"1234567890"</span>);
+<a class="jxr_linenumber" name="723" href="#723">723</a>     StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf,
+<a class="jxr_linenumber" name="724" href="#724">724</a>         <strong class="jxr_keyword">this</strong>.fs, 8 * 1024)
+<a class="jxr_linenumber" name="725" href="#725">725</a>             .withOutputDir(dir)
+<a class="jxr_linenumber" name="726" href="#726">726</a>             .build();
+<a class="jxr_linenumber" name="727" href="#727">727</a> 
+<a class="jxr_linenumber" name="728" href="#728">728</a>     List&lt;KeyValue&gt; kvList = getKeyValueSet(timestamps,numRows,
+<a class="jxr_linenumber" name="729" href="#729">729</a>         family, qualifier);
+<a class="jxr_linenumber" name="730" href="#730">730</a> 
+<a class="jxr_linenumber" name="731" href="#731">731</a>     <strong class="jxr_keyword">for</strong> (KeyValue kv : kvList) {
+<a class="jxr_linenumber" name="732" href="#732">732</a>       writer.append(kv);
+<a class="jxr_linenumber" name="733" href="#733">733</a>     }
+<a class="jxr_linenumber" name="734" href="#734">734</a>     writer.appendMetadata(0, false);
+<a class="jxr_linenumber" name="735" href="#735">735</a>     writer.close();
+<a class="jxr_linenumber" name="736" href="#736">736</a> 
+<a class="jxr_linenumber" name="737" href="#737">737</a>     StoreFile hsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, writer.getPath(), conf, cacheConf,
+<a class="jxr_linenumber" name="738" href="#738">738</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="739" href="#739">739</a>     StoreFile.Reader reader = hsf.createReader();
+<a class="jxr_linenumber" name="740" href="#740">740</a>     StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
+<a class="jxr_linenumber" name="741" href="#741">741</a>     TreeSet&lt;byte[]&gt; columns = <strong class="jxr_keyword">new</strong> TreeSet&lt;byte[]&gt;(Bytes.BYTES_COMPARATOR);
+<a class="jxr_linenumber" name="742" href="#742">742</a>     columns.add(qualifier);
+<a class="jxr_linenumber" name="743" href="#743">743</a> 
+<a class="jxr_linenumber" name="744" href="#744">744</a>     scan.setTimeRange(20, 100);
+<a class="jxr_linenumber" name="745" href="#745">745</a>     assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+<a class="jxr_linenumber" name="746" href="#746">746</a> 
+<a class="jxr_linenumber" name="747" href="#747">747</a>     scan.setTimeRange(1, 2);
+<a class="jxr_linenumber" name="748" href="#748">748</a>     assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+<a class="jxr_linenumber" name="749" href="#749">749</a> 
+<a class="jxr_linenumber" name="750" href="#750">750</a>     scan.setTimeRange(8, 10);
+<a class="jxr_linenumber" name="751" href="#751">751</a>     assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+<a class="jxr_linenumber" name="752" href="#752">752</a> 
+<a class="jxr_linenumber" name="753" href="#753">753</a>     scan.setTimeRange(7, 50);
+<a class="jxr_linenumber" name="754" href="#754">754</a>     assertTrue(scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+<a class="jxr_linenumber" name="755" href="#755">755</a> 
+<a class="jxr_linenumber" name="756" href="#756">756</a>     <em class="jxr_comment">// This test relies on the timestamp range optimization</em>
+<a class="jxr_linenumber" name="757" href="#757">757</a>     scan.setTimeRange(27, 50);
+<a class="jxr_linenumber" name="758" href="#758">758</a>     assertTrue(!scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
+<a class="jxr_linenumber" name="759" href="#759">759</a>   }
+<a class="jxr_linenumber" name="760" href="#760">760</a> 
+<a class="jxr_linenumber" name="761" href="#761">761</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testCacheOnWriteEvictOnClose() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="762" href="#762">762</a>     Configuration conf = <strong class="jxr_keyword">this</strong>.conf;
+<a class="jxr_linenumber" name="763" href="#763">763</a> 
+<a class="jxr_linenumber" name="764" href="#764">764</a>     <em class="jxr_comment">// Find a home for our files</em>
+<a class="jxr_linenumber" name="765" href="#765">765</a>     Path baseDir = <strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">this</strong>.testDir, <span class="jxr_string">"regionname"</span>),<span class="jxr_string">"twoCOWEOC"</span>);
+<a class="jxr_linenumber" name="766" href="#766">766</a> 
+<a class="jxr_linenumber" name="767" href="#767">767</a>     <em class="jxr_comment">// Grab the block cache and get the initial hit/miss counts</em>
+<a class="jxr_linenumber" name="768" href="#768">768</a>     BlockCache bc = <strong class="jxr_keyword">new</strong> CacheConfig(conf).getBlockCache();
+<a class="jxr_linenumber" name="769" href="#769">769</a>     assertNotNull(bc);
+<a class="jxr_linenumber" name="770" href="#770">770</a>     CacheStats cs = bc.getStats();
+<a class="jxr_linenumber" name="771" href="#771">771</a>     <strong class="jxr_keyword">long</strong> startHit = cs.getHitCount();
+<a class="jxr_linenumber" name="772" href="#772">772</a>     <strong class="jxr_keyword">long</strong> startMiss = cs.getMissCount();
+<a class="jxr_linenumber" name="773" href="#773">773</a>     <strong class="jxr_keyword">long</strong> startEvicted = cs.getEvictedCount();
+<a class="jxr_linenumber" name="774" href="#774">774</a> 
+<a class="jxr_linenumber" name="775" href="#775">775</a>     <em class="jxr_comment">// Let's write a StoreFile with three blocks, with cache on write off</em>
+<a class="jxr_linenumber" name="776" href="#776">776</a>     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
+<a class="jxr_linenumber" name="777" href="#777">777</a>     CacheConfig cacheConf = <strong class="jxr_keyword">new</strong> CacheConfig(conf);
+<a class="jxr_linenumber" name="778" href="#778">778</a>     Path pathCowOff = <strong class="jxr_keyword">new</strong> Path(baseDir, <span class="jxr_string">"123456789"</span>);
+<a class="jxr_linenumber" name="779" href="#779">779</a>     StoreFile.Writer writer = writeStoreFile(conf, cacheConf, pathCowOff, 3);
+<a class="jxr_linenumber" name="780" href="#780">780</a>     StoreFile hsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, writer.getPath(), conf, cacheConf,
+<a class="jxr_linenumber" name="781" href="#781">781</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="782" href="#782">782</a>     LOG.debug(hsf.getPath().toString());
+<a class="jxr_linenumber" name="783" href="#783">783</a> 
+<a class="jxr_linenumber" name="784" href="#784">784</a>     <em class="jxr_comment">// Read this file, we should see 3 misses</em>
+<a class="jxr_linenumber" name="785" href="#785">785</a>     StoreFile.Reader reader = hsf.createReader();
+<a class="jxr_linenumber" name="786" href="#786">786</a>     reader.loadFileInfo();
+<a class="jxr_linenumber" name="787" href="#787">787</a>     StoreFileScanner scanner = reader.getStoreFileScanner(<strong class="jxr_keyword">true</strong>, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="788" href="#788">788</a>     scanner.seek(KeyValue.LOWESTKEY);
+<a class="jxr_linenumber" name="789" href="#789">789</a>     <strong class="jxr_keyword">while</strong> (scanner.next() != <strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="790" href="#790">790</a>     assertEquals(startHit, cs.getHitCount());
+<a class="jxr_linenumber" name="791" href="#791">791</a>     assertEquals(startMiss + 3, cs.getMissCount());
+<a class="jxr_linenumber" name="792" href="#792">792</a>     assertEquals(startEvicted, cs.getEvictedCount());
+<a class="jxr_linenumber" name="793" href="#793">793</a>     startMiss += 3;
+<a class="jxr_linenumber" name="794" href="#794">794</a>     scanner.close();
+<a class="jxr_linenumber" name="795" href="#795">795</a>     reader.close(cacheConf.shouldEvictOnClose());
+<a class="jxr_linenumber" name="796" href="#796">796</a> 
+<a class="jxr_linenumber" name="797" href="#797">797</a>     <em class="jxr_comment">// Now write a StoreFile with three blocks, with cache on write on</em>
+<a class="jxr_linenumber" name="798" href="#798">798</a>     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="799" href="#799">799</a>     cacheConf = <strong class="jxr_keyword">new</strong> CacheConfig(conf);
+<a class="jxr_linenumber" name="800" href="#800">800</a>     Path pathCowOn = <strong class="jxr_keyword">new</strong> Path(baseDir, <span class="jxr_string">"123456788"</span>);
+<a class="jxr_linenumber" name="801" href="#801">801</a>     writer = writeStoreFile(conf, cacheConf, pathCowOn, 3);
+<a class="jxr_linenumber" name="802" href="#802">802</a>     hsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, writer.getPath(), conf, cacheConf,
+<a class="jxr_linenumber" name="803" href="#803">803</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="804" href="#804">804</a> 
+<a class="jxr_linenumber" name="805" href="#805">805</a>     <em class="jxr_comment">// Read this file, we should see 3 hits</em>
+<a class="jxr_linenumber" name="806" href="#806">806</a>     reader = hsf.createReader();
+<a class="jxr_linenumber" name="807" href="#807">807</a>     scanner = reader.getStoreFileScanner(<strong class="jxr_keyword">true</strong>, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="808" href="#808">808</a>     scanner.seek(KeyValue.LOWESTKEY);
+<a class="jxr_linenumber" name="809" href="#809">809</a>     <strong class="jxr_keyword">while</strong> (scanner.next() != <strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="810" href="#810">810</a>     assertEquals(startHit + 3, cs.getHitCount());
+<a class="jxr_linenumber" name="811" href="#811">811</a>     assertEquals(startMiss, cs.getMissCount());
+<a class="jxr_linenumber" name="812" href="#812">812</a>     assertEquals(startEvicted, cs.getEvictedCount());
+<a class="jxr_linenumber" name="813" href="#813">813</a>     startHit += 3;
+<a class="jxr_linenumber" name="814" href="#814">814</a>     scanner.close();
+<a class="jxr_linenumber" name="815" href="#815">815</a>     reader.close(cacheConf.shouldEvictOnClose());
+<a class="jxr_linenumber" name="816" href="#816">816</a> 
+<a class="jxr_linenumber" name="817" href="#817">817</a>     <em class="jxr_comment">// Let's read back the two files to ensure the blocks exactly match</em>
+<a class="jxr_linenumber" name="818" href="#818">818</a>     hsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, pathCowOff, conf, cacheConf,
+<a class="jxr_linenumber" name="819" href="#819">819</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="820" href="#820">820</a>     StoreFile.Reader readerOne = hsf.createReader();
+<a class="jxr_linenumber" name="821" href="#821">821</a>     readerOne.loadFileInfo();
+<a class="jxr_linenumber" name="822" href="#822">822</a>     StoreFileScanner scannerOne = readerOne.getStoreFileScanner(<strong class="jxr_keyword">true</strong>, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="823" href="#823">823</a>     scannerOne.seek(KeyValue.LOWESTKEY);
+<a class="jxr_linenumber" name="824" href="#824">824</a>     hsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, pathCowOn, conf, cacheConf,
+<a class="jxr_linenumber" name="825" href="#825">825</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="826" href="#826">826</a>     StoreFile.Reader readerTwo = hsf.createReader();
+<a class="jxr_linenumber" name="827" href="#827">827</a>     readerTwo.loadFileInfo();
+<a class="jxr_linenumber" name="828" href="#828">828</a>     StoreFileScanner scannerTwo = readerTwo.getStoreFileScanner(<strong class="jxr_keyword">true</strong>, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="829" href="#829">829</a>     scannerTwo.seek(KeyValue.LOWESTKEY);
+<a class="jxr_linenumber" name="830" href="#830">830</a>     KeyValue kv1 = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="831" href="#831">831</a>     KeyValue kv2 = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="832" href="#832">832</a>     <strong class="jxr_keyword">while</strong> ((kv1 = scannerOne.next()) != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="833" href="#833">833</a>       kv2 = scannerTwo.next();
+<a class="jxr_linenumber" name="834" href="#834">834</a>       assertTrue(kv1.equals(kv2));
+<a class="jxr_linenumber" name="835" href="#835">835</a>       assertTrue(Bytes.compareTo(
+<a class="jxr_linenumber" name="836" href="#836">836</a>           kv1.getBuffer(), kv1.getKeyOffset(), kv1.getKeyLength(), 
+<a class="jxr_linenumber" name="837" href="#837">837</a>           kv2.getBuffer(), kv2.getKeyOffset(), kv2.getKeyLength()) == 0);
+<a class="jxr_linenumber" name="838" href="#838">838</a>       assertTrue(Bytes.compareTo(
+<a class="jxr_linenumber" name="839" href="#839">839</a>           kv1.getBuffer(), kv1.getValueOffset(), kv1.getValueLength(),
+<a class="jxr_linenumber" name="840" href="#840">840</a>           kv2.getBuffer(), kv2.getValueOffset(), kv2.getValueLength()) == 0);
+<a class="jxr_linenumber" name="841" href="#841">841</a>     }
+<a class="jxr_linenumber" name="842" href="#842">842</a>     assertNull(scannerTwo.next());
+<a class="jxr_linenumber" name="843" href="#843">843</a>     assertEquals(startHit + 6, cs.getHitCount());
+<a class="jxr_linenumber" name="844" href="#844">844</a>     assertEquals(startMiss, cs.getMissCount());
+<a class="jxr_linenumber" name="845" href="#845">845</a>     assertEquals(startEvicted, cs.getEvictedCount());
+<a class="jxr_linenumber" name="846" href="#846">846</a>     startHit += 6;
+<a class="jxr_linenumber" name="847" href="#847">847</a>     scannerOne.close();
+<a class="jxr_linenumber" name="848" href="#848">848</a>     readerOne.close(cacheConf.shouldEvictOnClose());
+<a class="jxr_linenumber" name="849" href="#849">849</a>     scannerTwo.close();
+<a class="jxr_linenumber" name="850" href="#850">850</a>     readerTwo.close(cacheConf.shouldEvictOnClose());
+<a class="jxr_linenumber" name="851" href="#851">851</a> 
+<a class="jxr_linenumber" name="852" href="#852">852</a>     <em class="jxr_comment">// Let's close the first file with evict on close turned on</em>
+<a class="jxr_linenumber" name="853" href="#853">853</a>     conf.setBoolean(<span class="jxr_string">"hbase.rs.evictblocksonclose"</span>, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="854" href="#854">854</a>     cacheConf = <strong class="jxr_keyword">new</strong> CacheConfig(conf);
+<a class="jxr_linenumber" name="855" href="#855">855</a>     hsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, pathCowOff, conf, cacheConf,
+<a class="jxr_linenumber" name="856" href="#856">856</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="857" href="#857">857</a>     reader = hsf.createReader();
+<a class="jxr_linenumber" name="858" href="#858">858</a>     reader.close(cacheConf.shouldEvictOnClose());
+<a class="jxr_linenumber" name="859" href="#859">859</a> 
+<a class="jxr_linenumber" name="860" href="#860">860</a>     <em class="jxr_comment">// We should have 3 new evictions</em>
+<a class="jxr_linenumber" name="861" href="#861">861</a>     assertEquals(startHit, cs.getHitCount());
+<a class="jxr_linenumber" name="862" href="#862">862</a>     assertEquals(startMiss, cs.getMissCount());
+<a class="jxr_linenumber" name="863" href="#863">863</a>     assertEquals(startEvicted + 3, cs.getEvictedCount());
+<a class="jxr_linenumber" name="864" href="#864">864</a>     startEvicted += 3;
+<a class="jxr_linenumber" name="865" href="#865">865</a> 
+<a class="jxr_linenumber" name="866" href="#866">866</a>     <em class="jxr_comment">// Let's close the second file with evict on close turned off</em>
+<a class="jxr_linenumber" name="867" href="#867">867</a>     conf.setBoolean(<span class="jxr_string">"hbase.rs.evictblocksonclose"</span>, false);
+<a class="jxr_linenumber" name="868" href="#868">868</a>     cacheConf = <strong class="jxr_keyword">new</strong> CacheConfig(conf);
+<a class="jxr_linenumber" name="869" href="#869">869</a>     hsf = <strong class="jxr_keyword">new</strong> StoreFile(<strong class="jxr_keyword">this</strong>.fs, pathCowOn, conf, cacheConf,
+<a class="jxr_linenumber" name="870" href="#870">870</a>         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+<a class="jxr_linenumber" name="871" href="#871">871</a>     reader = hsf.createReader();
+<a class="jxr_linenumber" name="872" href="#872">872</a>     reader.close(cacheConf.shouldEvictOnClose());
+<a class="jxr_linenumber" name="873" href="#873">873</a> 
+<a class="jxr_linenumber" name="874" href="#874">874</a>     <em class="jxr_comment">// We expect no changes</em>
+<a class="jxr_linenumber" name="875" href="#875">875</a>     assertEquals(startHit, cs.getHitCount());
+<a class="jxr_linenumber" name="876" href="#876">876</a>     assertEquals(startMiss, cs.getMissCount());
+<a class="jxr_linenumber" name="877" href="#877">877</a>     assertEquals(startEvicted, cs.getEvictedCount());
+<a class="jxr_linenumber" name="878" href="#878">878</a>   }
+<a class="jxr_linenumber" name="879" href="#879">879</a> 
+<a class="jxr_linenumber" name="880" href="#880">880</a>   <strong class="jxr_keyword">private</strong> StoreFile.Writer writeStoreFile(Configuration conf,
+<a class="jxr_linenumber" name="881" href="#881">881</a>       CacheConfig cacheConf, Path path, <strong class="jxr_keyword">int</strong> numBlocks)
+<a class="jxr_linenumber" name="882" href="#882">882</a>   <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="883" href="#883">883</a>     <em class="jxr_comment">// Let's put ~5 small KVs in each block, so let's make 5*numBlocks KVs</em>
+<a class="jxr_linenumber" name="884" href="#884">884</a>     <strong class="jxr_keyword">int</strong> numKVs = 5 * numBlocks;
+<a class="jxr_linenumber" name="885" href="#885">885</a>     List&lt;KeyValue&gt; kvs = <strong class="jxr_keyword">new</strong> ArrayList&lt;KeyValue&gt;(numKVs);
+<a class="jxr_linenumber" name="886" href="#886">886</a>     byte [] b = Bytes.toBytes(<span class="jxr_string">"x"</span>);
+<a class="jxr_linenumber" name="887" href="#887">887</a>     <strong class="jxr_keyword">int</strong> totalSize = 0;
+<a class="jxr_linenumber" name="888" href="#888">888</a>     <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i=numKVs;i&gt;0;i--) {
+<a class="jxr_linenumber" name="889" href="#889">889</a>       KeyValue kv = <strong class="jxr_keyword">new</strong> KeyValue(b, b, b, i, b);
+<a class="jxr_linenumber" name="890" href="#890">890</a>       kvs.add(kv);
+<a class="jxr_linenumber" name="891" href="#891">891</a>       <em class="jxr_comment">// kv has memstoreTS 0, which takes 1 byte to store.</em>
+<a class="jxr_linenumber" name="892" href="#892">892</a>       totalSize += kv.getLength() + 1;
+<a class="jxr_linenumber" name="893" href="#893">893</a>     }
+<a class="jxr_linenumber" name="894" href="#894">894</a>     <strong class="jxr_keyword">int</strong> blockSize = totalSize / numBlocks;
+<a class="jxr_linenumber" name="895" href="#895">895</a>     StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf, fs,
+<a class="jxr_linenumber" name="896" href="#896">896</a>         blockSize)
+<a class="jxr_linenumber" name="897" href="#897">897</a>             .withFilePath(path)
+<a class="jxr_linenumber" name="898" href="#898">898</a>             .withMaxKeyCount(2000)
+<a class="jxr_linenumber" name="899" href="#899">899</a>             .withChecksumType(CKTYPE)
+<a class="jxr_linenumber" name="900" href="#900">900</a>             .withBytesPerChecksum(CKBYTES)
+<a class="jxr_linenumber" name="901" href="#901">901</a>             .build();
+<a class="jxr_linenumber" name="902" href="#902">902</a>     <em class="jxr_comment">// We'll write N-1 KVs to ensure we don't write an extra block</em>
+<a class="jxr_linenumber" name="903" href="#903">903</a>     kvs.remove(kvs.size()-1);
+<a class="jxr_linenumber" name="904" href="#904">904</a>     <strong class="jxr_keyword">for</strong> (KeyValue kv : kvs) {
+<a class="jxr_linenumber" name="905" href="#905">905</a>       writer.append(kv);
+<a class="jxr_linenumber" name="906" href="#906">906</a>     }
+<a class="jxr_linenumber" name="907" href="#907">907</a>     writer.appendMetadata(0, false);
+<a class="jxr_linenumber" name="908" href="#908">908</a>     writer.close();
+<a class="jxr_linenumber" name="909" href="#909">909</a>     <strong class="jxr_keyword">return</strong> writer;
+<a class="jxr_linenumber" name="910" href="#910">910</a>   }
+<a class="jxr_linenumber" name="911" href="#911">911</a> 
+<a class="jxr_linenumber" name="912" href="#912">912</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="913" href="#913">913</a> <em class="jxr_javadoccomment">   * Check if data block encoding information is saved correctly in HFile's</em>
+<a class="jxr_linenumber" name="914" href="#914">914</a> <em class="jxr_javadoccomment">   * file info.</em>
+<a class="jxr_linenumber" name="915" href="#915">915</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="916" href="#916">916</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testDataBlockEncodingMetaData() <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="917" href="#917">917</a>     Path dir = <strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">new</strong> Path(<strong class="jxr_keyword">this</strong>.testDir, <span class="jxr_string">"regionname"</span>), <span class="jxr_string">"familyname"</span>);
+<a class="jxr_linenumber" name="918" href="#918">918</a>     Path path = <strong class="jxr_keyword">new</strong> Path(dir, <span class="jxr_string">"1234567890"</span>);
+<a class="jxr_linenumber" name="919" href="#919">919</a> 
+<a class="jxr_linenumber" name="920" href="#920">920</a>     DataBlockEncoding dataBlockEncoderAlgo =
+<a class="jxr_linenumber" name="921" href="#921">921</a>         DataBlockEncoding.FAST_DIFF;
+<a class="jxr_linenumber" name="922" href="#922">922</a>     HFileDataBlockEncoder dataBlockEncoder =
+<a class="jxr_linenumber" name="923" href="#923">923</a>         <strong class="jxr_keyword">new</strong> HFileDataBlockEncoderImpl(
+<a class="jxr_linenumber" name="924" href="#924">924</a>             dataBlockEncoderAlgo,
+<a class="jxr_linenumber" name="925" href="#925">925</a>             dataBlockEncoderAlgo);
+<a class="jxr_linenumber" name="926" href="#926">926</a>     cacheConf = <strong class="jxr_keyword">new</strong> CacheConfig(conf);
+<a class="jxr_linenumber" name="927" href="#927">927</a>     StoreFile.Writer writer = <strong class="jxr_keyword">new</strong> StoreFile.WriterBuilder(conf, cacheConf, fs,
+<a class="jxr_linenumber" name="928" href="#928">928</a>         HFile.DEFAULT_BLOCKSIZE)
+<a class="jxr_linenumber" name="929" href="#929">929</a>             .withFilePath(path)
+<a class="jxr_linenumber" name="930" href="#930">930</a>             .withDataBlockEncoder(dataBlockEncoder)
+<a class="jxr_linenumber" name="931" href="#931">931</a>             .withMaxKeyCount(2000)
+<a class="jxr_linenumber" name="932" href="#932">932</a>             .withChecksumType(CKTYPE)
+<a class="jxr_linenumber" name="933" href="#933">933</a>             .withBytesPerChecksum(CKBYTES)
+<a class="jxr_linenumber" name="934" href="#934">934</a>             .build();
+<a class="jxr_linenumber" name="935" href="#935">935</a>     writer.close();
+<a class="jxr_linenumber" name="936" href="#936">936</a>     
+<a class="jxr_linenumber" name="937" href="#937">937</a>     StoreFile storeFile = <strong class="jxr_keyword">new</strong> StoreFile(fs, writer.getPath(), conf,
+<a class="jxr_linenumber" name="938" href="#938">938</a>         cacheConf, BloomType.NONE, dataBlockEncoder);
+<a class="jxr_linenumber" name="939" href="#939">939</a>     StoreFile.Reader reader = storeFile.createReader();
+<a class="jxr_linenumber" name="940" href="#940">940</a>     
+<a class="jxr_linenumber" name="941" href="#941">941</a>     Map&lt;byte[], byte[]&gt; fileInfo = reader.loadFileInfo();
+<a class="jxr_linenumber" name="942" href="#942">942</a>     byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);
+<a class="jxr_linenumber" name="943" href="#943">943</a> 
+<a class="jxr_linenumber" name="944" href="#944">944</a>     assertEquals(dataBlockEncoderAlgo.getNameInBytes(), value);
+<a class="jxr_linenumber" name="945" href="#945">945</a>   }
+<a class="jxr_linenumber" name="946" href="#946">946</a> 
+<a class="jxr_linenumber" name="947" href="#947">947</a> }
+<a class="jxr_linenumber" name="948" href="#948">948</a> 
+</pre>
+<hr/><div id="footer">This page was automatically generated by <a href="http://maven.apache.org/">Maven</a></div></body>
+</html>
+

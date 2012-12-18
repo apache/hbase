@@ -1,0 +1,787 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
+<html xml:lang="en" lang="en">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+		<title>HBase 0.95-SNAPSHOT Reference Package org.apache.hadoop.hbase.regionserver</title>
+		<link rel="stylesheet" type="text/css" href="../../../../../stylesheet.css" title="style" />
+	</head>
+	<body>
+		      	<div class="overview">
+        	<ul>
+          		<li>
+            		<a href="../../../../../overview-summary.html">Overview</a>
+          		</li>
+          		<li class="selected">Package</li>
+        	</ul>
+      	</div>
+      	<div class="framenoframe">
+        	<ul>
+          		<li>
+            		<a href="../../../../../index.html" target="_top">FRAMES</a>
+          		</li>
+          		<li>
+            		<a href="package-summary.html" target="_top">NO FRAMES</a>
+          		</li>
+        	</ul>
+      	</div>
+		
+		      	<h2>Package org.apache.hadoop.hbase.regionserver</h2>
+
+		<table class="summary">
+        	<thead>
+          		<tr>
+            		<th>Class Summary</th>
+          		</tr>
+        	</thead>
+        	<tbody>
+        		            	<tr>
+              		<td>
+                		<a href="MemStoreLAB.html" target="classFrame">Allocation</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="BaseRowProcessor.html" target="classFrame">BaseRowProcessor</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegion.html" target="classFrame">BatchOperationInProgress</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFile.html" target="classFrame">BloomType</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ChangedReadersObserver.html" target="classFrame">ChangedReadersObserver</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MemStoreLAB.html" target="classFrame">Chunk</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ColumnCount.html" target="classFrame">ColumnCount</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ColumnTracker.html" target="classFrame">ColumnTracker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="CompactSplitThread.html" target="classFrame">CompactSplitThread</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionServer.html" target="classFrame">CompactionChecker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="CompactionTool.html" target="classFrame">CompactionInputFormat</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="CompactionTool.html" target="classFrame">CompactionMapper</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="CompactionRequestor.html" target="classFrame">CompactionRequestor</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="CompactionTool.html" target="classFrame">CompactionTool</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="CompactionTool.html" target="classFrame">CompactionWorker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="Compactor.html" target="classFrame">Compactor</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFile.html" target="classFrame">Comparators</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="CompoundConfiguration.html" target="classFrame">CompoundConfiguration</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ConstantSizeRegionSplitPolicy.html" target="classFrame">ConstantSizeRegionSplitPolicy</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitTransaction.html" target="classFrame">DaughterOpener</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="DebugPrint.html" target="classFrame">DebugPrint</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="DeleteTracker.html" target="classFrame">DeleteCompare</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="DeleteTracker.html" target="classFrame">DeleteResult</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="DeleteTracker.html" target="classFrame">DeleteTracker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ShutdownHook.html" target="classFrame">DoNothingStoppable</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ShutdownHook.html" target="classFrame">DoNothingThread</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="LruHashMap.html" target="classFrame">Entry</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionServerCoprocessorHost.html" target="classFrame">EnvironmentPriorityComparator</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ExplicitColumnTracker.html" target="classFrame">ExplicitColumnTracker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionServerSourceFactoryImpl.html" target="classFrame">FactoryStorage</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MemStoreFlusher.html" target="classFrame">FlushQueueEntry</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MemStoreFlusher.html" target="classFrame">FlushRegionEntry</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="FlushRequester.html" target="classFrame">FlushRequester</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFile.html" target="classFrame">GetBulkTime</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="GetClosestRowBeforeTracker.html" target="classFrame">GetClosestRowBeforeTracker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitLogWorker.html" target="classFrame">GetDataAsyncCallback</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFile.html" target="classFrame">GetPathName</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFile.html" target="classFrame">GetSeqId</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionThriftServer.html" target="classFrame">HBaseHandlerRegion</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegion.html" target="classFrame">HRegion</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionWrapperImpl.html" target="classFrame">HRegionMetricsWrapperRunnable</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionServer.html" target="classFrame">HRegionServer</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionServerCommandLine.html" target="classFrame">HRegionServerCommandLine</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionThriftServer.html" target="classFrame">HRegionThriftServer</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HStore.html" target="classFrame">HStore</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="CompoundConfiguration.html" target="classFrame">ImmutableConfigMap</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="IncreasingToUpperBoundRegionSplitPolicy.html" target="classFrame">IncreasingToUpperBoundRegionSplitPolicy</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="InternalScan.html" target="classFrame">InternalScan</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="InternalScanner.html" target="classFrame">InternalScanner</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitTransaction.html" target="classFrame">JournalEntry</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="KeyValueHeap.html" target="classFrame">KVScannerComparator</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="KeyPrefixRegionSplitPolicy.html" target="classFrame">KeyPrefixRegionSplitPolicy</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="KeyValueHeap.html" target="classFrame">KeyValueHeap</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="KeyValueScanner.html" target="classFrame">KeyValueScanner</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="KeyValueSkipListSet.html" target="classFrame">KeyValueSkipListSet</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="LastSequenceId.html" target="classFrame">LastSequenceId</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="Leases.html" target="classFrame">Lease</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="LeaseException.html" target="classFrame">LeaseException</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="LeaseListener.html" target="classFrame">LeaseListener</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="Leases.html" target="classFrame">LeaseStillHeldException</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="Leases.html" target="classFrame">Leases</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="LogRoller.html" target="classFrame">LogRoller</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitTransaction.html" target="classFrame">LoggingProgressable</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="LruHashMap.html" target="classFrame">LruHashMap</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ScanQueryMatcher.html" target="classFrame">MatchCode</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MemStore.html" target="classFrame">MemStore</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MemStoreFlusher.html" target="classFrame">MemStoreFlusher</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MemStoreLAB.html" target="classFrame">MemStoreLAB</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MemStore.html" target="classFrame">MemStoreScanner</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MemStore.html" target="classFrame">Member</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegion.html" target="classFrame">MetricsRegion</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionAggregateSource.html" target="classFrame">MetricsRegionAggregateSource</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionAggregateSourceImpl.html" target="classFrame">MetricsRegionAggregateSourceImpl</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionServer.html" target="classFrame">MetricsRegionServer</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionServerSource.html" target="classFrame">MetricsRegionServerSource</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionServerSourceFactory.html" target="classFrame">MetricsRegionServerSourceFactory</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionServerSourceFactoryImpl.html" target="classFrame">MetricsRegionServerSourceFactoryImpl</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionServerSourceImpl.html" target="classFrame">MetricsRegionServerSourceImpl</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionServerWrapper.html" target="classFrame">MetricsRegionServerWrapper</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionServerWrapperImpl.html" target="classFrame">MetricsRegionServerWrapperImpl</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionSource.html" target="classFrame">MetricsRegionSource</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionSourceImpl.html" target="classFrame">MetricsRegionSourceImpl</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionWrapper.html" target="classFrame">MetricsRegionWrapper</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionWrapperImpl.html" target="classFrame">MetricsRegionWrapperImpl</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionServer.html" target="classFrame">MovedRegionsCleaner</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MultiRowMutationProcessor.html" target="classFrame">MultiRowMutationProcessor</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MultiVersionConsistencyControl.html" target="classFrame">MultiVersionConsistencyControl</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="NoSuchColumnFamilyException.html" target="classFrame">NoSuchColumnFamilyException</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="NonLazyKeyValueScanner.html" target="classFrame">NonLazyKeyValueScanner</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="OnlineRegions.html" target="classFrame">OnlineRegions</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="OperationStatus.html" target="classFrame">OperationStatus</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionServer.html" target="classFrame">QosFunction</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionServer.html" target="classFrame">QosPriority</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RSDumpServlet.html" target="classFrame">RSDumpServlet</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RSStatusServlet.html" target="classFrame">RSStatusServlet</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFile.html" target="classFrame">Reader</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionAlreadyInTransitionException.html" target="classFrame">RegionAlreadyInTransitionException</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionCoprocessorHost.html" target="classFrame">RegionCoprocessorHost</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionCoprocessorHost.html" target="classFrame">RegionEnvironment</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionOpeningState.html" target="classFrame">RegionOpeningState</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionScanner.html" target="classFrame">RegionScanner</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionServer.html" target="classFrame">RegionScannerHolder</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegion.html" target="classFrame">RegionScannerImpl</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionServerAccounting.html" target="classFrame">RegionServerAccounting</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionServerCoprocessorHost.html" target="classFrame">RegionServerCoprocessorHost</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionServerCoprocessorHost.html" target="classFrame">RegionServerEnvironment</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MetricsRegionServerWrapperImpl.html" target="classFrame">RegionServerMetricsWrapperRunnable</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionServerRunningException.html" target="classFrame">RegionServerRunningException</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionServerServices.html" target="classFrame">RegionServerServices</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionServerStoppedException.html" target="classFrame">RegionServerStoppedException</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RegionSplitPolicy.html" target="classFrame">RegionSplitPolicy</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ReplicationService.html" target="classFrame">ReplicationService</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ReplicationSinkService.html" target="classFrame">ReplicationSinkService</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ReplicationSourceService.html" target="classFrame">ReplicationSourceService</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionServer.html" target="classFrame">RowLockListener</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="RowProcessor.html" target="classFrame">RowProcessor</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ScanDeleteTracker.html" target="classFrame">ScanDeleteTracker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HStore.html" target="classFrame">ScanInfo</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ScanQueryMatcher.html" target="classFrame">ScanQueryMatcher</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ScanType.html" target="classFrame">ScanType</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ScanWildcardColumnTracker.html" target="classFrame">ScanWildcardColumnTracker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegionServer.html" target="classFrame">ScannerListener</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ShutdownHook.html" target="classFrame">ShutdownHook</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="ShutdownHook.html" target="classFrame">ShutdownHookThread</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitLogWorker.html" target="classFrame">SplitLogWorker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitRequest.html" target="classFrame">SplitRequest</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitTransaction.html" target="classFrame">SplitTransaction</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitLogWorker.html" target="classFrame">Status</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="Store.html" target="classFrame">Store</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreConfiguration.html" target="classFrame">StoreConfiguration</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFile.html" target="classFrame">StoreFile</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFileScanner.html" target="classFrame">StoreFileScanner</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitTransaction.html" target="classFrame">StoreFileSplitter</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFlusher.html" target="classFrame">StoreFlusher</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HStore.html" target="classFrame">StoreFlusherImpl</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreScanner.html" target="classFrame">StoreScanner</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreUtils.html" target="classFrame">StoreUtils</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="SplitLogWorker.html" target="classFrame">TaskExecutor</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="TimeRangeTracker.html" target="classFrame">TimeRangeTracker</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MemStoreFlusher.html" target="classFrame">WakeupFlushThread</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="MultiVersionConsistencyControl.html" target="classFrame">WriteEntry</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="HRegion.html" target="classFrame">WriteState</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFile.html" target="classFrame">Writer</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="StoreFile.html" target="classFrame">WriterBuilder</a>
+              		</td>
+            	</tr>
+				            	<tr>
+              		<td>
+                		<a href="WrongRegionException.html" target="classFrame">WrongRegionException</a>
+              		</td>
+            	</tr>
+				        	</tbody>
+      	</table>
+		
+		      	<div class="overview">
+        	<ul>
+          		<li>
+            		<a href="../../../../../overview-summary.html">Overview</a>
+          		</li>
+          		<li class="selected">Package</li>
+        	</ul>
+      	</div>
+      	<div class="framenoframe">
+        	<ul>
+          		<li>
+            		<a href="../../../../../index.html" target="_top">FRAMES</a>
+          		</li>
+          		<li>
+            		<a href="package-summary.html" target="_top">NO FRAMES</a>
+          		</li>
+        	</ul>
+      	</div>
+				<hr />
+		Copyright &#169; 2012 The Apache Software Foundation. All Rights Reserved.
+	</body>
+</html>

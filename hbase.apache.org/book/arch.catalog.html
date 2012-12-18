@@ -1,0 +1,38 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>9.2.&nbsp;Catalog Tables</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="architecture.html" title="Chapter&nbsp;9.&nbsp;Architecture"><link rel="prev" href="architecture.html" title="Chapter&nbsp;9.&nbsp;Architecture"><link rel="next" href="client.html" title="9.3.&nbsp;Client"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">9.2.&nbsp;Catalog Tables</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="architecture.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;9.&nbsp;Architecture</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="client.html">Next</a></td></tr></table><hr></div><div class="section" title="9.2.&nbsp;Catalog Tables"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="arch.catalog"></a>9.2.&nbsp;Catalog Tables</h2></div></div></div><p>The catalog tables -ROOT- and .META. exist as HBase tables.  They are filtered out
+	  of the HBase shell's <code class="code">list</code> command, but they are in fact tables just like any other.
+     </p><div class="section" title="9.2.1.&nbsp;ROOT"><div class="titlepage"><div><div><h3 class="title"><a name="arch.catalog.root"></a>9.2.1.&nbsp;ROOT</h3></div></div></div><p>-ROOT- keeps track of where the .META. table is.  The -ROOT- table structure is as follows:
+       </p><p>Key:
+            </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">.META. region key (<code class="code">.META.,,1</code>)</li></ul></div><p>
+       </p><p>Values:
+            </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><code class="code">info:regioninfo</code> (serialized <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html" target="_top">HRegionInfo</a>
+               instance of .META.)</li><li class="listitem"><code class="code">info:server</code> (server:port of the RegionServer holding .META.)</li><li class="listitem"><code class="code">info:serverstartcode</code> (start-time of the RegionServer process holding .META.)</li></ul></div><p>
+       </p></div><div class="section" title="9.2.2.&nbsp;META"><div class="titlepage"><div><div><h3 class="title"><a name="arch.catalog.meta"></a>9.2.2.&nbsp;META</h3></div></div></div><p>The .META. table keeps a list of all regions in the system. The .META. table structure is as follows:
+       </p><p>Key:
+            </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">Region key of the format (<code class="code">[table],[region start key],[region id]</code>)</li></ul></div><p>
+       </p><p>Values:
+            </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><code class="code">info:regioninfo</code> (serialized <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html" target="_top">
+              HRegionInfo</a> instance for this region)
+              </li><li class="listitem"><code class="code">info:server</code> (server:port of the RegionServer containing this region)</li><li class="listitem"><code class="code">info:serverstartcode</code> (start-time of the RegionServer process containing this region)</li></ul></div><p>
+       </p><p>When a table is in the process of splitting two other columns will be created, <code class="code">info:splitA</code> and <code class="code">info:splitB</code>
+       which represent the two daughter regions.  The values for these columns are also serialized HRegionInfo instances.
+       After the region has been split eventually this row will be deleted.
+       </p><p>Notes on HRegionInfo:  the empty key is used to denote table start and table end.  A region with an empty start key
+       is the first region in a table.  If region has both an empty start and an empty end key, it's the only region in the table
+       </p><p>In the (hopefully unlikely) event that programmatic processing of catalog metadata is required, see the
+         <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29" target="_top">Writables</a> utility.
+       </p></div><div class="section" title="9.2.3.&nbsp;Startup Sequencing"><div class="titlepage"><div><div><h3 class="title"><a name="arch.catalog.startup"></a>9.2.3.&nbsp;Startup Sequencing</h3></div></div></div><p>The META location is set in ROOT first.  Then META is updated with server and startcode values.
+	    </p><p>For information on region-RegionServer assignment, see <a class="xref" href="regions.arch.html#regions.arch.assignment" title="9.7.2.&nbsp;Region-RegionServer Assignment">Section&nbsp;9.7.2, &#8220;Region-RegionServer Assignment&#8221;</a>.
+	    </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'arch.catalog';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="architecture.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="architecture.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="client.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter&nbsp;9.&nbsp;Architecture&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;9.3.&nbsp;Client</td></tr></table></div></body></html>

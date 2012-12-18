@@ -1,0 +1,168 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Chapter&nbsp;1.&nbsp;Secure Apache HBase (TM)</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="security.html" title="Chapter&nbsp;1.&nbsp;Secure Apache HBase (TM)"><link rel="next" href="hbase.accesscontrol.configuration.html" title="1.2.&nbsp;Access Control"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Chapter&nbsp;1.&nbsp;Secure Apache HBase (TM)</th></tr><tr><td width="20%" align="left">&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="hbase.accesscontrol.configuration.html">Next</a></td></tr></table><hr></div><div class="chapter" title="Chapter&nbsp;1.&nbsp;Secure Apache HBase (TM)"><div class="titlepage"><div><div><h2 class="title"><a name="security"></a>Chapter&nbsp;1.&nbsp;Secure Apache HBase (TM)</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="section"><a href="security.html#hbase.secure.configuration">1.1. Secure Client Access to Apache HBase</a></span></dt><dd><dl><dt><span class="section"><a href="security.html#d456e19">1.1.1. Prerequisites</a></span></dt><dt><span class="section"><a href="security.html#d456e60">1.1.2. Server-side Configuration for Secure Operation</a></span></dt><dt><span class="section"><a href="security.html#d456e72">1.1.3. Client-side Configuration for Secure Operation</a></span></dt><dt><span class="section"><a href="security.html#d456e111">1.1.4. Client-side Configuration for Secure Operation - Thrift Gateway</a></span></dt><dt><span class="section"><a href="security.html#d456e126">1.1.5. Client-side Configuration for Secure Operation - REST Gateway</a></span></dt></dl></dd><dt><span class="section"><a href="hbase.accesscontrol.configuration.html">1.2. Access Control</a></span></dt><dd><dl><dt><span class="section"><a href="hbase.accesscontrol.configuration.html#d456e151">1.2.1. Prerequisites</a></span></dt><dt><span class="section"><a href="hbase.accesscontrol.configuration.html#d456e158">1.2.2. Overview</a></span></dt><dt><span class="section"><a href="hbase.accesscontrol.configuration.html#d456e315">1.2.3. Server-side Configuration for Access Control</a></span></dt><dt><span class="section"><a href="hbase.accesscontrol.configuration.html#d456e327">1.2.4. Shell Enhancements for Access Control</a></span></dt></dl></dd></dl></div><div class="section" title="1.1.&nbsp;Secure Client Access to Apache HBase"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="hbase.secure.configuration"></a>1.1.&nbsp;Secure Client Access to Apache HBase</h2></div></div></div><p>Newer releases of Apache HBase (TM) (&gt;= 0.92) support optional SASL authentication of clients<sup>[<a name="d456e10" href="#ftn.d456e10" class="footnote">1</a>]</sup>.</p><p>This describes how to set up Apache HBase and clients for connection to secure HBase resources.</p><div class="section" title="1.1.1.&nbsp;Prerequisites"><div class="titlepage"><div><div><h3 class="title"><a name="d456e19"></a>1.1.1.&nbsp;Prerequisites</h3></div></div></div><p>
+        You need to have a working Kerberos KDC.
+    </p><p>
+        A HBase configured for secure client access is expected to be running
+        on top of a secured HDFS cluster. HBase must be able to authenticate
+        to HDFS services. HBase needs Kerberos credentials to interact with
+        the Kerberos-enabled HDFS daemons. Authenticating a service should be
+        done using a keytab file. The procedure for creating keytabs for HBase
+        service is the same as for creating keytabs for Hadoop. Those steps
+        are omitted here. Copy the resulting keytab files to wherever HBase
+        Master and RegionServer processes are deployed and make them readable
+        only to the user account under which the HBase daemons will run.
+    </p><p>
+        A Kerberos principal has three parts, with the form 
+        <code class="code">username/fully.qualified.domain.name@YOUR-REALM.COM</code>. We
+        recommend using <code class="code">hbase</code> as the username portion.
+    </p><p>
+        The following is an example of the configuration properties for
+        Kerberos operation that must be added to the 
+        <code class="code">hbase-site.xml</code> file on every server machine in the
+        cluster. Required for even the most basic interactions with a
+        secure Hadoop configuration, independent of HBase security.
+    </p><pre class="programlisting">
+      &lt;property&gt;
+        &lt;name&gt;hbase.regionserver.kerberos.principal&lt;/name&gt;
+        &lt;value&gt;hbase/_HOST@YOUR-REALM.COM&lt;/value&gt;
+      &lt;/property&gt;
+      &lt;property&gt;
+        &lt;name&gt;hbase.regionserver.keytab.file&lt;/name&gt;
+        &lt;value&gt;/etc/hbase/conf/keytab.krb5&lt;/value&gt;
+      &lt;/property&gt;
+      &lt;property&gt;
+        &lt;name&gt;hbase.master.kerberos.principal&lt;/name&gt;
+        &lt;value&gt;hbase/_HOST@YOUR-REALM.COM&lt;/value&gt;
+      &lt;/property&gt;
+      &lt;property&gt;
+        &lt;name&gt;hbase.master.keytab.file&lt;/name&gt;
+        &lt;value&gt;/etc/hbase/conf/keytab.krb5&lt;/value&gt;
+      &lt;/property&gt;
+    </pre><p>
+        Each HBase client user should also be given a Kerberos principal. This
+        principal should have a password assigned to it (as opposed to a
+        keytab file). The client principal's <code class="code">maxrenewlife</code> should
+        be set so that it can be renewed enough times for the HBase client
+        process to complete. For example, if a user runs a long-running HBase
+        client process that takes at most 3 days, we might create this user's
+        principal within <code class="code">kadmin</code> with: <code class="code">addprinc -maxrenewlife
+        3days</code>
+    </p><p>
+        Long running daemons with indefinite lifetimes that require client
+        access to HBase can instead be configured to log in from a keytab. For
+        each host running such daemons, create a keytab with 
+        <code class="code">kadmin</code> or <code class="code">kadmin.local</code>. The procedure for
+        creating keytabs for HBase service is the same as for creating
+        keytabs for Hadoop. Those steps are omitted here. Copy the resulting
+        keytab files to where the client daemon will execute and make them
+        readable only to the user account under which the daemon will run.
+    </p></div><div class="section" title="1.1.2.&nbsp;Server-side Configuration for Secure Operation"><div class="titlepage"><div><div><h3 class="title"><a name="d456e60"></a>1.1.2.&nbsp;Server-side Configuration for Secure Operation</h3></div></div></div><p>
+        Add the following to the <code class="code">hbase-site.xml</code> file on every server machine in the cluster:
+    </p><pre class="programlisting">
+      &lt;property&gt;
+        &lt;name&gt;hbase.security.authentication&lt;/name&gt;
+        &lt;value&gt;kerberos&lt;/value&gt; 
+      &lt;/property&gt; 
+      &lt;property&gt;
+        &lt;name&gt;hbase.security.authorization&lt;/name&gt;
+        &lt;value&gt;true&lt;/value&gt;
+      &lt;/property&gt;
+      &lt;property&gt;
+      &lt;name&gt;hbase.coprocessor.region.classes&lt;/name&gt;
+        &lt;value&gt;org.apache.hadoop.hbase.security.token.TokenProvider&lt;/value&gt;
+      &lt;/property&gt;
+    </pre><p>
+       A full shutdown and restart of HBase service is required when deploying
+       these configuration changes.
+    </p></div><div class="section" title="1.1.3.&nbsp;Client-side Configuration for Secure Operation"><div class="titlepage"><div><div><h3 class="title"><a name="d456e72"></a>1.1.3.&nbsp;Client-side Configuration for Secure Operation</h3></div></div></div><p>
+        Add the following to the <code class="code">hbase-site.xml</code> file on every client:
+    </p><pre class="programlisting">
+      &lt;property&gt;
+        &lt;name&gt;hbase.security.authentication&lt;/name&gt;
+        &lt;value&gt;kerberos&lt;/value&gt;
+      &lt;/property&gt; 
+    </pre><p>
+        The client environment must be logged in to Kerberos from KDC or
+        keytab via the <code class="code">kinit</code> command before communication with
+        the HBase cluster will be possible.
+    </p><p>
+        Be advised that if the <code class="code">hbase.security.authentication</code>
+        in the client- and server-side site files do not match, the client will 
+        not be able to communicate with the cluster.
+    </p><p>
+        Once HBase is configured for secure RPC it is possible to optionally
+        configure encrypted communication. To do so, add the following to the
+        <code class="code">hbase-site.xml</code> file on every client:
+    </p><pre class="programlisting">
+      &lt;property&gt;
+        &lt;name&gt;hbase.rpc.protection&lt;/name&gt;
+        &lt;value&gt;privacy&lt;/value&gt;
+      &lt;/property&gt;
+    </pre><p>
+        This configuration property can also be set on a per connection basis.
+        Set it in the <code class="code">Configuration</code> supplied to
+        <code class="code">HTable</code>:
+    </p><pre class="programlisting">
+      Configuration conf = HBaseConfiguration.create();
+      conf.set("hbase.rpc.protection", "privacy");
+      HTable table = new HTable(conf, tablename);
+    </pre><p>
+        Expect a ~10% performance penalty for encrypted communication.
+    </p></div><div class="section" title="1.1.4.&nbsp;Client-side Configuration for Secure Operation - Thrift Gateway"><div class="titlepage"><div><div><h3 class="title"><a name="d456e111"></a>1.1.4.&nbsp;Client-side Configuration for Secure Operation - Thrift Gateway</h3></div></div></div><p>
+        Add the following to the <code class="code">hbase-site.xml</code> file for every Thrift gateway:
+    </p><pre class="programlisting">
+    &lt;property&gt;
+      &lt;name&gt;hbase.thrift.keytab.file&lt;/name&gt;
+      &lt;value&gt;/etc/hbase/conf/hbase.keytab&lt;/value&gt;
+    &lt;/property&gt;
+    &lt;property&gt;
+      &lt;name&gt;hbase.thrift.kerberos.principal&lt;/name&gt;
+      &lt;value&gt;$USER/_HOST@HADOOP.LOCALDOMAIN&lt;/value&gt;
+    &lt;/property&gt;
+    </pre><p>
+    </p><p>
+        Substitute the appropriate credential and keytab for $USER and $KEYTAB
+        respectively.
+    </p><p>
+        The Thrift gateway will authenticate with HBase using the supplied
+        credential. No authentication will be performed by the Thrift gateway
+        itself. All client access via the Thrift gateway will use the Thrift
+        gateway's credential and have its privilege.
+    </p></div><div class="section" title="1.1.5.&nbsp;Client-side Configuration for Secure Operation - REST Gateway"><div class="titlepage"><div><div><h3 class="title"><a name="d456e126"></a>1.1.5.&nbsp;Client-side Configuration for Secure Operation - REST Gateway</h3></div></div></div><p>
+        Add the following to the <code class="code">hbase-site.xml</code> file for every REST gateway:
+    </p><pre class="programlisting">
+    &lt;property&gt;
+      &lt;name&gt;hbase.rest.keytab.file&lt;/name&gt;
+      &lt;value&gt;$KEYTAB&lt;/value&gt;
+    &lt;/property&gt;
+    &lt;property&gt;
+      &lt;name&gt;hbase.rest.kerberos.principal&lt;/name&gt;
+      &lt;value&gt;$USER/_HOST@HADOOP.LOCALDOMAIN&lt;/value&gt;
+    &lt;/property&gt;
+    </pre><p>
+    </p><p>
+        Substitute the appropriate credential and keytab for $USER and $KEYTAB
+        respectively.
+    </p><p>
+        The REST gateway will authenticate with HBase using the supplied
+        credential. No authentication will be performed by the REST gateway
+        itself. All client access via the REST gateway will use the REST
+        gateway's credential and have its privilege.
+    </p><p>
+        It should be possible for clients to authenticate with the HBase
+        cluster through the REST gateway in a pass-through manner via SPEGNO
+        HTTP authentication. This is future work.
+    </p></div></div><div class="footnotes"><br><hr width="100" align="left"><div class="footnote"><p><sup>[<a id="ftn.d456e10" href="#d456e10" class="para">1</a>] </sup>See
+    also Matteo Bertozzi's article on <a class="link" href="http://www.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/" target="_top">Understanding User Authentication and Authorization in Apache HBase</a>.</p></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'security';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left">&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="hbase.accesscontrol.configuration.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right" valign="top">&nbsp;1.2.&nbsp;Access Control</td></tr></table></div></body></html>

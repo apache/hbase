@@ -1,0 +1,91 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>9.6.&nbsp;RegionServer</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="architecture.html" title="Chapter&nbsp;9.&nbsp;Architecture"><link rel="prev" href="master.html" title="9.5.&nbsp;Master"><link rel="next" href="regions.arch.html" title="9.7.&nbsp;Regions"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">9.6.&nbsp;RegionServer</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="master.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;9.&nbsp;Architecture</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="regions.arch.html">Next</a></td></tr></table><hr></div><div class="section" title="9.6.&nbsp;RegionServer"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="regionserver.arch"></a>9.6.&nbsp;RegionServer</h2></div></div></div><p><code class="code">HRegionServer</code> is the RegionServer implementation.  It is responsible for serving and managing regions.
+       In a distributed cluster, a RegionServer runs on a <a class="xref" href="arch.hdfs.html#arch.hdfs.dn" title="9.9.2.&nbsp;DataNode">Section&nbsp;9.9.2, &#8220;DataNode&#8221;</a>.
+       </p><div class="section" title="9.6.1.&nbsp;Interface"><div class="titlepage"><div><div><h3 class="title"><a name="regionserver.arch.api"></a>9.6.1.&nbsp;Interface</h3></div></div></div><p>The methods exposed by <code class="code">HRegionRegionInterface</code> contain both data-oriented and region-maintenance methods:
+         </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">Data (get, put, delete, next, etc.)
+            </li><li class="listitem">Region (splitRegion, compactRegion, etc.)
+            </li></ul></div><p>
+         For example, when the <code class="code">HBaseAdmin</code> method <code class="code">majorCompact</code> is invoked on a table, the client is actually iterating through
+         all regions for the specified table and requesting a major compaction directly to each region.
+         </p></div><div class="section" title="9.6.2.&nbsp;Processes"><div class="titlepage"><div><div><h3 class="title"><a name="regionserver.arch.processes"></a>9.6.2.&nbsp;Processes</h3></div></div></div><p>The RegionServer runs a variety of background threads:</p><div class="section" title="9.6.2.1.&nbsp;CompactSplitThread"><div class="titlepage"><div><div><h4 class="title"><a name="regionserver.arch.processes.compactsplit"></a>9.6.2.1.&nbsp;CompactSplitThread</h4></div></div></div><p>Checks for splits and handle minor compactions.</p></div><div class="section" title="9.6.2.2.&nbsp;MajorCompactionChecker"><div class="titlepage"><div><div><h4 class="title"><a name="regionserver.arch.processes.majorcompact"></a>9.6.2.2.&nbsp;MajorCompactionChecker</h4></div></div></div><p>Checks for major compactions.</p></div><div class="section" title="9.6.2.3.&nbsp;MemStoreFlusher"><div class="titlepage"><div><div><h4 class="title"><a name="regionserver.arch.processes.memstore"></a>9.6.2.3.&nbsp;MemStoreFlusher</h4></div></div></div><p>Periodically flushes in-memory writes in the MemStore to StoreFiles.</p></div><div class="section" title="9.6.2.4.&nbsp;LogRoller"><div class="titlepage"><div><div><h4 class="title"><a name="regionserver.arch.processes.log"></a>9.6.2.4.&nbsp;LogRoller</h4></div></div></div><p>Periodically checks the RegionServer's HLog.</p></div></div><div class="section" title="9.6.3.&nbsp;Coprocessors"><div class="titlepage"><div><div><h3 class="title"><a name="coprocessors"></a>9.6.3.&nbsp;Coprocessors</h3></div></div></div><p>Coprocessors were added in 0.92.  There is a thorough <a class="link" href="https://blogs.apache.org/hbase/entry/coprocessor_introduction" target="_top">Blog Overview of CoProcessors</a>
+         posted.  Documentation will eventually move to this reference guide, but the blog is the most current information available at this time.
+         </p></div><div class="section" title="9.6.4.&nbsp;Block Cache"><div class="titlepage"><div><div><h3 class="title"><a name="block.cache"></a>9.6.4.&nbsp;Block Cache</h3></div></div></div><div class="section" title="9.6.4.1.&nbsp;Design"><div class="titlepage"><div><div><h4 class="title"><a name="block.cache.design"></a>9.6.4.1.&nbsp;Design</h4></div></div></div><p>The Block Cache is an LRU cache that contains three levels of block priority to allow for scan-resistance and in-memory ColumnFamilies:
+        </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">Single access priority: The first time a block is loaded from HDFS it normally has this priority and it will be part of the first group to be considered
+            during evictions. The advantage is that scanned blocks are more likely to get evicted than blocks that are getting more usage.
+            </li><li class="listitem">Mutli access priority: If a block in the previous priority group is accessed again, it upgrades to this priority. It is thus part of the second group
+            considered during evictions.
+            </li><li class="listitem">In-memory access priority: If the block's family was configured to be "in-memory", it will be part of this priority disregarding the number of times it
+            was accessed. Catalog tables are configured like this. This group is the last one considered during evictions.
+            </li></ul></div><p>
+        For more information, see the <a class="link" href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/LruBlockCache.html" target="_top">LruBlockCache source</a>
+        </p></div><div class="section" title="9.6.4.2.&nbsp;Usage"><div class="titlepage"><div><div><h4 class="title"><a name="block.cache.usage"></a>9.6.4.2.&nbsp;Usage</h4></div></div></div><p>Block caching is enabled by default for all the user tables which means that any read operation will load the LRU cache. This might be good for a large number of use cases,
+        but further tunings are usually required in order to achieve better performance. An important concept is the
+        <a class="link" href="http://en.wikipedia.org/wiki/Working_set_size" target="_top">working set size</a>, or WSS, which is: "the amount of memory needed to compute the answer to a problem".
+        For a website, this would be the data that's needed to answer the queries over a short amount of time.
+        </p><p>The way to calculate how much memory is available in HBase for caching is:
+        </p><pre class="programlisting">
+            number of region servers * heap size * hfile.block.cache.size * 0.85
+        </pre><p>The default value for the block cache is 0.25 which represents 25% of the available heap. The last value (85%) is the default acceptable loading factor in the LRU cache after
+        which eviction is started. The reason it is included in this equation is that it would be unrealistic to say that it is possible to use 100% of the available memory since this would
+        make the process blocking from the point where it loads new blocks. Here are some examples:
+        </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">One region server with the default heap size (1GB) and the default block cache size will have 217MB of block cache available.
+            </li><li class="listitem">20 region servers with the heap size set to 8GB and a default block cache size will have 34GB of block cache.
+            </li><li class="listitem">100 region servers with the heap size set to 24GB and a block cache size of 0.5 will have about 1TB of block cache.
+            </li></ul></div><p>Your data isn't the only resident of the block cache, here are others that you may have to take into account:
+        </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">Catalog tables: The -ROOT- and .META. tables are forced into the block cache and have the in-memory priority which means that they are harder to evict. The former never uses
+            more than a few hundreds of bytes while the latter can occupy a few MBs (depending on the number of regions).
+            </li><li class="listitem">HFiles indexes: HFile is the file format that HBase uses to store data in HDFS and it contains a multi-layered index in order seek to the data without having to read the whole file.
+            The size of those indexes is a factor of the block size (64KB by default), the size of your keys and the amount of data you are storing. For big data sets it's not unusual to see numbers around
+            1GB per region server, although not all of it will be in cache because the LRU will evict indexes that aren't used.
+            </li><li class="listitem">Keys: Taking into account only the values that are being stored is missing half the picture since every value is stored along with its keys
+            (row key, family, qualifier, and timestamp). See <a class="xref" href="rowkey.design.html#keysize" title="6.3.2.&nbsp;Try to minimize row and column sizes">Section&nbsp;6.3.2, &#8220;Try to minimize row and column sizes&#8221;</a>.
+            </li><li class="listitem">Bloom filters: Just like the HFile indexes, those data structures (when enabled) are stored in the LRU.
+            </li></ul></div><p>Currently the recommended way to measure HFile indexes and bloom filters sizes is to look at the region server web UI and checkout the relevant metrics. For keys,
+        sampling can be done by using the HFile command line tool and look for the average key size metric.
+        </p><p>It's generally bad to use block caching when the WSS doesn't fit in memory. This is the case when you have for example 40GB available across all your region servers' block caches
+        but you need to process 1TB of data. One of the reasons is that the churn generated by the evictions will trigger more garbage collections unnecessarily. Here are two use cases:
+        </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">Fully random reading pattern: This is a case where you almost never access the same row twice within a short amount of time such that the chance of hitting a cached block is close
+            to 0. Setting block caching on such a table is a waste of memory and CPU cycles, more so that it will generate more garbage to pick up by the JVM. For more information on monitoring GC,
+            see <a class="xref" href="trouble.log.html#trouble.log.gc" title="12.2.3.&nbsp;JVM Garbage Collection Logs">Section&nbsp;12.2.3, &#8220;JVM Garbage Collection Logs&#8221;</a>.
+            </li><li class="listitem">Mapping a table: In a typical MapReduce job that takes a table in input, every row will be read only once so there's no need to put them into the block cache. The Scan object has
+            the option of turning this off via the setCaching method (set it to false). You can still keep block caching turned on on this table if you need fast random read access. An example would be
+            counting the number of rows in a table that serves live traffic, caching every block of that table would create massive churn and would surely evict data that's currently in use.
+            </li></ul></div></div></div><div class="section" title="9.6.5.&nbsp;Write Ahead Log (WAL)"><div class="titlepage"><div><div><h3 class="title"><a name="wal"></a>9.6.5.&nbsp;Write Ahead Log (WAL)</h3></div></div></div><div class="section" title="9.6.5.1.&nbsp;Purpose"><div class="titlepage"><div><div><h4 class="title"><a name="purpose.wal"></a>9.6.5.1.&nbsp;Purpose</h4></div></div></div><p>Each RegionServer adds updates (Puts, Deletes) to its write-ahead log (WAL)
+            first, and then to the <a class="xref" href="regions.arch.html#store.memstore" title="9.7.5.1.&nbsp;MemStore">Section&nbsp;9.7.5.1, &#8220;MemStore&#8221;</a> for the affected <a class="xref" href="regions.arch.html#store" title="9.7.5.&nbsp;Store">Section&nbsp;9.7.5, &#8220;Store&#8221;</a>.
+        This ensures that HBase has durable writes. Without WAL, there is the possibility of data loss in the case of a RegionServer failure
+        before each MemStore is flushed and new StoreFiles are written.  <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/wal/HLog.html" target="_top">HLog</a>
+        is the HBase WAL implementation, and there is one HLog instance per RegionServer.
+       </p>The WAL is in HDFS in <code class="filename">/hbase/.logs/</code> with subdirectories per region.
+       <p>
+        For more general information about the concept of write ahead logs, see the Wikipedia
+        <a class="link" href="http://en.wikipedia.org/wiki/Write-ahead_logging" target="_top">Write-Ahead Log</a> article.
+       </p></div><div class="section" title="9.6.5.2.&nbsp;WAL Flushing"><div class="titlepage"><div><div><h4 class="title"><a name="wal_flush"></a>9.6.5.2.&nbsp;WAL Flushing</h4></div></div></div><p>TODO (describe).
+          </p></div><div class="section" title="9.6.5.3.&nbsp;WAL Splitting"><div class="titlepage"><div><div><h4 class="title"><a name="wal_splitting"></a>9.6.5.3.&nbsp;WAL Splitting</h4></div></div></div><div class="section" title="9.6.5.3.1.&nbsp;How edits are recovered from a crashed RegionServer"><div class="titlepage"><div><div><h5 class="title"><a name="d2121e5167"></a>9.6.5.3.1.&nbsp;How edits are recovered from a crashed RegionServer</h5></div></div></div><p>When a RegionServer crashes, it will lose its ephemeral lease in
+         ZooKeeper...TODO</p></div><div class="section" title="9.6.5.3.2.&nbsp;hbase.hlog.split.skip.errors"><div class="titlepage"><div><div><h5 class="title"><a name="d2121e5172"></a>9.6.5.3.2.&nbsp;<code class="varname">hbase.hlog.split.skip.errors</code></h5></div></div></div><p>When set to <code class="constant">true</code>, any error
+        encountered splitting will be logged, the problematic WAL will be
+        moved into the <code class="filename">.corrupt</code> directory under the hbase
+        <code class="varname">rootdir</code>, and processing will continue. If set to
+        <code class="constant">false</code>, the default, the exception will be propagated and the
+        split logged as failed.<sup>[<a name="d2121e5190" href="#ftn.d2121e5190" class="footnote">25</a>]</sup></p></div><div class="section" title="9.6.5.3.3.&nbsp;How EOFExceptions are treated when splitting a crashed RegionServers' WALs"><div class="titlepage"><div><div><h5 class="title"><a name="d2121e5196"></a>9.6.5.3.3.&nbsp;How EOFExceptions are treated when splitting a crashed
+        RegionServers' WALs</h5></div></div></div><p>If we get an EOF while splitting logs, we proceed with the split
+        even when <code class="varname">hbase.hlog.split.skip.errors</code> ==
+        <code class="constant">false</code>. An EOF while reading the last log in the
+        set of files to split is near-guaranteed since the RegionServer likely
+        crashed mid-write of a record. But we'll continue even if we got an
+        EOF reading other than the last file in the set.<sup>[<a name="d2121e5207" href="#ftn.d2121e5207" class="footnote">26</a>]</sup></p></div></div></div><div class="footnotes"><br><hr width="100" align="left"><div class="footnote"><p><sup>[<a id="ftn.d2121e5190" href="#d2121e5190" class="para">25</a>] </sup>See <a class="link" href="https://issues.apache.org/jira/browse/HBASE-2958" target="_top">HBASE-2958
+            When hbase.hlog.split.skip.errors is set to false, we fail the
+            split but thats it</a>. We need to do more than just fail split
+            if this flag is set.</p></div><div class="footnote"><p><sup>[<a id="ftn.d2121e5207" href="#d2121e5207" class="para">26</a>] </sup>For background, see <a class="link" href="https://issues.apache.org/jira/browse/HBASE-2643" target="_top">HBASE-2643
+            Figure how to deal with eof splitting logs</a></p></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'regionserver.arch';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="master.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="architecture.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="regions.arch.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">9.5.&nbsp;Master&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;9.7.&nbsp;Regions</td></tr></table></div></body></html>

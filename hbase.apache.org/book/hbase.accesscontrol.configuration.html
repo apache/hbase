@@ -1,0 +1,120 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>8.2.&nbsp;Access Control</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="security.html" title="Chapter&nbsp;8.&nbsp;Secure Apache HBase (TM)"><link rel="prev" href="security.html" title="Chapter&nbsp;8.&nbsp;Secure Apache HBase (TM)"><link rel="next" href="architecture.html" title="Chapter&nbsp;9.&nbsp;Architecture"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">8.2.&nbsp;Access Control</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="security.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;8.&nbsp;Secure Apache HBase (TM)</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="architecture.html">Next</a></td></tr></table><hr></div><div class="section" title="8.2.&nbsp;Access Control"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="hbase.accesscontrol.configuration"></a>8.2.&nbsp;Access Control</h2></div></div></div><p>
+        Newer releases of Apache HBase (&gt;= 0.92) support optional access control
+        list (ACL-) based protection of resources on a column family and/or
+        table basis.
+    </p><p>
+        This describes how to set up Secure HBase for access control, with an
+        example of granting and revoking user permission on table resources
+        provided.
+    </p><div class="section" title="8.2.1.&nbsp;Prerequisites"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e4236"></a>8.2.1.&nbsp;Prerequisites</h3></div></div></div><p>
+       You must configure HBase for secure operation. Refer to the section
+       "Secure Client Access to HBase" and complete all of the steps described
+       there.
+    </p><p>
+       You must also configure ZooKeeper for secure operation. Changes to ACLs
+       are synchronized throughout the cluster using ZooKeeper. Secure 
+       authentication to ZooKeeper must be enabled or otherwise it will be
+       possible to subvert HBase access control via direct client access to
+       ZooKeeper. Refer to the section on secure ZooKeeper configuration and
+       complete all of the steps described there.
+    </p></div><div class="section" title="8.2.2.&nbsp;Overview"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e4243"></a>8.2.2.&nbsp;Overview</h3></div></div></div><p>
+        With Secure RPC and Access Control enabled, client access to HBase is
+        authenticated and user data is private unless access has been
+        explicitly granted. Access to data can be granted at a table or per
+        column family basis. 
+    </p><p>
+        However, the following items have been left out of the initial
+        implementation for simplicity:
+    </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>Row-level or per value (cell): This would require broader changes for storing the ACLs inline with rows. It is a future goal.</p></li><li class="listitem"><p>Push down of file ownership to HDFS: HBase is not designed for the case where files may have different permissions than the HBase system principal. Pushing file ownership down into HDFS would necessitate changes to core code. Also, while HDFS file ownership would make applying quotas easy, and possibly make bulk imports more straightforward, it is not clear that it would offer a more secure setup.</p></li><li class="listitem"><p>HBase managed "roles" as collections of permissions: We will not model "roles" internally in HBase to begin with. We instead allow group names to be granted permissions, which allows external modeling of roles via group membership. Groups are created and manipulated externally to HBase, via the Hadoop group mapping service.</p></li></ol></div><p>
+Access control mechanisms are mature and fairly standardized in the relational database world. The HBase implementation approximates current convention, but HBase has a simpler feature set than relational databases, especially in terms of client operations. We don't distinguish between an insert (new record) and update (of existing record), for example, as both collapse down into a Put. Accordingly, the important operations condense to four permissions: READ, WRITE, CREATE, and ADMIN.
+    </p><table id="d2121e4262">Operation To Permission Mapping<thead>PermissionOperation</thead><tbody>ReadGetExistsScanWritePutDeleteLock/UnlockRowIncrementColumnValueCheckAndDelete/PutFlushCompactCreateCreateAlterDropAdminEnable/DisableSplitMajor CompactGrantRevokeShutdown</tbody></table><p>
+        Permissions can be granted in any of the following scopes, though
+        CREATE and ADMIN permissions are effective only at table scope.
+    </p><p>
+    </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>Table</p><p>
+        </p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem"><p>Read: User can read from any column family in table</p></li><li class="listitem"><p>Write: User can write to any column family in table</p></li><li class="listitem"><p>Create: User can alter table attributes; add, alter, or drop column families; and drop the table.</p></li><li class="listitem"><p>Admin: User can alter table attributes; add, alter, or drop column families; and enable, disable, or drop the table. User can also trigger region (re)assignments or relocation.</p></li></ul></div><p>
+        </p></li><li class="listitem"><p>Column Family</p><p>
+        </p><div class="itemizedlist"><ul class="itemizedlist" type="circle"><li class="listitem"><p>Read: User can read from the column family</p></li><li class="listitem"><p>Write: User can write to the column family</p></li></ul></div><p>
+        </p></li></ul></div><p>
+    </p><p>
+       There is also an implicit global scope for the superuser.
+    </p><p>
+       The superuser is a principal, specified in the HBase site configuration
+       file, that has equivalent access to HBase as the 'root' user would on a
+       UNIX derived system. Normally this is the principal that the HBase
+       processes themselves authenticate as. Although future versions of HBase
+       Access Control may support multiple superusers, the superuser privilege
+       will always include the principal used to run the HMaster process. Only
+       the superuser is allowed to create tables, switch the balancer on or
+       off, or take other actions with global consequence. Furthermore, the
+       superuser has an implicit grant of all permissions to all resources.
+    </p><p>
+       Tables have a new metadata attribute: OWNER, the user principal who owns
+       the table. By default this will be set to the user principal who creates
+       the table, though it may be changed at table creation time or during an
+       alter operation by setting or changing the OWNER table attribute. Only a
+       single user principal can own a table at a given time. A table owner will
+       have all permissions over a given table. 
+    </p></div><div class="section" title="8.2.3.&nbsp;Server-side Configuration for Access Control"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e4400"></a>8.2.3.&nbsp;Server-side Configuration for Access Control</h3></div></div></div><p>
+        Enable the AccessController coprocessor in the cluster configuration
+        and restart HBase. The restart can be a rolling one. Complete the
+        restart of all Master and RegionServer processes before setting up
+        ACLs.
+    </p><p>
+        To enable the AccessController, modify the <code class="code">hbase-site.xml</code> file on every server machine in the cluster to look like:
+    </p><pre class="programlisting">
+      &lt;property&gt;
+        &lt;name&gt;hbase.coprocessor.master.classes&lt;/name&gt;
+        &lt;value&gt;org.apache.hadoop.hbase.security.access.AccessController&lt;/value&gt;
+      &lt;/property&gt;
+      &lt;property&gt;
+      &lt;name&gt;hbase.coprocessor.region.classes&lt;/name&gt;
+        &lt;value&gt;org.apache.hadoop.hbase.security.token.TokenProvider,
+        org.apache.hadoop.hbase.security.access.AccessController&lt;/value&gt;
+      &lt;/property&gt;
+    </pre></div><div class="section" title="8.2.4.&nbsp;Shell Enhancements for Access Control"><div class="titlepage"><div><div><h3 class="title"><a name="d2121e4412"></a>8.2.4.&nbsp;Shell Enhancements for Access Control</h3></div></div></div><p>
+The HBase shell has been extended to provide simple commands for editing and updating user permissions. The following commands have been added for access control list management: 
+    </p>
+    Grant
+    <p>
+    </p><pre class="programlisting">
+    grant &lt;user&gt; &lt;permissions&gt; &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ]
+    </pre><p>
+    </p><p>
+    <code class="code">&lt;permissions&gt;</code> is zero or more letters from the set "RWCA": READ('R'), WRITE('W'), CREATE('C'), ADMIN('A'). 
+    </p><p>
+    Note: Grants and revocations of individual permissions on a resource are both accomplished using the <code class="code">grant</code> command. A separate <code class="code">revoke</code> command is also provided by the shell, but this is for fast revocation of all of a user's access rights to a given resource only.
+    </p><p>
+    Revoke
+    </p><p>
+    </p><pre class="programlisting">
+    revoke &lt;user&gt; &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ]
+    </pre><p>
+    </p><p>
+    Alter
+    </p><p>
+    The <code class="code">alter</code> command has been extended to allow ownership assignment:
+    </p><pre class="programlisting">
+      alter 'tablename', {OWNER =&gt; 'username'}
+    </pre><p>
+    </p><p>
+    User Permission
+    </p><p>
+    The <code class="code">user_permission</code> command shows all access permissions for the current user for a given table:
+    </p><pre class="programlisting">
+      user_permission &lt;table&gt;
+    </pre><p>
+    </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'hbase.accesscontrol.configuration';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="security.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="security.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="architecture.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter&nbsp;8.&nbsp;Secure Apache HBase (TM)&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Chapter&nbsp;9.&nbsp;Architecture</td></tr></table></div></body></html>

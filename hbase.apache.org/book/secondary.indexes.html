@@ -1,0 +1,49 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>6.9.&nbsp; Secondary Indexes and Alternate Query Paths</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="schema.html" title="Chapter&nbsp;6.&nbsp;HBase and Schema Design"><link rel="prev" href="cf.keep.deleted.html" title="6.8.&nbsp; Keeping Deleted Cells"><link rel="next" href="schema.smackdown.html" title="6.10.&nbsp;Schema Design Smackdown"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">6.9.&nbsp;
+  Secondary Indexes and Alternate Query Paths
+  </th></tr><tr><td width="20%" align="left"><a accesskey="p" href="cf.keep.deleted.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;6.&nbsp;HBase and Schema Design</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="schema.smackdown.html">Next</a></td></tr></table><hr></div><div class="section" title="6.9.&nbsp; Secondary Indexes and Alternate Query Paths"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="secondary.indexes"></a>6.9.&nbsp;
+  Secondary Indexes and Alternate Query Paths
+  </h2></div></div></div><p>This section could also be titled "what if my table rowkey looks like <span class="emphasis"><em>this</em></span> but I also want to query my table like <span class="emphasis"><em>that</em></span>."
+  A common example on the dist-list is where a row-key is of the format "user-timestamp" but there are reporting requirements on activity across users for certain
+  time ranges.  Thus, selecting by user is easy because it is in the lead position of the key, but time is not.
+  </p><p>There is no single answer on the best way to handle this because it depends on...
+   </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">Number of users</li><li class="listitem">Data size and data arrival rate</li><li class="listitem">Flexibility of reporting requirements (e.g., completely ad-hoc date selection vs. pre-configured ranges) </li><li class="listitem">Desired execution speed of query (e.g., 90 seconds may be reasonable to some for an ad-hoc report, whereas it may be too long for others) </li></ul></div><p>
+   ... and solutions are also influenced by the size of the cluster and how much processing power you have to throw at the solution.
+   Common techniques are in sub-sections below.  This is a comprehensive, but not exhaustive, list of approaches.
+  </p><p>It should not be a surprise that secondary indexes require additional cluster space and processing.
+  This is precisely what happens in an RDBMS because the act of creating an alternate index requires both space and processing cycles to update.  RBDMS products
+  are more advanced in this regard to handle alternative index management out of the box.  However, HBase scales better at larger data volumes, so this is a feature trade-off.
+  </p><p>Pay attention to <a class="xref" href="performance.html" title="Chapter&nbsp;11.&nbsp;Apache HBase (TM) Performance Tuning">Chapter&nbsp;11, <i>Apache HBase (TM) Performance Tuning</i></a> when implementing any of these approaches.</p><p>Additionally, see the David Butler response in this dist-list thread <a class="link" href="http://search-hadoop.com/m/nvbiBp2TDP/Stargate%252Bhbase&amp;subj=Stargate+hbase" target="_top">HBase, mail # user - Stargate+hbase</a>
+   </p><div class="section" title="6.9.1.&nbsp; Filter Query"><div class="titlepage"><div><div><h3 class="title"><a name="secondary.indexes.filter"></a>6.9.1.&nbsp;
+       Filter Query
+      </h3></div></div></div><p>Depending on the case, it may be appropriate to use <a class="xref" href="client.filter.html" title="9.4.&nbsp;Client Request Filters">Section&nbsp;9.4, &#8220;Client Request Filters&#8221;</a>.  In this case, no secondary index is created.
+      However, don't try a full-scan on a large table like this from an application (i.e., single-threaded client).
+      </p></div><div class="section" title="6.9.2.&nbsp; Periodic-Update Secondary Index"><div class="titlepage"><div><div><h3 class="title"><a name="secondary.indexes.periodic"></a>6.9.2.&nbsp;
+       Periodic-Update Secondary Index
+      </h3></div></div></div><p>A secondary index could be created in an other table which is periodically updated via a MapReduce job.  The job could be executed intra-day, but depending on
+      load-strategy it could still potentially be out of sync with the main data table.</p><p>See <a class="xref" href="mapreduce.example.html#mapreduce.example.readwrite" title="7.2.2.&nbsp;HBase MapReduce Read/Write Example">Section&nbsp;7.2.2, &#8220;HBase MapReduce Read/Write Example&#8221;</a> for more information.</p></div><div class="section" title="6.9.3.&nbsp; Dual-Write Secondary Index"><div class="titlepage"><div><div><h3 class="title"><a name="secondary.indexes.dualwrite"></a>6.9.3.&nbsp;
+       Dual-Write Secondary Index
+      </h3></div></div></div><p>Another strategy is to build the secondary index while publishing data to the cluster (e.g., write to data table, write to index table).
+      If this is approach is taken after a data table already exists, then bootstrapping will be needed for the secondary index with a MapReduce job (see <a class="xref" href="secondary.indexes.html#secondary.indexes.periodic" title="6.9.2.&nbsp; Periodic-Update Secondary Index">Section&nbsp;6.9.2, &#8220;
+       Periodic-Update Secondary Index
+      &#8221;</a>).</p></div><div class="section" title="6.9.4.&nbsp; Summary Tables"><div class="titlepage"><div><div><h3 class="title"><a name="secondary.indexes.summary"></a>6.9.4.&nbsp;
+       Summary Tables
+      </h3></div></div></div><p>Where time-ranges are very wide (e.g., year-long report) and where the data is voluminous, summary tables are a common approach.
+      These would be generated with MapReduce jobs into another table.</p><p>See <a class="xref" href="mapreduce.example.html#mapreduce.example.summary" title="7.2.4.&nbsp;HBase MapReduce Summary to HBase Example">Section&nbsp;7.2.4, &#8220;HBase MapReduce Summary to HBase Example&#8221;</a> for more information.</p></div><div class="section" title="6.9.5.&nbsp; Coprocessor Secondary Index"><div class="titlepage"><div><div><h3 class="title"><a name="secondary.indexes.coproc"></a>6.9.5.&nbsp;
+       Coprocessor Secondary Index
+      </h3></div></div></div><p>Coprocessors act like RDBMS triggers.  These were added in 0.92.  For more information, see <a class="xref" href="regionserver.arch.html#coprocessors" title="9.6.3.&nbsp;Coprocessors">Section&nbsp;9.6.3, &#8220;Coprocessors&#8221;</a>
+      </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'secondary.indexes';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="cf.keep.deleted.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="schema.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="schema.smackdown.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">6.8.&nbsp;
+  Keeping Deleted Cells
+  &nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;6.10.&nbsp;Schema Design Smackdown</td></tr></table></div></body></html>

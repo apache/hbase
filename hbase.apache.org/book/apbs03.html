@@ -1,0 +1,51 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>B.3.&nbsp;Localized repairs</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="hbck.in.depth.html" title="Appendix&nbsp;B.&nbsp;hbck In Depth"><link rel="prev" href="apbs02.html" title="B.2.&nbsp;Inconsistencies"><link rel="next" href="apbs04.html" title="B.4.&nbsp;Region Overlap Repairs"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">B.3.&nbsp;Localized repairs</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="apbs02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Appendix&nbsp;B.&nbsp;hbck In Depth</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="apbs04.html">Next</a></td></tr></table><hr></div><div class="section" title="B.3.&nbsp;Localized repairs"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d2121e11418"></a>B.3.&nbsp;Localized repairs</h2></div></div></div><p>
+	When repairing a corrupted HBase, it is best to repair the lowest risk inconsistencies first.
+These are generally region consistency repairs -- localized single region repairs, that only modify
+in-memory data, ephemeral zookeeper data, or patch holes in the META table.
+Region consistency requires that the HBase instance has the state of the region&#8217;s data in HDFS
+(.regioninfo files), the region&#8217;s row in the .META. table., and region&#8217;s deployment/assignments on
+region servers and the master in accordance. Options for repairing region consistency include:
+	</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><code class="code">-fixAssignments</code> (equivalent to the 0.90 <code class="code">-fix</code> option) repairs unassigned, incorrectly
+assigned or multiply assigned regions.
+		</li><li class="listitem"><code class="code">-fixMeta</code> which removes meta rows when corresponding regions are not present in
+HDFS and adds new meta rows if they regions are present in HDFS while not in META.
+		</li></ul></div><p>
+	To fix deployment and assignment problems you can run this command:
+</p><pre class="programlisting">
+$ ./bin/hbase hbck -fixAssignments
+</pre>
+To fix deployment and assignment problems as well as repairing incorrect meta rows you can
+run this command:.
+<pre class="programlisting">
+$ ./bin/hbase hbck -fixAssignments -fixMeta
+</pre>
+There are a few classes of table integrity problems that are low risk repairs. The first two are
+degenerate (startkey == endkey) regions and backwards regions (startkey &gt; endkey). These are
+automatically handled by sidelining the data to a temporary directory (/hbck/xxxx).
+The third low-risk class is hdfs region holes. This can be repaired by using the:
+	<div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><code class="code">-fixHdfsHoles</code> option for fabricating new empty regions on the file system.
+If holes are detected you can use -fixHdfsHoles and should include -fixMeta and -fixAssignments to make the new region consistent.
+		</li></ul></div><pre class="programlisting">
+$ ./bin/hbase hbck -fixAssignments -fixMeta -fixHdfsHoles
+</pre>
+Since this is a common operation, we&#8217;ve added a the <code class="code">-repairHoles</code> flag that is equivalent to the
+previous command:
+<pre class="programlisting">
+$ ./bin/hbase hbck -repairHoles
+</pre>
+If inconsistencies still remain after these steps, you most likely have table integrity problems
+related to orphaned or overlapping regions.
+	</div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = '';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="apbs02.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="hbck.in.depth.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="apbs04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">B.2.&nbsp;Inconsistencies&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;B.4.&nbsp;Region Overlap Repairs</td></tr></table></div></body></html>

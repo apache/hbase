@@ -1,0 +1,71 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>1.3.&nbsp;Upgrading from 0.90.x to 0.92.x</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="upgrading.html" title="Chapter&nbsp;1.&nbsp;Upgrading"><link rel="up" href="upgrading.html" title="Chapter&nbsp;1.&nbsp;Upgrading"><link rel="prev" href="upgrade0.94.html" title="1.2.&nbsp;Upgrading from 0.92.x to 0.94.x"><link rel="next" href="upgrade0.90.html" title="1.4.&nbsp;Upgrading to HBase 0.90.x from 0.20.x or 0.89.x"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">1.3.&nbsp;Upgrading from 0.90.x to 0.92.x</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="upgrade0.94.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="upgrade0.90.html">Next</a></td></tr></table><hr></div><div class="section" title="1.3.&nbsp;Upgrading from 0.90.x to 0.92.x"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="upgrade0.92"></a>1.3.&nbsp;Upgrading from 0.90.x to 0.92.x</h2></div><div><h3 class="subtitle">Upgrade Guide</h3></div></div></div><p>You will find that 0.92.0 runs a little differently to 0.90.x releases.  Here are a few things to watch out for upgrading from 0.90.x to 0.92.0.
+</p><div class="note" title="tl;dr" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">tl;dr</h3><p>
+If you've not patience, here are the important things to know upgrading.
+</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">Once you upgrade, you can&#8217;t go back.
+</li><li class="listitem">
+MSLAB is on by default. Watch that heap usage if you have a lot of regions.
+</li><li class="listitem">
+Distributed splitting is on by defaul.  It should make region server failover faster.
+</li><li class="listitem">
+There&#8217;s a separate tarball for security.
+</li><li class="listitem">
+If -XX:MaxDirectMemorySize is set in your hbase-env.sh, it&#8217;s going to enable the experimental off-heap cache (You may not want this).
+</li></ol></div><p>
+</p></div><p>
+</p><div class="section" title="1.3.1.&nbsp;You can&#8217;t go back!"><div class="titlepage"><div><div><h3 class="title"><a name="d67e50"></a>1.3.1.&nbsp;You can&#8217;t go back!
+</h3></div></div></div><p>To move to 0.92.0, all you need to do is shutdown your cluster, replace your hbase 0.90.x with hbase 0.92.0 binaries (be sure you clear out all 0.90.x instances) and restart (You cannot do a rolling restart from 0.90.x to 0.92.x -- you must restart).
+On startup, the <code class="varname">.META.</code> table content is rewritten removing the table schema from the <code class="varname">info:regioninfo</code> column.
+Also, any flushes done post first startup will write out data in the new 0.92.0 file format, <a class="link" href="http://hbase.apache.org/book.html#hfilev2" target="_top">HFile V2</a>.
+This means you cannot go back to 0.90.x once you&#8217;ve started HBase 0.92.0 over your HBase data directory.
+</p></div><div class="section" title="1.3.2.&nbsp;MSLAB is ON by default"><div class="titlepage"><div><div><h3 class="title"><a name="d67e64"></a>1.3.2.&nbsp;MSLAB is ON by default
+</h3></div></div></div><p>In 0.92.0, the <a class="link" href="http://hbase.apache.org/book.html#hbase.hregion.memstore.mslab.enabled" target="_top">hbase.hregion.memstore.mslab.enabled</a> flag is set to true
+(See <a class="xref" href="">???</a>).  In 0.90.x it was <code class="constant">false</code>.  When it is enabled, memstores will step allocate memory in MSLAB 2MB chunks even if the
+memstore has zero or just a few small elements.  This is fine usually but if you had lots of regions per regionserver in a 0.90.x cluster (and MSLAB was off),
+you may find yourself OOME'ing on upgrade because the <span class="mathphrase">thousands of regions * number of column families * 2MB MSLAB (at a minimum)</span>
+puts your heap over the top.  Set <code class="varname">hbase.hregion.memstore.mslab.enabled</code> to
+<code class="constant">false</code> or set the MSLAB size down from 2MB by setting <code class="varname">hbase.hregion.memstore.mslab.chunksize</code> to something less.
+</p></div><div class="section" title="1.3.3.&nbsp;Distributed splitting is on by default"><div class="titlepage"><div><div><h3 class="title"><a name="d67e89"></a>1.3.3.&nbsp;Distributed splitting is on by default
+</h3></div></div></div><p>Previous, WAL logs on crash were split by the Master alone.  In 0.92.0, log splitting is done by the cluster (See See &#8220;HBASE-1364 [performance] Distributed splitting of regionserver commit logs&#8221;).  This should cut down significantly on the amount of time it takes splitting logs and getting regions back online again.
+</p></div><div class="section" title="1.3.4.&nbsp;Memory accounting is different now"><div class="titlepage"><div><div><h3 class="title"><a name="d67e94"></a>1.3.4.&nbsp;Memory accounting is different now
+</h3></div></div></div><p>In 0.92.0, <a class="xref" href="">???</a> indices and bloom filters take up residence in the same LRU used caching blocks that come from the filesystem.
+In 0.90.x, the HFile v1 indices lived outside of the LRU so they took up space even if the index was on a &#8216;cold&#8217; file, one that wasn&#8217;t being actively used.  With the indices now in the LRU, you may find you
+have less space for block caching.  Adjust your block cache accordingly.  See the <a class="xref" href="">???</a> for more detail.
+The block size default size has been changed in 0.92.0 from 0.2 (20 percent of heap) to 0.25.
+</p></div><div class="section" title="1.3.5.&nbsp;On the Hadoop version to use"><div class="titlepage"><div><div><h3 class="title"><a name="d67e103"></a>1.3.5.&nbsp;On the Hadoop version to use
+</h3></div></div></div><p>Run 0.92.0 on Hadoop 1.0.x (or CDH3u3 when it ships).  The performance benefits are worth making the move.  Otherwise, our Hadoop prescription is as it has been; you need an Hadoop that supports a working sync.  See <a class="xref" href="">???</a>.
+</p><p>If running on Hadoop 1.0.x (or CDH3u3), enable local read.  See <a class="link" href="http://files.meetup.com/1350427/hug_ebay_jdcryans.pdf" target="_top">Practical Caching</a> presentation for ruminations on the performance benefits &#8216;going local&#8217; (and for how to enable local reads).
+</p></div><div class="section" title="1.3.6.&nbsp;HBase 0.92.0 ships with ZooKeeper 3.4.2"><div class="titlepage"><div><div><h3 class="title"><a name="d67e115"></a>1.3.6.&nbsp;HBase 0.92.0 ships with ZooKeeper 3.4.2
+</h3></div></div></div><p>If you can, upgrade your zookeeper.  If you can&#8217;t, 3.4.2 clients should work against 3.3.X ensembles (HBase makes use of 3.4.2 API).
+</p></div><div class="section" title="1.3.7.&nbsp;Online alter is off by default"><div class="titlepage"><div><div><h3 class="title"><a name="d67e120"></a>1.3.7.&nbsp;Online alter is off by default
+</h3></div></div></div><p>In 0.92.0, we&#8217;ve added an experimental online schema alter facility  (See <a class="xref" href="">???</a>).  Its off by default.  Enable it at your own risk.  Online alter and splitting tables do not play well together so be sure your cluster quiescent using this feature (for now).
+</p></div><div class="section" title="1.3.8.&nbsp;WebUI"><div class="titlepage"><div><div><h3 class="title"><a name="d67e127"></a>1.3.8.&nbsp;WebUI
+</h3></div></div></div><p>The webui has had a few additions made in 0.92.0.  It now shows a list of the regions currently transitioning, recent compactions/flushes, and a process list of running processes (usually empty if all is well and requests are being handled promptly).  Other additions including requests by region, a debugging servlet dump, etc.
+</p></div><div class="section" title="1.3.9.&nbsp;Security tarball"><div class="titlepage"><div><div><h3 class="title"><a name="d67e132"></a>1.3.9.&nbsp;Security tarball
+</h3></div></div></div><p>We now ship with two tarballs; secure and insecure HBase.  Documentation on how to setup a secure HBase is on the way.
+</p></div><div class="section" title="1.3.10.&nbsp;Experimental off-heap cache"><div class="titlepage"><div><div><h3 class="title"><a name="d67e137"></a>1.3.10.&nbsp;Experimental off-heap cache
+</h3></div></div></div><p>
+A new cache was contributed to 0.92.0 to act as a solution between using the &#8220;on-heap&#8221; cache which is the current LRU cache the region servers have and the operating system cache which is out of our control.
+To enable, set &#8220;-XX:MaxDirectMemorySize&#8221; in hbase-env.sh to the value for maximum direct memory size and specify hbase.offheapcache.percentage in hbase-site.xml with the percentage that you want to dedicate to off-heap cache. This should only be set for servers and not for clients. Use at your own risk.
+See this blog post for additional information on this new experimental feature: http://www.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/
+</p></div><div class="section" title="1.3.11.&nbsp;Changes in HBase replication"><div class="titlepage"><div><div><h3 class="title"><a name="d67e142"></a>1.3.11.&nbsp;Changes in HBase replication
+</h3></div></div></div><p>0.92.0 adds two new features: multi-slave and multi-master replication. The way to enable this is the same as adding a new peer, so in order to have multi-master you would just run add_peer for each cluster that acts as a master to the other slave clusters. Collisions are handled at the timestamp level which may or may not be what you want, this needs to be evaluated on a per use case basis. Replication is still experimental in 0.92 and is disabled by default, run it at your own risk.
+</p></div><div class="section" title="1.3.12.&nbsp;RegionServer now aborts if OOME"><div class="titlepage"><div><div><h3 class="title"><a name="d67e147"></a>1.3.12.&nbsp;RegionServer now aborts if OOME
+</h3></div></div></div><p>If an OOME, we now have the JVM kill -9 the regionserver process so it goes down fast.  Previous, a RegionServer might stick around after incurring an OOME limping along in some wounded state.  To disable this facility, and recommend you leave it in place, you&#8217;d need to edit the bin/hbase file.  Look for the addition of the -XX:OnOutOfMemoryError="kill -9 %p" arguments (See [HBASE-4769] - &#8216;Abort RegionServer Immediately on OOME&#8217;)
+</p></div><div class="section" title="1.3.13.&nbsp;HFile V2 and the &#8220;Bigger, Fewer&#8221; Tendency"><div class="titlepage"><div><div><h3 class="title"><a name="d67e152"></a>1.3.13.&nbsp;HFile V2 and the &#8220;Bigger, Fewer&#8221; Tendency
+</h3></div></div></div><p>0.92.0 stores data in a new format, <a class="xref" href="">???</a>.   As HBase runs, it will move all your data from HFile v1 to HFile v2 format.  This auto-migration will run in the background as flushes and compactions run.
+HFile V2 allows HBase run with larger regions/files.  In fact, we encourage that all HBasers going forward tend toward Facebook axiom #1, run with larger, fewer regions.
+If you have lots of regions now -- more than 100s per host -- you should look into setting your region size up after you move to 0.92.0 (In 0.92.0, default size is now 1G, up from 256M), and then running online merge tool (See &#8220;HBASE-1621 merge tool should work on online cluster, but disabled table&#8221;).
+</p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'upgrade0.92';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="upgrade0.94.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="upgrade0.90.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">1.2.&nbsp;Upgrading from 0.92.x to 0.94.x&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="upgrading.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;1.4.&nbsp;Upgrading to HBase 0.90.x from 0.20.x or 0.89.x</td></tr></table></div></body></html>

@@ -1,0 +1,107 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>1.10.&nbsp;Submitting Patches</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="developer.html" title="Chapter&nbsp;1.&nbsp;Building and Developing Apache HBase (TM)"><link rel="up" href="developer.html" title="Chapter&nbsp;1.&nbsp;Building and Developing Apache HBase (TM)"><link rel="prev" href="developing.html" title="1.9.&nbsp;Developing"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">1.10.&nbsp;Submitting Patches</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="developing.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;</td></tr></table><hr></div><div class="section" title="1.10.&nbsp;Submitting Patches"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="submitting.patches"></a>1.10.&nbsp;Submitting Patches</h2></div></div></div><p>If you are new to submitting patches to open source or new to submitting patches to Apache,
+          I'd suggest you start by reading the <a class="link" href="http://commons.apache.org/patches.html" target="_top">On Contributing Patches</a>
+          page from <a class="link" href="http://commons.apache.org/" target="_top">Apache Commons Project</a>.  Its a nice overview that
+          applies equally to the Apache HBase Project.</p><div class="section" title="1.10.1.&nbsp;Create Patch"><div class="titlepage"><div><div><h3 class="title"><a name="submitting.patches.create"></a>1.10.1.&nbsp;Create Patch</h3></div></div></div><p>See the aforementioned Apache Commons link for how to make patches against a checked out subversion
+          repository.  Patch files can also be easily generated from Eclipse, for example by selecting "Team -&gt; Create Patch".
+          Patches can also be created by git diff and svn diff.
+          </p><p>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the
+          selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </p><p>Make sure you review <a class="xref" href="ides.html#eclipse.code.formatting" title="1.2.1.1.&nbsp;Code Formatting">Section&nbsp;1.2.1.1, &#8220;Code Formatting&#8221;</a> for code style. </p></div><div class="section" title="1.10.2.&nbsp;Patch File Naming"><div class="titlepage"><div><div><h3 class="title"><a name="submitting.patches.naming"></a>1.10.2.&nbsp;Patch File Naming</h3></div></div></div><p>The patch file should have the Apache HBase Jira ticket in the name.  For example, if a patch was submitted for <code class="filename">Foo.java</code>, then
+          a patch file called <code class="filename">Foo_HBASE_XXXX.patch</code> would be acceptable where XXXX is the Apache HBase Jira number.
+          </p><p>If you generating from a branch, then including the target branch in the filename is advised, e.g., <code class="filename">HBASE-XXXX-0.90.patch</code>.
+          </p></div><div class="section" title="1.10.3.&nbsp;Unit Tests"><div class="titlepage"><div><div><h3 class="title"><a name="submitting.patches.tests"></a>1.10.3.&nbsp;Unit Tests</h3></div></div></div><p>Yes, please.  Please try to include unit tests with every code patch (and especially new classes and large changes).
+            Make sure unit tests pass locally before submitting the patch.</p><p>Also, see <a class="xref" href="developing.html#mockito" title="1.9.2.1.&nbsp;Mockito">Section&nbsp;1.9.2.1, &#8220;Mockito&#8221;</a>.</p><p>If you are creating a new unit test class, notice how other unit test classes have classification/sizing
+            annotations at the top and a static method on the end.  Be sure to include these in any new unit test files
+            you generate.  See <a class="xref" href="hbase.tests.html" title="1.6.&nbsp;Tests">Section&nbsp;1.6, &#8220;Tests&#8221;</a> for more on how the annotations work.
+            </p></div><div class="section" title="1.10.4.&nbsp;Attach Patch to Jira"><div class="titlepage"><div><div><h3 class="title"><a name="submitting.patches.jira"></a>1.10.4.&nbsp;Attach Patch to Jira</h3></div></div></div><p>The patch should be attached to the associated Jira ticket "More Actions -&gt; Attach Files".  Make sure you click the
+            ASF license inclusion, otherwise the patch can't be considered for inclusion.
+            </p><p>Once attached to the ticket, click "Submit Patch" and
+            the status of the ticket will change.  Committers will review submitted patches for inclusion into the codebase.  Please
+            understand that not every patch may get committed, and that feedback will likely be provided on the patch.  Fear not, though,
+            because the Apache HBase community is helpful!
+            </p></div><div class="section" title="1.10.5.&nbsp;Common Patch Feedback"><div class="titlepage"><div><div><h3 class="title"><a name="common.patch.feedback"></a>1.10.5.&nbsp;Common Patch Feedback</h3></div></div></div><p>The following items are representative of common patch feedback. Your patch process will go faster if these are
+          taken into account <span class="emphasis"><em>before</em></span> submission.
+          </p><p>
+          See the <a class="link" href="http://www.oracle.com/technetwork/java/codeconv-138413.html" target="_top">Java coding standards</a>
+          for more information on coding conventions in Java.
+          </p><div class="section" title="1.10.5.1.&nbsp;Space Invaders"><div class="titlepage"><div><div><h4 class="title"><a name="common.patch.feedback.space.invaders"></a>1.10.5.1.&nbsp;Space Invaders</h4></div></div></div><p>Rather than do this...
+</p><pre class="programlisting">
+if ( foo.equals( bar ) ) {     // don't do this
+</pre><p>
+			... do this instead...
+</p><pre class="programlisting">
+if (foo.equals(bar)) {
+</pre><p>
+          </p><p>Also, rather than do this...
+</p><pre class="programlisting">
+foo = barArray[ i ];     // don't do this
+</pre><p>
+			... do this instead...
+</p><pre class="programlisting">
+foo = barArray[i];
+</pre><p>
+          </p></div><div class="section" title="1.10.5.2.&nbsp;Auto Generated Code"><div class="titlepage"><div><div><h4 class="title"><a name="common.patch.feedback.autogen"></a>1.10.5.2.&nbsp;Auto Generated Code</h4></div></div></div><p>Auto-generated code in Eclipse often looks like this...
+</p><pre class="programlisting">
+ public void readFields(DataInput arg0) throws IOException {    // don't do this
+   foo = arg0.readUTF();                                       // don't do this
+</pre><p>
+			... do this instead ...
+</p><pre class="programlisting">
+ public void readFields(DataInput di) throws IOException {
+   foo = di.readUTF();
+</pre><p>
+           See the difference?  'arg0' is what Eclipse uses for arguments by default.
+           </p></div><div class="section" title="1.10.5.3.&nbsp;Long Lines"><div class="titlepage"><div><div><h4 class="title"><a name="common.patch.feedback.longlines"></a>1.10.5.3.&nbsp;Long Lines</h4></div></div></div><p>
+            Keep lines less than 100 characters.
+</p><pre class="programlisting">
+Bar bar = foo.veryLongMethodWithManyArguments(argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8, argument9);  // don't do this
+</pre><p>
+			... do something like this instead ...
+</p><pre class="programlisting">
+Bar bar = foo.veryLongMethodWithManyArguments(
+ argument1, argument2, argument3,argument4, argument5, argument6, argument7, argument8, argument9);
+</pre><p>
+           </p></div><div class="section" title="1.10.5.4.&nbsp;Trailing Spaces"><div class="titlepage"><div><div><h4 class="title"><a name="common.patch.feedback.trailingspaces"></a>1.10.5.4.&nbsp;Trailing Spaces</h4></div></div></div><p>
+            This happens more than people would imagine.
+</p><pre class="programlisting">
+Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the semicolon instead of a line break.
+</pre><p>
+            Make sure there's a line-break after the end of your code, and also avoid lines that have nothing
+            but whitespace.
+            </p></div><div class="section" title="1.10.5.5.&nbsp;Implementing Writable"><div class="titlepage"><div><div><h4 class="title"><a name="common.patch.feedback.writable"></a>1.10.5.5.&nbsp;Implementing Writable</h4></div></div></div><p>Every class returned by RegionServers must implement <code class="code">Writable</code>.  If you
+            are creating a new class that needs to implement this interface, don't forget the default constructor.
+            </p></div><div class="section" title="1.10.5.6.&nbsp;Javadoc"><div class="titlepage"><div><div><h4 class="title"><a name="common.patch.feedback.javadoc"></a>1.10.5.6.&nbsp;Javadoc</h4></div></div></div><p>This is also a very common feedback item.  Don't forget Javadoc!
+            </p></div><div class="section" title="1.10.5.7.&nbsp;Javadoc - Useless Defaults"><div class="titlepage"><div><div><h4 class="title"><a name="common.patch.feedback.javadoc.defaults"></a>1.10.5.7.&nbsp;Javadoc - Useless Defaults</h4></div></div></div><p>Don't just leave the @param arguments the way your IDE generated them.  Don't do this...
+</p><pre class="programlisting">
+  /**
+   *
+   * @param bar             &lt;---- don't do this!!!!
+   * @return                &lt;---- or this!!!!
+   */
+  public Foo getFoo(Bar bar);
+</pre><p>
+            ... either add something descriptive to the @param and @return lines, or just remove them.
+            But the preference is to add something descriptive and useful.
+            </p></div><div class="section" title="1.10.5.8.&nbsp;One Thing At A Time, Folks"><div class="titlepage"><div><div><h4 class="title"><a name="common.patch.feedback.onething"></a>1.10.5.8.&nbsp;One Thing At A Time, Folks</h4></div></div></div><p>If you submit a patch for one thing, don't do auto-reformatting or unrelated reformatting of code on a completely
+            different area of code.
+            </p><p>Likewise, don't add unrelated cleanup or refactorings outside the scope of your Jira.
+            </p></div><div class="section" title="1.10.5.9.&nbsp;Ambigious Unit Tests"><div class="titlepage"><div><div><h4 class="title"><a name="common.patch.feedback.tests"></a>1.10.5.9.&nbsp;Ambigious Unit Tests</h4></div></div></div><p>Make sure that you're clear about what you are testing in your unit tests and why.
+            </p></div></div><div class="section" title="1.10.6.&nbsp;ReviewBoard"><div class="titlepage"><div><div><h3 class="title"><a name="reviewboard"></a>1.10.6.&nbsp;ReviewBoard</h3></div></div></div><p>Larger patches should go through <a class="link" href="http://reviews.apache.org" target="_top">ReviewBoard</a>.
+          </p><p>For more information on how to use ReviewBoard, see
+           <a class="link" href="http://www.reviewboard.org/docs/manual/1.5/" target="_top">the ReviewBoard documentation</a>.
+          </p></div><div class="section" title="1.10.7.&nbsp;Committing Patches"><div class="titlepage"><div><div><h3 class="title"><a name="committing.patches"></a>1.10.7.&nbsp;Committing Patches</h3></div></div></div><p>
+          Committers do this.  See <a class="link" href="http://wiki.apache.org/hadoop/Hbase/HowToCommit" target="_top">How To Commit</a> in the Apache HBase wiki.
+          </p><p>Commiters will also resolve the Jira, typically after the patch passes a build.
+          </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'submitting.patches';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="developing.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;</td></tr><tr><td width="40%" align="left" valign="top">1.9.&nbsp;Developing&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="developer.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;</td></tr></table></div></body></html>

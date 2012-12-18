@@ -1,0 +1,412 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>LoadTestTool xref</title>
+<link type="text/css" rel="stylesheet" href="../../../../../stylesheet.css" />
+</head>
+<body>
+<div id="overview"><a href="../../../../../../testapidocs/org/apache/hadoop/hbase/util/LoadTestTool.html">View Javadoc</a></div><pre>
+
+<a class="jxr_linenumber" name="1" href="#1">1</a>   <em class="jxr_comment">/*</em>
+<a class="jxr_linenumber" name="2" href="#2">2</a>   <em class="jxr_comment"> * Licensed to the Apache Software Foundation (ASF) under one or more</em>
+<a class="jxr_linenumber" name="3" href="#3">3</a>   <em class="jxr_comment"> * contributor license agreements. See the NOTICE file distributed with this</em>
+<a class="jxr_linenumber" name="4" href="#4">4</a>   <em class="jxr_comment"> * work for additional information regarding copyright ownership. The ASF</em>
+<a class="jxr_linenumber" name="5" href="#5">5</a>   <em class="jxr_comment"> * licenses this file to you under the Apache License, Version 2.0 (the</em>
+<a class="jxr_linenumber" name="6" href="#6">6</a>   <em class="jxr_comment"> * "License"); you may not use this file except in compliance with the License.</em>
+<a class="jxr_linenumber" name="7" href="#7">7</a>   <em class="jxr_comment"> * You may obtain a copy of the License at</em>
+<a class="jxr_linenumber" name="8" href="#8">8</a>   <em class="jxr_comment"> *</em>
+<a class="jxr_linenumber" name="9" href="#9">9</a>   <em class="jxr_comment"> * <a href="http://www.apache.org/licenses/LICENSE-2.0" target="alexandria_uri">http://www.apache.org/licenses/LICENSE-2.0</a></em>
+<a class="jxr_linenumber" name="10" href="#10">10</a>  <em class="jxr_comment"> *</em>
+<a class="jxr_linenumber" name="11" href="#11">11</a>  <em class="jxr_comment"> * Unless required by applicable law or agreed to in writing, software</em>
+<a class="jxr_linenumber" name="12" href="#12">12</a>  <em class="jxr_comment"> * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT</em>
+<a class="jxr_linenumber" name="13" href="#13">13</a>  <em class="jxr_comment"> * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the</em>
+<a class="jxr_linenumber" name="14" href="#14">14</a>  <em class="jxr_comment"> * License for the specific language governing permissions and limitations</em>
+<a class="jxr_linenumber" name="15" href="#15">15</a>  <em class="jxr_comment"> * under the License.</em>
+<a class="jxr_linenumber" name="16" href="#16">16</a>  <em class="jxr_comment"> */</em>
+<a class="jxr_linenumber" name="17" href="#17">17</a>  <strong class="jxr_keyword">package</strong> org.apache.hadoop.hbase.util;
+<a class="jxr_linenumber" name="18" href="#18">18</a>  
+<a class="jxr_linenumber" name="19" href="#19">19</a>  <strong class="jxr_keyword">import</strong> java.io.IOException;
+<a class="jxr_linenumber" name="20" href="#20">20</a>  <strong class="jxr_keyword">import</strong> java.util.Arrays;
+<a class="jxr_linenumber" name="21" href="#21">21</a>  
+<a class="jxr_linenumber" name="22" href="#22">22</a>  <strong class="jxr_keyword">import</strong> org.apache.commons.cli.CommandLine;
+<a class="jxr_linenumber" name="23" href="#23">23</a>  <strong class="jxr_keyword">import</strong> org.apache.commons.logging.Log;
+<a class="jxr_linenumber" name="24" href="#24">24</a>  <strong class="jxr_keyword">import</strong> org.apache.commons.logging.LogFactory;
+<a class="jxr_linenumber" name="25" href="#25">25</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HBaseTestingUtility;
+<a class="jxr_linenumber" name="26" href="#26">26</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HColumnDescriptor;
+<a class="jxr_linenumber" name="27" href="#27">27</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HConstants;
+<a class="jxr_linenumber" name="28" href="#28">28</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HTableDescriptor;
+<a class="jxr_linenumber" name="29" href="#29">29</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.PerformanceEvaluation;
+<a class="jxr_linenumber" name="30" href="#30">30</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.PleaseHoldException;
+<a class="jxr_linenumber" name="31" href="#31">31</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.client.HBaseAdmin;
+<a class="jxr_linenumber" name="32" href="#32">32</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.compress.Compression;
+<a class="jxr_linenumber" name="33" href="#33">33</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+<a class="jxr_linenumber" name="34" href="#34">34</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.regionserver.StoreFile;
+<a class="jxr_linenumber" name="35" href="#35">35</a>  
+<a class="jxr_linenumber" name="36" href="#36">36</a>  <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="37" href="#37">37</a>  <em class="jxr_javadoccomment"> * A command-line utility that reads, writes, and verifies data. Unlike</em>
+<a class="jxr_linenumber" name="38" href="#38">38</a>  <em class="jxr_javadoccomment"> * {@link PerformanceEvaluation}, this tool validates the data written,</em>
+<a class="jxr_linenumber" name="39" href="#39">39</a>  <em class="jxr_javadoccomment"> * and supports simultaneously writing and reading the same set of keys.</em>
+<a class="jxr_linenumber" name="40" href="#40">40</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="41" href="#41">41</a>  <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../org/apache/hadoop/hbase/util/LoadTestTool.html">LoadTestTool</a> <strong class="jxr_keyword">extends</strong> AbstractHBaseTool {
+<a class="jxr_linenumber" name="42" href="#42">42</a>  
+<a class="jxr_linenumber" name="43" href="#43">43</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Log LOG = LogFactory.getLog(LoadTestTool.<strong class="jxr_keyword">class</strong>);
+<a class="jxr_linenumber" name="44" href="#44">44</a>  
+<a class="jxr_linenumber" name="45" href="#45">45</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Table name for the test */</em>
+<a class="jxr_linenumber" name="46" href="#46">46</a>    <strong class="jxr_keyword">private</strong> byte[] tableName;
+<a class="jxr_linenumber" name="47" href="#47">47</a>  
+<a class="jxr_linenumber" name="48" href="#48">48</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Table name to use of not overridden on the command line */</em>
+<a class="jxr_linenumber" name="49" href="#49">49</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String DEFAULT_TABLE_NAME = <span class="jxr_string">"cluster_test"</span>;
+<a class="jxr_linenumber" name="50" href="#50">50</a>  
+<a class="jxr_linenumber" name="51" href="#51">51</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Column family used by the test */</em>
+<a class="jxr_linenumber" name="52" href="#52">52</a>    <strong class="jxr_keyword">static</strong> byte[] COLUMN_FAMILY = Bytes.toBytes(<span class="jxr_string">"test_cf"</span>);
+<a class="jxr_linenumber" name="53" href="#53">53</a>  
+<a class="jxr_linenumber" name="54" href="#54">54</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Column families used by the test */</em>
+<a class="jxr_linenumber" name="55" href="#55">55</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> byte[][] COLUMN_FAMILIES = { COLUMN_FAMILY };
+<a class="jxr_linenumber" name="56" href="#56">56</a>  
+<a class="jxr_linenumber" name="57" href="#57">57</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> The number of reader/writer threads if not specified */</em>
+<a class="jxr_linenumber" name="58" href="#58">58</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_NUM_THREADS = 20;
+<a class="jxr_linenumber" name="59" href="#59">59</a>  
+<a class="jxr_linenumber" name="60" href="#60">60</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Usage string for the load option */</em>
+<a class="jxr_linenumber" name="61" href="#61">61</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_USAGE_LOAD =
+<a class="jxr_linenumber" name="62" href="#62">62</a>        <span class="jxr_string">"&lt;avg_cols_per_key&gt;:&lt;avg_data_size&gt;"</span> +
+<a class="jxr_linenumber" name="63" href="#63">63</a>        <span class="jxr_string">"[:&lt;#threads="</span> + DEFAULT_NUM_THREADS + <span class="jxr_string">"&gt;]"</span>;
+<a class="jxr_linenumber" name="64" href="#64">64</a>  
+<a class="jxr_linenumber" name="65" href="#65">65</a>    <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Usa\ge string for the read option */</em>
+<a class="jxr_linenumber" name="66" href="#66">66</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_USAGE_READ =
+<a class="jxr_linenumber" name="67" href="#67">67</a>        <span class="jxr_string">"&lt;verify_percent&gt;[:&lt;#threads="</span> + DEFAULT_NUM_THREADS + <span class="jxr_string">"&gt;]"</span>;
+<a class="jxr_linenumber" name="68" href="#68">68</a>  
+<a class="jxr_linenumber" name="69" href="#69">69</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_USAGE_BLOOM = <span class="jxr_string">"Bloom filter type, one of "</span> +
+<a class="jxr_linenumber" name="70" href="#70">70</a>        Arrays.toString(StoreFile.BloomType.values());
+<a class="jxr_linenumber" name="71" href="#71">71</a>  
+<a class="jxr_linenumber" name="72" href="#72">72</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_USAGE_COMPRESSION = <span class="jxr_string">"Compression type, "</span> +
+<a class="jxr_linenumber" name="73" href="#73">73</a>        <span class="jxr_string">"one of "</span> + Arrays.toString(Compression.Algorithm.values());
+<a class="jxr_linenumber" name="74" href="#74">74</a>  
+<a class="jxr_linenumber" name="75" href="#75">75</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_DATA_BLOCK_ENCODING_USAGE =
+<a class="jxr_linenumber" name="76" href="#76">76</a>      <span class="jxr_string">"Encoding algorithm (e.g. prefix "</span>
+<a class="jxr_linenumber" name="77" href="#77">77</a>          + <span class="jxr_string">"compression) to use for data blocks in the test column family, "</span>
+<a class="jxr_linenumber" name="78" href="#78">78</a>          + <span class="jxr_string">"one of "</span> + Arrays.toString(DataBlockEncoding.values()) + <span class="jxr_string">"."</span>;
+<a class="jxr_linenumber" name="79" href="#79">79</a>  
+<a class="jxr_linenumber" name="80" href="#80">80</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_BLOOM = <span class="jxr_string">"bloom"</span>;
+<a class="jxr_linenumber" name="81" href="#81">81</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_COMPRESSION = <span class="jxr_string">"compression"</span>;
+<a class="jxr_linenumber" name="82" href="#82">82</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_DATA_BLOCK_ENCODING =
+<a class="jxr_linenumber" name="83" href="#83">83</a>        HColumnDescriptor.DATA_BLOCK_ENCODING.toLowerCase();
+<a class="jxr_linenumber" name="84" href="#84">84</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_ENCODE_IN_CACHE_ONLY =
+<a class="jxr_linenumber" name="85" href="#85">85</a>        <span class="jxr_string">"encode_in_cache_only"</span>;
+<a class="jxr_linenumber" name="86" href="#86">86</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_ENCODE_IN_CACHE_ONLY_USAGE =
+<a class="jxr_linenumber" name="87" href="#87">87</a>        <span class="jxr_string">"If this is specified, data blocks will only be encoded in block "</span> +
+<a class="jxr_linenumber" name="88" href="#88">88</a>        <span class="jxr_string">"cache but not on disk"</span>;
+<a class="jxr_linenumber" name="89" href="#89">89</a>  
+<a class="jxr_linenumber" name="90" href="#90">90</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_KEY_WINDOW = <span class="jxr_string">"key_window"</span>;
+<a class="jxr_linenumber" name="91" href="#91">91</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_WRITE = <span class="jxr_string">"write"</span>;
+<a class="jxr_linenumber" name="92" href="#92">92</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_MAX_READ_ERRORS = <span class="jxr_string">"max_read_errors"</span>;
+<a class="jxr_linenumber" name="93" href="#93">93</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_MULTIPUT = <span class="jxr_string">"multiput"</span>;
+<a class="jxr_linenumber" name="94" href="#94">94</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_NUM_KEYS = <span class="jxr_string">"num_keys"</span>;
+<a class="jxr_linenumber" name="95" href="#95">95</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_READ = <span class="jxr_string">"read"</span>;
+<a class="jxr_linenumber" name="96" href="#96">96</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_START_KEY = <span class="jxr_string">"start_key"</span>;
+<a class="jxr_linenumber" name="97" href="#97">97</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_TABLE_NAME = <span class="jxr_string">"tn"</span>;
+<a class="jxr_linenumber" name="98" href="#98">98</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_ZK_QUORUM = <span class="jxr_string">"zk"</span>;
+<a class="jxr_linenumber" name="99" href="#99">99</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_SKIP_INIT = <span class="jxr_string">"skip_init"</span>;
+<a class="jxr_linenumber" name="100" href="#100">100</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String OPT_INIT_ONLY = <span class="jxr_string">"init_only"</span>;
+<a class="jxr_linenumber" name="101" href="#101">101</a> 
+<a class="jxr_linenumber" name="102" href="#102">102</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">long</strong> DEFAULT_START_KEY = 0;
+<a class="jxr_linenumber" name="103" href="#103">103</a> 
+<a class="jxr_linenumber" name="104" href="#104">104</a>   <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> This will be removed as we factor out the dependency on command line */</em>
+<a class="jxr_linenumber" name="105" href="#105">105</a>   <strong class="jxr_keyword">private</strong> CommandLine cmd;
+<a class="jxr_linenumber" name="106" href="#106">106</a> 
+<a class="jxr_linenumber" name="107" href="#107">107</a>   <strong class="jxr_keyword">private</strong> <a href="../../../../../org/apache/hadoop/hbase/util/MultiThreadedWriter.html">MultiThreadedWriter</a> writerThreads = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="108" href="#108">108</a>   <strong class="jxr_keyword">private</strong> <a href="../../../../../org/apache/hadoop/hbase/util/MultiThreadedReader.html">MultiThreadedReader</a> readerThreads = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="109" href="#109">109</a> 
+<a class="jxr_linenumber" name="110" href="#110">110</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">long</strong> startKey, endKey;
+<a class="jxr_linenumber" name="111" href="#111">111</a> 
+<a class="jxr_linenumber" name="112" href="#112">112</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">boolean</strong> isWrite, isRead;
+<a class="jxr_linenumber" name="113" href="#113">113</a> 
+<a class="jxr_linenumber" name="114" href="#114">114</a>   <em class="jxr_comment">// Column family options</em>
+<a class="jxr_linenumber" name="115" href="#115">115</a>   <strong class="jxr_keyword">private</strong> DataBlockEncoding dataBlockEncodingAlgo;
+<a class="jxr_linenumber" name="116" href="#116">116</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">boolean</strong> encodeInCacheOnly;
+<a class="jxr_linenumber" name="117" href="#117">117</a>   <strong class="jxr_keyword">private</strong> Compression.Algorithm compressAlgo;
+<a class="jxr_linenumber" name="118" href="#118">118</a>   <strong class="jxr_keyword">private</strong> StoreFile.BloomType bloomType;
+<a class="jxr_linenumber" name="119" href="#119">119</a> 
+<a class="jxr_linenumber" name="120" href="#120">120</a>   <em class="jxr_comment">// Writer options</em>
+<a class="jxr_linenumber" name="121" href="#121">121</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> numWriterThreads = DEFAULT_NUM_THREADS;
+<a class="jxr_linenumber" name="122" href="#122">122</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">long</strong> minColsPerKey, maxColsPerKey;
+<a class="jxr_linenumber" name="123" href="#123">123</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> minColDataSize, maxColDataSize;
+<a class="jxr_linenumber" name="124" href="#124">124</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">boolean</strong> isMultiPut;
+<a class="jxr_linenumber" name="125" href="#125">125</a> 
+<a class="jxr_linenumber" name="126" href="#126">126</a>   <em class="jxr_comment">// Reader options</em>
+<a class="jxr_linenumber" name="127" href="#127">127</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> numReaderThreads = DEFAULT_NUM_THREADS;
+<a class="jxr_linenumber" name="128" href="#128">128</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> keyWindow = MultiThreadedReader.DEFAULT_KEY_WINDOW;
+<a class="jxr_linenumber" name="129" href="#129">129</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> maxReadErrors = MultiThreadedReader.DEFAULT_MAX_ERRORS;
+<a class="jxr_linenumber" name="130" href="#130">130</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> verifyPercent;
+<a class="jxr_linenumber" name="131" href="#131">131</a> 
+<a class="jxr_linenumber" name="132" href="#132">132</a>   <em class="jxr_comment">// TODO: refactor LoadTestToolImpl somewhere to make the usage from tests less bad,</em>
+<a class="jxr_linenumber" name="133" href="#133">133</a>   <em class="jxr_comment">//       console tool itself should only be used from console.</em>
+<a class="jxr_linenumber" name="134" href="#134">134</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">boolean</strong> isSkipInit = false;
+<a class="jxr_linenumber" name="135" href="#135">135</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">boolean</strong> isInitOnly = false;
+<a class="jxr_linenumber" name="136" href="#136">136</a> 
+<a class="jxr_linenumber" name="137" href="#137">137</a>   <strong class="jxr_keyword">private</strong> String[] splitColonSeparated(String option,
+<a class="jxr_linenumber" name="138" href="#138">138</a>       <strong class="jxr_keyword">int</strong> minNumCols, <strong class="jxr_keyword">int</strong> maxNumCols) {
+<a class="jxr_linenumber" name="139" href="#139">139</a>     String optVal = cmd.getOptionValue(option);
+<a class="jxr_linenumber" name="140" href="#140">140</a>     String[] cols = optVal.split(<span class="jxr_string">":"</span>);
+<a class="jxr_linenumber" name="141" href="#141">141</a>     <strong class="jxr_keyword">if</strong> (cols.length &lt; minNumCols || cols.length &gt; maxNumCols) {
+<a class="jxr_linenumber" name="142" href="#142">142</a>       <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalArgumentException(<span class="jxr_string">"Expected at least "</span>
+<a class="jxr_linenumber" name="143" href="#143">143</a>           + minNumCols + <span class="jxr_string">" columns but no more than "</span> + maxNumCols +
+<a class="jxr_linenumber" name="144" href="#144">144</a>           <span class="jxr_string">" in the colon-separated value '"</span> + optVal + <span class="jxr_string">"' of the "</span> +
+<a class="jxr_linenumber" name="145" href="#145">145</a>           <span class="jxr_string">"-"</span> + option + <span class="jxr_string">" option"</span>);
+<a class="jxr_linenumber" name="146" href="#146">146</a>     }
+<a class="jxr_linenumber" name="147" href="#147">147</a>     <strong class="jxr_keyword">return</strong> cols;
+<a class="jxr_linenumber" name="148" href="#148">148</a>   }
+<a class="jxr_linenumber" name="149" href="#149">149</a> 
+<a class="jxr_linenumber" name="150" href="#150">150</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> getNumThreads(String numThreadsStr) {
+<a class="jxr_linenumber" name="151" href="#151">151</a>     <strong class="jxr_keyword">return</strong> parseInt(numThreadsStr, 1, Short.MAX_VALUE);
+<a class="jxr_linenumber" name="152" href="#152">152</a>   }
+<a class="jxr_linenumber" name="153" href="#153">153</a> 
+<a class="jxr_linenumber" name="154" href="#154">154</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="155" href="#155">155</a> <em class="jxr_javadoccomment">   * Apply column family options such as Bloom filters, compression, and data</em>
+<a class="jxr_linenumber" name="156" href="#156">156</a> <em class="jxr_javadoccomment">   * block encoding.</em>
+<a class="jxr_linenumber" name="157" href="#157">157</a> <em class="jxr_javadoccomment">   */</em>
+<a class="jxr_linenumber" name="158" href="#158">158</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> applyColumnFamilyOptions(byte[] tableName,
+<a class="jxr_linenumber" name="159" href="#159">159</a>       byte[][] columnFamilies) <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="160" href="#160">160</a>     HBaseAdmin admin = <strong class="jxr_keyword">new</strong> HBaseAdmin(conf);
+<a class="jxr_linenumber" name="161" href="#161">161</a>     HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
+<a class="jxr_linenumber" name="162" href="#162">162</a>     LOG.info(<span class="jxr_string">"Disabling table "</span> + Bytes.toString(tableName));
+<a class="jxr_linenumber" name="163" href="#163">163</a>     admin.disableTable(tableName);
+<a class="jxr_linenumber" name="164" href="#164">164</a>     <strong class="jxr_keyword">for</strong> (byte[] cf : columnFamilies) {
+<a class="jxr_linenumber" name="165" href="#165">165</a>       HColumnDescriptor columnDesc = tableDesc.getFamily(cf);
+<a class="jxr_linenumber" name="166" href="#166">166</a>       <strong class="jxr_keyword">boolean</strong> isNewCf = columnDesc == <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="167" href="#167">167</a>       <strong class="jxr_keyword">if</strong> (isNewCf) {
+<a class="jxr_linenumber" name="168" href="#168">168</a>         columnDesc = <strong class="jxr_keyword">new</strong> HColumnDescriptor(cf);
+<a class="jxr_linenumber" name="169" href="#169">169</a>       }
+<a class="jxr_linenumber" name="170" href="#170">170</a>       <strong class="jxr_keyword">if</strong> (bloomType != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="171" href="#171">171</a>         columnDesc.setBloomFilterType(bloomType);
+<a class="jxr_linenumber" name="172" href="#172">172</a>       }
+<a class="jxr_linenumber" name="173" href="#173">173</a>       <strong class="jxr_keyword">if</strong> (compressAlgo != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="174" href="#174">174</a>         columnDesc.setCompressionType(compressAlgo);
+<a class="jxr_linenumber" name="175" href="#175">175</a>       }
+<a class="jxr_linenumber" name="176" href="#176">176</a>       <strong class="jxr_keyword">if</strong> (dataBlockEncodingAlgo != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="177" href="#177">177</a>         columnDesc.setDataBlockEncoding(dataBlockEncodingAlgo);
+<a class="jxr_linenumber" name="178" href="#178">178</a>         columnDesc.setEncodeOnDisk(!encodeInCacheOnly);
+<a class="jxr_linenumber" name="179" href="#179">179</a>       }
+<a class="jxr_linenumber" name="180" href="#180">180</a>       <strong class="jxr_keyword">if</strong> (isNewCf) {
+<a class="jxr_linenumber" name="181" href="#181">181</a>         admin.addColumn(tableName, columnDesc);
+<a class="jxr_linenumber" name="182" href="#182">182</a>       } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="183" href="#183">183</a>         admin.modifyColumn(tableName, columnDesc);
+<a class="jxr_linenumber" name="184" href="#184">184</a>       }
+<a class="jxr_linenumber" name="185" href="#185">185</a>     }
+<a class="jxr_linenumber" name="186" href="#186">186</a>     LOG.info(<span class="jxr_string">"Enabling table "</span> + Bytes.toString(tableName));
+<a class="jxr_linenumber" name="187" href="#187">187</a>     admin.enableTable(tableName);
+<a class="jxr_linenumber" name="188" href="#188">188</a>   }
+<a class="jxr_linenumber" name="189" href="#189">189</a> 
+<a class="jxr_linenumber" name="190" href="#190">190</a>   @Override
+<a class="jxr_linenumber" name="191" href="#191">191</a>   <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> addOptions() {
+<a class="jxr_linenumber" name="192" href="#192">192</a>     addOptWithArg(OPT_ZK_QUORUM, <span class="jxr_string">"ZK quorum as comma-separated host names "</span> +
+<a class="jxr_linenumber" name="193" href="#193">193</a>         <span class="jxr_string">"without port numbers"</span>);
+<a class="jxr_linenumber" name="194" href="#194">194</a>     addOptWithArg(OPT_TABLE_NAME, <span class="jxr_string">"The name of the table to read or write"</span>);
+<a class="jxr_linenumber" name="195" href="#195">195</a>     addOptWithArg(OPT_WRITE, OPT_USAGE_LOAD);
+<a class="jxr_linenumber" name="196" href="#196">196</a>     addOptWithArg(OPT_READ, OPT_USAGE_READ);
+<a class="jxr_linenumber" name="197" href="#197">197</a>     addOptNoArg(OPT_INIT_ONLY, <span class="jxr_string">"Initialize the test table only, don't do any loading"</span>);
+<a class="jxr_linenumber" name="198" href="#198">198</a>     addOptWithArg(OPT_BLOOM, OPT_USAGE_BLOOM);
+<a class="jxr_linenumber" name="199" href="#199">199</a>     addOptWithArg(OPT_COMPRESSION, OPT_USAGE_COMPRESSION);
+<a class="jxr_linenumber" name="200" href="#200">200</a>     addOptWithArg(OPT_DATA_BLOCK_ENCODING, OPT_DATA_BLOCK_ENCODING_USAGE);
+<a class="jxr_linenumber" name="201" href="#201">201</a>     addOptWithArg(OPT_MAX_READ_ERRORS, <span class="jxr_string">"The maximum number of read errors "</span> +
+<a class="jxr_linenumber" name="202" href="#202">202</a>         <span class="jxr_string">"to tolerate before terminating all reader threads. The default is "</span> +
+<a class="jxr_linenumber" name="203" href="#203">203</a>         MultiThreadedReader.DEFAULT_MAX_ERRORS + <span class="jxr_string">"."</span>);
+<a class="jxr_linenumber" name="204" href="#204">204</a>     addOptWithArg(OPT_KEY_WINDOW, <span class="jxr_string">"The 'key window' to maintain between "</span> +
+<a class="jxr_linenumber" name="205" href="#205">205</a>         <span class="jxr_string">"reads and writes for concurrent write/read workload. The default "</span> +
+<a class="jxr_linenumber" name="206" href="#206">206</a>         <span class="jxr_string">"is "</span> + MultiThreadedReader.DEFAULT_KEY_WINDOW + <span class="jxr_string">"."</span>);
+<a class="jxr_linenumber" name="207" href="#207">207</a> 
+<a class="jxr_linenumber" name="208" href="#208">208</a>     addOptNoArg(OPT_MULTIPUT, <span class="jxr_string">"Whether to use multi-puts as opposed to "</span> +
+<a class="jxr_linenumber" name="209" href="#209">209</a>         <span class="jxr_string">"separate puts for every column in a row"</span>);
+<a class="jxr_linenumber" name="210" href="#210">210</a>     addOptNoArg(OPT_ENCODE_IN_CACHE_ONLY, OPT_ENCODE_IN_CACHE_ONLY_USAGE);
+<a class="jxr_linenumber" name="211" href="#211">211</a> 
+<a class="jxr_linenumber" name="212" href="#212">212</a>     addOptWithArg(OPT_NUM_KEYS, <span class="jxr_string">"The number of keys to read/write"</span>);
+<a class="jxr_linenumber" name="213" href="#213">213</a>     addOptWithArg(OPT_START_KEY, <span class="jxr_string">"The first key to read/write "</span> +
+<a class="jxr_linenumber" name="214" href="#214">214</a>         <span class="jxr_string">"(a 0-based index). The default value is "</span> +
+<a class="jxr_linenumber" name="215" href="#215">215</a>         DEFAULT_START_KEY + <span class="jxr_string">"."</span>);
+<a class="jxr_linenumber" name="216" href="#216">216</a>     addOptNoArg(OPT_SKIP_INIT, <span class="jxr_string">"Skip the initialization; assume test table "</span>
+<a class="jxr_linenumber" name="217" href="#217">217</a>         + <span class="jxr_string">"already exists"</span>);
+<a class="jxr_linenumber" name="218" href="#218">218</a>   }
+<a class="jxr_linenumber" name="219" href="#219">219</a> 
+<a class="jxr_linenumber" name="220" href="#220">220</a>   @Override
+<a class="jxr_linenumber" name="221" href="#221">221</a>   <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> processOptions(CommandLine cmd) {
+<a class="jxr_linenumber" name="222" href="#222">222</a>     <strong class="jxr_keyword">this</strong>.cmd = cmd;
+<a class="jxr_linenumber" name="223" href="#223">223</a> 
+<a class="jxr_linenumber" name="224" href="#224">224</a>     tableName = Bytes.toBytes(cmd.getOptionValue(OPT_TABLE_NAME,
+<a class="jxr_linenumber" name="225" href="#225">225</a>         DEFAULT_TABLE_NAME));
+<a class="jxr_linenumber" name="226" href="#226">226</a> 
+<a class="jxr_linenumber" name="227" href="#227">227</a>     isWrite = cmd.hasOption(OPT_WRITE);
+<a class="jxr_linenumber" name="228" href="#228">228</a>     isRead = cmd.hasOption(OPT_READ);
+<a class="jxr_linenumber" name="229" href="#229">229</a>     isInitOnly = cmd.hasOption(OPT_INIT_ONLY);
+<a class="jxr_linenumber" name="230" href="#230">230</a> 
+<a class="jxr_linenumber" name="231" href="#231">231</a>     <strong class="jxr_keyword">if</strong> (!isWrite &amp;&amp; !isRead &amp;&amp; !isInitOnly) {
+<a class="jxr_linenumber" name="232" href="#232">232</a>       <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalArgumentException(<span class="jxr_string">"Either -"</span> + OPT_WRITE + <span class="jxr_string">" or "</span> +
+<a class="jxr_linenumber" name="233" href="#233">233</a>           <span class="jxr_string">"-"</span> + OPT_READ + <span class="jxr_string">" has to be specified"</span>);
+<a class="jxr_linenumber" name="234" href="#234">234</a>     }
+<a class="jxr_linenumber" name="235" href="#235">235</a> 
+<a class="jxr_linenumber" name="236" href="#236">236</a>     <strong class="jxr_keyword">if</strong> (isInitOnly &amp;&amp; (isRead || isWrite)) {
+<a class="jxr_linenumber" name="237" href="#237">237</a>       <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalArgumentException(OPT_INIT_ONLY + <span class="jxr_string">" cannot be specified with"</span>
+<a class="jxr_linenumber" name="238" href="#238">238</a>           + <span class="jxr_string">" either -"</span> + OPT_WRITE + <span class="jxr_string">" or -"</span> + OPT_READ);
+<a class="jxr_linenumber" name="239" href="#239">239</a>     }
+<a class="jxr_linenumber" name="240" href="#240">240</a> 
+<a class="jxr_linenumber" name="241" href="#241">241</a>     <strong class="jxr_keyword">if</strong> (!isInitOnly) {
+<a class="jxr_linenumber" name="242" href="#242">242</a>       <strong class="jxr_keyword">if</strong> (!cmd.hasOption(OPT_NUM_KEYS)) {
+<a class="jxr_linenumber" name="243" href="#243">243</a>         <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalArgumentException(OPT_NUM_KEYS + <span class="jxr_string">" must be specified in "</span>
+<a class="jxr_linenumber" name="244" href="#244">244</a>             + <span class="jxr_string">"read or write mode"</span>);
+<a class="jxr_linenumber" name="245" href="#245">245</a>       }
+<a class="jxr_linenumber" name="246" href="#246">246</a>       startKey = parseLong(cmd.getOptionValue(OPT_START_KEY,
+<a class="jxr_linenumber" name="247" href="#247">247</a>           String.valueOf(DEFAULT_START_KEY)), 0, Long.MAX_VALUE);
+<a class="jxr_linenumber" name="248" href="#248">248</a>       <strong class="jxr_keyword">long</strong> numKeys = parseLong(cmd.getOptionValue(OPT_NUM_KEYS), 1,
+<a class="jxr_linenumber" name="249" href="#249">249</a>           Long.MAX_VALUE - startKey);
+<a class="jxr_linenumber" name="250" href="#250">250</a>       endKey = startKey + numKeys;
+<a class="jxr_linenumber" name="251" href="#251">251</a>       isSkipInit = cmd.hasOption(OPT_SKIP_INIT);
+<a class="jxr_linenumber" name="252" href="#252">252</a>       System.out.println(<span class="jxr_string">"Key range: ["</span> + startKey + <span class="jxr_string">".."</span> + (endKey - 1) + <span class="jxr_string">"]"</span>);
+<a class="jxr_linenumber" name="253" href="#253">253</a>     }
+<a class="jxr_linenumber" name="254" href="#254">254</a> 
+<a class="jxr_linenumber" name="255" href="#255">255</a>     encodeInCacheOnly = cmd.hasOption(OPT_ENCODE_IN_CACHE_ONLY);
+<a class="jxr_linenumber" name="256" href="#256">256</a>     parseColumnFamilyOptions(cmd);
+<a class="jxr_linenumber" name="257" href="#257">257</a> 
+<a class="jxr_linenumber" name="258" href="#258">258</a>     <strong class="jxr_keyword">if</strong> (isWrite) {
+<a class="jxr_linenumber" name="259" href="#259">259</a>       String[] writeOpts = splitColonSeparated(OPT_WRITE, 2, 3);
+<a class="jxr_linenumber" name="260" href="#260">260</a> 
+<a class="jxr_linenumber" name="261" href="#261">261</a>       <strong class="jxr_keyword">int</strong> colIndex = 0;
+<a class="jxr_linenumber" name="262" href="#262">262</a>       minColsPerKey = 1;
+<a class="jxr_linenumber" name="263" href="#263">263</a>       maxColsPerKey = 2 * Long.parseLong(writeOpts[colIndex++]);
+<a class="jxr_linenumber" name="264" href="#264">264</a>       <strong class="jxr_keyword">int</strong> avgColDataSize =
+<a class="jxr_linenumber" name="265" href="#265">265</a>           parseInt(writeOpts[colIndex++], 1, Integer.MAX_VALUE);
+<a class="jxr_linenumber" name="266" href="#266">266</a>       minColDataSize = avgColDataSize / 2;
+<a class="jxr_linenumber" name="267" href="#267">267</a>       maxColDataSize = avgColDataSize * 3 / 2;
+<a class="jxr_linenumber" name="268" href="#268">268</a> 
+<a class="jxr_linenumber" name="269" href="#269">269</a>       <strong class="jxr_keyword">if</strong> (colIndex &lt; writeOpts.length) {
+<a class="jxr_linenumber" name="270" href="#270">270</a>         numWriterThreads = getNumThreads(writeOpts[colIndex++]);
+<a class="jxr_linenumber" name="271" href="#271">271</a>       }
+<a class="jxr_linenumber" name="272" href="#272">272</a> 
+<a class="jxr_linenumber" name="273" href="#273">273</a>       isMultiPut = cmd.hasOption(OPT_MULTIPUT);
+<a class="jxr_linenumber" name="274" href="#274">274</a> 
+<a class="jxr_linenumber" name="275" href="#275">275</a>       System.out.println(<span class="jxr_string">"Multi-puts: "</span> + isMultiPut);
+<a class="jxr_linenumber" name="276" href="#276">276</a>       System.out.println(<span class="jxr_string">"Columns per key: "</span> + minColsPerKey + <span class="jxr_string">".."</span>
+<a class="jxr_linenumber" name="277" href="#277">277</a>           + maxColsPerKey);
+<a class="jxr_linenumber" name="278" href="#278">278</a>       System.out.println(<span class="jxr_string">"Data size per column: "</span> + minColDataSize + <span class="jxr_string">".."</span>
+<a class="jxr_linenumber" name="279" href="#279">279</a>           + maxColDataSize);
+<a class="jxr_linenumber" name="280" href="#280">280</a>     }
+<a class="jxr_linenumber" name="281" href="#281">281</a> 
+<a class="jxr_linenumber" name="282" href="#282">282</a>     <strong class="jxr_keyword">if</strong> (isRead) {
+<a class="jxr_linenumber" name="283" href="#283">283</a>       String[] readOpts = splitColonSeparated(OPT_READ, 1, 2);
+<a class="jxr_linenumber" name="284" href="#284">284</a>       <strong class="jxr_keyword">int</strong> colIndex = 0;
+<a class="jxr_linenumber" name="285" href="#285">285</a>       verifyPercent = parseInt(readOpts[colIndex++], 0, 100);
+<a class="jxr_linenumber" name="286" href="#286">286</a>       <strong class="jxr_keyword">if</strong> (colIndex &lt; readOpts.length) {
+<a class="jxr_linenumber" name="287" href="#287">287</a>         numReaderThreads = getNumThreads(readOpts[colIndex++]);
+<a class="jxr_linenumber" name="288" href="#288">288</a>       }
+<a class="jxr_linenumber" name="289" href="#289">289</a> 
+<a class="jxr_linenumber" name="290" href="#290">290</a>       <strong class="jxr_keyword">if</strong> (cmd.hasOption(OPT_MAX_READ_ERRORS)) {
+<a class="jxr_linenumber" name="291" href="#291">291</a>         maxReadErrors = parseInt(cmd.getOptionValue(OPT_MAX_READ_ERRORS),
+<a class="jxr_linenumber" name="292" href="#292">292</a>             0, Integer.MAX_VALUE);
+<a class="jxr_linenumber" name="293" href="#293">293</a>       }
+<a class="jxr_linenumber" name="294" href="#294">294</a> 
+<a class="jxr_linenumber" name="295" href="#295">295</a>       <strong class="jxr_keyword">if</strong> (cmd.hasOption(OPT_KEY_WINDOW)) {
+<a class="jxr_linenumber" name="296" href="#296">296</a>         keyWindow = parseInt(cmd.getOptionValue(OPT_KEY_WINDOW),
+<a class="jxr_linenumber" name="297" href="#297">297</a>             0, Integer.MAX_VALUE);
+<a class="jxr_linenumber" name="298" href="#298">298</a>       }
+<a class="jxr_linenumber" name="299" href="#299">299</a> 
+<a class="jxr_linenumber" name="300" href="#300">300</a>       System.out.println(<span class="jxr_string">"Percent of keys to verify: "</span> + verifyPercent);
+<a class="jxr_linenumber" name="301" href="#301">301</a>       System.out.println(<span class="jxr_string">"Reader threads: "</span> + numReaderThreads);
+<a class="jxr_linenumber" name="302" href="#302">302</a>     }
+<a class="jxr_linenumber" name="303" href="#303">303</a>   }
+<a class="jxr_linenumber" name="304" href="#304">304</a> 
+<a class="jxr_linenumber" name="305" href="#305">305</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> parseColumnFamilyOptions(CommandLine cmd) {
+<a class="jxr_linenumber" name="306" href="#306">306</a>     String dataBlockEncodingStr = cmd.getOptionValue(OPT_DATA_BLOCK_ENCODING);
+<a class="jxr_linenumber" name="307" href="#307">307</a>     dataBlockEncodingAlgo = dataBlockEncodingStr == <strong class="jxr_keyword">null</strong> ? <strong class="jxr_keyword">null</strong> :
+<a class="jxr_linenumber" name="308" href="#308">308</a>         DataBlockEncoding.valueOf(dataBlockEncodingStr);
+<a class="jxr_linenumber" name="309" href="#309">309</a>     <strong class="jxr_keyword">if</strong> (dataBlockEncodingAlgo == DataBlockEncoding.NONE &amp;&amp; encodeInCacheOnly) {
+<a class="jxr_linenumber" name="310" href="#310">310</a>       <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalArgumentException(<span class="jxr_string">"-"</span> + OPT_ENCODE_IN_CACHE_ONLY + <span class="jxr_string">" "</span> +
+<a class="jxr_linenumber" name="311" href="#311">311</a>           <span class="jxr_string">"does not make sense when data block encoding is not used"</span>);
+<a class="jxr_linenumber" name="312" href="#312">312</a>     }
+<a class="jxr_linenumber" name="313" href="#313">313</a> 
+<a class="jxr_linenumber" name="314" href="#314">314</a>     String compressStr = cmd.getOptionValue(OPT_COMPRESSION);
+<a class="jxr_linenumber" name="315" href="#315">315</a>     compressAlgo = compressStr == <strong class="jxr_keyword">null</strong> ? Compression.Algorithm.NONE :
+<a class="jxr_linenumber" name="316" href="#316">316</a>         Compression.Algorithm.valueOf(compressStr);
+<a class="jxr_linenumber" name="317" href="#317">317</a> 
+<a class="jxr_linenumber" name="318" href="#318">318</a>     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
+<a class="jxr_linenumber" name="319" href="#319">319</a>     bloomType = bloomStr == <strong class="jxr_keyword">null</strong> ? <strong class="jxr_keyword">null</strong> :
+<a class="jxr_linenumber" name="320" href="#320">320</a>         StoreFile.BloomType.valueOf(bloomStr);
+<a class="jxr_linenumber" name="321" href="#321">321</a>   }
+<a class="jxr_linenumber" name="322" href="#322">322</a> 
+<a class="jxr_linenumber" name="323" href="#323">323</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> initTestTable() <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="324" href="#324">324</a>     HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableName,
+<a class="jxr_linenumber" name="325" href="#325">325</a>         COLUMN_FAMILY, compressAlgo, dataBlockEncodingAlgo);
+<a class="jxr_linenumber" name="326" href="#326">326</a>     applyColumnFamilyOptions(tableName, COLUMN_FAMILIES);
+<a class="jxr_linenumber" name="327" href="#327">327</a>   }
+<a class="jxr_linenumber" name="328" href="#328">328</a> 
+<a class="jxr_linenumber" name="329" href="#329">329</a>   @Override
+<a class="jxr_linenumber" name="330" href="#330">330</a>   <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">int</strong> doWork() <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="331" href="#331">331</a>     <strong class="jxr_keyword">if</strong> (cmd.hasOption(OPT_ZK_QUORUM)) {
+<a class="jxr_linenumber" name="332" href="#332">332</a>       conf.set(HConstants.ZOOKEEPER_QUORUM, cmd.getOptionValue(OPT_ZK_QUORUM));
+<a class="jxr_linenumber" name="333" href="#333">333</a>     }
+<a class="jxr_linenumber" name="334" href="#334">334</a> 
+<a class="jxr_linenumber" name="335" href="#335">335</a>     <strong class="jxr_keyword">if</strong> (isInitOnly) {
+<a class="jxr_linenumber" name="336" href="#336">336</a>       LOG.info(<span class="jxr_string">"Initializing only; no reads or writes"</span>);
+<a class="jxr_linenumber" name="337" href="#337">337</a>       initTestTable();
+<a class="jxr_linenumber" name="338" href="#338">338</a>       <strong class="jxr_keyword">return</strong> 0;
+<a class="jxr_linenumber" name="339" href="#339">339</a>     }
+<a class="jxr_linenumber" name="340" href="#340">340</a> 
+<a class="jxr_linenumber" name="341" href="#341">341</a>     <strong class="jxr_keyword">if</strong> (!isSkipInit) {
+<a class="jxr_linenumber" name="342" href="#342">342</a>       initTestTable();
+<a class="jxr_linenumber" name="343" href="#343">343</a>     }
+<a class="jxr_linenumber" name="344" href="#344">344</a> 
+<a class="jxr_linenumber" name="345" href="#345">345</a>     <strong class="jxr_keyword">if</strong> (isWrite) {
+<a class="jxr_linenumber" name="346" href="#346">346</a>       writerThreads = <strong class="jxr_keyword">new</strong> <a href="../../../../../org/apache/hadoop/hbase/util/MultiThreadedWriter.html">MultiThreadedWriter</a>(conf, tableName, COLUMN_FAMILY);
+<a class="jxr_linenumber" name="347" href="#347">347</a>       writerThreads.setMultiPut(isMultiPut);
+<a class="jxr_linenumber" name="348" href="#348">348</a>       writerThreads.setColumnsPerKey(minColsPerKey, maxColsPerKey);
+<a class="jxr_linenumber" name="349" href="#349">349</a>       writerThreads.setDataSize(minColDataSize, maxColDataSize);
+<a class="jxr_linenumber" name="350" href="#350">350</a>     }
+<a class="jxr_linenumber" name="351" href="#351">351</a> 
+<a class="jxr_linenumber" name="352" href="#352">352</a>     <strong class="jxr_keyword">if</strong> (isRead) {
+<a class="jxr_linenumber" name="353" href="#353">353</a>       readerThreads = <strong class="jxr_keyword">new</strong> <a href="../../../../../org/apache/hadoop/hbase/util/MultiThreadedReader.html">MultiThreadedReader</a>(conf, tableName, COLUMN_FAMILY,
+<a class="jxr_linenumber" name="354" href="#354">354</a>           verifyPercent);
+<a class="jxr_linenumber" name="355" href="#355">355</a>       readerThreads.setMaxErrors(maxReadErrors);
+<a class="jxr_linenumber" name="356" href="#356">356</a>       readerThreads.setKeyWindow(keyWindow);
+<a class="jxr_linenumber" name="357" href="#357">357</a>     }
+<a class="jxr_linenumber" name="358" href="#358">358</a> 
+<a class="jxr_linenumber" name="359" href="#359">359</a>     <strong class="jxr_keyword">if</strong> (isRead &amp;&amp; isWrite) {
+<a class="jxr_linenumber" name="360" href="#360">360</a>       LOG.info(<span class="jxr_string">"Concurrent read/write workload: making readers aware of the "</span> +
+<a class="jxr_linenumber" name="361" href="#361">361</a>           <span class="jxr_string">"write point"</span>);
+<a class="jxr_linenumber" name="362" href="#362">362</a>       readerThreads.linkToWriter(writerThreads);
+<a class="jxr_linenumber" name="363" href="#363">363</a>     }
+<a class="jxr_linenumber" name="364" href="#364">364</a> 
+<a class="jxr_linenumber" name="365" href="#365">365</a>     <strong class="jxr_keyword">if</strong> (isWrite) {
+<a class="jxr_linenumber" name="366" href="#366">366</a>       System.out.println(<span class="jxr_string">"Starting to write data..."</span>);
+<a class="jxr_linenumber" name="367" href="#367">367</a>       writerThreads.start(startKey, endKey, numWriterThreads);
+<a class="jxr_linenumber" name="368" href="#368">368</a>     }
+<a class="jxr_linenumber" name="369" href="#369">369</a> 
+<a class="jxr_linenumber" name="370" href="#370">370</a>     <strong class="jxr_keyword">if</strong> (isRead) {
+<a class="jxr_linenumber" name="371" href="#371">371</a>       System.out.println(<span class="jxr_string">"Starting to read data..."</span>);
+<a class="jxr_linenumber" name="372" href="#372">372</a>       readerThreads.start(startKey, endKey, numReaderThreads);
+<a class="jxr_linenumber" name="373" href="#373">373</a>     }
+<a class="jxr_linenumber" name="374" href="#374">374</a> 
+<a class="jxr_linenumber" name="375" href="#375">375</a>     <strong class="jxr_keyword">if</strong> (isWrite) {
+<a class="jxr_linenumber" name="376" href="#376">376</a>       writerThreads.waitForFinish();
+<a class="jxr_linenumber" name="377" href="#377">377</a>     }
+<a class="jxr_linenumber" name="378" href="#378">378</a> 
+<a class="jxr_linenumber" name="379" href="#379">379</a>     <strong class="jxr_keyword">if</strong> (isRead) {
+<a class="jxr_linenumber" name="380" href="#380">380</a>       readerThreads.waitForFinish();
+<a class="jxr_linenumber" name="381" href="#381">381</a>     }
+<a class="jxr_linenumber" name="382" href="#382">382</a> 
+<a class="jxr_linenumber" name="383" href="#383">383</a>     <strong class="jxr_keyword">boolean</strong> success = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="384" href="#384">384</a>     <strong class="jxr_keyword">if</strong> (isWrite) {
+<a class="jxr_linenumber" name="385" href="#385">385</a>       success = success &amp;&amp; writerThreads.getNumWriteFailures() == 0;
+<a class="jxr_linenumber" name="386" href="#386">386</a>     }
+<a class="jxr_linenumber" name="387" href="#387">387</a>     <strong class="jxr_keyword">if</strong> (isRead) {
+<a class="jxr_linenumber" name="388" href="#388">388</a>       success = success &amp;&amp; readerThreads.getNumReadErrors() == 0
+<a class="jxr_linenumber" name="389" href="#389">389</a>           &amp;&amp; readerThreads.getNumReadFailures() == 0;
+<a class="jxr_linenumber" name="390" href="#390">390</a>     }
+<a class="jxr_linenumber" name="391" href="#391">391</a>     <strong class="jxr_keyword">return</strong> success ? 0 : 1;
+<a class="jxr_linenumber" name="392" href="#392">392</a>   }
+<a class="jxr_linenumber" name="393" href="#393">393</a> 
+<a class="jxr_linenumber" name="394" href="#394">394</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> main(String[] args) {
+<a class="jxr_linenumber" name="395" href="#395">395</a>     <strong class="jxr_keyword">new</strong> <a href="../../../../../org/apache/hadoop/hbase/util/LoadTestTool.html">LoadTestTool</a>().doStaticMain(args);
+<a class="jxr_linenumber" name="396" href="#396">396</a>   }
+<a class="jxr_linenumber" name="397" href="#397">397</a> 
+<a class="jxr_linenumber" name="398" href="#398">398</a> }
+</pre>
+<hr/><div id="footer">This page was automatically generated by <a href="http://maven.apache.org/">Maven</a></div></body>
+</html>
+

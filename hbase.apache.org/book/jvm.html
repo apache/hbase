@@ -1,0 +1,39 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>11.3.&nbsp;Java</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="performance.html" title="Chapter&nbsp;11.&nbsp;Apache HBase (TM) Performance Tuning"><link rel="prev" href="perf.network.html" title="11.2.&nbsp;Network"><link rel="next" href="perf.configurations.html" title="11.4.&nbsp;HBase Configurations"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">11.3.&nbsp;Java</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="perf.network.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;11.&nbsp;Apache HBase (TM) Performance Tuning</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="perf.configurations.html">Next</a></td></tr></table><hr></div><div class="section" title="11.3.&nbsp;Java"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="jvm"></a>11.3.&nbsp;Java</h2></div></div></div><div class="section" title="11.3.1.&nbsp;The Garbage Collector and Apache HBase"><div class="titlepage"><div><div><h3 class="title"><a name="gc"></a>11.3.1.&nbsp;The Garbage Collector and Apache HBase</h3></div></div></div><div class="section" title="11.3.1.1.&nbsp;Long GC pauses"><div class="titlepage"><div><div><h4 class="title"><a name="gcpause"></a>11.3.1.1.&nbsp;Long GC pauses</h4></div></div></div><p><a name="mslab"></a>In his presentation, <a class="link" href="http://www.slideshare.net/cloudera/hbase-hug-presentation" target="_top">Avoiding
+        Full GCs with MemStore-Local Allocation Buffers</a>, Todd Lipcon
+        describes two cases of stop-the-world garbage collections common in
+        HBase, especially during loading; CMS failure modes and old generation
+        heap fragmentation brought. To address the first, start the CMS
+        earlier than default by adding
+        <code class="code">-XX:CMSInitiatingOccupancyFraction</code> and setting it down
+        from defaults. Start at 60 or 70 percent (The lower you bring down the
+        threshold, the more GCing is done, the more CPU used). To address the
+        second fragmentation issue, Todd added an experimental facility,
+        <a class="indexterm" name="d2121e6672"></a>, that
+        must be explicitly enabled in Apache HBase 0.90.x (Its defaulted to be on in
+        Apache 0.92.x HBase). See <code class="code">hbase.hregion.memstore.mslab.enabled</code>
+        to true in your <code class="classname">Configuration</code>. See the cited
+        slides for background and detail<sup>[<a name="d2121e6682" href="#ftn.d2121e6682" class="footnote">27</a>]</sup>.
+        Be aware that when enabled, each MemStore instance will occupy at least
+        an MSLAB instance of memory.  If you have thousands of regions or lots
+        of regions each with many column families, this allocation of MSLAB
+        may be responsible for a good portion of your heap allocation and in
+        an extreme case cause you to OOME.  Disable MSLAB in this case, or
+        lower the amount of memory it uses or float less regions per server.
+        </p><p>For more information about GC logs, see <a class="xref" href="trouble.log.html#trouble.log.gc" title="12.2.3.&nbsp;JVM Garbage Collection Logs">Section&nbsp;12.2.3, &#8220;JVM Garbage Collection Logs&#8221;</a>.
+        </p></div></div><div class="footnotes"><br><hr width="100" align="left"><div class="footnote"><p><sup>[<a id="ftn.d2121e6682" href="#d2121e6682" class="para">27</a>] </sup>The latest jvms do better
+        regards fragmentation so make sure you are running a recent release.
+        Read down in the message,
+        <a class="link" href="http://osdir.com/ml/hotspot-gc-use/2011-11/msg00002.html" target="_top">Identifying concurrent mode failures caused by fragmentation</a>.</p></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'jvm';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="perf.network.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="performance.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="perf.configurations.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">11.2.&nbsp;Network&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;11.4.&nbsp;HBase Configurations</td></tr></table></div></body></html>

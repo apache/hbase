@@ -1,0 +1,131 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>1.4.&nbsp;Adding an Apache HBase release to Apache's Maven Repository</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="developer.html" title="Chapter&nbsp;1.&nbsp;Building and Developing Apache HBase (TM)"><link rel="up" href="developer.html" title="Chapter&nbsp;1.&nbsp;Building and Developing Apache HBase (TM)"><link rel="prev" href="build.html" title="1.3.&nbsp;Building Apache HBase"><link rel="next" href="hbase.org.html" title="1.5.&nbsp;Updating hbase.apache.org"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">1.4.&nbsp;Adding an Apache HBase release to Apache's Maven Repository</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="build.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="hbase.org.html">Next</a></td></tr></table><hr></div><div class="section" title="1.4.&nbsp;Adding an Apache HBase release to Apache's Maven Repository"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="mvn_repo"></a>1.4.&nbsp;Adding an Apache HBase release to Apache's Maven Repository</h2></div></div></div><p>Follow the instructions at
+        <a class="link" href="http://www.apache.org/dev/publishing-maven-artifacts.html" target="_top">Publishing Maven Artifacts</a> after
+        reading the below miscellaney.
+        </p><p>You must use maven 3.0.x (Check by running <span class="command"><strong>mvn -version</strong></span>).
+        </p><p>Let me list out the commands I used first.  The sections that follow dig in more
+        on what is going on.  In this example, we are releasing the 0.92.2 jar to the apache
+        maven repository.
+        </p><pre class="programlisting">
+  # First make a copy of the tag we want to release; presumes the release has been tagged already
+  # We do this because we need to make some commits for the mvn release plugin to work.
+  853  svn copy -m "Publishing 0.92.2 to mvn"  https://svn.apache.org/repos/asf/hbase/tags/0.92.2 https://svn.apache.org/repos/asf/hbase/tags/0.92.2mvn
+  857  svn checkout https://svn.apache.org/repos/asf/hbase/tags/0.92.2mvn
+  858  cd 0.92.2mvn/
+  # Edit the version making it release version with a '-SNAPSHOT' suffix (See below for more on this)
+  860  vi pom.xml
+  861  svn commit -m "Add SNAPSHOT to the version" pom.xml
+  862  ~/bin/mvn/bin/mvn release:clean
+  865  ~/bin/mvn/bin/mvn release:prepare
+  866  # Answer questions and then ^C to kill the build after the last question. See below for more on this.
+  867  vi release.properties
+       # Change the references to trunk svn to be 0.92.2mvn; the release plugin presumes trunk
+       # Then restart the release:prepare -- it won't ask questions
+       # because the properties file exists.
+  868  ~/bin/mvn/bin/mvn release:prepare
+  # The apache-release profile comes from the apache parent pom and does signing of artifacts published
+  869  ~/bin/mvn/bin/mvn release:perform  -Papache-release
+       # When done copying up to apache staging repository,
+       # browse to repository.apache.org, login and finish
+       # the release as according to the above
+       # "Publishing Maven Artifacts.
+        </pre><p>
+        </p><p>Below is more detail on the commmands listed above.</p><p>At the <span class="command"><strong>mvn release:perform</strong></span> step, before starting, if you are for example
+        releasing hbase 0.92.2, you need to make sure the pom.xml version is 0.92.2-SNAPSHOT.  This needs
+        to be checked in.  Since we do the maven release after actual release, I've been doing this
+        checkin into a copy of the release tag rather than into the actual release tag itself (presumes the release has been properly tagged in svn).
+        So, say we released hbase 0.92.2 and now we want to do the release to the maven repository, in svn, the 0.92.2
+        release will be tagged 0.92.2.  Making the maven release, copy the 0.92.2 tag to 0.92.2mvn.
+        Check out this tag and change the version therein and commit.
+        </p><p>
+            Currently, the mvn release wants to go against trunk.  I haven't figured how to tell it to do otherwise
+            so I do the below hack.  The hack comprises answering the questions put to you by the mvn release plugin properly,
+            then immediately control-C'ing the build after the last question asked as the build release step starts to run.
+            After control-C'ing it, You'll notice a release.properties in your build dir.  Review it.
+            Make sure it is using the proper branch -- it tends to use trunk rather than the 0.92.2mvn or whatever
+            that you want it to use -- so hand edit the release.properties file that was put under <code class="varname">${HBASE_HOME}</code>
+            by the <span class="command"><strong>release:perform</strong></span> invocation.  When done, resstart the
+            <span class="command"><strong>release:perform</strong></span>.
+        </p><p>Here is how I'd answer the questions at <span class="command"><strong>release:prepare</strong></span> time:
+        </p><pre class="programlisting">What is the release version for "HBase"? (org.apache.hbase:hbase) 0.92.2: :
+What is SCM release tag or label for "HBase"? (org.apache.hbase:hbase) hbase-0.92.2: : 0.92.2mvn
+What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3-SNAPSHOT: :
+[INFO] Transforming 'HBase'...</pre><p>
+        </p><p>When you run <span class="command"><strong>release:perform</strong></span>, pass <span class="command"><strong>-Papache-release</strong></span>
+        else it will not 'sign' the artifacts it uploads.
+        </p><p>A strange issue I ran into was the one where the upload into the apache
+        repository was being sprayed across multiple apache machines making it so I could
+        not release.  See <a class="link" href="https://issues.apache.org/jira/browse/INFRA-4482" target="_top">INFRA-4482 Why is my upload to mvn spread across multiple repositories?</a>.</p><p><a name="mvn.settings.file"></a>Here is my <code class="filename">~/.m2/settings.xml</code>.
+        This is read by the release plugin.  The apache-release profile will pick up your
+        gpg key setup from here if you've specified it into the file.  The password
+        can be maven encrypted as suggested in the "Publishing Maven Artifacts" but plain
+        text password works too (just don't let anyone see your local settings.xml).
+        </p><pre class="programlisting">&lt;settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                      http://maven.apache.org/xsd/settings-1.0.0.xsd"&gt;
+  &lt;servers&gt;
+    &lt;!- To publish a snapshot of some part of Maven --&gt;
+    &lt;server&gt;
+      &lt;id&gt;apache.snapshots.https&lt;/id&gt;
+      &lt;username&gt;YOUR_APACHE_ID
+      &lt;/username&gt;
+      &lt;password&gt;YOUR_APACHE_PASSWORD
+      &lt;/password&gt;
+    &lt;/server&gt;
+    &lt;!-- To publish a website using Maven --&gt;
+    &lt;!-- To stage a release of some part of Maven --&gt;
+    &lt;server&gt;
+      &lt;id&gt;apache.releases.https&lt;/id&gt;
+      &lt;username&gt;YOUR_APACHE_ID
+      &lt;/username&gt;
+      &lt;password&gt;YOUR_APACHE_PASSWORD
+      &lt;/password&gt;
+    &lt;/server&gt;
+  &lt;/servers&gt;
+  &lt;profiles&gt;
+    &lt;profile&gt;
+      &lt;id&gt;apache-release&lt;/id&gt;
+      &lt;properties&gt;
+    &lt;gpg.keyname&gt;YOUR_KEYNAME&lt;/gpg.keyname&gt;
+    &lt;!--Keyname is something like this ... 00A5F21E... do gpg --list-keys to find it--&gt;
+    &lt;gpg.passphrase&gt;YOUR_KEY_PASSWORD
+    &lt;/gpg.passphrase&gt;
+      &lt;/properties&gt;
+    &lt;/profile&gt;
+  &lt;/profiles&gt;
+&lt;/settings&gt;
+        </pre><p>
+        </p><p>If you see run into the below, its because you need to edit version in the pom.xml and add
+        <code class="code">-SNAPSHOT</code> to the version (and commit).
+        </p><pre class="programlisting">[INFO] Scanning for projects...
+[INFO] Searching repository for plugin with prefix: 'release'.
+[INFO] ------------------------------------------------------------------------
+[INFO] Building HBase
+[INFO]    task-segment: [release:prepare] (aggregator-style)
+[INFO] ------------------------------------------------------------------------
+[INFO] [release:prepare {execution: default-cli}]
+[INFO] ------------------------------------------------------------------------
+[ERROR] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] You don't have a SNAPSHOT project in the reactor projects list.
+[INFO] ------------------------------------------------------------------------
+[INFO] For more information, run Maven with the -e switch
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 3 seconds
+[INFO] Finished at: Sat Mar 26 18:11:07 PDT 2011
+[INFO] Final Memory: 35M/423M
+[INFO] -----------------------------------------------------------------------</pre><p>
+        </p></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'mvn_repo';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="build.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="hbase.org.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">1.3.&nbsp;Building Apache HBase&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="developer.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;1.5.&nbsp;Updating hbase.apache.org</td></tr></table></div></body></html>

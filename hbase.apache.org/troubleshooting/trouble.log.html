@@ -1,0 +1,105 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>1.2.&nbsp;Logs</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="troubleshooting.html" title="Chapter&nbsp;1.&nbsp;Troubleshooting and Debugging Apache HBase (TM)"><link rel="up" href="troubleshooting.html" title="Chapter&nbsp;1.&nbsp;Troubleshooting and Debugging Apache HBase (TM)"><link rel="prev" href="troubleshooting.html" title="Chapter&nbsp;1.&nbsp;Troubleshooting and Debugging Apache HBase (TM)"><link rel="next" href="trouble.resources.html" title="1.3.&nbsp;Resources"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">1.2.&nbsp;Logs</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="troubleshooting.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="trouble.resources.html">Next</a></td></tr></table><hr></div><div class="section" title="1.2.&nbsp;Logs"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="trouble.log"></a>1.2.&nbsp;Logs</h2></div></div></div><p>
+      The key process logs are as follows...   (replace &lt;user&gt; with the user that started the service, and &lt;hostname&gt; for the machine name)
+      </p><p>
+      NameNode:  <code class="filename">$HADOOP_HOME/logs/hadoop-&lt;user&gt;-namenode-&lt;hostname&gt;.log</code>
+      </p><p>
+      DataNode:  <code class="filename">$HADOOP_HOME/logs/hadoop-&lt;user&gt;-datanode-&lt;hostname&gt;.log</code>
+      </p><p>
+      JobTracker:  <code class="filename">$HADOOP_HOME/logs/hadoop-&lt;user&gt;-jobtracker-&lt;hostname&gt;.log</code>
+      </p><p>
+      TaskTracker:  <code class="filename">$HADOOP_HOME/logs/hadoop-&lt;user&gt;-tasktracker-&lt;hostname&gt;.log</code>
+      </p><p>
+      HMaster:  <code class="filename">$HBASE_HOME/logs/hbase-&lt;user&gt;-master-&lt;hostname&gt;.log</code>
+      </p><p>
+      RegionServer:  <code class="filename">$HBASE_HOME/logs/hbase-&lt;user&gt;-regionserver-&lt;hostname&gt;.log</code>
+      </p><p>
+      ZooKeeper:  <code class="filename">TODO</code>
+      </p><div class="section" title="1.2.1.&nbsp;Log Locations"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.log.locations"></a>1.2.1.&nbsp;Log Locations</h3></div></div></div><p>For stand-alone deployments the logs are obviously going to be on a single machine, however this is a development configuration only.
+        Production deployments need to run on a cluster.</p><div class="section" title="1.2.1.1.&nbsp;NameNode"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.log.locations.namenode"></a>1.2.1.1.&nbsp;NameNode</h4></div></div></div><p>The NameNode log is on the NameNode server.  The HBase Master is typically run on the NameNode server, and well as ZooKeeper.</p><p>For smaller clusters the JobTracker is typically run on the NameNode server as well.</p></div><div class="section" title="1.2.1.2.&nbsp;DataNode"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.log.locations.datanode"></a>1.2.1.2.&nbsp;DataNode</h4></div></div></div><p>Each DataNode server will have a DataNode log for HDFS, as well as a RegionServer log for HBase.</p><p>Additionally, each DataNode server will also have a TaskTracker log for MapReduce task execution.</p></div></div><div class="section" title="1.2.2.&nbsp;Log Levels"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.log.levels"></a>1.2.2.&nbsp;Log Levels</h3></div></div></div><div class="section" title="1.2.2.1.&nbsp;Enabling RPC-level logging"><div class="titlepage"><div><div><h4 class="title"><a name="rpc.logging"></a>1.2.2.1.&nbsp;Enabling RPC-level logging</h4></div></div></div><p>Enabling the RPC-level logging on a RegionServer can often given
+           insight on timings at the server.  Once enabled, the amount of log
+           spewed is voluminous.  It is not recommended that you leave this
+           logging on for more than short bursts of time.  To enable RPC-level
+           logging, browse to the RegionServer UI and click on 
+           <span class="emphasis"><em>Log Level</em></span>.  Set the log level to <code class="varname">DEBUG</code> for the package
+           <code class="classname">org.apache.hadoop.ipc</code> (Thats right, for
+           <code class="classname">hadoop.ipc</code>, NOT, <code class="classname">hbase.ipc</code>).  Then tail the RegionServers log.  Analyze.</p><p>To disable, set the logging level back to <code class="varname">INFO</code> level.
+           </p></div></div><div class="section" title="1.2.3.&nbsp;JVM Garbage Collection Logs"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.log.gc"></a>1.2.3.&nbsp;JVM Garbage Collection Logs</h3></div></div></div><p>HBase is memory intensive, and using the default GC you can see long pauses in all threads including the <span class="emphasis"><em>Juliet Pause</em></span> aka "GC of Death". 
+           To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.  
+          </p><p>
+          To enable, in <code class="filename">hbase-env.sh</code> add:
+          </p><pre class="programlisting"> 
+export HBASE_OPTS="-XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/home/hadoop/hbase/logs/gc-hbase.log"
+          </pre><p>
+           Adjust the log directory to wherever you log.  Note:  The GC log does NOT roll automatically, so you'll have to keep an eye on it so it doesn't fill up the disk. 
+          </p><p>
+         At this point you should see logs like so:
+          </p><pre class="programlisting">
+64898.952: [GC [1 CMS-initial-mark: 2811538K(3055704K)] 2812179K(3061272K), 0.0007360 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+64898.953: [CMS-concurrent-mark-start]
+64898.971: [GC 64898.971: [ParNew: 5567K-&gt;576K(5568K), 0.0101110 secs] 2817105K-&gt;2812715K(3061272K), 0.0102200 secs] [Times: user=0.07 sys=0.00, real=0.01 secs] 
+          </pre><p>
+          </p><p>
+           In this section, the first line indicates a 0.0007360 second pause for the CMS to initially mark. This pauses the entire VM, all threads for that period of time.
+            </p><p>
+           The third line indicates a "minor GC", which pauses the VM for 0.0101110 seconds - aka 10 milliseconds. It has reduced the "ParNew" from about 5.5m to 576k.
+           Later on in this cycle we see:
+           </p><pre class="programlisting"> 
+64901.445: [CMS-concurrent-mark: 1.542/2.492 secs] [Times: user=10.49 sys=0.33, real=2.49 secs] 
+64901.445: [CMS-concurrent-preclean-start]
+64901.453: [GC 64901.453: [ParNew: 5505K-&gt;573K(5568K), 0.0062440 secs] 2868746K-&gt;2864292K(3061272K), 0.0063360 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+64901.476: [GC 64901.476: [ParNew: 5563K-&gt;575K(5568K), 0.0072510 secs] 2869283K-&gt;2864837K(3061272K), 0.0073320 secs] [Times: user=0.05 sys=0.01, real=0.01 secs] 
+64901.500: [GC 64901.500: [ParNew: 5517K-&gt;573K(5568K), 0.0120390 secs] 2869780K-&gt;2865267K(3061272K), 0.0121150 secs] [Times: user=0.09 sys=0.00, real=0.01 secs] 
+64901.529: [GC 64901.529: [ParNew: 5507K-&gt;569K(5568K), 0.0086240 secs] 2870200K-&gt;2865742K(3061272K), 0.0087180 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+64901.554: [GC 64901.555: [ParNew: 5516K-&gt;575K(5568K), 0.0107130 secs] 2870689K-&gt;2866291K(3061272K), 0.0107820 secs] [Times: user=0.06 sys=0.00, real=0.01 secs] 
+64901.578: [CMS-concurrent-preclean: 0.070/0.133 secs] [Times: user=0.48 sys=0.01, real=0.14 secs] 
+64901.578: [CMS-concurrent-abortable-preclean-start]
+64901.584: [GC 64901.584: [ParNew: 5504K-&gt;571K(5568K), 0.0087270 secs] 2871220K-&gt;2866830K(3061272K), 0.0088220 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+64901.609: [GC 64901.609: [ParNew: 5512K-&gt;569K(5568K), 0.0063370 secs] 2871771K-&gt;2867322K(3061272K), 0.0064230 secs] [Times: user=0.06 sys=0.00, real=0.01 secs] 
+64901.615: [CMS-concurrent-abortable-preclean: 0.007/0.037 secs] [Times: user=0.13 sys=0.00, real=0.03 secs] 
+64901.616: [GC[YG occupancy: 645 K (5568 K)]64901.616: [Rescan (parallel) , 0.0020210 secs]64901.618: [weak refs processing, 0.0027950 secs] [1 CMS-remark: 2866753K(3055704K)] 2867399K(3061272K), 0.0049380 secs] [Times: user=0.00 sys=0.01, real=0.01 secs] 
+64901.621: [CMS-concurrent-sweep-start]
+            </pre><p>
+            </p><p>
+            The first line indicates that the CMS concurrent mark (finding garbage) has taken 2.4 seconds. But this is a _concurrent_ 2.4 seconds, Java has not been paused at any point in time.
+            </p><p>
+            There are a few more minor GCs, then there is a pause at the 2nd last line:
+            </p><pre class="programlisting">  
+64901.616: [GC[YG occupancy: 645 K (5568 K)]64901.616: [Rescan (parallel) , 0.0020210 secs]64901.618: [weak refs processing, 0.0027950 secs] [1 CMS-remark: 2866753K(3055704K)] 2867399K(3061272K), 0.0049380 secs] [Times: user=0.00 sys=0.01, real=0.01 secs] 
+            </pre><p>
+            </p><p>
+            The pause here is 0.0049380 seconds (aka 4.9 milliseconds) to 'remark' the heap.  
+            </p><p>
+            At this point the sweep starts, and you can watch the heap size go down:
+            </p><pre class="programlisting">
+64901.637: [GC 64901.637: [ParNew: 5501K-&gt;569K(5568K), 0.0097350 secs] 2871958K-&gt;2867441K(3061272K), 0.0098370 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+...  lines removed ...
+64904.936: [GC 64904.936: [ParNew: 5532K-&gt;568K(5568K), 0.0070720 secs] 1365024K-&gt;1360689K(3061272K), 0.0071930 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+64904.953: [CMS-concurrent-sweep: 2.030/3.332 secs] [Times: user=9.57 sys=0.26, real=3.33 secs] 
+            </pre><p>
+            At this point, the CMS sweep took 3.332 seconds, and heap went from about ~ 2.8 GB to 1.3 GB (approximate).
+            </p><p>
+            The key points here is to keep all these pauses low. CMS pauses are always low, but if your ParNew starts growing, you can see minor GC pauses approach 100ms, exceed 100ms and hit as high at 400ms.
+            </p><p>
+            This can be due to the size of the ParNew, which should be relatively small. If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if its too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
+            </p><p>
+             Add this to HBASE_OPTS:
+            </p><pre class="programlisting"> 
+export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above&gt; &lt;gc logging options from above&gt;"
+            </pre><p>
+            </p><p>
+            For more information on GC pauses, see the <a class="link" href="http://www.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/" target="_top">3 part blog post</a>  by Todd Lipcon
+            and <a class="xref" href="">???</a> above.
+            </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'trouble.log';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="troubleshooting.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="trouble.resources.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter&nbsp;1.&nbsp;Troubleshooting and Debugging Apache HBase (TM)&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="troubleshooting.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;1.3.&nbsp;Resources</td></tr></table></div></body></html>

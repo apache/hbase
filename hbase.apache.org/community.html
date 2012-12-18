@@ -1,0 +1,61 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Chapter&nbsp;1.&nbsp;Community</title><link rel="stylesheet" type="text/css" href="css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="chapter" title="Chapter&nbsp;1.&nbsp;Community"><div class="titlepage"><div><div><h2 class="title"><a name="community"></a>Chapter&nbsp;1.&nbsp;Community</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="section"><a href="#decisions">1.1. Decisions</a></span></dt><dd><dl><dt><span class="section"><a href="#feature_branches">1.1.1. Feature Branches</a></span></dt><dt><span class="section"><a href="#patchplusonepolicy">1.1.2. Patch +1 Policy</a></span></dt></dl></dd><dt><span class="section"><a href="#community.roles">1.2. Community Roles</a></span></dt><dd><dl><dt><span class="section"><a href="#OWNER">1.2.1. Component Owner</a></span></dt></dl></dd></dl></div><div class="section" title="1.1.&nbsp;Decisions"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="decisions"></a>1.1.&nbsp;Decisions</h2></div></div></div><div class="section" title="1.1.1.&nbsp;Feature Branches"><div class="titlepage"><div><div><h3 class="title"><a name="feature_branches"></a>1.1.1.&nbsp;Feature Branches</h3></div></div></div><p>Feature Branches are easy to make.  You do not have to be a committer to make one.  Just request the name of your branch be added to JIRA up on the
+        developer's mailing list and a committer will add it for you.  Thereafter you can file issues against your feature branch in Apache HBase (TM) JIRA.  Your code you
+        keep elsewhere -- it should be public so it can be observed -- and you can update dev mailing list on progress.   When the feature is ready for commit,
+        3 +1s from committers will get your feature merged<sup>[<a name="d2023e13" href="#ftn.d2023e13" class="footnote">1</a>]</sup>
+        </p></div><div class="section" title="1.1.2.&nbsp;Patch +1 Policy"><div class="titlepage"><div><div><h3 class="title"><a name="patchplusonepolicy"></a>1.1.2.&nbsp;Patch +1 Policy</h3></div></div></div><p>
+The below policy is something we put in place 09/2012.  It is a
+suggested policy rather than a hard requirement.  We want to try it
+first to see if it works before we cast it in stone.
+        </p><p>
+Apache HBase is made of
+<a class="link" href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel" target="_top">components</a>.
+Components have one or more <a class="xref" href="#OWNER" title="1.2.1.&nbsp;Component Owner">Section&nbsp;1.2.1, &#8220;Component Owner&#8221;</a>s.  See the 'Description' field on the 
+<a class="link" href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel" target="_top">components</a>
+JIRA page for who the current owners are by component.
+</p><p>
+Patches that fit within the scope of a single Apache HBase component require,
+at least, a +1 by one of the component's owners before commit. If
+owners are absent -- busy or otherwise -- two +1s by non-owners will
+suffice.
+</p><p>
+Patches that span components need at least two +1s before they can be
+committed, preferably +1s by owners of components touched by the
+x-component patch (TODO: This needs tightening up but I think fine for
+first pass).
+</p><p>
+Any -1 on a patch by anyone vetos a patch; it cannot be committed
+until the justification for the -1 is addressed.
+</p></div></div><div class="section" title="1.2.&nbsp;Community Roles"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="community.roles"></a>1.2.&nbsp;Community Roles</h2></div></div></div><div class="section" title="1.2.1.&nbsp;Component Owner"><div class="titlepage"><div><div><h3 class="title"><a name="OWNER"></a>1.2.1.&nbsp;Component Owner</h3></div></div></div><p>
+Component owners are listed in the description field on this Apache HBase JIRA <a class="link" href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel" target="_top">components</a>
+page.  The owners are listed in the 'Description' field rather than in the 'Component
+Lead' field because the latter only allows us list one individual
+whereas it is encouraged that components have multiple owners.
+        </p><p>
+Owners are volunteers who are (usually, but not necessarily) expert in
+their component domain and may have an agenda on how they think their
+Apache HBase component should evolve.
+</p><p>
+Duties include:
+</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>
+Owners will try and review patches that land within their component's scope.
+</p></li><li class="listitem"><p>
+If applicable, if an owner has an agenda, they will publish their
+goals or the design toward which they are driving their component
+</p></li></ol></div><p>
+</p><p>
+If you would like to be volunteer as a component owner, just write the
+dev list and we'll sign you up. Owners do not need to be committers.
+</p></div></div><div class="footnotes"><br><hr width="100" align="left"><div class="footnote"><p><sup>[<a id="ftn.d2023e13" href="#d2023e13" class="para">1</a>] </sup>See <a class="link" href="http://search-hadoop.com/m/asM982C5FkS1" target="_top">HBase, mail # dev - Thoughts about large feature dev branches</a></p></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'community';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a></body></html>

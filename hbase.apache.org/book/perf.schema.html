@@ -1,0 +1,46 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>11.6.&nbsp;Schema Design</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="performance.html" title="Chapter&nbsp;11.&nbsp;Apache HBase (TM) Performance Tuning"><link rel="prev" href="perf.zookeeper.html" title="11.5.&nbsp;ZooKeeper"><link rel="next" href="perf.writing.html" title="11.7.&nbsp;Writing to HBase"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">11.6.&nbsp;Schema Design</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="perf.zookeeper.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;11.&nbsp;Apache HBase (TM) Performance Tuning</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="perf.writing.html">Next</a></td></tr></table><hr></div><div class="section" title="11.6.&nbsp;Schema Design"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="perf.schema"></a>11.6.&nbsp;Schema Design</h2></div></div></div><div class="section" title="11.6.1.&nbsp;Number of Column Families"><div class="titlepage"><div><div><h3 class="title"><a name="perf.number.of.cfs"></a>11.6.1.&nbsp;Number of Column Families</h3></div></div></div><p>See <a class="xref" href="number.of.cfs.html" title="6.2.&nbsp; On the number of column families">Section&nbsp;6.2, &#8220;
+      On the number of column families
+  &#8221;</a>.</p></div><div class="section" title="11.6.2.&nbsp;Key and Attribute Lengths"><div class="titlepage"><div><div><h3 class="title"><a name="perf.schema.keys"></a>11.6.2.&nbsp;Key and Attribute Lengths</h3></div></div></div><p>See <a class="xref" href="rowkey.design.html#keysize" title="6.3.2.&nbsp;Try to minimize row and column sizes">Section&nbsp;6.3.2, &#8220;Try to minimize row and column sizes&#8221;</a>.  See also <a class="xref" href="perf.schema.html#perf.compression.however" title="11.6.7.1.&nbsp;However...">Section&nbsp;11.6.7.1, &#8220;However...&#8221;</a> for
+      compression caveats.</p></div><div class="section" title="11.6.3.&nbsp;Table RegionSize"><div class="titlepage"><div><div><h3 class="title"><a name="schema.regionsize"></a>11.6.3.&nbsp;Table RegionSize</h3></div></div></div><p>The regionsize can be set on a per-table basis via <code class="code">setFileSize</code> on
+    <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html" target="_top">HTableDescriptor</a> in the
+    event where certain tables require different regionsizes than the configured default regionsize.
+    </p><p>See <a class="xref" href="perf.configurations.html#perf.number.of.regions" title="11.4.1.&nbsp;Number of Regions">Section&nbsp;11.4.1, &#8220;Number of Regions&#8221;</a> for more information.
+    </p></div><div class="section" title="11.6.4.&nbsp;Bloom Filters"><div class="titlepage"><div><div><h3 class="title"><a name="schema.bloom"></a>11.6.4.&nbsp;Bloom Filters</h3></div></div></div><p>Bloom Filters can be enabled per-ColumnFamily.
+        Use <code class="code">HColumnDescriptor.setBloomFilterType(NONE | ROW |
+        ROWCOL)</code> to enable blooms per Column Family. Default =
+        <code class="varname">NONE</code> for no bloom filters. If
+        <code class="varname">ROW</code>, the hash of the row will be added to the bloom
+        on each insert. If <code class="varname">ROWCOL</code>, the hash of the row +
+        column family + column family qualifier will be added to the bloom on
+        each key insert.</p><p>See <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html" target="_top">HColumnDescriptor</a> and
+    <a class="xref" href="perf.reading.html#blooms" title="11.8.8.&nbsp;Bloom Filters">Section&nbsp;11.8.8, &#8220;Bloom Filters&#8221;</a> for more information or this answer up in quora,
+<a class="link" href="http://www.quora.com/How-are-bloom-filters-used-in-HBase" target="_top">How are bloom filters used in HBase?</a>.
+    </p></div><div class="section" title="11.6.5.&nbsp;ColumnFamily BlockSize"><div class="titlepage"><div><div><h3 class="title"><a name="schema.cf.blocksize"></a>11.6.5.&nbsp;ColumnFamily BlockSize</h3></div></div></div><p>The blocksize can be configured for each ColumnFamily in a table, and this defaults to 64k.  Larger cell values require larger blocksizes.
+    There is an inverse relationship between blocksize and the resulting StoreFile indexes (i.e., if the blocksize is doubled then the resulting
+    indexes should be roughly halved).
+    </p><p>See <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html" target="_top">HColumnDescriptor</a>
+    and <a class="xref" href="regions.arch.html#store" title="9.7.5.&nbsp;Store">Section&nbsp;9.7.5, &#8220;Store&#8221;</a>for more information.
+    </p></div><div class="section" title="11.6.6.&nbsp;In-Memory ColumnFamilies"><div class="titlepage"><div><div><h3 class="title"><a name="cf.in.memory"></a>11.6.6.&nbsp;In-Memory ColumnFamilies</h3></div></div></div><p>ColumnFamilies can optionally be defined as in-memory.  Data is still persisted to disk, just like any other ColumnFamily.
+    In-memory blocks have the highest priority in the <a class="xref" href="regionserver.arch.html#block.cache" title="9.6.4.&nbsp;Block Cache">Section&nbsp;9.6.4, &#8220;Block Cache&#8221;</a>, but it is not a guarantee that the entire table
+    will be in memory.
+    </p><p>See <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html" target="_top">HColumnDescriptor</a> for more information.
+    </p></div><div class="section" title="11.6.7.&nbsp;Compression"><div class="titlepage"><div><div><h3 class="title"><a name="perf.compression"></a>11.6.7.&nbsp;Compression</h3></div></div></div><p>Production systems should use compression with their ColumnFamily definitions.  See <a class="xref" href="compression.html" title="Appendix&nbsp;C.&nbsp;Compression In HBase">Appendix&nbsp;C, <i>Compression In HBase</i></a> for more information.
+      </p><div class="section" title="11.6.7.1.&nbsp;However..."><div class="titlepage"><div><div><h4 class="title"><a name="perf.compression.however"></a>11.6.7.1.&nbsp;However...</h4></div></div></div><p>Compression deflates data <span class="emphasis"><em>on disk</em></span>.  When it's in-memory (e.g., in the
+         MemStore) or on the wire (e.g., transferring between RegionServer and Client) it's inflated.
+         So while using ColumnFamily compression is a best practice, but it's not going to completely eliminate
+         the impact of over-sized Keys, over-sized ColumnFamily names, or over-sized Column names.
+         </p><p>See <a class="xref" href="rowkey.design.html#keysize" title="6.3.2.&nbsp;Try to minimize row and column sizes">Section&nbsp;6.3.2, &#8220;Try to minimize row and column sizes&#8221;</a> on for schema design tips, and <a class="xref" href="regions.arch.html#keyvalue" title="9.7.5.4.&nbsp;KeyValue">Section&nbsp;9.7.5.4, &#8220;KeyValue&#8221;</a> for more information on HBase stores data internally.
+         </p></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'perf.schema';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="perf.zookeeper.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="performance.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="perf.writing.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">11.5.&nbsp;ZooKeeper&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;11.7.&nbsp;Writing to HBase</td></tr></table></div></body></html>

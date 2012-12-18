@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="UTF-8"?><section xml:id="hbase_default_configurations" version="5.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:db="http://docbook.org/ns/docbook" xmlns:xi="http://www.w3.org/2001/XInclude" xmlns:svg="http://www.w3.org/2000/svg" xmlns:html="http://www.w3.org/1999/xhtml" xmlns="http://docbook.org/ns/docbook"><title>HBase Default Configuration</title><para/><glossary xml:id="hbase.default.configuration"><title>HBase Default Configuration</title><para>
+The documentation below is generated using the default hbase configuration file,
+<filename>hbase-default.xml</filename>, as source.
+</para><glossentry id="hbase.rootdir"><glossterm><varname>hbase.rootdir</varname></glossterm><glossdef><para>The directory shared by region servers and into
+    which HBase persists.  The URL should be 'fully-qualified'
+    to include the filesystem scheme.  For example, to specify the
+    HDFS directory '/hbase' where the HDFS instance's namenode is
+    running at namenode.example.org on port 9000, set this value to:
+    hdfs://namenode.example.org:9000/hbase.  By default HBase writes
+    into /tmp.  Change this configuration else all data will be lost
+    on machine restart.
+    </para><para>Default: <varname>file:///tmp/hbase-${user.name}/hbase</varname></para></glossdef></glossentry><glossentry id="hbase.master.port"><glossterm><varname>hbase.master.port</varname></glossterm><glossdef><para>The port the HBase Master should bind to.</para><para>Default: <varname>60000</varname></para></glossdef></glossentry><glossentry id="hbase.cluster.distributed"><glossterm><varname>hbase.cluster.distributed</varname></glossterm><glossdef><para>The mode the cluster will be in. Possible values are
+      false for standalone mode and true for distributed mode.  If
+      false, startup will run all HBase and ZooKeeper daemons together
+      in the one JVM.
+    </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="hbase.tmp.dir"><glossterm><varname>hbase.tmp.dir</varname></glossterm><glossdef><para>Temporary directory on the local filesystem.
+    Change this setting to point to a location more permanent
+    than '/tmp' (The '/tmp' directory is often cleared on
+    machine restart).
+    </para><para>Default: <varname>/tmp/hbase-${user.name}</varname></para></glossdef></glossentry><glossentry id="hbase.master.info.port"><glossterm><varname>hbase.master.info.port</varname></glossterm><glossdef><para>The port for the HBase Master web UI.
+    Set to -1 if you do not want a UI instance run.
+    </para><para>Default: <varname>60010</varname></para></glossdef></glossentry><glossentry id="hbase.master.info.bindAddress"><glossterm><varname>hbase.master.info.bindAddress</varname></glossterm><glossdef><para>The bind address for the HBase Master web UI
+    </para><para>Default: <varname>0.0.0.0</varname></para></glossdef></glossentry><glossentry id="hbase.client.write.buffer"><glossterm><varname>hbase.client.write.buffer</varname></glossterm><glossdef><para>Default size of the HTable clien write buffer in bytes.
+    A bigger buffer takes more memory -- on both the client and server
+    side since server instantiates the passed write buffer to process
+    it -- but a larger buffer size reduces the number of RPCs made.
+    For an estimate of server-side memory-used, evaluate
+    hbase.client.write.buffer * hbase.regionserver.handler.count
+    </para><para>Default: <varname>2097152</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.port"><glossterm><varname>hbase.regionserver.port</varname></glossterm><glossdef><para>The port the HBase RegionServer binds to.
+    </para><para>Default: <varname>60020</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.info.port"><glossterm><varname>hbase.regionserver.info.port</varname></glossterm><glossdef><para>The port for the HBase RegionServer web UI
+    Set to -1 if you do not want the RegionServer UI to run.
+    </para><para>Default: <varname>60030</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.info.port.auto"><glossterm><varname>hbase.regionserver.info.port.auto</varname></glossterm><glossdef><para>Whether or not the Master or RegionServer
+    UI should search for a port to bind to. Enables automatic port
+    search if hbase.regionserver.info.port is already in use.
+    Useful for testing, turned off by default.
+    </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.info.bindAddress"><glossterm><varname>hbase.regionserver.info.bindAddress</varname></glossterm><glossdef><para>The address for the HBase RegionServer web UI
+    </para><para>Default: <varname>0.0.0.0</varname></para></glossdef></glossentry><glossentry id="hbase.client.pause"><glossterm><varname>hbase.client.pause</varname></glossterm><glossdef><para>General client pause value.  Used mostly as value to wait
+    before running a retry of a failed get, region lookup, etc.</para><para>Default: <varname>1000</varname></para></glossdef></glossentry><glossentry id="hbase.client.retries.number"><glossterm><varname>hbase.client.retries.number</varname></glossterm><glossdef><para>Maximum retries.  Used as maximum for all retryable
+    operations such as fetching of the root region from root region
+    server, getting a cell's value, starting a row update, etc.
+    Default: 10.
+    </para><para>Default: <varname>10</varname></para></glossdef></glossentry><glossentry id="hbase.bulkload.retries.number"><glossterm><varname>hbase.bulkload.retries.number</varname></glossterm><glossdef><para>Maximum retries.  This is maximum number of iterations
+    to atomic bulk loads are attempted in the face of splitting operations
+    0 means never give up.  Default: 0.
+    </para><para>Default: <varname>0</varname></para></glossdef></glossentry><glossentry id="hbase.client.scanner.caching"><glossterm><varname>hbase.client.scanner.caching</varname></glossterm><glossdef><para>Number of rows that will be fetched when calling next
+    on a scanner if it is not served from (local, client) memory. Higher
+    caching values will enable faster scanners but will eat up more memory
+    and some calls of next may take longer and longer times when the cache is empty.
+    Do not set this value such that the time between invocations is greater
+    than the scanner timeout; i.e. hbase.client.scanner.timeout.period
+    </para><para>Default: <varname>100</varname></para></glossdef></glossentry><glossentry id="hbase.client.keyvalue.maxsize"><glossterm><varname>hbase.client.keyvalue.maxsize</varname></glossterm><glossdef><para>Specifies the combined maximum allowed size of a KeyValue
+    instance. This is to set an upper boundary for a single entry saved in a
+    storage file. Since they cannot be split it helps avoiding that a region
+    cannot be split any further because the data is too large. It seems wise
+    to set this to a fraction of the maximum region size. Setting it to zero
+    or less disables the check.
+    </para><para>Default: <varname>10485760</varname></para></glossdef></glossentry><glossentry id="hbase.client.scanner.timeout.period"><glossterm><varname>hbase.client.scanner.timeout.period</varname></glossterm><glossdef><para>Client scanner lease period in milliseconds. Default is
+    60 seconds. </para><para>Default: <varname>60000</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.rowlock.timeout.period"><glossterm><varname>hbase.regionserver.rowlock.timeout.period</varname></glossterm><glossdef><para>Row lock time out period in milliseconds. Default is
+    60 seconds. </para><para>Default: <varname>60000</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.handler.count"><glossterm><varname>hbase.regionserver.handler.count</varname></glossterm><glossdef><para>Count of RPC Listener instances spun up on RegionServers.
+    Same property is used by the Master for count of master handlers.
+    Default is 10.
+    </para><para>Default: <varname>10</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.msginterval"><glossterm><varname>hbase.regionserver.msginterval</varname></glossterm><glossdef><para>Interval between messages from the RegionServer to Master
+    in milliseconds.
+    </para><para>Default: <varname>3000</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.optionallogflushinterval"><glossterm><varname>hbase.regionserver.optionallogflushinterval</varname></glossterm><glossdef><para>Sync the HLog to the HDFS after this interval if it has not
+    accumulated enough entries to trigger a sync. Default 1 second. Units:
+    milliseconds.
+    </para><para>Default: <varname>1000</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.regionSplitLimit"><glossterm><varname>hbase.regionserver.regionSplitLimit</varname></glossterm><glossdef><para>Limit for the number of regions after which no more region
+    splitting should take place. This is not a hard limit for the number of
+    regions but acts as a guideline for the regionserver to stop splitting after
+    a certain limit. Default is set to MAX_INT; i.e. do not block splitting.
+    </para><para>Default: <varname>2147483647</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.logroll.period"><glossterm><varname>hbase.regionserver.logroll.period</varname></glossterm><glossdef><para>Period at which we will roll the commit log regardless
+    of how many edits it has.</para><para>Default: <varname>3600000</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.logroll.errors.tolerated"><glossterm><varname>hbase.regionserver.logroll.errors.tolerated</varname></glossterm><glossdef><para>The number of consecutive WAL close errors we will allow
+    before triggering a server abort.  A setting of 0 will cause the
+    region server to abort if closing the current WAL writer fails during
+    log rolling.  Even a small value (2 or 3) will allow a region server
+    to ride over transient HDFS errors.</para><para>Default: <varname>2</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.hlog.reader.impl"><glossterm><varname>hbase.regionserver.hlog.reader.impl</varname></glossterm><glossdef><para>The HLog file reader implementation.</para><para>Default: <varname>org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.hlog.writer.impl"><glossterm><varname>hbase.regionserver.hlog.writer.impl</varname></glossterm><glossdef><para>The HLog file writer implementation.</para><para>Default: <varname>org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogWriter</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.nbreservationblocks"><glossterm><varname>hbase.regionserver.nbreservationblocks</varname></glossterm><glossdef><para>The number of resevoir blocks of memory release on
+    OOME so we can cleanup properly before server shutdown.
+    </para><para>Default: <varname>4</varname></para></glossdef></glossentry><glossentry id="hbase.zookeeper.dns.interface"><glossterm><varname>hbase.zookeeper.dns.interface</varname></glossterm><glossdef><para>The name of the Network Interface from which a ZooKeeper server
+      should report its IP address.
+    </para><para>Default: <varname>default</varname></para></glossdef></glossentry><glossentry id="hbase.zookeeper.dns.nameserver"><glossterm><varname>hbase.zookeeper.dns.nameserver</varname></glossterm><glossdef><para>The host name or IP address of the name server (DNS)
+      which a ZooKeeper server should use to determine the host name used by the
+      master for communication and display purposes.
+    </para><para>Default: <varname>default</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.dns.interface"><glossterm><varname>hbase.regionserver.dns.interface</varname></glossterm><glossdef><para>The name of the Network Interface from which a region server
+      should report its IP address.
+    </para><para>Default: <varname>default</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.dns.nameserver"><glossterm><varname>hbase.regionserver.dns.nameserver</varname></glossterm><glossdef><para>The host name or IP address of the name server (DNS)
+      which a region server should use to determine the host name used by the
+      master for communication and display purposes.
+    </para><para>Default: <varname>default</varname></para></glossdef></glossentry><glossentry id="hbase.master.dns.interface"><glossterm><varname>hbase.master.dns.interface</varname></glossterm><glossdef><para>The name of the Network Interface from which a master
+      should report its IP address.
+    </para><para>Default: <varname>default</varname></para></glossdef></glossentry><glossentry id="hbase.master.dns.nameserver"><glossterm><varname>hbase.master.dns.nameserver</varname></glossterm><glossdef><para>The host name or IP address of the name server (DNS)
+      which a master should use to determine the host name used
+      for communication and display purposes.
+    </para><para>Default: <varname>default</varname></para></glossdef></glossentry><glossentry id="hbase.balancer.period&#10;    "><glossterm><varname>hbase.balancer.period
+    </varname></glossterm><glossdef><para>Period at which the region balancer runs in the Master.
+    </para><para>Default: <varname>300000</varname></para></glossdef></glossentry><glossentry id="hbase.regions.slop"><glossterm><varname>hbase.regions.slop</varname></glossterm><glossdef><para>Rebalance if any regionserver has average + (average * slop) regions.
+    Default is 20% slop.
+    </para><para>Default: <varname>0.2</varname></para></glossdef></glossentry><glossentry id="hbase.master.logcleaner.ttl"><glossterm><varname>hbase.master.logcleaner.ttl</varname></glossterm><glossdef><para>Maximum time a HLog can stay in the .oldlogdir directory,
+    after which it will be cleaned by a Master thread.
+    </para><para>Default: <varname>600000</varname></para></glossdef></glossentry><glossentry id="hbase.master.logcleaner.plugins"><glossterm><varname>hbase.master.logcleaner.plugins</varname></glossterm><glossdef><para>A comma-separated list of LogCleanerDelegate invoked by
+    the LogsCleaner service. These WAL/HLog cleaners are called in order,
+    so put the HLog cleaner that prunes the most HLog files in front. To
+    implement your own LogCleanerDelegate, just put it in HBase's classpath
+    and add the fully qualified class name here. Always add the above
+    default log cleaners in the list.
+    </para><para>Default: <varname>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.global.memstore.upperLimit"><glossterm><varname>hbase.regionserver.global.memstore.upperLimit</varname></glossterm><glossdef><para>Maximum size of all memstores in a region server before new
+      updates are blocked and flushes are forced. Defaults to 40% of heap.
+      Updates are blocked and flushes are forced until size of all memstores
+      in a region server hits hbase.regionserver.global.memstore.lowerLimit.
+    </para><para>Default: <varname>0.4</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.global.memstore.lowerLimit"><glossterm><varname>hbase.regionserver.global.memstore.lowerLimit</varname></glossterm><glossdef><para>Maximum size of all memstores in a region server before
+      flushes are forced. Defaults to 35% of heap.
+      This value equal to hbase.regionserver.global.memstore.upperLimit causes
+      the minimum possible flushing to occur when updates are blocked due to
+      memstore limiting.
+    </para><para>Default: <varname>0.35</varname></para></glossdef></glossentry><glossentry id="hbase.server.thread.wakefrequency"><glossterm><varname>hbase.server.thread.wakefrequency</varname></glossterm><glossdef><para>Time to sleep in between searches for work (in milliseconds).
+    Used as sleep interval by service threads such as log roller.
+    </para><para>Default: <varname>10000</varname></para></glossdef></glossentry><glossentry id="hbase.server.versionfile.writeattempts"><glossterm><varname>hbase.server.versionfile.writeattempts</varname></glossterm><glossdef><para>
+    How many time to retry attempting to write a version file
+    before just aborting. Each attempt is seperated by the
+    hbase.server.thread.wakefrequency milliseconds.
+    </para><para>Default: <varname>3</varname></para></glossdef></glossentry><glossentry id="hbase.hregion.memstore.flush.size"><glossterm><varname>hbase.hregion.memstore.flush.size</varname></glossterm><glossdef><para>
+    Memstore will be flushed to disk if size of the memstore
+    exceeds this number of bytes.  Value is checked by a thread that runs
+    every hbase.server.thread.wakefrequency.
+    </para><para>Default: <varname>134217728</varname></para></glossdef></glossentry><glossentry id="hbase.hregion.preclose.flush.size"><glossterm><varname>hbase.hregion.preclose.flush.size</varname></glossterm><glossdef><para>
+      If the memstores in a region are this size or larger when we go
+      to close, run a "pre-flush" to clear out memstores before we put up
+      the region closed flag and take the region offline.  On close,
+      a flush is run under the close flag to empty memory.  During
+      this time the region is offline and we are not taking on any writes.
+      If the memstore content is large, this flush could take a long time to
+      complete.  The preflush is meant to clean out the bulk of the memstore
+      before putting up the close flag and taking the region offline so the
+      flush that runs under the close flag has little to do.
+    </para><para>Default: <varname>5242880</varname></para></glossdef></glossentry><glossentry id="hbase.hregion.memstore.block.multiplier"><glossterm><varname>hbase.hregion.memstore.block.multiplier</varname></glossterm><glossdef><para>
+    Block updates if memstore has hbase.hregion.block.memstore
+    time hbase.hregion.flush.size bytes.  Useful preventing
+    runaway memstore during spikes in update traffic.  Without an
+    upper-bound, memstore fills such that when it flushes the
+    resultant flush files take a long time to compact or split, or
+    worse, we OOME.
+    </para><para>Default: <varname>2</varname></para></glossdef></glossentry><glossentry id="hbase.hregion.memstore.mslab.enabled"><glossterm><varname>hbase.hregion.memstore.mslab.enabled</varname></glossterm><glossdef><para>
+      Enables the MemStore-Local Allocation Buffer,
+      a feature which works to prevent heap fragmentation under
+      heavy write loads. This can reduce the frequency of stop-the-world
+      GC pauses on large heaps.
+    </para><para>Default: <varname>true</varname></para></glossdef></glossentry><glossentry id="hbase.hregion.max.filesize"><glossterm><varname>hbase.hregion.max.filesize</varname></glossterm><glossdef><para>
+    Maximum HStoreFile size. If any one of a column families' HStoreFiles has
+    grown to exceed this value, the hosting HRegion is split in two.
+    Default: 10G.
+    </para><para>Default: <varname>10737418240</varname></para></glossdef></glossentry><glossentry id="hbase.hstore.compactionThreshold"><glossterm><varname>hbase.hstore.compactionThreshold</varname></glossterm><glossdef><para>
+    If more than this number of HStoreFiles in any one HStore
+    (one HStoreFile is written per flush of memstore) then a compaction
+    is run to rewrite all HStoreFiles files as one.  Larger numbers
+    put off compaction but when it runs, it takes longer to complete.
+    </para><para>Default: <varname>3</varname></para></glossdef></glossentry><glossentry id="hbase.hstore.blockingStoreFiles"><glossterm><varname>hbase.hstore.blockingStoreFiles</varname></glossterm><glossdef><para>
+    If more than this number of StoreFiles in any one Store
+    (one StoreFile is written per flush of MemStore) then updates are
+    blocked for this HRegion until a compaction is completed, or
+    until hbase.hstore.blockingWaitTime has been exceeded.
+    </para><para>Default: <varname>7</varname></para></glossdef></glossentry><glossentry id="hbase.hstore.blockingWaitTime"><glossterm><varname>hbase.hstore.blockingWaitTime</varname></glossterm><glossdef><para>
+    The time an HRegion will block updates for after hitting the StoreFile
+    limit defined by hbase.hstore.blockingStoreFiles.
+    After this time has elapsed, the HRegion will stop blocking updates even
+    if a compaction has not been completed.  Default: 90 seconds.
+    </para><para>Default: <varname>90000</varname></para></glossdef></glossentry><glossentry id="hbase.hstore.compaction.max"><glossterm><varname>hbase.hstore.compaction.max</varname></glossterm><glossdef><para>Max number of HStoreFiles to compact per 'minor' compaction.
+    </para><para>Default: <varname>10</varname></para></glossdef></glossentry><glossentry id="hbase.hregion.majorcompaction"><glossterm><varname>hbase.hregion.majorcompaction</varname></glossterm><glossdef><para>The time (in miliseconds) between 'major' compactions of all
+    HStoreFiles in a region.  Default: 1 day.
+    Set to 0 to disable automated major compactions.
+    </para><para>Default: <varname>86400000</varname></para></glossdef></glossentry><glossentry id="hbase.mapreduce.hfileoutputformat.blocksize"><glossterm><varname>hbase.mapreduce.hfileoutputformat.blocksize</varname></glossterm><glossdef><para>The mapreduce HFileOutputFormat writes storefiles/hfiles.
+    This is the minimum hfile blocksize to emit.  Usually in hbase, writing
+    hfiles, the blocksize is gotten from the table schema (HColumnDescriptor)
+    but in the mapreduce outputformat context, we don't have access to the
+    schema so get blocksize from Configuration.  The smaller you make
+    the blocksize, the bigger your index and the less you fetch on a
+    random-access.  Set the blocksize down if you have small cells and want
+    faster random-access of individual cells.
+    </para><para>Default: <varname>65536</varname></para></glossdef></glossentry><glossentry id="hfile.block.cache.size"><glossterm><varname>hfile.block.cache.size</varname></glossterm><glossdef><para>
+        Percentage of maximum heap (-Xmx setting) to allocate to block cache
+        used by HFile/StoreFile. Default of 0.25 means allocate 25%.
+        Set to 0 to disable but it's not recommended.
+    </para><para>Default: <varname>0.25</varname></para></glossdef></glossentry><glossentry id="hbase.hash.type"><glossterm><varname>hbase.hash.type</varname></glossterm><glossdef><para>The hashing algorithm for use in HashFunction. Two values are
+    supported now: murmur (MurmurHash) and jenkins (JenkinsHash).
+    Used by bloom filters.
+    </para><para>Default: <varname>murmur</varname></para></glossdef></glossentry><glossentry id="hfile.block.index.cacheonwrite"><glossterm><varname>hfile.block.index.cacheonwrite</varname></glossterm><glossdef><para>
+          This allows to put non-root multi-level index blocks into the block
+          cache at the time the index is being written.
+      </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="hfile.index.block.max.size"><glossterm><varname>hfile.index.block.max.size</varname></glossterm><glossdef><para>
+          When the size of a leaf-level, intermediate-level, or root-level
+          index block in a multi-level block index grows to this size, the
+          block is written out and a new block is started.
+      </para><para>Default: <varname>131072</varname></para></glossdef></glossentry><glossentry id="hfile.format.version"><glossterm><varname>hfile.format.version</varname></glossterm><glossdef><para>
+          The HFile format version to use for new files. Set this to 1 to test
+          backwards-compatibility. The default value of this option should be
+          consistent with FixedFileTrailer.MAX_VERSION.
+      </para><para>Default: <varname>2</varname></para></glossdef></glossentry><glossentry id="io.storefile.bloom.block.size"><glossterm><varname>io.storefile.bloom.block.size</varname></glossterm><glossdef><para>
+          The size in bytes of a single block ("chunk") of a compound Bloom
+          filter. This size is approximate, because Bloom blocks can only be
+          inserted at data block boundaries, and the number of keys per data
+          block varies.
+      </para><para>Default: <varname>131072</varname></para></glossdef></glossentry><glossentry id="hfile.block.bloom.cacheonwrite"><glossterm><varname>hfile.block.bloom.cacheonwrite</varname></glossterm><glossdef><para>
+          Enables cache-on-write for inline blocks of a compound Bloom filter.
+      </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="hbase.rs.cacheblocksonwrite"><glossterm><varname>hbase.rs.cacheblocksonwrite</varname></glossterm><glossdef><para>
+          Whether an HFile block should be added to the block cache when the
+          block is finished.
+      </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="hbase.rpc.engine"><glossterm><varname>hbase.rpc.engine</varname></glossterm><glossdef><para>Implementation of org.apache.hadoop.hbase.ipc.RpcEngine to be
+    used for client / server RPC call marshalling.
+    </para><para>Default: <varname>org.apache.hadoop.hbase.ipc.ProtobufRpcEngine</varname></para></glossdef></glossentry><glossentry id="hbase.ipc.client.tcpnodelay"><glossterm><varname>hbase.ipc.client.tcpnodelay</varname></glossterm><glossdef><para>Set no delay on rpc socket connections.  See
+    http://docs.oracle.com/javase/1.5.0/docs/api/java/net/Socket.html#getTcpNoDelay()
+    </para><para>Default: <varname>true</varname></para></glossdef></glossentry><glossentry id="hbase.master.keytab.file"><glossterm><varname>hbase.master.keytab.file</varname></glossterm><glossdef><para>Full path to the kerberos keytab file to use for logging in
+    the configured HMaster server principal.
+    </para><para>Default: <varname/></para></glossdef></glossentry><glossentry id="hbase.master.kerberos.principal"><glossterm><varname>hbase.master.kerberos.principal</varname></glossterm><glossdef><para>Ex. "hbase/_HOST@EXAMPLE.COM".  The kerberos principal name
+    that should be used to run the HMaster process.  The principal name should
+    be in the form: user/hostname@DOMAIN.  If "_HOST" is used as the hostname
+    portion, it will be replaced with the actual hostname of the running
+    instance.
+    </para><para>Default: <varname/></para></glossdef></glossentry><glossentry id="hbase.regionserver.keytab.file"><glossterm><varname>hbase.regionserver.keytab.file</varname></glossterm><glossdef><para>Full path to the kerberos keytab file to use for logging in
+    the configured HRegionServer server principal.
+    </para><para>Default: <varname/></para></glossdef></glossentry><glossentry id="hbase.regionserver.kerberos.principal"><glossterm><varname>hbase.regionserver.kerberos.principal</varname></glossterm><glossdef><para>Ex. "hbase/_HOST@EXAMPLE.COM".  The kerberos principal name
+    that should be used to run the HRegionServer process.  The principal name
+    should be in the form: user/hostname@DOMAIN.  If "_HOST" is used as the
+    hostname portion, it will be replaced with the actual hostname of the
+    running instance.  An entry for this principal must exist in the file
+    specified in hbase.regionserver.keytab.file
+    </para><para>Default: <varname/></para></glossdef></glossentry><glossentry id="hadoop.policy.file"><glossterm><varname>hadoop.policy.file</varname></glossterm><glossdef><para>The policy configuration file used by RPC servers to make
+      authorization decisions on client requests.  Only used when HBase
+      security is enabled.
+    </para><para>Default: <varname>hbase-policy.xml</varname></para></glossdef></glossentry><glossentry id="hbase.superuser"><glossterm><varname>hbase.superuser</varname></glossterm><glossdef><para>List of users or groups (comma-separated), who are allowed
+    full privileges, regardless of stored ACLs, across the cluster.
+    Only used when HBase security is enabled.
+    </para><para>Default: <varname/></para></glossdef></glossentry><glossentry id="hbase.auth.key.update.interval"><glossterm><varname>hbase.auth.key.update.interval</varname></glossterm><glossdef><para>The update interval for master key for authentication tokens 
+    in servers in milliseconds.  Only used when HBase security is enabled.
+    </para><para>Default: <varname>86400000</varname></para></glossdef></glossentry><glossentry id="hbase.auth.token.max.lifetime"><glossterm><varname>hbase.auth.token.max.lifetime</varname></glossterm><glossdef><para>The maximum lifetime in milliseconds after which an
+    authentication token expires.  Only used when HBase security is enabled.
+    </para><para>Default: <varname>604800000</varname></para></glossdef></glossentry><glossentry id="zookeeper.session.timeout"><glossterm><varname>zookeeper.session.timeout</varname></glossterm><glossdef><para>ZooKeeper session timeout.
+      HBase passes this to the zk quorum as suggested maximum time for a
+      session (This setting becomes zookeeper's 'maxSessionTimeout').  See
+      http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
+      "The client sends a requested timeout, the server responds with the
+      timeout that it can give the client. " In milliseconds.
+    </para><para>Default: <varname>180000</varname></para></glossdef></glossentry><glossentry id="zookeeper.znode.parent"><glossterm><varname>zookeeper.znode.parent</varname></glossterm><glossdef><para>Root ZNode for HBase in ZooKeeper. All of HBase's ZooKeeper
+      files that are configured with a relative path will go under this node.
+      By default, all of HBase's ZooKeeper file path are configured with a
+      relative path, so they will all go under this directory unless changed.
+    </para><para>Default: <varname>/hbase</varname></para></glossdef></glossentry><glossentry id="zookeeper.znode.rootserver"><glossterm><varname>zookeeper.znode.rootserver</varname></glossterm><glossdef><para>Path to ZNode holding root region location. This is written by
+      the master and read by clients and region servers. If a relative path is
+      given, the parent folder will be ${zookeeper.znode.parent}. By default,
+      this means the root location is stored at /hbase/root-region-server.
+    </para><para>Default: <varname>root-region-server</varname></para></glossdef></glossentry><glossentry id="zookeeper.znode.acl.parent"><glossterm><varname>zookeeper.znode.acl.parent</varname></glossterm><glossdef><para>Root ZNode for access control lists.</para><para>Default: <varname>acl</varname></para></glossdef></glossentry><glossentry id="hbase.coprocessor.region.classes"><glossterm><varname>hbase.coprocessor.region.classes</varname></glossterm><glossdef><para>A comma-separated list of Coprocessors that are loaded by
+    default on all tables. For any override coprocessor method, these classes
+    will be called in order. After implementing your own Coprocessor, just put
+    it in HBase's classpath and add the fully qualified class name here.
+    A coprocessor can also be loaded on demand by setting HTableDescriptor.
+    </para><para>Default: <varname/></para></glossdef></glossentry><glossentry id="hbase.coprocessor.master.classes"><glossterm><varname>hbase.coprocessor.master.classes</varname></glossterm><glossdef><para>A comma-separated list of
+    org.apache.hadoop.hbase.coprocessor.MasterObserver coprocessors that are
+    loaded by default on the active HMaster process. For any implemented
+    coprocessor methods, the listed classes will be called in order. After
+    implementing your own MasterObserver, just put it in HBase's classpath
+    and add the fully qualified class name here.
+    </para><para>Default: <varname/></para></glossdef></glossentry><glossentry id="hbase.zookeeper.quorum"><glossterm><varname>hbase.zookeeper.quorum</varname></glossterm><glossdef><para>Comma separated list of servers in the ZooKeeper Quorum.
+    For example, "host1.mydomain.com,host2.mydomain.com,host3.mydomain.com".
+    By default this is set to localhost for local and pseudo-distributed modes
+    of operation. For a fully-distributed setup, this should be set to a full
+    list of ZooKeeper quorum servers. If HBASE_MANAGES_ZK is set in hbase-env.sh
+    this is the list of servers which we will start/stop ZooKeeper on.
+    </para><para>Default: <varname>localhost</varname></para></glossdef></glossentry><glossentry id="hbase.zookeeper.peerport"><glossterm><varname>hbase.zookeeper.peerport</varname></glossterm><glossdef><para>Port used by ZooKeeper peers to talk to each other.
+    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    for more information.
+    </para><para>Default: <varname>2888</varname></para></glossdef></glossentry><glossentry id="hbase.zookeeper.leaderport"><glossterm><varname>hbase.zookeeper.leaderport</varname></glossterm><glossdef><para>Port used by ZooKeeper for leader election.
+    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    for more information.
+    </para><para>Default: <varname>3888</varname></para></glossdef></glossentry><glossentry id="hbase.zookeeper.property.initLimit"><glossterm><varname>hbase.zookeeper.property.initLimit</varname></glossterm><glossdef><para>Property from ZooKeeper's config zoo.cfg.
+    The number of ticks that the initial synchronization phase can take.
+    </para><para>Default: <varname>10</varname></para></glossdef></glossentry><glossentry id="hbase.zookeeper.property.syncLimit"><glossterm><varname>hbase.zookeeper.property.syncLimit</varname></glossterm><glossdef><para>Property from ZooKeeper's config zoo.cfg.
+    The number of ticks that can pass between sending a request and getting an
+    acknowledgment.
+    </para><para>Default: <varname>5</varname></para></glossdef></glossentry><glossentry id="hbase.zookeeper.property.dataDir"><glossterm><varname>hbase.zookeeper.property.dataDir</varname></glossterm><glossdef><para>Property from ZooKeeper's config zoo.cfg.
+    The directory where the snapshot is stored.
+    </para><para>Default: <varname>${hbase.tmp.dir}/zookeeper</varname></para></glossdef></glossentry><glossentry id="hbase.zookeeper.property.clientPort"><glossterm><varname>hbase.zookeeper.property.clientPort</varname></glossterm><glossdef><para>Property from ZooKeeper's config zoo.cfg.
+    The port at which the clients will connect.
+    </para><para>Default: <varname>2181</varname></para></glossdef></glossentry><glossentry id="hbase.zookeeper.property.maxClientCnxns"><glossterm><varname>hbase.zookeeper.property.maxClientCnxns</varname></glossterm><glossdef><para>Property from ZooKeeper's config zoo.cfg.
+    Limit on number of concurrent connections (at the socket level) that a
+    single client, identified by IP address, may make to a single member of
+    the ZooKeeper ensemble. Set high to avoid zk connection issues running
+    standalone and pseudo-distributed.
+    </para><para>Default: <varname>300</varname></para></glossdef></glossentry><glossentry id="hbase.rest.port"><glossterm><varname>hbase.rest.port</varname></glossterm><glossdef><para>The port for the HBase REST server.</para><para>Default: <varname>8080</varname></para></glossdef></glossentry><glossentry id="hbase.rest.readonly"><glossterm><varname>hbase.rest.readonly</varname></glossterm><glossdef><para>
+    Defines the mode the REST server will be started in. Possible values are:
+    false: All HTTP methods are permitted - GET/PUT/POST/DELETE.
+    true: Only the GET method is permitted.
+    </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="hbase.defaults.for.version.skip"><glossterm><varname>hbase.defaults.for.version.skip</varname></glossterm><glossdef><para>
+    Set to true to skip the 'hbase.defaults.for.version' check.
+    Setting this to true can be useful in contexts other than
+    the other side of a maven generation; i.e. running in an
+    ide.  You'll want to set this boolean to true to avoid
+    seeing the RuntimException complaint: "hbase-default.xml file
+    seems to be for and old version of HBase (\${hbase.version}), this
+    version is X.X.X-SNAPSHOT"
+    </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="hbase.coprocessor.abortonerror"><glossterm><varname>hbase.coprocessor.abortonerror</varname></glossterm><glossdef><para>
+      Set to true to cause the hosting server (master or regionserver) to
+      abort if a coprocessor throws a Throwable object that is not IOException or
+      a subclass of IOException. Setting it to true might be useful in development
+      environments where one wants to terminate the server as soon as possible to
+      simplify coprocessor failure analysis.
+      </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="hbase.online.schema.update.enable"><glossterm><varname>hbase.online.schema.update.enable</varname></glossterm><glossdef><para>
+    Set true to enable online schema changes.  This is an experimental feature.  
+    There are known issues modifying table schemas at the same time a region
+    split is happening so your table needs to be quiescent or else you have to
+    be running with splits disabled.
+    </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="dfs.support.append"><glossterm><varname>dfs.support.append</varname></glossterm><glossdef><para>Does HDFS allow appends to files?
+    This is an hdfs config. set in here so the hdfs client will do append support.
+    You must ensure that this config. is true serverside too when running hbase
+    (You will have to restart your cluster after setting it).
+    </para><para>Default: <varname>true</varname></para></glossdef></glossentry><glossentry id="hbase.thrift.minWorkerThreads"><glossterm><varname>hbase.thrift.minWorkerThreads</varname></glossterm><glossdef><para>
+    The "core size" of the thread pool. New threads are created on every
+    connection until this many threads are created.
+    </para><para>Default: <varname>16</varname></para></glossdef></glossentry><glossentry id="hbase.thrift.maxWorkerThreads"><glossterm><varname>hbase.thrift.maxWorkerThreads</varname></glossterm><glossdef><para>
+    The maximum size of the thread pool. When the pending request queue
+    overflows, new threads are created until their number reaches this number.
+    After that, the server starts dropping connections.
+    </para><para>Default: <varname>1000</varname></para></glossdef></glossentry><glossentry id="hbase.thrift.maxQueuedRequests"><glossterm><varname>hbase.thrift.maxQueuedRequests</varname></glossterm><glossdef><para>
+     The maximum number of pending Thrift connections waiting in the queue. If
+     there are no idle threads in the pool, the server queues requests. Only
+     when the queue overflows, new threads are added, up to
+     hbase.thrift.maxQueuedRequests threads.
+     </para><para>Default: <varname>1000</varname></para></glossdef></glossentry><glossentry id="hbase.offheapcache.percentage"><glossterm><varname>hbase.offheapcache.percentage</varname></glossterm><glossdef><para>
+     The amount of off heap space to be allocated towards the experimental
+     off heap cache. If you desire the cache to be disabled, simply set this
+     value to 0.
+     </para><para>Default: <varname>0</varname></para></glossdef></glossentry><glossentry id="hbase.data.umask.enable"><glossterm><varname>hbase.data.umask.enable</varname></glossterm><glossdef><para>Enable, if true, that file permissions should be assigned
+      to the files written by the regionserver
+    </para><para>Default: <varname>false</varname></para></glossdef></glossentry><glossentry id="hbase.data.umask"><glossterm><varname>hbase.data.umask</varname></glossterm><glossdef><para>File permissions that should be used to write data
+      files when hbase.data.umask.enable is true
+    </para><para>Default: <varname>000</varname></para></glossdef></glossentry><glossentry id="hbase.metrics.showTableName"><glossterm><varname>hbase.metrics.showTableName</varname></glossterm><glossdef><para>Whether to include the prefix "tbl.tablename" in per-column family metrics.
+	If true, for each metric M, per-cf metrics will be reported for tbl.T.cf.CF.M, if false,
+	per-cf metrics will be aggregated by column-family across tables, and reported for cf.CF.M.
+	In both cases, the aggregated metric M across tables and cfs will be reported.
+    </para><para>Default: <varname>true</varname></para></glossdef></glossentry><glossentry id="hbase.metrics.exposeOperationTimes"><glossterm><varname>hbase.metrics.exposeOperationTimes</varname></glossterm><glossdef><para>Whether to report metrics about time taken performing an
+      operation on the region server.  Get, Put, Delete, Increment, and Append can all
+      have their times exposed through Hadoop metrics per CF and per region.
+	</para><para>Default: <varname>true</varname></para></glossdef></glossentry><glossentry id="hbase.table.archive.directory"><glossterm><varname>hbase.table.archive.directory</varname></glossterm><glossdef><para>Per-table directory name under which to backup files for a
+      table. Files are moved to the same directories as they would be under the
+      table directory, but instead are just one level lower (under
+      table/.archive/... rather than table/...). Currently only applies to HFiles.</para><para>Default: <varname>.archive</varname></para></glossdef></glossentry><glossentry id="hbase.master.hfilecleaner.plugins"><glossterm><varname>hbase.master.hfilecleaner.plugins</varname></glossterm><glossdef><para>A comma-separated list of HFileCleanerDelegate invoked by
+    the HFileCleaner service. These HFiles cleaners are called in order,
+    so put the cleaner that prunes the most files in front. To
+    implement your own HFileCleanerDelegate, just put it in HBase's classpath
+    and add the fully qualified class name here. Always add the above
+    default log cleaners in the list as they will be overwritten in hbase-site.xml.
+    </para><para>Default: <varname>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</varname></para></glossdef></glossentry><glossentry id="hbase.regionserver.catalog.timeout"><glossterm><varname>hbase.regionserver.catalog.timeout</varname></glossterm><glossdef><para>Timeout value for the Catalog Janitor from the regionserver to META.</para><para>Default: <varname>600000</varname></para></glossdef></glossentry><glossentry id="hbase.master.catalog.timeout"><glossterm><varname>hbase.master.catalog.timeout</varname></glossterm><glossdef><para>Timeout value for the Catalog Janitor from the master to META.</para><para>Default: <varname>600000</varname></para></glossdef></glossentry><glossentry id="hbase.config.read.zookeeper.config"><glossterm><varname>hbase.config.read.zookeeper.config</varname></glossterm><glossdef><para>
+        Set to true to allow HBaseConfiguration to read the
+        zoo.cfg file for ZooKeeper properties. Switching this to true
+        is not recommended, since the functionality of reading ZK
+        properties from a zoo.cfg file has been deprecated.
+    </para><para>Default: <varname>false</varname></para></glossdef></glossentry></glossary></section>

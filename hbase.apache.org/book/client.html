@@ -1,0 +1,66 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>9.3.&nbsp;Client</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="architecture.html" title="Chapter&nbsp;9.&nbsp;Architecture"><link rel="prev" href="arch.catalog.html" title="9.2.&nbsp;Catalog Tables"><link rel="next" href="client.filter.html" title="9.4.&nbsp;Client Request Filters"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">9.3.&nbsp;Client</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="arch.catalog.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;9.&nbsp;Architecture</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="client.filter.html">Next</a></td></tr></table><hr></div><div class="section" title="9.3.&nbsp;Client"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="client"></a>9.3.&nbsp;Client</h2></div></div></div><p>The HBase client
+         <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html" target="_top">HTable</a>
+         is responsible for finding RegionServers that are serving the
+         particular row range of interest.  It does this by querying
+         the <code class="code">.META.</code> and <code class="code">-ROOT-</code> catalog tables
+         (TODO: Explain).  After locating the required
+         region(s), the client <span class="emphasis"><em>directly</em></span> contacts
+         the RegionServer serving that region (i.e., it does not go
+         through the master) and issues the read or write request.
+         This information is cached in the client so that subsequent requests
+         need not go through the lookup process.  Should a region be reassigned
+         either by the master load balancer or because a RegionServer has died,
+         the client will requery the catalog tables to determine the new
+         location of the user region.
+    </p><p>See <a class="xref" href="master.html#master.runtime" title="9.5.2.&nbsp;Runtime Impact">Section&nbsp;9.5.2, &#8220;Runtime Impact&#8221;</a> for more information about the impact of the Master on HBase Client
+    communication.
+    </p><p>Administrative functions are handled through <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html" target="_top">HBaseAdmin</a>
+    </p><div class="section" title="9.3.1.&nbsp;Connections"><div class="titlepage"><div><div><h3 class="title"><a name="client.connections"></a>9.3.1.&nbsp;Connections</h3></div></div></div><p>For connection configuration information, see <a class="xref" href="config.files.html#client_dependencies" title="2.3.4.&nbsp;Client configuration and dependencies connecting to an HBase cluster">Section&nbsp;2.3.4, &#8220;Client configuration and dependencies connecting to an HBase cluster&#8221;</a>.
+         </p><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html" target="_top">HTable</a>
+instances are not thread-safe.  When creating HTable instances, it is advisable to use the same <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration" target="_top">HBaseConfiguration</a>
+instance.  This will ensure sharing of ZooKeeper and socket instances to the RegionServers
+which is usually what you want.  For example, this is preferred:
+		</p><pre class="programlisting">HBaseConfiguration conf = HBaseConfiguration.create();
+HTable table1 = new HTable(conf, "myTable");
+HTable table2 = new HTable(conf, "myTable");</pre><p>
+		as opposed to this:
+        </p><pre class="programlisting">HBaseConfiguration conf1 = HBaseConfiguration.create();
+HTable table1 = new HTable(conf1, "myTable");
+HBaseConfiguration conf2 = HBaseConfiguration.create();
+HTable table2 = new HTable(conf2, "myTable");</pre><p>
+        For more information about how connections are handled in the HBase client,
+        see <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnectionManager.html" target="_top">HConnectionManager</a>.
+          </p><div class="section" title="9.3.1.1.&nbsp;Connection Pooling"><div class="titlepage"><div><div><h4 class="title"><a name="client.connection.pooling"></a>9.3.1.1.&nbsp;Connection Pooling</h4></div></div></div><p>For applications which require high-end multithreaded access (e.g., web-servers or application servers that may serve many application threads
+            in a single JVM), see <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTablePool.html" target="_top">HTablePool</a>.
+            </p></div></div><div class="section" title="9.3.2.&nbsp;WriteBuffer and Batch Methods"><div class="titlepage"><div><div><h3 class="title"><a name="client.writebuffer"></a>9.3.2.&nbsp;WriteBuffer and Batch Methods</h3></div></div></div><p>If <a class="xref" href="perf.writing.html#perf.hbase.client.autoflush" title="11.7.4.&nbsp;HBase Client: AutoFlush">Section&nbsp;11.7.4, &#8220;HBase Client:  AutoFlush&#8221;</a> is turned off on
+               <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html" target="_top">HTable</a>,
+               <code class="classname">Put</code>s are sent to RegionServers when the writebuffer
+               is filled.  The writebuffer is 2MB by default.  Before an HTable instance is
+               discarded, either <code class="methodname">close()</code> or
+               <code class="methodname">flushCommits()</code> should be invoked so Puts
+               will not be lost.
+	      </p><p>Note: <code class="code">htable.delete(Delete);</code> does not go in the writebuffer!  This only applies to Puts.
+	      </p><p>For additional information on write durability, review the <a class="link" href="acid-semantics.html" target="_top">ACID semantics</a> page.
+	      </p><p>For fine-grained control of batching of
+           <code class="classname">Put</code>s or <code class="classname">Delete</code>s,
+           see the <a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29" target="_top">batch</a> methods on HTable.
+	   </p></div><div class="section" title="9.3.3.&nbsp;External Clients"><div class="titlepage"><div><div><h3 class="title"><a name="client.external"></a>9.3.3.&nbsp;External Clients</h3></div></div></div><p>Information on non-Java clients and custom protocols is covered in <a class="xref" href="external_apis.html" title="Chapter&nbsp;10.&nbsp;Apache HBase (TM) External APIs">Chapter&nbsp;10, <i>Apache HBase (TM) External APIs</i></a>
+           </p></div><div class="section" title="9.3.4.&nbsp;RowLocks"><div class="titlepage"><div><div><h3 class="title"><a name="client.rowlocks"></a>9.3.4.&nbsp;RowLocks</h3></div></div></div><p><a class="link" href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#lockRow%28byte[]%29" target="_top">RowLocks</a> are still
+           in the client API <span class="emphasis"><em>however</em></span> they are discouraged because if not managed properly these can
+           lock up the RegionServers.
+           </p><p>There is an oustanding ticket <a class="link" href="https://issues.apache.org/jira/browse/HBASE-2332" target="_top">HBASE-2332</a> to
+           remove this feature from the client.
+           </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'client';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="arch.catalog.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="architecture.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="client.filter.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">9.2.&nbsp;Catalog Tables&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;9.4.&nbsp;Client Request Filters</td></tr></table></div></body></html>

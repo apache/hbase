@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>TestOfflineMetaRebuildHole xref</title>
+<link type="text/css" rel="stylesheet" href="../../../../../../stylesheet.css" />
+</head>
+<body>
+<div id="overview"><a href="../../../../../../../testapidocs/org/apache/hadoop/hbase/util/hbck/TestOfflineMetaRebuildHole.html">View Javadoc</a></div><pre>
+
+<a class="jxr_linenumber" name="1" href="#1">1</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="2" href="#2">2</a>   <em class="jxr_javadoccomment"> * Licensed to the Apache Software Foundation (ASF) under one</em>
+<a class="jxr_linenumber" name="3" href="#3">3</a>   <em class="jxr_javadoccomment"> * or more contributor license agreements.  See the NOTICE file</em>
+<a class="jxr_linenumber" name="4" href="#4">4</a>   <em class="jxr_javadoccomment"> * distributed with this work for additional information</em>
+<a class="jxr_linenumber" name="5" href="#5">5</a>   <em class="jxr_javadoccomment"> * regarding copyright ownership.  The ASF licenses this file</em>
+<a class="jxr_linenumber" name="6" href="#6">6</a>   <em class="jxr_javadoccomment"> * to you under the Apache License, Version 2.0 (the</em>
+<a class="jxr_linenumber" name="7" href="#7">7</a>   <em class="jxr_javadoccomment"> * "License"); you may not use this file except in compliance</em>
+<a class="jxr_linenumber" name="8" href="#8">8</a>   <em class="jxr_javadoccomment"> * with the License.  You may obtain a copy of the License at</em>
+<a class="jxr_linenumber" name="9" href="#9">9</a>   <em class="jxr_javadoccomment"> *</em>
+<a class="jxr_linenumber" name="10" href="#10">10</a>  <em class="jxr_javadoccomment"> *     <a href="http://www.apache.org/licenses/LICENSE-2.0" target="alexandria_uri">http://www.apache.org/licenses/LICENSE-2.0</a></em>
+<a class="jxr_linenumber" name="11" href="#11">11</a>  <em class="jxr_javadoccomment"> *</em>
+<a class="jxr_linenumber" name="12" href="#12">12</a>  <em class="jxr_javadoccomment"> * Unless required by applicable law or agreed to in writing, software</em>
+<a class="jxr_linenumber" name="13" href="#13">13</a>  <em class="jxr_javadoccomment"> * distributed under the License is distributed on an "AS IS" BASIS,</em>
+<a class="jxr_linenumber" name="14" href="#14">14</a>  <em class="jxr_javadoccomment"> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</em>
+<a class="jxr_linenumber" name="15" href="#15">15</a>  <em class="jxr_javadoccomment"> * See the License for the specific language governing permissions and</em>
+<a class="jxr_linenumber" name="16" href="#16">16</a>  <em class="jxr_javadoccomment"> * limitations under the License.</em>
+<a class="jxr_linenumber" name="17" href="#17">17</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="18" href="#18">18</a>  <strong class="jxr_keyword">package</strong> org.apache.hadoop.hbase.util.hbck;
+<a class="jxr_linenumber" name="19" href="#19">19</a>  
+<a class="jxr_linenumber" name="20" href="#20">20</a>  <strong class="jxr_keyword">import</strong> <strong class="jxr_keyword">static</strong> org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
+<a class="jxr_linenumber" name="21" href="#21">21</a>  <strong class="jxr_keyword">import</strong> <strong class="jxr_keyword">static</strong> org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
+<a class="jxr_linenumber" name="22" href="#22">22</a>  <strong class="jxr_keyword">import</strong> <strong class="jxr_keyword">static</strong> org.junit.Assert.assertEquals;
+<a class="jxr_linenumber" name="23" href="#23">23</a>  <strong class="jxr_keyword">import</strong> <strong class="jxr_keyword">static</strong> org.junit.Assert.assertFalse;
+<a class="jxr_linenumber" name="24" href="#24">24</a>  <strong class="jxr_keyword">import</strong> <strong class="jxr_keyword">static</strong> org.junit.Assert.assertTrue;
+<a class="jxr_linenumber" name="25" href="#25">25</a>  
+<a class="jxr_linenumber" name="26" href="#26">26</a>  <strong class="jxr_keyword">import</strong> java.util.Arrays;
+<a class="jxr_linenumber" name="27" href="#27">27</a>  
+<a class="jxr_linenumber" name="28" href="#28">28</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HBaseTestingUtility;
+<a class="jxr_linenumber" name="29" href="#29">29</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HTableDescriptor;
+<a class="jxr_linenumber" name="30" href="#30">30</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.MediumTests;
+<a class="jxr_linenumber" name="31" href="#31">31</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.util.HBaseFsck;
+<a class="jxr_linenumber" name="32" href="#32">32</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+<a class="jxr_linenumber" name="33" href="#33">33</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.zookeeper.ZKAssign;
+<a class="jxr_linenumber" name="34" href="#34">34</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+<a class="jxr_linenumber" name="35" href="#35">35</a>  <strong class="jxr_keyword">import</strong> org.junit.Test;
+<a class="jxr_linenumber" name="36" href="#36">36</a>  <strong class="jxr_keyword">import</strong> org.junit.experimental.categories.Category;
+<a class="jxr_linenumber" name="37" href="#37">37</a>  
+<a class="jxr_linenumber" name="38" href="#38">38</a>  <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="39" href="#39">39</a>  <em class="jxr_javadoccomment"> * This builds a table, removes info from meta, and then fails when attempting</em>
+<a class="jxr_linenumber" name="40" href="#40">40</a>  <em class="jxr_javadoccomment"> * to rebuild meta.</em>
+<a class="jxr_linenumber" name="41" href="#41">41</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="42" href="#42">42</a>  @Category(MediumTests.<strong class="jxr_keyword">class</strong>)
+<a class="jxr_linenumber" name="43" href="#43">43</a>  <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../../org/apache/hadoop/hbase/util/hbck/TestOfflineMetaRebuildHole.html">TestOfflineMetaRebuildHole</a> <strong class="jxr_keyword">extends</strong> <a href="../../../../../../org/apache/hadoop/hbase/util/hbck/OfflineMetaRebuildTestCore.html">OfflineMetaRebuildTestCore</a> {
+<a class="jxr_linenumber" name="44" href="#44">44</a>  
+<a class="jxr_linenumber" name="45" href="#45">45</a>    @Test(timeout = 120000)
+<a class="jxr_linenumber" name="46" href="#46">46</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testMetaRebuildHoleFail() <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="47" href="#47">47</a>      <em class="jxr_comment">// Fully remove a meta entry and hdfs region</em>
+<a class="jxr_linenumber" name="48" href="#48">48</a>      byte[] startKey = splits[1];
+<a class="jxr_linenumber" name="49" href="#49">49</a>      byte[] endKey = splits[2];
+<a class="jxr_linenumber" name="50" href="#50">50</a>      deleteRegion(conf, htbl, startKey, endKey);
+<a class="jxr_linenumber" name="51" href="#51">51</a>  
+<a class="jxr_linenumber" name="52" href="#52">52</a>      wipeOutMeta();
+<a class="jxr_linenumber" name="53" href="#53">53</a>  
+<a class="jxr_linenumber" name="54" href="#54">54</a>      <em class="jxr_comment">// is meta really messed up?</em>
+<a class="jxr_linenumber" name="55" href="#55">55</a>      assertEquals(0, scanMeta());
+<a class="jxr_linenumber" name="56" href="#56">56</a>      assertErrors(doFsck(conf, false), <strong class="jxr_keyword">new</strong> ERROR_CODE[] {
+<a class="jxr_linenumber" name="57" href="#57">57</a>          ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+<a class="jxr_linenumber" name="58" href="#58">58</a>          ERROR_CODE.NOT_IN_META_OR_DEPLOYED, });
+<a class="jxr_linenumber" name="59" href="#59">59</a>      <em class="jxr_comment">// Note, would like to check # of tables, but this takes a while to time</em>
+<a class="jxr_linenumber" name="60" href="#60">60</a>      <em class="jxr_comment">// out.</em>
+<a class="jxr_linenumber" name="61" href="#61">61</a>  
+<a class="jxr_linenumber" name="62" href="#62">62</a>      <em class="jxr_comment">// shutdown the minicluster</em>
+<a class="jxr_linenumber" name="63" href="#63">63</a>      TEST_UTIL.shutdownMiniHBaseCluster();
+<a class="jxr_linenumber" name="64" href="#64">64</a>      TEST_UTIL.shutdownMiniZKCluster();
+<a class="jxr_linenumber" name="65" href="#65">65</a>  
+<a class="jxr_linenumber" name="66" href="#66">66</a>      <em class="jxr_comment">// attempt to rebuild meta table from scratch</em>
+<a class="jxr_linenumber" name="67" href="#67">67</a>      HBaseFsck fsck = <strong class="jxr_keyword">new</strong> HBaseFsck(conf);
+<a class="jxr_linenumber" name="68" href="#68">68</a>      assertFalse(fsck.rebuildMeta(false));
+<a class="jxr_linenumber" name="69" href="#69">69</a>  
+<a class="jxr_linenumber" name="70" href="#70">70</a>      <em class="jxr_comment">// bring up the minicluster</em>
+<a class="jxr_linenumber" name="71" href="#71">71</a>      TEST_UTIL.startMiniZKCluster(); <em class="jxr_comment">// tables seem enabled by default</em>
+<a class="jxr_linenumber" name="72" href="#72">72</a>      TEST_UTIL.restartHBaseCluster(3);
+<a class="jxr_linenumber" name="73" href="#73">73</a>  
+<a class="jxr_linenumber" name="74" href="#74">74</a>      ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
+<a class="jxr_linenumber" name="75" href="#75">75</a>  
+<a class="jxr_linenumber" name="76" href="#76">76</a>      LOG.info(<span class="jxr_string">"Waiting for no more RIT"</span>);
+<a class="jxr_linenumber" name="77" href="#77">77</a>      ZKAssign.blockUntilNoRIT(zkw);
+<a class="jxr_linenumber" name="78" href="#78">78</a>      LOG.info(<span class="jxr_string">"No more RIT in ZK, now doing final test verification"</span>);
+<a class="jxr_linenumber" name="79" href="#79">79</a>  
+<a class="jxr_linenumber" name="80" href="#80">80</a>      <em class="jxr_comment">// Meta still messed up.</em>
+<a class="jxr_linenumber" name="81" href="#81">81</a>      assertEquals(0, scanMeta());
+<a class="jxr_linenumber" name="82" href="#82">82</a>      HTableDescriptor[] htbls = TEST_UTIL.getHBaseAdmin().listTables();
+<a class="jxr_linenumber" name="83" href="#83">83</a>      LOG.info(<span class="jxr_string">"Tables present after restart: "</span> + Arrays.toString(htbls));
+<a class="jxr_linenumber" name="84" href="#84">84</a>  
+<a class="jxr_linenumber" name="85" href="#85">85</a>      <em class="jxr_comment">// After HBASE-451 HBaseAdmin.listTables() gets table descriptors from FS,</em>
+<a class="jxr_linenumber" name="86" href="#86">86</a>      <em class="jxr_comment">// so the table is still present and this should be 1.</em>
+<a class="jxr_linenumber" name="87" href="#87">87</a>      assertEquals(1, htbls.length);
+<a class="jxr_linenumber" name="88" href="#88">88</a>      assertErrors(doFsck(conf, false), <strong class="jxr_keyword">new</strong> ERROR_CODE[] {
+<a class="jxr_linenumber" name="89" href="#89">89</a>          ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+<a class="jxr_linenumber" name="90" href="#90">90</a>          ERROR_CODE.NOT_IN_META_OR_DEPLOYED, });
+<a class="jxr_linenumber" name="91" href="#91">91</a>    }
+<a class="jxr_linenumber" name="92" href="#92">92</a>  
+<a class="jxr_linenumber" name="93" href="#93">93</a>  }
+<a class="jxr_linenumber" name="94" href="#94">94</a>  
+</pre>
+<hr/><div id="footer">This page was automatically generated by <a href="http://maven.apache.org/">Maven</a></div></body>
+</html>
+

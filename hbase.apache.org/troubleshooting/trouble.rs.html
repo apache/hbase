@@ -1,0 +1,133 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>1.9.&nbsp;RegionServer</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="troubleshooting.html" title="Chapter&nbsp;1.&nbsp;Troubleshooting and Debugging Apache HBase (TM)"><link rel="up" href="troubleshooting.html" title="Chapter&nbsp;1.&nbsp;Troubleshooting and Debugging Apache HBase (TM)"><link rel="prev" href="trouble.network.html" title="1.8.&nbsp;Network"><link rel="next" href="trouble.master.html" title="1.10.&nbsp;Master"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">1.9.&nbsp;RegionServer</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="trouble.network.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="trouble.master.html">Next</a></td></tr></table><hr></div><div class="section" title="1.9.&nbsp;RegionServer"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="trouble.rs"></a>1.9.&nbsp;RegionServer</h2></div></div></div><p>For more information on the RegionServers, see <a class="xref" href="">???</a>. 
+       </p><div class="section" title="1.9.1.&nbsp;Startup Errors"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.rs.startup"></a>1.9.1.&nbsp;Startup Errors</h3></div></div></div><div class="section" title="1.9.1.1.&nbsp;Master Starts, But RegionServers Do Not"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.startup.master-no-region"></a>1.9.1.1.&nbsp;Master Starts, But RegionServers Do Not</h4></div></div></div><p>The Master believes the RegionServers have the IP of 127.0.0.1 - which is localhost and resolves to the master's own localhost.
+            </p><p>The RegionServers are erroneously informing the Master that their IP addresses are 127.0.0.1. 
+            </p><p>Modify <code class="filename">/etc/hosts</code> on the region servers, from...  
+            </p><pre class="programlisting">
+# Do not remove the following line, or various programs
+# that require network functionality will fail.
+127.0.0.1               fully.qualified.regionservername regionservername  localhost.localdomain localhost
+::1             localhost6.localdomain6 localhost6
+            </pre><p>
+            ... to (removing the master node's name from localhost)...
+            </p><pre class="programlisting">
+# Do not remove the following line, or various programs
+# that require network functionality will fail.
+127.0.0.1               localhost.localdomain localhost
+::1             localhost6.localdomain6 localhost6
+            </pre><p>
+            </p></div><div class="section" title="1.9.1.2.&nbsp;Compression Link Errors"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.startup.compression"></a>1.9.1.2.&nbsp;Compression Link Errors</h4></div></div></div><p>
+            Since compression algorithms such as LZO need to be installed and configured on each cluster this is a frequent source of startup error.  If you see messages like this...
+            </p><pre class="programlisting">
+11/02/20 01:32:15 ERROR lzo.GPLNativeCodeLoader: Could not load native gpl library
+java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
+        at java.lang.ClassLoader.loadLibrary(ClassLoader.java:1734)
+        at java.lang.Runtime.loadLibrary0(Runtime.java:823)
+        at java.lang.System.loadLibrary(System.java:1028)
+            </pre><p>
+            .. then there is a path issue with the compression libraries.  See the Configuration section on <a class="link" href="">LZO compression configuration</a>.
+            </p></div></div><div class="section" title="1.9.2.&nbsp;Runtime Errors"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.rs.runtime"></a>1.9.2.&nbsp;Runtime Errors</h3></div></div></div><div class="section" title="1.9.2.1.&nbsp;RegionServer Hanging"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.hang"></a>1.9.2.1.&nbsp;RegionServer Hanging</h4></div></div></div><p>
+            Are you running an old JVM (&lt; 1.6.0_u21?)?  When you look at a thread dump,
+            does it look like threads are BLOCKED but no one holds the lock all are
+            blocked on?  See <a class="link" href="https://issues.apache.org/jira/browse/HBASE-3622" target="_top">HBASE 3622 Deadlock in HBaseServer (JVM bug?)</a>.
+            Adding <code class="code">-XX:+UseMembar</code> to the HBase <code class="varname">HBASE_OPTS</code> in <code class="filename">conf/hbase-env.sh</code>
+            may fix it.
+            </p><p>Also, are you using <a class="xref" href="">???</a>?  These are discouraged because they can lock up the 
+            RegionServers if not managed properly.
+            </p></div><div class="section" title="1.9.2.2.&nbsp;java.io.IOException...(Too many open files)"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.filehandles"></a>1.9.2.2.&nbsp;java.io.IOException...(Too many open files)</h4></div></div></div><p>
+           If you see log messages like this...
+</p><pre class="programlisting">
+2010-09-13 01:24:17,336 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: 
+Disk-related IOException in BlockReceiver constructor. Cause is java.io.IOException: Too many open files
+        at java.io.UnixFileSystem.createFileExclusively(Native Method)
+        at java.io.File.createNewFile(File.java:883)
+</pre><p>
+           ... see the Getting Started section on <a class="link" href="">ulimit and nproc configuration</a>.
+           </p></div><div class="section" title="1.9.2.3.&nbsp;xceiverCount 258 exceeds the limit of concurrent xcievers 256"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.xceivers"></a>1.9.2.3.&nbsp;xceiverCount 258 exceeds the limit of concurrent xcievers 256</h4></div></div></div><p>
+           This typically shows up in the DataNode logs.
+           </p><p>
+           See the Getting Started section on <a class="link" href="">xceivers configuration</a>.
+           </p></div><div class="section" title="1.9.2.4.&nbsp;System instability, and the presence of &#34;java.lang.OutOfMemoryError: unable to create new native thread in exceptions&#34; HDFS DataNode logs or that of any system daemon"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.oom-nt"></a>1.9.2.4.&nbsp;System instability, and the presence of "java.lang.OutOfMemoryError: unable to create new native thread in exceptions" HDFS DataNode logs or that of any system daemon</h4></div></div></div><p>
+           See the Getting Started section on <a class="link" href="">ulimit and nproc configuration</a>.  The default on recent Linux
+           distributions is 1024 - which is far too low for HBase.
+           </p></div><div class="section" title="1.9.2.5.&nbsp;DFS instability and/or RegionServer lease timeouts"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.gc"></a>1.9.2.5.&nbsp;DFS instability and/or RegionServer lease timeouts</h4></div></div></div><p>
+           If you see warning messages like this...
+           </p><pre class="programlisting">
+2009-02-24 10:01:33,516 WARN org.apache.hadoop.hbase.util.Sleeper: We slept xxx ms, ten times longer than scheduled: 10000
+2009-02-24 10:01:33,516 WARN org.apache.hadoop.hbase.util.Sleeper: We slept xxx ms, ten times longer than scheduled: 15000
+2009-02-24 10:01:36,472 WARN org.apache.hadoop.hbase.regionserver.HRegionServer: unable to report to master for xxx milliseconds - retrying      
+           </pre><p>
+           ... or see full GC compactions then you may be experiencing full GC's.
+           </p></div><div class="section" title="1.9.2.6.&nbsp;&#34;No live nodes contain current block&#34; and/or YouAreDeadException"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.nolivenodes"></a>1.9.2.6.&nbsp;"No live nodes contain current block" and/or YouAreDeadException</h4></div></div></div><p>
+           These errors can happen either when running out of OS file handles or in periods of severe network problems where the nodes are unreachable.
+           </p><p>
+           See the Getting Started section on <a class="link" href="">ulimit and nproc configuration</a> and check your network.
+           </p></div><div class="section" title="1.9.2.7.&nbsp;ZooKeeper SessionExpired events"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.zkexpired"></a>1.9.2.7.&nbsp;ZooKeeper SessionExpired events</h4></div></div></div><p>Master or RegionServers shutting down with messages like those in the logs: </p><pre class="programlisting">
+WARN org.apache.zookeeper.ClientCnxn: Exception
+closing session 0x278bd16a96000f to sun.nio.ch.SelectionKeyImpl@355811ec
+java.io.IOException: TIMED OUT
+       at org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:906)
+WARN org.apache.hadoop.hbase.util.Sleeper: We slept 79410ms, ten times longer than scheduled: 5000
+INFO org.apache.zookeeper.ClientCnxn: Attempting connection to server hostname/IP:PORT
+INFO org.apache.zookeeper.ClientCnxn: Priming connection to java.nio.channels.SocketChannel[connected local=/IP:PORT remote=hostname/IP:PORT]
+INFO org.apache.zookeeper.ClientCnxn: Server connection successful
+WARN org.apache.zookeeper.ClientCnxn: Exception closing session 0x278bd16a96000d to sun.nio.ch.SelectionKeyImpl@3544d65e
+java.io.IOException: Session Expired
+       at org.apache.zookeeper.ClientCnxn$SendThread.readConnectResult(ClientCnxn.java:589)
+       at org.apache.zookeeper.ClientCnxn$SendThread.doIO(ClientCnxn.java:709)
+       at org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:945)
+ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expired           
+           </pre><p>
+           The JVM is doing a long running garbage collecting which is pausing every threads (aka "stop the world").
+           Since the RegionServer's local ZooKeeper client cannot send heartbeats, the session times out.
+           By design, we shut down any node that isn't able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere.  
+           </p><p>
+            </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">Make sure you give plenty of RAM (in <code class="filename">hbase-env.sh</code>), the default of 1GB won't be able to sustain long running imports.</li><li class="listitem">Make sure you don't swap, the JVM never behaves well under swapping.</li><li class="listitem">Make sure you are not CPU starving the RegionServer thread. For example, if you are running a MapReduce job using 6 CPU-intensive tasks on a machine with 4 cores, you are probably starving the RegionServer enough to create longer garbage collection pauses.</li><li class="listitem">Increase the ZooKeeper session timeout</li></ul></div><p>
+           If you wish to increase the session timeout, add the following to your <code class="filename">hbase-site.xml</code> to increase the timeout from the default of 60 seconds to 120 seconds. 
+           </p><pre class="programlisting">
+&lt;property&gt;
+    &lt;name&gt;zookeeper.session.timeout&lt;/name&gt;
+    &lt;value&gt;1200000&lt;/value&gt;
+&lt;/property&gt;
+&lt;property&gt;
+    &lt;name&gt;hbase.zookeeper.property.tickTime&lt;/name&gt;
+    &lt;value&gt;6000&lt;/value&gt;
+&lt;/property&gt;
+            </pre><p>
+           </p><p>
+           Be aware that setting a higher timeout means that the regions served by a failed RegionServer will take at least
+           that amount of time to be transfered to another RegionServer. For a production system serving live requests, we would instead 
+           recommend setting it lower than 1 minute and over-provision your cluster in order the lower the memory load on each machines (hence having 
+           less garbage to collect per machine).
+           </p><p>
+           If this is happening during an upload which only happens once (like initially loading all your data into HBase), consider bulk loading.
+           </p>
+           See <a class="xref" href="trouble.zookeeper.html#trouble.zookeeper.general" title="1.11.2.&nbsp;ZooKeeper, The Cluster Canary">Section&nbsp;1.11.2, &#8220;ZooKeeper, The Cluster Canary&#8221;</a> for other general information about ZooKeeper troubleshooting.
+        </div><div class="section" title="1.9.2.8.&nbsp;NotServingRegionException"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.notservingregion"></a>1.9.2.8.&nbsp;NotServingRegionException</h4></div></div></div><p>This exception is "normal" when found in the RegionServer logs at DEBUG level.  This exception is returned back to the client
+           and then the client goes back to .META. to find the new location of the moved region.</p><p>However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something probably wrong.</p></div><div class="section" title="1.9.2.9.&nbsp;Regions listed by domain name, then IP"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.double_listed_regions"></a>1.9.2.9.&nbsp;Regions listed by domain name, then IP</h4></div></div></div><p>
+           Fix your DNS.  In versions of Apache HBase before 0.92.x, reverse DNS needs to give same answer
+           as forward lookup. See <a class="link" href="https://issues.apache.org/jira/browse/HBASE-3431" target="_top">HBASE 3431
+           RegionServer is not using the name given it by the master; double entry in master listing of servers</a> for gorey details.
+          </p></div><div class="section" title="1.9.2.10.&nbsp;Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got brand-new compressor' messages"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.codecmsgs"></a>1.9.2.10.&nbsp;Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
+            brand-new compressor' messages</h4></div></div></div><p>We are not using the native versions of compression
+                    libraries.  See <a class="link" href="https://issues.apache.org/jira/browse/HBASE-1900" target="_top">HBASE-1900 Put back native support when hadoop 0.21 is released</a>.
+                    Copy the native libs from hadoop under hbase lib dir or
+                    symlink them into place and the message should go away.
+                </p></div><div class="section" title="1.9.2.11.&nbsp;Server handler X on 60020 caught: java.nio.channels.ClosedChannelException"><div class="titlepage"><div><div><h4 class="title"><a name="trouble.rs.runtime.client_went_away"></a>1.9.2.11.&nbsp;Server handler X on 60020 caught: java.nio.channels.ClosedChannelException</h4></div></div></div><p>
+           If you see this type of message it means that the region server was trying to read/send data from/to a client but
+           it already went away. Typical causes for this are if the client was killed (you see a storm of messages like this when a MapReduce
+           job is killed or fails) or if the client receives a SocketTimeoutException. It's harmless, but you should consider digging in
+           a bit more if you aren't doing something to trigger them.
+           </p></div></div><div class="section" title="1.9.3.&nbsp;Shutdown Errors"><div class="titlepage"><div><div><h3 class="title"><a name="trouble.rs.shutdown"></a>1.9.3.&nbsp;Shutdown Errors</h3></div></div></div></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'trouble.rs';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="trouble.network.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="trouble.master.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">1.8.&nbsp;Network&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="troubleshooting.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;1.10.&nbsp;Master</td></tr></table></div></body></html>

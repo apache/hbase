@@ -1,0 +1,147 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>6.3.&nbsp;Rowkey Design</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="book.html" title="The Apache HBase&#153; Reference Guide"><link rel="up" href="schema.html" title="Chapter&nbsp;6.&nbsp;HBase and Schema Design"><link rel="prev" href="number.of.cfs.html" title="6.2.&nbsp; On the number of column families"><link rel="next" href="schema.versions.html" title="6.4.&nbsp; Number of Versions"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">6.3.&nbsp;Rowkey Design</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="number.of.cfs.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;6.&nbsp;HBase and Schema Design</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="schema.versions.html">Next</a></td></tr></table><hr></div><div class="section" title="6.3.&nbsp;Rowkey Design"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="rowkey.design"></a>6.3.&nbsp;Rowkey Design</h2></div></div></div><div class="section" title="6.3.1.&nbsp; Monotonically Increasing Row Keys/Timeseries Data"><div class="titlepage"><div><div><h3 class="title"><a name="timeseries"></a>6.3.1.&nbsp;
+    Monotonically Increasing Row Keys/Timeseries Data
+    </h3></div></div></div><p>
+      In the HBase chapter of Tom White's book Hadoop: The Definitive Guide (O'Reilly) there is a an optimization note on watching out for a phenomenon where an import process walks in lock-step with all clients in concert pounding one of the table's regions (and thus, a single node), then moving onto the next region, etc.  With monotonically increasing row-keys (i.e., using a timestamp), this will happen.  See this comic by IKai Lan on why monotonically increasing row keys are problematic in BigTable-like datastores:
+      <a class="link" href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/" target="_top">monotonically increasing values are bad</a>.  The pile-up on a single region brought on
+      by monotonically increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general it's best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key.
+    </p><p>If you do need to upload time series data into HBase, you should
+    study <a class="link" href="http://opentsdb.net/" target="_top">OpenTSDB</a> as a
+    successful example.  It has a page describing the <a class="link" href=" http://opentsdb.net/schema.html" target="_top">schema</a> it uses in
+    HBase.  The key format in OpenTSDB is effectively [metric_type][event_timestamp], which would appear at first glance to contradict the previous advice about not using a timestamp as the key.  However, the difference is that the timestamp is not in the <span class="emphasis"><em>lead</em></span> position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types.  Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
+   </p></div><div class="section" title="6.3.2.&nbsp;Try to minimize row and column sizes"><div class="titlepage"><div><div><h3 class="title"><a name="keysize"></a>6.3.2.&nbsp;Try to minimize row and column sizes</h3></div><div><h4 class="subtitle">Or why are my StoreFile indices large?</h4></div></div></div><p>In HBase, values are always freighted with their coordinates; as a
+          cell value passes through the system, it'll be accompanied by its
+          row, column name, and timestamp - always.  If your rows and column names
+          are large, especially compared to the size of the cell value, then
+          you may run up against some interesting scenarios.  One such is
+          the case described by Marc Limotte at the tail of
+          HBASE-3551
+          (recommended!).
+          Therein, the indices that are kept on HBase storefiles (<a class="xref" href="regions.arch.html#hfile" title="9.7.5.2.&nbsp;StoreFile (HFile)">Section&nbsp;9.7.5.2, &#8220;StoreFile (HFile)&#8221;</a>)
+                  to facilitate random access may end up occupyng large chunks of the HBase
+                  allotted RAM because the cell value coordinates are large.
+                  Mark in the above cited comment suggests upping the block size so
+                  entries in the store file index happen at a larger interval or
+                  modify the table schema so it makes for smaller rows and column
+                  names.
+                  Compression will also make for larger indices.  See
+                  the thread <a class="link" href="http://search-hadoop.com/m/hemBv1LiN4Q1/a+question+storefileIndexSize&amp;subj=a+question+storefileIndexSize" target="_top">a question storefileIndexSize</a>
+                  up on the user mailing list.
+       </p><p>Most of the time small inefficiencies don't matter all that much.  Unfortunately,
+         this is a case where they do.  Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated
+       several billion times in your data. </p><p>See <a class="xref" href="regions.arch.html#keyvalue" title="9.7.5.4.&nbsp;KeyValue">Section&nbsp;9.7.5.4, &#8220;KeyValue&#8221;</a> for more information on HBase stores data internally to see why this is important.</p><div class="section" title="6.3.2.1.&nbsp;Column Families"><div class="titlepage"><div><div><h4 class="title"><a name="keysize.cf"></a>6.3.2.1.&nbsp;Column Families</h4></div></div></div><p>Try to keep the ColumnFamily names as small as possible, preferably one character (e.g. "d" for data/default).
+         </p><p>See <a class="xref" href="regions.arch.html#keyvalue" title="9.7.5.4.&nbsp;KeyValue">Section&nbsp;9.7.5.4, &#8220;KeyValue&#8221;</a> for more information on HBase stores data internally to see why this is important.</p></div><div class="section" title="6.3.2.2.&nbsp;Attributes"><div class="titlepage"><div><div><h4 class="title"><a name="keysize.atttributes"></a>6.3.2.2.&nbsp;Attributes</h4></div></div></div><p>Although verbose attribute names (e.g., "myVeryImportantAttribute") are easier to read, prefer shorter attribute names (e.g., "via")
+         to store in HBase.
+         </p><p>See <a class="xref" href="regions.arch.html#keyvalue" title="9.7.5.4.&nbsp;KeyValue">Section&nbsp;9.7.5.4, &#8220;KeyValue&#8221;</a> for more information on HBase stores data internally to see why this is important.</p></div><div class="section" title="6.3.2.3.&nbsp;Rowkey Length"><div class="titlepage"><div><div><h4 class="title"><a name="keysize.row"></a>6.3.2.3.&nbsp;Rowkey Length</h4></div></div></div><p>Keep them as short as is reasonable such that they can still be useful for required data access (e.g., Get vs. Scan).
+         A short key that is useless for data access is not better than a longer key with better get/scan properties.  Expect tradeoffs
+         when designing rowkeys.
+         </p></div><div class="section" title="6.3.2.4.&nbsp;Byte Patterns"><div class="titlepage"><div><div><h4 class="title"><a name="keysize.patterns"></a>6.3.2.4.&nbsp;Byte Patterns</h4></div></div></div><p>A long is 8 bytes.  You can store an unsigned number up to 18,446,744,073,709,551,615 in those eight bytes.
+            If you stored this number as a String -- presuming a byte per character -- you need nearly 3x the bytes.
+         </p><p>Not convinced?  Below is some sample code that you can run on your own.
+</p><pre class="programlisting">
+// long
+//
+long l = 1234567890L;
+byte[] lb = Bytes.toBytes(l);
+System.out.println("long bytes length: " + lb.length);   // returns 8
+
+String s = "" + l;
+byte[] sb = Bytes.toBytes(s);
+System.out.println("long as string length: " + sb.length);    // returns 10
+
+// hash
+//
+MessageDigest md = MessageDigest.getInstance("MD5");
+byte[] digest = md.digest(Bytes.toBytes(s));
+System.out.println("md5 digest bytes length: " + digest.length);    // returns 16
+
+String sDigest = new String(digest);
+byte[] sbDigest = Bytes.toBytes(sDigest);
+System.out.println("md5 digest as string length: " + sbDigest.length);    // returns 26
+</pre><p>
+         </p></div></div><div class="section" title="6.3.3.&nbsp;Reverse Timestamps"><div class="titlepage"><div><div><h3 class="title"><a name="reverse.timestamp"></a>6.3.3.&nbsp;Reverse Timestamps</h3></div></div></div><p>A common problem in database processing is quickly finding the most recent version of a value.  A technique using reverse timestamps
+    as a part of the key can help greatly with a special case of this problem.  Also found in the HBase chapter of Tom White's book Hadoop:  The Definitive Guide (O'Reilly),
+    the technique involves appending (<code class="code">Long.MAX_VALUE - timestamp</code>) to the end of any key, e.g., [key][reverse_timestamp].
+    </p><p>The most recent value for [key] in a table can be found by performing a Scan for [key] and obtaining the first record.  Since HBase keys
+    are in sorted order, this key sorts before any older row-keys for [key] and thus is first.
+    </p><p>This technique would be used instead of using <a class="xref" href="schema.versions.html" title="6.4.&nbsp; Number of Versions">Section&nbsp;6.4, &#8220;
+  Number of Versions
+  &#8221;</a> where the intent is to hold onto all versions
+    "forever" (or a very long time) and at the same time quickly obtain access to any other version by using the same Scan technique.
+    </p></div><div class="section" title="6.3.4.&nbsp;Rowkeys and ColumnFamilies"><div class="titlepage"><div><div><h3 class="title"><a name="rowkey.scope"></a>6.3.4.&nbsp;Rowkeys and ColumnFamilies</h3></div></div></div><p>Rowkeys are scoped to ColumnFamilies.  Thus, the same rowkey could exist in each ColumnFamily that exists in a table without collision.
+    </p></div><div class="section" title="6.3.5.&nbsp;Immutability of Rowkeys"><div class="titlepage"><div><div><h3 class="title"><a name="changing.rowkeys"></a>6.3.5.&nbsp;Immutability of Rowkeys</h3></div></div></div><p>Rowkeys cannot be changed.  The only way they can be "changed" in a table is if the row is deleted and then re-inserted.
+    This is a fairly common question on the HBase dist-list so it pays to get the rowkeys right the first time (and/or before you've
+    inserted a lot of data).
+    </p></div><div class="section" title="6.3.6.&nbsp;Relationship Between RowKeys and Region Splits"><div class="titlepage"><div><div><h3 class="title"><a name="rowkey.regionsplits"></a>6.3.6.&nbsp;Relationship Between RowKeys and Region Splits</h3></div></div></div><p>If you pre-split your table, it is <span class="emphasis"><em>critical</em></span> to understand how your rowkey will be distributed across
+    the region boundaries.  As an example of why this is important, consider the example of using displayable hex characters as the
+    lead position of the key (e.g., ""0000000000000000" to "ffffffffffffffff").  Running those key ranges through <code class="code">Bytes.split</code>
+    (which is the split strategy used when creating regions in <code class="code">HBaseAdmin.createTable(byte[] startKey, byte[] endKey, numRegions)</code>
+    for 10 regions will generate the following splits...
+    </p><p>
+    </p><pre class="programlisting">
+48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48                                // 0
+54 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10                 // 6
+61 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -68                 // =
+68 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -126  // D
+75 75 75 75 75 75 75 75 75 75 75 75 75 75 75 72                                // K
+82 18 18 18 18 18 18 18 18 18 18 18 18 18 18 14                                // R
+88 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -44                 // X
+95 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -102                // _
+102 102 102 102 102 102 102 102 102 102 102 102 102 102 102 102                // f
+    </pre><p>
+    ... (note:  the lead byte is listed to the right as a comment.)  Given that the first split is a '0' and the last split is an 'f',
+    everything is great, right?  Not so fast.
+    </p><p>The problem is that all the data is going to pile up in the first 2 regions and the last region thus creating a "lumpy" (and
+    possibly "hot") region problem.  To understand why, refer to an  <a class="link" href="http://www.asciitable.com" target="_top">ASCII Table</a>.
+    '0' is byte 48, and 'f' is byte 102, but there is a huge gap in byte values (bytes 58 to 96) that will <span class="emphasis"><em>never appear in this
+    keyspace</em></span> because the only values are [0-9] and [a-f].  Thus, the middle regions regions will
+    never be used.  To make pre-spliting work with this example keyspace, a custom definition of splits (i.e., and not relying on the
+    built-in split method) is required.
+    </p><p>Lesson #1:  Pre-splitting tables is generally a best practice, but you need to pre-split them in such a way that all the
+    regions are accessible in the keyspace.  While this example demonstrated the problem with a hex-key keyspace, the same problem can happen
+     with <span class="emphasis"><em>any</em></span> keyspace.  Know your data.
+    </p><p>Lesson #2:  While generally not advisable, using hex-keys (and more generally, displayable data) can still work with pre-split
+    tables as long as all the created regions are accessible in the keyspace.
+    </p><p>To conclude this example, the following is an example of  how appropriate splits can be pre-created for hex-keys:.
+	    </p><pre class="programlisting">public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
+throws IOException {
+  try {
+    admin.createTable( table, splits );
+    return true;
+  } catch (TableExistsException e) {
+    logger.info("table " + table.getNameAsString() + " already exists");
+    // the table already exists...
+    return false;
+  }
+}
+
+public static byte[][] getHexSplits(String startKey, String endKey, int numRegions) {
+  byte[][] splits = new byte[numRegions-1][];
+  BigInteger lowestKey = new BigInteger(startKey, 16);
+  BigInteger highestKey = new BigInteger(endKey, 16);
+  BigInteger range = highestKey.subtract(lowestKey);
+  BigInteger regionIncrement = range.divide(BigInteger.valueOf(numRegions));
+  lowestKey = lowestKey.add(regionIncrement);
+  for(int i=0; i &lt; numRegions-1;i++) {
+    BigInteger key = lowestKey.add(regionIncrement.multiply(BigInteger.valueOf(i)));
+    byte[] b = String.format("%016x", key).getBytes();
+    splits[i] = b;
+  }
+  return splits;
+}</pre></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'rowkey.design';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="number.of.cfs.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="schema.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="schema.versions.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">6.2.&nbsp;
+      On the number of column families
+  &nbsp;</td><td width="20%" align="center"><a accesskey="h" href="book.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;6.4.&nbsp;
+  Number of Versions
+  </td></tr></table></div></body></html>

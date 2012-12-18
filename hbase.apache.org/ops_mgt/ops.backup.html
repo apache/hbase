@@ -1,0 +1,36 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>1.7.&nbsp;HBase Backup</title><link rel="stylesheet" type="text/css" href="../css/freebsd_docbook.css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.76.1"><link rel="home" href="ops_mgt.html" title="Chapter&nbsp;1.&nbsp;Apache HBase (TM) Operational Management"><link rel="up" href="ops_mgt.html" title="Chapter&nbsp;1.&nbsp;Apache HBase (TM) Operational Management"><link rel="prev" href="cluster_replication.html" title="1.6.&nbsp;Cluster Replication"><link rel="next" href="ops.capacity.html" title="1.8.&nbsp;Capacity Planning"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">1.7.&nbsp;HBase Backup</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="cluster_replication.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ops.capacity.html">Next</a></td></tr></table><hr></div><div class="section" title="1.7.&nbsp;HBase Backup"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="ops.backup"></a>1.7.&nbsp;HBase Backup</h2></div></div></div><p>There are two broad strategies for performing HBase backups: backing up with a full cluster shutdown, and backing up on a live cluster.
+    Each approach has pros and cons.
+    </p><p>For additional information, see <a class="link" href="http://blog.sematext.com/2011/03/11/hbase-backup-options/" target="_top">HBase Backup Options</a> over on the Sematext Blog.
+    </p><div class="section" title="1.7.1.&nbsp;Full Shutdown Backup"><div class="titlepage"><div><div><h3 class="title"><a name="ops.backup.fullshutdown"></a>1.7.1.&nbsp;Full Shutdown Backup</h3></div></div></div><p>Some environments can tolerate a periodic full shutdown of their HBase cluster, for example if it is being used a back-end analytic capacity
+      and not serving front-end web-pages.  The benefits are that the NameNode/Master are RegionServers are down, so there is no chance of missing
+      any in-flight changes to either StoreFiles or metadata.  The obvious con is that the cluster is down.  The steps include:
+      </p><div class="section" title="1.7.1.1.&nbsp;Stop HBase"><div class="titlepage"><div><div><h4 class="title"><a name="ops.backup.fullshutdown.stop"></a>1.7.1.1.&nbsp;Stop HBase</h4></div></div></div><p>
+        </p></div><div class="section" title="1.7.1.2.&nbsp;Distcp"><div class="titlepage"><div><div><h4 class="title"><a name="ops.backup.fullshutdown.distcp"></a>1.7.1.2.&nbsp;Distcp</h4></div></div></div><p>Distcp could be used to either copy the contents of the HBase directory in HDFS to either the same cluster in another directory, or
+        to a different cluster.
+        </p><p>Note:  Distcp works in this situation because the cluster is down and there are no in-flight edits to files.
+        Distcp-ing of files in the HBase directory is not generally recommended on a live cluster.
+        </p></div><div class="section" title="1.7.1.3.&nbsp;Restore (if needed)"><div class="titlepage"><div><div><h4 class="title"><a name="ops.backup.fullshutdown.restore"></a>1.7.1.3.&nbsp;Restore (if needed)</h4></div></div></div><p>The backup of the hbase directory from HDFS is copied onto the 'real' hbase directory via distcp.  The act of copying these files
+        creates new HDFS metadata, which is why a restore of the NameNode edits from the time of the HBase backup isn't required for this kind of
+        restore, because it's a restore (via distcp) of a specific HDFS directory (i.e., the HBase part) not the entire HDFS file-system.
+        </p></div></div><div class="section" title="1.7.2.&nbsp;Live Cluster Backup - Replication"><div class="titlepage"><div><div><h3 class="title"><a name="ops.backup.live.replication"></a>1.7.2.&nbsp;Live Cluster Backup - Replication</h3></div></div></div><p>This approach assumes that there is a second cluster.
+      See the HBase page on <a class="link" href="http://hbase.apache.org/replication.html" target="_top">replication</a> for more information.
+      </p></div><div class="section" title="1.7.3.&nbsp;Live Cluster Backup - CopyTable"><div class="titlepage"><div><div><h3 class="title"><a name="ops.backup.live.copytable"></a>1.7.3.&nbsp;Live Cluster Backup - CopyTable</h3></div></div></div><p>The <a class="xref" href="ops_mgt.html#copytable" title="1.1.6.&nbsp;CopyTable">Section&nbsp;1.1.6, &#8220;CopyTable&#8221;</a> utility could either be used to copy data from one table to another on the
+      same cluster, or to copy data to another table on another cluster.
+      </p><p>Since the cluster is up, there is a risk that edits could be missed in the copy process.
+      </p></div><div class="section" title="1.7.4.&nbsp;Live Cluster Backup - Export"><div class="titlepage"><div><div><h3 class="title"><a name="ops.backup.live.export"></a>1.7.4.&nbsp;Live Cluster Backup - Export</h3></div></div></div><p>The <a class="xref" href="ops_mgt.html#export" title="1.1.7.&nbsp;Export">Section&nbsp;1.1.7, &#8220;Export&#8221;</a> approach dumps the content of a table to HDFS on the same cluster.  To restore the data, the
+      <a class="xref" href="ops_mgt.html#import" title="1.1.8.&nbsp;Import">Section&nbsp;1.1.8, &#8220;Import&#8221;</a> utility would be used.
+      </p><p>Since the cluster is up, there is a risk that edits could be missed in the export process.
+      </p></div></div><div id="disqus_thread"></div><script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = 'ops.backup';
+
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript><a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="cluster_replication.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ops.capacity.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">1.6.&nbsp;Cluster Replication&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="ops_mgt.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;1.8.&nbsp;Capacity Planning</td></tr></table></div></body></html>

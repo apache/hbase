@@ -1,0 +1,540 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>ProtobufRpcEngine xref</title>
+<link type="text/css" rel="stylesheet" href="../../../../../stylesheet.css" />
+</head>
+<body>
+<div id="overview"><a href="../../../../../../apidocs/org/apache/hadoop/hbase/ipc/ProtobufRpcEngine.html">View Javadoc</a></div><pre>
+
+<a class="jxr_linenumber" name="1" href="#1">1</a>   <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="2" href="#2">2</a>   <em class="jxr_javadoccomment"> * Licensed to the Apache Software Foundation (ASF) under one</em>
+<a class="jxr_linenumber" name="3" href="#3">3</a>   <em class="jxr_javadoccomment"> * or more contributor license agreements.  See the NOTICE file</em>
+<a class="jxr_linenumber" name="4" href="#4">4</a>   <em class="jxr_javadoccomment"> * distributed with this work for additional information</em>
+<a class="jxr_linenumber" name="5" href="#5">5</a>   <em class="jxr_javadoccomment"> * regarding copyright ownership.  The ASF licenses this file</em>
+<a class="jxr_linenumber" name="6" href="#6">6</a>   <em class="jxr_javadoccomment"> * to you under the Apache License, Version 2.0 (the</em>
+<a class="jxr_linenumber" name="7" href="#7">7</a>   <em class="jxr_javadoccomment"> * "License"); you may not use this file except in compliance</em>
+<a class="jxr_linenumber" name="8" href="#8">8</a>   <em class="jxr_javadoccomment"> * with the License.  You may obtain a copy of the License at</em>
+<a class="jxr_linenumber" name="9" href="#9">9</a>   <em class="jxr_javadoccomment"> *</em>
+<a class="jxr_linenumber" name="10" href="#10">10</a>  <em class="jxr_javadoccomment"> *     <a href="http://www.apache.org/licenses/LICENSE-2.0" target="alexandria_uri">http://www.apache.org/licenses/LICENSE-2.0</a></em>
+<a class="jxr_linenumber" name="11" href="#11">11</a>  <em class="jxr_javadoccomment"> *</em>
+<a class="jxr_linenumber" name="12" href="#12">12</a>  <em class="jxr_javadoccomment"> * Unless required by applicable law or agreed to in writing, software</em>
+<a class="jxr_linenumber" name="13" href="#13">13</a>  <em class="jxr_javadoccomment"> * distributed under the License is distributed on an "AS IS" BASIS,</em>
+<a class="jxr_linenumber" name="14" href="#14">14</a>  <em class="jxr_javadoccomment"> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</em>
+<a class="jxr_linenumber" name="15" href="#15">15</a>  <em class="jxr_javadoccomment"> * See the License for the specific language governing permissions and</em>
+<a class="jxr_linenumber" name="16" href="#16">16</a>  <em class="jxr_javadoccomment"> * limitations under the License.</em>
+<a class="jxr_linenumber" name="17" href="#17">17</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="18" href="#18">18</a>  
+<a class="jxr_linenumber" name="19" href="#19">19</a>  <strong class="jxr_keyword">package</strong> org.apache.hadoop.hbase.ipc;
+<a class="jxr_linenumber" name="20" href="#20">20</a>  
+<a class="jxr_linenumber" name="21" href="#21">21</a>  <strong class="jxr_keyword">import</strong> java.io.IOException;
+<a class="jxr_linenumber" name="22" href="#22">22</a>  <strong class="jxr_keyword">import</strong> java.lang.reflect.InvocationHandler;
+<a class="jxr_linenumber" name="23" href="#23">23</a>  <strong class="jxr_keyword">import</strong> java.lang.reflect.InvocationTargetException;
+<a class="jxr_linenumber" name="24" href="#24">24</a>  <strong class="jxr_keyword">import</strong> java.lang.reflect.Method;
+<a class="jxr_linenumber" name="25" href="#25">25</a>  <strong class="jxr_keyword">import</strong> java.lang.reflect.Proxy;
+<a class="jxr_linenumber" name="26" href="#26">26</a>  <strong class="jxr_keyword">import</strong> java.net.InetSocketAddress;
+<a class="jxr_linenumber" name="27" href="#27">27</a>  <strong class="jxr_keyword">import</strong> java.util.HashMap;
+<a class="jxr_linenumber" name="28" href="#28">28</a>  <strong class="jxr_keyword">import</strong> java.util.Map;
+<a class="jxr_linenumber" name="29" href="#29">29</a>  <strong class="jxr_keyword">import</strong> java.util.concurrent.ConcurrentHashMap;
+<a class="jxr_linenumber" name="30" href="#30">30</a>  
+<a class="jxr_linenumber" name="31" href="#31">31</a>  <strong class="jxr_keyword">import</strong> javax.net.SocketFactory;
+<a class="jxr_linenumber" name="32" href="#32">32</a>  
+<a class="jxr_linenumber" name="33" href="#33">33</a>  <strong class="jxr_keyword">import</strong> org.apache.commons.logging.Log;
+<a class="jxr_linenumber" name="34" href="#34">34</a>  <strong class="jxr_keyword">import</strong> org.apache.commons.logging.LogFactory;
+<a class="jxr_linenumber" name="35" href="#35">35</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.classification.InterfaceAudience;
+<a class="jxr_linenumber" name="36" href="#36">36</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.conf.Configuration;
+<a class="jxr_linenumber" name="37" href="#37">37</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.HRegionInfo;
+<a class="jxr_linenumber" name="38" href="#38">38</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.client.Operation;
+<a class="jxr_linenumber" name="39" href="#39">39</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+<a class="jxr_linenumber" name="40" href="#40">40</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+<a class="jxr_linenumber" name="41" href="#41">41</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
+<a class="jxr_linenumber" name="42" href="#42">42</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.regionserver.HRegionServer;
+<a class="jxr_linenumber" name="43" href="#43">43</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.security.HBasePolicyProvider;
+<a class="jxr_linenumber" name="44" href="#44">44</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.security.User;
+<a class="jxr_linenumber" name="45" href="#45">45</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
+<a class="jxr_linenumber" name="46" href="#46">46</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.ipc.RemoteException;
+<a class="jxr_linenumber" name="47" href="#47">47</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+<a class="jxr_linenumber" name="48" href="#48">48</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.util.Bytes;
+<a class="jxr_linenumber" name="49" href="#49">49</a>  <strong class="jxr_keyword">import</strong> org.codehaus.jackson.map.ObjectMapper;
+<a class="jxr_linenumber" name="50" href="#50">50</a>  
+<a class="jxr_linenumber" name="51" href="#51">51</a>  <strong class="jxr_keyword">import</strong> com.google.protobuf.Message;
+<a class="jxr_linenumber" name="52" href="#52">52</a>  <strong class="jxr_keyword">import</strong> com.google.protobuf.ServiceException;
+<a class="jxr_linenumber" name="53" href="#53">53</a>  <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="54" href="#54">54</a>  <em class="jxr_javadoccomment"> * The {@link RpcEngine} implementation for ProtoBuf-based RPCs.</em>
+<a class="jxr_linenumber" name="55" href="#55">55</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="56" href="#56">56</a>  @InterfaceAudience.Private
+<a class="jxr_linenumber" name="57" href="#57">57</a>  <strong class="jxr_keyword">class</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/ProtobufRpcEngine.html">ProtobufRpcEngine</a> <strong class="jxr_keyword">implements</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/RpcEngine.html">RpcEngine</a> {
+<a class="jxr_linenumber" name="58" href="#58">58</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Log LOG =
+<a class="jxr_linenumber" name="59" href="#59">59</a>        LogFactory.getLog(<span class="jxr_string">"org.apache.hadoop.hbase.ipc.ProtobufRpcEngine"</span>);
+<a class="jxr_linenumber" name="60" href="#60">60</a>    <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">static</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/ClientCache.html">ClientCache</a> CLIENTS = <strong class="jxr_keyword">new</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/ClientCache.html">ClientCache</a>();
+<a class="jxr_linenumber" name="61" href="#61">61</a>    @Override
+<a class="jxr_linenumber" name="62" href="#62">62</a>    <strong class="jxr_keyword">public</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/VersionedProtocol.html">VersionedProtocol</a> getProxy(
+<a class="jxr_linenumber" name="63" href="#63">63</a>        Class&lt;? <strong class="jxr_keyword">extends</strong> VersionedProtocol&gt; protocol, <strong class="jxr_keyword">long</strong> clientVersion,
+<a class="jxr_linenumber" name="64" href="#64">64</a>        InetSocketAddress addr, <a href="../../../../../org/apache/hadoop/hbase/security/User.html">User</a> ticket, Configuration conf,
+<a class="jxr_linenumber" name="65" href="#65">65</a>        SocketFactory factory, <strong class="jxr_keyword">int</strong> rpcTimeout) <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="66" href="#66">66</a>      <strong class="jxr_keyword">final</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/ProtobufRpcEngine.html">Invoker</a> invoker = <strong class="jxr_keyword">new</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/ProtobufRpcEngine.html">Invoker</a>(protocol, addr, ticket, conf, factory,
+<a class="jxr_linenumber" name="67" href="#67">67</a>          rpcTimeout);
+<a class="jxr_linenumber" name="68" href="#68">68</a>      <strong class="jxr_keyword">return</strong> (VersionedProtocol)Proxy.newProxyInstance(
+<a class="jxr_linenumber" name="69" href="#69">69</a>          protocol.getClassLoader(), <strong class="jxr_keyword">new</strong> Class[]{protocol}, invoker);
+<a class="jxr_linenumber" name="70" href="#70">70</a>    }
+<a class="jxr_linenumber" name="71" href="#71">71</a>  
+<a class="jxr_linenumber" name="72" href="#72">72</a>    @Override
+<a class="jxr_linenumber" name="73" href="#73">73</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> stopProxy(<a href="../../../../../org/apache/hadoop/hbase/ipc/VersionedProtocol.html">VersionedProtocol</a> proxy) {
+<a class="jxr_linenumber" name="74" href="#74">74</a>      <strong class="jxr_keyword">if</strong> (proxy!=<strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="75" href="#75">75</a>        ((<a href="../../../../../org/apache/hadoop/hbase/ipc/ProtobufRpcEngine.html">Invoker</a>)Proxy.getInvocationHandler(proxy)).close();
+<a class="jxr_linenumber" name="76" href="#76">76</a>      }
+<a class="jxr_linenumber" name="77" href="#77">77</a>    }
+<a class="jxr_linenumber" name="78" href="#78">78</a>  
+<a class="jxr_linenumber" name="79" href="#79">79</a>    @Override
+<a class="jxr_linenumber" name="80" href="#80">80</a>    <strong class="jxr_keyword">public</strong> <a href="../../../../../org/apache/hadoop/hbase/Server.html">Server</a> getServer(Class&lt;? <strong class="jxr_keyword">extends</strong> VersionedProtocol&gt; protocol,
+<a class="jxr_linenumber" name="81" href="#81">81</a>        Object instance, Class&lt;?&gt;[] ifaces, String bindAddress, <strong class="jxr_keyword">int</strong> port,
+<a class="jxr_linenumber" name="82" href="#82">82</a>        <strong class="jxr_keyword">int</strong> numHandlers, <strong class="jxr_keyword">int</strong> metaHandlerCount, <strong class="jxr_keyword">boolean</strong> verbose,
+<a class="jxr_linenumber" name="83" href="#83">83</a>        Configuration conf, <strong class="jxr_keyword">int</strong> highPriorityLevel) <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="84" href="#84">84</a>      <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../org/apache/hadoop/hbase/Server.html">Server</a>(instance, ifaces, conf, bindAddress, port, numHandlers,
+<a class="jxr_linenumber" name="85" href="#85">85</a>          metaHandlerCount, verbose, highPriorityLevel);
+<a class="jxr_linenumber" name="86" href="#86">86</a>    }
+<a class="jxr_linenumber" name="87" href="#87">87</a>  
+<a class="jxr_linenumber" name="88" href="#88">88</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/ProtobufRpcEngine.html">Invoker</a> <strong class="jxr_keyword">implements</strong> InvocationHandler {
+<a class="jxr_linenumber" name="89" href="#89">89</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Map&lt;String, Message&gt; returnTypes =
+<a class="jxr_linenumber" name="90" href="#90">90</a>          <strong class="jxr_keyword">new</strong> ConcurrentHashMap&lt;String, Message&gt;();
+<a class="jxr_linenumber" name="91" href="#91">91</a>      <strong class="jxr_keyword">private</strong> Class&lt;? <strong class="jxr_keyword">extends</strong> VersionedProtocol&gt; protocol;
+<a class="jxr_linenumber" name="92" href="#92">92</a>      <strong class="jxr_keyword">private</strong> InetSocketAddress address;
+<a class="jxr_linenumber" name="93" href="#93">93</a>      <strong class="jxr_keyword">private</strong> <a href="../../../../../org/apache/hadoop/hbase/security/User.html">User</a> ticket;
+<a class="jxr_linenumber" name="94" href="#94">94</a>      <strong class="jxr_keyword">private</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/HBaseClient.html">HBaseClient</a> client;
+<a class="jxr_linenumber" name="95" href="#95">95</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">boolean</strong> isClosed = false;
+<a class="jxr_linenumber" name="96" href="#96">96</a>      <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> rpcTimeout;
+<a class="jxr_linenumber" name="97" href="#97">97</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">long</strong> clientProtocolVersion;
+<a class="jxr_linenumber" name="98" href="#98">98</a>  
+<a class="jxr_linenumber" name="99" href="#99">99</a>      <strong class="jxr_keyword">public</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/ProtobufRpcEngine.html">Invoker</a>(Class&lt;? <strong class="jxr_keyword">extends</strong> VersionedProtocol&gt; protocol,
+<a class="jxr_linenumber" name="100" href="#100">100</a>         InetSocketAddress addr, <a href="../../../../../org/apache/hadoop/hbase/security/User.html">User</a> ticket, Configuration conf,
+<a class="jxr_linenumber" name="101" href="#101">101</a>         SocketFactory factory, <strong class="jxr_keyword">int</strong> rpcTimeout) <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="102" href="#102">102</a>       <strong class="jxr_keyword">this</strong>.protocol = protocol;
+<a class="jxr_linenumber" name="103" href="#103">103</a>       <strong class="jxr_keyword">this</strong>.address = addr;
+<a class="jxr_linenumber" name="104" href="#104">104</a>       <strong class="jxr_keyword">this</strong>.ticket = ticket;
+<a class="jxr_linenumber" name="105" href="#105">105</a>       <strong class="jxr_keyword">this</strong>.client = CLIENTS.getClient(conf, factory);
+<a class="jxr_linenumber" name="106" href="#106">106</a>       <strong class="jxr_keyword">this</strong>.rpcTimeout = rpcTimeout;
+<a class="jxr_linenumber" name="107" href="#107">107</a>       Long version = Invocation.PROTOCOL_VERSION.get(protocol);
+<a class="jxr_linenumber" name="108" href="#108">108</a>       <strong class="jxr_keyword">if</strong> (version != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="109" href="#109">109</a>         <strong class="jxr_keyword">this</strong>.clientProtocolVersion = version;
+<a class="jxr_linenumber" name="110" href="#110">110</a>       } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="111" href="#111">111</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="112" href="#112">112</a>           <strong class="jxr_keyword">this</strong>.clientProtocolVersion = HBaseRPC.getProtocolVersion(protocol);
+<a class="jxr_linenumber" name="113" href="#113">113</a>         } <strong class="jxr_keyword">catch</strong> (NoSuchFieldException e) {
+<a class="jxr_linenumber" name="114" href="#114">114</a>           <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> RuntimeException(<span class="jxr_string">"Exception encountered during "</span> +
+<a class="jxr_linenumber" name="115" href="#115">115</a>                                       protocol, e);
+<a class="jxr_linenumber" name="116" href="#116">116</a>         } <strong class="jxr_keyword">catch</strong> (IllegalAccessException e) {
+<a class="jxr_linenumber" name="117" href="#117">117</a>           <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> RuntimeException(<span class="jxr_string">"Exception encountered during "</span> +
+<a class="jxr_linenumber" name="118" href="#118">118</a>                                       protocol, e);
+<a class="jxr_linenumber" name="119" href="#119">119</a>         }
+<a class="jxr_linenumber" name="120" href="#120">120</a>       }
+<a class="jxr_linenumber" name="121" href="#121">121</a>     }
+<a class="jxr_linenumber" name="122" href="#122">122</a> 
+<a class="jxr_linenumber" name="123" href="#123">123</a>     <strong class="jxr_keyword">private</strong> RpcRequestBody constructRpcRequest(Method method,
+<a class="jxr_linenumber" name="124" href="#124">124</a>         Object[] params) <strong class="jxr_keyword">throws</strong> ServiceException {
+<a class="jxr_linenumber" name="125" href="#125">125</a>       RpcRequestBody rpcRequest;
+<a class="jxr_linenumber" name="126" href="#126">126</a>       RpcRequestBody.Builder builder = RpcRequestBody.newBuilder();
+<a class="jxr_linenumber" name="127" href="#127">127</a>       builder.setMethodName(method.getName());
+<a class="jxr_linenumber" name="128" href="#128">128</a>       Message param;
+<a class="jxr_linenumber" name="129" href="#129">129</a>       <strong class="jxr_keyword">int</strong> length = params.length;
+<a class="jxr_linenumber" name="130" href="#130">130</a>       <strong class="jxr_keyword">if</strong> (length == 2) {
+<a class="jxr_linenumber" name="131" href="#131">131</a>         <em class="jxr_comment">// RpcController + Message in the method args</em>
+<a class="jxr_linenumber" name="132" href="#132">132</a>         <em class="jxr_comment">// (generated code from RPC bits in .proto files have RpcController)</em>
+<a class="jxr_linenumber" name="133" href="#133">133</a>         param = (Message)params[1];
+<a class="jxr_linenumber" name="134" href="#134">134</a>       } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (length == 1) { <em class="jxr_comment">// Message</em>
+<a class="jxr_linenumber" name="135" href="#135">135</a>         param = (Message)params[0];
+<a class="jxr_linenumber" name="136" href="#136">136</a>       } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="137" href="#137">137</a>         <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> ServiceException(<span class="jxr_string">"Too many parameters for request. Method: ["</span>
+<a class="jxr_linenumber" name="138" href="#138">138</a>             + method.getName() + <span class="jxr_string">"]"</span> + <span class="jxr_string">", Expected: 2, Actual: "</span>
+<a class="jxr_linenumber" name="139" href="#139">139</a>             + params.length);
+<a class="jxr_linenumber" name="140" href="#140">140</a>       }
+<a class="jxr_linenumber" name="141" href="#141">141</a>       builder.setRequestClassName(param.getClass().getName());
+<a class="jxr_linenumber" name="142" href="#142">142</a>       builder.setRequest(param.toByteString());
+<a class="jxr_linenumber" name="143" href="#143">143</a>       builder.setClientProtocolVersion(clientProtocolVersion);
+<a class="jxr_linenumber" name="144" href="#144">144</a>       rpcRequest = builder.build();
+<a class="jxr_linenumber" name="145" href="#145">145</a>       <strong class="jxr_keyword">return</strong> rpcRequest;
+<a class="jxr_linenumber" name="146" href="#146">146</a>     }
+<a class="jxr_linenumber" name="147" href="#147">147</a> 
+<a class="jxr_linenumber" name="148" href="#148">148</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="149" href="#149">149</a> <em class="jxr_javadoccomment">     * This is the client side invoker of RPC method. It only throws</em>
+<a class="jxr_linenumber" name="150" href="#150">150</a> <em class="jxr_javadoccomment">     * ServiceException, since the invocation proxy expects only</em>
+<a class="jxr_linenumber" name="151" href="#151">151</a> <em class="jxr_javadoccomment">     * ServiceException to be thrown by the method in case protobuf service.</em>
+<a class="jxr_linenumber" name="152" href="#152">152</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="153" href="#153">153</a> <em class="jxr_javadoccomment">     * ServiceException has the following causes:</em>
+<a class="jxr_linenumber" name="154" href="#154">154</a> <em class="jxr_javadoccomment">     * &lt;ol&gt;</em>
+<a class="jxr_linenumber" name="155" href="#155">155</a> <em class="jxr_javadoccomment">     * &lt;li&gt;Exceptions encountered on the client side in this method are</em>
+<a class="jxr_linenumber" name="156" href="#156">156</a> <em class="jxr_javadoccomment">     * set as cause in ServiceException as is.&lt;/li&gt;</em>
+<a class="jxr_linenumber" name="157" href="#157">157</a> <em class="jxr_javadoccomment">     * &lt;li&gt;Exceptions from the server are wrapped in RemoteException and are</em>
+<a class="jxr_linenumber" name="158" href="#158">158</a> <em class="jxr_javadoccomment">     * set as cause in ServiceException&lt;/li&gt;</em>
+<a class="jxr_linenumber" name="159" href="#159">159</a> <em class="jxr_javadoccomment">     * &lt;/ol&gt;</em>
+<a class="jxr_linenumber" name="160" href="#160">160</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="161" href="#161">161</a> <em class="jxr_javadoccomment">     * Note that the client calling protobuf RPC methods, must handle</em>
+<a class="jxr_linenumber" name="162" href="#162">162</a> <em class="jxr_javadoccomment">     * ServiceException by getting the cause from the ServiceException. If the</em>
+<a class="jxr_linenumber" name="163" href="#163">163</a> <em class="jxr_javadoccomment">     * cause is RemoteException, then unwrap it to get the exception thrown by</em>
+<a class="jxr_linenumber" name="164" href="#164">164</a> <em class="jxr_javadoccomment">     * the server.</em>
+<a class="jxr_linenumber" name="165" href="#165">165</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="166" href="#166">166</a>     @Override
+<a class="jxr_linenumber" name="167" href="#167">167</a>     <strong class="jxr_keyword">public</strong> Object invoke(Object proxy, Method method, Object[] args)
+<a class="jxr_linenumber" name="168" href="#168">168</a>         <strong class="jxr_keyword">throws</strong> ServiceException {
+<a class="jxr_linenumber" name="169" href="#169">169</a>       <strong class="jxr_keyword">long</strong> startTime = 0;
+<a class="jxr_linenumber" name="170" href="#170">170</a>       <strong class="jxr_keyword">if</strong> (LOG.isDebugEnabled()) {
+<a class="jxr_linenumber" name="171" href="#171">171</a>         startTime = System.currentTimeMillis();
+<a class="jxr_linenumber" name="172" href="#172">172</a>       }
+<a class="jxr_linenumber" name="173" href="#173">173</a> 
+<a class="jxr_linenumber" name="174" href="#174">174</a>       RpcRequestBody rpcRequest = constructRpcRequest(method, args);
+<a class="jxr_linenumber" name="175" href="#175">175</a>       Message val = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="176" href="#176">176</a>       <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="177" href="#177">177</a>         val = client.call(rpcRequest, address, protocol, ticket, rpcTimeout);
+<a class="jxr_linenumber" name="178" href="#178">178</a> 
+<a class="jxr_linenumber" name="179" href="#179">179</a>         <strong class="jxr_keyword">if</strong> (LOG.isDebugEnabled()) {
+<a class="jxr_linenumber" name="180" href="#180">180</a>           <strong class="jxr_keyword">long</strong> callTime = System.currentTimeMillis() - startTime;
+<a class="jxr_linenumber" name="181" href="#181">181</a>           <strong class="jxr_keyword">if</strong> (LOG.isTraceEnabled()) LOG.trace(<span class="jxr_string">"Call: "</span> + method.getName() + <span class="jxr_string">" "</span> + callTime);
+<a class="jxr_linenumber" name="182" href="#182">182</a>         }
+<a class="jxr_linenumber" name="183" href="#183">183</a>         <strong class="jxr_keyword">return</strong> val;
+<a class="jxr_linenumber" name="184" href="#184">184</a>       } <strong class="jxr_keyword">catch</strong> (Throwable e) {
+<a class="jxr_linenumber" name="185" href="#185">185</a>         <strong class="jxr_keyword">if</strong> (e instanceof RemoteException) {
+<a class="jxr_linenumber" name="186" href="#186">186</a>           Throwable cause = ((RemoteException)e).unwrapRemoteException();
+<a class="jxr_linenumber" name="187" href="#187">187</a>           <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> ServiceException(cause);
+<a class="jxr_linenumber" name="188" href="#188">188</a>         }
+<a class="jxr_linenumber" name="189" href="#189">189</a>         <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> ServiceException(e);
+<a class="jxr_linenumber" name="190" href="#190">190</a>       }
+<a class="jxr_linenumber" name="191" href="#191">191</a>     }
+<a class="jxr_linenumber" name="192" href="#192">192</a> 
+<a class="jxr_linenumber" name="193" href="#193">193</a>     <strong class="jxr_keyword">synchronized</strong> <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> close() {
+<a class="jxr_linenumber" name="194" href="#194">194</a>       <strong class="jxr_keyword">if</strong> (!isClosed) {
+<a class="jxr_linenumber" name="195" href="#195">195</a>         isClosed = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="196" href="#196">196</a>         CLIENTS.stopClient(client);
+<a class="jxr_linenumber" name="197" href="#197">197</a>       }
+<a class="jxr_linenumber" name="198" href="#198">198</a>     }
+<a class="jxr_linenumber" name="199" href="#199">199</a> 
+<a class="jxr_linenumber" name="200" href="#200">200</a>    <strong class="jxr_keyword">static</strong> Message getReturnProtoType(Method method) <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="201" href="#201">201</a>       <strong class="jxr_keyword">if</strong> (returnTypes.containsKey(method.getName())) {
+<a class="jxr_linenumber" name="202" href="#202">202</a>         <strong class="jxr_keyword">return</strong> returnTypes.get(method.getName());
+<a class="jxr_linenumber" name="203" href="#203">203</a>       }
+<a class="jxr_linenumber" name="204" href="#204">204</a> 
+<a class="jxr_linenumber" name="205" href="#205">205</a>       Class&lt;?&gt; returnType = method.getReturnType();
+<a class="jxr_linenumber" name="206" href="#206">206</a>       Method newInstMethod = returnType.getMethod(<span class="jxr_string">"getDefaultInstance"</span>);
+<a class="jxr_linenumber" name="207" href="#207">207</a>       newInstMethod.setAccessible(<strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="208" href="#208">208</a>       Message protoType = (Message) newInstMethod.invoke(<strong class="jxr_keyword">null</strong>, (Object[]) <strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="209" href="#209">209</a>       returnTypes.put(method.getName(), protoType);
+<a class="jxr_linenumber" name="210" href="#210">210</a>       <strong class="jxr_keyword">return</strong> protoType;
+<a class="jxr_linenumber" name="211" href="#211">211</a>     }
+<a class="jxr_linenumber" name="212" href="#212">212</a>   }
+<a class="jxr_linenumber" name="213" href="#213">213</a> 
+<a class="jxr_linenumber" name="214" href="#214">214</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../org/apache/hadoop/hbase/Server.html">Server</a> <strong class="jxr_keyword">extends</strong> <a href="../../../../../org/apache/hadoop/hbase/ipc/HBaseServer.html">HBaseServer</a> {
+<a class="jxr_linenumber" name="215" href="#215">215</a>     <strong class="jxr_keyword">boolean</strong> verbose;
+<a class="jxr_linenumber" name="216" href="#216">216</a>     Object instance;
+<a class="jxr_linenumber" name="217" href="#217">217</a>     Class&lt;?&gt; implementation;
+<a class="jxr_linenumber" name="218" href="#218">218</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String WARN_RESPONSE_TIME =
+<a class="jxr_linenumber" name="219" href="#219">219</a>         <span class="jxr_string">"hbase.ipc.warn.response.time"</span>;
+<a class="jxr_linenumber" name="220" href="#220">220</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String WARN_RESPONSE_SIZE =
+<a class="jxr_linenumber" name="221" href="#221">221</a>         <span class="jxr_string">"hbase.ipc.warn.response.size"</span>;
+<a class="jxr_linenumber" name="222" href="#222">222</a> 
+<a class="jxr_linenumber" name="223" href="#223">223</a>     <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Default value for above params */</em>
+<a class="jxr_linenumber" name="224" href="#224">224</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_WARN_RESPONSE_TIME = 10000; <em class="jxr_comment">// milliseconds</em>
+<a class="jxr_linenumber" name="225" href="#225">225</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
+<a class="jxr_linenumber" name="226" href="#226">226</a> 
+<a class="jxr_linenumber" name="227" href="#227">227</a>     <em class="jxr_javadoccomment">/**</em><em class="jxr_javadoccomment"> Names for suffixed metrics */</em>
+<a class="jxr_linenumber" name="228" href="#228">228</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String ABOVE_ONE_SEC_METRIC = <span class="jxr_string">".aboveOneSec."</span>;
+<a class="jxr_linenumber" name="229" href="#229">229</a> 
+<a class="jxr_linenumber" name="230" href="#230">230</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> warnResponseTime;
+<a class="jxr_linenumber" name="231" href="#231">231</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> warnResponseSize;
+<a class="jxr_linenumber" name="232" href="#232">232</a> 
+<a class="jxr_linenumber" name="233" href="#233">233</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> String classNameBase(String className) {
+<a class="jxr_linenumber" name="234" href="#234">234</a>       String[] names = className.split(<span class="jxr_string">"&#92;&#92;."</span>, -1);
+<a class="jxr_linenumber" name="235" href="#235">235</a>       <strong class="jxr_keyword">if</strong> (names == <strong class="jxr_keyword">null</strong> || names.length == 0) {
+<a class="jxr_linenumber" name="236" href="#236">236</a>         <strong class="jxr_keyword">return</strong> className;
+<a class="jxr_linenumber" name="237" href="#237">237</a>       }
+<a class="jxr_linenumber" name="238" href="#238">238</a>       <strong class="jxr_keyword">return</strong> names[names.length-1];
+<a class="jxr_linenumber" name="239" href="#239">239</a>     }
+<a class="jxr_linenumber" name="240" href="#240">240</a> 
+<a class="jxr_linenumber" name="241" href="#241">241</a>     <strong class="jxr_keyword">public</strong> <a href="../../../../../org/apache/hadoop/hbase/Server.html">Server</a>(Object instance, <strong class="jxr_keyword">final</strong> Class&lt;?&gt;[] ifaces,
+<a class="jxr_linenumber" name="242" href="#242">242</a>         Configuration conf, String bindAddress,  <strong class="jxr_keyword">int</strong> port,
+<a class="jxr_linenumber" name="243" href="#243">243</a>         <strong class="jxr_keyword">int</strong> numHandlers, <strong class="jxr_keyword">int</strong> metaHandlerCount, <strong class="jxr_keyword">boolean</strong> verbose,
+<a class="jxr_linenumber" name="244" href="#244">244</a>         <strong class="jxr_keyword">int</strong> highPriorityLevel)
+<a class="jxr_linenumber" name="245" href="#245">245</a>         <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="246" href="#246">246</a>       <strong class="jxr_keyword">super</strong>(bindAddress, port, numHandlers, metaHandlerCount,
+<a class="jxr_linenumber" name="247" href="#247">247</a>           conf, classNameBase(instance.getClass().getName()),
+<a class="jxr_linenumber" name="248" href="#248">248</a>           highPriorityLevel);
+<a class="jxr_linenumber" name="249" href="#249">249</a>       <strong class="jxr_keyword">this</strong>.instance = instance;
+<a class="jxr_linenumber" name="250" href="#250">250</a>       <strong class="jxr_keyword">this</strong>.implementation = instance.getClass();
+<a class="jxr_linenumber" name="251" href="#251">251</a>       <strong class="jxr_keyword">this</strong>.verbose = verbose;
+<a class="jxr_linenumber" name="252" href="#252">252</a> 
+<a class="jxr_linenumber" name="253" href="#253">253</a>       <strong class="jxr_keyword">this</strong>.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME,
+<a class="jxr_linenumber" name="254" href="#254">254</a>           DEFAULT_WARN_RESPONSE_TIME);
+<a class="jxr_linenumber" name="255" href="#255">255</a>       <strong class="jxr_keyword">this</strong>.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
+<a class="jxr_linenumber" name="256" href="#256">256</a>           DEFAULT_WARN_RESPONSE_SIZE);
+<a class="jxr_linenumber" name="257" href="#257">257</a>       <strong class="jxr_keyword">this</strong>.verbose = verbose;
+<a class="jxr_linenumber" name="258" href="#258">258</a>       <strong class="jxr_keyword">this</strong>.instance = instance;
+<a class="jxr_linenumber" name="259" href="#259">259</a>       <strong class="jxr_keyword">this</strong>.implementation = instance.getClass();
+<a class="jxr_linenumber" name="260" href="#260">260</a>     }
+<a class="jxr_linenumber" name="261" href="#261">261</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Map&lt;String, Message&gt; methodArg =
+<a class="jxr_linenumber" name="262" href="#262">262</a>         <strong class="jxr_keyword">new</strong> ConcurrentHashMap&lt;String, Message&gt;();
+<a class="jxr_linenumber" name="263" href="#263">263</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Map&lt;String, Method&gt; methodInstances =
+<a class="jxr_linenumber" name="264" href="#264">264</a>         <strong class="jxr_keyword">new</strong> ConcurrentHashMap&lt;String, Method&gt;();
+<a class="jxr_linenumber" name="265" href="#265">265</a> 
+<a class="jxr_linenumber" name="266" href="#266">266</a>     <strong class="jxr_keyword">private</strong> <a href="../../../../../org/apache/hadoop/hbase/security/token/AuthenticationTokenSecretManager.html">AuthenticationTokenSecretManager</a> createSecretManager(){
+<a class="jxr_linenumber" name="267" href="#267">267</a>       <strong class="jxr_keyword">if</strong> (!isSecurityEnabled ||
+<a class="jxr_linenumber" name="268" href="#268">268</a>           !(instance instanceof org.apache.hadoop.hbase.Server)) {
+<a class="jxr_linenumber" name="269" href="#269">269</a>         <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="270" href="#270">270</a>       }
+<a class="jxr_linenumber" name="271" href="#271">271</a>       org.apache.hadoop.hbase.Server server =
+<a class="jxr_linenumber" name="272" href="#272">272</a>           (org.apache.hadoop.hbase.Server)instance;
+<a class="jxr_linenumber" name="273" href="#273">273</a>       Configuration conf = server.getConfiguration();
+<a class="jxr_linenumber" name="274" href="#274">274</a>       <strong class="jxr_keyword">long</strong> keyUpdateInterval =
+<a class="jxr_linenumber" name="275" href="#275">275</a>           conf.getLong(<span class="jxr_string">"hbase.auth.key.update.interval"</span>, 24*60*60*1000);
+<a class="jxr_linenumber" name="276" href="#276">276</a>       <strong class="jxr_keyword">long</strong> maxAge =
+<a class="jxr_linenumber" name="277" href="#277">277</a>           conf.getLong(<span class="jxr_string">"hbase.auth.token.max.lifetime"</span>, 7*24*60*60*1000);
+<a class="jxr_linenumber" name="278" href="#278">278</a>       <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../org/apache/hadoop/hbase/security/token/AuthenticationTokenSecretManager.html">AuthenticationTokenSecretManager</a>(conf, server.getZooKeeper(),
+<a class="jxr_linenumber" name="279" href="#279">279</a>           server.getServerName().toString(), keyUpdateInterval, maxAge);
+<a class="jxr_linenumber" name="280" href="#280">280</a>     }
+<a class="jxr_linenumber" name="281" href="#281">281</a> 
+<a class="jxr_linenumber" name="282" href="#282">282</a>     @Override
+<a class="jxr_linenumber" name="283" href="#283">283</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> startThreads() {
+<a class="jxr_linenumber" name="284" href="#284">284</a>       <a href="../../../../../org/apache/hadoop/hbase/security/token/AuthenticationTokenSecretManager.html">AuthenticationTokenSecretManager</a> mgr = createSecretManager();
+<a class="jxr_linenumber" name="285" href="#285">285</a>       <strong class="jxr_keyword">if</strong> (mgr != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="286" href="#286">286</a>         setSecretManager(mgr);
+<a class="jxr_linenumber" name="287" href="#287">287</a>         mgr.start();
+<a class="jxr_linenumber" name="288" href="#288">288</a>       }
+<a class="jxr_linenumber" name="289" href="#289">289</a>       <strong class="jxr_keyword">this</strong>.authManager = <strong class="jxr_keyword">new</strong> ServiceAuthorizationManager();
+<a class="jxr_linenumber" name="290" href="#290">290</a>       HBasePolicyProvider.init(conf, authManager);
+<a class="jxr_linenumber" name="291" href="#291">291</a> 
+<a class="jxr_linenumber" name="292" href="#292">292</a>       <em class="jxr_comment">// continue with base startup</em>
+<a class="jxr_linenumber" name="293" href="#293">293</a>       <strong class="jxr_keyword">super</strong>.startThreads();
+<a class="jxr_linenumber" name="294" href="#294">294</a>     }
+<a class="jxr_linenumber" name="295" href="#295">295</a> 
+<a class="jxr_linenumber" name="296" href="#296">296</a>     @Override
+<a class="jxr_linenumber" name="297" href="#297">297</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="298" href="#298">298</a> <em class="jxr_javadoccomment">     * This is a server side method, which is invoked over RPC. On success</em>
+<a class="jxr_linenumber" name="299" href="#299">299</a> <em class="jxr_javadoccomment">     * the return response has protobuf response payload. On failure, the</em>
+<a class="jxr_linenumber" name="300" href="#300">300</a> <em class="jxr_javadoccomment">     * exception name and the stack trace are returned in the protobuf response.</em>
+<a class="jxr_linenumber" name="301" href="#301">301</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="302" href="#302">302</a>     <strong class="jxr_keyword">public</strong> Message call(Class&lt;? <strong class="jxr_keyword">extends</strong> VersionedProtocol&gt; protocol,
+<a class="jxr_linenumber" name="303" href="#303">303</a>         RpcRequestBody rpcRequest, <strong class="jxr_keyword">long</strong> receiveTime, <a href="../../../../../org/apache/hadoop/hbase/monitoring/MonitoredRPCHandler.html">MonitoredRPCHandler</a> status)
+<a class="jxr_linenumber" name="304" href="#304">304</a>         <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="305" href="#305">305</a>       <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="306" href="#306">306</a>         String methodName = rpcRequest.getMethodName();
+<a class="jxr_linenumber" name="307" href="#307">307</a>         Method method = getMethod(protocol, methodName);
+<a class="jxr_linenumber" name="308" href="#308">308</a>         <strong class="jxr_keyword">if</strong> (method == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="309" href="#309">309</a>           <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> HBaseRPC.UnknownProtocolException(<span class="jxr_string">"Method "</span> + methodName +
+<a class="jxr_linenumber" name="310" href="#310">310</a>               <span class="jxr_string">" doesn't exist in protocol "</span> + protocol.getName());
+<a class="jxr_linenumber" name="311" href="#311">311</a>         }
+<a class="jxr_linenumber" name="312" href="#312">312</a> 
+<a class="jxr_linenumber" name="313" href="#313">313</a>         <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="314" href="#314">314</a> <em class="jxr_javadoccomment">         * RPCs for a particular interface (ie protocol) are done using a</em>
+<a class="jxr_linenumber" name="315" href="#315">315</a> <em class="jxr_javadoccomment">         * IPC connection that is setup using rpcProxy.</em>
+<a class="jxr_linenumber" name="316" href="#316">316</a> <em class="jxr_javadoccomment">         * The rpcProxy's has a declared protocol name that is</em>
+<a class="jxr_linenumber" name="317" href="#317">317</a> <em class="jxr_javadoccomment">         * sent form client to server at connection time.</em>
+<a class="jxr_linenumber" name="318" href="#318">318</a> <em class="jxr_javadoccomment">         */</em>
+<a class="jxr_linenumber" name="319" href="#319">319</a>         <em class="jxr_comment">//TODO: use the clientVersion to do protocol compatibility checks, and</em>
+<a class="jxr_linenumber" name="320" href="#320">320</a>         <em class="jxr_comment">//this could be used here to handle complex use cases like deciding</em>
+<a class="jxr_linenumber" name="321" href="#321">321</a>         <em class="jxr_comment">//which implementation of the protocol should be used to service the</em>
+<a class="jxr_linenumber" name="322" href="#322">322</a>         <em class="jxr_comment">//current request, etc. Ideally, we shouldn't land up in a situation</em>
+<a class="jxr_linenumber" name="323" href="#323">323</a>         <em class="jxr_comment">//where we need to support such a use case.</em>
+<a class="jxr_linenumber" name="324" href="#324">324</a>         <em class="jxr_comment">//For now the clientVersion field is simply ignored</em>
+<a class="jxr_linenumber" name="325" href="#325">325</a>         <strong class="jxr_keyword">long</strong> clientVersion = rpcRequest.getClientProtocolVersion();
+<a class="jxr_linenumber" name="326" href="#326">326</a> 
+<a class="jxr_linenumber" name="327" href="#327">327</a>         <strong class="jxr_keyword">if</strong> (verbose) {
+<a class="jxr_linenumber" name="328" href="#328">328</a>           LOG.info(<span class="jxr_string">"Call: protocol name="</span> + protocol.getName() +
+<a class="jxr_linenumber" name="329" href="#329">329</a>               <span class="jxr_string">", method="</span> + methodName);
+<a class="jxr_linenumber" name="330" href="#330">330</a>         }
+<a class="jxr_linenumber" name="331" href="#331">331</a> 
+<a class="jxr_linenumber" name="332" href="#332">332</a>         status.setRPC(rpcRequest.getMethodName(),
+<a class="jxr_linenumber" name="333" href="#333">333</a>             <strong class="jxr_keyword">new</strong> Object[]{rpcRequest.getRequest()}, receiveTime);
+<a class="jxr_linenumber" name="334" href="#334">334</a>         status.setRPCPacket(rpcRequest);
+<a class="jxr_linenumber" name="335" href="#335">335</a>         status.resume(<span class="jxr_string">"Servicing call"</span>);
+<a class="jxr_linenumber" name="336" href="#336">336</a>         <em class="jxr_comment">//get an instance of the method arg type</em>
+<a class="jxr_linenumber" name="337" href="#337">337</a>         Message protoType = getMethodArgType(method);
+<a class="jxr_linenumber" name="338" href="#338">338</a>         Message param = protoType.newBuilderForType()
+<a class="jxr_linenumber" name="339" href="#339">339</a>             .mergeFrom(rpcRequest.getRequest()).build();
+<a class="jxr_linenumber" name="340" href="#340">340</a>         Message result;
+<a class="jxr_linenumber" name="341" href="#341">341</a>         Object impl = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="342" href="#342">342</a>         <strong class="jxr_keyword">if</strong> (protocol.isAssignableFrom(<strong class="jxr_keyword">this</strong>.implementation)) {
+<a class="jxr_linenumber" name="343" href="#343">343</a>           impl = <strong class="jxr_keyword">this</strong>.instance;
+<a class="jxr_linenumber" name="344" href="#344">344</a>         } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="345" href="#345">345</a>           <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> HBaseRPC.UnknownProtocolException(protocol);
+<a class="jxr_linenumber" name="346" href="#346">346</a>         }
+<a class="jxr_linenumber" name="347" href="#347">347</a> 
+<a class="jxr_linenumber" name="348" href="#348">348</a>         <strong class="jxr_keyword">long</strong> startTime = System.currentTimeMillis();
+<a class="jxr_linenumber" name="349" href="#349">349</a>         <strong class="jxr_keyword">if</strong> (method.getParameterTypes().length == 2) {
+<a class="jxr_linenumber" name="350" href="#350">350</a>           <em class="jxr_comment">// RpcController + Message in the method args</em>
+<a class="jxr_linenumber" name="351" href="#351">351</a>           <em class="jxr_comment">// (generated code from RPC bits in .proto files have RpcController)</em>
+<a class="jxr_linenumber" name="352" href="#352">352</a>           result = (Message)method.invoke(impl, <strong class="jxr_keyword">null</strong>, param);
+<a class="jxr_linenumber" name="353" href="#353">353</a>         } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (method.getParameterTypes().length == 1) {
+<a class="jxr_linenumber" name="354" href="#354">354</a>           <em class="jxr_comment">// Message (hand written code usually has only a single argument)</em>
+<a class="jxr_linenumber" name="355" href="#355">355</a>           result = (Message)method.invoke(impl, param);
+<a class="jxr_linenumber" name="356" href="#356">356</a>         } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="357" href="#357">357</a>           <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> ServiceException(<span class="jxr_string">"Too many parameters for method: ["</span>
+<a class="jxr_linenumber" name="358" href="#358">358</a>               + method.getName() + <span class="jxr_string">"]"</span> + <span class="jxr_string">", allowed (at most): 2, Actual: "</span>
+<a class="jxr_linenumber" name="359" href="#359">359</a>               + method.getParameterTypes().length);
+<a class="jxr_linenumber" name="360" href="#360">360</a>         }
+<a class="jxr_linenumber" name="361" href="#361">361</a>         <strong class="jxr_keyword">int</strong> processingTime = (<strong class="jxr_keyword">int</strong>) (System.currentTimeMillis() - startTime);
+<a class="jxr_linenumber" name="362" href="#362">362</a>         <strong class="jxr_keyword">int</strong> qTime = (<strong class="jxr_keyword">int</strong>) (startTime-receiveTime);
+<a class="jxr_linenumber" name="363" href="#363">363</a>         <strong class="jxr_keyword">if</strong> (TRACELOG.isDebugEnabled()) {
+<a class="jxr_linenumber" name="364" href="#364">364</a>           TRACELOG.debug(<span class="jxr_string">"Call #"</span> + CurCall.get().id +
+<a class="jxr_linenumber" name="365" href="#365">365</a>               <span class="jxr_string">"; served="</span> + protocol.getSimpleName() + <span class="jxr_string">"#"</span> + method.getName() +
+<a class="jxr_linenumber" name="366" href="#366">366</a>               <span class="jxr_string">", queueTime="</span> + qTime +
+<a class="jxr_linenumber" name="367" href="#367">367</a>               <span class="jxr_string">", processingTime="</span> + processingTime +
+<a class="jxr_linenumber" name="368" href="#368">368</a>               <span class="jxr_string">", request="</span> + param.toString() +
+<a class="jxr_linenumber" name="369" href="#369">369</a>               <span class="jxr_string">" response="</span> + result.toString());
+<a class="jxr_linenumber" name="370" href="#370">370</a>         }
+<a class="jxr_linenumber" name="371" href="#371">371</a>         metrics.dequeuedCall(qTime);
+<a class="jxr_linenumber" name="372" href="#372">372</a>         metrics.processedCall(processingTime);
+<a class="jxr_linenumber" name="373" href="#373">373</a> 
+<a class="jxr_linenumber" name="374" href="#374">374</a>         <strong class="jxr_keyword">if</strong> (verbose) {
+<a class="jxr_linenumber" name="375" href="#375">375</a>           log(<span class="jxr_string">"Return: "</span>+result, LOG);
+<a class="jxr_linenumber" name="376" href="#376">376</a>         }
+<a class="jxr_linenumber" name="377" href="#377">377</a>         <strong class="jxr_keyword">long</strong> responseSize = result.getSerializedSize();
+<a class="jxr_linenumber" name="378" href="#378">378</a>         <em class="jxr_comment">// log any RPC responses that are slower than the configured warn</em>
+<a class="jxr_linenumber" name="379" href="#379">379</a>         <em class="jxr_comment">// response time or larger than configured warning size</em>
+<a class="jxr_linenumber" name="380" href="#380">380</a>         <strong class="jxr_keyword">boolean</strong> tooSlow = (processingTime &gt; warnResponseTime
+<a class="jxr_linenumber" name="381" href="#381">381</a>             &amp;&amp; warnResponseTime &gt; -1);
+<a class="jxr_linenumber" name="382" href="#382">382</a>         <strong class="jxr_keyword">boolean</strong> tooLarge = (responseSize &gt; warnResponseSize
+<a class="jxr_linenumber" name="383" href="#383">383</a>             &amp;&amp; warnResponseSize &gt; -1);
+<a class="jxr_linenumber" name="384" href="#384">384</a>         <strong class="jxr_keyword">if</strong> (tooSlow || tooLarge) {
+<a class="jxr_linenumber" name="385" href="#385">385</a>           <em class="jxr_comment">// when tagging, we let TooLarge trump TooSmall to keep output simple</em>
+<a class="jxr_linenumber" name="386" href="#386">386</a>           <em class="jxr_comment">// note that large responses will often also be slow.</em>
+<a class="jxr_linenumber" name="387" href="#387">387</a>           StringBuilder buffer = <strong class="jxr_keyword">new</strong> StringBuilder(256);
+<a class="jxr_linenumber" name="388" href="#388">388</a>           buffer.append(methodName);
+<a class="jxr_linenumber" name="389" href="#389">389</a>           buffer.append(<span class="jxr_string">"("</span>);
+<a class="jxr_linenumber" name="390" href="#390">390</a>           buffer.append(param.getClass().getName());
+<a class="jxr_linenumber" name="391" href="#391">391</a>           buffer.append(<span class="jxr_string">")"</span>);
+<a class="jxr_linenumber" name="392" href="#392">392</a>           buffer.append(<span class="jxr_string">", client version="</span>+clientVersion);
+<a class="jxr_linenumber" name="393" href="#393">393</a>           logResponse(<strong class="jxr_keyword">new</strong> Object[]{rpcRequest.getRequest()},
+<a class="jxr_linenumber" name="394" href="#394">394</a>               methodName, buffer.toString(), (tooLarge ? <span class="jxr_string">"TooLarge"</span> : <span class="jxr_string">"TooSlow"</span>),
+<a class="jxr_linenumber" name="395" href="#395">395</a>               status.getClient(), startTime, processingTime, qTime,
+<a class="jxr_linenumber" name="396" href="#396">396</a>               responseSize);
+<a class="jxr_linenumber" name="397" href="#397">397</a>         }
+<a class="jxr_linenumber" name="398" href="#398">398</a>         <strong class="jxr_keyword">return</strong> result;
+<a class="jxr_linenumber" name="399" href="#399">399</a>       } <strong class="jxr_keyword">catch</strong> (InvocationTargetException e) {
+<a class="jxr_linenumber" name="400" href="#400">400</a>         Throwable target = e.getTargetException();
+<a class="jxr_linenumber" name="401" href="#401">401</a>         <strong class="jxr_keyword">if</strong> (target instanceof IOException) {
+<a class="jxr_linenumber" name="402" href="#402">402</a>           <strong class="jxr_keyword">throw</strong> (IOException)target;
+<a class="jxr_linenumber" name="403" href="#403">403</a>         }
+<a class="jxr_linenumber" name="404" href="#404">404</a>         <strong class="jxr_keyword">if</strong> (target instanceof ServiceException) {
+<a class="jxr_linenumber" name="405" href="#405">405</a>           <strong class="jxr_keyword">throw</strong> ProtobufUtil.getRemoteException((ServiceException)target);
+<a class="jxr_linenumber" name="406" href="#406">406</a>         }
+<a class="jxr_linenumber" name="407" href="#407">407</a>         IOException ioe = <strong class="jxr_keyword">new</strong> IOException(target.toString());
+<a class="jxr_linenumber" name="408" href="#408">408</a>         ioe.setStackTrace(target.getStackTrace());
+<a class="jxr_linenumber" name="409" href="#409">409</a>         <strong class="jxr_keyword">throw</strong> ioe;
+<a class="jxr_linenumber" name="410" href="#410">410</a>       } <strong class="jxr_keyword">catch</strong> (Throwable e) {
+<a class="jxr_linenumber" name="411" href="#411">411</a>         <strong class="jxr_keyword">if</strong> (!(e instanceof IOException)) {
+<a class="jxr_linenumber" name="412" href="#412">412</a>           LOG.error(<span class="jxr_string">"Unexpected throwable object "</span>, e);
+<a class="jxr_linenumber" name="413" href="#413">413</a>         }
+<a class="jxr_linenumber" name="414" href="#414">414</a>         IOException ioe = <strong class="jxr_keyword">new</strong> IOException(e.toString());
+<a class="jxr_linenumber" name="415" href="#415">415</a>         ioe.setStackTrace(e.getStackTrace());
+<a class="jxr_linenumber" name="416" href="#416">416</a>         <strong class="jxr_keyword">throw</strong> ioe;
+<a class="jxr_linenumber" name="417" href="#417">417</a>       }
+<a class="jxr_linenumber" name="418" href="#418">418</a>     }
+<a class="jxr_linenumber" name="419" href="#419">419</a> 
+<a class="jxr_linenumber" name="420" href="#420">420</a>     <strong class="jxr_keyword">static</strong> Method getMethod(Class&lt;? <strong class="jxr_keyword">extends</strong> VersionedProtocol&gt; protocol,
+<a class="jxr_linenumber" name="421" href="#421">421</a>         String methodName) {
+<a class="jxr_linenumber" name="422" href="#422">422</a>       Method method = methodInstances.get(methodName);
+<a class="jxr_linenumber" name="423" href="#423">423</a>       <strong class="jxr_keyword">if</strong> (method != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="424" href="#424">424</a>         <strong class="jxr_keyword">return</strong> method;
+<a class="jxr_linenumber" name="425" href="#425">425</a>       }
+<a class="jxr_linenumber" name="426" href="#426">426</a>       Method[] methods = protocol.getMethods();
+<a class="jxr_linenumber" name="427" href="#427">427</a>       <strong class="jxr_keyword">for</strong> (Method m : methods) {
+<a class="jxr_linenumber" name="428" href="#428">428</a>         <strong class="jxr_keyword">if</strong> (m.getName().equals(methodName)) {
+<a class="jxr_linenumber" name="429" href="#429">429</a>           m.setAccessible(<strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="430" href="#430">430</a>           methodInstances.put(methodName, m);
+<a class="jxr_linenumber" name="431" href="#431">431</a>           <strong class="jxr_keyword">return</strong> m;
+<a class="jxr_linenumber" name="432" href="#432">432</a>         }
+<a class="jxr_linenumber" name="433" href="#433">433</a>       }
+<a class="jxr_linenumber" name="434" href="#434">434</a>       <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="435" href="#435">435</a>     }
+<a class="jxr_linenumber" name="436" href="#436">436</a> 
+<a class="jxr_linenumber" name="437" href="#437">437</a>     <strong class="jxr_keyword">static</strong> Message getMethodArgType(Method method) <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="438" href="#438">438</a>       Message protoType = methodArg.get(method.getName());
+<a class="jxr_linenumber" name="439" href="#439">439</a>       <strong class="jxr_keyword">if</strong> (protoType != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="440" href="#440">440</a>         <strong class="jxr_keyword">return</strong> protoType;
+<a class="jxr_linenumber" name="441" href="#441">441</a>       }
+<a class="jxr_linenumber" name="442" href="#442">442</a> 
+<a class="jxr_linenumber" name="443" href="#443">443</a>       Class&lt;?&gt;[] args = method.getParameterTypes();
+<a class="jxr_linenumber" name="444" href="#444">444</a>       Class&lt;?&gt; arg;
+<a class="jxr_linenumber" name="445" href="#445">445</a>       <strong class="jxr_keyword">if</strong> (args.length == 2) {
+<a class="jxr_linenumber" name="446" href="#446">446</a>         <em class="jxr_comment">// RpcController + Message in the method args</em>
+<a class="jxr_linenumber" name="447" href="#447">447</a>         <em class="jxr_comment">// (generated code from RPC bits in .proto files have RpcController)</em>
+<a class="jxr_linenumber" name="448" href="#448">448</a>         arg = args[1];
+<a class="jxr_linenumber" name="449" href="#449">449</a>       } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (args.length == 1) {
+<a class="jxr_linenumber" name="450" href="#450">450</a>         arg = args[0];
+<a class="jxr_linenumber" name="451" href="#451">451</a>       } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="452" href="#452">452</a>         <em class="jxr_comment">//unexpected</em>
+<a class="jxr_linenumber" name="453" href="#453">453</a>         <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="454" href="#454">454</a>       }
+<a class="jxr_linenumber" name="455" href="#455">455</a>       <em class="jxr_comment">//in the protobuf methods, args[1] is the only significant argument</em>
+<a class="jxr_linenumber" name="456" href="#456">456</a>       Method newInstMethod = arg.getMethod(<span class="jxr_string">"getDefaultInstance"</span>);
+<a class="jxr_linenumber" name="457" href="#457">457</a>       newInstMethod.setAccessible(<strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="458" href="#458">458</a>       protoType = (Message) newInstMethod.invoke(<strong class="jxr_keyword">null</strong>, (Object[]) <strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="459" href="#459">459</a>       methodArg.put(method.getName(), protoType);
+<a class="jxr_linenumber" name="460" href="#460">460</a>       <strong class="jxr_keyword">return</strong> protoType;
+<a class="jxr_linenumber" name="461" href="#461">461</a>     }
+<a class="jxr_linenumber" name="462" href="#462">462</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="463" href="#463">463</a> <em class="jxr_javadoccomment">     * Logs an RPC response to the LOG file, producing valid JSON objects for</em>
+<a class="jxr_linenumber" name="464" href="#464">464</a> <em class="jxr_javadoccomment">     * client Operations.</em>
+<a class="jxr_linenumber" name="465" href="#465">465</a> <em class="jxr_javadoccomment">     * @param params The parameters received in the call.</em>
+<a class="jxr_linenumber" name="466" href="#466">466</a> <em class="jxr_javadoccomment">     * @param methodName The name of the method invoked</em>
+<a class="jxr_linenumber" name="467" href="#467">467</a> <em class="jxr_javadoccomment">     * @param call The string representation of the call</em>
+<a class="jxr_linenumber" name="468" href="#468">468</a> <em class="jxr_javadoccomment">     * @param tag  The tag that will be used to indicate this event in the log.</em>
+<a class="jxr_linenumber" name="469" href="#469">469</a> <em class="jxr_javadoccomment">     * @param clientAddress   The address of the client who made this call.</em>
+<a class="jxr_linenumber" name="470" href="#470">470</a> <em class="jxr_javadoccomment">     * @param startTime       The time that the call was initiated, in ms.</em>
+<a class="jxr_linenumber" name="471" href="#471">471</a> <em class="jxr_javadoccomment">     * @param processingTime  The duration that the call took to run, in ms.</em>
+<a class="jxr_linenumber" name="472" href="#472">472</a> <em class="jxr_javadoccomment">     * @param qTime           The duration that the call spent on the queue</em>
+<a class="jxr_linenumber" name="473" href="#473">473</a> <em class="jxr_javadoccomment">     *                        prior to being initiated, in ms.</em>
+<a class="jxr_linenumber" name="474" href="#474">474</a> <em class="jxr_javadoccomment">     * @param responseSize    The size in bytes of the response buffer.</em>
+<a class="jxr_linenumber" name="475" href="#475">475</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="476" href="#476">476</a>      <strong class="jxr_keyword">void</strong> logResponse(Object[] params, String methodName, String call, String tag,
+<a class="jxr_linenumber" name="477" href="#477">477</a>          String clientAddress, <strong class="jxr_keyword">long</strong> startTime, <strong class="jxr_keyword">int</strong> processingTime, <strong class="jxr_keyword">int</strong> qTime,
+<a class="jxr_linenumber" name="478" href="#478">478</a>          <strong class="jxr_keyword">long</strong> responseSize)
+<a class="jxr_linenumber" name="479" href="#479">479</a>       <strong class="jxr_keyword">throws</strong> IOException {
+<a class="jxr_linenumber" name="480" href="#480">480</a>       <em class="jxr_comment">// for JSON encoding</em>
+<a class="jxr_linenumber" name="481" href="#481">481</a>       ObjectMapper mapper = <strong class="jxr_keyword">new</strong> ObjectMapper();
+<a class="jxr_linenumber" name="482" href="#482">482</a>       <em class="jxr_comment">// base information that is reported regardless of type of call</em>
+<a class="jxr_linenumber" name="483" href="#483">483</a>       Map&lt;String, Object&gt; responseInfo = <strong class="jxr_keyword">new</strong> HashMap&lt;String, Object&gt;();
+<a class="jxr_linenumber" name="484" href="#484">484</a>       responseInfo.put(<span class="jxr_string">"starttimems"</span>, startTime);
+<a class="jxr_linenumber" name="485" href="#485">485</a>       responseInfo.put(<span class="jxr_string">"processingtimems"</span>, processingTime);
+<a class="jxr_linenumber" name="486" href="#486">486</a>       responseInfo.put(<span class="jxr_string">"queuetimems"</span>, qTime);
+<a class="jxr_linenumber" name="487" href="#487">487</a>       responseInfo.put(<span class="jxr_string">"responsesize"</span>, responseSize);
+<a class="jxr_linenumber" name="488" href="#488">488</a>       responseInfo.put(<span class="jxr_string">"client"</span>, clientAddress);
+<a class="jxr_linenumber" name="489" href="#489">489</a>       responseInfo.put(<span class="jxr_string">"class"</span>, instance.getClass().getSimpleName());
+<a class="jxr_linenumber" name="490" href="#490">490</a>       responseInfo.put(<span class="jxr_string">"method"</span>, methodName);
+<a class="jxr_linenumber" name="491" href="#491">491</a>       <strong class="jxr_keyword">if</strong> (params.length == 2 &amp;&amp; instance instanceof HRegionServer &amp;&amp;
+<a class="jxr_linenumber" name="492" href="#492">492</a>           params[0] instanceof byte[] &amp;&amp;
+<a class="jxr_linenumber" name="493" href="#493">493</a>           params[1] instanceof <a href="../../../../../org/apache/hadoop/hbase/client/Operation.html">Operation</a>) {
+<a class="jxr_linenumber" name="494" href="#494">494</a>         <em class="jxr_comment">// if the slow process is a query, we want to log its table as well</em>
+<a class="jxr_linenumber" name="495" href="#495">495</a>         <em class="jxr_comment">// as its own fingerprint</em>
+<a class="jxr_linenumber" name="496" href="#496">496</a>         byte [] tableName =
+<a class="jxr_linenumber" name="497" href="#497">497</a>           HRegionInfo.parseRegionName((byte[]) params[0])[0];
+<a class="jxr_linenumber" name="498" href="#498">498</a>         responseInfo.put(<span class="jxr_string">"table"</span>, Bytes.toStringBinary(tableName));
+<a class="jxr_linenumber" name="499" href="#499">499</a>         <em class="jxr_comment">// annotate the response map with operation details</em>
+<a class="jxr_linenumber" name="500" href="#500">500</a>         responseInfo.putAll(((Operation) params[1]).toMap());
+<a class="jxr_linenumber" name="501" href="#501">501</a>         <em class="jxr_comment">// report to the log file</em>
+<a class="jxr_linenumber" name="502" href="#502">502</a>         LOG.warn(<span class="jxr_string">"(operation"</span> + tag + <span class="jxr_string">"): "</span> +
+<a class="jxr_linenumber" name="503" href="#503">503</a>             mapper.writeValueAsString(responseInfo));
+<a class="jxr_linenumber" name="504" href="#504">504</a>       } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (params.length == 1 &amp;&amp; instance instanceof HRegionServer &amp;&amp;
+<a class="jxr_linenumber" name="505" href="#505">505</a>           params[0] instanceof <a href="../../../../../org/apache/hadoop/hbase/client/Operation.html">Operation</a>) {
+<a class="jxr_linenumber" name="506" href="#506">506</a>         <em class="jxr_comment">// annotate the response map with operation details</em>
+<a class="jxr_linenumber" name="507" href="#507">507</a>         responseInfo.putAll(((Operation) params[0]).toMap());
+<a class="jxr_linenumber" name="508" href="#508">508</a>         <em class="jxr_comment">// report to the log file</em>
+<a class="jxr_linenumber" name="509" href="#509">509</a>         LOG.warn(<span class="jxr_string">"(operation"</span> + tag + <span class="jxr_string">"): "</span> +
+<a class="jxr_linenumber" name="510" href="#510">510</a>             mapper.writeValueAsString(responseInfo));
+<a class="jxr_linenumber" name="511" href="#511">511</a>       } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="512" href="#512">512</a>         <em class="jxr_comment">// can't get JSON details, so just report call.toString() along with</em>
+<a class="jxr_linenumber" name="513" href="#513">513</a>         <em class="jxr_comment">// a more generic tag.</em>
+<a class="jxr_linenumber" name="514" href="#514">514</a>         responseInfo.put(<span class="jxr_string">"call"</span>, call);
+<a class="jxr_linenumber" name="515" href="#515">515</a>         LOG.warn(<span class="jxr_string">"(response"</span> + tag + <span class="jxr_string">"): "</span> +
+<a class="jxr_linenumber" name="516" href="#516">516</a>             mapper.writeValueAsString(responseInfo));
+<a class="jxr_linenumber" name="517" href="#517">517</a>       }
+<a class="jxr_linenumber" name="518" href="#518">518</a>     }
+<a class="jxr_linenumber" name="519" href="#519">519</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> log(String value, Log LOG) {
+<a class="jxr_linenumber" name="520" href="#520">520</a>       String v = value;
+<a class="jxr_linenumber" name="521" href="#521">521</a>       <strong class="jxr_keyword">if</strong> (v != <strong class="jxr_keyword">null</strong> &amp;&amp; v.length() &gt; 55)
+<a class="jxr_linenumber" name="522" href="#522">522</a>         v = v.substring(0, 55)+<span class="jxr_string">"..."</span>;
+<a class="jxr_linenumber" name="523" href="#523">523</a>       LOG.info(v);
+<a class="jxr_linenumber" name="524" href="#524">524</a>     }
+<a class="jxr_linenumber" name="525" href="#525">525</a>   }
+<a class="jxr_linenumber" name="526" href="#526">526</a> }
+</pre>
+<hr/><div id="footer">This page was automatically generated by <a href="http://maven.apache.org/">Maven</a></div></body>
+</html>
+
