@@ -738,7 +738,8 @@ public class TestHFileBlock {
       }
       BlockType bt = BlockType.values()[blockTypeOrdinal];
       DataOutputStream dos = hbw.startWriting(bt);
-      for (int j = 0; j < rand.nextInt(500); ++j) {
+      int size = rand.nextInt(500);
+      for (int j = 0; j < size; ++j) {
         // This might compress well.
         dos.writeShort(i + 1);
         dos.writeInt(j + 1);
