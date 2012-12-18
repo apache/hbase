@@ -514,6 +514,10 @@ public class  HRegionServer implements ClientProtocol,
     this.rpcServer.setQosFunction((qosFunction = new QosFunction()));
     this.startcode = System.currentTimeMillis();
 
+    // login the zookeeper client principal (if using security)
+    ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
+      "hbase.zookeeper.client.kerberos.principal", this.isa.getHostName());
+
     // login the server principal (if using secure Hadoop)
     User.login(this.conf, "hbase.regionserver.keytab.file",
       "hbase.regionserver.kerberos.principal", this.isa.getHostName());
