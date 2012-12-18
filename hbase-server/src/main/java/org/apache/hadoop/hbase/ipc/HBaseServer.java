@@ -192,7 +192,7 @@ public abstract class HBaseServer implements RpcServer {
   }
 
   /** Returns the server instance called under or null.  May be called under
-   * {@link #call(Class, RpcRequestBody, long, MonitoredRPCHandler)} implementations,
+   * {@code #call(Class, RpcRequestBody, long, MonitoredRPCHandler)} implementations,
    * and under protobuf methods of parameters and return values.
    * Permits applications to access the server context.
    * @return HBaseServer

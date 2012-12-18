@@ -1345,7 +1345,7 @@ public class HBaseClient {
    * @param addresses socket addresses
    * @return  RpcResponseBody[]
    * @throws IOException e
-   * @deprecated Use {@link #call(RpcRequestBody[], InetSocketAddress[], Class, User)} instead
+   * @deprecated Use {@code #call(RpcRequestBody[], InetSocketAddress[], Class, User)} instead
    */
   @Deprecated
   public Message[] call(RpcRequestBody[] params, InetSocketAddress[] addresses)
