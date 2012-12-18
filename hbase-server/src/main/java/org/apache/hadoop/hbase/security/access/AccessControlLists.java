@@ -71,11 +71,11 @@ import java.util.*;
  * Key                      Desc
  * --------                 --------
  * user                     table level permissions for a user [R=read, W=write]
- * @group                   table level permissions for a group
+ * group                    table level permissions for a group
  * user,family              column family level permissions for a user
- * @group,family            column family level permissions for a group
+ * group,family             column family level permissions for a group
  * user,family,qualifier    column qualifier level permissions for a user
- * @group,family,qualifier  column qualifier level permissions for a group
+ * group,family,qualifier   column qualifier level permissions for a group
  * </pre>
  * All values are encoded as byte arrays containing the codes from the
  * {@link org.apache.hadoop.hbase.security.access.TablePermission.Action} enum.
@@ -302,7 +302,7 @@ public class AccessControlLists {
    * table.
    *
    * @param aclRegion
-   * @return
+   * @return a map of the permissions for this table.
    * @throws IOException
    */
   static Map<byte[],ListMultimap<String,TablePermission>> loadAll(

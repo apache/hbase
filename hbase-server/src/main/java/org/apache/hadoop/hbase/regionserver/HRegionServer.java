@@ -1403,8 +1403,8 @@ public class  HRegionServer implements ClientProtocol,
 
   /**
    * Called by {@link #setupWALAndReplication()} creating WAL instance.
-   * @param logdir
-   * @param oldLogDir
+   * @param rootdir
+   * @param logName
    * @return WAL instance.
    * @throws IOException
    */
@@ -1967,7 +1967,6 @@ public class  HRegionServer implements ClientProtocol,
    * For tests, web ui and metrics.
    * This method will only work if HRegionServer is in the same JVM as client;
    * HRegion cannot be serialized to cross an rpc.
-   * @see #getOnlineRegions()
    */
   public Collection<HRegion> getOnlineRegionsLocalContext() {
     Collection<HRegion> regions = this.onlineRegions.values();
@@ -3723,7 +3722,7 @@ public class  HRegionServer implements ClientProtocol,
    *
    * @param region
    * @param mutate
-   * @return
+   * @return the Result
    * @throws IOException
    */
   protected Result append(final HRegion region,
@@ -3750,7 +3749,7 @@ public class  HRegionServer implements ClientProtocol,
    *
    * @param region
    * @param mutate
-   * @return
+   * @return the Result
    * @throws IOException
    */
   protected Result increment(final HRegion region,

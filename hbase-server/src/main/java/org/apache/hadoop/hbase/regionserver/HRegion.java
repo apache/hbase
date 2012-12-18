@@ -1849,7 +1849,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Setup correct timestamps in the KVs in Delete object.
    * Caller should have the row and region locks.
    * @param familyMap
-   * @param now
+   * @param byteNow
    * @throws IOException
    */
   void prepareDeleteTimestamps(Map<byte[], List<KeyValue>> familyMap, byte[] byteNow)
@@ -1990,7 +1990,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Perform a batch put with no pre-specified locks
-   * @see HRegion#put(Pair[])
+   * @see HRegion#batchMutate(Pair[])
    */
   public OperationStatus[] put(Put[] puts) throws IOException {
     @SuppressWarnings("unchecked")

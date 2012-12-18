@@ -89,7 +89,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
      * Find out if a given region is in compaction now.
      *
      * @param regionId
-     * @return
+     * @return a CompactionState
      */
     public static CompactionState getCompactionState(
         final long regionId) {

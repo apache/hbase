@@ -1265,7 +1265,7 @@ public abstract class FSUtils {
    * @param fs
    * @param path
    * @param recursive
-   * @return
+   * @return the value returned by the fs.delete()
    * @throws IOException
    */
   public static boolean delete(final FileSystem fs, final Path path, final boolean recursive)
@@ -1278,7 +1278,7 @@ public abstract class FSUtils {
    * 
    * @param fs
    * @param path
-   * @return
+   * @return the value returned by fs.exists()
    * @throws IOException
    */
   public static boolean isExists(final FileSystem fs, final Path path) throws IOException {

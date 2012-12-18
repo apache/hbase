@@ -1054,9 +1054,10 @@ public final class RequestConverter {
    * @param tableName
    * @return a GetSchemaAlterStatusRequest
    */
-  public static GetSchemaAlterStatusRequest buildGetSchemaAlterStatusRequest(final byte [] table) {
+  public static GetSchemaAlterStatusRequest buildGetSchemaAlterStatusRequest(
+      final byte [] tableName) {
     GetSchemaAlterStatusRequest.Builder builder = GetSchemaAlterStatusRequest.newBuilder();
-    builder.setTableName(ByteString.copyFrom(table));
+    builder.setTableName(ByteString.copyFrom(tableName));
     return builder.build();
   }
 

@@ -59,7 +59,7 @@ public interface AccessControllerProtocol extends CoprocessorProtocol {
    * table, column family and column qualifier must all be specified.
    * Attempting to revoke permissions over just the "data" table will have
    * no effect.
-   * @param permission the details of the previously granted permission to revoke
+   * @param userPermission the details of the previously granted permission to revoke
    * @throws IOException if the revocation could not be performed
    */
   public void revoke(UserPermission userPermission)

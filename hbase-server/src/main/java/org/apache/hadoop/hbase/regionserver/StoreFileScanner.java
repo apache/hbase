@@ -219,7 +219,7 @@ public class StoreFileScanner implements KeyValueScanner {
    *
    * @param s
    * @param k
-   * @return
+   * @return false if not found or if k is after the end.
    * @throws IOException
    */
   public static boolean seekAtOrAfter(HFileScanner s, KeyValue k)

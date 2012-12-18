@@ -40,7 +40,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 
 /**
- * Implementation of {@link FSHLog.Writer} that delegates to
+ * Implementation of {@link HLog.Writer} that delegates to
  * SequenceFile.Writer.
  */
 @InterfaceAudience.Private
