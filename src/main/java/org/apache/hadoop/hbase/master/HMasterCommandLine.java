@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
 
 public class HMasterCommandLine extends ServerCommandLine {
@@ -124,6 +125,11 @@ public class HMasterCommandLine extends ServerCommandLine {
               + HConstants.ZOOKEEPER_CLIENT_PORT);
         }
         zooKeeperCluster.setDefaultClientPort(zkClientPort);
+
+        // login the zookeeper server principal (if using security)
+        ZKUtil.loginServer(conf, "hbase.zookeeper.server.keytab.file",
+          "hbase.zookeeper.server.kerberos.principal", null);
+
         int clientPort = zooKeeperCluster.startup(zkDataPath);
         if (clientPort != zkClientPort) {
           String errorMsg = "Could not start ZK at requested port of " +
