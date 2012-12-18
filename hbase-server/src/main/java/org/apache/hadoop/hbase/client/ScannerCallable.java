@@ -102,9 +102,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     // HConnectionManager will call instantiateServer with reload==true
     // if and only if for retries.
     if (reload && this.scanMetrics != null) {
-      this.scanMetrics.countOfRPCRetries.inc();
+      this.scanMetrics.countOfRPCRetries.incrementAndGet();
       if (isRegionServerRemote) {
-        this.scanMetrics.countOfRemoteRPCRetries.inc();
+        this.scanMetrics.countOfRemoteRPCRetries.incrementAndGet();
       }
     }
   }
@@ -197,7 +197,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
             // when what we need is to open scanner against new location.
             // Attach NSRE to signal client that it needs to resetup scanner.
             if (this.scanMetrics != null) {
-              this.scanMetrics.countOfNSRE.inc();
+              this.scanMetrics.countOfNSRE.incrementAndGet();
             }
             throw new DoNotRetryIOException("Reset scanner", ioe);
           } else if (ioe instanceof RegionServerStoppedException) {
@@ -220,9 +220,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     if (this.scanMetrics == null) {
       return;
     }
-    this.scanMetrics.countOfRPCcalls.inc();
+    this.scanMetrics.countOfRPCcalls.incrementAndGet();
     if (isRegionServerRemote) {
-      this.scanMetrics.countOfRemoteRPCcalls.inc();
+      this.scanMetrics.countOfRemoteRPCcalls.incrementAndGet();
     }
   }
 

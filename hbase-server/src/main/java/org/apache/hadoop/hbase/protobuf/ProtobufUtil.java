@@ -39,6 +39,7 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.TreeMap;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -67,6 +68,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
@@ -116,6 +118,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -1831,6 +1834,37 @@ public final class ProtobufUtil {
         throw new DoNotRetryIOException(
           "Unsupported region specifier type: " + type);
     }
+  }
+
+  public static ScanMetrics toScanMetrics(final byte[] bytes) {
+    MapReduceProtos.ScanMetrics.Builder builder = MapReduceProtos.ScanMetrics.newBuilder();
+    try {
+      builder.mergeFrom(bytes);
+    } catch (InvalidProtocolBufferException e) {
+      //Ignored there are just no key values to add.
+    }
+    MapReduceProtos.ScanMetrics pScanMetrics = builder.build();
+    ScanMetrics scanMetrics = new ScanMetrics();
+    for (HBaseProtos.NameInt64Pair pair : pScanMetrics.getMetricsList()) {
+      if (pair.hasName() && pair.hasValue()) {
+        scanMetrics.setCounter(pair.getName(), pair.getValue());
+      }
+    }
+    return scanMetrics;
+  }
+
+  public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics) {
+    MapReduceProtos.ScanMetrics.Builder builder = MapReduceProtos.ScanMetrics.newBuilder();
+    Map<String, Long> metrics = scanMetrics.getMetricsMap();
+    for (Entry<String, Long> e : metrics.entrySet()) {
+      HBaseProtos.NameInt64Pair nameInt64Pair =
+          HBaseProtos.NameInt64Pair.newBuilder()
+              .setName(e.getKey())
+              .setValue(e.getValue())
+              .build();
+      builder.addMetrics(nameInt64Pair);
+    }
+    return builder.build();
   }
 
   /**

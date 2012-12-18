@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.mapreduce.Counter;
@@ -262,19 +264,16 @@ public class TableRecordReaderImpl {
       return;
     }
 
-    DataInputBuffer in = new DataInputBuffer();
-    in.reset(serializedMetrics, 0, serializedMetrics.length);
-    ScanMetrics scanMetrics = new ScanMetrics();
-    scanMetrics.readFields(in);
-    MetricsTimeVaryingLong[] mlvs =
-      scanMetrics.getMetricsTimeVaryingLongArray();
+    ScanMetrics scanMetrics = ProtobufUtil.toScanMetrics(serializedMetrics);
 
     try {
-      for (MetricsTimeVaryingLong mlv : mlvs) {
+      for (Map.Entry<String, Long> entry:scanMetrics.getMetricsMap().entrySet()) {
         Counter ct = (Counter)this.getCounter.invoke(context,
-          HBASE_COUNTER_GROUP_NAME, mlv.getName());
-        ct.increment(mlv.getCurrentIntervalValue());
+            HBASE_COUNTER_GROUP_NAME, entry.getKey());
+
+        ct.increment(entry.getValue());
       }
+
       ((Counter) this.getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
           "NUM_SCANNER_RESTARTS")).increment(numRestarts);
     } catch (Exception e) {

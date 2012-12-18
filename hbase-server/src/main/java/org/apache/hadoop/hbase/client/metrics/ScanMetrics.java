@@ -18,158 +18,125 @@
 
 package org.apache.hadoop.hbase.client.metrics;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.metrics.util.MetricsBase;
-import org.apache.hadoop.metrics.util.MetricsRegistry;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
  * Provides client-side metrics related to scan operations
  * The data can be passed to mapreduce framework or other systems.
- * Currently metrics framework won't be able to support the scenario
- * where multiple scan instances run on the same machine trying to
- * update the same metric. We use metrics objects in the class,
- * so that it can be easily switched to metrics framework later when it support
- * this scenario.
+ * We use atomic longs so that one thread can increment,
+ * while another atomically resets to zero after the values are reported
+ * to hadoop's counters.
+ *
  * Some of these metrics are general for any client operation such as put
  * However, there is no need for this. So they are defined under scan operation
  * for now.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class ScanMetrics implements Writable {
+public class ScanMetrics {
 
-  private static final byte SCANMETRICS_VERSION = (byte)1;
+
   private static final Log LOG = LogFactory.getLog(ScanMetrics.class);
-  private MetricsRegistry registry = new MetricsRegistry();
+
+  /**
+   * Hash to hold the String -> Atomic Long mappings.
+   */
+  private final Map<String, AtomicLong> counters = new HashMap<String, AtomicLong>();
+
+  // AtomicLongs to hold the metrics values.  These are all updated through ClientScanner and
+  // ScannerCallable.  They are atomic longs so that atomic getAndSet can be used to reset the
+  // values after progress is passed to hadoop's counters.
+
 
   /**
    * number of RPC calls
    */
-  public final MetricsTimeVaryingLong countOfRPCcalls =
-    new MetricsTimeVaryingLong("RPC_CALLS", registry);
+  public final AtomicLong countOfRPCcalls = createCounter("RPC_CALLS");
 
   /**
    * number of remote RPC calls
    */
-  public final MetricsTimeVaryingLong countOfRemoteRPCcalls =
-    new MetricsTimeVaryingLong("REMOTE_RPC_CALLS", registry);
+  public final AtomicLong countOfRemoteRPCcalls = createCounter("REMOTE_RPC_CALLS");
 
   /**
    * sum of milliseconds between sequential next calls
    */
-  public final MetricsTimeVaryingLong sumOfMillisSecBetweenNexts =
-    new MetricsTimeVaryingLong("MILLIS_BETWEEN_NEXTS", registry);
+  public final AtomicLong sumOfMillisSecBetweenNexts = createCounter("MILLIS_BETWEEN_NEXTS");
 
   /**
    * number of NotServingRegionException caught
    */
-  public final MetricsTimeVaryingLong countOfNSRE =
-    new MetricsTimeVaryingLong("NOT_SERVING_REGION_EXCEPTION", registry);
+  public final AtomicLong countOfNSRE = createCounter("NOT_SERVING_REGION_EXCEPTION");
 
   /**
    * number of bytes in Result objects from region servers
    */
-  public final MetricsTimeVaryingLong countOfBytesInResults =
-    new MetricsTimeVaryingLong("BYTES_IN_RESULTS", registry);
+  public final AtomicLong countOfBytesInResults = createCounter("BYTES_IN_RESULTS");
 
   /**
    * number of bytes in Result objects from remote region servers
    */
-  public final MetricsTimeVaryingLong countOfBytesInRemoteResults =
-    new MetricsTimeVaryingLong("BYTES_IN_REMOTE_RESULTS", registry);
+  public final AtomicLong countOfBytesInRemoteResults = createCounter("BYTES_IN_REMOTE_RESULTS");
 
   /**
    * number of regions
    */
-  public final MetricsTimeVaryingLong countOfRegions =
-    new MetricsTimeVaryingLong("REGIONS_SCANNED", registry);
+  public final AtomicLong countOfRegions = createCounter("REGIONS_SCANNED");
 
   /**
    * number of RPC retries
    */
-  public final MetricsTimeVaryingLong countOfRPCRetries =
-    new MetricsTimeVaryingLong("RPC_RETRIES", registry);
+  public final AtomicLong countOfRPCRetries = createCounter("RPC_RETRIES");
 
   /**
    * number of remote RPC retries
    */
-  public final MetricsTimeVaryingLong countOfRemoteRPCRetries =
-    new MetricsTimeVaryingLong("REMOTE_RPC_RETRIES", registry);
+  public final AtomicLong countOfRemoteRPCRetries = createCounter("REMOTE_RPC_RETRIES");
 
   /**
    * constructor
    */
-  public ScanMetrics () {
+  public ScanMetrics() {
+  }
+
+  private AtomicLong createCounter(String counterName) {
+    AtomicLong c = new AtomicLong(0);
+    counters.put(counterName, c);
+    return c;
+  }
+
+  public void setCounter(String counterName, long value) {
+    AtomicLong c = this.counters.get(counterName);
+    if (c != null) {
+      c.set(value);
+    }
   }
 
   /**
-   * serialize all the MetricsTimeVaryingLong
+   * Get all of the values since the last time this function was called.
+   *
+   * Calling this function will reset all AtomicLongs in the instance back to 0.
+   *
+   * @return A Map of String -> Long for metrics
    */
-  public void write(DataOutput out) throws IOException {
-    out.writeByte(SCANMETRICS_VERSION);
-    Collection<MetricsBase> mbs = registry.getMetricsList();
-
-    // we only handle MetricsTimeVaryingLong for now.
-    int metricsCount = 0;
-    for (MetricsBase mb : mbs) {
-      if ( mb instanceof MetricsTimeVaryingLong) {
-        metricsCount++;
-      } else {
-        throw new IOException("unsupported metrics type. metrics name: "
-          + mb.getName() + ", metrics description: " + mb.getDescription());
-      }
+  public Map<String, Long> getMetricsMap() {
+    //Create a builder
+    ImmutableMap.Builder<String, Long> builder = ImmutableMap.builder();
+    //For every entry add the value and reset the AtomicLong back to zero
+    for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
+      builder.put(e.getKey(), e.getValue().getAndSet(0));
     }
-
-    out.writeInt(metricsCount);
-    for (MetricsBase mb : mbs) {
-      out.writeUTF(mb.getName());
-      out.writeLong(((MetricsTimeVaryingLong) mb).getCurrentIntervalValue());
-    }
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    int version = in.readByte();
-    if (version > (int)SCANMETRICS_VERSION) {
-      throw new IOException("version " + version + " not supported");
-    }
-
-    int metricsCount = in.readInt();
-    for (int i=0; i<metricsCount; i++) {
-      String metricsName = in.readUTF();
-      long v = in.readLong();
-      MetricsBase mb = registry.get(metricsName);
-      if ( mb instanceof MetricsTimeVaryingLong) {
-        ((MetricsTimeVaryingLong) mb).inc(v);
-      } else {
-        LOG.warn("unsupported metrics type. metrics name: "
-          + mb.getName() + ", metrics description: " + mb.getDescription());
-      }
-    }
-  }
-
-  public MetricsTimeVaryingLong[] getMetricsTimeVaryingLongArray() {
-    Collection<MetricsBase> mbs = registry.getMetricsList();
-    ArrayList<MetricsTimeVaryingLong> mlv =
-      new ArrayList<MetricsTimeVaryingLong>();
-    for (MetricsBase mb : mbs) {
-      if ( mb instanceof MetricsTimeVaryingLong) {
-        mlv.add((MetricsTimeVaryingLong) mb);
-      }
-    }
-    return mlv.toArray(new MetricsTimeVaryingLong[mlv.size()]);
+    //Build the immutable map so that people can't mess around with it.
+    return builder.build();
   }
 
 }

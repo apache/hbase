@@ -263,3 +263,8 @@ message BytesBytesPair {
   required bytes first = 1;
   required bytes second = 2;
 }
+
+message NameInt64Pair {
+  optional string name = 1;
+  optional int64 value = 2;
+}

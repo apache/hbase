@@ -4685,7 +4685,7 @@ public class TestFromClientSide {
 
     ScanMetrics scanMetrics = getScanMetrics(scan);
     assertEquals("Did not access all the regions in the table", numOfRegions,
-        scanMetrics.countOfRegions.getCurrentIntervalValue());
+        scanMetrics.countOfRegions.get());
 
     // now, test that the metrics are still collected even if you don't call close, but do
     // run past the end of all the records
@@ -4697,7 +4697,7 @@ public class TestFromClientSide {
     }
     ScanMetrics scanMetricsWithoutClose = getScanMetrics(scanWithoutClose);
     assertEquals("Did not access all the regions in the table", numOfRegions,
-        scanMetricsWithoutClose.countOfRegions.getCurrentIntervalValue());
+        scanMetricsWithoutClose.countOfRegions.get());
 
     // finally, test that the metrics are collected correctly if you both run past all the records,
     // AND close the scanner
@@ -4711,17 +4711,16 @@ public class TestFromClientSide {
     scannerWithClose.close();
     ScanMetrics scanMetricsWithClose = getScanMetrics(scanWithClose);
     assertEquals("Did not access all the regions in the table", numOfRegions,
-        scanMetricsWithClose.countOfRegions.getCurrentIntervalValue());
+        scanMetricsWithClose.countOfRegions.get());
   }
 
   private ScanMetrics getScanMetrics(Scan scan) throws Exception {
     byte[] serializedMetrics = scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
     assertTrue("Serialized metrics were not found.", serializedMetrics != null);
 
-    DataInputBuffer in = new DataInputBuffer();
-    in.reset(serializedMetrics, 0, serializedMetrics.length);
-    ScanMetrics scanMetrics = new ScanMetrics();
-    scanMetrics.readFields(in);
+
+    ScanMetrics scanMetrics = ProtobufUtil.toScanMetrics(serializedMetrics);
+
     return scanMetrics;
   }
 

@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -215,7 +217,7 @@ public class ClientScanner extends AbstractClientScanner {
         callable.withRetries();
         this.currentRegion = callable.getHRegionInfo();
         if (this.scanMetrics != null) {
-          this.scanMetrics.countOfRegions.inc();
+          this.scanMetrics.countOfRegions.incrementAndGet();
         }
       } catch (IOException e) {
         close();
@@ -249,8 +251,8 @@ public class ClientScanner extends AbstractClientScanner {
         return;
       }
       final DataOutputBuffer d = new DataOutputBuffer();
-      scanMetrics.write(d);
-      scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA, d.getData());
+      MapReduceProtos.ScanMetrics pScanMetrics = ProtobufUtil.toScanMetrics(scanMetrics);
+      scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA, pScanMetrics.toByteArray());
     }
 
     public Result next() throws IOException {
@@ -329,7 +331,7 @@ public class ClientScanner extends AbstractClientScanner {
           }
           long currentTime = System.currentTimeMillis();
           if (this.scanMetrics != null ) {
-            this.scanMetrics.sumOfMillisSecBetweenNexts.inc(currentTime-lastNext);
+            this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime-lastNext);
           }
           lastNext = currentTime;
           if (values != null && values.length > 0) {
