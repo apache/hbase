@@ -1328,7 +1328,8 @@ public class HRegion implements HeapSize { // , Writable{
     }
     MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
     status.setStatus("Acquiring readlock on region");
-    lock(lock.readLock());
+    // block waiting for the lock for flushing cache
+    lock.readLock().lock();
     try {
       if (this.closed.get()) {
         LOG.debug("Skipping flush on " + this + " because closed");
