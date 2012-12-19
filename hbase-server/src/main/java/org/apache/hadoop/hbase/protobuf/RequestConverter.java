@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -1149,6 +1150,78 @@ public final class RequestConverter {
       byte[] regionName) {
     return GetLastFlushedSequenceIdRequest.newBuilder().setRegionName(
         ByteString.copyFrom(regionName)).build();
+  }
+
+  /**
+   * Create a request to grant user permissions.
+   *
+   * @param username the short user name who to grant permissions
+   * @param table optional table name the permissions apply
+   * @param family optional column family
+   * @param qualifier optional qualifier
+   * @param actions the permissions to be granted
+   * @return A {@link AccessControlProtos.GrantRequest)
+   */
+  public static AccessControlProtos.GrantRequest buildGrantRequest(
+      String username, byte[] table, byte[] family, byte[] qualifier,
+      AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder permissionBuilder =
+        AccessControlProtos.Permission.newBuilder();
+    for (AccessControlProtos.Permission.Action a : actions) {
+      permissionBuilder.addAction(a);
+    }
+    if (table != null) {
+      permissionBuilder.setTable(ByteString.copyFrom(table));
+    }
+    if (family != null) {
+      permissionBuilder.setFamily(ByteString.copyFrom(family));
+    }
+    if (qualifier != null) {
+      permissionBuilder.setQualifier(ByteString.copyFrom(qualifier));
+    }
+
+    return AccessControlProtos.GrantRequest.newBuilder()
+      .setPermission(
+          AccessControlProtos.UserPermission.newBuilder()
+              .setUser(ByteString.copyFromUtf8(username))
+              .setPermission(permissionBuilder.build())
+      ).build();
+  }
+
+  /**
+   * Create a request to revoke user permissions.
+   *
+   * @param username the short user name whose permissions to be revoked
+   * @param table optional table name the permissions apply
+   * @param family optional column family
+   * @param qualifier optional qualifier
+   * @param actions the permissions to be revoked
+   * @return A {@link AccessControlProtos.RevokeRequest)
+   */
+  public static AccessControlProtos.RevokeRequest buildRevokeRequest(
+      String username, byte[] table, byte[] family, byte[] qualifier,
+      AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder permissionBuilder =
+        AccessControlProtos.Permission.newBuilder();
+    for (AccessControlProtos.Permission.Action a : actions) {
+      permissionBuilder.addAction(a);
+    }
+    if (table != null) {
+      permissionBuilder.setTable(ByteString.copyFrom(table));
+    }
+    if (family != null) {
+      permissionBuilder.setFamily(ByteString.copyFrom(family));
+    }
+    if (qualifier != null) {
+      permissionBuilder.setQualifier(ByteString.copyFrom(qualifier));
+    }
+
+    return AccessControlProtos.RevokeRequest.newBuilder()
+      .setPermission(
+          AccessControlProtos.UserPermission.newBuilder()
+              .setUser(ByteString.copyFromUtf8(username))
+              .setPermission(permissionBuilder.build())
+      ).build();
   }
 
   /**

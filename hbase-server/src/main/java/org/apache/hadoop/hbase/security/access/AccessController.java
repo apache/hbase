@@ -47,8 +47,6 @@ import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -100,14 +98,14 @@ import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Acc
  *
  * <p>
  * The access control lists used for authorization can be manipulated via the
- * exposed {@link AccessControllerProtocol} implementation, and the associated
+ * exposed {@link AccessControlService.Interface} implementation, and the associated
  * {@code grant}, {@code revoke}, and {@code user_permission} HBase shell
  * commands.
  * </p>
  */
 public class AccessController extends BaseRegionObserver
-    implements MasterObserver, RegionServerObserver, AccessControllerProtocol,
-    AccessControlService.Interface, CoprocessorService {
+    implements MasterObserver, RegionServerObserver,
+      AccessControlService.Interface, CoprocessorService {
   /**
    * Represents the result of an authorization check for logging and error
    * reporting.
@@ -179,11 +177,6 @@ public class AccessController extends BaseRegionObserver
 
   private static final Log AUDITLOG =
     LogFactory.getLog("SecurityLogger."+AccessController.class.getName());
-
-  /**
-   * Version number for AccessControllerProtocol
-   */
-  private static final long PROTOCOL_VERSION = 1L;
 
   TableAuthManager authManager = null;
 
@@ -1079,143 +1072,6 @@ public class AccessController extends BaseRegionObserver
     }
   }
 
-  /* ---- AccessControllerProtocol implementation ---- */
-  /*
-   * These methods are only allowed to be called against the _acl_ region(s).
-   * This will be restricted by both client side and endpoint implementations.
-   */
-  @Deprecated
-  @Override
-  public void grant(UserPermission perm) throws IOException {
-    // verify it's only running at .acl.
-    if (aclRegion) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received request to grant access permission " + perm.toString());
-      }
-
-      requirePermission("grant", perm.getTable(), perm.getFamily(), perm.getQualifier(), Action.ADMIN);
-
-      AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm);
-      if (AUDITLOG.isTraceEnabled()) {
-        // audit log should store permission changes in addition to auth results
-        AUDITLOG.trace("Granted permission " + perm.toString());
-      }
-    } else {
-      throw new CoprocessorException(AccessController.class, "This method "
-          + "can only execute at " + Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
-    }
-  }
-
-  @Override
-  @Deprecated
-  public void grant(byte[] user, TablePermission permission)
-      throws IOException {
-    grant(new UserPermission(user, permission.getTable(),
-            permission.getFamily(), permission.getQualifier(),
-            permission.getActions()));
-  }
-
-  @Deprecated
-  @Override
-  public void revoke(UserPermission perm) throws IOException {
-    // only allowed to be called on _acl_ region
-    if (aclRegion) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received request to revoke access permission " + perm.toString());
-      }
-
-      requirePermission("revoke", perm.getTable(), perm.getFamily(),
-                        perm.getQualifier(), Action.ADMIN);
-
-      AccessControlLists.removeUserPermission(regionEnv.getConfiguration(), perm);
-      if (AUDITLOG.isTraceEnabled()) {
-        // audit log should record all permission changes
-        AUDITLOG.trace("Revoked permission " + perm.toString());
-      }
-    } else {
-      throw new CoprocessorException(AccessController.class, "This method "
-          + "can only execute at " + Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
-    }
-  }
-
-  @Override
-  @Deprecated
-  public void revoke(byte[] user, TablePermission permission)
-      throws IOException {
-    revoke(new UserPermission(user, permission.getTable(),
-            permission.getFamily(), permission.getQualifier(),
-            permission.getActions()));
-  }
-
-  @Deprecated
-  @Override
-  public List<UserPermission> getUserPermissions(final byte[] tableName) throws IOException {
-    // only allowed to be called on _acl_ region
-    if (aclRegion) {
-      requirePermission("userPermissions", tableName, null, null, Action.ADMIN);
-
-      List<UserPermission> perms = AccessControlLists.getUserPermissions(
-        regionEnv.getConfiguration(), tableName);
-      return perms;
-    } else {
-      throw new CoprocessorException(AccessController.class, "This method "
-          + "can only execute at " + Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
-    }
-  }
-
-  @Deprecated
-  @Override
-  public void checkPermissions(Permission[] permissions) throws IOException {
-    byte[] tableName = regionEnv.getRegion().getTableDesc().getName();
-    for (Permission permission : permissions) {
-      if (permission instanceof TablePermission) {
-        TablePermission tperm = (TablePermission) permission;
-        for (Permission.Action action : permission.getActions()) {
-          if (!Arrays.equals(tperm.getTable(), tableName)) {
-            throw new CoprocessorException(AccessController.class, String.format("This method "
-                + "can only execute at the table specified in TablePermission. " +
-                "Table of the region:%s , requested table:%s", Bytes.toString(tableName),
-                Bytes.toString(tperm.getTable())));
-          }
-
-          HashMap<byte[], Set<byte[]>> familyMap = Maps.newHashMapWithExpectedSize(1);
-          if (tperm.getFamily() != null) {
-            if (tperm.getQualifier() != null) {
-              familyMap.put(tperm.getFamily(), Sets.newHashSet(tperm.getQualifier()));
-            } else {
-              familyMap.put(tperm.getFamily(), null);
-            }
-          }
-
-          requirePermission("checkPermissions", action, regionEnv, familyMap);
-        }
-
-      } else {
-        for (Permission.Action action : permission.getActions()) {
-          requirePermission("checkPermissions", action);
-        }
-      }
-    }
-  }
-
-  @Deprecated
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion) throws IOException {
-    return PROTOCOL_VERSION;
-  }
-
-  @Deprecated
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    if (AccessControllerProtocol.class.getName().equals(protocol)) {
-      return new ProtocolSignature(PROTOCOL_VERSION, null);
-    }
-    throw new HBaseRPC.UnknownProtocolException(
-        "Unexpected protocol requested: "+protocol);
-  }
-
-
   /* ---- Protobuf AccessControlService implementation ---- */
   @Override
   public void grant(RpcController controller,
@@ -1224,7 +1080,23 @@ public class AccessController extends BaseRegionObserver
     UserPermission perm = ProtobufUtil.toUserPermission(request.getPermission());
     AccessControlProtos.GrantResponse response = null;
     try {
-      grant(perm);
+      // verify it's only running at .acl.
+      if (aclRegion) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received request to grant access permission " + perm.toString());
+        }
+
+        requirePermission("grant", perm.getTable(), perm.getFamily(), perm.getQualifier(), Action.ADMIN);
+
+        AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm);
+        if (AUDITLOG.isTraceEnabled()) {
+          // audit log should store permission changes in addition to auth results
+          AUDITLOG.trace("Granted permission " + perm.toString());
+        }
+      } else {
+        throw new CoprocessorException(AccessController.class, "This method "
+            + "can only execute at " + Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
+      }
       response = AccessControlProtos.GrantResponse.getDefaultInstance();
     } catch (IOException ioe) {
       // pass exception back up
@@ -1240,7 +1112,24 @@ public class AccessController extends BaseRegionObserver
     UserPermission perm = ProtobufUtil.toUserPermission(request.getPermission());
     AccessControlProtos.RevokeResponse response = null;
     try {
-      revoke(perm);
+      // only allowed to be called on _acl_ region
+      if (aclRegion) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received request to revoke access permission " + perm.toString());
+        }
+
+        requirePermission("revoke", perm.getTable(), perm.getFamily(),
+                          perm.getQualifier(), Action.ADMIN);
+
+        AccessControlLists.removeUserPermission(regionEnv.getConfiguration(), perm);
+        if (AUDITLOG.isTraceEnabled()) {
+          // audit log should record all permission changes
+          AUDITLOG.trace("Revoked permission " + perm.toString());
+        }
+      } else {
+        throw new CoprocessorException(AccessController.class, "This method "
+            + "can only execute at " + Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
+      }
       response = AccessControlProtos.RevokeResponse.getDefaultInstance();
     } catch (IOException ioe) {
       // pass exception back up
@@ -1256,8 +1145,17 @@ public class AccessController extends BaseRegionObserver
     byte[] table = request.getTable().toByteArray();
     AccessControlProtos.UserPermissionsResponse response = null;
     try {
-      List<UserPermission> perms = getUserPermissions(table);
-      response = ResponseConverter.buildUserPermissionsResponse(perms);
+      // only allowed to be called on _acl_ region
+      if (aclRegion) {
+        requirePermission("userPermissions", table, null, null, Action.ADMIN);
+
+        List<UserPermission> perms = AccessControlLists.getUserPermissions(
+          regionEnv.getConfiguration(), table);
+        response = ResponseConverter.buildUserPermissionsResponse(perms);
+      } else {
+        throw new CoprocessorException(AccessController.class, "This method "
+            + "can only execute at " + Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
+      }
     } catch (IOException ioe) {
       // pass exception back up
       ResponseConverter.setControllerException(controller, ioe);
@@ -1269,13 +1167,42 @@ public class AccessController extends BaseRegionObserver
   public void checkPermissions(RpcController controller,
                                AccessControlProtos.CheckPermissionsRequest request,
                                RpcCallback<AccessControlProtos.CheckPermissionsResponse> done) {
-    Permission[] perms = new Permission[request.getPermissionCount()];
+    Permission[] permissions = new Permission[request.getPermissionCount()];
     for (int i=0; i < request.getPermissionCount(); i++) {
-      perms[i] = ProtobufUtil.toPermission(request.getPermission(i));
+      permissions[i] = ProtobufUtil.toPermission(request.getPermission(i));
     }
     AccessControlProtos.CheckPermissionsResponse response = null;
     try {
-      checkPermissions(perms);
+      byte[] tableName = regionEnv.getRegion().getTableDesc().getName();
+      for (Permission permission : permissions) {
+        if (permission instanceof TablePermission) {
+          TablePermission tperm = (TablePermission) permission;
+          for (Permission.Action action : permission.getActions()) {
+            if (!Arrays.equals(tperm.getTable(), tableName)) {
+              throw new CoprocessorException(AccessController.class, String.format("This method "
+                  + "can only execute at the table specified in TablePermission. " +
+                  "Table of the region:%s , requested table:%s", Bytes.toString(tableName),
+                  Bytes.toString(tperm.getTable())));
+            }
+
+            HashMap<byte[], Set<byte[]>> familyMap = Maps.newHashMapWithExpectedSize(1);
+            if (tperm.getFamily() != null) {
+              if (tperm.getQualifier() != null) {
+                familyMap.put(tperm.getFamily(), Sets.newHashSet(tperm.getQualifier()));
+              } else {
+                familyMap.put(tperm.getFamily(), null);
+              }
+            }
+
+            requirePermission("checkPermissions", action, regionEnv, familyMap);
+          }
+
+        } else {
+          for (Permission.Action action : permission.getActions()) {
+            requirePermission("checkPermissions", action);
+          }
+        }
+      }
       response = AccessControlProtos.CheckPermissionsResponse.getDefaultInstance();
     } catch (IOException ioe) {
       ResponseConverter.setControllerException(controller, ioe);

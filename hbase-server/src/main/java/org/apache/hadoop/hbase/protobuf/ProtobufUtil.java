@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -134,6 +135,7 @@ import org.apache.hbase.Cell;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcChannel;
@@ -1789,6 +1791,91 @@ public final class ProtobufUtil {
       builder.addPermissions(userPermBuilder.build());
     }
     return builder.build();
+  }
+
+  /**
+   * A utility used to grant a user some permissions. The permissions will
+   * be global if table is not specified.  Otherwise, they are for those
+   * table/column family/qualifier only.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param userShortName the short name of the user to grant permissions
+   * @param t optional table name
+   * @param f optional column family
+   * @param q optional qualifier
+   * @param actions the permissions to be granted
+   * @throws ServiceException
+   */
+  public static void grant(AccessControlService.BlockingInterface protocol,
+      String userShortName, byte[] t, byte[] f, byte[] q,
+      Permission.Action... actions) throws ServiceException {
+    List<AccessControlProtos.Permission.Action> permActions =
+        Lists.newArrayListWithCapacity(actions.length);
+    for (Permission.Action a : actions) {
+      permActions.add(ProtobufUtil.toPermissionAction(a));
+    }
+    AccessControlProtos.GrantRequest request = RequestConverter.
+      buildGrantRequest(userShortName, t, f, q, permActions.toArray(
+        new AccessControlProtos.Permission.Action[actions.length]));
+    protocol.grant(null, request);
+  }
+
+  /**
+   * A utility used to revoke a user some permissions. The permissions will
+   * be global if table is not specified.  Otherwise, they are for those
+   * table/column family/qualifier only.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param userShortName the short name of the user to revoke permissions
+   * @param t optional table name
+   * @param f optional column family
+   * @param q optional qualifier
+   * @param actions the permissions to be revoked
+   * @throws ServiceException
+   */
+  public static void revoke(AccessControlService.BlockingInterface protocol,
+      String userShortName, byte[] t, byte[] f, byte[] q,
+      Permission.Action... actions) throws ServiceException {
+    List<AccessControlProtos.Permission.Action> permActions =
+        Lists.newArrayListWithCapacity(actions.length);
+    for (Permission.Action a : actions) {
+      permActions.add(ProtobufUtil.toPermissionAction(a));
+    }
+    AccessControlProtos.RevokeRequest request = RequestConverter.
+      buildRevokeRequest(userShortName, t, f, q, permActions.toArray(
+        new AccessControlProtos.Permission.Action[actions.length]));
+    protocol.revoke(null, request);
+  }
+
+  /**
+   * A utility used to get user permissions.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param t optional table name
+   * @throws ServiceException
+   */
+  public static List<UserPermission> getUserPermissions(
+      AccessControlService.BlockingInterface protocol,
+      byte[] t) throws ServiceException {
+    AccessControlProtos.UserPermissionsRequest.Builder builder =
+      AccessControlProtos.UserPermissionsRequest.newBuilder();
+    if (t != null) {
+      builder.setTable(ByteString.copyFrom(t));
+    }
+    AccessControlProtos.UserPermissionsRequest request = builder.build();
+    AccessControlProtos.UserPermissionsResponse response =
+      protocol.getUserPermissions(null, request);
+    List<UserPermission> perms = new ArrayList<UserPermission>();
+    for (AccessControlProtos.UserPermission perm: response.getPermissionList()) {
+      perms.add(ProtobufUtil.toUserPermission(perm));
+    }
+    return perms;
   }
 
   /**
