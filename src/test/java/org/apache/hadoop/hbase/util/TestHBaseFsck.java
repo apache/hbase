@@ -1658,6 +1658,35 @@ public class TestHBaseFsck {
   }
 
   /**
+   * Test fixing lingering reference file.
+   */
+  @Test
+  public void testLingeringReferenceFile() throws Exception {
+    String table = "testLingeringReferenceFile";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by creating a fake reference file
+      FileSystem fs = FileSystem.get(conf);
+      Path tableDir= FSUtils.getTablePath(FSUtils.getRootDir(conf), table);
+      Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
+      Path famDir = new Path(regionDir, FAM_STR);
+      Path fakeReferenceFile = new Path(famDir, "fbce357483ceea.12144538");
+      fs.create(fakeReferenceFile);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.LINGERING_REFERENCE_HFILE });
+      // fix reference file
+      doFsck(conf, true);
+      // check that reference file fixed
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
    * Test pluggable error reporter. It can be plugged in
    * from system property or configuration.
    */
