@@ -49,6 +49,7 @@
     <menu name="Documentation">
         <item name="Getting Started" href="book/quickstart.html" />
       <item name="API" href="apidocs/index.html" />
+      <item name="X-Ref" href="xref/index.html" />
       <item name="Ref Guide (multi-page)"      href="book/book.html" />
       <item name="Ref Guide (single-page)"      href="book.html" />
       <item name="FAQ" href="book/faq.html" />
