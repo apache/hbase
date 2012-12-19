@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UUID;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALEdit.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALKey;
+import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
@@ -128,6 +129,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
@@ -141,6 +143,8 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcChannel;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
 
 /**
  * Protobufs utility.
@@ -1899,6 +1903,36 @@ public final class ProtobufUtil {
     }
 
     return perms;
+  }
+
+  /**
+   * Converts a Token instance (with embedded identifier) to the protobuf representation.
+   *
+   * @param token the Token instance to copy
+   * @return the protobuf Token message
+   */
+  public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
+    AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
+    builder.setIdentifier(ByteString.copyFrom(token.getIdentifier()));
+    builder.setPassword(ByteString.copyFrom(token.getPassword()));
+    if (token.getService() != null) {
+      builder.setService(ByteString.copyFromUtf8(token.getService().toString()));
+    }
+    return builder.build();
+  }
+
+  /**
+   * Converts a protobuf Token message back into a Token instance.
+   *
+   * @param proto the protobuf Token message
+   * @return the Token instance
+   */
+  public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
+    return new Token<AuthenticationTokenIdentifier>(
+        proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
+        proto.hasPassword() ? proto.getPassword().toByteArray() : null,
+        AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE,
+        proto.hasService() ? new Text(proto.getService().toStringUtf8()) : null);
   }
 
   /**

@@ -20,14 +20,21 @@ package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.BaseEndpointCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -37,12 +44,11 @@ import org.apache.hadoop.security.token.Token;
 
 /**
  * Provides a service for obtaining authentication tokens via the
- * {@link AuthenticationProtocol} coprocessor protocol.
+ * {@link AuthenticationProtos.AuthenticationService} coprocessor service.
  */
-public class TokenProvider extends BaseEndpointCoprocessor
-    implements AuthenticationProtocol {
+public class TokenProvider implements AuthenticationProtos.AuthenticationService.Interface,
+    Coprocessor, CoprocessorService {
 
-  public static final long VERSION = 0L;
   private static Log LOG = LogFactory.getLog(TokenProvider.class);
 
   private AuthenticationTokenSecretManager secretManager;
@@ -50,8 +56,6 @@ public class TokenProvider extends BaseEndpointCoprocessor
 
   @Override
   public void start(CoprocessorEnvironment env) {
-    super.start(env);
-
     // if running at region
     if (env instanceof RegionCoprocessorEnvironment) {
       RegionCoprocessorEnvironment regionEnv =
@@ -65,28 +69,7 @@ public class TokenProvider extends BaseEndpointCoprocessor
   }
 
   @Override
-  public Token<AuthenticationTokenIdentifier> getAuthenticationToken()
-      throws IOException {
-    if (secretManager == null) {
-      throw new IOException(
-          "No secret manager configured for token authentication");
-    }
-
-    User currentUser = RequestContext.getRequestUser();
-    UserGroupInformation ugi = null;
-    if (currentUser != null) {
-      ugi = currentUser.getUGI();
-    }
-    if (currentUser == null) {
-      throw new AccessDeniedException("No authenticated user for request!");
-    } else if (!isAllowedDelegationTokenOp(ugi)) {
-      LOG.warn("Token generation denied for user="+currentUser.getName()
-          +", authMethod="+ugi.getAuthenticationMethod());
-      throw new AccessDeniedException(
-          "Token generation only allowed for Kerberos authenticated clients");
-    }
-
-    return secretManager.generateToken(currentUser.getName());
+  public void stop(CoprocessorEnvironment env) throws IOException {
   }
 
   /**
@@ -106,18 +89,62 @@ public class TokenProvider extends BaseEndpointCoprocessor
     return true;
   }
 
+  // AuthenticationService implementation
+
   @Override
-  public String whoami() {
-    return RequestContext.getRequestUserName();
+  public Service getService() {
+    return AuthenticationProtos.AuthenticationService.newReflectiveService(this);
   }
 
   @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    if (AuthenticationProtocol.class.getName().equals(protocol)) {
-      return TokenProvider.VERSION;
+  public void getAuthenticationToken(RpcController controller,
+                                     AuthenticationProtos.TokenRequest request,
+                                     RpcCallback<AuthenticationProtos.TokenResponse> done) {
+    AuthenticationProtos.TokenResponse.Builder response =
+        AuthenticationProtos.TokenResponse.newBuilder();
+
+    try {
+      if (secretManager == null) {
+        throw new IOException(
+            "No secret manager configured for token authentication");
+      }
+
+      User currentUser = RequestContext.getRequestUser();
+      UserGroupInformation ugi = null;
+      if (currentUser != null) {
+        ugi = currentUser.getUGI();
+      }
+      if (currentUser == null) {
+        throw new AccessDeniedException("No authenticated user for request!");
+      } else if (!isAllowedDelegationTokenOp(ugi)) {
+        LOG.warn("Token generation denied for user="+currentUser.getName()
+            +", authMethod="+ugi.getAuthenticationMethod());
+        throw new AccessDeniedException(
+            "Token generation only allowed for Kerberos authenticated clients");
+      }
+
+      Token<AuthenticationTokenIdentifier> token =
+          secretManager.generateToken(currentUser.getName());
+      response.setToken(ProtobufUtil.toToken(token)).build();
+    } catch (IOException ioe) {
+      ResponseConverter.setControllerException(controller, ioe);
     }
-    LOG.warn("Unknown protocol requested: "+protocol);
-    return -1;
+    done.run(response.build());
+  }
+
+  @Override
+  public void whoami(RpcController controller, AuthenticationProtos.WhoAmIRequest request,
+                     RpcCallback<AuthenticationProtos.WhoAmIResponse> done) {
+    User requestUser = RequestContext.getRequestUser();
+    AuthenticationProtos.WhoAmIResponse.Builder response =
+        AuthenticationProtos.WhoAmIResponse.newBuilder();
+    if (requestUser != null) {
+      response.setUsername(requestUser.getShortName());
+      AuthenticationMethod method = requestUser.getUGI().getAuthenticationMethod();
+      if (method != null) {
+        response.setAuthMethod(method.name());
+      }
+    }
+    done.run(response.build());
   }
 }

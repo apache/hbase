@@ -22,11 +22,15 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedExceptionAction;
 
+import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
@@ -49,14 +53,22 @@ public class TokenUtil {
     HTable meta = null;
     try {
       meta = new HTable(conf, ".META.");
-      AuthenticationProtocol prot = meta.coprocessorProxy(
-          AuthenticationProtocol.class, HConstants.EMPTY_START_ROW);
-      return prot.getAuthenticationToken();
+      CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
+      AuthenticationProtos.AuthenticationService.BlockingInterface service =
+          AuthenticationProtos.AuthenticationService.newBlockingStub(rpcChannel);
+      AuthenticationProtos.TokenResponse response = service.getAuthenticationToken(null,
+          AuthenticationProtos.TokenRequest.getDefaultInstance());
+
+      return ProtobufUtil.toToken(response.getToken());
+    } catch (ServiceException se) {
+      ProtobufUtil.toIOException(se);
     } finally {
       if (meta != null) {
         meta.close();
       }
     }
+    // dummy return for ServiceException catch block
+    return null;
   }
 
   private static Text getClusterId(Token<AuthenticationTokenIdentifier> token)
