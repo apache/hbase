@@ -98,7 +98,7 @@ public class SecureClient extends HBaseClient {
 
       User ticket = remoteId.getTicket();
       Class<?> protocol = remoteId.getProtocol();
-      this.useSasl = User.isSecurityEnabled();
+      this.useSasl = User.isHBaseSecurityEnabled(conf);
       if (useSasl && protocol != null) {
         TokenInfo tokenInfo = protocol.getAnnotation(TokenInfo.class);
         if (tokenInfo != null) {
