@@ -277,13 +277,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
   @Override
   public synchronized boolean seek(KeyValue key) throws IOException {
-    if (this.heap == null) {
-
-      List<KeyValueScanner> scanners = getScannersNoCompaction();
-
-      heap = new KeyValueHeap(scanners, store.comparator);
-    }
-
+    // reset matcher state, in case that underlying store changed
+    checkReseek();
     return this.heap.seek(key);
   }
 
