@@ -37,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -265,7 +264,7 @@ public class RegionCoprocessorHost
   /**
    * Invoked before a region open
    */
-  public void preOpen() {
+  public void preOpen(){
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -285,7 +284,7 @@ public class RegionCoprocessorHost
   /**
    * Invoked after a region open
    */
-  public void postOpen() {
+  public void postOpen(){
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -306,7 +305,7 @@ public class RegionCoprocessorHost
    * Invoked before a region is closed
    * @param abortRequested true if the server is aborting
    */
-  public void preClose(boolean abortRequested) {
+  public void preClose(boolean abortRequested) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -314,7 +313,7 @@ public class RegionCoprocessorHost
         try {
           ((RegionObserver)env.getInstance()).preClose(ctx, abortRequested);
         } catch (Throwable e) {
-          handleCoprocessorThrowableNoRethrow(env, e);
+          handleCoprocessorThrowable(env, e);
         }
       }
     }
@@ -324,7 +323,7 @@ public class RegionCoprocessorHost
    * Invoked after a region is closed
    * @param abortRequested true if the server is aborting
    */
-  public void postClose(boolean abortRequested) {
+  public void postClose(boolean abortRequested){
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -1482,6 +1481,32 @@ public class RegionCoprocessorHost
     }
 
     return hasLoaded;
+  }
+  
+  public void preLockRow(byte[] regionName, byte[] row) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        ((RegionObserver) env.getInstance()).preLockRow(ctx, regionName, row);
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void preUnLockRow(byte[] regionName, long lockId) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        ((RegionObserver) env.getInstance()).preUnlockRow(ctx, regionName, lockId);
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
   }
 
 }

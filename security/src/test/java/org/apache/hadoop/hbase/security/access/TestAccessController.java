@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -51,9 +52,11 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
@@ -79,6 +82,8 @@ public class TestAccessController {
   private static User USER_ADMIN;
   // user with rw permissions
   private static User USER_RW;
+  // user with rw permissions on table.
+  private static User USER_RW_ON_TABLE;
   // user with read-only permissions
   private static User USER_RO;
   // user is table owner. will have all permissions on table
@@ -93,6 +98,7 @@ public class TestAccessController {
 
   private static MasterCoprocessorEnvironment CP_ENV;
   private static RegionCoprocessorEnvironment RCP_ENV;
+  private static RegionServerCoprocessorEnvironment RSCP_ENV;
   private static AccessController ACCESS_CONTROLLER;
 
   @BeforeClass
@@ -107,6 +113,10 @@ public class TestAccessController {
     ACCESS_CONTROLLER = (AccessController) cpHost.findCoprocessor(AccessController.class.getName());
     CP_ENV = cpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
+        .getCoprocessorHost();
+    RSCP_ENV = rsHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER, 
+      Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
     TEST_UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME, 5000);
@@ -116,6 +126,7 @@ public class TestAccessController {
     USER_ADMIN = User.createUserForTesting(conf, "admin2", new String[0]);
     USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
+    USER_RW_ON_TABLE = User.createUserForTesting(conf, "rwuser_1", new String[0]);
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
@@ -148,6 +159,9 @@ public class TestAccessController {
 
     protocol.grant(new UserPermission(Bytes.toBytes(USER_CREATE.getShortName()), TEST_TABLE, null,
         Permission.Action.CREATE));
+    
+    protocol.grant(new UserPermission(Bytes.toBytes(USER_RW_ON_TABLE.getShortName()), TEST_TABLE,
+      null, Permission.Action.READ, Permission.Action.WRITE));
   }
 
   @AfterClass
@@ -161,6 +175,8 @@ public class TestAccessController {
         user.runAs(action);
       } catch (AccessDeniedException ade) {
         fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
+      } catch (UnknownRowLockException exp){
+        //expected
       }
     }
   }
@@ -1271,4 +1287,70 @@ public class TestAccessController {
     }
 
   }
+
+  @Test
+  public void testLockAction() throws Exception {
+    PrivilegedExceptionAction lockAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preLockRow(ObserverContext.createAndPrepare(RCP_ENV, null), null,
+          Bytes.toBytes("random_row"));
+        return null;
+      }
+    };
+    verifyAllowed(lockAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW_ON_TABLE);
+    verifyDenied(lockAction, USER_RO, USER_RW, USER_NONE);
+  }
+
+  @Test
+  public void testUnLockAction() throws Exception {
+    PrivilegedExceptionAction unLockAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preUnlockRow(ObserverContext.createAndPrepare(RCP_ENV, null), null,
+          123456);
+        return null;
+      }
+    };
+    verifyAllowed(unLockAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_RW_ON_TABLE);
+    verifyDenied(unLockAction, USER_NONE, USER_RO, USER_RW);
+  }
+
+  @Test
+  public void testStopRegionServer() throws Exception {
+    PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preStopRegionServer(ObserverContext.createAndPrepare(RSCP_ENV, null));
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testOpenRegion() throws Exception {
+    PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preOpen(ObserverContext.createAndPrepare(RCP_ENV, null));
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testCloseRegion() throws Exception {
+    PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preClose(ObserverContext.createAndPrepare(RCP_ENV, null), false);
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
 }

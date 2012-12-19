@@ -58,11 +58,13 @@ import java.util.jar.JarFile;
  */
 public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   public static final String REGION_COPROCESSOR_CONF_KEY =
-      "hbase.coprocessor.region.classes";
+    "hbase.coprocessor.region.classes";
+  public static final String REGIONSERVER_COPROCESSOR_CONF_KEY =
+    "hbase.coprocessor.regionserver.classes";
   public static final String USER_REGION_COPROCESSOR_CONF_KEY =
-      "hbase.coprocessor.user.region.classes";
+    "hbase.coprocessor.user.region.classes";
   public static final String MASTER_COPROCESSOR_CONF_KEY =
-      "hbase.coprocessor.master.classes";
+    "hbase.coprocessor.master.classes";
   public static final String WAL_COPROCESSOR_CONF_KEY =
     "hbase.coprocessor.wal.classes";
 

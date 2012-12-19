@@ -58,14 +58,14 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public void stop(CoprocessorEnvironment e) throws IOException { }
 
   @Override
-  public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) { }
+  public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException { }
 
   @Override
   public void postOpen(ObserverContext<RegionCoprocessorEnvironment> e) { }
 
   @Override
-  public void preClose(ObserverContext<RegionCoprocessorEnvironment> e,
-      boolean abortRequested) { }
+  public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
+      throws IOException { }
 
   @Override
   public void postClose(ObserverContext<RegionCoprocessorEnvironment> e,
@@ -320,4 +320,20 @@ public abstract class BaseRegionObserver implements RegionObserver {
     List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException {
     return hasLoaded;
   }
+
+  @Override
+  public void preLockRow(ObserverContext<RegionCoprocessorEnvironment> ctx, byte[] regionName,
+      byte[] row) throws IOException { }
+
+  @Override
+  public void preUnlockRow(ObserverContext<RegionCoprocessorEnvironment> ctx, byte[] regionName,
+      long lockId) throws IOException { }
+
+  @Override
+  public void postLockRow(ObserverContext<RegionCoprocessorEnvironment> ctx, byte[] regionName,
+      byte[] row) throws IOException { }
+
+  @Override
+  public void postUnlockRow(ObserverContext<RegionCoprocessorEnvironment> ctx, byte[] regionName,
+      long lockId) throws IOException { }
 }
