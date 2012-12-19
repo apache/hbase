@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
@@ -191,6 +192,7 @@ public class HBaseFsck extends Configured implements Tool {
   private boolean fixTableOrphans = false; // fix fs holes (missing .tableinfo)
   private boolean fixVersionFile = false; // fix missing hbase.version file in hdfs
   private boolean fixSplitParents = false; // fix lingering split parents
+  private boolean fixReferenceFiles = false; // fix lingering reference store file
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
   // -ROOT- and .META. are always checked
@@ -442,6 +444,8 @@ public class HBaseFsck extends Configured implements Tool {
       admin.setBalancerRunning(oldBalancer, false);
     }
 
+    offlineReferenceFileRepair();
+
     // Print table summary
     printTableSummary(tablesInfo);
     return errors.summarize();
@@ -595,6 +599,67 @@ public class HBaseFsck extends Configured implements Tool {
     }
 
     return errors.getErrorList().size();
+  }
+
+  /**
+   * Scan all the store file names to find any lingering reference files,
+   * which refer to some none-exiting files. If "fix" option is enabled,
+   * any lingering reference file will be sidelined if found.
+   * <p>
+   * Lingering reference file prevents a region from opening. It has to
+   * be fixed before a cluster can start properly.
+   */
+  private void offlineReferenceFileRepair() throws IOException {
+    Configuration conf = getConf();
+    Path hbaseRoot = FSUtils.getRootDir(conf);
+    FileSystem fs = hbaseRoot.getFileSystem(conf);
+    Map<String, Path> allFiles = FSUtils.getTableStoreFilePathMap(fs, hbaseRoot);
+    for (Path path: allFiles.values()) {
+      boolean isReference = false;
+      try {
+        isReference = StoreFile.isReference(path);
+      } catch (Throwable t) {
+        // Ignore. Some files may not be store files at all.
+        // For example, files under .oldlogs folder in .META.
+        // Warning message is already logged by
+        // StoreFile#isReference.
+      }
+      if (!isReference) continue;
+
+      Path referredToFile = StoreFile.getReferredToFile(path);
+      if (fs.exists(referredToFile)) continue;  // good, expected
+
+      // Found a lingering reference file
+      errors.reportError(ERROR_CODE.LINGERING_REFERENCE_HFILE,
+        "Found lingering reference file " + path);
+      if (!shouldFixReferenceFiles()) continue;
+
+      // Now, trying to fix it since requested
+      boolean success = false;
+      String pathStr = path.toString();
+
+      // A reference file path should be like
+      // ${hbase.rootdir}/table_name/region_id/family_name/referred_file.region_name
+      // Up 3 directories to get the table folder.
+      // So the file will be sidelined to a similar folder structure.
+      int index = pathStr.lastIndexOf(Path.SEPARATOR_CHAR);
+      for (int i = 0; index > 0 && i < 3; i++) {
+        index = pathStr.lastIndexOf(Path.SEPARATOR_CHAR, index);
+      }
+      if (index > 0) {
+        Path rootDir = getSidelineDir();
+        Path dst = new Path(rootDir, pathStr.substring(index));
+        fs.mkdirs(dst.getParent());
+        LOG.info("Trying to sildeline reference file"
+          + path + " to " + dst);
+        setShouldRerun();
+
+        success = fs.rename(path, dst);
+      }
+      if (!success) {
+        LOG.error("Failed to sideline reference file " + path);
+      }
+    }
   }
 
   /**
@@ -2771,7 +2836,7 @@ public class HBaseFsck extends Configured implements Tool {
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
-      ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE
+      ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE
     }
     public void clear();
     public void report(String message);
@@ -3204,6 +3269,14 @@ public class HBaseFsck extends Configured implements Tool {
     return fixSplitParents;
   }
 
+  public void setFixReferenceFiles(boolean shouldFix) {
+    fixReferenceFiles = shouldFix;
+  }
+
+  boolean shouldFixReferenceFiles() {
+    return fixReferenceFiles;
+  }
+
   public boolean shouldIgnorePreCheckPermission() {
     return ignorePreCheckPermission;
   }
@@ -3315,6 +3388,7 @@ public class HBaseFsck extends Configured implements Tool {
     System.err.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
     System.err.println("   -fixSplitParents  Try to force offline split parents to be online.");
     System.err.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
+    System.err.println("   -fixReferenceFiles  Try to offline lingering reference store files");
 
     System.err.println("");
     System.err.println("  Datafile Repair options: (expert features, use with caution!)");
@@ -3324,7 +3398,7 @@ public class HBaseFsck extends Configured implements Tool {
     System.err.println("");
     System.err.println("  Metadata Repair shortcuts");
     System.err.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
-        "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps");
+        "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps -fixReferenceFiles");
     System.err.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
 
     setRetCode(-2);
@@ -3431,6 +3505,8 @@ public class HBaseFsck extends Configured implements Tool {
         checkCorruptHFiles = true;
       } else if (cmd.equals("-sidelineCorruptHFiles")) {
         sidelineCorruptHFiles = true;
+      } else if (cmd.equals("-fixReferenceFiles")) {
+        setFixReferenceFiles(true);
       } else if (cmd.equals("-repair")) {
         // this attempts to merge overlapping hdfs regions, needs testing
         // under load
@@ -3443,6 +3519,7 @@ public class HBaseFsck extends Configured implements Tool {
         setSidelineBigOverlaps(true);
         setFixSplitParents(false);
         setCheckHdfs(true);
+        setFixReferenceFiles(true);
       } else if (cmd.equals("-repairHoles")) {
         // this will make all missing hdfs regions available but may lose data
         setFixHdfsHoles(true);
