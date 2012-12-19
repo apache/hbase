@@ -33,7 +33,7 @@
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
 usage="Usage: hbase-daemon.sh [--config <conf-dir>]\
- (start|stop|restart) <hbase-command> \
+ (start|stop|restart|stop-for-restart) <hbase-command> \
  <args...>"
 
 # if no args specified, show usage
@@ -53,6 +53,12 @@ shift
 
 command=$1
 shift
+
+if [ "x$startStop" = xstop-for-restart ]; then
+  if [ "x$command" != xregionserver ]; then
+    command=stop
+  fi
+fi
 
 hbase_rotate_log ()
 {
@@ -185,7 +191,7 @@ case $startStop in
     fi
     ;;
 
-  (restart)
+  (restart|stop-for-restart)
     thiscmd=$0
     args=$@
     # stop the command
@@ -203,9 +209,11 @@ case $startStop in
         ;;
     esac
     wait_until_done $!
-    # start the command
-    $thiscmd --config "${HBASE_CONF_DIR}" start $command $args &
-    wait_until_done $!
+    if [ x$startStop = xrestart ]; then
+      # start the command
+      $thiscmd --config "${HBASE_CONF_DIR}" start $command $args &
+      wait_until_done $!
+    fi
     ;;
 
   (*)
