@@ -684,7 +684,7 @@ public abstract class SecureServer extends HBaseServer {
         conf, serverName, highPriorityLevel);
     this.authorize =
       conf.getBoolean(HADOOP_SECURITY_AUTHORIZATION, false);
-    this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
+    this.isSecurityEnabled = User.isHBaseSecurityEnabled(this.conf);
 
     if (isSecurityEnabled) {
       HBaseSaslRpcServer.init(conf);
