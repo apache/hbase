@@ -236,7 +236,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Server to handle client requests. Default access so can be accessed by
   // unit tests.
   RpcServer rpcServer;
-  
+
   // Server to handle client requests.
   private HBaseServer server;  
 
@@ -365,6 +365,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * ClusterId
    */
   private ClusterId clusterId = null;
+
+  private RegionServerCoprocessorHost rsHost;
 
   /**
    * Starts a HRegionServer at the default location
@@ -1020,6 +1022,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
       this.dynamicMetrics = RegionServerDynamicMetrics.newInstance(this);
+      this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
       startServiceThreads();
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
         ", RPC listening on " + this.isa +
@@ -1027,6 +1030,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
       isOnline = true;
     } catch (Throwable e) {
+      LOG.warn("Exception in region server : ", e);
       this.isOnline = false;
       stop("Failed initialization");
       throw convertThrowableToIOE(cleanup(e, "Failed init"),
@@ -1582,6 +1586,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.splitLogWorker = new SplitLogWorker(this.zooKeeper,
         this.getConfiguration(), this.getServerName().toString());
     splitLogWorker.start();
+    
   }
 
   /**
@@ -1649,10 +1654,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   @Override
   public void stop(final String msg) {
-    this.stopped = true;
-    LOG.info("STOPPED: " + msg);
-    // Wakes run() if it is sleeping
-    sleeper.skipSleepCycle();
+    try {
+      this.rsHost.preStop(msg);
+      this.stopped = true;
+      LOG.info("STOPPED: " + msg);
+      // Wakes run() if it is sleeping
+      sleeper.skipSleepCycle();
+    } catch (IOException exp) {
+      LOG.warn("The region server did not stop", exp);
+    }
   }
 
   public void waitForServerOnline(){
@@ -2623,6 +2633,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
+      if (region.getCoprocessorHost() != null) {
+        region.getCoprocessorHost().preLockRow(regionName, row);
+      }
       Integer r = region.obtainRowLock(row);
       long lockId = addRowLock(r, region);
       LOG.debug("Row lock " + lockId + " explicitly acquired by client");
@@ -2687,6 +2700,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
+      if (region.getCoprocessorHost() != null) {
+        region.getCoprocessorHost().preUnLockRow(regionName, lockId);
+      }
       String lockName = String.valueOf(lockId);
       Integer r = rowlocks.remove(lockName);
       if (r == null) {
@@ -2863,6 +2879,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     final int versionOfClosingNode)
   throws IOException {
     checkOpen();
+    //Check for permissions to close.
+    HRegion actualRegion = this.getFromOnlineRegions(region.getEncodedName());
+    if (actualRegion.getCoprocessorHost() != null) {
+      actualRegion.getCoprocessorHost().preClose(false);
+    }
     LOG.info("Received close region: " + region.getRegionNameAsString() +
       ". Version of ZK closing node:" + versionOfClosingNode);
     boolean hasit = this.onlineRegions.containsKey(region.getEncodedName());
@@ -2910,6 +2931,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected boolean closeRegion(HRegionInfo region, final boolean abort,
       final boolean zk, final int versionOfClosingNode) {
+    
+    HRegion actualRegion = this.getFromOnlineRegions(region.getEncodedName());
+    if ((actualRegion != null) && (actualRegion.getCoprocessorHost() !=null)){
+      try {
+        actualRegion.getCoprocessorHost().preClose(abort);
+      } catch (IOException e) {
+        LOG.warn(e);
+        return false;
+      }
+    }
+    
     if (this.regionsInTransitionInRS.containsKey(region.getEncodedNameAsBytes())) {
       LOG.warn("Received close for region we are already opening or closing; " +
           region.getEncodedName());
@@ -3608,6 +3640,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   public ZooKeeperWatcher getZooKeeperWatcher() {
     return this.zooKeeper;
+  }
+
+  public RegionServerCoprocessorHost getCoprocessorHost(){
+    return this.rsHost;
   }
 
 
