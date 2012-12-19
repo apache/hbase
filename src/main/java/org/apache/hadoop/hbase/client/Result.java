@@ -649,4 +649,15 @@ public class Result implements Writable, WritableWithSize {
       }
     }
   }
+  
+  /**
+   * Copy another Result into this one. Needed for the old Mapred framework
+   * @param other
+   */
+  public void copyFrom(Result other) {
+    this.row = other.row;
+    this.bytes = other.bytes;
+    this.familyMap = other.familyMap;
+    this.kvs = other.kvs;
+  }
 }
