@@ -454,6 +454,23 @@ public class MasterFileSystem {
     //      @see HRegion.checkRegioninfoOnFilesystem()
   }
 
+  public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName)
+      throws IOException {
+    // archive family store files
+    Path tableDir = new Path(rootdir, region.getTableNameAsString());
+    HFileArchiver.archiveFamily(fs, conf, region, tableDir, familyName);
+
+    // delete the family folder
+    Path familyDir = new Path(tableDir,
+      new Path(region.getEncodedName(), Bytes.toString(familyName)));
+    if (fs.delete(familyDir, true) == false) {
+      throw new IOException("Could not delete family "
+          + Bytes.toString(familyName) + " from FileSystem for region "
+          + region.getRegionNameAsString() + "(" + region.getEncodedName()
+          + ")");
+    }
+  }
+
   public void stop() {
     if (splitLogManager != null) {
       this.splitLogManager.stop();

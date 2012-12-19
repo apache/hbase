@@ -147,6 +147,38 @@ public class HFileArchiver {
   }
 
   /**
+   * Remove from the specified region the store files of the specified column family,
+   * either by archiving them or outright deletion
+   * @param fs the filesystem where the store files live
+   * @param conf {@link Configuration} to examine to determine the archive directory
+   * @param parent Parent region hosting the store files
+   * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
+   * @param family the family hosting the store files
+   * @throws IOException if the files could not be correctly disposed.
+   */
+  public static void archiveFamily(FileSystem fs, Configuration conf,
+      HRegionInfo parent, Path tableDir, byte[] family) throws IOException {
+    Path familyDir = new Path(tableDir, new Path(parent.getEncodedName(), Bytes.toString(family)));
+    FileStatus[] storeFiles = FSUtils.listStatus(fs, familyDir, null);
+    if (storeFiles == null) {
+      LOG.debug("No store files to dispose for region=" + parent.getRegionNameAsString() +
+          ", family=" + Bytes.toString(family));
+      return;
+    }
+
+    FileStatusConverter getAsFile = new FileStatusConverter(fs);
+    Collection<File> toArchive = Lists.transform(Arrays.asList(storeFiles), getAsFile);
+    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, parent, tableDir, family);
+
+    // do the actual archive
+    if (!resolveAndArchive(fs, storeArchiveDir, toArchive)) {
+      throw new IOException("Failed to archive/delete all the files for region:"
+          + Bytes.toString(parent.getRegionName()) + ", family:" + Bytes.toString(family)
+          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
+    }
+  }
+
+  /**
    * Remove the store files, either by archiving them or outright deletion
    * @param fs the filesystem where the store files live
    * @param parent Parent region hosting the store files
@@ -196,7 +228,7 @@ public class HFileArchiver {
     if (!resolveAndArchive(fs, storeArchiveDir, storeFiles)) {
       throw new IOException("Failed to archive/delete all the files for region:"
           + Bytes.toString(parent.getRegionName()) + ", family:" + Bytes.toString(family)
-          + " into " + storeArchiveDir + "Something is probably arwy on the filesystem.");
+          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
     }
   }
 
