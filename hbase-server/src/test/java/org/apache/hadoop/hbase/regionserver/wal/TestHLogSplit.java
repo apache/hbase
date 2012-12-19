@@ -100,7 +100,7 @@ public class TestHLogSplit {
   private Configuration conf;
   private FileSystem fs;
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
 
   private static final Path HBASEDIR = new Path("/hbase");

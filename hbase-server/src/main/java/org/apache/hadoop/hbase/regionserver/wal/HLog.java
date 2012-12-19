@@ -71,6 +71,7 @@ public interface HLog {
     void seek(long pos) throws IOException;
 
     long getPosition() throws IOException;
+    void reset() throws IOException;
   }
 
   public interface Writer {

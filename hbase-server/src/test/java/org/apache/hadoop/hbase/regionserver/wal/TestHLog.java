@@ -477,15 +477,13 @@ public class TestHLog  {
       throw t.exception;
 
     // Make sure you can read all the content
-    SequenceFile.Reader reader
-      = new SequenceFile.Reader(this.fs, walPath, this.conf);
+    HLog.Reader reader = HLogFactory.createReader(this.fs, walPath, this.conf);
     int count = 0;
-    HLogKey key = HLogUtil.newKey(conf);
-    WALEdit val = new WALEdit();
-    while (reader.next(key, val)) {
+    HLog.Entry entry = new HLog.Entry();
+    while (reader.next(entry) != null) {
       count++;
       assertTrue("Should be one KeyValue per WALEdit",
-                 val.getKeyValues().size() == 1);
+                  entry.getEdit().getKeyValues().size() == 1);
     }
     assertEquals(total, count);
     reader.close();

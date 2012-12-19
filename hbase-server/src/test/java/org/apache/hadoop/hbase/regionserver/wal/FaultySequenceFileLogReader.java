@@ -49,6 +49,9 @@ public class FaultySequenceFileLogReader extends SequenceFileLogReader {
         HLogKey key = HLogUtil.newKey(conf);
         WALEdit val = new WALEdit();
         HLog.Entry e = new HLog.Entry(key, val);
+        if (compressionContext != null) {
+          e.setCompressionContext(compressionContext);
+        }
         b = this.reader.next(e.getKey(), e.getEdit());
         nextQueue.offer(e);
         numberOfFileEntries++;
