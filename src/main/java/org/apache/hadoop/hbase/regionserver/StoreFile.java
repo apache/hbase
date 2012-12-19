@@ -320,7 +320,7 @@ public class StoreFile extends SchemaConfigured {
    * @return Calculated path to parent region file.
    * @throws IOException
    */
-  static Path getReferredToFile(final Path p) {
+  public static Path getReferredToFile(final Path p) {
     Matcher m = REF_NAME_PARSER.matcher(p.getName());
     if (m == null || !m.matches()) {
       LOG.warn("Failed match of store file name " + p.toString());
