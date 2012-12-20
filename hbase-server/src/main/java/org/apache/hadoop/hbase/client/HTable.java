@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -1259,17 +1258,11 @@ public class HTable implements HTableInterface {
   public <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
       byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable)
       throws ServiceException, Throwable {
-    final Map<byte[],R> results =  new ConcurrentSkipListMap<byte[], R>(Bytes.BYTES_COMPARATOR);
+    final Map<byte[],R> results =  Collections.synchronizedMap(
+        new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
       public void update(byte[] region, byte[] row, R value) {
-        if (value == null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Call to " + service.getName() +
-                " received NULL value from Batch.Call for region " + Bytes.toStringBinary(region));
-          }
-        } else {
-          results.put(region, value);
-        }
+        results.put(region, value);
       }
     });
     return results;

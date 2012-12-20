@@ -257,6 +257,44 @@ public class TestCoprocessorEndpoint {
   }
 
   @Test
+  public void testCoprocessorServiceNullResponse() throws Throwable {
+    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    NavigableMap<HRegionInfo,ServerName> regions = table.getRegionLocations();
+
+    final TestProtos.EchoRequestProto request =
+        TestProtos.EchoRequestProto.newBuilder().setMessage("hello").build();
+    try {
+      // scan: for all regions
+      final RpcController controller = new ServerRpcController();
+      // test that null results are supported
+      Map<byte[], String> results = table.coprocessorService(TestRpcServiceProtos.TestProtobufRpcProto.class,
+          ROWS[0], ROWS[ROWS.length - 1],
+          new Batch.Call<TestRpcServiceProtos.TestProtobufRpcProto, String>() {
+            public String call(TestRpcServiceProtos.TestProtobufRpcProto instance)
+                throws IOException {
+              BlockingRpcCallback<TestProtos.EchoResponseProto> callback = new BlockingRpcCallback<TestProtos.EchoResponseProto>();
+              instance.echo(controller, request, callback);
+              TestProtos.EchoResponseProto response = callback.get();
+              LOG.debug("Batch.Call got result " + response);
+              return null;
+            }
+          }
+      );
+      for (Map.Entry<byte[], String> e : results.entrySet()) {
+        LOG.info("Got value "+e.getValue()+" for region "+Bytes.toStringBinary(e.getKey()));
+      }
+      assertEquals(3, results.size());
+      for (HRegionInfo info : regions.navigableKeySet()) {
+        LOG.info("Region info is "+info.getRegionNameAsString());
+        assertTrue(results.containsKey(info.getRegionName()));
+        assertNull(results.get(info.getRegionName()));
+      }
+    } finally {
+      table.close();
+    }
+  }
+
+  @Test
   public void testMasterCoprocessorService() throws Throwable {
     HBaseAdmin admin = util.getHBaseAdmin();
     final TestProtos.EchoRequestProto request =
