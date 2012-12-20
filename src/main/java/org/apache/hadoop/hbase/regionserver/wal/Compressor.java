@@ -143,12 +143,7 @@ public class Compressor {
       // the status byte also acts as the higher order byte of the dictionary
       // entry
       short dictIdx = toShort(status, in.readByte());
-      byte[] entry;
-      try {
-        entry = dict.getEntry(dictIdx);
-      } catch (Exception ex) {
-        throw new IOException("Unable to uncompress the log entry", ex);
-      }
+      byte[] entry = dict.getEntry(dictIdx);
       if (entry == null) {
         throw new IOException("Missing dictionary entry for index "
             + dictIdx);
