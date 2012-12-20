@@ -61,7 +61,7 @@ public class TestReplication {
 
   private static final Log LOG = LogFactory.getLog(TestReplication.class);
 
-  protected static Configuration conf1 = HBaseConfiguration.create();
+  private static Configuration conf1;
   private static Configuration conf2;
   private static Configuration CONF_WITH_LOCALFS;
 
@@ -91,6 +91,7 @@ public class TestReplication {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    conf1 = HBaseConfiguration.create();
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     // smaller block size and capacity to trigger more operations
     // and test them
@@ -519,7 +520,7 @@ public class TestReplication {
 
     // disable and start the peer
     admin.disablePeer("2");
-    utility2.startMiniHBaseCluster(1, 2);
+    utility2.startMiniHBaseCluster(1, 1);
     Get get = new Get(rowkey);
     for (int i = 0; i < NB_RETRIES; i++) {
       Result res = htable2.get(get);
@@ -759,8 +760,7 @@ public class TestReplication {
     int lastCount = 0;
 
     final long start = System.currentTimeMillis();
-    int i = 0;
-    while (true) {
+    for (int i = 0; i < NB_RETRIES; i++) {
       if (i==NB_RETRIES-1) {
         fail("Waited too much time for queueFailover replication. " +
           "Waited "+(System.currentTimeMillis() - start)+"ms.");
@@ -772,8 +772,6 @@ public class TestReplication {
       if (res2.length < initialCount) {
         if (lastCount < res2.length) {
           i--; // Don't increment timeout if we make progress
-        } else {
-          i++;
         }
         lastCount = res2.length;
         LOG.info("Only got " + lastCount + " rows instead of " +
@@ -793,7 +791,7 @@ public class TestReplication {
           Thread.sleep(timeout);
           utility.expireRegionServerSession(rs);
         } catch (Exception e) {
-          LOG.error("Couldn't kill a region server", e);
+          LOG.error(e);
         }
       }
     };
