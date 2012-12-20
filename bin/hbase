@@ -256,6 +256,21 @@ fi
 # restore ordinary behaviour
 unset IFS
 
+#Set the right GC options based on the what we are running
+declare -a client_cmds=("shell" "hbck" "hlog" "hfile" "zkcli")
+for cmd in $client_cmds; do
+	if [[ $cmd == $COMMAND ]]; then
+		client=true
+		break
+	fi
+done
+
+if [[ $client ]]; then
+	HBASE_OPTS="$HBASE_OPTS $CLIENT_GC_OPTS"
+else
+	HBASE_OPTS="$HBASE_OPTS $SERVER_GC_OPTS"
+fi
+
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
   # eg export JRUBY_HOME=/usr/local/share/jruby
