@@ -1142,8 +1142,11 @@ public class AccessController extends BaseRegionObserver
   public void getUserPermissions(RpcController controller,
                                  AccessControlProtos.UserPermissionsRequest request,
                                  RpcCallback<AccessControlProtos.UserPermissionsResponse> done) {
-    byte[] table = request.getTable().toByteArray();
     AccessControlProtos.UserPermissionsResponse response = null;
+    byte[] table = null;
+    if (request.hasTable()) {
+      table = request.getTable().toByteArray();
+    }
     try {
       // only allowed to be called on _acl_ region
       if (aclRegion) {

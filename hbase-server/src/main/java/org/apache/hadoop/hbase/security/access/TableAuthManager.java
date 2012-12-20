@@ -352,6 +352,7 @@ public class TableAuthManager {
     if (authorizeUser(username, action)) {
       return true;
     }
+    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
     return authorize(getTablePermissions(table).getUser(username), table, family,
         qualifier, action);
   }
@@ -380,6 +381,7 @@ public class TableAuthManager {
     if (authorizeGroup(groupName, action)) {
       return true;
     }
+    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
     return authorize(getTablePermissions(table).getGroup(groupName), table, family, action);
   }
 

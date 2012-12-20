@@ -33,11 +33,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -1159,6 +1159,19 @@ public class TestAccessController {
 
     // delete table
     admin.deleteTable(tableName);
+  }
+
+  @Test
+  public void testGlobalPermissionList() throws Exception {
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+    AccessControlService.BlockingInterface protocol =
+      AccessControlService.newBlockingStub(service);
+    List<UserPermission> perms = ProtobufUtil.getUserPermissions(protocol, null);
+    UserPermission adminPerm = new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
+      AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW"));
+    assertTrue("Only user admin has permission on table _acl_ per setup",
+      perms.size() == 1 && hasFoundUserPermission(adminPerm, perms));
   }
 
   /** global operations */
