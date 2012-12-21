@@ -86,7 +86,7 @@ public class TestHLogSplit {
   private Configuration conf;
   private FileSystem fs;
 
-  private final static HBaseTestingUtility
+  protected final static HBaseTestingUtility
           TEST_UTIL = new HBaseTestingUtility();
 
 
