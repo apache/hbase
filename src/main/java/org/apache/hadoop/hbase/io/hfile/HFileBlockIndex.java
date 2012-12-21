@@ -181,10 +181,10 @@ public class HFileBlockIndex {
      */
     public HFileBlock seekToDataBlock(final byte[] key, int keyOffset,
         int keyLength, HFileBlock currentBlock, boolean cacheBlocks,
-        boolean pread, boolean isCompaction)
+        boolean isCompaction)
         throws IOException {
       BlockWithScanInfo blockWithScanInfo = loadDataBlockWithScanInfo(key, keyOffset, keyLength,
-          currentBlock, cacheBlocks, pread, isCompaction);
+          currentBlock, cacheBlocks, isCompaction);
       if (blockWithScanInfo == null) {
         return null;
       } else {
@@ -203,15 +203,13 @@ public class HFileBlockIndex {
      * @param currentBlock the current block, to avoid re-reading the same
      *          block
      * @param cacheBlocks
-     * @param pread
      * @param isCompaction
      * @return the BlockWithScanInfo which contains the DataBlock with other scan info 
      *         such as nextIndexedKey.
      * @throws IOException
      */
     public BlockWithScanInfo loadDataBlockWithScanInfo(final byte[] key, int keyOffset,
-        int keyLength, HFileBlock currentBlock, boolean cacheBlocks,
-        boolean pread, boolean isCompaction)
+        int keyLength, HFileBlock currentBlock, boolean cacheBlocks, boolean isCompaction)
         throws IOException {
       int rootLevelIndex = rootBlockContainingKey(key, keyOffset, keyLength);
       if (rootLevelIndex < 0 || rootLevelIndex >= blockOffsets.length) {
@@ -258,7 +256,7 @@ public class HFileBlockIndex {
             expectedBlockType = BlockType.DATA;
           }
           block = cachingBlockReader.readBlock(currentOffset,
-              currentOnDiskSize, shouldCache, pread, isCompaction,
+              currentOnDiskSize, shouldCache, isCompaction,
               expectedBlockType);
         }
 
@@ -334,7 +332,7 @@ public class HFileBlockIndex {
 
         // Caching, using pread, assuming this is not a compaction.
         HFileBlock midLeafBlock = cachingBlockReader.readBlock(
-            midLeafBlockOffset, midLeafBlockOnDiskSize, true, true, false,
+            midLeafBlockOffset, midLeafBlockOnDiskSize, true, false,
             BlockType.LEAF_INDEX);
 
         ByteBuffer b = midLeafBlock.getBufferWithoutHeader();

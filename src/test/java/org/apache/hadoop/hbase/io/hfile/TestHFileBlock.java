@@ -248,90 +248,87 @@ public class TestHFileBlock {
   @Test
   public void testReaderV1() throws IOException {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
-      for (boolean pread : new boolean[] { false, true }) {
-        byte[] block = createTestV1Block(algo);
-        Path path = new Path(TEST_UTIL.getTestDir(), "blocks_v1_"
-            + algo);
-        LOG.info("Creating temporary file at " + path);
-        FSDataOutputStream os = fs.create(path);
-        int totalSize = 0;
-        int numBlocks = 50;
-        for (int i = 0; i < numBlocks; ++i) {
-          os.write(block);
-          totalSize += block.length;
-        }
-        os.close();
-
-        FSDataInputStream is = fs.open(path);
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV1(is, algo,
-            totalSize);
-        HFileBlock b;
-        int numBlocksRead = 0;
-        long pos = 0;
-        while (pos < totalSize) {
-          b = hbr.readBlockData(pos, block.length, uncompressedSizeV1, pread);
-          b.sanityCheck();
-          pos += block.length;
-          numBlocksRead++;
-        }
-        assertEquals(numBlocks, numBlocksRead);
-        is.close();
+      byte[] block = createTestV1Block(algo);
+      Path path = new Path(TEST_UTIL.getTestDir(), "blocks_v1_"
+          + algo);
+      LOG.info("Creating temporary file at " + path);
+      FSDataOutputStream os = fs.create(path);
+      int totalSize = 0;
+      int numBlocks = 50;
+      for (int i = 0; i < numBlocks; ++i) {
+        os.write(block);
+        totalSize += block.length;
       }
+      os.close();
+
+      FSDataInputStream is = fs.open(path);
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderV1(is, algo,
+          totalSize);
+      HFileBlock b;
+      int numBlocksRead = 0;
+      long pos = 0;
+      while (pos < totalSize) {
+        b = hbr.readBlockData(pos, block.length, uncompressedSizeV1);
+        b.sanityCheck();
+        pos += block.length;
+        numBlocksRead++;
+      }
+      assertEquals(numBlocks, numBlocksRead);
+      is.close();
+
     }
   }
 
   @Test
   public void testReaderV2() throws IOException {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
-      for (boolean pread : new boolean[] { false, true }) {
-        Path path = new Path(TEST_UTIL.getTestDir(), "blocks_v2_"
-            + algo);
-        FSDataOutputStream os = fs.create(path);
-        HFileBlock.Writer hbw = new HFileBlock.Writer(algo, null,
-            includesMemstoreTS);
-        long totalSize = 0;
-        for (int blockId = 0; blockId < 2; ++blockId) {
-          hbw.startWriting(BlockType.DATA);
-          DataOutputStream dos = hbw.getUserDataStreamUnsafe();
-          for (int i = 0; i < 1234; ++i) {
-            dos.writeInt(i);
-          }
-          hbw.writeHeaderAndData(os);
-          totalSize += hbw.getOnDiskSizeWithHeader();
+      Path path = new Path(TEST_UTIL.getTestDir(), "blocks_v2_"
+          + algo);
+      FSDataOutputStream os = fs.create(path);
+      HFileBlock.Writer hbw = new HFileBlock.Writer(algo, null,
+          includesMemstoreTS);
+      long totalSize = 0;
+      for (int blockId = 0; blockId < 2; ++blockId) {
+        hbw.startWriting(BlockType.DATA);
+        DataOutputStream dos = hbw.getUserDataStreamUnsafe();
+        for (int i = 0; i < 1234; ++i) {
+          dos.writeInt(i);
         }
-        os.close();
+        hbw.writeHeaderAndData(os);
+        totalSize += hbw.getOnDiskSizeWithHeader();
+      }
+      os.close();
 
-        FSDataInputStream is = fs.open(path);
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, algo,
-            totalSize);
-        HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
+      FSDataInputStream is = fs.open(path);
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, algo,
+          totalSize);
+      HFileBlock b = hbr.readBlockData(0, -1, -1);
+      is.close();
+
+      b.sanityCheck();
+      assertEquals(4936, b.getUncompressedSizeWithoutHeader());
+      assertEquals(algo == GZ ? 2173 : 4936, b.getOnDiskSizeWithoutHeader());
+      String blockStr = b.toString();
+
+      if (algo == GZ) {
+        is = fs.open(path);
+        hbr = new HFileBlock.FSReaderV2(is, algo, totalSize);
+        b = hbr.readBlockData(0, 2173 + HFileBlock.HEADER_SIZE, -1);
+        assertEquals(blockStr, b.toString());
+        int wrongCompressedSize = 2172;
+        try {
+          b = hbr.readBlockData(0, wrongCompressedSize
+              + HFileBlock.HEADER_SIZE, -1);
+          fail("Exception expected");
+        } catch (IOException ex) {
+          String expectedPrefix = "On-disk size without header provided is "
+              + wrongCompressedSize + ", but block header contains "
+              + b.getOnDiskSizeWithoutHeader() + ".";
+          assertTrue("Invalid exception message: '" + ex.getMessage()
+              + "'.\nMessage is expected to start with: '" + expectedPrefix
+              + "'", ex.getMessage().startsWith(expectedPrefix));
+        }
         is.close();
-
-        b.sanityCheck();
-        assertEquals(4936, b.getUncompressedSizeWithoutHeader());
-        assertEquals(algo == GZ ? 2173 : 4936, b.getOnDiskSizeWithoutHeader());
-        String blockStr = b.toString();
-
-        if (algo == GZ) {
-          is = fs.open(path);
-          hbr = new HFileBlock.FSReaderV2(is, algo, totalSize);
-          b = hbr.readBlockData(0, 2173 + HFileBlock.HEADER_SIZE, -1, pread);
-          assertEquals(blockStr, b.toString());
-          int wrongCompressedSize = 2172;
-          try {
-            b = hbr.readBlockData(0, wrongCompressedSize
-                + HFileBlock.HEADER_SIZE, -1, pread);
-            fail("Exception expected");
-          } catch (IOException ex) {
-            String expectedPrefix = "On-disk size without header provided is "
-                + wrongCompressedSize + ", but block header contains "
-                + b.getOnDiskSizeWithoutHeader() + ".";
-            assertTrue("Invalid exception message: '" + ex.getMessage()
-                + "'.\nMessage is expected to start with: '" + expectedPrefix
-                + "'", ex.getMessage().startsWith(expectedPrefix));
-          }
-          is.close();
-        }
       }
     }
   }
@@ -344,67 +341,65 @@ public class TestHFileBlock {
   public void testDataBlockEncoding() throws IOException {
     final int numBlocks = 5;
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
-      for (boolean pread : new boolean[] { false, true }) {
-        for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-          LOG.info("\n\nUsing includesMemstoreTS: " + includesMemstoreTS +
-              ", compression: " + algo +
-              ", pread: " + pread +
-              ", encoding: " + encoding + "\n");
-          Path path = new Path(TEST_UTIL.getTestDir(), "blocks_v2_"
-              + algo + "_" + encoding.toString());
-          FSDataOutputStream os = fs.create(path);
-          HFileDataBlockEncoder dataBlockEncoder =
-              new HFileDataBlockEncoderImpl(encoding);
-          HFileBlock.Writer hbw = new HFileBlock.Writer(algo, dataBlockEncoder,
-              includesMemstoreTS);
-          long totalSize = 0;
-          final List<Integer> encodedSizes = new ArrayList<Integer>();
-          final List<ByteBuffer> encodedBlocks = new ArrayList<ByteBuffer>();
-          for (int blockId = 0; blockId < numBlocks; ++blockId) {
-            writeEncodedBlock(encoding, hbw, encodedSizes, encodedBlocks,
-                blockId);
+      for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+        LOG.info("\n\nUsing includesMemstoreTS: " + includesMemstoreTS +
+            ", compression: " + algo +
+            ", encoding: " + encoding + "\n");
+        Path path = new Path(TEST_UTIL.getTestDir(), "blocks_v2_"
+            + algo + "_" + encoding.toString());
+        FSDataOutputStream os = fs.create(path);
+        HFileDataBlockEncoder dataBlockEncoder =
+            new HFileDataBlockEncoderImpl(encoding);
+        HFileBlock.Writer hbw = new HFileBlock.Writer(algo, dataBlockEncoder,
+            includesMemstoreTS);
+        long totalSize = 0;
+        final List<Integer> encodedSizes = new ArrayList<Integer>();
+        final List<ByteBuffer> encodedBlocks = new ArrayList<ByteBuffer>();
+        for (int blockId = 0; blockId < numBlocks; ++blockId) {
+          writeEncodedBlock(encoding, hbw, encodedSizes, encodedBlocks,
+              blockId);
 
-            hbw.writeHeaderAndData(os);
-            totalSize += hbw.getOnDiskSizeWithHeader();
-            LOG.info("Wrote block #" + blockId + ": " +
-                "onDiskSizeWithHeader=" + hbw.getOnDiskSizeWithHeader() + ", " +
-                "uncompressedSizeWithHeader=" + hbw.getUncompressedSizeWithHeader());
-          }
-          os.close();
-
-          FSDataInputStream is = fs.open(path);
-          HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(is, algo,
-              totalSize);
-          hbr.setDataBlockEncoder(dataBlockEncoder);
-          hbr.setIncludesMemstoreTS(includesMemstoreTS);
-
-          HFileBlock b;
-          int pos = 0;
-          LOG.info("\n\nStarting to read blocks\n");
-          for (int blockId = 0; blockId < numBlocks; ++blockId) {
-            b = hbr.readBlockData(pos, -1, -1, pread);
-            b.sanityCheck();
-            pos += b.getOnDiskSizeWithHeader();
-
-            LOG.info("Read block #" + blockId + ": " + b);
-            assertEquals("Invalid encoded size:", (int) encodedSizes.get(blockId),
-                b.getUncompressedSizeWithoutHeader());
-            ByteBuffer actualBuffer = b.getBufferWithoutHeader();
-            if (encoding != DataBlockEncoding.NONE) {
-              // We expect a two-byte big-endian encoding id.
-              assertEquals(encoding.getId(), actualBuffer.getShort());
-              actualBuffer = actualBuffer.slice();
-            }
-
-            ByteBuffer expectedBuffer = encodedBlocks.get(blockId);
-            expectedBuffer.rewind();
-
-            // test if content matches, produce nice message
-            assertBuffersEqual(expectedBuffer, actualBuffer, algo, encoding, pread);
-          }
-          is.close();
+          hbw.writeHeaderAndData(os);
+          totalSize += hbw.getOnDiskSizeWithHeader();
+          LOG.info("Wrote block #" + blockId + ": " +
+              "onDiskSizeWithHeader=" + hbw.getOnDiskSizeWithHeader() + ", " +
+              "uncompressedSizeWithHeader=" + hbw.getUncompressedSizeWithHeader());
         }
+        os.close();
+
+        FSDataInputStream is = fs.open(path);
+        HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(is, algo,
+            totalSize);
+        hbr.setDataBlockEncoder(dataBlockEncoder);
+        hbr.setIncludesMemstoreTS(includesMemstoreTS);
+
+        HFileBlock b;
+        int pos = 0;
+        LOG.info("\n\nStarting to read blocks\n");
+        for (int blockId = 0; blockId < numBlocks; ++blockId) {
+          b = hbr.readBlockData(pos, -1, -1);
+          b.sanityCheck();
+          pos += b.getOnDiskSizeWithHeader();
+
+          LOG.info("Read block #" + blockId + ": " + b);
+          assertEquals("Invalid encoded size:", (int) encodedSizes.get(blockId),
+              b.getUncompressedSizeWithoutHeader());
+          ByteBuffer actualBuffer = b.getBufferWithoutHeader();
+          if (encoding != DataBlockEncoding.NONE) {
+            // We expect a two-byte big-endian encoding id.
+            assertEquals(encoding.getId(), actualBuffer.getShort());
+            actualBuffer = actualBuffer.slice();
+          }
+
+          ByteBuffer expectedBuffer = encodedBlocks.get(blockId);
+          expectedBuffer.rewind();
+
+          // test if content matches, produce nice message
+          assertBuffersEqual(expectedBuffer, actualBuffer, algo, encoding);
+        }
+        is.close();
       }
+
     }
   }
 
@@ -433,7 +428,7 @@ public class TestHFileBlock {
 
   private void assertBuffersEqual(ByteBuffer expectedBuffer,
       ByteBuffer actualBuffer, Compression.Algorithm compression,
-      DataBlockEncoding encoding, boolean pread) {
+      DataBlockEncoding encoding) {
     if (!actualBuffer.equals(expectedBuffer)) {
       int prefix = 0;
       int minLimit = Math.min(expectedBuffer.limit(), actualBuffer.limit());
@@ -444,7 +439,7 @@ public class TestHFileBlock {
       assertEquals(String.format(
           "Content mismatch for compression %s, encoding %s, " +
           "pread %s, commonPrefix %d, expected length %d, actual length %d",
-          compression, encoding, pread, prefix,
+          compression, encoding, prefix,
           expectedBuffer.limit(), actualBuffer.limit()),
           Bytes.toStringBinary(expectedBuffer),
           Bytes.toStringBinary(actualBuffer));
@@ -454,92 +449,82 @@ public class TestHFileBlock {
   @Test
   public void testPreviousOffset() throws IOException {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
-      for (boolean pread : BOOLEAN_VALUES) {
-        for (boolean cacheOnWrite : BOOLEAN_VALUES) {
-          Random rand = defaultRandom();
-          LOG.info("Compression algorithm: " + algo + ", pread=" + pread);
-          Path path = new Path(TEST_UTIL.getTestDir(), "prev_offset");
-          List<Long> expectedOffsets = new ArrayList<Long>();
-          List<Long> expectedPrevOffsets = new ArrayList<Long>();
-          List<BlockType> expectedTypes = new ArrayList<BlockType>();
-          List<ByteBuffer> expectedContents = cacheOnWrite
-              ? new ArrayList<ByteBuffer>() : null;
-          long totalSize = writeBlocks(rand, algo, path, expectedOffsets,
-              expectedPrevOffsets, expectedTypes, expectedContents, true);
+      for (boolean cacheOnWrite : BOOLEAN_VALUES) {
+        Random rand = defaultRandom();
+        LOG.info("Compression algorithm: " + algo );
+        Path path = new Path(TEST_UTIL.getTestDir(), "prev_offset");
+        List<Long> expectedOffsets = new ArrayList<Long>();
+        List<Long> expectedPrevOffsets = new ArrayList<Long>();
+        List<BlockType> expectedTypes = new ArrayList<BlockType>();
+        List<ByteBuffer> expectedContents = cacheOnWrite  ? new ArrayList<ByteBuffer>() : null;
+        long totalSize = writeBlocks(rand, algo, path, expectedOffsets,
+            expectedPrevOffsets, expectedTypes, expectedContents, true);
 
-          FSDataInputStream is = fs.open(path);
-          HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, algo,
-              totalSize);
-          long curOffset = 0;
-          for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
-            if (!pread) {
-              assertEquals(is.getPos(), curOffset + (i == 0 ? 0 :
-                  HFileBlock.HEADER_SIZE));
+        FSDataInputStream is = fs.open(path);
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, algo,
+            totalSize);
+        long curOffset = 0;
+        for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
+          assertEquals(expectedOffsets.get(i).longValue(), curOffset);
+          LOG.info("Reading block #" + i + " at offset " + curOffset);
+          HFileBlock b = hbr.readBlockData(curOffset, -1, -1);
+          LOG.info("Block #" + i + ": " + b);
+          assertEquals("Invalid block #" + i + "'s type:",
+              expectedTypes.get(i), b.getBlockType());
+          assertEquals("Invalid previous block offset for block " + i
+              + " of " + "type " + b.getBlockType() + ":",
+              (long) expectedPrevOffsets.get(i), b.getPrevBlockOffset());
+          b.sanityCheck();
+          assertEquals(curOffset, b.getOffset());
+
+          // Now re-load this block knowing the on-disk size. This tests a
+          // different branch in the loader.
+          HFileBlock b2 = hbr.readBlockData(curOffset,
+              b.getOnDiskSizeWithHeader(), -1);
+          b2.sanityCheck();
+
+          assertEquals(b.getBlockType(), b2.getBlockType());
+          assertEquals(b.getOnDiskSizeWithoutHeader(),
+              b2.getOnDiskSizeWithoutHeader());
+          assertEquals(b.getOnDiskSizeWithHeader(),
+              b2.getOnDiskSizeWithHeader());
+          assertEquals(b.getUncompressedSizeWithoutHeader(),
+              b2.getUncompressedSizeWithoutHeader());
+          assertEquals(b.getPrevBlockOffset(), b2.getPrevBlockOffset());
+          assertEquals(curOffset, b2.getOffset());
+
+          curOffset += b.getOnDiskSizeWithHeader();
+
+          if (cacheOnWrite) {
+            // In the cache-on-write mode we store uncompressed bytes so we
+            // can compare them to what was read by the block reader.
+
+            ByteBuffer bufRead = b.getBufferWithHeader();
+            ByteBuffer bufExpected = expectedContents.get(i);
+            boolean bytesAreCorrect = Bytes.compareTo(bufRead.array(),
+                bufRead.arrayOffset(), bufRead.limit(),
+                bufExpected.array(), bufExpected.arrayOffset(),
+                bufExpected.limit()) == 0;
+            String wrongBytesMsg = "";
+
+            if (!bytesAreCorrect) {
+              // Optimization: only construct an error message in case we
+              // will need it.
+              wrongBytesMsg = "Expected bytes in block #" + i + " (algo="
+                  + algo;
+              wrongBytesMsg += Bytes.toStringBinary(bufExpected.array(),
+                  bufExpected.arrayOffset(), Math.min(32,
+                      bufExpected.limit()))
+                      + ", actual:\n"
+                      + Bytes.toStringBinary(bufRead.array(),
+                          bufRead.arrayOffset(), Math.min(32, bufRead.limit()));
             }
 
-            assertEquals(expectedOffsets.get(i).longValue(), curOffset);
-
-            LOG.info("Reading block #" + i + " at offset " + curOffset);
-            HFileBlock b = hbr.readBlockData(curOffset, -1, -1, pread);
-            LOG.info("Block #" + i + ": " + b);
-            assertEquals("Invalid block #" + i + "'s type:",
-                expectedTypes.get(i), b.getBlockType());
-            assertEquals("Invalid previous block offset for block " + i
-                + " of " + "type " + b.getBlockType() + ":",
-                (long) expectedPrevOffsets.get(i), b.getPrevBlockOffset());
-            b.sanityCheck();
-            assertEquals(curOffset, b.getOffset());
-
-            // Now re-load this block knowing the on-disk size. This tests a
-            // different branch in the loader.
-            HFileBlock b2 = hbr.readBlockData(curOffset,
-                b.getOnDiskSizeWithHeader(), -1, pread);
-            b2.sanityCheck();
-
-            assertEquals(b.getBlockType(), b2.getBlockType());
-            assertEquals(b.getOnDiskSizeWithoutHeader(),
-                b2.getOnDiskSizeWithoutHeader());
-            assertEquals(b.getOnDiskSizeWithHeader(),
-                b2.getOnDiskSizeWithHeader());
-            assertEquals(b.getUncompressedSizeWithoutHeader(),
-                b2.getUncompressedSizeWithoutHeader());
-            assertEquals(b.getPrevBlockOffset(), b2.getPrevBlockOffset());
-            assertEquals(curOffset, b2.getOffset());
-
-            curOffset += b.getOnDiskSizeWithHeader();
-
-            if (cacheOnWrite) {
-              // In the cache-on-write mode we store uncompressed bytes so we
-              // can compare them to what was read by the block reader.
-
-              ByteBuffer bufRead = b.getBufferWithHeader();
-              ByteBuffer bufExpected = expectedContents.get(i);
-              boolean bytesAreCorrect = Bytes.compareTo(bufRead.array(),
-                  bufRead.arrayOffset(), bufRead.limit(),
-                  bufExpected.array(), bufExpected.arrayOffset(),
-                  bufExpected.limit()) == 0;
-              String wrongBytesMsg = "";
-
-              if (!bytesAreCorrect) {
-                // Optimization: only construct an error message in case we
-                // will need it.
-                wrongBytesMsg = "Expected bytes in block #" + i + " (algo="
-                    + algo + ", pread=" + pread + "):\n";
-                wrongBytesMsg += Bytes.toStringBinary(bufExpected.array(),
-                    bufExpected.arrayOffset(), Math.min(32,
-                        bufExpected.limit()))
-                    + ", actual:\n"
-                    + Bytes.toStringBinary(bufRead.array(),
-                        bufRead.arrayOffset(), Math.min(32, bufRead.limit()));
-              }
-
-              assertTrue(wrongBytesMsg, bytesAreCorrect);
-            }
+            assertTrue(wrongBytesMsg, bytesAreCorrect);
           }
-
-          assertEquals(curOffset, fs.getFileStatus(path).getLen());
-          is.close();
         }
+        assertEquals(curOffset, fs.getFileStatus(path).getLen());
+        is.close();
       }
     }
   }
@@ -575,7 +560,6 @@ public class TestHFileBlock {
       while (System.currentTimeMillis() < endTime) {
         int blockId = rand.nextInt(NUM_TEST_BLOCKS);
         long offset = offsets.get(blockId);
-        boolean pread = rand.nextBoolean();
         boolean withOnDiskSize = rand.nextBoolean();
         long expectedSize =
           (blockId == NUM_TEST_BLOCKS - 1 ? fileSize
@@ -584,10 +568,10 @@ public class TestHFileBlock {
         HFileBlock b;
         try {
           long onDiskSizeArg = withOnDiskSize ? expectedSize : -1;
-          b = hbr.readBlockData(offset, onDiskSizeArg, -1, pread);
+          b = hbr.readBlockData(offset, onDiskSizeArg, -1);
         } catch (IOException ex) {
           LOG.error("Error in client " + clientId + " trying to read block at "
-              + offset + ", pread=" + pread + ", withOnDiskSize=" +
+              + offset + ", pread=" + ", withOnDiskSize=" +
               withOnDiskSize, ex);
           return false;
         }
@@ -597,8 +581,7 @@ public class TestHFileBlock {
         assertEquals(offset, b.getOffset());
 
         ++numBlocksRead;
-        if (pread)
-          ++numPositionalRead;
+        ++numPositionalRead;
         if (withOnDiskSize)
           ++numWithOnDiskSize;
       }

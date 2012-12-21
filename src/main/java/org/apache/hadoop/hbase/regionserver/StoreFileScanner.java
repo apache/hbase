@@ -79,19 +79,17 @@ class StoreFileScanner implements KeyValueScanner {
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
       Collection<StoreFile> files,
-      boolean cacheBlocks,
-      boolean usePread) throws IOException {
-    return getScannersForStoreFiles(files, cacheBlocks,
-                                   usePread, false);
+      boolean cacheBlocks) throws IOException {
+    return getScannersForStoreFiles(files, cacheBlocks, false);
   }
 
   /**
    * Return an array of scanners corresponding to the given set of store files.
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
-      Collection<StoreFile> files, boolean cacheBlocks, boolean usePread,
+      Collection<StoreFile> files, boolean cacheBlocks,
       boolean isCompaction) throws IOException {
-    return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction,
+    return getScannersForStoreFiles(files, cacheBlocks, isCompaction,
         null);
   }
 
@@ -101,14 +99,13 @@ class StoreFileScanner implements KeyValueScanner {
    * optimization
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
-      Collection<StoreFile> files, boolean cacheBlocks, boolean usePread,
+      Collection<StoreFile> files, boolean cacheBlocks,
       boolean isCompaction, ScanQueryMatcher matcher) throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(
         files.size());
     for (StoreFile file : files) {
       StoreFile.Reader r = file.createReader();
-      StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, usePread,
-          isCompaction);
+      StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, isCompaction);
       scanner.setScanQueryMatcher(matcher);
       scanners.add(scanner);
     }

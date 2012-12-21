@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
@@ -999,7 +998,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * @return the newly read block
      */
     HFileBlock readBlockData(long offset, long onDiskSize,
-        int uncompressedSize, boolean pread) throws IOException;
+        int uncompressedSize) throws IOException;
 
     /**
      * Creates a block iterator over the given portion of the {@link HFile}.
@@ -1048,7 +1047,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         public HFileBlock nextBlock() throws IOException {
           if (offset >= endOffset)
             return null;
-          HFileBlock b = readBlockData(offset, -1, -1, false);
+          HFileBlock b = readBlockData(offset, -1, -1);
           offset += b.getOnDiskSizeWithHeader();
           return b;
         }
@@ -1075,14 +1074,13 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * @param size size of the block to be read
      * @param peekIntoNextBlock whether to read the next block's on-disk size
      * @param fileOffset position in the stream to read at
-     * @param pread whether we should do a positional read
      * @return the on-disk size of the next block with header size included, or
      *         -1 if it could not be determined
      * @throws IOException
      */
     protected int readAtOffset(byte[] dest, int destOffset, int size,
-        boolean peekIntoNextBlock, long fileOffset, boolean pread)
-        throws IOException {
+        boolean peekIntoNextBlock, long fileOffset)
+            throws IOException {
       if (peekIntoNextBlock &&
           destOffset + size + HEADER_SIZE > dest.length) {
         // We are asked to read the next block's header as well, but there is
@@ -1096,85 +1094,35 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       ProfilingData pData = (callContext == null)? null : callContext.getProfilingData();
 
       long t0, t1;
-      long timeToGrabLock, timeToSeek, timeToRead, timeToReadExtra;
-      if (pread) {
-        // Positional read. Better for random reads.
-        int extraSize = peekIntoNextBlock ? HEADER_SIZE : 0;
+      long timeToRead;
+      // Positional read. Better for random reads.
+      int extraSize = peekIntoNextBlock ? HEADER_SIZE : 0;
 
-        t0 = EnvironmentEdgeManager.currentTimeMillis();
-        numPositionalRead.incrementAndGet();
-        int sizeToRead = size + extraSize;
-        int sizeRead = 0;
-        if (sizeToRead > 0) {
-          sizeRead = istream.read(fileOffset, dest, destOffset, sizeToRead);
-          if (pData != null) {
-            t1 = EnvironmentEdgeManager.currentTimeMillis();
-            timeToRead = t1 - t0;
-            pData.addToHist(ProfilingData.HFILE_BLOCK_P_READ_TIME_MS, timeToRead);
-          }
-          if (size == 0 && sizeRead == -1) {
-            // a degenerate case of a zero-size block and no next block header.
-            sizeRead = 0;
-          }
-          if (sizeRead < size) {
-            throw new IOException("Positional read of " + sizeToRead + " bytes " +
-                "failed at offset " + fileOffset + " (returned " + sizeRead + ")");
-          }
+      t0 = EnvironmentEdgeManager.currentTimeMillis();
+      numPositionalRead.incrementAndGet();
+      int sizeToRead = size + extraSize;
+      int sizeRead = 0;
+      if (sizeToRead > 0) {
+        sizeRead = istream.read(fileOffset, dest, destOffset, sizeToRead);
+        if (pData != null) {
+          t1 = EnvironmentEdgeManager.currentTimeMillis();
+          timeToRead = t1 - t0;
+          pData.addToHist(ProfilingData.HFILE_BLOCK_P_READ_TIME_MS, timeToRead);
         }
-
-        if (sizeRead == size || sizeRead < sizeToRead) {
-          // Could not read the next block's header, or did not try.
-          return -1;
+        if (size == 0 && sizeRead == -1) {
+          // a degenerate case of a zero-size block and no next block header.
+          sizeRead = 0;
         }
-
-      } else {
-        t0 = EnvironmentEdgeManager.currentTimeMillis();
-        // Seek + read. Better for scanning.
-        synchronized (istream) {
-          if (pData != null) {
-            t1 = EnvironmentEdgeManager.currentTimeMillis();
-            timeToGrabLock = t1 - t0;
-            t0 = t1;
-            pData.addToHist(ProfilingData.HFILE_BLOCK_WAIT_FOR_LOCK_TIME_MS, timeToGrabLock);
-          }
-          numSeekRead.incrementAndGet();
-          istream.seek(fileOffset);
-          if (pData != null) {
-            t1 = EnvironmentEdgeManager.currentTimeMillis();
-            timeToSeek = t1 - t0;
-            pData.addToHist(ProfilingData.HFILE_BLOCK_SEEK_TIME_MS, timeToSeek);
-          }
-
-          long realOffset = istream.getPos();
-          if (realOffset != fileOffset) {
-            throw new IOException("Tried to seek to " + fileOffset + " to "
-                + "read " + size + " bytes, but pos=" + realOffset
-                + " after seek");
-          }
-
-          if (!peekIntoNextBlock) {
-            t0 = EnvironmentEdgeManager.currentTimeMillis();
-            IOUtils.readFully(istream, dest, destOffset, size);
-            if (pData != null) {
-              t1 = EnvironmentEdgeManager.currentTimeMillis();
-              timeToRead = t1 - t0;
-              pData.addToHist(ProfilingData.HFILE_BLOCK_NO_P_READ_TIME_MS, timeToRead);
-            }
-            return -1;
-          }
-
-          // Try to read the next block header.
-          t0 = EnvironmentEdgeManager.currentTimeMillis();
-          if (!readWithExtra(istream, dest, destOffset, size, HEADER_SIZE))
-            if (pData != null) {
-              t1 = EnvironmentEdgeManager.currentTimeMillis();
-              timeToReadExtra = t1 - t0;
-              pData.addToHist(ProfilingData.HFILE_BLOCK_NO_P_READ_TIME_EXTRA_MS, timeToReadExtra);
-            }
-            return -1;
+        if (sizeRead < size) {
+          throw new IOException("Positional read of " + sizeToRead + " bytes " +
+              "failed at offset " + fileOffset + " (returned " + sizeRead + ")");
         }
       }
 
+      if (sizeRead == size || sizeRead < sizeToRead) {
+        // Could not read the next block's header, or did not try.
+        return -1;
+      }
       assert peekIntoNextBlock;
       return Bytes.toInt(dest, destOffset + size + BlockType.MAGIC_LENGTH) +
           HEADER_SIZE;
@@ -1215,13 +1163,12 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      *
      * @param offset the starting file offset the bounded stream reads from
      * @param size the size of the segment of the file the stream should read
-     * @param pread whether to use position reads
      * @return a stream restricted to the given portion of the file
      */
     protected InputStream createBufferedBoundedStream(long offset,
-        int size, boolean pread) {
+        int size) {
       return new BufferedInputStream(new BoundedRangeFileInputStream(istream,
-          offset, size, pread), Math.min(DEFAULT_BUFFER_SIZE, size));
+          offset, size), Math.min(DEFAULT_BUFFER_SIZE, size));
     }
 
   }
@@ -1263,7 +1210,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      */
     @Override
     public HFileBlock readBlockData(long offset, long onDiskSizeWithMagic,
-        int uncompressedSizeWithMagic, boolean pread) throws IOException {
+        int uncompressedSizeWithMagic) throws IOException {
       if (uncompressedSizeWithMagic <= 0) {
         throw new IOException("Invalid uncompressedSize="
             + uncompressedSizeWithMagic + " for a version 1 " + "block");
@@ -1300,7 +1247,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         // The first MAGIC_LENGTH bytes of what this will read will be
         // overwritten.
         readAtOffset(buf.array(), buf.arrayOffset() + HEADER_DELTA,
-            onDiskSize, false, offset, pread);
+            onDiskSize, false, offset);
 
         onDiskSizeWithoutHeader = uncompressedSizeWithMagic - MAGIC_LENGTH;
       } else {
@@ -1308,7 +1255,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         numSeekRead.incrementAndGet();
 
         InputStream bufferedBoundedStream = createBufferedBoundedStream(
-            offset, onDiskSize, pread);
+            offset, onDiskSize);
         decompress(buf.array(), buf.arrayOffset() + HEADER_DELTA,
             bufferedBoundedStream, uncompressedSizeWithMagic);
 
@@ -1372,11 +1319,10 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      *          the header, or -1 if unknown
      * @param uncompressedSize the uncompressed size of the the block. Always
      *          expected to be -1. This parameter is only used in version 1.
-     * @param pread whether to use a positional read
      */
     @Override
     public HFileBlock readBlockData(long offset, long onDiskSizeWithHeaderL,
-        int uncompressedSize, boolean pread) throws IOException {
+        int uncompressedSize) throws IOException {
       if (offset < 0) {
         throw new IOException("Invalid offset=" + offset + " trying to read "
             + "block (onDiskSize=" + onDiskSizeWithHeaderL
@@ -1436,8 +1382,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           int nextBlockOnDiskSizeWithHeader = readAtOffset(
               headerAndData.array(), headerAndData.arrayOffset()
                   + preReadHeaderSize, onDiskSizeWithHeader
-                  - preReadHeaderSize, true, offset + preReadHeaderSize,
-                  pread);
+                  - preReadHeaderSize, true, offset + preReadHeaderSize);
 
           b = new HFileBlock(headerAndData);
           b.assumeUncompressed();
@@ -1452,7 +1397,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
           int nextBlockOnDiskSize = readAtOffset(onDiskBlock,
               preReadHeaderSize, onDiskSizeWithHeader - preReadHeaderSize,
-              true, offset + preReadHeaderSize, pread);
+              true, offset + preReadHeaderSize);
 
           if (header == null)
             header = onDiskBlock;
@@ -1507,7 +1452,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           // read the header.
           headerBuf = ByteBuffer.allocate(HEADER_SIZE);;
           readAtOffset(headerBuf.array(), headerBuf.arrayOffset(), HEADER_SIZE,
-              false, offset, pread);
+              false, offset);
         }
 
         b = new HFileBlock(headerBuf);
@@ -1522,8 +1467,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           b.assumeUncompressed();
           b.nextBlockOnDiskSizeWithHeader = readAtOffset(b.buf.array(),
               b.buf.arrayOffset() + HEADER_SIZE,
-              b.uncompressedSizeWithoutHeader, true, offset + HEADER_SIZE,
-              pread);
+              b.uncompressedSizeWithoutHeader, true, offset + HEADER_SIZE);
 
           if (b.nextBlockOnDiskSizeWithHeader > 0) {
             setNextBlockHeader(offset, b);
@@ -1535,7 +1479,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
           b.nextBlockOnDiskSizeWithHeader = readAtOffset(compressedBytes,
               HEADER_SIZE, b.onDiskSizeWithoutHeader, true, offset
-                  + HEADER_SIZE, pread);
+                  + HEADER_SIZE);
           DataInputStream dis = new DataInputStream(new ByteArrayInputStream(
               compressedBytes, HEADER_SIZE, b.onDiskSizeWithoutHeader));
 

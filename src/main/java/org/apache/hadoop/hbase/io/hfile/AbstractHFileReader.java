@@ -156,13 +156,11 @@ public abstract class AbstractHFileReader extends SchemaConfigured
    * compactions.
    *
    * @param cacheBlocks True if we should cache blocks read in by this scanner.
-   * @param pread Use positional read rather than seek+read if true (pread is
-   *          better for random reads, seek+read is better scanning).
    * @return Scanner on this file.
    */
   @Override
-  public HFileScanner getScanner(boolean cacheBlocks, final boolean pread) {
-    return getScanner(cacheBlocks, pread, false);
+  public HFileScanner getScanner(boolean cacheBlocks) {
+    return getScanner(cacheBlocks, false);
   }
 
   /**
@@ -270,7 +268,6 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     protected ByteBuffer blockBuffer;
 
     protected boolean cacheBlocks;
-    protected final boolean pread;
     protected final boolean isCompaction;
 
     protected int currKeyLen;
@@ -283,10 +280,9 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     protected final HFile.Reader reader;
 
     public Scanner(final HFile.Reader reader, final boolean cacheBlocks,
-        final boolean pread, final boolean isCompaction) {
+        final boolean isCompaction) {
       this.reader = reader;
       this.cacheBlocks = cacheBlocks;
-      this.pread = pread;
       this.isCompaction = isCompaction;
     }
 

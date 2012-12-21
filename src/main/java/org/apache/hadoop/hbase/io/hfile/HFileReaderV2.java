@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -159,21 +158,18 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * scanner is sufficient.
    *
    * @param cacheBlocks True if we should cache blocks read in by this scanner.
-   * @param pread Use positional read rather than seek+read if true (pread is
-   *          better for random reads, seek+read is better scanning).
    * @param isCompaction is scanner being used for a compaction?
    * @return Scanner on this file.
    */
   @Override
-  public HFileScanner getScanner(boolean cacheBlocks, final boolean pread,
-      final boolean isCompaction) {
+  public HFileScanner getScanner(boolean cacheBlocks, final boolean isCompaction) {
     // check if we want to use data block encoding in memory
     if (dataBlockEncoder.useEncodedScanner(isCompaction)) {
-      return new EncodedScannerV2(this, cacheBlocks, pread, isCompaction,
+      return new EncodedScannerV2(this, cacheBlocks, isCompaction,
           includesMemstoreTS);
     }
 
-    return new ScannerV2(this, cacheBlocks, pread, isCompaction);
+    return new ScannerV2(this, cacheBlocks, isCompaction);
   }
 
   /**
@@ -221,9 +217,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
         // Cache Miss, please load.
       }
 
-      final boolean pread = true;  // we always do positional reads for meta blocks
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
-          blockSize, -1, pread);
+          blockSize, -1);
       passSchemaMetricsTo(metaBlock);
 
       long deltaNs = System.nanoTime() - startTimeNs;
@@ -247,8 +242,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * @param dataBlockOffset offset to read.
    * @param onDiskBlockSize size of the block
    * @param cacheBlock
-   * @param pread Use positional read instead of seek+read (positional is
-   *          better doing random reads whereas seek+read is better scanning).
    * @param isCompaction is this block being read as part of a compaction
    * @param expectedBlockType the block type we are expecting to read with this
    *          read operation, or null to read whatever block type is available
@@ -258,7 +251,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * @throws IOException
    */
   public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize,
-      final boolean cacheBlock, boolean pread, final boolean isCompaction,
+      final boolean cacheBlock, final boolean isCompaction,
       BlockType expectedBlockType)
       throws IOException {
     if (dataBlockIndexReader == null) {
@@ -300,7 +293,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       // Load block from filesystem.
       long startTimeNs = System.nanoTime();
       HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset,
-          onDiskBlockSize, -1, pread);
+          onDiskBlockSize, -1);
       hfileBlock = dataBlockEncoder.diskToCacheFormat(hfileBlock,
           isCompaction);
       validateBlockType(hfileBlock, expectedBlockType);
@@ -308,13 +301,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
       BlockCategory blockCategory = hfileBlock.getBlockType().getCategory();
 
       long deltaNs = System.nanoTime() - startTimeNs;
-      if (pread) {
-        HFile.preadTimeNano.addAndGet(deltaNs);
-        HFile.preadOps.incrementAndGet();
-      } else {
-        HFile.readTimeNano.addAndGet(deltaNs);
-        HFile.readOps.incrementAndGet();
-      }
+      HFile.preadTimeNano.addAndGet(deltaNs);
+      HFile.preadOps.incrementAndGet();
 
       getSchemaMetrics().updateOnCacheMiss(blockCategory, isCompaction,
           TimeUnit.NANOSECONDS.toMillis(deltaNs));
@@ -473,8 +461,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
     protected byte[] nextIndexedKey;
     
     public AbstractScannerV2(HFileReaderV2 r, boolean cacheBlocks,
-        final boolean pread, final boolean isCompaction) {
-      super(r, cacheBlocks, pread, isCompaction);
+        final boolean isCompaction) {
+      super(r, cacheBlocks, isCompaction);
     }
 
     /**
@@ -497,7 +485,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           reader.getDataBlockIndexReader();
       BlockWithScanInfo blockWithScanInfo = 
         indexReader.loadDataBlockWithScanInfo(key, offset, length, block, 
-            cacheBlocks, pread, isCompaction);
+            cacheBlocks, isCompaction);
       if (blockWithScanInfo == null || blockWithScanInfo.getHFileBlock() == null) {
         // This happens if the key e.g. falls before the beginning of the file.
         return -1;
@@ -553,7 +541,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         throws IOException {
       HFileBlock seekToBlock =
           reader.getDataBlockIndexReader().seekToDataBlock(key, offset, length,
-              block, cacheBlocks, pread, isCompaction);
+              block, cacheBlocks, isCompaction);
       if (seekToBlock == null) {
         return false;
       }
@@ -574,7 +562,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         // figure out the size.
         seekToBlock = reader.readBlock(previousBlockOffset,
             seekToBlock.getOffset() - previousBlockOffset, cacheBlocks,
-            pread, isCompaction, BlockType.DATA);
+            isCompaction, BlockType.DATA);
         // TODO shortcut: seek forward in this block to the last key of the
         // block.
       }
@@ -610,7 +598,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         // it might turn out to be a non-data block.
         curBlock = reader.readBlock(curBlock.getOffset()
             + curBlock.getOnDiskSizeWithHeader(),
-            curBlock.getNextBlockOnDiskSizeWithHeader(), cacheBlocks, pread,
+            curBlock.getNextBlockOnDiskSizeWithHeader(), cacheBlocks,
             isCompaction, null);
       } while (!(curBlock.getBlockType().equals(BlockType.DATA) ||
           curBlock.getBlockType().equals(BlockType.ENCODED_DATA)));
@@ -626,8 +614,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
     private HFileReaderV2 reader;
 
     public ScannerV2(HFileReaderV2 r, boolean cacheBlocks,
-        final boolean pread, final boolean isCompaction) {
-      super(r, cacheBlocks, pread, isCompaction);
+        final boolean isCompaction) {
+      super(r, cacheBlocks, isCompaction);
       this.reader = r;
     }
 
@@ -745,7 +733,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         return true;
       }
 
-      block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
+      block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks,
           isCompaction, BlockType.DATA);
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());
@@ -943,8 +931,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
     private final boolean includesMemstoreTS;
 
     public EncodedScannerV2(HFileReaderV2 reader, boolean cacheBlocks,
-        boolean pread, boolean isCompaction, boolean includesMemstoreTS) {
-      super(reader, cacheBlocks, pread, isCompaction);
+        boolean isCompaction, boolean includesMemstoreTS) {
+      super(reader, cacheBlocks, isCompaction);
       this.includesMemstoreTS = includesMemstoreTS;
     }
 
@@ -1010,7 +998,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         return true;
       }
 
-      block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
+      block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks,
           isCompaction, BlockType.DATA);
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());

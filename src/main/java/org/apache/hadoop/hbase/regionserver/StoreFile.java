@@ -1205,28 +1205,23 @@ public class StoreFile extends SchemaConfigured {
      * this overload if using this scanner for compactions.
      *
      * @param cacheBlocks should this scanner cache blocks?
-     * @param pread use pread (for highly concurrent small readers)
      * @return a scanner
      */
-    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
-                                               boolean pread) {
-      return getStoreFileScanner(cacheBlocks, pread, false);
+    public StoreFileScanner getStoreFileScanner(boolean cacheBlocks) {
+      return getStoreFileScanner(cacheBlocks, false);
     }
 
     /**
      * Get a scanner to scan over this StoreFile.
      *
      * @param cacheBlocks should this scanner cache blocks?
-     * @param pread use pread (for highly concurrent small readers)
      * @param isCompaction is scanner being used for compaction?
      * @return a scanner
      */
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
-                                               boolean pread,
                                                boolean isCompaction) {
       return new StoreFileScanner(this,
-                                 getScanner(cacheBlocks, pread,
-                                            isCompaction), !isCompaction);
+                                 getScanner(cacheBlocks, isCompaction), !isCompaction);
     }
 
     /**
@@ -1235,12 +1230,11 @@ public class StoreFile extends SchemaConfigured {
      * which is the preferred way to scan a store with higher level concepts.
      *
      * @param cacheBlocks should we cache the blocks?
-     * @param pread use pread (for concurrent small readers)
      * @return the underlying HFileScanner
      */
     @Deprecated
-    public HFileScanner getScanner(boolean cacheBlocks, boolean pread){
-      return getScanner(cacheBlocks, pread, false);
+    public HFileScanner getScanner(boolean cacheBlocks){
+      return getScanner(cacheBlocks, false);
     }
 
     /**
@@ -1249,14 +1243,12 @@ public class StoreFile extends SchemaConfigured {
      * which is the preferred way to scan a store with higher level concepts.
      *
      * @param cacheBlocks should we cache the blocks?
-     * @param pread use pread (for concurrent small readers)
      * @param isCompaction is scanner being used for compaction?
      * @return the underlying HFileScanner
      */
     @Deprecated
-    public HFileScanner getScanner(boolean cacheBlocks, boolean pread,
-                                  boolean isCompaction) {
-      return reader.getScanner(cacheBlocks, pread, isCompaction);
+    public HFileScanner getScanner(boolean cacheBlocks, boolean isCompaction) {
+      return reader.getScanner(cacheBlocks, isCompaction);
     }
 
     public void close(boolean evictOnClose) throws IOException {

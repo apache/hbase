@@ -36,7 +36,6 @@ class BoundedRangeFileInputStream  extends InputStream {
   private long end;
   private long mark;
   private final byte[] oneByte = new byte[1];
-  private final boolean pread;
 
   /**
    * Constructor
@@ -47,13 +46,12 @@ class BoundedRangeFileInputStream  extends InputStream {
    *          Beginning offset of the region.
    * @param length
    *          Length of the region.
-   * @param pread If true, use Filesystem positional read rather than seek+read.
    *
    *          The actual length of the region may be smaller if (off_begin +
    *          length) goes beyond the end of FS input stream.
    */
   public BoundedRangeFileInputStream(FSDataInputStream in, long offset,
-      long length, final boolean pread) {
+      long length) {
     if (offset < 0 || length < 0) {
       throw new IndexOutOfBoundsException("Invalid offset/length: " + offset
           + "/" + length);
@@ -63,7 +61,6 @@ class BoundedRangeFileInputStream  extends InputStream {
     this.pos = offset;
     this.end = offset + length;
     this.mark = -1;
-    this.pread = pread;
   }
 
   @Override
@@ -96,15 +93,8 @@ class BoundedRangeFileInputStream  extends InputStream {
 
     int n = (int) Math.min(Integer.MAX_VALUE, Math.min(len, (end - pos)));
     if (n == 0) return -1;
-    int ret = 0;
-    if (this.pread) {
-      ret = in.read(pos, b, off, n);
-    } else {
-      synchronized (in) {
-        in.seek(pos);
-        ret = in.read(b, off, n);
-      }
-    }
+    int ret = in.read(pos, b, off, n);
+
     if (ret < 0) {
       end = pos;
       return -1;

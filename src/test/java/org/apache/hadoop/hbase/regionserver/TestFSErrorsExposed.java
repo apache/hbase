@@ -130,7 +130,7 @@ public class TestFSErrorsExposed {
         cacheConf, BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
 
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
-        Collections.singletonList(sf), false, true, false);
+        Collections.singletonList(sf), false, false);
     KeyValueScanner scanner = scanners.get(0);
 
     FaultyInputStream inStream = fs.inStreams.get(0).get();

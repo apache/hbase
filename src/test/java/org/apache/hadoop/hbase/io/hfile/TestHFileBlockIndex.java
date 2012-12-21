@@ -128,7 +128,6 @@ public class TestHFileBlockIndex {
     private HFileBlock.FSReader realReader;
     private long prevOffset;
     private long prevOnDiskSize;
-    private boolean prevPread;
     private HFileBlock prevBlock;
 
     public int hitCount = 0;
@@ -140,21 +139,18 @@ public class TestHFileBlockIndex {
 
     @Override
     public HFileBlock readBlock(long offset, long onDiskSize,
-        boolean cacheBlock, boolean pread, boolean isCompaction,
+        boolean cacheBlock, boolean isCompaction,
         BlockType expectedBlockType)
         throws IOException {
-      if (offset == prevOffset && onDiskSize == prevOnDiskSize &&
-          pread == prevPread) {
+      if (offset == prevOffset && onDiskSize == prevOnDiskSize) {
         hitCount += 1;
         return prevBlock;
       }
 
       missCount += 1;
-      prevBlock = realReader.readBlockData(offset, onDiskSize,
-          -1, pread);
+      prevBlock = realReader.readBlockData(offset, onDiskSize, -1);
       prevOffset = offset;
       prevOnDiskSize = onDiskSize;
-      prevPread = pread;
 
       return prevBlock;
     }
@@ -185,7 +181,7 @@ public class TestHFileBlockIndex {
       assertTrue(key != null);
       assertTrue(indexReader != null);
       HFileBlock b = indexReader.seekToDataBlock(key, 0, key.length, null,
-          true, true, false);
+          true, false);
       if (Bytes.BYTES_RAWCOMPARATOR.compare(key, firstKeyInFile) < 0) {
         assertTrue(b == null);
         ++i;

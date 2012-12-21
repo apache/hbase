@@ -321,7 +321,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
               .withBloomType(bloomFilterType)
               .withBloomErrorRate(err)
               .build();
-      HFileScanner scanner = halfReader.getScanner(false, false, false);
+      HFileScanner scanner = halfReader.getScanner(false, false);
       scanner.seekTo();
       do {
         KeyValue kv = scanner.getKeyValue();

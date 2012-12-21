@@ -164,7 +164,7 @@ public class TestHFileWriterV2 {
     fsdis.seek(0);
     long curBlockPos = 0;
     while (curBlockPos <= trailer.getLastDataBlockOffset()) {
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1);
       assertEquals(BlockType.DATA, block.getBlockType());
       ByteBuffer buf = block.getBufferWithoutHeader();
       while (buf.hasRemaining()) {
@@ -202,12 +202,12 @@ public class TestHFileWriterV2 {
     // Meta blocks. We can scan until the load-on-open data offset (which is
     // the root block index offset in version 2) because we are not testing
     // intermediate-level index blocks here.
-
+    
     int metaCounter = 0;
-    while (fsdis.getPos() < trailer.getLoadOnOpenDataOffset()) {
+    while (curBlockPos < trailer.getLoadOnOpenDataOffset()) {
       LOG.info("Current offset: " + fsdis.getPos() + ", scanning until " +
           trailer.getLoadOnOpenDataOffset());
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1);
       assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
       block.readInto(t);

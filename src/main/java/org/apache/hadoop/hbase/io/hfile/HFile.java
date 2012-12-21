@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFile.WriterFactory;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -384,7 +383,7 @@ public class HFile {
   /** An abstraction used by the block index */
   public interface CachingBlockReader {
     HFileBlock readBlock(long offset, long onDiskBlockSize,
-        boolean cacheBlock, final boolean pread, final boolean isCompaction,
+        boolean cacheBlock, final boolean isCompaction,
         BlockType expectedBlockType)
         throws IOException;
   }
@@ -402,8 +401,7 @@ public class HFile {
 
     RawComparator<byte []> getComparator();
 
-    HFileScanner getScanner(boolean cacheBlocks,
-       final boolean pread, final boolean isCompaction);
+    HFileScanner getScanner(boolean cacheBlocks, final boolean isCompaction);
 
     ByteBuffer getMetaBlock(String metaBlockName,
        boolean cacheBlock) throws IOException;
@@ -430,7 +428,7 @@ public class HFile {
 
     HFileBlockIndex.BlockIndexReader getDataBlockIndexReader();
 
-    HFileScanner getScanner(boolean cacheBlocks, boolean pread);
+    HFileScanner getScanner(boolean cacheBlocks);
 
     Compression.Algorithm getCompressionAlgorithm();
 
