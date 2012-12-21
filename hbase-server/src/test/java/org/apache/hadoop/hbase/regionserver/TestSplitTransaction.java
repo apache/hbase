@@ -208,7 +208,7 @@ public class TestSplitTransaction {
     TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 1);
     try {
       for (Store store : this.parent.stores.values()) {
-        store.getFamily().setBloomFilterType(StoreFile.BloomType.ROW);
+        store.getFamily().setBloomFilterType(BloomType.ROW);
       }
       testWholesomeSplit();
     } finally {

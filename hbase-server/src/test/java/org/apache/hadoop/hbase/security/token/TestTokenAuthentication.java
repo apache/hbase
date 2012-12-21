@@ -42,8 +42,9 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -122,7 +123,7 @@ public class TestTokenAuthentication {
         throw new IllegalArgumentException("Failed resolve of " + initialIsa);
       }
 
-      this.rpcServer = HBaseRPC.getServer(TokenServer.class, this,
+      this.rpcServer = HBaseServerRPC.getServer(TokenServer.class, this,
           new Class<?>[]{AuthenticationProtos.AuthenticationService.Interface.class},
           initialIsa.getHostName(), // BindAddress is IP we got for this server.
           initialIsa.getPort(),
@@ -377,7 +378,7 @@ public class TestTokenAuthentication {
         c.set(HConstants.CLUSTER_ID, clusterId.toString());
         AuthenticationProtos.AuthenticationService.BlockingInterface proxy =
             (AuthenticationProtos.AuthenticationService.BlockingInterface)
-            HBaseRPC.waitForProxy(BlockingAuthenticationService.class,
+            HBaseClientRPC.waitForProxy(BlockingAuthenticationService.class,
                 BlockingAuthenticationService.VERSION,
                 server.getAddress(), c,
                 HConstants.DEFAULT_HBASE_CLIENT_RPC_MAXATTEMPTS,

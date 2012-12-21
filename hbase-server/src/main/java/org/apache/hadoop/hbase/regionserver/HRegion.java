@@ -106,9 +106,9 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
+import org.apache.hadoop.hbase.ipc.UnknownProtocolException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
@@ -4978,7 +4978,7 @@ public class HRegion implements HeapSize { // , Writable{
     String serviceName = call.getServiceName();
     String methodName = call.getMethodName();
     if (!coprocessorServiceHandlers.containsKey(serviceName)) {
-      throw new HBaseRPC.UnknownProtocolException(null,
+      throw new UnknownProtocolException(null,
           "No registered coprocessor service found for name "+serviceName+
           " in region "+Bytes.toStringBinary(getRegionName()));
     }
@@ -4987,7 +4987,7 @@ public class HRegion implements HeapSize { // , Writable{
     Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
     Descriptors.MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
     if (methodDesc == null) {
-      throw new HBaseRPC.UnknownProtocolException(service.getClass(),
+      throw new UnknownProtocolException(service.getClass(),
           "Unknown method "+methodName+" called on service "+serviceName+
               " in region "+Bytes.toStringBinary(getRegionName()));
     }

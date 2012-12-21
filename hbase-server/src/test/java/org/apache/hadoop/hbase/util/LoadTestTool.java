@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 
 /**
  * A command-line utility that reads, writes, and verifies data. Unlike
@@ -67,7 +67,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       "<verify_percent>[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
 
   private static final String OPT_USAGE_BLOOM = "Bloom filter type, one of " +
-      Arrays.toString(StoreFile.BloomType.values());
+      Arrays.toString(BloomType.values());
 
   private static final String OPT_USAGE_COMPRESSION = "Compression type, " +
       "one of " + Arrays.toString(Compression.Algorithm.values());
@@ -115,7 +115,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private DataBlockEncoding dataBlockEncodingAlgo;
   private boolean encodeInCacheOnly;
   private Compression.Algorithm compressAlgo;
-  private StoreFile.BloomType bloomType;
+  private BloomType bloomType;
 
   // Writer options
   private int numWriterThreads = DEFAULT_NUM_THREADS;
@@ -317,7 +317,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
     bloomType = bloomStr == null ? null :
-        StoreFile.BloomType.valueOf(bloomStr);
+        BloomType.valueOf(bloomStr);
   }
 
   public void initTestTable() throws IOException {

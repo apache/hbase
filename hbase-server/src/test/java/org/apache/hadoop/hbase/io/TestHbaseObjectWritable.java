@@ -479,8 +479,6 @@ public class TestHbaseObjectWritable extends TestCase {
     assertEquals(18,HbaseObjectWritable.getClassCode(HColumnDescriptor.class).intValue());
     assertEquals(19,HbaseObjectWritable.getClassCode(HConstants.Modify.class).intValue());
     // 20 and 21 are place holders for HMsg
-    assertEquals(22,HbaseObjectWritable.getClassCode(HRegion.class).intValue());
-    assertEquals(23,HbaseObjectWritable.getClassCode(HRegion[].class).intValue());
     assertEquals(24,HbaseObjectWritable.getClassCode(HRegionInfo.class).intValue());
     assertEquals(25,HbaseObjectWritable.getClassCode(HRegionInfo[].class).intValue());
     // Intentional hole... these objects have been removed.

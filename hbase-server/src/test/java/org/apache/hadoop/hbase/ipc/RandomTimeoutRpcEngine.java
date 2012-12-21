@@ -41,7 +41,7 @@ import com.google.protobuf.ServiceException;
  * Make sure to call setProtocolEngine to have the client actually use the RpcEngine
  * for a specific protocol
  */
-public class RandomTimeoutRpcEngine extends ProtobufRpcEngine {
+public class RandomTimeoutRpcEngine extends ProtobufRpcClientEngine {
 
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   public static double chanceOfTimeout = 0.3;
@@ -67,7 +67,7 @@ public class RandomTimeoutRpcEngine extends ProtobufRpcEngine {
    * Call this in order to set this class to run as the RpcEngine for the given protocol
    */
   public static void setProtocolEngine(Configuration conf, Class protocol) {
-    HBaseRPC.setProtocolEngine(conf, protocol, RandomTimeoutRpcEngine.class);
+    HBaseClientRPC.setProtocolEngine(conf, protocol, RandomTimeoutRpcEngine.class);
   }
 
   /**

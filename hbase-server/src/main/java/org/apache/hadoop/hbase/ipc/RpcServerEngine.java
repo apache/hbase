@@ -18,27 +18,14 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-
-import javax.net.SocketFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.security.User;
 
-/** An RPC implementation. */
+import java.io.IOException;
+
+/** An RPC implementation for the server. */
 @InterfaceAudience.Private
-interface RpcEngine {
-
-  /** Construct a client-side proxy object. */
-  VersionedProtocol getProxy(Class<? extends VersionedProtocol> protocol,
-                  long clientVersion, InetSocketAddress addr,
-                  User ticket, Configuration conf,
-                  SocketFactory factory, int rpcTimeout) throws IOException;
-
-  /** Stop this proxy. */
-  void stopProxy(VersionedProtocol proxy);
+interface RpcServerEngine {
 
   /** Construct a server for a protocol implementation instance. */
   RpcServer getServer(Class<? extends VersionedProtocol> protocol, Object instance,

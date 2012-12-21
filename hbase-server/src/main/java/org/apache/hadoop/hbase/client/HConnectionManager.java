@@ -72,7 +72,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -242,7 +242,7 @@ public class HConnectionManager {
    * @param stopProxy
    *          Shuts down all the proxy's put up to cluster members including to
    *          cluster HMaster. Calls
-   *          {@link HBaseRPC#stopProxy(org.apache.hadoop.hbase.ipc.VersionedProtocol)}
+   *          {@link HBaseClientRPC#stopProxy(org.apache.hadoop.hbase.ipc.VersionedProtocol)}
    *          .
    */
   public static void deleteConnection(Configuration conf, boolean stopProxy) {
@@ -709,16 +709,16 @@ public class HConnectionManager {
 
         InetSocketAddress isa =
           new InetSocketAddress(sn.getHostname(), sn.getPort());
-        MasterProtocol tryMaster = (MasterProtocol) HBaseRPC.getProxy(
-          masterProtocolState.protocolClass,
-          masterProtocolState.version,
-          isa, this.conf,this.rpcTimeout);
+        MasterProtocol tryMaster = (MasterProtocol) HBaseClientRPC.getProxy(
+            masterProtocolState.protocolClass,
+            masterProtocolState.version,
+            isa, this.conf, this.rpcTimeout);
 
         if (tryMaster.isMasterRunning(
             null, RequestConverter.buildIsMasterRunningRequest()).getIsMasterRunning()) {
           return tryMaster;
         } else {
-          HBaseRPC.stopProxy(tryMaster);
+          HBaseClientRPC.stopProxy(tryMaster);
           String msg = "Can create a proxy to master, but it is not running";
           LOG.info(msg);
           throw new MasterNotRunningException(msg);
@@ -1380,7 +1380,7 @@ public class HConnectionManager {
               // Only create isa when we need to.
               InetSocketAddress address = new InetSocketAddress(hostname, port);
               // definitely a cache miss. establish an RPC for this RS
-              server = HBaseRPC.waitForProxy(
+              server = HBaseClientRPC.waitForProxy(
                   protocolClass, version, address, this.conf,
                   this.maxRPCAttempts, this.rpcTimeout, this.rpcTimeout);
               protocols.put(protocol, server);
@@ -1595,7 +1595,7 @@ public class HConnectionManager {
       synchronized (masterAndZKLock) {
         if (!isKeepAliveMasterConnectedAndRunning(protocolState)) {
           if (protocolState.protocol != null) {
-            HBaseRPC.stopProxy(protocolState.protocol);
+            HBaseClientRPC.stopProxy(protocolState.protocol);
           }
           protocolState.protocol = null;
           protocolState.protocol = createMasterWithRetries(protocolState);
@@ -1671,7 +1671,7 @@ public class HConnectionManager {
     private void closeMasterProtocol(MasterProtocolState protocolState) {
       if (protocolState.protocol != null){
         LOG.info("Closing master protocol: " + protocolState.protocolClass.getName());
-        HBaseRPC.stopProxy(protocolState.protocol);
+        HBaseClientRPC.stopProxy(protocolState.protocol);
         protocolState.protocol = null;
       }
       protocolState.userCount = 0;
@@ -2252,7 +2252,7 @@ public class HConnectionManager {
         closeMaster();
         for (Map<String, VersionedProtocol> i : servers.values()) {
           for (VersionedProtocol server: i.values()) {
-            HBaseRPC.stopProxy(server);
+            HBaseClientRPC.stopProxy(server);
           }
         }
       }

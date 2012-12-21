@@ -27,7 +27,7 @@ import java.net.SocketTimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
@@ -55,8 +55,8 @@ public class TestHMasterRPCException {
     //try to connect too soon. Retry on SocketTimeoutException.
     while (i < 20) { 
       try {
-        MasterMonitorProtocol inf = (MasterMonitorProtocol) HBaseRPC.getProxy(
-            MasterMonitorProtocol.class,  MasterMonitorProtocol.VERSION, isa, conf, 100 * 10);
+        MasterMonitorProtocol inf = (MasterMonitorProtocol) HBaseClientRPC.getProxy(
+            MasterMonitorProtocol.class, MasterMonitorProtocol.VERSION, isa, conf, 100 * 10);
         inf.isMasterRunning(null, IsMasterRunningRequest.getDefaultInstance());
         fail();
       } catch (ServiceException ex) {

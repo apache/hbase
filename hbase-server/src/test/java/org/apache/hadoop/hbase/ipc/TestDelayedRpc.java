@@ -70,12 +70,12 @@ public class TestDelayedRpc {
     Configuration conf = HBaseConfiguration.create();
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
 
-    rpcServer = HBaseRPC.getServer(new TestRpcImpl(delayReturnValue),
+    rpcServer = HBaseServerRPC.getServer(new TestRpcImpl(delayReturnValue),
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
-    TestRpc client = (TestRpc) HBaseRPC.getProxy(TestRpc.class, 0,
+    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class, 0,
         rpcServer.getListenerAddress(), conf, 1000);
 
     List<Integer> results = new ArrayList<Integer>();
@@ -133,11 +133,11 @@ public class TestDelayedRpc {
     log.setLevel(Level.WARN);
 
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
-    rpcServer = HBaseRPC.getServer(new TestRpcImpl(true),
+    rpcServer = HBaseServerRPC.getServer(new TestRpcImpl(true),
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
-    TestRpc client = (TestRpc) HBaseRPC.getProxy(TestRpc.class, 0,
+    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class, 0,
         rpcServer.getListenerAddress(), conf, 1000);
 
     Thread threads[] = new Thread[MAX_DELAYED_RPC + 1];
@@ -264,12 +264,12 @@ public class TestDelayedRpc {
     Configuration conf = HBaseConfiguration.create();
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
 
-    rpcServer = HBaseRPC.getServer(new FaultyTestRpc(),
+    rpcServer = HBaseServerRPC.getServer(new FaultyTestRpc(),
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
-    TestRpc client = (TestRpc) HBaseRPC.getProxy(TestRpc.class, 0,
+    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class, 0,
         rpcServer.getListenerAddress(), conf, 1000);
 
     int result = 0xDEADBEEF;

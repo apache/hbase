@@ -83,11 +83,13 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.ipc.UnknownProtocolException;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
@@ -167,7 +169,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -351,9 +352,9 @@ Server {
     }
     int numHandlers = conf.getInt("hbase.master.handler.count",
       conf.getInt("hbase.regionserver.handler.count", 25));
-    this.rpcServer = HBaseRPC.getServer(MasterMonitorProtocol.class, this,
-      new Class<?>[]{MasterMonitorProtocol.class,
-        MasterAdminProtocol.class, RegionServerStatusProtocol.class},
+    this.rpcServer = HBaseServerRPC.getServer(MasterMonitorProtocol.class, this,
+        new Class<?>[]{MasterMonitorProtocol.class,
+            MasterAdminProtocol.class, RegionServerStatusProtocol.class},
         initialIsa.getHostName(), // BindAddress is IP we got for this server.
         initialIsa.getPort(),
         numHandlers,
@@ -2347,7 +2348,7 @@ Server {
       String serviceName = call.getServiceName();
       String methodName = call.getMethodName();
       if (!coprocessorServiceHandlers.containsKey(serviceName)) {
-        throw new HBaseRPC.UnknownProtocolException(null,
+        throw new UnknownProtocolException(null,
             "No registered master coprocessor service found for name "+serviceName);
       }
 
@@ -2355,7 +2356,7 @@ Server {
       Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
       Descriptors.MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
       if (methodDesc == null) {
-        throw new HBaseRPC.UnknownProtocolException(service.getClass(),
+        throw new UnknownProtocolException(service.getClass(),
             "Unknown method "+methodName+" called on master service "+serviceName);
       }
 

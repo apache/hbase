@@ -279,7 +279,7 @@ public class StoreFileScanner implements KeyValueScanner {
     boolean haveToSeek = true;
     if (useBloom) {
       // check ROWCOL Bloom filter first.
-      if (reader.getBloomFilterType() == StoreFile.BloomType.ROWCOL) {
+      if (reader.getBloomFilterType() == BloomType.ROWCOL) {
         haveToSeek = reader.passesGeneralBloomFilter(kv.getBuffer(),
             kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
             kv.getQualifierOffset(), kv.getQualifierLength());

@@ -28,6 +28,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -41,6 +42,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -106,6 +108,8 @@ public class HBaseClient {
   public static final Log LOG = LogFactory
       .getLog("org.apache.hadoop.ipc.HBaseClient");
   protected final PoolMap<ConnectionId, Connection> connections;
+  private static final Map<String, Method> methodInstances =
+      new ConcurrentHashMap<String, Method>();
 
   protected int counter;                            // counter for call ids
   protected final AtomicBoolean running = new AtomicBoolean(true); // if client runs
@@ -959,6 +963,24 @@ public class HBaseClient {
       }
     }
 
+
+    private Method getMethod(Class<? extends VersionedProtocol> protocol,
+                             String methodName) {
+      Method method = methodInstances.get(methodName);
+      if (method != null) {
+        return method;
+      }
+      Method[] methods = protocol.getMethods();
+      for (Method m : methods) {
+        if (m.getName().equals(methodName)) {
+          m.setAccessible(true);
+          methodInstances.put(methodName, m);
+          return m;
+        }
+      }
+      return null;
+    }
+
     /* Receive a response.
      * Because only one receiver, so no synchronization on in.
      */
@@ -990,9 +1012,9 @@ public class HBaseClient {
         if (status == Status.SUCCESS) {
           Message rpcResponseType;
           try {
-            rpcResponseType = ProtobufRpcEngine.Invoker.getReturnProtoType(
-                ProtobufRpcEngine.Server.getMethod(remoteId.getProtocol(),
-                    call.param.getMethodName()));
+            rpcResponseType = ProtobufRpcClientEngine.Invoker.getReturnProtoType(
+                getMethod(remoteId.getProtocol(),
+                          call.param.getMethodName()));
           } catch (Exception e) {
             throw new RuntimeException(e); //local exception
           }

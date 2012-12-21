@@ -107,7 +107,7 @@ public class TestMultiColumnScanner {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final Compression.Algorithm comprAlgo;
-  private final StoreFile.BloomType bloomType;
+  private final BloomType bloomType;
   private final DataBlockEncoding dataBlockEncoding;
 
   // Some static sanity-checking.
@@ -133,7 +133,7 @@ public class TestMultiColumnScanner {
   }
 
   public TestMultiColumnScanner(Compression.Algorithm comprAlgo,
-      StoreFile.BloomType bloomType, boolean useDataBlockEncoding) {
+      BloomType bloomType, boolean useDataBlockEncoding) {
     this.comprAlgo = comprAlgo;
     this.bloomType = bloomType;
     this.dataBlockEncoding = useDataBlockEncoding ? DataBlockEncoding.PREFIX :

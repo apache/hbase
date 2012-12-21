@@ -101,8 +101,11 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
+import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
+import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
+import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
+import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -489,10 +492,10 @@ public class  HRegionServer implements ClientProtocol,
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
 
-    this.rpcServer = HBaseRPC.getServer(AdminProtocol.class, this,
-      new Class<?>[]{ClientProtocol.class,
-        AdminProtocol.class, HBaseRPCErrorHandler.class,
-        OnlineRegions.class},
+    this.rpcServer = HBaseServerRPC.getServer(AdminProtocol.class, this,
+        new Class<?>[]{ClientProtocol.class,
+            AdminProtocol.class, HBaseRPCErrorHandler.class,
+            OnlineRegions.class},
         initialIsa.getHostName(), // BindAddress is IP we got for this server.
         initialIsa.getPort(),
         conf.getInt("hbase.regionserver.handler.count", 10),
@@ -965,7 +968,7 @@ public class  HRegionServer implements ClientProtocol,
 
     // Make sure the proxy is down.
     if (this.hbaseMaster != null) {
-      HBaseRPC.stopProxy(this.hbaseMaster);
+      HBaseClientRPC.stopProxy(this.hbaseMaster);
       this.hbaseMaster = null;
     }
     this.leases.close();
@@ -1773,7 +1776,7 @@ public class  HRegionServer implements ClientProtocol,
       try {
         // Do initial RPC setup. The final argument indicates that the RPC
         // should retry indefinitely.
-        master = (RegionServerStatusProtocol) HBaseRPC.waitForProxy(
+        master = (RegionServerStatusProtocol) HBaseClientRPC.waitForProxy(
             RegionServerStatusProtocol.class, RegionServerStatusProtocol.VERSION,
             isa, this.conf, -1,
             this.rpcTimeout, this.rpcTimeout);

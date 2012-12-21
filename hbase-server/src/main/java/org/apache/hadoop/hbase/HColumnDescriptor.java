@@ -35,8 +35,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
@@ -164,7 +163,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * Default setting for whether or not to use bloomfilters.
    */
-  public static final String DEFAULT_BLOOMFILTER = StoreFile.BloomType.NONE.toString();
+  public static final String DEFAULT_BLOOMFILTER = BloomType.NONE.toString();
 
   /**
    * Default setting for whether to cache bloom filter blocks on write if block
@@ -408,7 +407,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     setEncodeOnDisk(encodeOnDisk);
     setDataBlockEncoding(DataBlockEncoding.
         valueOf(dataBlockEncoding.toUpperCase()));
-    setBloomFilterType(StoreFile.BloomType.
+    setBloomFilterType(BloomType.
       valueOf(bloomFilter.toUpperCase()));
     setBlocksize(blocksize);
     setScope(scope);
@@ -760,19 +759,19 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return bloom filter type used for new StoreFiles in ColumnFamily
    */
-  public StoreFile.BloomType getBloomFilterType() {
+  public BloomType getBloomFilterType() {
     String n = getValue(BLOOMFILTER);
     if (n == null) {
       n = DEFAULT_BLOOMFILTER;
     }
-    return StoreFile.BloomType.valueOf(n.toUpperCase());
+    return BloomType.valueOf(n.toUpperCase());
   }
 
   /**
    * @param bt bloom filter type
    * @return this (for chained invocation)
    */
-  public HColumnDescriptor setBloomFilterType(final StoreFile.BloomType bt) {
+  public HColumnDescriptor setBloomFilterType(final BloomType bt) {
     return setValue(BLOOMFILTER, bt.toString());
   }
 

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.junit.experimental.categories.Category;
 
@@ -48,7 +49,7 @@ public class TestHColumnDescriptor {
     boolean inmemory = hcd.isInMemory();
     hcd.setScope(v);
     hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
-    hcd.setBloomFilterType(StoreFile.BloomType.ROW);
+    hcd.setBloomFilterType(BloomType.ROW);
     hcd.setCompressionType(Algorithm.SNAPPY);
 
 
@@ -65,7 +66,7 @@ public class TestHColumnDescriptor {
     assertEquals(hcd.getScope(), deserializedHcd.getScope());
     assertTrue(deserializedHcd.getCompressionType().equals(Compression.Algorithm.SNAPPY));
     assertTrue(deserializedHcd.getDataBlockEncoding().equals(DataBlockEncoding.FAST_DIFF));
-    assertTrue(deserializedHcd.getBloomFilterType().equals(StoreFile.BloomType.ROW));
+    assertTrue(deserializedHcd.getBloomFilterType().equals(BloomType.ROW));
   }
 
   @Test

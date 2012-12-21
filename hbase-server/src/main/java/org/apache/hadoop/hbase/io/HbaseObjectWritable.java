@@ -178,8 +178,10 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(Integer.class, code++);
     addToMap(Integer[].class, code++);
 
-    addToMap(HRegion.class, code++);
-    addToMap(HRegion[].class, code++);
+    //HRegion shouldn't be pushed across the wire.
+    code++; //addToMap(HRegion.class, code++);
+    code++; //addToMap(HRegion[].class, code++);
+
     addToMap(HRegionInfo.class, code++);
     addToMap(HRegionInfo[].class, code++);
     code++; // Removed

@@ -521,11 +521,19 @@
           block is finished.
       </description>
   </property>
+
   <property>
-    <name>hbase.rpc.engine</name>
-    <value>org.apache.hadoop.hbase.ipc.ProtobufRpcEngine</value>
-    <description>Implementation of org.apache.hadoop.hbase.ipc.RpcEngine to be
-    used for client / server RPC call marshalling.
+    <name>hbase.rpc.client.engine</name>
+    <value>org.apache.hadoop.hbase.ipc.ProtobufRpcClientEngine</value>
+    <description>Implementation of org.apache.hadoop.hbase.ipc.RpcClientEngine to be
+    used for client RPC call marshalling.
+    </description>
+  </property>
+  <property>
+    <name>hbase.rpc.server.engine</name>
+    <value>org.apache.hadoop.hbase.ipc.ProtobufRpcServerEngine</value>
+    <description>Implementation of org.apache.hadoop.hbase.ipc.RpcServerEngine to be
+    used for server RPC call marshalling.
     </description>
   </property>
   <property>

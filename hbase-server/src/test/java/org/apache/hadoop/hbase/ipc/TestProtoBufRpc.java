@@ -96,12 +96,13 @@ public class TestProtoBufRpc {
   public  void setUp() throws IOException { // Setup server for both protocols
     conf = new Configuration();
     // Set RPC engine to protobuf RPC engine
-    HBaseRPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine.class);
+    HBaseClientRPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcClientEngine.class);
+    HBaseServerRPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcServerEngine.class);
 
     // Create server side implementation
     PBServerImpl serverImpl = new PBServerImpl();
     // Get RPC server for server side implementation
-    server = HBaseRPC.getServer(TestRpcService.class,serverImpl, 
+    server = HBaseServerRPC.getServer(TestRpcService.class,serverImpl,
         new Class[]{TestRpcService.class}, 
         ADDRESS, PORT, 10, 10, true, conf, 0);
     addr = server.getListenerAddress();
@@ -116,9 +117,10 @@ public class TestProtoBufRpc {
 
   private static TestRpcService getClient() throws IOException {
     // Set RPC engine to protobuf RPC engine
-    HBaseRPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
-    return (TestRpcService) HBaseRPC.getProxy(TestRpcService.class, 0, 
+    HBaseClientRPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcClientEngine.class);
+    HBaseServerRPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcServerEngine.class);
+
+    return (TestRpcService) HBaseClientRPC.getProxy(TestRpcService.class, 0,
         addr, conf, 10000);
   }
 

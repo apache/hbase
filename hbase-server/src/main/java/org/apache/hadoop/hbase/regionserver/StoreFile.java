@@ -92,21 +92,6 @@ import com.google.common.collect.Ordering;
 public class StoreFile {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
-  public static enum BloomType {
-    /**
-     * Bloomfilters disabled
-     */
-    NONE,
-    /**
-     * Bloom enabled with Table row as Key
-     */
-    ROW,
-    /**
-     * Bloom enabled with Table row & column (family+qualifier) as Key
-     */
-    ROWCOL
-  }
-
   // Keys for fileinfo values in HFile
 
   /** Max Sequence ID in FileInfo */

@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.Test;
@@ -89,7 +88,7 @@ public class TestBlocksRead extends HBaseTestCase {
    * @param tableName
    * @param callingMethod
    * @param conf
-   * @param families
+   * @param family
    * @throws IOException
    * @return created and initialized region.
    */
