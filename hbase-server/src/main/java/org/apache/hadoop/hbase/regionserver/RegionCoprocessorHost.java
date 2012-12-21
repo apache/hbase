@@ -430,7 +430,7 @@ public class RegionCoprocessorHost
    * Called prior to rewriting the store files selected for compaction
    * @param store the store being compacted
    * @param scanner the scanner used to read store data during compaction
-   * @throws IOException 
+   * @throws IOException
    */
   public InternalScanner preCompact(HStore store, InternalScanner scanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -503,7 +503,7 @@ public class RegionCoprocessorHost
 
   /**
    * Invoked before a memstore flush
-   * @throws IOException 
+   * @throws IOException
    */
   public void preFlush() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -607,7 +607,7 @@ public class RegionCoprocessorHost
       }
     }
   }
-  
+
   /**
    * Invoked just before a split
    * @throws IOException
@@ -633,7 +633,7 @@ public class RegionCoprocessorHost
    * Invoked just after a split
    * @param l the new left-hand daughter region
    * @param r the new right-hand daughter region
-   * @throws IOException 
+   * @throws IOException
    */
   public void postSplit(HRegion l, HRegion r) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -651,7 +651,7 @@ public class RegionCoprocessorHost
       }
     }
   }
-  
+
   /**
    * Invoked just before the rollback of a failed split is started
    * @throws IOException
@@ -672,7 +672,7 @@ public class RegionCoprocessorHost
       }
     }
   }
-  
+
   /**
    * Invoked just after the rollback of a failed split is done
    * @throws IOException
@@ -693,7 +693,7 @@ public class RegionCoprocessorHost
       }
     }
   }
-  
+
   /**
    * Invoked after a split is completed irrespective of a failure or success.
    * @throws IOException

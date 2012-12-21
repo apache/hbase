@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.ipc.VersionedProtocol;
  * However you still can just implement the interface CoprocessorProtocol
  * and Coprocessor to develop an Endpoint. But you won't be able to access
  * the region related resource, i.e., CoprocessorEnvironment.
+ * @deprecated CoprocessorProtocol is going away in 0.96
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

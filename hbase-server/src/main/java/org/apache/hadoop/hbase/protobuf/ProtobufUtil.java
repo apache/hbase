@@ -241,6 +241,7 @@ public final class ProtobufUtil {
    * @return the converted client Exec
    */
   @SuppressWarnings("unchecked")
+  @Deprecated
   public static Exec toExec(
       final ClientProtos.Exec proto) throws IOException {
     byte[] row = proto.getRow().toByteArray();
@@ -542,10 +543,10 @@ public final class ProtobufUtil {
 
   /**
    * Convert a MutateRequest to Mutation
-   * 
+   *
    * @param proto the protocol buffer Mutate to convert
    * @return the converted Mutation
-   * @throws IOException 
+   * @throws IOException
    */
   public static Mutation toMutation(final Mutate proto) throws IOException {
     MutateType type = proto.getMutateType();

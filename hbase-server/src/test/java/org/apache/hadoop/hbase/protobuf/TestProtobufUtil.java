@@ -292,25 +292,4 @@ public class TestProtobufUtil {
     Scan scan = ProtobufUtil.toScan(proto);
     assertEquals(scanBuilder.build(), ProtobufUtil.toScan(scan));
   }
-
-  /**
-   * Test basic Exec conversions.
-   *
-   * @throws IOException
-   */
-  @Test
-  public void testExec() throws IOException {
-    ClientProtos.Exec.Builder execBuilder = ClientProtos.Exec.newBuilder();
-    execBuilder.setRow(ByteString.copyFromUtf8("row"));
-    execBuilder.setProtocolName(ColumnAggregationEndpoint.class.getName());
-    execBuilder.setMethodName("sum");
-    execBuilder.addParameter(ProtobufUtil.toParameter(Bytes.toBytes("f")));
-    execBuilder.addParameter(ProtobufUtil.toParameter(Bytes.toBytes("c")));
-
-    ClientProtos.Exec proto = execBuilder.build();
-    Exec exec = ProtobufUtil.toExec(proto);
-    execBuilder = ClientProtos.Exec.newBuilder(ProtobufUtil.toExec(exec));
-    execBuilder.clearProperty(); // remove properties added by default
-    assertEquals(proto, execBuilder.build());
-  }
 }

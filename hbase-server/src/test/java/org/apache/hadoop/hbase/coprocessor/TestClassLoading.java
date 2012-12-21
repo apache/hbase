@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.TestServerCustomProtocol;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -64,7 +65,8 @@ public class TestClassLoading {
   static final String cpNameInvalid = "TestCPInvalid";
 
   private static Class<?> regionCoprocessor1 = ColumnAggregationEndpoint.class;
-  private static Class<?> regionCoprocessor2 = GenericEndpoint.class;
+  // TOOD: Fix the import of this handler.  It is coming in from a package that is far away.
+  private static Class<?> regionCoprocessor2 = TestServerCustomProtocol.PingHandler.class;
   private static Class<?> regionServerCoprocessor = SampleRegionWALObserver.class;
   private static Class<?> masterCoprocessor = BaseMasterObserver.class;
 

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,23 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.coprocessor;
+// Coprocessor test
+option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
+option java_outer_classname = "ColumnAggregationProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
 
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
-import java.io.IOException;
+message SumRequest {
+  required bytes family = 1;
+  optional bytes qualifier = 2;
+}
 
-/**
- * A sample protocol for performing aggregation at regions.
- */
-public interface ColumnAggregationProtocol extends CoprocessorProtocol {
-  /**
-   * Perform aggregation for a given column at the region. The aggregation
-   * will include all the rows inside the region. It can be extended to
-   * allow passing start and end rows for a fine-grained aggregation.
-   * @param family family
-   * @param qualifier qualifier
-   * @return Aggregation of the column.
-   * @throws exception.
-   */
-  public long sum(byte[] family, byte[] qualifier) throws IOException;
+message SumResponse {
+  required int64 sum = 1;
+}
+
+service ColumnAggregationService {
+  rpc sum(SumRequest) returns(SumResponse);
 }

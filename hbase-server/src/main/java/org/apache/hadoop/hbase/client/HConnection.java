@@ -320,6 +320,7 @@ public interface HConnection extends Abortable, Closeable {
    * @param <T> the protocol interface type
    * @param <R> the callable's return type
    * @throws IOException
+   * @deprecated CoprocessorProtocol replaced by CoprocessorService calls.
    */
   public <T extends CoprocessorProtocol,R> void processExecs(
       final Class<T> protocol,

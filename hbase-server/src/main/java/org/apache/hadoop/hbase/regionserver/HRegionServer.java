@@ -105,7 +105,6 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
@@ -344,10 +343,10 @@ public class  HRegionServer implements ClientProtocol,
 
   /** region server process name */
   public static final String REGIONSERVER = "regionserver";
-  
+
   /** region server configuration name */
   public static final String REGIONSERVER_CONF = "regionserver_conf";
-  
+
   /*
    * Space is reserved in HRS constructor and then released when aborting to
    * recover from an OOME. See HBASE-706. TODO: Make this percentage of the heap
@@ -432,7 +431,7 @@ public class  HRegionServer implements ClientProtocol,
    * The reference to the QosFunction
    */
   private final QosFunction qosFunction;
-  
+
   private RegionServerCoprocessorHost rsHost;
 
   /**
@@ -627,7 +626,7 @@ public class  HRegionServer implements ClientProtocol,
             new HashMap<Class<? extends Message>, Method>());
       }
       if (methodMap.get("getRegion") == null) {
-        methodMap.put("getRegion", 
+        methodMap.put("getRegion",
             new HashMap<Class<? extends Message>, Method>());
       }
       for (Class<? extends Message> cls : knownArgumentClasses) {
@@ -1397,7 +1396,7 @@ public class  HRegionServer implements ClientProtocol,
     // Instantiate replication manager if replication enabled.  Pass it the
     // log directories.
     createNewReplicationInstance(conf, this, this.fs, logdir, oldLogDir);
-    
+
     return instantiateHLog(rootDir, logName);
   }
 
@@ -2108,7 +2107,7 @@ public class  HRegionServer implements ClientProtocol,
   public ZooKeeperWatcher getZooKeeperWatcher() {
     return this.zooKeeper;
   }
-  
+
   public RegionServerCoprocessorHost getCoprocessorHost(){
     return this.rsHost;
   }
@@ -3392,7 +3391,7 @@ public class  HRegionServer implements ClientProtocol,
         checkIfRegionInTransition(region.getEncodedNameAsBytes(), OPEN);
         HRegion onlineRegion = getFromOnlineRegions(region.getEncodedName());
         if (null != onlineRegion) {
-          //Check if the region can actually be opened. 
+          //Check if the region can actually be opened.
           if( onlineRegion.getCoprocessorHost() != null){
             onlineRegion.getCoprocessorHost().preOpen();
           }
@@ -3486,7 +3485,7 @@ public class  HRegionServer implements ClientProtocol,
         }
         checkIfRegionInTransition(encodedName, CLOSE);
       }
-           
+
       requestCount.increment();
       LOG.info("Received close region: " + region.getRegionNameAsString() +
         ". Version of ZK closing node:" + versionOfClosingNode +
@@ -3978,7 +3977,7 @@ public class  HRegionServer implements ClientProtocol,
   private String getMyEphemeralNodePath() {
     return ZKUtil.joinZNode(this.zooKeeper.rsZNode, getServerName().toString());
   }
-  
+
   /**
    * Holder class which holds the RegionScanner and nextCallSeq together.
    */

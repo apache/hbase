@@ -2608,7 +2608,7 @@ public class HRegion implements HeapSize { // , Writable{
     p.setWriteToWAL(true);
     doBatchMutate(p, lid);
   }
- 
+
   /**
    * Atomically apply the given map of family->edits to the memstore.
    * This handles the consistency control on its own, but the caller
@@ -2802,7 +2802,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
     long seqid = minSeqIdForTheRegion;
-    
+
     NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regiondir);
     if (files == null || files.isEmpty()) return seqid;
 
@@ -3420,7 +3420,7 @@ public class HRegion implements HeapSize { // , Writable{
       } else {
         this.filter = null;
       }
-      
+
       this.batch = scan.getBatch();
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
@@ -3574,7 +3574,7 @@ public class HRegion implements HeapSize { // , Writable{
           if (filter != null && filter.hasFilterRow()) {
             filter.filterRow(results);
           }
-          
+
           return false;
         } else if (filterRowKey(currentRow, offset, length)) {
           nextRow(currentRow, offset, length);
@@ -3627,7 +3627,7 @@ public class HRegion implements HeapSize { // , Writable{
     protected void nextRow(byte [] currentRow, int offset, short length) throws IOException {
       KeyValue next;
       while((next = this.storeHeap.peek()) != null && next.matchingRow(currentRow, offset, length)) {
-        this.storeHeap.next(MOCKED_LIST);       
+        this.storeHeap.next(MOCKED_LIST);
       }
       results.clear();
       resetFilters();

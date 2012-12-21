@@ -283,12 +283,14 @@ message Exec {
    * {@link org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(
    * Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)}
    * method before they are available.
+   * @deprecated Use CoprocessorService going forward
  */
 message ExecCoprocessorRequest {
   required RegionSpecifier region = 1;
   required Exec call = 2;
 }
 
+// @deprecated Use CoprocessorService going forward
 message ExecCoprocessorResponse {
   required NameBytesPair value = 1;
 }
