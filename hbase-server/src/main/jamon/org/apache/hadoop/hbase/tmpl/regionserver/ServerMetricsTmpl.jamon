@@ -35,31 +35,31 @@ com.yammer.metrics.stats.Snapshot;
 java.lang.management.ManagementFactory;
 </%import>
 <div class="tabbable">
-    <ul class="nav nav-tabs">
-        <li class="active"><a href="#baseStats" data-toggle="tab">Base Stats</a></li>
-        <li class=""><a href="#memoryStats" data-toggle="tab">Memory</a></li>
-        <li class=""><a href="#requestStats" data-toggle="tab">Requests</a></li>
-        <li class=""><a href="#storeStats" data-toggle="tab">Storefiles</a></li>
-        <li class=""><a href="#queueStats" data-toggle="tab">Queues</a></li>
-        <li class=""><a href="#blockCacheStats" data-toggle="tab">Block Cache</a></li>
+    <ul class="nav nav-pills">
+        <li class="active"><a href="#tab_baseStats" data-toggle="tab">Base Stats</a></li>
+        <li class=""><a href="#tab_memoryStats" data-toggle="tab">Memory</a></li>
+        <li class=""><a href="#tab_requestStats" data-toggle="tab">Requests</a></li>
+        <li class=""><a href="#tab_storeStats" data-toggle="tab">Storefiles</a></li>
+        <li class=""><a href="#tab_queueStats" data-toggle="tab">Queues</a></li>
+        <li class=""><a href="#tab_blockCacheStats" data-toggle="tab">Block Cache</a></li>
     </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="baseStats">
+        <div class="tab-pane active" id="tab_baseStats">
             <& baseStats; mWrap = mWrap &>
         </div>
-        <div class="tab-pane" id="memoryStats">
+        <div class="tab-pane" id="tab_memoryStats">
             <& memoryStats; mWrap = mWrap &>
         </div>
-        <div class="tab-pane" id="requestStats">
+        <div class="tab-pane" id="tab_requestStats">
             <& requestStats; mWrap = mWrap &>
         </div>
-        <div class="tab-pane" id="storeStats">
+        <div class="tab-pane" id="tab_storeStats">
             <& storeStats; mWrap = mWrap &>
         </div>
-        <div class="tab-pane" id="queueStats">
+        <div class="tab-pane" id="tab_queueStats">
             <& queueStats; mWrap = mWrap  &>
         </div>
-        <div class="tab-pane" id="blockCacheStats">
+        <div class="tab-pane" id="tab_blockCacheStats">
             <& blockCacheStats; mWrap = mWrap &>
         </div>
     </div>

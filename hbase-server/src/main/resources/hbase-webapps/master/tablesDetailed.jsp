@@ -56,7 +56,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </a>
-          <a class="brand" href="/master-status">HBase Master</a>
+          <a class="brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
           <div class="nav-collapse">
             <ul class="nav">
                 <li><a href="/master-status">Home</a></li>
@@ -73,11 +73,8 @@
 
     <div class="container">
     <div class="row inner_header">
-        <div class="span8">
+        <div class="page-header">
             <h1>User Tables</h1>
-        </div>
-        <div class="span4 logo">
-            <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
         </div>
     </div>
 
@@ -90,7 +87,7 @@
 </tr>
 <%   for(HTableDescriptor htDesc : tables ) { %>
 <tr>
-    <td><%= escapeXml(htDesc.getNameAsString()) %></td>
+    <td><a href="/table.jsp?name=<%= escapeXml(htDesc.getNameAsString()) %>"><%= escapeXml(htDesc.getNameAsString()) %></a></td>
     <td><%= escapeXml(htDesc.toString()) %></td>
 </tr>
 <%   }  %>

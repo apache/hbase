@@ -48,27 +48,27 @@ Arrays.sort(serverNames);
 </%java>
 
 <div class="tabbable">
-    <ul class="nav nav-tabs">
-        <li class="active"><a href="#baseStats" data-toggle="tab">Base Stats</a></li>
-        <li class=""><a href="#memoryStats" data-toggle="tab">Memory</a></li>
-        <li class=""><a href="#requestStats" data-toggle="tab">Requests</a></li>
-        <li class=""><a href="#storeStats" data-toggle="tab">Storefiles</a></li>
-        <li class=""><a href="#compactStas" data-toggle="tab">Compactions</a></li>
+    <ul class="nav nav-pills">
+        <li class="active"><a href="#tab_baseStats" data-toggle="tab">Base Stats</a></li>
+        <li class=""><a href="#tab_memoryStats" data-toggle="tab">Memory</a></li>
+        <li class=""><a href="#tab_requestStats" data-toggle="tab">Requests</a></li>
+        <li class=""><a href="#tab_storeStats" data-toggle="tab">Storefiles</a></li>
+        <li class=""><a href="#tab_compactStas" data-toggle="tab">Compactions</a></li>
     </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        <div class="tab-pane active" id="baseStats">
+        <div class="tab-pane active" id="tab_baseStats">
             <& baseStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="memoryStats">
+        <div class="tab-pane" id="tab_memoryStats">
             <& memoryStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="requestStats">
+        <div class="tab-pane" id="tab_requestStats">
             <& requestStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="storeStats">
+        <div class="tab-pane" id="tab_storeStats">
             <& storeStats; serverNames = serverNames; &>
         </div>
-        <div class="tab-pane" id="compactStas">
+        <div class="tab-pane" id="tab_compactStas">
             <& compactionStats; serverNames = serverNames; &>
         </div>
     </div>

@@ -20,18 +20,19 @@
 
 $(document).ready(
   function(){
-	$('.nav-tabs a').on('shown', function(event) {
-    var top = $(document).scrollTop();
-    location.hash = $(event.target).attr('href').substr(1);
-    $(document).scrollTop(top);  
-    return false;
+    var prefix = "tab_";
+	$('.tabbable .nav-pills a').click(function (e) {
+        e.preventDefault();
+        location.hash = $(e.target).attr('href').substr(1).replace(prefix, "");
+        $(this).tab('show');
     });
             
     if (location.hash !== '') {
-      var tabItem = $('a[href="' + location.hash + '"]');
+      var tabItem = $('a[href="' + location.hash.replace("#", "#"+prefix) + '"]');
       tabItem.tab('show');
       $(document).scrollTop(0);  
       return false;  
     }
+    return true;
   }
-)
+);
