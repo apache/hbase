@@ -99,6 +99,8 @@ public class MasterFileSystem {
     String fsUri = this.fs.getUri().toString();
     conf.set("fs.default.name", fsUri);
     conf.set("fs.defaultFS", fsUri);
+    // make sure the fs has the same conf
+    fs.setConf(conf);
     this.distributedLogSplitting =
       conf.getBoolean("hbase.master.distributed.log.splitting", true);
     if (this.distributedLogSplitting) {
