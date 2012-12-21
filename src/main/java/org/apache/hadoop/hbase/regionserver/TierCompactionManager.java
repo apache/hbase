@@ -20,13 +20,14 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.Calendar;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
-
-import java.io.IOException;
 public class TierCompactionManager extends CompactionManager {
 
   private static final Log LOG = LogFactory.getLog(TierCompactionManager.class);
@@ -121,13 +122,19 @@ public class TierCompactionManager extends CompactionManager {
 
     int i;
     int j = countOfFiles;
-
+    //
+    Calendar tierBoundary = tierConf.isTierBoundaryFixed() ? Calendar
+        .getInstance() : null;
     for (i = 0; i < numTiers; i++) {
       tier = tierConf.getCompactionTier(i);
+      // assign the current tier as the start point of the next tier
+      if (tierConf.isTierBoundaryFixed()) {
+        tierBoundary = tier.getTierBoundary(tierBoundary);
+      }
       endInTier[i] = j;
       while (j > 0) {
         file = candidates.getFilesToCompact().get(j - 1);
-        if (!isInTier(file, tier)) {
+        if (!isInTier(file, tier, tierBoundary)) {
           break;
         }
         j--;
@@ -188,11 +195,18 @@ public class TierCompactionManager extends CompactionManager {
     return candidates;
   }
 
-  private boolean isInTier(StoreFile file, TierCompactionConfiguration.CompactionTier tier) {
-    return file.getReader().length() <= tier.getMaxSize() &&
-      EnvironmentEdgeManager.currentTimeMillis()-file.getMinFlushTime() <= tier.getMaxAgeInDisk();
+  // Either we use age-based tier compaction or boundary-based tier compaction
+  private boolean isInTier(StoreFile file, TierCompactionConfiguration.CompactionTier tier, 
+      Calendar tierBoundary) {
+    if (tierConf.isTierBoundaryFixed()) {
+      return file.getMinFlushTime() >= tierBoundary.getTimeInMillis();
+    } else {
+      return file.getReader().length() <= tier.getMaxSize()
+          && EnvironmentEdgeManager.currentTimeMillis()
+          - file.getMinFlushTime() <= tier.getMaxAgeInDisk();
+    }
   }
-
+  
   /**
    * This function iterates over the start values in order.
    * Whenever an admissible compaction is found, we return the selection.

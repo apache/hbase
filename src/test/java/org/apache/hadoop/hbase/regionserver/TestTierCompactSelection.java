@@ -19,20 +19,23 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 
-import java.io.IOException;
-import java.util.*;
-
 public class TestTierCompactSelection extends TestDefaultCompactSelection {
   private final static Log LOG = LogFactory.getLog(TestTierCompactSelection.class);
 
-  private static final int numTiers = 4;
+  private static final int numTiers = 5;
 
   private String strPrefix, strSchema, strTier;
-
+  private Calendar currCal;
+  private Calendar[] expectedCals;
 
   @Override
   public void setUp() throws Exception {
@@ -84,11 +87,16 @@ public class TestTierCompactSelection extends TestDefaultCompactSelection {
     conf.setFloat(strPrefix + strSchema + strTier + "CompactionRatio", 1.0F);
     // Also include files in tier 1 here
     conf.setInt(strPrefix + strSchema + strTier + "EndingIndexForTier", 1);
+    conf.setBoolean(strPrefix + strSchema + "IsTierBoundaryFixed", false);
 
     // Last tier - least aggressive compaction
     // has default tier settings only
     // Max Time elapsed is Infinity by default
-
+    currCal = Calendar.getInstance();
+    expectedCals = new Calendar[numTiers + 1];
+    for (int i = 0; i < numTiers + 1; i++) {
+      expectedCals[i] = Calendar.getInstance();
+    }
   }
 
   @Override
@@ -299,6 +307,521 @@ public class TestTierCompactSelection extends TestDefaultCompactSelection {
       992,   993, 1011, 990, 1009,  998, 1007, 996, 1005, 994, 1003, 992, 991, 999, 450, 550, 1001),
       992,   993, 1011, 990, 1009                                                                 );
 
+  }
+
+  /**
+   * 
+   * @throws IOException
+   */
+  public void testTierCompactionBoundary() throws IOException {
+    conf.setBoolean(strPrefix + strSchema + "IsTierBoundaryFixed", true);
+    String strTierPrefix = strPrefix + strSchema;
+    conf.setInt(strPrefix + strSchema + "NumCompactionTiers", 3);
+
+    // -------------------------------------
+    // two Tiers
+    // -------------------------------------
+    // NOW: 2012 Nov 10, 12:11
+    // wild card
+    // -------------------------------------
+    this.conf.setStrings(strTierPrefix + "Tier.0.Boundary", "1 0 * * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11}, // pseudo now
+                   new int[] {2012, 11, 10,  0, 1});  // expected tier boundary
+
+    // -------------------------------------
+    // ?/2 at DAY_OF_MONTH
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 ?/2 * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 8, 0, 0});
+    // -------------------------------------
+    // different step size at DAY_OF_MONTH
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 ?/4 * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11,  6,  0,  0});
+
+    // -------------------------------------
+    // */4 at DAY_OF_MONTH
+    // [1, 5, 9... ]
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 */4 * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11,  9,  0,  0});
+
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 */4 * *");
+    boundaryEquals(new int[] { 2012, 11, 8, 12, 11 },
+                   new int[] {2012, 11, 5, 0, 0});
+
+    // -------------------------------------
+    // an explicit value at DAY_OF_MONTH
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 7 * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 7, 0, 0});
+
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 7 8 * 2011");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11}, 
+                   new int[] { 2011, 8, 7, 0, 0 });
+
+    // -------------------------------------
+    // comma at DAY_OF_MONTH
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 6,7 * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 7, 0, 0});
+    
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 6,7 * *");
+    boundaryEquals(new int[] {2012, 11, 7, 0, 1},
+                   new int[] {2012, 11, 7, 0, 0});
+
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 6,7 * *");
+    boundaryEquals(new int[] { 2012, 11, 7, 0, 0 },
+                   new int[] {2012, 11, 6, 0, 0});
+
+    // -------------------------------------
+    // hyphen at DAY_OF_MONTH
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 6-7 * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 7, 0, 0});
+
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 6-7 * *");
+    boundaryEquals(new int[] { 2012, 11, 7, 0, 0 },
+                   new int[] {2012, 11, 6, 0, 0});
+
+    // -------------------------------------
+    // an explicit value at DAY_OF_MONTH
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 1L * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 10, 31, 0, 0});
+
+    // -------------------------------------
+    // an explicit value at DAY_OF_MONTH
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 1L ?/2 *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 9, 30, 0, 0});
+
+    // -------------------------------------
+    // an explicit value at DAY_OF_MONTH
+    // [1, 6, 11]
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 1L */5 *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 6, 30, 0, 0});
+
+    // -------------------------------------
+    // comma at DAY_OF_WEEK 
+    // -------------------------------------
+    this.conf.setStrings(strTierPrefix + "Tier.0.Boundary", "1 0 * * 1,3,5");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 9, 0, 1});
+
+    this.conf.setStrings(strTierPrefix + "Tier.0.Boundary", "1 0 * * 1,3,5");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 9, 0, 1});
+
+    this.conf.setStrings(strTierPrefix + "Tier.0.Boundary", "1 0 * * 1,3,5");
+    boundaryEquals(new int[] {2012, 11, 9, 0, 1},
+                   new int[] {2012, 11, 7, 0, 1});
+
+    // -------------------------------------
+    // hyphen at DAY_OF_WEEK 
+    // -------------------------------------
+    this.conf.setStrings(strTierPrefix + "Tier.0.Boundary", "1 0 * * 1-5");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 9, 0, 1});
+
+    this.conf.setStrings(strTierPrefix + "Tier.0.Boundary", "1 0 * * 1-4");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 8, 0, 1});
+
+    // -------------------------------------
+    // DAY_OF_WEEK with "#"
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * * 5#1");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 2, 12, 0});
+
+    // -------------------------------------
+    // week_of_day with "#" with roll over in month
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * * 5#1");
+    boundaryEquals(new int[] {2012, 11, 2, 12, 0},
+                   new int[] {2012, 10, 5, 12, 0});
+
+    // -------------------------------------
+    // week_of_day with "#" with explicit month
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * 8 5#1");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 8, 3, 12, 0});
+    
+    // -------------------------------------
+    // week_of_day with "#" with ?/2 month
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * ?/2 5#1");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 9, 7, 12, 0});
+    
+    // -------------------------------------
+    // week_of_day with "#" with */ month
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * */2 5#1");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 2, 12, 0});
+    
+    // -------------------------------------
+    // week_of_day with "L"
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * * 5L");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 10, 26, 12, 0});
+    
+    // -------------------------------------
+    // week_of_day with "L" and roll over in month
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * * 5L");
+    boundaryEquals(new int[] { 2012, 10, 22, 12, 11 },
+                   new int[] {2012, 9, 28, 12, 0});
+    
+    // -------------------------------------
+    // week_of_day with "L" in a given month
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * 8 5L");
+    boundaryEquals(new int[] { 2012, 10, 22, 12, 11 },
+                   new int[] {2012, 8, 31, 12, 0});
+    
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * 8 5L 2011");
+    boundaryEquals(new int[] { 2012, 10, 22, 12, 11 },
+                   new int[] {2011, 8, 26, 12, 0});
+    
+    // -------------------------------------
+    // week_of_day with "L" for dynamic month
+    // [1, 3, 5, ...]
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * */2 5L");
+    boundaryEquals(new int[] { 2012, 10, 22, 12, 11 },
+                   new int[] {2012, 9, 28, 12, 0});
+
+    // -------------------------------------
+    // week_of_day with "L" with ?
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * ?/2 5L");
+    boundaryEquals(new int[] { 2012, 10, 22, 12, 11 },
+                   new int[] {2012, 8, 31, 12, 0});
+
+    // -------------------------------------
+    // week_of_day with "L" with ? and different stepsize
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * ?/5 5L");
+    boundaryEquals(new int[] { 2012, 10, 22, 12, 11 },
+                   new int[] {2012, 5, 25, 12, 0});
+
+    // -------------------------------------
+    // week_of_day with "L" with ? and different stepsize
+    // [1, 6, 11]
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 12 * */5 5L");
+    boundaryEquals(new int[] { 2012, 10, 22, 12, 11 },
+                   new int[] {2012, 6, 29, 12, 0});
+
+    // -------------------------------------
+    // Three Tiers
+    // -------------------------------------
+    // test wild card
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 * * *");
+    conf.setStrings(strTierPrefix + "Tier.1.Boundary", "0 0 * * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 10, 0, 0},
+                   new int[] {2012, 11, 9, 0, 0});
+
+    // -------------------------------------
+    // test combination of wild card & ?/2
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 * * *");
+    conf.setStrings(strTierPrefix + "Tier.1.Boundary", "0 0 ?/2 * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 10, 0, 0}, 
+                   new int[] {2012, 11, 8, 0, 0});
+
+    // -------------------------------------
+    // test stepsize
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 * * *");
+    conf.setStrings(strTierPrefix + "Tier.1.Boundary", "0 0 ?/3 * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 10, 0, 0}, 
+                   new int[] {2012, 11, 7, 0, 0});
+
+    // -------------------------------------
+    // test combination of wildcard and "L"
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 * * *");
+    conf.setStrings(strTierPrefix + "Tier.1.Boundary", "59 23 1L * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 10, 0, 0}, 
+                   new int[] {2012, 10, 31, 23, 59});
+
+    // -------------------------------------
+    // test with a given year/month/day
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 4 1 1 * 2012");
+    conf.setStrings(strTierPrefix + "Tier.1.Boundary", "0 4 1 1 * 2011");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 1, 1, 4, 0}, 
+                   new int[] {2011, 1, 1, 4, 0});
+
+    // -------------------------------------
+    // five Tiers
+    // -------------------------------------
+    // T0 :0 0 * * *
+    // T1: 0 0 * * *
+    // T2: 0 0 * * 0
+    // T3: 0 0 1 * *
+    // 
+    // NOW: 2012 Nov 10, 12:11
+    // T0 : Nov 10 -- today's midnight
+    // T1 : Nov 09 -- yesterday's midnight
+    // T2 : Nov 04 -- last sunday's midnight
+    // T3 : Nov 01 -- 1st day of the month's midnight
+    // -------------------------------------
+    conf.setStrings(strTierPrefix + "Tier.0.Boundary", "0 0 * * *");
+    conf.setStrings(strTierPrefix + "Tier.1.Boundary", "0 0 * * *");
+    conf.setStrings(strTierPrefix + "Tier.2.Boundary", "0 0 * * 0");
+    conf.setStrings(strTierPrefix + "Tier.3.Boundary", "0 0 1 * *");
+    boundaryEquals(new int[] {2012, 11, 10, 12, 11},
+                   new int[] {2012, 11, 10, 0, 0}, 
+                   new int[] {2012, 11, 9, 0, 0},
+                   new int[] {2012, 11, 4, 0, 0},
+                   new int[] {2012, 11, 1, 0, 0});
+
+  }
+
+  /**
+   * 
+   * @throws IOException
+   */
+  public void testCompactionBoundarDefault() throws IOException {
+    conf.setBoolean(strPrefix + strSchema + "IsTierBoundaryFixed", true);
+    Calendar[] expectedCals = new Calendar[numTiers];
+    for (int i = 0; i < numTiers; i++) {
+      expectedCals[i] = Calendar.getInstance();
+    }
+    // every minute
+    testCronExpression("* * * * *", 
+        new int[] {2012, 11, 10, 12, 11}, // the pseudo now
+        new int[] {2012, 11, 10, 12, 10}, 
+        new int[] {2012, 11, 10, 12, 9},
+        new int[] {2012, 11, 10, 12, 8});
+                  
+    // every minute cross hour
+    testCronExpression("* * * * *", 
+        new int[] {2012, 11, 10, 12, 2},
+        new int[] {2012, 11, 10, 12, 1}, 
+        new int[] {2012, 11, 10, 12, 0},
+        new int[] {2012, 11, 10, 11, 59});
+    
+    // every minute cross day
+    testCronExpression("* * * * *", 
+        new int[] {2012, 11, 10, 0, 2},
+        new int[] {2012, 11, 10, 0, 1}, 
+        new int[] {2012, 11, 10, 0, 0},
+        new int[] {2012, 11, 9, 23, 59});
+
+    // every minute cross month
+    testCronExpression("* * * * *", 
+        new int[] {2012, 11, 1, 0, 2},
+        new int[] {2012, 11, 1, 0, 1}, 
+        new int[] {2012, 11, 1, 0, 0},
+        new int[] {2012, 10, 31, 23, 59});
+
+    // every minute cross year
+    testCronExpression("* * * * *", 
+        new int[] {2012, 1, 1, 0, 2},
+        new int[] {2012, 1, 1, 0, 1}, 
+        new int[] {2012, 1, 1, 0, 0},
+        new int[] {2011, 12, 31, 23, 59});
+
+    // every hour 1/2 hr boundary
+    testCronExpression("30 * * * *", 
+        new int[] {2012, 11, 10, 5, 30},
+        new int[] {2012, 11, 10, 4, 30}, 
+        new int[] {2012, 11, 10, 3, 30},
+        new int[] {2012, 11, 10, 2, 30});
+
+    // every hour cross day
+    testCronExpression("1 * * * *", 
+        new int[] {2012, 11, 0, 1, 11},
+        new int[] {2012, 11, 0, 1, 1}, 
+        new int[] {2012, 11, 0, 0, 1},
+        new int[] {2012, 10, 30, 23, 1});
+
+    // every day
+    testCronExpression("1 2 * * *", 
+        new int[] {2012, 11, 10, 12, 11},
+        new int[] {2012, 11, 10, 2, 1}, 
+        new int[] {2012, 11, 9, 2, 1},
+        new int[] {2012, 11, 8, 2, 1});
+
+    // every day at 4am
+    testCronExpression("0 4 * * *", 
+        new int[] {2012, 11, 10, 3, 11},
+        new int[] {2012, 11, 9, 4, 0}, 
+        new int[] {2012, 11, 8, 4, 0},
+        new int[] {2012, 11, 7, 4, 0});
+
+    // every day cross month
+    testCronExpression("1 2 * * *", 
+        new int[] {2012, 1, 1, 3, 11},
+        new int[] {2012, 1, 1, 2, 1}, 
+        new int[] {2011, 12, 31, 2, 1},
+        new int[] {2011, 12, 30, 2, 1});
+
+    // every month
+    testCronExpression("1 2 3 * *", 
+        new int[] {2012, 11, 10, 1, 11},
+        new int[] {2012, 11, 3, 2, 1}, 
+        new int[] {2012, 10, 3, 2, 1},
+        new int[] {2012, 9, 3, 2, 1});
+
+    // every month cross year
+    testCronExpression("1 2 3 * *", 
+        new int[] {2012, 1, 2, 1, 11},
+        new int[] {2011, 12, 3, 2, 1}, 
+        new int[] {2011, 11, 3, 2, 1},
+        new int[] {2011, 10, 3, 2, 1});
+    
+    // every march cross year
+    testCronExpression("1 2 3 3 *", 
+        new int[] {2012, 1, 2, 1, 11},
+        new int[] {2011, 3, 3, 2, 1}, 
+        new int[] {2010, 3, 3, 2, 1},
+        new int[] {2009, 3, 3, 2, 1});
+    
+    // every Thursday per month cross year
+    testCronExpression("1 2 * * 4", 
+        new int[] {2012, 11, 8, 2, 11},
+        new int[] {2012, 11, 8, 2, 1}, 
+        new int[] {2012, 11, 1, 2, 1},
+        new int[] {2012, 10, 25, 2, 1});
+    
+    // last day per month 
+    testCronExpression("1 2 1L * *",
+        new int[] {2012, 11, 8, 2, 11},
+        new int[] {2012, 10, 31, 2, 1}, 
+        new int[] {2012, 9, 30, 2, 1},
+        new int[] {2012, 8, 31, 2, 1});
+
+    // last day bi-monthly
+    testCronExpression("1 2 1L ?/2 *", 
+        new int[] {2012, 11, 8, 2, 11},
+        new int[] {2012, 9, 30, 2, 1}, 
+        new int[] {2012, 7, 31, 2, 1},
+        new int[] {2012, 5, 31, 2, 1});
+
+    // last Friday bi-monthly
+    testCronExpression("1 2 * ?/2 5L",
+        new int[] {2012, 11, 8, 2, 11},
+        new int[] {2012, 9, 28, 2, 1}, 
+        new int[] {2012, 7, 27, 2, 1},
+        new int[] {2012, 5, 25, 2, 1});
+    
+    // last Friday per month
+    testCronExpression("1 2 * * 5L",
+        new int[] {2012, 11, 8, 2, 11},
+        new int[] {2012, 10, 26, 2, 1}, 
+        new int[] {2012, 9, 28, 2, 1},
+        new int[] {2012, 8, 31, 2, 1});
+
+    // last day of the first month per quarter
+    // [1, 4, 7, 10]
+    testCronExpression("1 2 1L */3 *",
+       new int[] {2012, 11, 8, 2, 11},
+       new int[] {2012, 10, 31, 2, 1},
+       new int[] {2012, 7, 31, 2, 1},
+       new int[] {2012, 4, 30, 2, 1});
+
+    // the very first day of every quarter
+    testCronExpression("0 0 1 */3 *",
+        new int[] {2012, 11, 10, 2, 11},
+        new int[] {2012, 10, 1, 0, 0}, 
+        new int[] {2012, 7, 1, 0, 0},
+        new int[] {2012, 4, 1, 0, 0});
+
+    // the very first day of every quarter
+    // NOW: 11/8/2012, 2:11
+    // the first valid month by ?/3 means three months from the current month
+    // [2, 5, 8, 11] 
+    testCronExpression("0 0 1 ?/3 *", 
+        new int[] {2012, 11, 8, 2, 11},
+        new int[] {2012, 8, 1, 0, 0}, 
+        new int[] {2012, 5, 1, 0, 0},
+        new int[] {2012, 2, 1, 0, 0});
+
+    // every mon/wed/fri cross month boundary
+    testCronExpression("1 0 * * 1,3,5", 
+        new int[] {2012, 12, 4, 2, 11},
+        new int[] {2012, 12, 3, 0, 1}, 
+        new int[] {2012, 11, 30, 0, 1},
+        new int[] {2012, 11, 28, 0, 1});
+
+    // same effect as the previous cron expression
+    testCronExpression("1 0 * * 1-5/2", 
+        new int[] {2012, 12, 4, 2, 11},
+        new int[] {2012, 12, 3, 0, 1}, 
+        new int[] {2012, 11, 30, 0, 1},
+        new int[] {2012, 11, 28, 0, 1});
+
+  }
+
+  private void testCronExpression(String cronExpression, int[] currVal,
+      int[]... expectedVals) throws IOException {
+    for (int i = 0; i < expectedVals.length; i++) {
+      String strTier = "Tier." + String.valueOf(i) + ".";
+      this.conf.setStrings(strPrefix + strSchema + strTier + "Boundary",
+          cronExpression);
+    }
+    String strTier = "Tier." + String.valueOf(expectedVals.length) + ".";
+    this.conf.setStrings(strPrefix + strSchema + strTier + "Boundary", "");
+    boundaryEquals(currVal, expectedVals);
+  }
+
+  /**
+   * 
+   * @param currVal: the pseudo now from when the tier boundaries 
+   *                 start to be calculated
+   * @param expectedVals: expected tier boundaries
+   */
+  private void boundaryEquals(int[] currVal, int[]... expectedVals) {
+    int localNumTiers = expectedVals.length + 1;
+    conf.setInt(strPrefix + strSchema + "NumCompactionTiers", localNumTiers);
+    currCal.set(currVal[0], currVal[1] - 1, currVal[2], currVal[3], currVal[4]);
+    String strTier = "Tier." + String.valueOf(localNumTiers - 1) + ".";
+    conf.set(strPrefix + strSchema + strTier + "Boundary", "");
+    for (int i = 0; i < localNumTiers - 1; i++) {
+      expectedCals[i].set(expectedVals[i][0], expectedVals[i][1] - 1,
+          expectedVals[i][2], expectedVals[i][3], expectedVals[i][4]);
+    }
+    expectedCals[localNumTiers - 1].setTimeInMillis(0);
+
+    TierCompactionConfiguration tierConf = new TierCompactionConfiguration(
+        conf, store);
+    Calendar localCal = (Calendar) currCal.clone();
+    TierCompactionConfiguration.CompactionTier tier;
+    if (tierConf.isTierBoundaryFixed()) {
+      for (int i = 0; i < localNumTiers; i++) {
+        tier = tierConf.getCompactionTier(i);
+        localCal = tier.getTierBoundary(localCal);
+        // we can ignore all the numbers below the minute level
+        // since our cron expression starts with the minute
+        assertEquals(expectedCals[i].getTimeInMillis() / 60000, 
+            localCal.getTimeInMillis() / 60000);
+      }
+    }
   }
 
   @Override
