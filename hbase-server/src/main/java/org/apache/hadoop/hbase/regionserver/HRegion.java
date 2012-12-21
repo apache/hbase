@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.text.ParseException;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -62,7 +60,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.protobuf.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -100,23 +97,21 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.coprocessor.Exec;
-import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
-import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -138,14 +133,15 @@ import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MutableClassToInstanceMap;
 import com.google.common.io.Closeables;
-
-import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns
@@ -211,13 +207,6 @@ public class HRegion implements HeapSize { // , Writable{
 
   protected final Map<byte[], Store> stores = new ConcurrentSkipListMap<byte[], Store>(
       Bytes.BYTES_RAWCOMPARATOR);
-
-  // Registered region protocol handlers
-  private ClassToInstanceMap<CoprocessorProtocol>
-      protocolHandlers = MutableClassToInstanceMap.create();
-
-  private Map<String, Class<? extends CoprocessorProtocol>>
-      protocolHandlerNames = Maps.newHashMap();
 
   // TODO: account for each registered handler in HeapSize computation
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
@@ -2093,10 +2082,6 @@ public class HRegion implements HeapSize { // , Writable{
     Set<byte[]> deletesCfSet = null;
 
     WALEdit walEdit = new WALEdit();
-
-    long startTimeMs = EnvironmentEdgeManager.currentTimeMillis();
-
-
     MultiVersionConsistencyControl.WriteEntry w = null;
     long txid = 0;
     boolean walSyncSuccessful = false;
@@ -2365,7 +2350,6 @@ public class HRegion implements HeapSize { // , Writable{
 
       if (noOfPuts > 0) {
         // There were some Puts in the batch.
-        double noOfMutations = noOfPuts + noOfDeletes;
         if (this.metricsRegion != null) {
           this.metricsRegion.updatePut();
         }
@@ -4899,7 +4883,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      41 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      39 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (9 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
@@ -4941,47 +4925,6 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Registers a new CoprocessorProtocol subclass and instance to
-   * be available for handling {@link HRegion#exec(Exec)} calls.
-   *
-   * <p>
-   * Only a single protocol type/handler combination may be registered per
-   * region.
-   * After the first registration, subsequent calls with the same protocol type
-   * will fail with a return value of {@code false}.
-   * </p>
-   * @param protocol a {@code CoprocessorProtocol} subinterface defining the
-   * protocol methods
-   * @param handler an instance implementing the interface
-   * @param <T> the protocol type
-   * @return {@code true} if the registration was successful, {@code false}
-   * otherwise
-   */
-  @Deprecated
-  public <T extends CoprocessorProtocol> boolean registerProtocol(
-      Class<T> protocol, T handler) {
-
-    /* No stacking of protocol handlers is currently allowed.  The
-     * first to claim wins!
-     */
-    if (protocolHandlers.containsKey(protocol)) {
-      LOG.error("Protocol "+protocol.getName()+
-          " already registered, rejecting request from "+
-          handler
-      );
-      return false;
-    }
-
-    protocolHandlers.putInstance(protocol, handler);
-    protocolHandlerNames.put(protocol.getName(), protocol);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Registered protocol handler: region="+
-          Bytes.toStringBinary(getRegionName())+" protocol="+protocol.getName());
-    }
-    return true;
-  }
-
-  /**
    * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to
    * be available for handling
    * {@link HRegion#execService(com.google.protobuf.RpcController, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall)}} calls.
@@ -5014,73 +4957,6 @@ public class HRegion implements HeapSize { // , Writable{
           Bytes.toStringBinary(getRegionName())+" service="+serviceDesc.getFullName());
     }
     return true;
-  }
-
-  /**
-   * Executes a single {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol}
-   * method using the registered protocol handlers.
-   * {@link CoprocessorProtocol} implementations must be registered via the
-   * {@link org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)}
-   * method before they are available.
-   *
-   * @param call an {@code Exec} instance identifying the protocol, method name,
-   *     and parameters for the method invocation
-   * @return an {@code ExecResult} instance containing the region name of the
-   *     invocation and the return value
-   * @throws IOException if no registered protocol handler is found or an error
-   *     occurs during the invocation
-   * @see org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)
-   */
-  @Deprecated
-  public ExecResult exec(Exec call)
-      throws IOException {
-    Class<? extends CoprocessorProtocol> protocol = call.getProtocol();
-    if (protocol == null) {
-      String protocolName = call.getProtocolName();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received dynamic protocol exec call with protocolName " + protocolName);
-      }
-      // detect the actual protocol class
-      protocol  = protocolHandlerNames.get(protocolName);
-      if (protocol == null) {
-        throw new HBaseRPC.UnknownProtocolException(null,
-            "No matching handler for protocol "+protocolName+
-            " in region "+Bytes.toStringBinary(getRegionName()));
-      }
-    }
-    if (!protocolHandlers.containsKey(protocol)) {
-      throw new HBaseRPC.UnknownProtocolException(protocol,
-          "No matching handler for protocol "+protocol.getName()+
-          " in region "+Bytes.toStringBinary(getRegionName()));
-    }
-
-    CoprocessorProtocol handler = protocolHandlers.getInstance(protocol);
-    Object value;
-
-    try {
-      Method method = protocol.getMethod(
-          call.getMethodName(), call.getParameterClasses());
-      method.setAccessible(true);
-
-      value = method.invoke(handler, call.getParameters());
-    } catch (InvocationTargetException e) {
-      Throwable target = e.getTargetException();
-      if (target instanceof IOException) {
-        throw (IOException)target;
-      }
-      IOException ioe = new IOException(target.toString());
-      ioe.setStackTrace(target.getStackTrace());
-      throw ioe;
-    } catch (Throwable e) {
-      if (!(e instanceof IOException)) {
-        LOG.error("Unexpected throwable object ", e);
-      }
-      IOException ioe = new IOException(e.toString());
-      ioe.setStackTrace(e.getStackTrace());
-      throw ioe;
-    }
-
-    return new ExecResult(getRegionName(), value);
   }
 
   /**

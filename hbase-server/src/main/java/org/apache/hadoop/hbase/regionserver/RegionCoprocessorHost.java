@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -214,11 +213,6 @@ public class RegionCoprocessorHost
     // It uses a visitor pattern to invoke registered Endpoint
     // method.
     for (Class c : implClass.getInterfaces()) {
-      if (CoprocessorProtocol.class.isAssignableFrom(c)) {
-        region.registerProtocol(c, (CoprocessorProtocol)instance);
-      }
-      // we allow endpoints to register as both CoproocessorProtocols and Services
-      // for ease of transition
       if (CoprocessorService.class.isAssignableFrom(c)) {
         region.registerService( ((CoprocessorService)instance).getService() );
       }

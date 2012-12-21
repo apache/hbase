@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
@@ -472,30 +471,6 @@ public class HTablePool implements Closeable {
     @Override
     public void unlockRow(RowLock rl) throws IOException {
       table.unlockRow(rl);
-    }
-
-    @Override
-    @Deprecated
-    public <T extends CoprocessorProtocol> T coprocessorProxy(
-        Class<T> protocol, byte[] row) {
-      return table.coprocessorProxy(protocol, row);
-    }
-
-    @Override
-    @Deprecated
-    public <T extends CoprocessorProtocol, R> Map<byte[], R> coprocessorExec(
-        Class<T> protocol, byte[] startKey, byte[] endKey,
-        Batch.Call<T, R> callable) throws IOException, Throwable {
-      return table.coprocessorExec(protocol, startKey, endKey, callable);
-    }
-
-    @Override
-    @Deprecated
-    public <T extends CoprocessorProtocol, R> void coprocessorExec(
-        Class<T> protocol, byte[] startKey, byte[] endKey,
-        Batch.Call<T, R> callable, Batch.Callback<R> callback)
-        throws IOException, Throwable {
-      table.coprocessorExec(protocol, startKey, endKey, callable, callback);
     }
 
     @Override

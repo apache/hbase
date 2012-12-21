@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -67,7 +66,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequ
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction;
@@ -117,7 +115,6 @@ import com.google.protobuf.ByteString;
  * or build components for protocol buffer requests.
  */
 @InterfaceAudience.Private
-@SuppressWarnings("deprecation")
 public final class RequestConverter {
 
   private RequestConverter() {
@@ -497,24 +494,6 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer coprocessor exec request
-   *
-   * @param regionName
-   * @param exec
-   * @return a coprocessor exec request
-   * @throws IOException
-   */
-  public static ExecCoprocessorRequest buildExecCoprocessorRequest(
-      final byte[] regionName, final Exec exec) throws IOException {
-    ExecCoprocessorRequest.Builder builder = ExecCoprocessorRequest.newBuilder();
-    RegionSpecifier region = buildRegionSpecifier(
-      RegionSpecifierType.REGION_NAME, regionName);
-    builder.setRegion(region);
-    builder.setCall(ProtobufUtil.toExec(exec));
-    return builder.build();
-  }
-
-  /**
    * Create a protocol buffer multi request for a list of actions.
    * RowMutations in the list (if any) will be ignored.
    *
@@ -539,8 +518,6 @@ public final class RequestConverter {
         protoAction.setMutate(ProtobufUtil.toMutate(MutateType.PUT, (Put)row));
       } else if (row instanceof Delete) {
         protoAction.setMutate(ProtobufUtil.toMutate(MutateType.DELETE, (Delete)row));
-      } else if (row instanceof Exec) {
-        protoAction.setExec(ProtobufUtil.toExec((Exec)row));
       } else if (row instanceof Append) {
         protoAction.setMutate(ProtobufUtil.toMutate(MutateType.APPEND, (Append)row));
       } else if (row instanceof Increment) {

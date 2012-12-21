@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BitComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -238,7 +237,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(MultiResponse.class, code++);
 
     // coprocessor execution
-    addToMap(Exec.class, code++);
+    // Exec no longer exists --> addToMap(Exec.class, code++);
+    code++;
     addToMap(Increment.class, code++);
 
     addToMap(KeyOnlyFilter.class, code++);

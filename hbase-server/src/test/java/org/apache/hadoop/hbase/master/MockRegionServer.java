@@ -65,8 +65,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowRequest;
@@ -402,13 +400,6 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   @Override
   public BulkLoadHFileResponse bulkLoadHFile(RpcController controller,
       BulkLoadHFileRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public ExecCoprocessorResponse execCoprocessor(RpcController controller,
-      ExecCoprocessorRequest request) throws ServiceException {
     // TODO Auto-generated method stub
     return null;
   }

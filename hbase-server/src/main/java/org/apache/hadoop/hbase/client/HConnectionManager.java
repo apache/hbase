@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -73,8 +72,6 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
-import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -2124,75 +2121,6 @@ public class HConnectionManager {
       }
     }
 
-
-    /**
-     * Executes the given
-     * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call}
-     * callable for each row in the
-     * given list and invokes
-     * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
-     * for each result returned.
-     *
-     * @param protocol the protocol interface being called
-     * @param rows a list of row keys for which the callable should be invoked
-     * @param tableName table name for the coprocessor invoked
-     * @param pool ExecutorService used to submit the calls per row
-     * @param callable instance on which to invoke
-     * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
-     * for each row
-     * @param callback instance on which to invoke
-     * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
-     * for each result
-     * @param <T> the protocol interface type
-     * @param <R> the callable's return type
-     * @throws IOException
-     */
-    @Deprecated
-    public <T extends CoprocessorProtocol,R> void processExecs(
-        final Class<T> protocol,
-        List<byte[]> rows,
-        final byte[] tableName,
-        ExecutorService pool,
-        final Batch.Call<T,R> callable,
-        final Batch.Callback<R> callback)
-      throws IOException, Throwable {
-
-      Map<byte[],Future<R>> futures =
-          new TreeMap<byte[],Future<R>>(Bytes.BYTES_COMPARATOR);
-      for (final byte[] r : rows) {
-        final ExecRPCInvoker invoker =
-            new ExecRPCInvoker(conf, this, protocol, tableName, r);
-        Future<R> future = pool.submit(
-            new Callable<R>() {
-              public R call() throws Exception {
-                T instance = (T)Proxy.newProxyInstance(conf.getClassLoader(),
-                    new Class[]{protocol},
-                    invoker);
-                R result = callable.call(instance);
-                byte[] region = invoker.getRegionName();
-                if (callback != null) {
-                  callback.update(region, r, result);
-                }
-                return result;
-              }
-            });
-        futures.put(r, future);
-      }
-      for (Map.Entry<byte[],Future<R>> e : futures.entrySet()) {
-        try {
-          e.getValue().get();
-        } catch (ExecutionException ee) {
-          LOG.warn("Error executing for row "+Bytes.toStringBinary(e.getKey()), ee);
-          throw ee.getCause();
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          throw new IOException("Interrupted executing for row " +
-              Bytes.toStringBinary(e.getKey()), ie);
-        }
-      }
-    }
-
-
     /*
      * Return the number of cached region for a table. It will only be called
      * from a unit test.
@@ -2209,8 +2137,6 @@ public class HConnectionManager {
         return tableLocs.values().size();
       }
     }
-
-
 
     /**
      * Check the region cache to see whether a region is cached yet or not.

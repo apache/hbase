@@ -256,45 +256,6 @@ message BulkLoadHFileResponse {
   required bool loaded = 1;
 }
 
-/**
- * An individual coprocessor call. You must specify the protocol,
- * the method, and the row to which the call will be executed.
- *
- * You can specify the configuration settings in the property list.
- *
- * The parameter list has the parameters used for the method.
- * A parameter is a pair of parameter name and the binary parameter
- * value. The name is the parameter class name.  The value is the
- * binary format of the parameter, for example, protocol buffer
- * encoded value.
- */
-message Exec {
-  required bytes row = 1;
-  required string protocolName = 2;
-  required string methodName = 3;
-  repeated NameStringPair property = 4;
-  repeated NameBytesPair parameter = 5;
-}
-
-  /**
-   * Executes a single {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol}
-   * method using the registered protocol handlers.
-   * {@link CoprocessorProtocol} implementations must be registered via the
-   * {@link org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(
-   * Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)}
-   * method before they are available.
-   * @deprecated Use CoprocessorService going forward
- */
-message ExecCoprocessorRequest {
-  required RegionSpecifier region = 1;
-  required Exec call = 2;
-}
-
-// @deprecated Use CoprocessorService going forward
-message ExecCoprocessorResponse {
-  required NameBytesPair value = 1;
-}
-
 message CoprocessorServiceCall {
   required bytes row = 1;
   required string serviceName = 2;
@@ -319,7 +280,6 @@ message CoprocessorServiceResponse {
 message MultiAction {
   optional Mutate mutate = 1;
   optional Get get = 2;
-  optional Exec exec = 3;
 }
 
 /**
@@ -371,9 +331,6 @@ service ClientService {
 
   rpc bulkLoadHFile(BulkLoadHFileRequest)
     returns(BulkLoadHFileResponse);
-
-  rpc execCoprocessor(ExecCoprocessorRequest)
-    returns(ExecCoprocessorResponse);
 
   rpc execService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);

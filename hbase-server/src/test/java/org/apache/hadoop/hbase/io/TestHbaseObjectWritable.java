@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BitComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -536,7 +535,6 @@ public class TestHbaseObjectWritable extends TestCase {
     assertEquals(67,HbaseObjectWritable.getClassCode(MultiResponse.class).intValue());
 
     // coprocessor execution
-    assertEquals(68,HbaseObjectWritable.getClassCode(Exec.class).intValue());
     assertEquals(69,HbaseObjectWritable.getClassCode(Increment.class).intValue());
 
     assertEquals(70,HbaseObjectWritable.getClassCode(KeyOnlyFilter.class).intValue());

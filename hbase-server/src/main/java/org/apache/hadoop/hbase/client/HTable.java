@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -52,9 +51,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -1194,61 +1191,8 @@ public class HTable implements HTableInterface {
   /**
    * {@inheritDoc}
    */
-  @Override
-  @Deprecated
-  public <T extends CoprocessorProtocol> T coprocessorProxy(
-      Class<T> protocol, byte[] row) {
-    return (T)Proxy.newProxyInstance(this.getClass().getClassLoader(),
-        new Class[]{protocol},
-        new ExecRPCInvoker(configuration,
-            connection,
-            protocol,
-            tableName,
-            row));
-  }
-
-  /**
-   * {@inheritDoc}
-   */
   public CoprocessorRpcChannel coprocessorService(byte[] row) {
     return new RegionCoprocessorRpcChannel(connection, tableName, row);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  @Deprecated
-  public <T extends CoprocessorProtocol, R> Map<byte[],R> coprocessorExec(
-      Class<T> protocol, byte[] startKey, byte[] endKey,
-      Batch.Call<T,R> callable)
-      throws IOException, Throwable {
-
-    final Map<byte[],R> results =  Collections.synchronizedMap(new TreeMap<byte[],R>(
-        Bytes.BYTES_COMPARATOR));
-    coprocessorExec(protocol, startKey, endKey, callable,
-        new Batch.Callback<R>(){
-      public void update(byte[] region, byte[] row, R value) {
-        results.put(region, value);
-      }
-    });
-    return results;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  @Deprecated
-  public <T extends CoprocessorProtocol, R> void coprocessorExec(
-      Class<T> protocol, byte[] startKey, byte[] endKey,
-      Batch.Call<T,R> callable, Batch.Callback<R> callback)
-      throws IOException, Throwable {
-
-    // get regions covered by the row range
-    List<byte[]> keys = getStartKeysInRange(startKey, endKey);
-    connection.processExecs(protocol, keys, tableName, pool, callable,
-        callback);
   }
 
   /**
