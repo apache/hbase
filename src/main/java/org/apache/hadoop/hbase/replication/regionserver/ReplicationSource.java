@@ -105,8 +105,6 @@ public class ReplicationSource extends Thread
   private int replicationQueueNbCapacity;
   // Our reader for the current log
   private HLog.Reader reader;
-  // Current position in the log
-  private long position = 0;
   // Last position in the log that we sent to ZooKeeper
   private long lastLoggedPosition = -1;
   // Path of the current log
@@ -132,10 +130,15 @@ public class ReplicationSource extends Thread
   private int currentNbEntries = 0;
   // Current number of operations (Put/Delete) that we need to replicate
   private int currentNbOperations = 0;
+  // Current size of data we need to replicate
+  private int currentSize = 0;
   // Indicates if this particular source is running
   private volatile boolean running = true;
   // Metrics for this source
   private ReplicationSourceMetrics metrics;
+  // Handle on the log reader helper
+  private ReplicationHLogReaderManager repLogReader;
+
 
   /**
    * Instantiation method used by region servers
@@ -183,7 +186,7 @@ public class ReplicationSource extends Thread
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.fs = fs;
     this.metrics = new ReplicationSourceMetrics(peerClusterZnode);
-
+    this.repLogReader = new ReplicationHLogReaderManager(this.fs, this.conf);
     try {
       this.clusterId = zkHelper.getUUIDForCluster(zkHelper.getZookeeperWatcher());
     } catch (KeeperException ke) {
@@ -263,8 +266,8 @@ public class ReplicationSource extends Thread
     // normally has a position (unless the RS failed between 2 logs)
     if (this.queueRecovered) {
       try {
-        this.position = this.zkHelper.getHLogRepPosition(
-            this.peerClusterZnode, this.queue.peek().getName());
+        this.repLogReader.setPosition(this.zkHelper.getHLogRepPosition(
+            this.peerClusterZnode, this.queue.peek().getName()));
       } catch (KeeperException e) {
         this.terminate("Couldn't get the position of this recovered queue " +
             peerClusterZnode, e);
@@ -322,6 +325,7 @@ public class ReplicationSource extends Thread
 
       boolean gotIOE = false;
       currentNbEntries = 0;
+      currentSize = 0;
       try {
         if (readAllEntriesToReplicateOrNextFile(currentWALisBeingWrittenTo)) {
           continue;
@@ -357,9 +361,7 @@ public class ReplicationSource extends Thread
         }
       } finally {
         try {
-          if (this.reader != null) {
-            this.reader.close();
-          }
+          this.repLogReader.closeReader();
         } catch (IOException e) {
           gotIOE = true;
           LOG.warn("Unable to finalize the tailing of a file", e);
@@ -370,10 +372,10 @@ public class ReplicationSource extends Thread
       // wait a bit and retry.
       // But if we need to stop, don't bother sleeping
       if (this.isActive() && (gotIOE || currentNbEntries == 0)) {
-        if (this.lastLoggedPosition != this.position) {
+        if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
           this.manager.logPositionAndCleanOldLogs(this.currentPath,
-              this.peerClusterZnode, this.position, queueRecovered, currentWALisBeingWrittenTo);
-          this.lastLoggedPosition = this.position;
+              this.peerClusterZnode, this.repLogReader.getPosition(), queueRecovered, currentWALisBeingWrittenTo);
+          this.lastLoggedPosition = this.repLogReader.getPosition();
         }
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
           sleepMultiplier++;
@@ -405,11 +407,9 @@ public class ReplicationSource extends Thread
   protected boolean readAllEntriesToReplicateOrNextFile(boolean currentWALisBeingWrittenTo)
       throws IOException{
     long seenEntries = 0;
-    if (this.position != 0) {
-      this.reader.seek(this.position);
-    }
-    long startPosition = this.position;
-    HLog.Entry entry = readNextAndSetPosition();
+    this.repLogReader.seek();
+    HLog.Entry entry =
+        this.repLogReader.readNextAndSetPosition(this.entriesArray, this.currentNbEntries);
     while (entry != null) {
       WALEdit edit = entry.getEdit();
       this.metrics.logEditsReadRate.inc(1);
@@ -433,18 +433,18 @@ public class ReplicationSource extends Thread
           }
           currentNbOperations += countDistinctRowKeys(edit);
           currentNbEntries++;
+          currentSize += entry.getEdit().heapSize();
         } else {
           this.metrics.logEditsFilteredRate.inc(1);
         }
       }
       // Stop if too many entries or too big
-      if ((this.reader.getPosition() - startPosition)
-          >= this.replicationQueueSizeCapacity ||
+      if (currentSize >= this.replicationQueueSizeCapacity ||
           currentNbEntries >= this.replicationQueueNbCapacity) {
         break;
       }
       try {
-        entry = readNextAndSetPosition();
+        entry = this.repLogReader.readNextAndSetPosition(this.entriesArray, this.currentNbEntries);
       } catch (IOException ie) {
         LOG.debug("Break on IOE: " + ie.getMessage());
         break;
@@ -452,7 +452,7 @@ public class ReplicationSource extends Thread
     }
     LOG.debug("currentNbOperations:" + currentNbOperations +
         " and seenEntries:" + seenEntries +
-        " and size: " + (this.reader.getPosition() - startPosition));
+        " and size: " + this.currentSize);
     if (currentWALisBeingWrittenTo) {
       return false;
     }
@@ -460,16 +460,6 @@ public class ReplicationSource extends Thread
     // hit the end of the file for sure
     return seenEntries == 0 && processEndOfFile();
   }
-
-  private HLog.Entry readNextAndSetPosition() throws IOException {
-    HLog.Entry entry = this.reader.next(entriesArray[currentNbEntries]);
-    // Store the position so that in the future the reader can start
-    // reading from here. If the above call to next() throws an
-    // exception, the position won't be changed and retry will happen
-    // from the last known good position
-    this.position = this.reader.getPosition();
-    return entry;
-  } 
 
   private void connectToPeers() {
     // Connect to peer cluster first, unless we have to stop
@@ -509,10 +499,9 @@ public class ReplicationSource extends Thread
   protected boolean openReader(int sleepMultiplier) {
     try {
       LOG.debug("Opening log for replication " + this.currentPath.getName() +
-          " at " + this.position);
+          " at " + this.repLogReader.getPosition());
       try {
-       this.reader = null;
-       this.reader = HLog.getReader(this.fs, this.currentPath, this.conf);
+        this.reader = repLogReader.openReader(this.currentPath);
       } catch (FileNotFoundException fnfe) {
         if (this.queueRecovered) {
           // We didn't find the log in the archive directory, look if it still
@@ -648,10 +637,10 @@ public class ReplicationSource extends Thread
         HRegionInterface rrs = getRS();
         LOG.debug("Replicating " + currentNbEntries);
         rrs.replicateLogEntries(Arrays.copyOf(this.entriesArray, currentNbEntries));
-        if (this.lastLoggedPosition != this.position) {
+        if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
           this.manager.logPositionAndCleanOldLogs(this.currentPath,
-              this.peerClusterZnode, this.position, queueRecovered, currentWALisBeingWrittenTo);
-          this.lastLoggedPosition = this.position;
+              this.peerClusterZnode, this.repLogReader.getPosition(), queueRecovered, currentWALisBeingWrittenTo);
+          this.lastLoggedPosition = this.repLogReader.getPosition();
         }
         this.totalReplicatedEdits += currentNbEntries;
         this.metrics.shippedBatchesRate.inc(1);
@@ -721,7 +710,8 @@ public class ReplicationSource extends Thread
   protected boolean processEndOfFile() {
     if (this.queue.size() != 0) {
       this.currentPath = null;
-      this.position = 0;
+      this.repLogReader.finishCurrentFile();
+      this.reader = null;
       return true;
     } else if (this.queueRecovered) {
       this.manager.closeRecoveredQueue(this);

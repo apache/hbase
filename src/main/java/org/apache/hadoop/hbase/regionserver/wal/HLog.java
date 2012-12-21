@@ -167,6 +167,7 @@ public class HLog implements Syncable {
     Entry next(Entry reuse) throws IOException;
     void seek(long pos) throws IOException;
     long getPosition() throws IOException;
+    void reset() throws IOException;
   }
 
   public interface Writer {
@@ -695,15 +696,18 @@ public class HLog implements Syncable {
 
   /**
    * Get a reader for the WAL.
+   * The proper way to tail a log that can be under construction is to first use this method
+   * to get a reader then call {@link HLog.Reader#reset()} to see the new data. It will also
+   * take care of keeping implementation-specific context (like compression).
    * @param fs
    * @param path
    * @param conf
    * @return A WAL reader.  Close when done with it.
    * @throws IOException
    */
-  public static Reader getReader(final FileSystem fs,
-    final Path path, Configuration conf)
-  throws IOException {
+  public static Reader getReader(final FileSystem fs, final Path path,
+                                 Configuration conf)
+      throws IOException {
     try {
 
       if (logReaderClass == null) {
