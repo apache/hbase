@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1110,7 +1109,7 @@ public class HBaseTestingUtility {
    */
   public int createMultiRegions(HTable table, byte[] columnFamily)
   throws IOException {
-    return createMultiRegions(getConfiguration(), table, columnFamily);
+    return createMultiRegions(table, columnFamily, true);
   }
 
   public static final byte[][] KEYS = {
@@ -1127,16 +1126,16 @@ public class HBaseTestingUtility {
 
   /**
    * Creates many regions names "aaa" to "zzz".
-   * @param c Configuration to use.
+   *
    * @param table  The table to use for the data.
    * @param columnFamily  The family to insert the data into.
+   * @param cleanupFS  True if a previous region should be remove from the FS  
    * @return count of regions created.
    * @throws IOException When creating the regions fails.
    */
-  public int createMultiRegions(final Configuration c, final HTable table,
-      final byte[] columnFamily)
+  public int createMultiRegions(HTable table, byte[] columnFamily, boolean cleanupFS)
   throws IOException {
-    return createMultiRegions(c, table, columnFamily, KEYS);
+    return createMultiRegions(getConfiguration(), table, columnFamily, KEYS, cleanupFS);
   }
 
   /**
@@ -1164,7 +1163,12 @@ public class HBaseTestingUtility {
   }
 
   public int createMultiRegions(final Configuration c, final HTable table,
-      final byte[] columnFamily, byte [][] startKeys)
+      final byte[] columnFamily, byte [][] startKeys) throws IOException {
+    return createMultiRegions(c, table, columnFamily, startKeys, true);
+  }
+  
+  public int createMultiRegions(final Configuration c, final HTable table,
+          final byte[] columnFamily, byte [][] startKeys, boolean cleanupFS)
   throws IOException {
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
@@ -1202,11 +1206,14 @@ public class HBaseTestingUtility {
         Bytes.toStringBinary(row));
       meta.delete(new Delete(row));
     }
-    // remove the "old" region from FS
-    Path tableDir = new Path(getDefaultRootDirPath().toString()
-        + System.getProperty("file.separator") + htd.getNameAsString()
-        + System.getProperty("file.separator") + regionToDeleteInFS);
-    getDFSCluster().getFileSystem().delete(tableDir);
+    if (cleanupFS) {
+      // see HBASE-7417 - this confused TestReplication
+      // remove the "old" region from FS
+      Path tableDir = new Path(getDefaultRootDirPath().toString()
+          + System.getProperty("file.separator") + htd.getNameAsString()
+          + System.getProperty("file.separator") + regionToDeleteInFS);
+      getDFSCluster().getFileSystem().delete(tableDir);
+    }
     // flush cache of regions
     HConnection conn = table.getConnection();
     conn.clearRegionCache();

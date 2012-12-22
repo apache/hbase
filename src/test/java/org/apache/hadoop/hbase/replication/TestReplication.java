@@ -79,7 +79,7 @@ public class TestReplication {
   private static final int NB_ROWS_IN_BIG_BATCH =
       NB_ROWS_IN_BATCH * 10;
   private static final long SLEEP_TIME = 1500;
-  private static final int NB_RETRIES = 10;
+  private static final int NB_RETRIES = 15;
 
   private static final byte[] tableName = Bytes.toBytes("test");
   private static final byte[] famName = Bytes.toBytes("f");
@@ -716,7 +716,7 @@ public class TestReplication {
    */
   @Test(timeout=300000)
   public void queueFailover() throws Exception {
-    utility1.createMultiRegions(htable1, famName);
+    utility1.createMultiRegions(htable1, famName, false);
 
     // killing the RS with .META. can result into failed puts until we solve
     // IO fencing
