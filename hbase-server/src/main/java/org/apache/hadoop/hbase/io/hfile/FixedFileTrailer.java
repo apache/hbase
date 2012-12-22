@@ -222,7 +222,6 @@ public class FixedFileTrailer {
    * {@link #serialize(DataOutputStream)}.
    *
    * @param inputStream
-   * @param version
    * @throws IOException
    */
   void deserialize(DataInputStream inputStream) throws IOException {

@@ -92,13 +92,13 @@ import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Acc
  *
  * <p>
  * To perform authorization checks, {@code AccessController} relies on the
- * {@link org.apache.hadoop.hbase.ipc.SecureRpcEngine} being loaded to provide
+ * {@link org.apache.hadoop.hbase.ipc.RpcServerEngine} being loaded to provide
  * the user identities for remote requests.
  * </p>
  *
  * <p>
  * The access control lists used for authorization can be manipulated via the
- * exposed {@link AccessControlService.Interface} implementation, and the associated
+ * exposed {@link AccessControlService} Interface implementation, and the associated
  * {@code grant}, {@code revoke}, and {@code user_permission} HBase shell
  * commands.
  * </p>

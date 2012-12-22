@@ -44,7 +44,7 @@ import org.apache.hadoop.security.token.Token;
 
 /**
  * Provides a service for obtaining authentication tokens via the
- * {@link AuthenticationProtos.AuthenticationService} coprocessor service.
+ * {@link AuthenticationProtos} AuthenticationService coprocessor service.
  */
 public class TokenProvider implements AuthenticationProtos.AuthenticationService.Interface,
     Coprocessor, CoprocessorService {
@@ -73,7 +73,7 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
   }
 
   /**
-   * @param ugi
+   * @param ugi A user group information.
    * @return true if delegation token operation is allowed
    */
   private boolean isAllowedDelegationTokenOp(UserGroupInformation ugi) throws IOException {

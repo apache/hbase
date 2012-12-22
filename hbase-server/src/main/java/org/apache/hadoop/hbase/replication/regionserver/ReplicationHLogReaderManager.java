@@ -57,7 +57,7 @@ public class ReplicationHLogReaderManager {
   /**
    * Opens the file at the current position
    * @param path
-   * @return
+   * @return an HLog reader.
    * @throws IOException
    */
   public HLog.Reader openReader(Path path) throws IOException {

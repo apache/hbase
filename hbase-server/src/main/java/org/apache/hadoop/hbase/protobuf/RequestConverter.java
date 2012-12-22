@@ -1137,7 +1137,7 @@ public final class RequestConverter {
    * @param family optional column family
    * @param qualifier optional qualifier
    * @param actions the permissions to be granted
-   * @return A {@link AccessControlProtos.GrantRequest)
+   * @return A {@link AccessControlProtos} GrantRequest
    */
   public static AccessControlProtos.GrantRequest buildGrantRequest(
       String username, byte[] table, byte[] family, byte[] qualifier,
@@ -1173,7 +1173,7 @@ public final class RequestConverter {
    * @param family optional column family
    * @param qualifier optional qualifier
    * @param actions the permissions to be revoked
-   * @return A {@link AccessControlProtos.RevokeRequest)
+   * @return A {@link AccessControlProtos} RevokeRequest
    */
   public static AccessControlProtos.RevokeRequest buildRevokeRequest(
       String username, byte[] table, byte[] family, byte[] qualifier,

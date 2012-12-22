@@ -37,7 +37,8 @@ import java.util.TreeSet;
  * <p>
  * Note : It may emit KVs which do not have the given columns in them, if
  * these KVs happen to occur before a KV which does have a match. Given this
- * caveat, this filter is only useful for special cases like {@link RowCounter}.
+ * caveat, this filter is only useful for special cases
+ * like {@link org.apache.hadoop.hbase.mapreduce.RowCounter}.
  * <p>
  */
 @InterfaceAudience.Public

@@ -54,7 +54,7 @@ public class ChecksumUtil {
    *                    compute checkums from
    * @param endOffset ending offset in the indata stream upto
    *                   which checksums needs to be computed
-   * @param outData the output buffer where checksum values are written
+   * @param outdata the output buffer where checksum values are written
    * @param outOffset the starting offset in the outdata where the
    *                  checksum values are written
    * @param checksumType type of checksum
