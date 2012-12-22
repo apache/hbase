@@ -865,7 +865,7 @@
     <maven.assembly.version>2.3</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
-    <findbugs.version>2.4.0</findbugs.version>
+    <findbugs.version>2.5.2</findbugs.version>
     <maven.site.version>3.1</maven.site.version>
     <javadoc.version>2.9</javadoc.version>
     <maven.resources.plugin.version>2.5</maven.resources.plugin.version>

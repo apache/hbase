@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DeserializationException;
-import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
@@ -80,7 +79,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private volatile String currentTask = null;
   private int currentVersion;
   private volatile boolean exitWorker;
-  private Object grabTaskLock = new Object();
+  private final Object grabTaskLock = new Object();
   private boolean workerInGrabTask = false;
 
 
@@ -109,8 +108,8 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         // interrupted or has encountered a transient error and when it has
         // encountered a bad non-retry-able persistent error.
         try {
-          if (HLogSplitter.splitLogFile(rootdir,
-              fs.getFileStatus(new Path(filename)), fs, conf, p, sequenceIdChecker) == false) {
+          if (!HLogSplitter.splitLogFile(rootdir,
+              fs.getFileStatus(new Path(filename)), fs, conf, p, sequenceIdChecker)) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {
@@ -249,13 +248,13 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         SplitLogCounters.tot_wkr_failed_to_grab_task_exception.incrementAndGet();
         return;
       }
-      if (slt.isUnassigned() == false) {
+      if (!slt.isUnassigned()) {
         SplitLogCounters.tot_wkr_failed_to_grab_task_owned.incrementAndGet();
         return;
       }
 
       currentVersion = stat.getVersion();
-      if (attemptToOwnTask(true) == false) {
+      if (!attemptToOwnTask(true)) {
         SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.incrementAndGet();
         return;
       }
@@ -277,7 +276,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
         @Override
         public boolean progress() {
-          if (attemptToOwnTask(false) == false) {
+          if (!attemptToOwnTask(false)) {
             LOG.warn("Failed to heartbeat the task" + currentTask);
             return false;
           }
@@ -323,7 +322,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         Thread.interrupted();
       }
     }
-    return;
   }
 
   /**
@@ -395,8 +393,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     } catch (KeeperException e) {
       LOG.warn("failed to end task, " + path + " " + slt, e);
     }
-    SplitLogCounters.tot_wkr_final_transistion_failed.incrementAndGet();
-    return;
+    SplitLogCounters.tot_wkr_final_transition_failed.incrementAndGet();
   }
 
   void getDataSetWatchAsync() {
@@ -531,7 +528,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     worker = new Thread(null, this, "SplitLogWorker-" + serverName);
     exitWorker = false;
     worker.start();
-    return;
   }
 
   /**
@@ -558,7 +554,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       }
       data = watcher.getRecoverableZooKeeper().removeMetaData(data);
       getDataSetWatchSuccess(path, data);
-      return;
     }
   }
 
@@ -574,7 +569,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       DONE(),
       ERR(),
       RESIGNED(),
-      PREEMPTED();
+      PREEMPTED()
     }
     public Status exec(String name, CancelableProgressable p);
   }
