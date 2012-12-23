@@ -68,33 +68,53 @@ public class TestZKTableReadOnly {
     return ZKTableReadOnly.isEnabledTable(zkw, tableName);
   }
 
+  private void runClientCompatiblityWith92ZNodeTest(String tableName, Configuration conf)
+  throws Exception {
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
+      tableName, abortable, true);
+    assertTrue(enableAndCheckEnabled(zkw, tableName));
+  }
   /**
-   * Test that client ZK reader can handle the 0.92 table znode format.
+   * Test that client ZK reader can handle the 0.92 table format znode.
    */
   @Test
   public void testClientCompatibilityWith92ZNode() throws Exception {
-    final String tableName = "testClientCompatibilityWith92ZNode";
-
+    // test without useMulti
+    String tableName = "testClientCompatibilityWith92ZNode";
     // Set the client to read from the 0.92 table znode format
     Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     String znode92 = conf.get("zookeeper.znode.masterTableEnableDisable92", "table92");
     conf.set("zookeeper.znode.clientTableEnableDisable", znode92);
+    runClientCompatiblityWith92ZNodeTest(tableName, conf);
 
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
+    // test with useMulti
+    tableName = "testClientCompatibilityWith92ZNodeUseMulti";
+    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
+    runClientCompatiblityWith92ZNodeTest(tableName, conf);
+  }
+
+  private void runClientCompatibilityWith94ZNodeTest(String tableName, Configuration conf)
+  throws Exception {
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       tableName, abortable, true);
     assertTrue(enableAndCheckEnabled(zkw, tableName));
   }
 
   /**
-   * Test that client ZK reader can handle the current (0.94) table format znode
+   * Test that client ZK reader can handle the current (0.94) table format znode.
    */
   @Test
   public void testClientCompatibilityWith94ZNode() throws Exception {
-    final String tableName = "testClientCompatibilityWith94ZNode";
+    String tableName = "testClientCompatibilityWith94ZNode";
 
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-      tableName, abortable, true);
-    assertTrue(enableAndCheckEnabled(zkw, tableName));
+    // without useMulti
+    runClientCompatibilityWith94ZNodeTest(tableName, TEST_UTIL.getConfiguration());
+
+    // with useMulti
+    tableName = "testClientCompatiblityWith94ZNodeUseMulti";
+    Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
+    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
+    runClientCompatibilityWith94ZNodeTest(tableName, conf);
   }
 
   @org.junit.Rule

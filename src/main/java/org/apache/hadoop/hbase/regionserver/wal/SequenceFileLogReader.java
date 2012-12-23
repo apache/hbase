@@ -139,15 +139,17 @@ public class SequenceFileLogReader implements HLog.Reader {
 
   Configuration conf;
   WALReader reader;
+  FileSystem fs;
 
   // Needed logging exceptions
   Path path;
   int edit = 0;
   long entryStart = 0;
+  boolean emptyCompressionContext = true;
   /**
    * Compression context to use reading.  Can be null if no compression.
    */
-  private CompressionContext compressionContext = null;
+  protected CompressionContext compressionContext = null;
 
   protected Class<? extends HLogKey> keyClass;
 
@@ -173,6 +175,7 @@ public class SequenceFileLogReader implements HLog.Reader {
     this.conf = conf;
     this.path = path;
     reader = new WALReader(fs, path, conf);
+    this.fs = fs;
 
     // If compression is enabled, new dictionaries are created here.
     boolean compression = reader.isWALCompressionEnabled();
@@ -237,11 +240,22 @@ public class SequenceFileLogReader implements HLog.Reader {
       throw addFileInfoToException(ioe);
     }
     edit++;
+    if (compressionContext != null && emptyCompressionContext) {
+      emptyCompressionContext = false;
+    }
     return b? e: null;
   }
 
   @Override
   public void seek(long pos) throws IOException {
+    if (compressionContext != null && emptyCompressionContext) {
+      while (next() != null) {
+        if (getPosition() == pos) {
+          emptyCompressionContext = false;
+          break;
+        }
+      }
+    }
     try {
       reader.seek(pos);
     } catch (IOException ioe) {
@@ -285,5 +299,12 @@ public class SequenceFileLogReader implements HLog.Reader {
     } catch(Exception e) { /* reflection fail. keep going */ }
 
     return ioe;
+  }
+
+  @Override
+  public void reset() throws IOException {
+    // Resetting the reader lets us see newly added data if the file is being written to
+    // We also keep the same compressionContext which was previously populated for this file
+    reader = new WALReader(fs, path, conf);
   }
 }

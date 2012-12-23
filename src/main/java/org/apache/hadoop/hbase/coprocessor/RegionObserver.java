@@ -55,8 +55,9 @@ public interface RegionObserver extends Coprocessor {
   /**
    * Called before the region is reported as open to the master.
    * @param c the environment provided by the region server
+   * @throws IOException if an error occurred on the coprocessor
    */
-  void preOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void preOpen(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
    * Called after the region is reported as open to the master.
@@ -227,9 +228,10 @@ public interface RegionObserver extends Coprocessor {
    * Called before the region is reported as closed to the master.
    * @param c the environment provided by the region server
    * @param abortRequested true if the region server is aborting
+   * @throws IOException 
    */
   void preClose(final ObserverContext<RegionCoprocessorEnvironment> c,
-      boolean abortRequested);
+      boolean abortRequested) throws IOException;
 
   /**
    * Called after the region is reported as closed to the master.
@@ -771,4 +773,55 @@ public interface RegionObserver extends Coprocessor {
    */
   boolean postBulkLoadHFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException;
+  
+  /**
+   * Called before locking a row. 
+   *
+   * @param ctx 
+   * @param regionName 
+   * @param row 
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @deprecated Will be removed in 0.96
+   */
+  @Deprecated
+  void preLockRow(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+    final byte[] regionName, final byte[] row) throws IOException; 
+  
+  /**
+   * Called after locking a row.
+   *
+   * @param ctx 
+   * @param regionName the region name
+   * @param row 
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @deprecated Will be removed in 0.96
+   */
+  @Deprecated
+  void postLockRow(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+    final byte[] regionName, final byte[] row) throws IOException;
+  
+  /**
+   * Called before unlocking a row.
+   *
+   * @param ctx 
+   * @param regionName 
+   * @param lockId the lock id
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @deprecated Will be removed in 0.96
+   */
+  @Deprecated
+  void preUnlockRow(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+    final byte[] regionName, final long lockId) throws IOException; 
+  
+  /**
+   * Called after unlocking a row.
+   * @param ctx 
+   * @param regionName the region name
+   * @param lockId the lock id
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @deprecated Will be removed in 0.96
+   */
+  @Deprecated
+  void postUnlockRow(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+    final byte[] regionName, final long lockId) throws IOException;
 }

@@ -432,7 +432,6 @@ public class MetaReader {
           return true;
         }
         if (!isInsideTable(this.current, tableNameBytes)) return false;
-        if (this.current.isSplitParent()) return true;
         // Else call super and add this Result to the collection.
         super.visit(r);
         // Stop collecting regions from table after we get one.

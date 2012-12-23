@@ -67,6 +67,7 @@ public class Put extends Mutation
    * Create a Put operation for the specified row, using an existing row lock.
    * @param row row key
    * @param rowLock previously acquired row lock, or null
+   * @deprecated {@link RowLock} and associated operations are deprecated, use {@link #Put(byte[])}
    */
   public Put(byte [] row, RowLock rowLock) {
       this(row, HConstants.LATEST_TIMESTAMP, rowLock);
@@ -87,6 +88,8 @@ public class Put extends Mutation
    * @param row row key
    * @param ts timestamp
    * @param rowLock previously acquired row lock, or null
+   * @deprecated {@link RowLock} and associated operations are deprecated,
+   * use {@link #Put(byte[], long)}
    */
   public Put(byte [] row, long ts, RowLock rowLock) {
     if(row == null || row.length > HConstants.MAX_ROW_LENGTH) {

@@ -164,6 +164,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
   /**
    * Method for retrieving the delete's RowLock
    * @return RowLock
+   * @deprecated {@link RowLock} and associated operations are deprecated
    */
   public RowLock getRowLock() {
     return new RowLock(this.row, this.lockId);
@@ -173,6 +174,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
    * Method for retrieving the delete's lock ID.
    *
    * @return The lock ID.
+   * @deprecated {@link RowLock} and associated operations are deprecated
    */
   public long getLockId() {
   return this.lockId;
@@ -191,6 +193,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
    * @param clusterId
    */
   public void setClusterId(UUID clusterId) {
+    if (clusterId == null) return;
     byte[] val = new byte[2*Bytes.SIZEOF_LONG];
     Bytes.putLong(val, 0, clusterId.getMostSignificantBits());
     Bytes.putLong(val, Bytes.SIZEOF_LONG, clusterId.getLeastSignificantBits());

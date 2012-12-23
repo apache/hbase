@@ -99,6 +99,8 @@ public class MasterFileSystem {
     String fsUri = this.fs.getUri().toString();
     conf.set("fs.default.name", fsUri);
     conf.set("fs.defaultFS", fsUri);
+    // make sure the fs has the same conf
+    fs.setConf(conf);
     this.distributedLogSplitting =
       conf.getBoolean("hbase.master.distributed.log.splitting", true);
     if (this.distributedLogSplitting) {
@@ -452,6 +454,23 @@ public class MasterFileSystem {
     // TODO implement this.  i think this is currently broken in trunk i don't
     //      see this getting updated.
     //      @see HRegion.checkRegioninfoOnFilesystem()
+  }
+
+  public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName)
+      throws IOException {
+    // archive family store files
+    Path tableDir = new Path(rootdir, region.getTableNameAsString());
+    HFileArchiver.archiveFamily(fs, conf, region, tableDir, familyName);
+
+    // delete the family folder
+    Path familyDir = new Path(tableDir,
+      new Path(region.getEncodedName(), Bytes.toString(familyName)));
+    if (fs.delete(familyDir, true) == false) {
+      throw new IOException("Could not delete family "
+          + Bytes.toString(familyName) + " from FileSystem for region "
+          + region.getRegionNameAsString() + "(" + region.getEncodedName()
+          + ")");
+    }
   }
 
   public void stop() {

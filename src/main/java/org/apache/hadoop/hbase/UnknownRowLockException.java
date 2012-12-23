@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 
 /**
  * Thrown if a region server is passed an unknown row lock id
+ * @deprecated row locks are deprecated (and thus so our associated exceptions).
  */
 public class UnknownRowLockException extends DoNotRetryIOException {
   private static final long serialVersionUID = 993179627856392526L;

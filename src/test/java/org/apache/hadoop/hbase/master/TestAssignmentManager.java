@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.Get;
@@ -61,12 +61,12 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKTable.TableState;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZKTable.TableState;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
+import org.apache.zookeeper.Watcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -74,6 +74,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import com.google.protobuf.ServiceException;
 
@@ -81,7 +82,7 @@ import com.google.protobuf.ServiceException;
 /**
  * Test {@link AssignmentManager}
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestAssignmentManager {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final ServerName SERVERNAME_A =
@@ -91,6 +92,10 @@ public class TestAssignmentManager {
   private static final HRegionInfo REGIONINFO =
     new HRegionInfo(Bytes.toBytes("t"),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
+  private static final HRegionInfo REGIONINFO_2 = new HRegionInfo(Bytes.toBytes("t"),
+      Bytes.toBytes("a"),Bytes.toBytes( "b"));
+  private static int assignmentCount;
+  private static boolean enabling = false;  
 
   // Mocked objects or; get redone for each test.
   private Server server;
@@ -157,7 +162,7 @@ public class TestAssignmentManager {
 
   /**
    * Test a balance going on at same time as a master failover
-   * 
+   *
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
@@ -179,10 +184,8 @@ public class TestAssignmentManager {
       int versionid =
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
-      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO,
-          EventType.M_ZK_REGION_OFFLINE)) {
-        Threads.sleep(1);
-      }
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+
       // Get current versionid else will fail on transition from OFFLINE to
       // OPENING below
       versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
@@ -223,10 +226,8 @@ public class TestAssignmentManager {
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
       am.gate.set(false);
-      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO,
-          EventType.M_ZK_REGION_OFFLINE)) {
-        Threads.sleep(1);
-      }
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+
       // Get current versionid else will fail on transition from OFFLINE to
       // OPENING below
       versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
@@ -266,10 +267,8 @@ public class TestAssignmentManager {
       int versionid =
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
-      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO,
-          EventType.M_ZK_REGION_OFFLINE)) {
-        Threads.sleep(1);
-      }
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+
       am.gate.set(false);
       // Get current versionid else will fail on transition from OFFLINE to
       // OPENING below
@@ -308,10 +307,11 @@ public class TestAssignmentManager {
    * from one server to another mocking regionserver responding over zk.
    * @throws IOException
    * @throws KeeperException
+   * @throws InterruptedException
    */
-  @Test
+  @Test(timeout = 10000)
   public void testBalance()
-  throws IOException, KeeperException {
+  throws IOException, KeeperException, InterruptedException {
     // Create and startup an executor.  This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testBalanceExecutor");
@@ -345,11 +345,9 @@ public class TestAssignmentManager {
       // AM is going to notice above CLOSED and queue up a new assign.  The
       // assign will go to open the region in the new location set by the
       // balancer.  The zk node will be OFFLINE waiting for regionserver to
-      // transition it through OPENING, OPENED.  Wait till we see the OFFLINE
-      // zk node before we proceed.
-      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO, EventType.M_ZK_REGION_OFFLINE)) {
-        Threads.sleep(1);
-      }
+      // transition it through OPENING, OPENED.  Wait till we see the RIT
+      // before we proceed.
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
       // Get current versionid else will fail on transition from OFFLINE to OPENING below
       versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
       assertNotSame(-1, versionid);
@@ -402,7 +400,7 @@ public class TestAssignmentManager {
 
   /**
    * To test closed region handler to remove rit and delete corresponding znode if region in pending
-   * close or closing while processing shutdown of a region server.(HBASE-5927). 
+   * close or closing while processing shutdown of a region server.(HBASE-5927).
    * @throws KeeperException
    * @throws IOException
    */
@@ -412,7 +410,7 @@ public class TestAssignmentManager {
     testCaseWithPartiallyDisabledState(TableState.DISABLING);
     testCaseWithPartiallyDisabledState(TableState.DISABLED);
   }
-  
+
   /**
    * To test if the split region is removed from RIT if the region was in SPLITTING state
    * but the RS has actually completed the splitting in META but went down. See HBASE-6070
@@ -446,7 +444,7 @@ public class TestAssignmentManager {
     am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
         State.SPLITTING, System.currentTimeMillis(), SERVERNAME_A));
     am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
-    
+
     RegionTransitionData data = new RegionTransitionData(EventType.RS_ZK_REGION_SPLITTING,
         REGIONINFO.getRegionName(), SERVERNAME_A);
     String node = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
@@ -454,11 +452,11 @@ public class TestAssignmentManager {
     ZKUtil.createAndWatch(this.watcher, node, data.getBytes());
 
     try {
-      
+
       processServerShutdownHandler(ct, am, regionSplitDone);
       // check znode deleted or not.
       // In both cases the znode should be deleted.
-      
+
       if(regionSplitDone){
         assertTrue("Region state of region in SPLITTING should be removed from rit.",
             am.regionsInTransition.isEmpty());
@@ -501,7 +499,7 @@ public class TestAssignmentManager {
     } else {
       am.getZKTable().setDisabledTable(REGIONINFO.getTableNameAsString());
     }
-    
+
     RegionTransitionData data = new RegionTransitionData(EventType.M_ZK_REGION_CLOSING,
         REGIONINFO.getRegionName(), SERVERNAME_A);
     String node = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
@@ -576,7 +574,7 @@ public class TestAssignmentManager {
    * @param hri Region to serialize into HRegionInfo
    * @return A mocked up Result that fakes a Get on a row in the
    * <code>.META.</code> table.
-   * @throws IOException 
+   * @throws IOException
    */
   private Result getMetaTableRowResult(final HRegionInfo hri,
       final ServerName sn)
@@ -595,13 +593,13 @@ public class TestAssignmentManager {
       Bytes.toBytes(sn.getStartcode())));
     return new Result(kvs);
   }
-  
+
   /**
    * @param sn ServerName to use making startcode and server in meta
    * @param hri Region to serialize into HRegionInfo
    * @return A mocked up Result that fakes a Get on a row in the
    * <code>.META.</code> table.
-   * @throws IOException 
+   * @throws IOException
    */
   private Result getMetaTableRowResultAsSplitRegion(final HRegionInfo hri, final ServerName sn)
       throws IOException {
@@ -663,12 +661,12 @@ public class TestAssignmentManager {
       am.shutdown();
     }
   }
-  
+
   /**
    * Tests the processDeadServersAndRegionsInTransition should not fail with NPE
    * when it failed to get the children. Let's abort the system in this
    * situation
-   * @throws ServiceException 
+   * @throws ServiceException
    */
   @Test(timeout = 5000)
   public void testProcessDeadServersAndRegionsInTransitionShouldNotFailWithNPE()
@@ -708,8 +706,8 @@ public class TestAssignmentManager {
    * @param region region to be created as offline
    * @param serverName server event originates from
    * @return Version of znode created.
-   * @throws KeeperException 
-   * @throws IOException 
+   * @throws KeeperException
+   * @throws IOException
    */
   // Copied from SplitTransaction rather than open the method over there in
   // the regionserver package.
@@ -768,14 +766,27 @@ public class TestAssignmentManager {
     // with an encoded name by doing a Get on .META.
     HRegionInterface ri = Mockito.mock(HRegionInterface.class);
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
+    Result[] result = null;
+    if (enabling) {
+      result = new Result[2];
+      result[0] = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+      result[1] = getMetaTableRowResult(REGIONINFO_2, SERVERNAME_A);
+    }
     Result r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     Mockito.when(ri .openScanner((byte[]) Mockito.any(), (Scan) Mockito.any())).
       thenReturn(System.currentTimeMillis());
-    // Return good result 'r' first and then return null to indicate end of scan
-    Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).thenReturn(new Result[] { r });
-    // If a get, return the above result too for REGIONINFO
-    Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).
-      thenReturn(r);
+   if (enabling) {
+      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).thenReturn(result, result, result,
+          (Result[]) null);
+      // If a get, return the above result too for REGIONINFO_2
+      Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).thenReturn(
+          getMetaTableRowResult(REGIONINFO_2, SERVERNAME_A));
+    } else {
+      // Return good result 'r' first and then return null to indicate end of scan
+      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).thenReturn(new Result[] { r });
+      // If a get, return the above result too for REGIONINFO
+      Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).thenReturn(r);
+    }
     // Get a connection w/ mocked up common methods.
     HConnection connection = HConnectionTestingUtility.
       getMockedConnectionAndDecorate(HTU.getConfiguration(), ri, SERVERNAME_B,
@@ -789,9 +800,9 @@ public class TestAssignmentManager {
         server, manager, ct, balancer, executor);
     return am;
   }
-  
+
   /**
-   * TestCase verifies that the regionPlan is updated whenever a region fails to open 
+   * TestCase verifies that the regionPlan is updated whenever a region fails to open
    * and the master tries to process RS_ZK_FAILED_OPEN state.(HBASE-5546).
    */
   @Test
@@ -839,17 +850,18 @@ public class TestAssignmentManager {
       assertNotSame("Same region plan should not come", regionPlan, newRegionPlan);
       assertTrue("Destnation servers should be different.", !(regionPlan.getDestination().equals(
         newRegionPlan.getDestination())));
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
     } finally {
       this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
         DefaultLoadBalancer.class, LoadBalancer.class);
       am.shutdown();
     }
   }
-  
+
   /**
    * Test verifies whether assignment is skipped for regions of tables in DISABLING state during
    * clean cluster startup. See HBASE-6281.
-   * 
+   *
    * @throws KeeperException
    * @throws IOException
    * @throws Exception
@@ -892,6 +904,53 @@ public class TestAssignmentManager {
   }
 
   /**
+   * Test verifies whether all the enabling table regions assigned only once during master startup.
+   * 
+   * @throws KeeperException
+   * @throws IOException
+   * @throws Exception
+   */
+  @Test
+  public void testMasterRestartWhenTableInEnabling() throws KeeperException, IOException, Exception {
+    enabling = true;
+    this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        DefaultLoadBalancer.class, LoadBalancer.class);
+    Map<ServerName, HServerLoad> serverAndLoad = new HashMap<ServerName, HServerLoad>();
+    serverAndLoad.put(SERVERNAME_A, null);
+    Mockito.when(this.serverManager.getOnlineServers()).thenReturn(serverAndLoad);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(false);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
+    HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
+    Server server = new HMaster(HTU.getConfiguration());
+    Whitebox.setInternalState(server, "serverManager", this.serverManager);
+    assignmentCount = 0;
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
+        this.serverManager);
+    am.regionOnline(new HRegionInfo("t1".getBytes(), HConstants.EMPTY_START_ROW,
+        HConstants.EMPTY_END_ROW), SERVERNAME_A);
+    am.gate.set(false);
+    try {
+      // set table in enabling state.
+      am.getZKTable().setEnablingTable(REGIONINFO.getTableNameAsString());
+      ZKAssign.createNodeOffline(this.watcher, REGIONINFO_2, SERVERNAME_B);
+
+      am.joinCluster();
+      while (!am.getZKTable().isEnabledTable(REGIONINFO.getTableNameAsString())) {
+        Thread.sleep(10);
+      }
+      assertEquals("Number of assignments should be equal.", 2, assignmentCount);
+      assertTrue("Table should be enabled.",
+          am.getZKTable().isEnabledTable(REGIONINFO.getTableNameAsString()));
+    } finally {
+      enabling = false;
+      am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
+      am.shutdown();
+      ZKAssign.deleteAllNodes(this.watcher);
+      assignmentCount = 0;
+    }
+  }
+
+  /**
    * Mocked load balancer class used in the testcase to make sure that the testcase waits until
    * random assignment is called and the gate variable is set to true.
    */
@@ -908,7 +967,7 @@ public class TestAssignmentManager {
       this.gate.set(true);
       return randomServerName;
     }
-    
+
     @Override
     public Map<ServerName, List<HRegionInfo>> retainAssignment(
         Map<HRegionInfo, ServerName> regions, List<ServerName> servers) {
@@ -960,8 +1019,13 @@ public class TestAssignmentManager {
     @Override
     public void assign(HRegionInfo region, boolean setOfflineInZK, boolean forceNewPlan,
         boolean hijack) {
-      assignInvoked = true;
-      super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+      if (enabling) {
+        assignmentCount++;
+        this.regionOnline(region, SERVERNAME_A);
+      } else {
+        assignInvoked = true;
+        super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+      }
     }
     
     @Override

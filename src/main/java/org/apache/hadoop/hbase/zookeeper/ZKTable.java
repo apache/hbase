@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -228,16 +230,19 @@ public class ZKTable {
       }
     }
     synchronized (this.cache) {
+      List<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
       if (settingToEnabled) {
-        ZKUtil.deleteNodeFailSilent(this.watcher, znode92);
+        ops.add(ZKUtilOp.deleteNodeFailSilent(znode92));
       }
       else {
-        ZKUtil.setData(this.watcher, znode92, Bytes.toBytes(state.toString()));
+        ops.add(ZKUtilOp.setData(znode92, Bytes.toBytes(state.toString())));
       }
-      // Set the current format znode after the 0.92 format znode.
+      // If not running multi-update either because of configuration or failure,
+      // set the current format znode after the 0.92 format znode.
       // This is so in the case of failure, the AssignmentManager is guaranteed to
       // see the state was not applied, since it uses the current format znode internally.
-      ZKUtil.setData(this.watcher, znode, Bytes.toBytes(state.toString()));
+      ops.add(ZKUtilOp.setData(znode, Bytes.toBytes(state.toString())));
+      ZKUtil.multiOrSequential(this.watcher, ops, true);
       this.cache.put(tableName, state);
     }
   }
@@ -292,13 +297,16 @@ public class ZKTable {
   public void setDeletedTable(final String tableName)
   throws KeeperException {
     synchronized (this.cache) {
-      ZKUtil.deleteNodeFailSilent(this.watcher,
-        ZKUtil.joinZNode(this.watcher.masterTableZNode92, tableName));
-      // Delete the current format znode after the 0.92 format znode.
-      // This is so in the case of failure, the AssignmentManager is guaranteed to
-      // see the table was not deleted, since it uses the current format znode internally.
-      ZKUtil.deleteNodeFailSilent(this.watcher,
-        ZKUtil.joinZNode(this.watcher.masterTableZNode, tableName));
+      List<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
+      ops.add(ZKUtilOp.deleteNodeFailSilent(
+        ZKUtil.joinZNode(this.watcher.masterTableZNode92, tableName)));
+      // If not running multi-update either because of configuration or failure,
+      // delete the current format znode after the 0.92 format znode.  This is so in the case of
+      // failure, the AssignmentManager is guaranteed to see the table was not deleted, since it
+      // uses the current format znode internally.
+      ops.add(ZKUtilOp.deleteNodeFailSilent(
+        ZKUtil.joinZNode(this.watcher.masterTableZNode, tableName)));
+      ZKUtil.multiOrSequential(this.watcher, ops, true);
       if (this.cache.remove(tableName) == null) {
         LOG.warn("Moving table " + tableName + " state to deleted but was " +
           "already deleted");

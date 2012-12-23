@@ -95,6 +95,8 @@ public class LoadTestTool extends AbstractHBaseTool {
   private static final String OPT_START_KEY = "start_key";
   private static final String OPT_TABLE_NAME = "tn";
   private static final String OPT_ZK_QUORUM = "zk";
+  private static final String OPT_SKIP_INIT = "skip_init";
+  private static final String OPT_INIT_ONLY = "init_only";
 
   private static final long DEFAULT_START_KEY = 0;
 
@@ -125,6 +127,11 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int keyWindow = MultiThreadedReader.DEFAULT_KEY_WINDOW;
   private int maxReadErrors = MultiThreadedReader.DEFAULT_MAX_ERRORS;
   private int verifyPercent;
+
+  // TODO: refactor LoadTestToolImpl somewhere to make the usage from tests less bad,
+  //       console tool itself should only be used from console.
+  private boolean isSkipInit = false;
+  private boolean isInitOnly = false;
 
   private String[] splitColonSeparated(String option,
       int minNumCols, int maxNumCols) {
@@ -186,6 +193,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_TABLE_NAME, "The name of the table to read or write");
     addOptWithArg(OPT_WRITE, OPT_USAGE_LOAD);
     addOptWithArg(OPT_READ, OPT_USAGE_READ);
+    addOptNoArg(OPT_INIT_ONLY, "Initialize the test table only, don't do any loading");
     addOptWithArg(OPT_BLOOM, OPT_USAGE_BLOOM);
     addOptWithArg(OPT_COMPRESSION, OPT_USAGE_COMPRESSION);
     addOptWithArg(OPT_DATA_BLOCK_ENCODING, OPT_DATA_BLOCK_ENCODING_USAGE);
@@ -200,10 +208,12 @@ public class LoadTestTool extends AbstractHBaseTool {
         "separate puts for every column in a row");
     addOptNoArg(OPT_ENCODE_IN_CACHE_ONLY, OPT_ENCODE_IN_CACHE_ONLY_USAGE);
 
-    addRequiredOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
+    addOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
     addOptWithArg(OPT_START_KEY, "The first key to read/write " +
         "(a 0-based index). The default value is " +
         DEFAULT_START_KEY + ".");
+    addOptNoArg(OPT_SKIP_INIT, "Skip the initialization; assume test table "
+        + "already exists");
   }
 
   @Override
@@ -212,18 +222,33 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     tableName = Bytes.toBytes(cmd.getOptionValue(OPT_TABLE_NAME,
         DEFAULT_TABLE_NAME));
-    startKey = parseLong(cmd.getOptionValue(OPT_START_KEY,
-        String.valueOf(DEFAULT_START_KEY)), 0, Long.MAX_VALUE);
-    long numKeys = parseLong(cmd.getOptionValue(OPT_NUM_KEYS), 1,
-        Long.MAX_VALUE - startKey);
-    endKey = startKey + numKeys;
 
     isWrite = cmd.hasOption(OPT_WRITE);
     isRead = cmd.hasOption(OPT_READ);
+    isInitOnly = cmd.hasOption(OPT_INIT_ONLY);
 
-    if (!isWrite && !isRead) {
+    if (!isWrite && !isRead && !isInitOnly) {
       throw new IllegalArgumentException("Either -" + OPT_WRITE + " or " +
           "-" + OPT_READ + " has to be specified");
+    }
+
+    if (isInitOnly && (isRead || isWrite)) {
+      throw new IllegalArgumentException(OPT_INIT_ONLY + " cannot be specified with"
+          + " either -" + OPT_WRITE + " or -" + OPT_READ);
+    }
+
+    if (!isInitOnly) {
+      if (!cmd.hasOption(OPT_NUM_KEYS)) {
+        throw new IllegalArgumentException(OPT_NUM_KEYS + " must be specified in "
+            + "read or write mode");
+      }
+      startKey = parseLong(cmd.getOptionValue(OPT_START_KEY,
+          String.valueOf(DEFAULT_START_KEY)), 0, Long.MAX_VALUE);
+      long numKeys = parseLong(cmd.getOptionValue(OPT_NUM_KEYS), 1,
+          Long.MAX_VALUE - startKey);
+      endKey = startKey + numKeys;
+      isSkipInit = cmd.hasOption(OPT_SKIP_INIT);
+      System.out.println("Key range: [" + startKey + ".." + (endKey - 1) + "]");
     }
 
     encodeInCacheOnly = cmd.hasOption(OPT_ENCODE_IN_CACHE_ONLY);
@@ -274,8 +299,6 @@ public class LoadTestTool extends AbstractHBaseTool {
       System.out.println("Percent of keys to verify: " + verifyPercent);
       System.out.println("Reader threads: " + numReaderThreads);
     }
-
-    System.out.println("Key range: [" + startKey + ".." + (endKey - 1) + "]");
   }
 
   private void parseColumnFamilyOptions(CommandLine cmd) {
@@ -296,15 +319,27 @@ public class LoadTestTool extends AbstractHBaseTool {
         StoreFile.BloomType.valueOf(bloomStr);
   }
 
+  public void initTestTable() throws IOException {
+    HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableName,
+        COLUMN_FAMILY, compressAlgo, dataBlockEncodingAlgo);
+    applyColumnFamilyOptions(tableName, COLUMN_FAMILIES);
+  }
+
   @Override
-  protected void doWork() throws IOException {
+  protected int doWork() throws IOException {
     if (cmd.hasOption(OPT_ZK_QUORUM)) {
       conf.set(HConstants.ZOOKEEPER_QUORUM, cmd.getOptionValue(OPT_ZK_QUORUM));
     }
 
-    HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableName,
-        COLUMN_FAMILY, compressAlgo, dataBlockEncodingAlgo);
-    applyColumnFamilyOptions(tableName, COLUMN_FAMILIES);
+    if (isInitOnly) {
+      LOG.info("Initializing only; no reads or writes");
+      initTestTable();
+      return 0;
+    }
+
+    if (!isSkipInit) {
+      initTestTable();
+    }
 
     if (isWrite) {
       writerThreads = new MultiThreadedWriter(conf, tableName, COLUMN_FAMILY);
@@ -343,6 +378,16 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (isRead) {
       readerThreads.waitForFinish();
     }
+
+    boolean success = true;
+    if (isWrite) {
+      success = success && writerThreads.getNumWriteFailures() == 0;
+    }
+    if (isRead) {
+      success = success && readerThreads.getNumReadErrors() == 0
+          && readerThreads.getNumReadFailures() == 0;
+    }
+    return success ? 0 : 1;
   }
 
   public static void main(String[] args) {

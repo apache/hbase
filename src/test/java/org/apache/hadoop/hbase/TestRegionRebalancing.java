@@ -218,9 +218,10 @@ public class TestRegionRebalancing {
    * Wait until all the regions are assigned.
    */
   private void waitForAllRegionsAssigned() throws IOException {
-    while (getRegionCount() < 22) {
+    int totalRegions = HBaseTestingUtility.KEYS.length+2;
+    while (getRegionCount() < totalRegions) {
     // while (!cluster.getMaster().allRegionsAssigned()) {
-      LOG.debug("Waiting for there to be 22 regions, but there are " + getRegionCount() + " right now.");
+      LOG.debug("Waiting for there to be "+ totalRegions +" regions, but there are " + getRegionCount() + " right now.");
       try {
         Thread.sleep(200);
       } catch (InterruptedException e) {}

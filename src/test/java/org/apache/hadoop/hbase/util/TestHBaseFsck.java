@@ -70,6 +70,9 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
+import org.apache.hadoop.hbase.util.HBaseFsck.PrintingErrorReporter;
+import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
@@ -1313,6 +1316,160 @@ public class TestHBaseFsck {
   }
 
   /**
+   * Test -noHdfsChecking option can detect and fix assignments issue.
+   */
+  @Test
+  public void testFixAssignmentsAndNoHdfsChecking() throws Exception {
+    String table = "testFixAssignmentsAndNoHdfsChecking";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by closing a region
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
+        Bytes.toBytes("B"), true, false, false, false);
+
+      // verify there is no other errors
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that noHdfsChecking report the same errors
+      HBaseFsck fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.onlineHbck();
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that fixAssignments works fine with noHdfsChecking
+      fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.setFixAssignments(true);
+      fsck.onlineHbck();
+      assertTrue(fsck.shouldRerun());
+      fsck.onlineHbck();
+      assertNoErrors(fsck);
+
+      assertEquals(ROWKEYS.length, countRows());
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
+   * Test -noHdfsChecking option can detect region is not in meta but deployed.
+   * However, it can not fix it without checking Hdfs because we need to get
+   * the region info from Hdfs in this case, then to patch the meta.
+   */
+  @Test
+  public void testFixMetaNotWorkingWithNoHdfsChecking() throws Exception {
+    String table = "testFixMetaNotWorkingWithNoHdfsChecking";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by deleting a region from the metadata
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
+        Bytes.toBytes("B"), false, true, false, false);
+
+      // verify there is no other errors
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_IN_META, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that noHdfsChecking report the same errors
+      HBaseFsck fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.onlineHbck();
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_IN_META, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that fixMeta doesn't work with noHdfsChecking
+      fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.setFixAssignments(true);
+      fsck.setFixMeta(true);
+      fsck.onlineHbck();
+      assertFalse(fsck.shouldRerun());
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_IN_META, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
+   * Test -fixHdfsHoles doesn't work with -noHdfsChecking option,
+   * and -noHdfsChecking can't detect orphan Hdfs region.
+   */
+  @Test
+  public void testFixHdfsHolesNotWorkingWithNoHdfsChecking() throws Exception {
+    String table = "testFixHdfsHolesNotWorkingWithNoHdfsChecking";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by creating an overlap in the metadata
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
+        Bytes.toBytes("B"), true, true, false, true);
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
+
+      HRegionInfo hriOverlap = createRegion(conf, tbl.getTableDescriptor(),
+        Bytes.toBytes("A2"), Bytes.toBytes("B"));
+      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
+      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+        .waitForAssignment(hriOverlap);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.ORPHAN_HDFS_REGION, ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+        ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that noHdfsChecking can't detect ORPHAN_HDFS_REGION
+      HBaseFsck fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.onlineHbck();
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // verify that fixHdfsHoles doesn't work with noHdfsChecking
+      fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setCheckHdfs(false);
+      fsck.setFixHdfsHoles(true);
+      fsck.setFixHdfsOverlaps(true);
+      fsck.setFixHdfsOrphans(true);
+      fsck.onlineHbck();
+      assertFalse(fsck.shouldRerun());
+      assertErrors(fsck, new ERROR_CODE[] {
+        ERROR_CODE.HOLE_IN_REGION_CHAIN});
+    } finally {
+      if (TEST_UTIL.getHBaseAdmin().isTableDisabled(table)) {
+        TEST_UTIL.getHBaseAdmin().enableTable(table);
+      }
+      deleteTable(table);
+    }
+  }
+
+  /**
    * We don't have an easy way to verify that a flush completed, so we loop until we find a
    * legitimate hfile and return it.
    * @param fs
@@ -1498,6 +1655,120 @@ public class TestHBaseFsck {
       }
     };
     doQuarantineTest(table, hbck, 3, 0, 0, 0, 1);
+  }
+
+  /**
+   * Test fixing lingering reference file.
+   */
+  @Test
+  public void testLingeringReferenceFile() throws Exception {
+    String table = "testLingeringReferenceFile";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by creating a fake reference file
+      FileSystem fs = FileSystem.get(conf);
+      Path tableDir= FSUtils.getTablePath(FSUtils.getRootDir(conf), table);
+      Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
+      Path famDir = new Path(regionDir, FAM_STR);
+      Path fakeReferenceFile = new Path(famDir, "fbce357483ceea.12144538");
+      fs.create(fakeReferenceFile);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.LINGERING_REFERENCE_HFILE });
+      // fix reference file
+      doFsck(conf, true);
+      // check that reference file fixed
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
+   * Test pluggable error reporter. It can be plugged in
+   * from system property or configuration.
+   */
+  @Test
+  public void testErrorReporter() throws Exception {
+    try {
+      MockErrorReporter.calledCount = 0;
+      doFsck(conf, false);
+      assertEquals(MockErrorReporter.calledCount, 0);
+
+      conf.set("hbasefsck.errorreporter", MockErrorReporter.class.getName());
+      doFsck(conf, false);
+      assertTrue(MockErrorReporter.calledCount > 20);
+    } finally {
+      conf.set("hbasefsck.errorreporter",
+        PrintingErrorReporter.class.getName());
+      MockErrorReporter.calledCount = 0;
+    }
+  }
+
+  static class MockErrorReporter implements ErrorReporter {
+    static int calledCount = 0;
+
+    public void clear() {
+      calledCount++;
+    }
+
+    public void report(String message) {
+      calledCount++;
+    }
+
+    public void reportError(String message) {
+      calledCount++;
+    }
+
+    public void reportError(ERROR_CODE errorCode, String message) {
+      calledCount++;
+    }
+
+    public void reportError(ERROR_CODE errorCode, String message, TableInfo table) {
+      calledCount++;
+    }
+
+    public void reportError(ERROR_CODE errorCode,
+        String message, TableInfo table, HbckInfo info) {
+      calledCount++;
+    }
+
+    public void reportError(ERROR_CODE errorCode, String message,
+        TableInfo table, HbckInfo info1, HbckInfo info2) {
+      calledCount++;
+    }
+
+    public int summarize() {
+      return ++calledCount;
+    }
+
+    public void detail(String details) {
+      calledCount++;
+    }
+
+    public ArrayList<ERROR_CODE> getErrorList() {
+      calledCount++;
+      return new ArrayList<ERROR_CODE>();
+    }
+
+    public void progress() {
+      calledCount++;
+    }
+
+    public void print(String message) {
+      calledCount++;
+    }
+
+    public void resetErrors() {
+      calledCount++;
+    }
+
+    public boolean tableHasErrors(TableInfo table) {
+      calledCount++;
+      return false;
+    }
   }
 
   @org.junit.Rule
