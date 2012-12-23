@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -96,9 +97,7 @@ import org.apache.zookeeper.ZooKeeper;
  * old HBaseTestCase and HBaseClusterTestCase functionality.
  * Create an instance and keep it around testing HBase.  This class is
  * meant to be your one-stop shop for anything you might need testing.  Manages
- * one cluster at a time only. Managed cluster can be an in-process
- * {@link MiniHBaseCluster}, or a deployed cluster of type {@link DistributedHBaseCluster}.
- * Not all methods work with the real cluster.
+ * one cluster at a time only.
  * Depends on log4j being on classpath and
  * hbase-site.xml for logging and test-run configuration.  It does not set
  * logging levels nor make changes to configuration parameters.
@@ -121,7 +120,7 @@ public class HBaseTestingUtility {
   private boolean passedZkCluster = false;
   private MiniDFSCluster dfsCluster = null;
 
-  private HBaseCluster hbaseCluster = null;
+  private MiniHBaseCluster hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
 
   // Directory where we put the data for this instance of HBaseTestingUtility
@@ -212,10 +211,6 @@ public class HBaseTestingUtility {
    */
   public Configuration getConfiguration() {
     return this.conf;
-  }
-
-  public void setHBaseCluster(HBaseCluster hbaseCluster) {
-    this.hbaseCluster = hbaseCluster;
   }
 
   /**
@@ -655,7 +650,7 @@ public class HBaseTestingUtility {
 
     getHBaseAdmin(); // create immediately the hbaseAdmin
     LOG.info("Minicluster is up");
-    return (MiniHBaseCluster)this.hbaseCluster;
+    return this.hbaseCluster;
   }
 
   /**
@@ -683,11 +678,7 @@ public class HBaseTestingUtility {
    * @see #startMiniCluster()
    */
   public MiniHBaseCluster getMiniHBaseCluster() {
-    if (this.hbaseCluster instanceof MiniHBaseCluster) {
-      return (MiniHBaseCluster)this.hbaseCluster;
-    }
-    throw new RuntimeException(hbaseCluster + " not an instance of " +
-                               MiniHBaseCluster.class.getName());
+    return this.hbaseCluster;
   }
 
   /**
@@ -730,7 +721,7 @@ public class HBaseTestingUtility {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
       // Wait till hbase is down before going on to shutdown zk.
-      this.hbaseCluster.waitUntilShutDown();
+      this.hbaseCluster.join();
       this.hbaseCluster = null;
     }
   }
@@ -768,7 +759,7 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public void flush() throws IOException {
-    getMiniHBaseCluster().flushcache();
+    this.hbaseCluster.flushcache();
   }
 
   /**
@@ -776,7 +767,7 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public void flush(byte [] tableName) throws IOException {
-    getMiniHBaseCluster().flushcache(tableName);
+    this.hbaseCluster.flushcache(tableName);
   }
 
   /**
@@ -784,7 +775,7 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public void compact(boolean major) throws IOException {
-    getMiniHBaseCluster().compact(major);
+    this.hbaseCluster.compact(major);
   }
 
   /**
@@ -792,7 +783,7 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public void compact(byte [] tableName, boolean major) throws IOException {
-    getMiniHBaseCluster().compact(tableName, major);
+    this.hbaseCluster.compact(tableName, major);
   }
 
 
@@ -1012,37 +1003,6 @@ public class HBaseTestingUtility {
     t.flushCommits();
     return rowCount;
   }
-
-  /**
-   * Load table of multiple column families with rows from 'aaa' to 'zzz'.
-   * @param t Table
-   * @param f Array of Families to load
-   * @return Count of rows loaded.
-   * @throws IOException
-   */
-  public int loadTable(final HTable t, final byte[][] f) throws IOException {
-    t.setAutoFlush(false);
-    byte[] k = new byte[3];
-    int rowCount = 0;
-    for (byte b1 = 'a'; b1 <= 'z'; b1++) {
-      for (byte b2 = 'a'; b2 <= 'z'; b2++) {
-        for (byte b3 = 'a'; b3 <= 'z'; b3++) {
-          k[0] = b1;
-          k[1] = b2;
-          k[2] = b3;
-          Put put = new Put(k);
-          for (int i = 0; i < f.length; i++) {
-            put.add(f[i], null, k);
-          }
-          t.put(put);
-          rowCount++;
-        }
-      }
-    }
-    t.flushCommits();
-    return rowCount;
-  }
-
   /**
    * Load region with rows from 'aaa' to 'zzz'.
    * @param r Region
@@ -1109,7 +1069,7 @@ public class HBaseTestingUtility {
    */
   public int createMultiRegions(HTable table, byte[] columnFamily)
   throws IOException {
-    return createMultiRegions(table, columnFamily, true);
+    return createMultiRegions(getConfiguration(), table, columnFamily);
   }
 
   public static final byte[][] KEYS = {
@@ -1126,16 +1086,16 @@ public class HBaseTestingUtility {
 
   /**
    * Creates many regions names "aaa" to "zzz".
-   *
+   * @param c Configuration to use.
    * @param table  The table to use for the data.
    * @param columnFamily  The family to insert the data into.
-   * @param cleanupFS  True if a previous region should be remove from the FS  
    * @return count of regions created.
    * @throws IOException When creating the regions fails.
    */
-  public int createMultiRegions(HTable table, byte[] columnFamily, boolean cleanupFS)
+  public int createMultiRegions(final Configuration c, final HTable table,
+      final byte[] columnFamily)
   throws IOException {
-    return createMultiRegions(getConfiguration(), table, columnFamily, KEYS, cleanupFS);
+    return createMultiRegions(c, table, columnFamily, KEYS);
   }
 
   /**
@@ -1163,12 +1123,7 @@ public class HBaseTestingUtility {
   }
 
   public int createMultiRegions(final Configuration c, final HTable table,
-      final byte[] columnFamily, byte [][] startKeys) throws IOException {
-    return createMultiRegions(c, table, columnFamily, startKeys, true);
-  }
-  
-  public int createMultiRegions(final Configuration c, final HTable table,
-          final byte[] columnFamily, byte [][] startKeys, boolean cleanupFS)
+      final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
@@ -1182,9 +1137,6 @@ public class HBaseTestingUtility {
     // and end key. Adding the custom regions below adds those blindly,
     // including the new start region from empty to "bbb". lg
     List<byte[]> rows = getMetaTableRows(htd.getName());
-    String regionToDeleteInFS = table
-        .getRegionsInRange(Bytes.toBytes(""), Bytes.toBytes("")).get(0)
-        .getRegionInfo().getEncodedName();
     List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
     // add custom ones
     int count = 0;
@@ -1206,22 +1158,13 @@ public class HBaseTestingUtility {
         Bytes.toStringBinary(row));
       meta.delete(new Delete(row));
     }
-    if (cleanupFS) {
-      // see HBASE-7417 - this confused TestReplication
-      // remove the "old" region from FS
-      Path tableDir = new Path(getDefaultRootDirPath().toString()
-          + System.getProperty("file.separator") + htd.getNameAsString()
-          + System.getProperty("file.separator") + regionToDeleteInFS);
-      getDFSCluster().getFileSystem().delete(tableDir);
-    }
     // flush cache of regions
     HConnection conn = table.getConnection();
     conn.clearRegionCache();
     // assign all the new regions IF table is enabled.
-    HBaseAdmin admin = getHBaseAdmin();
-    if (admin.isTableEnabled(table.getTableName())) {
+    if (getHBaseAdmin().isTableEnabled(table.getTableName())) {
       for(HRegionInfo hri : newRegions) {
-        admin.assign(hri.getRegionName());
+        hbaseCluster.getMaster().assignRegion(hri);
       }
     }
 
@@ -1332,8 +1275,8 @@ public class HBaseTestingUtility {
       Bytes.toString(tableName));
     byte [] firstrow = metaRows.get(0);
     LOG.debug("FirstRow=" + Bytes.toString(firstrow));
-    int index = getMiniHBaseCluster().getServerWith(firstrow);
-    return getMiniHBaseCluster().getRegionServerThreads().get(index).getRegionServer();
+    int index = hbaseCluster.getServerWith(firstrow);
+    return hbaseCluster.getRegionServerThreads().get(index).getRegionServer();
   }
 
   /**
@@ -1414,7 +1357,7 @@ public class HBaseTestingUtility {
    * @throws Exception
    */
   public void expireMasterSession() throws Exception {
-    HMaster master = getMiniHBaseCluster().getMaster();
+    HMaster master = hbaseCluster.getMaster();
     expireSession(master.getZooKeeper(), false);
   }
 
@@ -1424,7 +1367,7 @@ public class HBaseTestingUtility {
    * @throws Exception
    */
   public void expireRegionServerSession(int index) throws Exception {
-    HRegionServer rs = getMiniHBaseCluster().getRegionServer(index);
+    HRegionServer rs = hbaseCluster.getRegionServer(index);
     expireSession(rs.getZooKeeper(), false);
     decrementMinRegionServerCount();
   }
@@ -1498,27 +1441,13 @@ public class HBaseTestingUtility {
     }
   }
 
-  /**
-   * Get the Mini HBase cluster.
-   *
-   * @return hbase cluster
-   * @see #getHBaseClusterInterface()
-   */
-  public MiniHBaseCluster getHBaseCluster() {
-    return getMiniHBaseCluster();
-  }
 
   /**
-   * Returns the HBaseCluster instance.
-   * <p>Returned object can be any of the subclasses of HBaseCluster, and the
-   * tests referring this should not assume that the cluster is a mini cluster or a
-   * distributed one. If the test only works on a mini cluster, then specific
-   * method {@link #getMiniHBaseCluster()} can be used instead w/o the
-   * need to type-cast.
+   * Get the HBase cluster.
+   *
+   * @return hbase cluster
    */
-  public HBaseCluster getHBaseClusterInterface() {
-    //implementation note: we should rename this method as #getHBaseCluster(),
-    //but this would require refactoring 90+ calls.
+  public MiniHBaseCluster getHBaseCluster() {
     return hbaseCluster;
   }
 
@@ -1680,8 +1609,8 @@ public class HBaseTestingUtility {
   public boolean ensureSomeRegionServersAvailable(final int num)
       throws IOException {
     boolean startedServer = false;
-    MiniHBaseCluster hbaseCluster = getMiniHBaseCluster();
-    for (int i=hbaseCluster.getLiveRegionServerThreads().size(); i<num; ++i) {
+
+    for (int i=hbaseCluster.getLiveRegionServerThreads().size(); i<num; ++i){
       LOG.info("Started new server=" + hbaseCluster.startRegionServer());
       startedServer = true;
     }
@@ -1703,12 +1632,12 @@ public class HBaseTestingUtility {
     boolean startedServer = ensureSomeRegionServersAvailable(num);
 
     for (JVMClusterUtil.RegionServerThread rst :
-      getMiniHBaseCluster().getRegionServerThreads()) {
+      hbaseCluster.getRegionServerThreads()) {
 
       HRegionServer hrs = rst.getRegionServer();
       if (hrs.isStopping() || hrs.isStopped()) {
         LOG.info("A region server is stopped or stopping:"+hrs);
-        LOG.info("Started new server=" + getMiniHBaseCluster().startRegionServer());
+        LOG.info("Started new server=" + hbaseCluster.startRegionServer());
         startedServer = true;
       }
     }
@@ -1978,9 +1907,7 @@ public class HBaseTestingUtility {
         Bytes.toBytes(String.format(keyFormat, splitStartKey)),
         Bytes.toBytes(String.format(keyFormat, splitEndKey)),
         numRegions);
-    if (hbaseCluster != null) {
-      getMiniHBaseCluster().flushcache(HConstants.META_TABLE_NAME);
-    }
+    hbaseCluster.flushcache(HConstants.META_TABLE_NAME);
 
     for (int iFlush = 0; iFlush < numFlushes; ++iFlush) {
       for (int iRow = 0; iRow < numRowsPerFlush; ++iRow) {
@@ -2015,9 +1942,7 @@ public class HBaseTestingUtility {
       }
       LOG.info("Initiating flush #" + iFlush + " for table " + tableName);
       table.flushCommits();
-      if (hbaseCluster != null) {
-        getMiniHBaseCluster().flushcache(tableNameBytes);
-      }
+      hbaseCluster.flushcache(tableNameBytes);
     }
 
     return table;

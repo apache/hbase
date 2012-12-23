@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 
 import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.*;
@@ -718,8 +719,7 @@ public class TestHFileBlock {
       }
       BlockType bt = BlockType.values()[blockTypeOrdinal];
       DataOutputStream dos = hbw.startWriting(bt);
-      int size = rand.nextInt(500);
-      for (int j = 0; j < size; ++j) {
+      for (int j = 0; j < rand.nextInt(500); ++j) {
         // This might compress well.
         dos.writeShort(i + 1);
         dos.writeInt(j + 1);

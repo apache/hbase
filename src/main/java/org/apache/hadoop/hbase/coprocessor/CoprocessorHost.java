@@ -20,8 +20,6 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.common.collect.MapMaker;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,7 +44,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -58,13 +55,11 @@ import java.util.jar.JarFile;
  */
 public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   public static final String REGION_COPROCESSOR_CONF_KEY =
-    "hbase.coprocessor.region.classes";
-  public static final String REGIONSERVER_COPROCESSOR_CONF_KEY =
-    "hbase.coprocessor.regionserver.classes";
+      "hbase.coprocessor.region.classes";
   public static final String USER_REGION_COPROCESSOR_CONF_KEY =
-    "hbase.coprocessor.user.region.classes";
+      "hbase.coprocessor.user.region.classes";
   public static final String MASTER_COPROCESSOR_CONF_KEY =
-    "hbase.coprocessor.master.classes";
+      "hbase.coprocessor.master.classes";
   public static final String WAL_COPROCESSOR_CONF_KEY =
     "hbase.coprocessor.wal.classes";
 
@@ -76,15 +71,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
   protected volatile int loadSequence;
-
-  /*
-   * External classloaders cache keyed by external jar path.
-   * ClassLoader instance is stored as a weak-reference
-   * to allow GC'ing when no CoprocessorHost is using it
-   * (@see HBASE-7205)
-   */
-  static ConcurrentMap<Path, ClassLoader> classLoadersCache =
-      new MapMaker().concurrencyLevel(3).weakValues().makeMap();
 
   public CoprocessorHost() {
     pathPrefix = UUID.randomUUID().toString();
@@ -173,27 +159,14 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     LOG.debug("Loading coprocessor class " + className + " with path " + 
         path + " and priority " + priority);
 
-    ClassLoader cl = null;
-    if (path == null) {
-      try {
-        implClass = getClass().getClassLoader().loadClass(className);
-      } catch (ClassNotFoundException e) {
-        throw new IOException("No jar path specified for " + className);
-      }
-    } else {
-      // Have we already loaded the class, perhaps from an earlier region open
-      // for the same table?
-      cl = classLoadersCache.get(path);
-      if (cl != null){
-        LOG.debug("Found classloader "+ cl + "for "+path.toString());
-        try {
-          implClass = cl.loadClass(className);
-        } catch (ClassNotFoundException e) {
-          LOG.info("Class " + className + " needs to be loaded from a file - " +
-              path + ".");
-          // go ahead to load from file system.
-        }
-      }
+    // Have we already loaded the class, perhaps from an earlier region open
+    // for the same table?
+    try {
+      implClass = getClass().getClassLoader().loadClass(className);
+    } catch (ClassNotFoundException e) {
+      LOG.info("Class " + className + " needs to be loaded from a file - " +
+          path + ".");
+      // go ahead to load from file system.
     }
 
     // If not, load
@@ -225,8 +198,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       // unsurprisingly wants URLs, not URIs; so we will use the deprecated
       // method which returns URLs for as long as it is available
       List<URL> paths = new ArrayList<URL>();
-      URL url = new File(dst.toString()).getCanonicalFile().toURL();
-      paths.add(url);
+      paths.add(new File(dst.toString()).getCanonicalFile().toURL());
 
       JarFile jarFile = new JarFile(dst.toString());
       Enumeration<JarEntry> entries = jarFile.entries();
@@ -243,33 +215,17 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
       jarFile.close();
 
-      cl = new CoprocessorClassLoader(paths, this.getClass().getClassLoader());
-      // cache cp classloader as a weak value, will be GC'ed when no reference left
-      ClassLoader prev = classLoadersCache.putIfAbsent(path, cl);
-      if (prev != null) {
-        //lost update race, use already added classloader
-        cl = prev;
-      }
-
+      ClassLoader cl = new CoprocessorClassLoader(paths,
+        this.getClass().getClassLoader());
+      Thread.currentThread().setContextClassLoader(cl);
       try {
         implClass = cl.loadClass(className);
       } catch (ClassNotFoundException e) {
-        throw new IOException("Cannot load external coprocessor class " + className, e);
+        throw new IOException(e);
       }
     }
 
-    //load custom code for coprocessor
-    Thread currentThread = Thread.currentThread();
-    ClassLoader hostClassLoader = currentThread.getContextClassLoader();
-    try{
-      // switch temporarily to the thread classloader for custom CP
-      currentThread.setContextClassLoader(cl);
-      E cpInstance = loadInstance(implClass, priority, conf);
-      return cpInstance;
-    } finally {
-      // restore the fresh (host) classloader
-      currentThread.setContextClassLoader(hostClassLoader);
-    }
+    return loadInstance(implClass, priority, conf);
   }
 
   /**
@@ -343,24 +299,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
     }
     return null;
-  }
-
-  /**
-   * Retrieves the set of classloaders used to instantiate Coprocessor classes defined in external
-   * jar files.
-   * @return A set of ClassLoader instances
-   */
-  Set<ClassLoader> getExternalClassLoaders() {
-    Set<ClassLoader> externalClassLoaders = new HashSet<ClassLoader>();
-    final ClassLoader systemClassLoader = this.getClass().getClassLoader();
-    for (E env : coprocessors) {
-      ClassLoader cl = env.getInstance().getClass().getClassLoader();
-      if (cl != systemClassLoader ){
-        //do not include system classloader
-        externalClassLoaders.add(cl);
-      }
-    }
-    return externalClassLoaders;
   }
 
   /**
@@ -537,17 +475,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         return tableName;
       }
 
-      /**
-       * @deprecated {@link RowLock} and associated operations are deprecated.
-       */
       public RowLock lockRow(byte[] row) throws IOException {
         throw new RuntimeException(
           "row locking is not allowed within the coprocessor environment");
       }
 
-      /**
-       * @deprecated {@link RowLock} and associated operations are deprecated.
-       */
       public void unlockRow(RowLock rl) throws IOException {
         throw new RuntimeException(
           "row locking is not allowed within the coprocessor environment");

@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
-import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -171,7 +170,7 @@ public class TestEndToEndSplitTransaction {
     //for daughters.
     HTable table = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
-    Stoppable stopper = new StoppableImplementation();
+    Stoppable stopper = new SimpleStoppable();
     RegionSplitter regionSplitter = new RegionSplitter(table);
     RegionChecker regionChecker = new RegionChecker(conf, stopper, TABLENAME);
 
@@ -192,6 +191,20 @@ public class TestEndToEndSplitTransaction {
 
     //one final check
     regionChecker.verify();
+  }
+
+  private static class SimpleStoppable implements Stoppable {
+    volatile boolean stopped = false;
+
+    @Override
+    public void stop(String why) {
+      this.stopped = true;
+    }
+
+    @Override
+    public boolean isStopped() {
+      return stopped;
+    }
   }
 
   static class RegionSplitter extends Thread {

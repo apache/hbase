@@ -33,7 +33,6 @@ package org.apache.hadoop.hbase;
  *
  * @see SmallTests
  * @see MediumTests
- * @see IntegrationTests
  */
 public interface LargeTests {
 }

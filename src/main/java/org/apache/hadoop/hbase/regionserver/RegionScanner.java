@@ -20,10 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.List;
-
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * RegionScanner describes iterators over rows in an HRegion.
@@ -52,50 +49,4 @@ public interface RegionScanner extends InternalScanner {
    */
   public boolean reseek(byte[] row) throws IOException;
 
-  /**
-   * @return The Scanner's MVCC readPt see {@link MultiVersionConsistencyControl}
-   */
-  public long getMvccReadPoint();
-
-  /**
-   * Grab the next row's worth of values with the default limit on the number of values
-   * to return.
-   * This is a special internal method to be called from coprocessor hooks to avoid expensive setup.
-   * Caller must set the thread's readpoint, start and close a region operation, an synchronize on the scanner object.
-   * See {@link #nextRaw(List, int, String)}
-   * @param result return output array
-   * @param metric the metric name
-   * @return true if more rows exist after this one, false if scanner is done
-   * @throws IOException e
-   */
-  public boolean nextRaw(List<KeyValue> result, String metric) throws IOException;
-
-  /**
-   * Grab the next row's worth of values with a limit on the number of values
-   * to return.
-   * This is a special internal method to be called from coprocessor hooks to avoid expensive setup.
-   * Caller must set the thread's readpoint, start and close a region operation, an synchronize on the scanner object.
-   * Example:
-   * <code><pre>
-   * HRegion region = ...;
-   * RegionScanner scanner = ...
-   * MultiVersionConsistencyControl.setThreadReadPoint(scanner.getMvccReadPoint());
-   * region.startRegionOperation();
-   * try {
-   *   synchronized(scanner) {
-   *     ...
-   *     boolean moreRows = scanner.nextRaw(values);
-   *     ...
-   *   }
-   * } finally {
-   *   region.closeRegionOperation();
-   * }
-   * </pre></code>
-   * @param result return output array
-   * @param limit limit on row count to get
-   * @param metric the metric name
-   * @return true if more rows exist after this one, false if scanner is done
-   * @throws IOException e
-   */
-  public boolean nextRaw(List<KeyValue> result, int limit, String metric) throws IOException;
 }

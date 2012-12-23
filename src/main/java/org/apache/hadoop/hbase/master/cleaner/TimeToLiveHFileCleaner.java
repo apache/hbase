@@ -65,10 +65,7 @@ public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
       return false;
     }
     long life = currentTime - time;
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("HFile life:" + life + ", ttl:" + ttl + ", current:" + currentTime + ", from: "
-          + time);
-    }
+    LOG.debug("Life:" + life + ", ttl:" + ttl + ", current:" + currentTime + ", from: " + time);
     if (life < 0) {
       LOG.warn("Found a log (" + filePath + ") newer than current time (" + currentTime + " < "
           + time + "), probably a clock skew");

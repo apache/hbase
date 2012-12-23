@@ -63,7 +63,7 @@ public abstract class AbstractHBaseTool implements Tool {
   protected abstract void processOptions(CommandLine cmd);
 
   /** The "main function" of the tool */
-  protected abstract int doWork() throws Exception;
+  protected abstract void doWork() throws Exception;
 
   @Override
   public Configuration getConf() {
@@ -99,14 +99,13 @@ public abstract class AbstractHBaseTool implements Tool {
 
     processOptions(cmd);
 
-    int ret = EXIT_FAILURE;
     try {
-      ret = doWork();
+      doWork();
     } catch (Exception e) {
       LOG.error("Error running command-line tool", e);
       return EXIT_FAILURE;
     }
-    return ret;
+    return EXIT_SUCCESS;
   }
 
   private boolean sanityCheckOptions(CommandLine cmd) {

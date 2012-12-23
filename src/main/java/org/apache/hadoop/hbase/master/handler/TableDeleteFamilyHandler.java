@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -50,12 +49,6 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
       this.masterServices.getMasterFileSystem().deleteColumn(tableName, familyName);
     // Update in-memory descriptor cache
     this.masterServices.getTableDescriptors().add(htd);
-    // Remove the column family from the file system
-    MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
-    for (HRegionInfo hri : hris) {
-      // Delete the family directory in FS for all the regions one by one
-      mfs.deleteFamilyFromFS(hri, familyName);
-    }
   }
 
   @Override

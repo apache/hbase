@@ -89,7 +89,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
   }
 
   @Override
-  protected int doWork() throws Exception {
+  protected void doWork() throws IOException {
     ProcessBasedLocalHBaseCluster hbaseCluster =
         new ProcessBasedLocalHBaseCluster(conf, hbaseHome, numRegionServers);
 
@@ -130,7 +130,6 @@ public class RestartMetaTest extends AbstractHBaseTool {
           + Bytes.toStringBinary(result.getFamilyMap(HConstants.CATALOG_FAMILY)
               .get(HConstants.SERVER_QUALIFIER)));
     }
-    return 0;
   }
 
   @Override

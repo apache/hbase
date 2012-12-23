@@ -49,4 +49,5 @@ public class CompactionProgress {
   public float getProgressPct() {
     return currentCompactedKVs / totalCompactingKVs;
   }
+
 }

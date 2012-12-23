@@ -44,7 +44,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -97,7 +96,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
@@ -167,7 +165,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.joda.time.field.MillisDurationField;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -236,7 +233,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Server to handle client requests. Default access so can be accessed by
   // unit tests.
   RpcServer rpcServer;
-
+  
   // Server to handle client requests.
   private HBaseServer server;  
 
@@ -366,8 +363,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   private ClusterId clusterId = null;
 
-  private RegionServerCoprocessorHost rsHost;
-
   /**
    * Starts a HRegionServer at the default location
    *
@@ -438,10 +433,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.rpcServer.setErrorHandler(this);
     this.rpcServer.setQosFunction(new QosFunction());
     this.startcode = System.currentTimeMillis();
-
-    // login the zookeeper client principal (if using security)
-    ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
-      "hbase.zookeeper.client.kerberos.principal", this.isa.getHostName());
 
     // login the server principal (if using secure Hadoop)
     User.login(this.conf, "hbase.regionserver.keytab.file",
@@ -1022,7 +1013,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
       this.dynamicMetrics = RegionServerDynamicMetrics.newInstance(this);
-      this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
       startServiceThreads();
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
         ", RPC listening on " + this.isa +
@@ -1030,7 +1020,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
       isOnline = true;
     } catch (Throwable e) {
-      LOG.warn("Exception in region server : ", e);
       this.isOnline = false;
       stop("Failed initialization");
       throw convertThrowableToIOE(cleanup(e, "Failed init"),
@@ -1106,7 +1095,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, rootIndexSizeKB,
         totalStaticIndexSizeKB, totalStaticBloomSizeKB,
         (int) r.readRequestsCount.get(), (int) r.writeRequestsCount.get(),
-        totalCompactingKVs, currentCompactedKVs);
+        totalCompactingKVs, currentCompactedKVs,
+        r.getCoprocessorHost().getCoprocessors());
   }
 
   /**
@@ -1586,7 +1576,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.splitLogWorker = new SplitLogWorker(this.zooKeeper,
         this.getConfiguration(), this.getServerName().toString());
     splitLogWorker.start();
-    
   }
 
   /**
@@ -1654,15 +1643,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   @Override
   public void stop(final String msg) {
-    try {
-      this.rsHost.preStop(msg);
-      this.stopped = true;
-      LOG.info("STOPPED: " + msg);
-      // Wakes run() if it is sleeping
-      sleeper.skipSleepCycle();
-    } catch (IOException exp) {
-      LOG.warn("The region server did not stop", exp);
-    }
+    this.stopped = true;
+    LOG.info("STOPPED: " + msg);
+    // Wakes run() if it is sleeping
+    sleeper.skipSleepCycle();
   }
 
   public void waitForServerOnline(){
@@ -2446,32 +2430,23 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
       }
 
-      MultiVersionConsistencyControl.setThreadReadPoint(s.getMvccReadPoint());
-      region.startRegionOperation();
-      try {
-        int i = 0;
-        synchronized(s) {
-          for (; i < nbRows
-              && currentScanResultSize < maxScannerResultSize; i++) {
-            // Collect values to be returned here
-            boolean moreRows = s.nextRaw(values, SchemaMetrics.METRIC_NEXTSIZE);
-            if (!values.isEmpty()) {
-              for (KeyValue kv : values) {
-                currentScanResultSize += kv.heapSize();
-              }
-              results.add(new Result(values));
-            }
-            if (!moreRows) {
-              break;
-            }
-            values.clear();
+      for (int i = 0; i < nbRows
+          && currentScanResultSize < maxScannerResultSize; i++) {
+        requestCount.incrementAndGet();
+        // Collect values to be returned here
+        boolean moreRows = s.next(values, SchemaMetrics.METRIC_NEXTSIZE);
+        if (!values.isEmpty()) {
+          for (KeyValue kv : values) {
+            currentScanResultSize += kv.heapSize();
           }
+          results.add(new Result(values));
         }
-        requestCount.addAndGet(i);
-        region.readRequestsCount.add(i);
-      } finally {
-        region.closeRegionOperation();
+        if (!moreRows) {
+          break;
+        }
+        values.clear();
       }
+
       // coprocessor postNext hook
       if (region != null && region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postScannerNext(s, results, nbRows, true);
@@ -2614,9 +2589,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return -1;
   }
 
-  /**
-   * @deprecated {@link RowLock} and associated operations are deprecated.
-   */
   public long lockRow(byte[] regionName, byte[] row) throws IOException {
     checkOpen();
     NullPointerException npe = null;
@@ -2633,9 +2605,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().preLockRow(regionName, row);
-      }
       Integer r = region.obtainRowLock(row);
       long lockId = addRowLock(r, region);
       LOG.debug("Row lock " + lockId + " explicitly acquired by client");
@@ -2679,9 +2648,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return rl;
   }
 
-  /**
-   * @deprecated {@link RowLock} and associated operations are deprecated.
-   */
   @Override
   @QosPriority(priority=HConstants.HIGH_QOS)
   public void unlockRow(byte[] regionName, long lockId) throws IOException {
@@ -2700,9 +2666,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().preUnLockRow(regionName, lockId);
-      }
       String lockName = String.valueOf(lockId);
       Integer r = rowlocks.remove(lockName);
       if (r == null) {
@@ -2879,11 +2842,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     final int versionOfClosingNode)
   throws IOException {
     checkOpen();
-    //Check for permissions to close.
-    HRegion actualRegion = this.getFromOnlineRegions(region.getEncodedName());
-    if (actualRegion.getCoprocessorHost() != null) {
-      actualRegion.getCoprocessorHost().preClose(false);
-    }
     LOG.info("Received close region: " + region.getRegionNameAsString() +
       ". Version of ZK closing node:" + versionOfClosingNode);
     boolean hasit = this.onlineRegions.containsKey(region.getEncodedName());
@@ -2931,17 +2889,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected boolean closeRegion(HRegionInfo region, final boolean abort,
       final boolean zk, final int versionOfClosingNode) {
-    
-    HRegion actualRegion = this.getFromOnlineRegions(region.getEncodedName());
-    if ((actualRegion != null) && (actualRegion.getCoprocessorHost() !=null)){
-      try {
-        actualRegion.getCoprocessorHost().preClose(abort);
-      } catch (IOException e) {
-        LOG.warn(e);
-        return false;
-      }
-    }
-    
     if (this.regionsInTransitionInRS.containsKey(region.getEncodedNameAsBytes())) {
       LOG.warn("Received close for region we are already opening or closing; " +
           region.getEncodedName());
@@ -3642,10 +3589,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return this.zooKeeper;
   }
 
-  public RegionServerCoprocessorHost getCoprocessorHost(){
-    return this.rsHost;
-  }
-
 
   public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
     return this.regionsInTransitionInRS;
@@ -3823,13 +3766,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // used by org/apache/hbase/tmpl/regionserver/RSStatusTmpl.jamon (HBASE-4070).
   public String[] getCoprocessors() {
-    TreeSet<String> coprocessors = new TreeSet<String>(
-        this.hlog.getCoprocessorHost().getCoprocessors());
-    Collection<HRegion> regions = getOnlineRegionsLocalContext();
-    for (HRegion region: regions) {
-      coprocessors.addAll(region.getCoprocessorHost().getCoprocessors());
-    }
-    return coprocessors.toArray(new String[0]);
+    HServerLoad hsl = buildServerLoad();
+    return hsl == null? null: hsl.getCoprocessors();
   }
 
   /**

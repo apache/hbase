@@ -241,11 +241,13 @@ public class TestCatalogJanitor {
       return new TableDescriptors() {
         @Override
         public HTableDescriptor remove(String tablename) throws IOException {
+          // TODO Auto-generated method stub
           return null;
         }
         
         @Override
         public Map<String, HTableDescriptor> getAll() throws IOException {
+          // TODO Auto-generated method stub
           return null;
         }
         
@@ -263,6 +265,8 @@ public class TestCatalogJanitor {
         
         @Override
         public void add(HTableDescriptor htd) throws IOException {
+          // TODO Auto-generated method stub
+          
         }
       };
     }
@@ -280,34 +284,6 @@ public class TestCatalogJanitor {
     @Override
     public <T extends CoprocessorProtocol> boolean registerProtocol(Class<T> protocol, T handler) {
       return false;
-    }
-
-    @Override
-    public void deleteTable(byte[] tableName) throws IOException {
-    }
-
-    @Override
-    public void modifyTable(byte[] tableName, HTableDescriptor descriptor) throws IOException {
-    }
-
-    @Override
-    public void enableTable(byte[] tableName) throws IOException {
-    }
-
-    @Override
-    public void disableTable(byte[] tableName) throws IOException {
-    }
-
-    @Override
-    public void addColumn(byte[] tableName, HColumnDescriptor column) throws IOException {
-    }
-
-    @Override
-    public void modifyColumn(byte[] tableName, HColumnDescriptor descriptor) throws IOException {
-    }
-
-    @Override
-    public void deleteColumn(byte[] tableName, byte[] columnName) throws IOException {
     }
   }
 
