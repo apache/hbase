@@ -73,8 +73,6 @@ public class Increment implements Row {
    * At least one column must be incremented.
    * @param row row key
    * @param rowLock previously acquired row lock, or null
-   * @deprecated {@link RowLock} and associated operations are deprecated,
-   * use {@link #Increment(byte[])}
    */
   public Increment(byte [] row, RowLock rowLock) {
     this.row = row;
@@ -116,7 +114,6 @@ public class Increment implements Row {
   /**
    * Method for retrieving the increment's RowLock
    * @return RowLock
-   * @deprecated {@link RowLock} and associated operations are deprecated
    */
   public RowLock getRowLock() {
     return new RowLock(this.row, this.lockId);
@@ -125,7 +122,6 @@ public class Increment implements Row {
   /**
    * Method for retrieving the increment's lockId
    * @return lockId
-   * @deprecated {@link RowLock} and associated operations are deprecated
    */
   public long getLockId() {
     return this.lockId;

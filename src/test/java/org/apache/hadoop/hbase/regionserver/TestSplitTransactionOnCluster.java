@@ -36,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -728,44 +727,6 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  @Test(timeout = 20000)
-  public void testTableExistsIfTheSpecifiedTableRegionIsSplitParent() throws Exception {
-    final byte[] tableName = 
-        Bytes.toBytes("testTableExistsIfTheSpecifiedTableRegionIsSplitParent");
-    HRegionServer regionServer = null;
-    List<HRegion> regions = null;
-    HBaseAdmin admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
-    try {
-      // Create table then get the single region for our new table.
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      htd.addFamily(new HColumnDescriptor("cf"));
-      admin.createTable(htd);
-      HTable t = new HTable(cluster.getConfiguration(), tableName);
-      regions = cluster.getRegions(tableName);
-      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
-      regionServer = cluster.getRegionServer(regionServerIndex);
-      insertData(tableName, admin, t);
-      // Turn off balancer so it doesn't cut in and mess up our placements.
-      cluster.getMaster().setCatalogJanitorEnabled(false);
-      boolean tableExists = MetaReader.tableExists(regionServer.getCatalogTracker(),
-          Bytes.toString(tableName));
-      assertEquals("The specified table should present.", true, tableExists);
-      SplitTransaction st = new SplitTransaction(regions.get(0), Bytes.toBytes("row2"));
-      try {
-        st.prepare();
-        st.createDaughters(regionServer, regionServer);
-      } catch (IOException e) {
-
-      }
-      tableExists = MetaReader.tableExists(regionServer.getCatalogTracker(),
-          Bytes.toString(tableName));
-      assertEquals("The specified table should present.", true, tableExists);
-    } finally {
-      cluster.getMaster().setCatalogJanitorEnabled(true);
-      admin.close();
-    }
-  }
-  
   private void insertData(final byte[] tableName, HBaseAdmin admin, HTable t) throws IOException,
       InterruptedException {
     Put p = new Put(Bytes.toBytes("row1"));

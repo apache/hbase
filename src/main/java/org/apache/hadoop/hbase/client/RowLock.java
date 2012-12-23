@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 /**
  * Holds row name and lock id.
- * @deprecated {@link RowLock} and associated operations are deprecated.
  */
 public class RowLock {
   private byte [] row = null;

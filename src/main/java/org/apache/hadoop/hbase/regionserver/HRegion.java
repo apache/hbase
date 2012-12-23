@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.EOFException;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -56,14 +55,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -79,7 +76,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Append;
@@ -232,34 +228,15 @@ public class HRegion implements HeapSize { // , Writable{
    * The directory for the table this region is part of.
    * This directory contains the directory for this region.
    */
-  private final Path tableDir;
+  final Path tableDir;
 
-  private final HLog log;
-  private final FileSystem fs;
-  private final Configuration conf;
-  private final int rowLockWaitDuration;
+  final HLog log;
+  final FileSystem fs;
+  final Configuration conf;
+  final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
-
-  // The internal wait duration to acquire a lock before read/update
-  // from the region. It is not per row. The purpose of this wait time
-  // is to avoid waiting a long time while the region is busy, so that
-  // we can release the IPC handler soon enough to improve the
-  // availability of the region server. It can be adjusted by
-  // tuning configuration "hbase.busy.wait.duration".
-  final long busyWaitDuration;
-  static final long DEFAULT_BUSY_WAIT_DURATION = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
-
-  // If updating multiple rows in one call, wait longer,
-  // i.e. waiting for busyWaitDuration * # of rows. However,
-  // we can limit the max multiplier.
-  final int maxBusyWaitMultiplier;
-
-  // Max busy wait duration. There is no point to wait longer than the RPC
-  // purge timeout, when a RPC call will be terminated by the RPC engine.
-  final long maxBusyWaitDuration;
-
-  private final HRegionInfo regionInfo;
-  private final Path regiondir;
+  final HRegionInfo regionInfo;
+  final Path regiondir;
   KeyValue.KVComparator comparator;
 
   private ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
@@ -377,10 +354,6 @@ public class HRegion implements HeapSize { // , Writable{
     this.coprocessorHost = null;
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
     this.opMetrics = new OperationMetrics();
-
-    this.maxBusyWaitDuration = 2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
-    this.busyWaitDuration = DEFAULT_BUSY_WAIT_DURATION;
-    this.maxBusyWaitMultiplier = 2;
   }
 
   /**
@@ -426,17 +399,6 @@ public class HRegion implements HeapSize { // , Writable{
     this.regiondir = getRegionDir(this.tableDir, encodedNameStr);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
     this.opMetrics = new OperationMetrics(conf, this.regionInfo);
-
-    this.busyWaitDuration = conf.getLong(
-      "hbase.busy.wait.duration", DEFAULT_BUSY_WAIT_DURATION);
-    this.maxBusyWaitMultiplier = conf.getInt("hbase.busy.wait.multiplier.max", 2);
-    if (busyWaitDuration * maxBusyWaitMultiplier <= 0L) {
-      throw new IllegalArgumentException("Invalid hbase.busy.wait.duration ("
-        + busyWaitDuration + ") or hbase.busy.wait.multiplier.max ("
-        + maxBusyWaitMultiplier + "). Their product should be positive");
-    }
-    this.maxBusyWaitDuration = conf.getLong("ipc.client.call.purge.timeout",
-      2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
     /*
      * timestamp.slop provides a server-side constraint on the timestamp. This
@@ -726,7 +688,7 @@ public class HRegion implements HeapSize { // , Writable{
   public long addAndGetGlobalMemstoreSize(long memStoreSize) {
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
-    }
+    }  
     return this.memstoreSize.getAndAdd(memStoreSize);
   }
 
@@ -752,7 +714,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // and then create the file
     Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
-
+    
     // if datanode crashes or if the RS goes down just before the close is called while trying to
     // close the created regioninfo file in the .tmp directory then on next
     // creation we will be getting AlreadyCreatedException.
@@ -760,7 +722,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (FSUtils.isExists(fs, tmpPath)) {
       FSUtils.delete(fs, tmpPath, true);
     }
-
+    
     FSDataOutputStream out = FSUtils.create(fs, tmpPath, perms);
 
     try {
@@ -774,26 +736,6 @@ public class HRegion implements HeapSize { // , Writable{
     if (!fs.rename(tmpPath, regioninfoPath)) {
       throw new IOException("Unable to rename " + tmpPath + " to " +
         regioninfoPath);
-    }
-  }
-
-  /**
-   * @param fs
-   * @param dir
-   * @return An HRegionInfo instance gotten from the <code>.regioninfo</code> file under region dir
-   * @throws IOException
-   */
-  public static HRegionInfo loadDotRegionInfoFileContent(final FileSystem fs, final Path dir)
-  throws IOException {
-    Path regioninfo = new Path(dir, HRegion.REGIONINFO_FILE);
-    if (!fs.exists(regioninfo)) throw new FileNotFoundException(regioninfo.toString());
-    FSDataInputStream in = fs.open(regioninfo);
-    try {
-      HRegionInfo hri = new HRegionInfo();
-      hri.readFields(in);
-      return hri;
-    } finally {
-      in.close();
     }
   }
 
@@ -941,7 +883,6 @@ public class HRegion implements HeapSize { // , Writable{
 
     this.closing.set(true);
     status.setStatus("Disabling writes for close");
-    // block waiting for the lock for closing
     lock.writeLock().lock();
     try {
       if (this.isClosed()) {
@@ -1043,16 +984,19 @@ public class HRegion implements HeapSize { // , Writable{
     return getOpenAndCloseThreadPool(maxThreads, threadNamePrefix);
   }
 
-  static ThreadPoolExecutor getOpenAndCloseThreadPool(int maxThreads,
+  private ThreadPoolExecutor getOpenAndCloseThreadPool(int maxThreads,
       final String threadNamePrefix) {
-    return Threads.getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-      new ThreadFactory() {
-        private int count = 1;
+    ThreadPoolExecutor openAndCloseThreadPool = Threads
+        .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
+            new ThreadFactory() {
+              private int count = 1;
 
-        public Thread newThread(Runnable r) {
-          return new Thread(r, threadNamePrefix + "-" + count++);
-        }
-      });
+              public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, threadNamePrefix + "-" + count++);
+                return t;
+              }
+            });
+    return openAndCloseThreadPool;
   }
 
    /**
@@ -1248,7 +1192,6 @@ public class HRegion implements HeapSize { // , Writable{
       return false;
     }
     Preconditions.checkArgument(cr.getHRegion().equals(this));
-    // block waiting for the lock for compaction
     lock.readLock().lock();
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Compacting " + cr.getStore() + " in " + this);
@@ -1328,7 +1271,6 @@ public class HRegion implements HeapSize { // , Writable{
     }
     MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
     status.setStatus("Acquiring readlock on region");
-    // block waiting for the lock for flushing cache
     lock.readLock().lock();
     try {
       if (this.closed.get()) {
@@ -1464,7 +1406,6 @@ public class HRegion implements HeapSize { // , Writable{
     // end up in both snapshot and memstore (makes it difficult to do atomic
     // rows then)
     status.setStatus("Obtaining lock to block concurrent updates");
-    // block waiting for the lock for internal flush
     this.updatesLock.writeLock().lock();
     long flushsize = this.memstoreSize.get();
     status.setStatus("Preparing to flush by snapshotting stores");
@@ -1723,23 +1664,11 @@ public class HRegion implements HeapSize { // , Writable{
   //////////////////////////////////////////////////////////////////////////////
   // set() methods for client use.
   //////////////////////////////////////////////////////////////////////////////
-
-  /**
-   * @param delete delete object
-   * @param writeToWAL append to the write ahead lock or not
-   * @throws IOException read exceptions
-   */
-  public void delete(Delete delete, boolean writeToWAL)
-  throws IOException {
-    delete(delete, null, writeToWAL);
-  }
-
   /**
    * @param delete delete object
    * @param lockid existing lock id, or null for grab a lock
    * @param writeToWAL append to the write ahead lock or not
    * @throws IOException read exceptions
-   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public void delete(Delete delete, Integer lockid, boolean writeToWAL)
   throws IOException {
@@ -1855,7 +1784,7 @@ public class HRegion implements HeapSize { // , Writable{
     byte [] byteNow = Bytes.toBytes(now);
     boolean flush = false;
 
-    lock(updatesLock.readLock());
+    updatesLock.readLock().lock();
     try {
       prepareDeleteTimestamps(delete.getFamilyMap(), byteNow);
 
@@ -1914,7 +1843,6 @@ public class HRegion implements HeapSize { // , Writable{
    * @param put
    * @param lockid
    * @throws IOException
-   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public void put(Put put, Integer lockid) throws IOException {
     this.put(put, lockid, put.getWriteToWAL());
@@ -1927,7 +1855,6 @@ public class HRegion implements HeapSize { // , Writable{
    * @param lockid
    * @param writeToWAL
    * @throws IOException
-   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public void put(Put put, Integer lockid, boolean writeToWAL)
   throws IOException {
@@ -2013,7 +1940,7 @@ public class HRegion implements HeapSize { // , Writable{
     System.arraycopy(putsAndLocks, 0, mutationsAndLocks, 0, putsAndLocks.length);
     return batchMutate(mutationsAndLocks);
   }
-
+  
   /**
    * Perform a batch of mutations.
    * It supports only Put and Delete mutations and will ignore other types passed.
@@ -2236,7 +2163,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
 
-      lock(this.updatesLock.readLock(), numReadyToWrite);
+      this.updatesLock.readLock().lock();
       locked = true;
 
       //
@@ -2367,7 +2294,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       // do after lock
       final long netTimeMs = EnvironmentEdgeManager.currentTimeMillis()- startTimeMs;
-
+            
       // See if the column families were consistent through the whole thing.
       // if they were then keep them. If they were not then pass a null.
       // null will be treated as unknown.
@@ -2401,24 +2328,6 @@ public class HRegion implements HeapSize { // , Writable{
   //the getting of the lock happens before, so that you would just pass it into
   //the methods. So in the case of checkAndMutate you could just do lockRow,
   //get, put, unlockRow or something
- /**
-  *
-  * @param row
-  * @param family
-  * @param qualifier
-  * @param compareOp
-  * @param comparator
-  * @param writeToWAL
-  * @throws IOException
-  * @return true if the new put was execute, false otherwise
-  */
- public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
-     CompareOp compareOp, WritableByteArrayComparable comparator, Writable w,
-     boolean writeToWAL)
- throws IOException {
-   return checkAndMutate(row, family, qualifier, compareOp, comparator, w, null, writeToWAL);
- }
-  
   /**
    *
    * @param row
@@ -2430,7 +2339,6 @@ public class HRegion implements HeapSize { // , Writable{
    * @param writeToWAL
    * @throws IOException
    * @return true if the new put was execute, false otherwise
-   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
       CompareOp compareOp, WritableByteArrayComparable comparator, Writable w,
@@ -2549,8 +2457,7 @@ public class HRegion implements HeapSize { // , Writable{
    * this and the synchronize on 'this' inside in internalFlushCache to send
    * the notify.
    */
-  private void checkResources()
-      throws RegionTooBusyException, InterruptedIOException {
+  private void checkResources() {
 
     // If catalog region, do not impose resource constraints or block updates.
     if (this.getRegionInfo().isMetaRegion()) return;
@@ -2568,30 +2475,12 @@ public class HRegion implements HeapSize { // , Writable{
           " is >= than blocking " +
           StringUtils.humanReadableInt(this.blockingMemStoreSize) + " size");
       }
-      long now = EnvironmentEdgeManager.currentTimeMillis();
-      long timeToWait = startTime + busyWaitDuration - now;
-      if (timeToWait <= 0L) {
-        final long totalTime = now - startTime;
-        this.updatesBlockedMs.add(totalTime);
-        LOG.info("Failed to unblock updates for region " + this + " '"
-          + Thread.currentThread().getName() + "' in " + totalTime
-          + "ms. The region is still busy.");
-        throw new RegionTooBusyException("region is flushing");
-      }
       blocked = true;
       synchronized(this) {
         try {
-          wait(Math.min(timeToWait, threadWakeFrequency));
-        } catch (InterruptedException ie) {
-          final long totalTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
-          if (totalTime > 0) {
-            this.updatesBlockedMs.add(totalTime);
-          }
-          LOG.info("Interrupted while waiting to unblock updates for region "
-            + this + " '" + Thread.currentThread().getName() + "'");
-          InterruptedIOException iie = new InterruptedIOException();
-          iie.initCause(ie);
-          throw iie;
+          wait(threadWakeFrequency);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
         }
       }
     }
@@ -2658,7 +2547,7 @@ public class HRegion implements HeapSize { // , Writable{
     byte[] byteNow = Bytes.toBytes(now);
     boolean flush = false;
 
-    lock(this.updatesLock.readLock());
+    this.updatesLock.readLock().lock();
     try {
       checkFamilies(familyMap.keySet());
       checkTimestamps(familyMap, now);
@@ -2689,7 +2578,7 @@ public class HRegion implements HeapSize { // , Writable{
     // do after lock
     final long after = EnvironmentEdgeManager.currentTimeMillis();
     this.opMetrics.updatePutMetrics(familyMap.keySet(), after - now);
-
+    
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
@@ -3283,7 +3172,6 @@ public class HRegion implements HeapSize { // , Writable{
    * @param lockId  The lock ID to release.
    */
   public void releaseRowLock(final Integer lockId) {
-    if (lockId == null) return; // null lock id, do nothing
     HashedBytes rowKey = lockIds.remove(lockId);
     if (rowKey == null) {
       LOG.warn("Release unknown lockId: " + lockId);
@@ -3524,10 +3412,6 @@ public class HRegion implements HeapSize { // , Writable{
       this(scan, null);
     }
 
-    @Override
-    public long getMvccReadPoint() {
-      return this.readPt;
-    }
     /**
      * Reset both the filter and the old filter.
      */
@@ -3538,7 +3422,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     @Override
-    public boolean next(List<KeyValue> outResults, int limit)
+    public synchronized boolean next(List<KeyValue> outResults, int limit)
         throws IOException {
       return next(outResults, limit, null);
     }
@@ -3558,42 +3442,30 @@ public class HRegion implements HeapSize { // , Writable{
         // This could be a new thread from the last time we called next().
         MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
 
-        return nextRaw(outResults, limit, metric);
+        results.clear();
+
+        boolean returnResult = nextInternal(limit, metric);
+
+        outResults.addAll(results);
+        resetFilters();
+        if (isFilterDone()) {
+          return false;
+        }
+        return returnResult;
       } finally {
         closeRegionOperation();
       }
     }
 
     @Override
-    public boolean nextRaw(List<KeyValue> outResults, String metric)
-        throws IOException {
-      return nextRaw(outResults, batch, metric);
-    }
-
-    @Override
-    public boolean nextRaw(List<KeyValue> outResults, int limit,
-        String metric) throws IOException {
-      results.clear();
-
-      boolean returnResult = nextInternal(limit, metric);
-
-      outResults.addAll(results);
-      resetFilters();
-      if (isFilterDone()) {
-        return false;
-      }
-      return returnResult;
-    }
-
-    @Override
-    public boolean next(List<KeyValue> outResults)
+    public synchronized boolean next(List<KeyValue> outResults)
         throws IOException {
       // apply the batching limit by default
       return next(outResults, batch, null);
     }
 
     @Override
-    public boolean next(List<KeyValue> outResults, String metric)
+    public synchronized boolean next(List<KeyValue> outResults, String metric)
         throws IOException {
       // apply the batching limit by default
       return next(outResults, batch, metric);
@@ -3617,16 +3489,8 @@ public class HRegion implements HeapSize { // , Writable{
           rpcCall.throwExceptionIfCallerDisconnected();
         }
 
-        KeyValue current = this.storeHeap.peek();
-        byte[] currentRow = null;
-        int offset = 0;
-        short length = 0;
-        if (current != null) {
-          currentRow = current.getBuffer();
-          offset = current.getRowOffset();
-          length = current.getRowLength();
-        }
-        if (isStopRow(currentRow, offset, length)) {
+        byte [] currentRow = peekRow();
+        if (isStopRow(currentRow)) {
           if (filter != null && filter.hasFilterRow()) {
             filter.filterRow(results);
           }
@@ -3635,10 +3499,10 @@ public class HRegion implements HeapSize { // , Writable{
           }
 
           return false;
-        } else if (filterRowKey(currentRow, offset, length)) {
-          nextRow(currentRow, offset, length);
+        } else if (filterRowKey(currentRow)) {
+          nextRow(currentRow);
         } else {
-          KeyValue nextKv;
+          byte [] nextRow;
           do {
             this.storeHeap.next(results, limit - results.size(), metric);
             if (limit > 0 && results.size() == limit) {
@@ -3648,10 +3512,9 @@ public class HRegion implements HeapSize { // , Writable{
               }
               return true; // we are expecting more yes, but also limited to how many we can return.
             }
-            nextKv = this.storeHeap.peek();
-          } while (nextKv != null && nextKv.matchingRow(currentRow, offset, length));
+          } while (Bytes.equals(currentRow, nextRow = peekRow()));
 
-          final boolean stopRow = nextKv == null || isStopRow(nextKv.getBuffer(), nextKv.getRowOffset(), nextKv.getRowLength());
+          final boolean stopRow = isStopRow(nextRow);
 
           // now that we have an entire row, lets process with a filters:
 
@@ -3666,7 +3529,7 @@ public class HRegion implements HeapSize { // , Writable{
             // the reasons for calling this method are:
             // 1. reset the filters.
             // 2. provide a hook to fast forward the row (used by subclasses)
-            nextRow(currentRow, offset, length);
+            nextRow(currentRow);
 
             // This row was totally filtered out, if this is NOT the last row,
             // we should continue on.
@@ -3682,25 +3545,29 @@ public class HRegion implements HeapSize { // , Writable{
       return filter != null
           && filter.filterRow();
     }
-    private boolean filterRowKey(byte[] row, int offset, short length) {
+    private boolean filterRowKey(byte[] row) {
       return filter != null
-          && filter.filterRowKey(row, offset, length);
+          && filter.filterRowKey(row, 0, row.length);
     }
 
-    protected void nextRow(byte [] currentRow, int offset, short length) throws IOException {
-      KeyValue next;
-      while((next = this.storeHeap.peek()) != null && next.matchingRow(currentRow, offset, length)) {
-        this.storeHeap.next(MOCKED_LIST);       
+    protected void nextRow(byte [] currentRow) throws IOException {
+      while (Bytes.equals(currentRow, peekRow())) {
+        this.storeHeap.next(MOCKED_LIST);
       }
       results.clear();
       resetFilters();
     }
 
-    private boolean isStopRow(byte [] currentRow, int offset, short length) {
+    private byte[] peekRow() {
+      KeyValue kv = this.storeHeap.peek();
+      return kv == null ? null : kv.getRow();
+    }
+
+    private boolean isStopRow(byte [] currentRow) {
       return currentRow == null ||
           (stopRow != null &&
           comparator.compareRows(stopRow, 0, stopRow.length,
-              currentRow, offset, length) <= isScan);
+              currentRow, 0, currentRow.length) <= isScan);
     }
 
     @Override
@@ -3828,7 +3695,6 @@ public class HRegion implements HeapSize { // , Writable{
    * @param conf
    * @param hTableDescriptor
    * @param hlog shared HLog
-   * @param boolean initialize - true to initialize the region
    * @return new HRegion
    *
    * @throws IOException
@@ -3836,36 +3702,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
                                       final Configuration conf,
                                       final HTableDescriptor hTableDescriptor,
-                                      final HLog hlog,
-                                      final boolean initialize)
-      throws IOException {
-    return createHRegion(info, rootDir, conf, hTableDescriptor,
-        hlog, initialize, false);
-  }
-
-  /**
-   * Convenience method creating new HRegions. Used by createTable.
-   * The {@link HLog} for the created region needs to be closed
-   * explicitly, if it is not null.
-   * Use {@link HRegion#getLog()} to get access.
-   *
-   * @param info Info for region to create.
-   * @param rootDir Root directory for HBase instance
-   * @param conf
-   * @param hTableDescriptor
-   * @param hlog shared HLog
-   * @param boolean initialize - true to initialize the region
-   * @param boolean ignoreHLog
-      - true to skip generate new hlog if it is null, mostly for createTable
-   * @return new HRegion
-   *
-   * @throws IOException
-   */
-  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-                                      final Configuration conf,
-                                      final HTableDescriptor hTableDescriptor,
-                                      final HLog hlog,
-                                      final boolean initialize, final boolean ignoreHLog)
+                                      final HLog hlog)
       throws IOException {
     LOG.info("creating HRegion " + info.getTableNameAsString()
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
@@ -3877,24 +3714,14 @@ public class HRegion implements HeapSize { // , Writable{
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
     HLog effectiveHLog = hlog;
-    if (hlog == null && !ignoreHLog) {
+    if (hlog == null) {
       effectiveHLog = new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
           new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf);
     }
     HRegion region = HRegion.newHRegion(tableDir,
         effectiveHLog, fs, conf, info, hTableDescriptor, null);
-    if (initialize) {
-      region.initialize();
-    }
+    region.initialize();
     return region;
-  }
-
-  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-                                      final Configuration conf,
-                                      final HTableDescriptor hTableDescriptor,
-                                      final HLog hlog)
-    throws IOException {
-    return createHRegion(info, rootDir, conf, hTableDescriptor, hlog, true);
   }
 
   /**
@@ -4351,19 +4178,9 @@ public class HRegion implements HeapSize { // , Writable{
   //
   /**
    * @param get get object
-   * @return result
-   * @throws IOException read exceptions
-   */
-  public Result get(final Get get) throws IOException {
-    return get(get, null);
-  }
-
-  /**
-   * @param get get object
    * @param lockid existing lock id, or null for no previous lock
    * @return result
    * @throws IOException read exceptions
-   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public Result get(final Get get, final Integer lockid) throws IOException {
     checkRow(get.getRow(), "Get");
@@ -4418,7 +4235,7 @@ public class HRegion implements HeapSize { // , Writable{
     // do after lock
     final long after = EnvironmentEdgeManager.currentTimeMillis();
     this.opMetrics.updateGetMetrics(get.familySet(), after - now);
-
+    
     return results;
   }
 
@@ -4486,7 +4303,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
 
       // 3. acquire the region lock
-      lock(this.updatesLock.readLock(), acquiredLocks.size());
+      this.updatesLock.readLock().lock();
       locked = true;
 
       // 4. Get a mvcc write number
@@ -4608,23 +4425,6 @@ public class HRegion implements HeapSize { // , Writable{
 
   // TODO: There's a lot of boiler plate code identical
   // to increment... See how to better unify that.
-
-  /**
-  *
-  * Perform one or more append operations on a row.
-  * <p>
-  * Appends performed are done under row lock but reads do not take locks out
-  * so this can be seen partially complete by gets and scans.
-  *
-  * @param append
-  * @param writeToWAL
-  * @return new keyvalues after increment
-  * @throws IOException
-  */
- public Result append(Append append, boolean writeToWAL)
-     throws IOException {
-   return append(append, null, writeToWAL);
- }
   /**
    *
    * Perform one or more append operations on a row.
@@ -4637,7 +4437,6 @@ public class HRegion implements HeapSize { // , Writable{
    * @param writeToWAL
    * @return new keyvalues after increment
    * @throws IOException
-   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
    */
   public Result append(Append append, Integer lockid, boolean writeToWAL)
       throws IOException {
@@ -4657,7 +4456,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.writeRequestsCount.increment();
     try {
       Integer lid = getLock(lockid, row, true);
-      lock(this.updatesLock.readLock());
+      this.updatesLock.readLock().lock();
       try {
         long now = EnvironmentEdgeManager.currentTimeMillis();
         // Process each family
@@ -4764,32 +4563,16 @@ public class HRegion implements HeapSize { // , Writable{
       closeRegionOperation();
     }
 
-
+    
     long after = EnvironmentEdgeManager.currentTimeMillis();
     this.opMetrics.updateAppendMetrics(append.getFamilyMap().keySet(), after - before);
-
+    
     if (flush) {
       // Request a cache flush. Do it outside update lock.
       requestFlush();
     }
 
     return append.isReturnResults() ? new Result(allKVs) : null;
-  }
-
-  /**
-  *
-  * Perform one or more increment operations on a row.
-  * <p>
-  * Increments performed are done under row lock but reads do not take locks
-  * out so this can be seen partially complete by gets and scans.
-  * @param increment
-  * @param writeToWAL
-  * @return new keyvalues after increment
-  * @throws IOException
-  */
-  public Result increment(Increment increment, boolean writeToWAL)
-  throws IOException {
-    return increment(increment, null, writeToWAL);
   }
 
   /**
@@ -4803,8 +4586,6 @@ public class HRegion implements HeapSize { // , Writable{
    * @param writeToWAL
    * @return new keyvalues after increment
    * @throws IOException
-   * @deprecated row locks (lockId) held outside the extent of the operation are deprecated.
-
    */
   public Result increment(Increment increment, Integer lockid,
       boolean writeToWAL)
@@ -4826,7 +4607,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.writeRequestsCount.increment();
     try {
       Integer lid = getLock(lockid, row, true);
-      lock(this.updatesLock.readLock());
+      this.updatesLock.readLock().lock();
       try {
         long now = EnvironmentEdgeManager.currentTimeMillis();
         // Process each family
@@ -4910,7 +4691,7 @@ public class HRegion implements HeapSize { // , Writable{
       long after = EnvironmentEdgeManager.currentTimeMillis();
       this.opMetrics.updateIncrementMetrics(increment.getFamilyMap().keySet(), after - before);
     }
-
+    
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
@@ -4944,7 +4725,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.writeRequestsCount.increment();
     try {
       Integer lid = obtainRowLock(row);
-      lock(this.updatesLock.readLock());
+      this.updatesLock.readLock().lock();
       try {
         Store store = stores.get(family);
 
@@ -5037,8 +4818,8 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      35 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (7 * Bytes.SIZEOF_LONG) +
+      35 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
+      (5 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
@@ -5338,16 +5119,13 @@ public class HRegion implements HeapSize { // , Writable{
    * #closeRegionOperation needs to be called in the try's finally block
    * Acquires a read lock and checks if the region is closing or closed.
    * @throws NotServingRegionException when the region is closing or closed
-   * @throws RegionTooBusyException if failed to get the lock in time
-   * @throws InterruptedIOException if interrupted while waiting for a lock
    */
-  public void startRegionOperation()
-      throws NotServingRegionException, RegionTooBusyException, InterruptedIOException {
+  private void startRegionOperation() throws NotServingRegionException {
     if (this.closing.get()) {
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
           " is closing");
     }
-    lock(lock.readLock());
+    lock.readLock().lock();
     if (this.closed.get()) {
       lock.readLock().unlock();
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
@@ -5359,7 +5137,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Closes the lock. This needs to be called in the finally block corresponding
    * to the try block of #startRegionOperation
    */
-  public void closeRegionOperation(){
+  private void closeRegionOperation(){
     lock.readLock().unlock();
   }
 
@@ -5369,17 +5147,15 @@ public class HRegion implements HeapSize { // , Writable{
    * #closeBulkRegionOperation needs to be called in the try's finally block
    * Acquires a writelock and checks if the region is closing or closed.
    * @throws NotServingRegionException when the region is closing or closed
-   * @throws RegionTooBusyException if failed to get the lock in time
-   * @throws InterruptedIOException if interrupted while waiting for a lock
    */
   private void startBulkRegionOperation(boolean writeLockNeeded)
-      throws NotServingRegionException, RegionTooBusyException, InterruptedIOException {
+  throws NotServingRegionException {
     if (this.closing.get()) {
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
           " is closing");
     }
-    if (writeLockNeeded) lock(lock.writeLock());
-    else lock(lock.readLock());
+    if (writeLockNeeded) lock.writeLock().lock();
+    else lock.readLock().lock();
     if (this.closed.get()) {
       if (writeLockNeeded) lock.writeLock().unlock();
       else lock.readLock().unlock();
@@ -5392,7 +5168,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Closes the lock. This needs to be called in the finally block corresponding
    * to the try block of #startRegionOperation
    */
-  private void closeBulkRegionOperation() {
+  private void closeBulkRegionOperation(){
     if (lock.writeLock().isHeldByCurrentThread()) lock.writeLock().unlock();
     else lock.readLock().unlock();
   }
@@ -5403,7 +5179,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private void recordPutWithoutWal(final Map<byte [], List<KeyValue>> familyMap) {
     if (numPutsWithoutWAL.getAndIncrement() == 0) {
-      LOG.info("writing data to region " + this +
+      LOG.info("writing data to region " + this + 
                " with WAL disabled. Data may be lost in the event of a crash.");
     }
 
@@ -5415,33 +5191,6 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     dataInMemoryWithoutWAL.addAndGet(putSize);
-  }
-
-  private void lock(final Lock lock)
-      throws RegionTooBusyException, InterruptedIOException {
-    lock(lock, 1);
-  }
-
-  /**
-   * Try to acquire a lock.  Throw RegionTooBusyException
-   * if failed to get the lock in time. Throw InterruptedIOException
-   * if interrupted while waiting for the lock.
-   */
-  private void lock(final Lock lock, final int multiplier)
-      throws RegionTooBusyException, InterruptedIOException {
-    try {
-      final long waitTime = Math.min(maxBusyWaitDuration,
-        busyWaitDuration * Math.min(multiplier, maxBusyWaitMultiplier));
-      if (!lock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
-        throw new RegionTooBusyException(
-          "failed to get a lock in " + waitTime + "ms");
-      }
-    } catch (InterruptedException ie) {
-      LOG.info("Interrupted while waiting for a lock");
-      InterruptedIOException iie = new InterruptedIOException();
-      iie.initCause(ie);
-      throw iie;
-    }
   }
 
   /**
@@ -5483,6 +5232,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
   };
 
+
   /**
    * Facility for dumping and compacting catalog tables.
    * Only does catalog tables since these are only tables we for sure know
@@ -5515,11 +5265,11 @@ public class HRegion implements HeapSize { // , Writable{
     final HLog log = new HLog(fs, logdir, oldLogDir, c);
     try {
       processTable(fs, tableDir, log, c, majorCompact);
-    } finally {
+     } finally {
        log.close();
        // TODO: is this still right?
        BlockCache bc = new CacheConfig(c).getBlockCache();
        if (bc != null) bc.shutdown();
-    }
+     }
   }
 }

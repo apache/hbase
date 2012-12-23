@@ -27,7 +27,6 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.zookeeper.ZKTable.TableState;
 import org.apache.zookeeper.KeeperException;
@@ -111,9 +110,14 @@ public class TestZKTable {
     assertFalse(zkt.isTablePresent(name));
   }
 
-  private void runTest9294CompatibilityTest(String tableName, Configuration conf)
-  throws Exception {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
+  /**
+   * Test that ZK table writes table state in formats expected by 0.92 and 0.94 clients
+   */
+  @Test
+  public void test9294Compatibility() throws Exception {
+    final String tableName = "test9294Compatibility";
+
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       tableName, abortable, true);
     ZKTable zkt = new ZKTable(zkw);
     zkt.setEnabledTable(tableName);
@@ -122,22 +126,6 @@ public class TestZKTable {
       ZKTableReadOnly.getTableState(zkw, zkw.masterTableZNode,  tableName) == TableState.ENABLED);
     // check that 0.92 format table is null, as expected by 0.92.0/0.92.1 clients
     assertTrue(ZKTableReadOnly.getTableState(zkw, zkw.masterTableZNode92, tableName) == null);
-  }
-
-  /**
-   * Test that ZK table writes table state in formats expected by 0.92 and 0.94 clients
-   */
-  @Test
-  public void test9294Compatibility() throws Exception {
-    // without useMulti
-    String tableName = "test9294Compatibility";
-    runTest9294CompatibilityTest(tableName, TEST_UTIL.getConfiguration());
-
-    // with useMulti
-    tableName = "test9294CompatibilityWithMulti";
-    Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
-    runTest9294CompatibilityTest(tableName, conf);
   }
 
   /**
@@ -182,17 +170,14 @@ public class TestZKTable {
    * Because two ZooKeeper nodes are written for each table state transition
    * {@link ZooKeeperWatcher#masterTableZNode} and {@link ZooKeeperWatcher#masterTableZNode92}
    * it is possible that we fail in between the two operations and are left with
-   * inconsistent state (when hbase.zookeeper.useMulti is false).
-   * Check that we can get back to a consistent state by retrying the operation.
+   * inconsistent state.  Check that we can get back to a consistent state by
+   * retrying the operation.
    */
   @Test
   public void testDisableTableRetry() throws Exception {
     final String tableName = "testDisableTableRetry";
 
-    Configuration conf = TEST_UTIL.getConfiguration();
-    // test only relevant if useMulti is false
-    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, false);
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       tableName, abortable, true);
     ThrowingRecoverableZookeeper throwing = new ThrowingRecoverableZookeeper(zkw);
     ZooKeeperWatcher spyZookeeperWatcher = Mockito.spy(zkw);
@@ -226,10 +211,7 @@ public class TestZKTable {
   public void testEnableTableRetry() throws Exception {
     final String tableName = "testEnableTableRetry";
 
-    Configuration conf = TEST_UTIL.getConfiguration();
-    // test only relevant if useMulti is false
-    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, false);
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       tableName, abortable, true);
     ThrowingRecoverableZookeeper throwing = new ThrowingRecoverableZookeeper(zkw);
     ZooKeeperWatcher spyZookeeperWatcher = Mockito.spy(zkw);
@@ -263,10 +245,7 @@ public class TestZKTable {
   public void testDeleteTableRetry() throws Exception {
     final String tableName = "testEnableTableRetry";
 
-    Configuration conf = TEST_UTIL.getConfiguration();
-    // test only relevant if useMulti is false
-    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, false);
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       tableName, abortable, true);
     ThrowingRecoverableZookeeper throwing = new ThrowingRecoverableZookeeper(zkw);
     ZooKeeperWatcher spyZookeeperWatcher = Mockito.spy(zkw);

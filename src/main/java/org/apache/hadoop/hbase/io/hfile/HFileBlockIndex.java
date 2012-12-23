@@ -342,7 +342,7 @@ public class HFileBlockIndex {
         midKey = Arrays.copyOfRange(b.array(), keyOffset, keyOffset + keyLen);
       } else {
         // The middle of the root-level index.
-        midKey = blockKeys[rootCount / 2];
+        midKey = blockKeys[(rootCount - 1) / 2];
       }
 
       this.midKey.set(midKey);
@@ -1429,4 +1429,5 @@ public class HFileBlockIndex {
   public static int getMaxChunkSize(Configuration conf) {
     return conf.getInt(MAX_CHUNK_SIZE_KEY, DEFAULT_MAX_CHUNK_SIZE);
   }
+
 }

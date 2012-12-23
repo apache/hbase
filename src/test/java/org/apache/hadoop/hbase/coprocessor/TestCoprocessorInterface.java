@@ -85,18 +85,6 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     }
 
     @Override
-    public boolean nextRaw(List<KeyValue> result, int limit, String metric) 
-        throws IOException {
-      return delegate.nextRaw(result, limit, metric);
-    }
-
-    @Override
-    public boolean nextRaw(List<KeyValue> result, String metric) 
-        throws IOException {
-      return delegate.nextRaw(result, metric);
-    }
-
-    @Override
     public void close() throws IOException {
       delegate.close();
     }
@@ -116,10 +104,6 @@ public class TestCoprocessorInterface extends HBaseTestCase {
       return false;
     }
 
-    @Override
-    public long getMvccReadPoint() {
-      return delegate.getMvccReadPoint();
-    }
   }
 
   public static class CoprocessorImpl extends BaseRegionObserver {

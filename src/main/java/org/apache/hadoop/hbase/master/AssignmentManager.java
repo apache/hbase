@@ -142,10 +142,9 @@ public class AssignmentManager extends ZooKeeperListener {
 
   // store all the table names in disabling state
   Set<String> disablingTables = new HashSet<String>(1);
-  // store all the enabling state table names and corresponding online servers' regions.
-  // This may be needed to avoid calling assign twice for the regions of the ENABLING table
-  // that could have been assigned through processRIT.
-  Map<String, List<HRegionInfo>> enablingTables = new HashMap<String, List<HRegionInfo>>(1);
+  // store all the enabling state tablenames.
+  Set<String> enablingTables = new HashSet<String>(1);
+
   /**
    * Server to regions assignment map.
    * Contains the set of regions currently assigned to a given server.
@@ -275,16 +274,6 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Gives enabling table regions.
-   * 
-   * @param tableName
-   * @return list of regionInfos
-   */
-  public List<HRegionInfo> getEnablingTableRegions(String tableName){
-    return this.enablingTables.get(tableName);
-  }
-
-  /**
    * Add a regionPlan for the specified region.
    * @param encodedName 
    * @param plan 
@@ -375,9 +364,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // Recover the tables that were not fully moved to DISABLED state.
     // These tables are in DISABLING state when the master restarted/switched.
     boolean isWatcherCreated = recoverTableInDisablingState(this.disablingTables);
-    recoverTableInEnablingState(this.enablingTables.keySet(), isWatcherCreated);
-    this.enablingTables.clear();
-    this.disablingTables.clear();
+    recoverTableInEnablingState(this.enablingTables, isWatcherCreated);
   }
 
   /**
@@ -522,10 +509,6 @@ public class AssignmentManager extends ZooKeeperListener {
     String encodedRegionName = regionInfo.getEncodedName();
     LOG.info("Processing region " + regionInfo.getRegionNameAsString() +
       " in state " + data.getEventType());
-    List<HRegionInfo> hris = this.enablingTables.get(regionInfo.getTableNameAsString());
-    if (hris != null && !hris.isEmpty()) {
-      hris.remove(regionInfo);
-    }
     synchronized (regionsInTransition) {
       RegionState regionState = regionsInTransition.get(encodedRegionName);
       if (regionState != null ||
@@ -2323,12 +2306,11 @@ public class AssignmentManager extends ZooKeeperListener {
     // Skip assignment for regions of tables in DISABLING state also because
     // during clean cluster startup no RS is alive and regions map also doesn't
     // have any information about the regions. See HBASE-6281.
-    Set<String> disablingDisabledAndEnablingTables = new HashSet<String>(this.disablingTables);
-    disablingDisabledAndEnablingTables.addAll(this.zkTable.getDisabledTables());
-    disablingDisabledAndEnablingTables.addAll(this.enablingTables.keySet());
+    Set<String> disablingAndDisabledTables = new HashSet<String>(this.disablingTables);
+    disablingAndDisabledTables.addAll(this.zkTable.getDisabledTables());
     // Scan META for all user regions, skipping any disabled tables
     Map<HRegionInfo, ServerName> allRegions = MetaReader.fullScan(catalogTracker,
-        disablingDisabledAndEnablingTables, true);
+        disablingAndDisabledTables, true);
     if (allRegions == null || allRegions.isEmpty()) return;
 
     // Get all available servers
@@ -2576,14 +2558,13 @@ public class AssignmentManager extends ZooKeeperListener {
         // from ENABLED state when application calls disableTable.
         // It can't be in DISABLED state, because DISABLED states transitions
         // from DISABLING state.
-        boolean enabling = checkIfRegionsBelongsToEnabling(regionInfo);
-        addTheTablesInPartialState(regionInfo);
-        if (enabling) {
-          addToEnablingTableRegions(regionInfo);
-        } else {
-          LOG.warn("Region " + regionInfo.getEncodedName() + " has null regionLocation."
-              + " But its table " + tableName + " isn't in ENABLING state.");
+        if (false == checkIfRegionsBelongsToEnabling(regionInfo)) {
+          LOG.warn("Region " + regionInfo.getEncodedName() +
+            " has null regionLocation." + " But its table " + tableName +
+            " isn't in ENABLING state.");
         }
+        addTheTablesInPartialState(this.disablingTables, this.enablingTables, regionInfo,
+            tableName);
       } else if (!onlineServers.contains(regionLocation)) {
         // Region is located on a server that isn't online
         List<Pair<HRegionInfo, Result>> offlineRegions =
@@ -2594,7 +2575,8 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         offlineRegions.add(new Pair<HRegionInfo,Result>(regionInfo, result));
         disabled = checkIfRegionBelongsToDisabled(regionInfo);
-        disablingOrEnabling = addTheTablesInPartialState(regionInfo);
+        disablingOrEnabling = addTheTablesInPartialState(this.disablingTables,
+            this.enablingTables, regionInfo, tableName);
         // need to enable the table if not disabled or disabling or enabling
         // this will be used in rolling restarts
         enableTableIfNotDisabledOrDisablingOrEnabling(disabled,
@@ -2615,18 +2597,16 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         // Region is being served and on an active server
         // add only if region not in disabled and enabling table
-        boolean enabling = checkIfRegionsBelongsToEnabling(regionInfo);
-        disabled = checkIfRegionBelongsToDisabled(regionInfo);
-        if (!enabling && !disabled) {
+        if (false == checkIfRegionBelongsToDisabled(regionInfo)
+            && false == checkIfRegionsBelongsToEnabling(regionInfo)) {
           synchronized (this.regions) {
             regions.put(regionInfo, regionLocation);
             addToServers(regionLocation, regionInfo);
           }
         }
-        disablingOrEnabling = addTheTablesInPartialState(regionInfo);
-        if (enabling) {
-          addToEnablingTableRegions(regionInfo);
-        }
+        disablingOrEnabling = addTheTablesInPartialState(this.disablingTables,
+            this.enablingTables, regionInfo, tableName);
+        disabled = checkIfRegionBelongsToDisabled(regionInfo);
         // need to enable the table if not disabled or disabling or enabling
         // this will be used in rolling restarts
         enableTableIfNotDisabledOrDisablingOrEnabling(disabled,
@@ -2636,18 +2616,6 @@ public class AssignmentManager extends ZooKeeperListener {
     return offlineServers;
   }
 
-  private void addToEnablingTableRegions(HRegionInfo regionInfo) {
-    String tableName = regionInfo.getTableNameAsString();
-    List<HRegionInfo> hris = this.enablingTables.get(tableName);
-    if (!hris.contains(regionInfo)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding region" + regionInfo.getRegionNameAsString()
-            + " to enabling table " + tableName + ".");
-      }
-      hris.add(regionInfo);
-    }
-  }
-  
   private void enableTableIfNotDisabledOrDisablingOrEnabling(boolean disabled,
       boolean disablingOrEnabling, String tableName) {
     if (!disabled && !disablingOrEnabling
@@ -2656,15 +2624,14 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
-  private Boolean addTheTablesInPartialState(HRegionInfo regionInfo) {
-    String tableName = regionInfo.getTableNameAsString();
+  private Boolean addTheTablesInPartialState(Set<String> disablingTables,
+      Set<String> enablingTables, HRegionInfo regionInfo,
+      String disablingTableName) {
     if (checkIfRegionBelongsToDisabling(regionInfo)) {
-      this.disablingTables.add(tableName);
+      disablingTables.add(disablingTableName);
       return true;
     } else if (checkIfRegionsBelongsToEnabling(regionInfo)) {
-      if (!this.enablingTables.containsKey(tableName)) {
-        this.enablingTables.put(tableName, new ArrayList<HRegionInfo>());
-      } 
+      enablingTables.add(disablingTableName);
       return true;
     } 
     return false;

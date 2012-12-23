@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1014,36 +1015,6 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * Load table of multiple column families with rows from 'aaa' to 'zzz'.
-   * @param t Table
-   * @param f Array of Families to load
-   * @return Count of rows loaded.
-   * @throws IOException
-   */
-  public int loadTable(final HTable t, final byte[][] f) throws IOException {
-    t.setAutoFlush(false);
-    byte[] k = new byte[3];
-    int rowCount = 0;
-    for (byte b1 = 'a'; b1 <= 'z'; b1++) {
-      for (byte b2 = 'a'; b2 <= 'z'; b2++) {
-        for (byte b3 = 'a'; b3 <= 'z'; b3++) {
-          k[0] = b1;
-          k[1] = b2;
-          k[2] = b3;
-          Put put = new Put(k);
-          for (int i = 0; i < f.length; i++) {
-            put.add(f[i], null, k);
-          }
-          t.put(put);
-          rowCount++;
-        }
-      }
-    }
-    t.flushCommits();
-    return rowCount;
-  }
-
-  /**
    * Load region with rows from 'aaa' to 'zzz'.
    * @param r Region
    * @param f Family
@@ -1109,7 +1080,7 @@ public class HBaseTestingUtility {
    */
   public int createMultiRegions(HTable table, byte[] columnFamily)
   throws IOException {
-    return createMultiRegions(table, columnFamily, true);
+    return createMultiRegions(getConfiguration(), table, columnFamily);
   }
 
   public static final byte[][] KEYS = {
@@ -1126,16 +1097,16 @@ public class HBaseTestingUtility {
 
   /**
    * Creates many regions names "aaa" to "zzz".
-   *
+   * @param c Configuration to use.
    * @param table  The table to use for the data.
    * @param columnFamily  The family to insert the data into.
-   * @param cleanupFS  True if a previous region should be remove from the FS  
    * @return count of regions created.
    * @throws IOException When creating the regions fails.
    */
-  public int createMultiRegions(HTable table, byte[] columnFamily, boolean cleanupFS)
+  public int createMultiRegions(final Configuration c, final HTable table,
+      final byte[] columnFamily)
   throws IOException {
-    return createMultiRegions(getConfiguration(), table, columnFamily, KEYS, cleanupFS);
+    return createMultiRegions(c, table, columnFamily, KEYS);
   }
 
   /**
@@ -1163,12 +1134,7 @@ public class HBaseTestingUtility {
   }
 
   public int createMultiRegions(final Configuration c, final HTable table,
-      final byte[] columnFamily, byte [][] startKeys) throws IOException {
-    return createMultiRegions(c, table, columnFamily, startKeys, true);
-  }
-  
-  public int createMultiRegions(final Configuration c, final HTable table,
-          final byte[] columnFamily, byte [][] startKeys, boolean cleanupFS)
+      final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
@@ -1182,9 +1148,6 @@ public class HBaseTestingUtility {
     // and end key. Adding the custom regions below adds those blindly,
     // including the new start region from empty to "bbb". lg
     List<byte[]> rows = getMetaTableRows(htd.getName());
-    String regionToDeleteInFS = table
-        .getRegionsInRange(Bytes.toBytes(""), Bytes.toBytes("")).get(0)
-        .getRegionInfo().getEncodedName();
     List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
     // add custom ones
     int count = 0;
@@ -1205,14 +1168,6 @@ public class HBaseTestingUtility {
       LOG.info("createMultiRegions: deleting meta row -> " +
         Bytes.toStringBinary(row));
       meta.delete(new Delete(row));
-    }
-    if (cleanupFS) {
-      // see HBASE-7417 - this confused TestReplication
-      // remove the "old" region from FS
-      Path tableDir = new Path(getDefaultRootDirPath().toString()
-          + System.getProperty("file.separator") + htd.getNameAsString()
-          + System.getProperty("file.separator") + regionToDeleteInFS);
-      getDFSCluster().getFileSystem().delete(tableDir);
     }
     // flush cache of regions
     HConnection conn = table.getConnection();

@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 
 public class HbckTestingUtil {
-  private static ExecutorService exec = new ScheduledThreadPoolExecutor(10);
   public static HBaseFsck doFsck(
       Configuration conf, boolean fix) throws Exception {
     return doFsck(conf, fix, null);
@@ -38,14 +37,14 @@ public class HbckTestingUtil {
 
   public static HBaseFsck doFsck(
       Configuration conf, boolean fix, String table) throws Exception {
-    return doFsck(conf, fix, fix, fix, fix,fix, fix, fix, fix, table);
+    return doFsck(conf, fix, fix, fix, fix,fix, fix, fix, table);
   }
 
   public static HBaseFsck doFsck(Configuration conf, boolean fixAssignments,
       boolean fixMeta, boolean fixHdfsHoles, boolean fixHdfsOverlaps,
       boolean fixHdfsOrphans, boolean fixTableOrphans, boolean fixVersionFile,
-      boolean fixReferenceFiles, String table) throws Exception {
-    HBaseFsck fsck = new HBaseFsck(conf, exec);
+      String table) throws Exception {
+    HBaseFsck fsck = new HBaseFsck(conf);
     fsck.connect();
     fsck.setDisplayFullReport(); // i.e. -details
     fsck.setTimeLag(0);
@@ -56,7 +55,6 @@ public class HbckTestingUtil {
     fsck.setFixHdfsOrphans(fixHdfsOrphans);
     fsck.setFixTableOrphans(fixTableOrphans);
     fsck.setFixVersionFile(fixVersionFile);
-    fsck.setFixReferenceFiles(fixReferenceFiles);
     if (table != null) {
       fsck.includeTable(table);
     }
@@ -73,6 +71,7 @@ public class HbckTestingUtil {
    */
   public static HBaseFsck doHFileQuarantine(Configuration conf, String table) throws Exception {
     String[] args = {"-sidelineCorruptHFiles", "-ignorePreCheckPermission", table};
+    ExecutorService exec = new ScheduledThreadPoolExecutor(10);
     HBaseFsck hbck = new HBaseFsck(conf, exec);
     hbck.exec(exec, args);
     return hbck;

@@ -215,9 +215,6 @@ public class Scan extends OperationWithAttributes implements Writable {
     if(set == null) {
       set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
     }
-    if (qualifier == null) {
-      qualifier = HConstants.EMPTY_BYTE_ARRAY;
-    }
     set.add(qualifier);
     familyMap.put(family, set);
 

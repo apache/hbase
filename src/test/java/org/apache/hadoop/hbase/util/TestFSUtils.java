@@ -90,26 +90,20 @@ public class TestFSUtils {
       // given the default replication factor is 3, the same as the number of
       // datanodes; the locality index for each host should be 100%,
       // or getWeight for each host should be the same as getUniqueBlocksWeights
-      final long maxTime = System.currentTimeMillis() + 2000;
-      boolean ok;
-      do {
-        ok = true;
-        FileStatus status = fs.getFileStatus(testFile);
-        HDFSBlocksDistribution blocksDistribution =
-          FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
-        long uniqueBlocksTotalWeight =
-          blocksDistribution.getUniqueBlocksTotalWeight();
-        for (String host : hosts) {
-          long weight = blocksDistribution.getWeight(host);
-          ok = (ok && uniqueBlocksTotalWeight == weight);
-        }
-      } while (!ok && System.currentTimeMillis() < maxTime);
-      assertTrue(ok);
-      } finally {
+      FileStatus status = fs.getFileStatus(testFile);
+      HDFSBlocksDistribution blocksDistribution =
+        FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+      long uniqueBlocksTotalWeight =
+        blocksDistribution.getUniqueBlocksTotalWeight();
+      for (String host : hosts) {
+        long weight = blocksDistribution.getWeight(host);
+        assertTrue(uniqueBlocksTotalWeight == weight);
+      }
+    } finally {
       htu.shutdownMiniDFSCluster();
     }
 
-
+    
     try {
       // set up a cluster with 4 nodes
       String hosts[] = new String[] { "host1", "host2", "host3", "host4" };
@@ -124,22 +118,16 @@ public class TestFSUtils {
       // given the default replication factor is 3, we will have total of 9
       // replica of blocks; thus the host with the highest weight should have
       // weight == 3 * DEFAULT_BLOCK_SIZE
-      final long maxTime = System.currentTimeMillis() + 2000;
-      long weight;
-      long uniqueBlocksTotalWeight;
-      do {
-        FileStatus status = fs.getFileStatus(testFile);
-        HDFSBlocksDistribution blocksDistribution =
-          FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
-        uniqueBlocksTotalWeight = blocksDistribution.getUniqueBlocksTotalWeight();
-
-        String tophost = blocksDistribution.getTopHosts().get(0);
-        weight = blocksDistribution.getWeight(tophost);
-
-        // NameNode is informed asynchronously, so we may have a delay. See HBASE-6175
-      } while (uniqueBlocksTotalWeight != weight && System.currentTimeMillis() < maxTime);
+      FileStatus status = fs.getFileStatus(testFile);
+      HDFSBlocksDistribution blocksDistribution =
+        FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+      long uniqueBlocksTotalWeight =
+        blocksDistribution.getUniqueBlocksTotalWeight();
+      
+      String tophost = blocksDistribution.getTopHosts().get(0);
+      long weight = blocksDistribution.getWeight(tophost);
       assertTrue(uniqueBlocksTotalWeight == weight);
-
+      
     } finally {
       htu.shutdownMiniDFSCluster();
     }
@@ -158,16 +146,11 @@ public class TestFSUtils {
       
       // given the default replication factor is 3, we will have total of 3
       // replica of blocks; thus there is one host without weight
-      final long maxTime = System.currentTimeMillis() + 2000;
-      HDFSBlocksDistribution blocksDistribution;
-      do {
-        FileStatus status = fs.getFileStatus(testFile);
-        blocksDistribution = FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
-        // NameNode is informed asynchronously, so we may have a delay. See HBASE-6175
-      }
-      while (blocksDistribution.getTopHosts().size() != 3 && System.currentTimeMillis() < maxTime);
+      FileStatus status = fs.getFileStatus(testFile);
+      HDFSBlocksDistribution blocksDistribution =
+        FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
       assertEquals("Wrong number of hosts distributing blocks.", 3,
-        blocksDistribution.getTopHosts().size());
+          blocksDistribution.getTopHosts().size());
     } finally {
       htu.shutdownMiniDFSCluster();
     }

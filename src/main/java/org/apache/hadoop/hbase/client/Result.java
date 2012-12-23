@@ -96,7 +96,7 @@ public class Result implements Writable, WritableWithSize {
    * @param kvs List of KeyValues
    */
   public Result(List<KeyValue> kvs) {
-    this(kvs.toArray(new KeyValue[kvs.size()]));
+    this(kvs.toArray(new KeyValue[0]));
   }
 
   /**
@@ -648,16 +648,5 @@ public class Result implements Writable, WritableWithSize {
             + res1.toString() + " compared to " + res2.toString());
       }
     }
-  }
-  
-  /**
-   * Copy another Result into this one. Needed for the old Mapred framework
-   * @param other
-   */
-  public void copyFrom(Result other) {
-    this.row = other.row;
-    this.bytes = other.bytes;
-    this.familyMap = other.familyMap;
-    this.kvs = other.kvs;
   }
 }

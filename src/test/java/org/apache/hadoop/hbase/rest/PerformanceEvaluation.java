@@ -114,6 +114,7 @@ public class PerformanceEvaluation  {
 
   protected Map<String, CmdDescriptor> commands = new TreeMap<String, CmdDescriptor>();
   protected static Cluster cluster = new Cluster();
+  protected static String accessToken = null;
 
   volatile Configuration conf;
   private boolean nomapred = false;
@@ -448,7 +449,8 @@ public class PerformanceEvaluation  {
    */
   private boolean checkTable() throws IOException {
     HTableDescriptor tableDescriptor = getTableDescriptor();
-    RemoteAdmin admin = new RemoteAdmin(new Client(cluster), conf);
+    RemoteAdmin admin =
+      new RemoteAdmin(new Client(cluster), conf, accessToken);
     if (!admin.isTableAvailable(tableDescriptor.getName())) {
       admin.createTable(tableDescriptor);
       return true;
@@ -712,7 +714,8 @@ public class PerformanceEvaluation  {
     }
     
     void testSetup() throws IOException {
-      this.table = new RemoteHTable(new Client(cluster), conf, tableName);
+      this.table = new RemoteHTable(new Client(cluster), conf, tableName,
+        accessToken);
     }
 
     void testTakedown()  throws IOException {
@@ -1130,6 +1133,7 @@ public class PerformanceEvaluation  {
     System.err.println();
     System.err.println("Options:");
     System.err.println(" host          String. Specify Stargate endpoint.");
+    System.err.println(" token         String. API access token.");
     System.err.println(" rows          Integer. Rows each client runs. Default: One million");
     System.err.println(" rowsPerPut    Integer. Rows each Stargate (multi)Put. Default: 100");
     System.err.println(" nomapred      (Flag) Run multiple clients using threads " +
@@ -1201,6 +1205,12 @@ public class PerformanceEvaluation  {
         final String host = "--host=";
         if (cmd.startsWith(host)) {
           cluster.add(cmd.substring(host.length()));
+          continue;
+        }
+
+        final String token = "--token=";
+        if (cmd.startsWith(token)) {
+          accessToken = cmd.substring(token.length());
           continue;
         }
 

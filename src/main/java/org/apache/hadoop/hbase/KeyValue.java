@@ -216,6 +216,9 @@ public class KeyValue implements Writable, HeapSize {
   private int offset = 0;
   private int length = 0;
 
+  // the row cached
+  private volatile byte [] rowCache = null;
+
   /**
    * @return True if a delete type, a {@link KeyValue.Type#Delete} or
    * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
@@ -984,6 +987,7 @@ public class KeyValue implements Writable, HeapSize {
       int tsOffset = getTimestampOffset();
       System.arraycopy(now, 0, this.bytes, tsOffset, Bytes.SIZEOF_LONG);
       // clear cache or else getTimestamp() possibly returns an old value
+      timestampCache = -1L;
       return true;
     }
     return false;
@@ -1033,19 +1037,28 @@ public class KeyValue implements Writable, HeapSize {
    * @return Row in a new byte array.
    */
   public byte [] getRow() {
-    int o = getRowOffset();
-    short l = getRowLength();
-    byte result[] = new byte[l];
-    System.arraycopy(getBuffer(), o, result, 0, l);
-    return result;
+    if (rowCache == null) {
+      int o = getRowOffset();
+      short l = getRowLength();
+      // initialize and copy the data into a local variable
+      // in case multiple threads race here.
+      byte local[] = new byte[l];
+      System.arraycopy(getBuffer(), o, local, 0, l);
+      rowCache = local; // volatile assign
+    }
+    return rowCache;
   }
 
   /**
    *
    * @return Timestamp
    */
+  private long timestampCache = -1;
   public long getTimestamp() {
-    return getTimestamp(getKeyLength());
+    if (timestampCache == -1) {
+      timestampCache = getTimestamp(getKeyLength());
+    }
+    return timestampCache;
   }
 
   /**
@@ -2247,17 +2260,21 @@ public class KeyValue implements Writable, HeapSize {
 
   // HeapSize
   public long heapSize() {
-    return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE
-        + ClassSize.align(ClassSize.ARRAY) + ClassSize.align(length)
-        + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_LONG);
+    return ClassSize.align(ClassSize.OBJECT + (2 * ClassSize.REFERENCE) +
+        ClassSize.align(ClassSize.ARRAY) + ClassSize.align(length) +
+        (3 * Bytes.SIZEOF_INT) +
+        ClassSize.align(ClassSize.ARRAY) +
+        (2 * Bytes.SIZEOF_LONG));
   }
 
   // this overload assumes that the length bytes have already been read,
   // and it expects the length of the KeyValue to be explicitly passed
   // to it.
   public void readFields(int length, final DataInput in) throws IOException {
+    this.rowCache = null;
     this.length = length;
     this.offset = 0;
+    this.timestampCache = -1;
     this.keyLength = 0;
     this.bytes = new byte[this.length];
     in.readFully(this.bytes, 0, this.length);

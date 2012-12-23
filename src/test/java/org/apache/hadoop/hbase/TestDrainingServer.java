@@ -54,14 +54,13 @@ public class TestDrainingServer {
   private static final byte [] TABLENAME = Bytes.toBytes("t");
   private static final byte [] FAMILY = Bytes.toBytes("f");
   private static final int COUNT_OF_REGIONS = HBaseTestingUtility.KEYS.length;
-  private static final int NB_SLAVES = 5;
 
   /**
    * Spin up a cluster with a bunch of regions on it.
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(NB_SLAVES);
+    TEST_UTIL.startMiniCluster(5);
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
@@ -74,25 +73,14 @@ public class TestDrainingServer {
       createTableDescriptor(fs, FSUtils.getRootDir(TEST_UTIL.getConfiguration()), htd);
     // Assign out the regions we just created.
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     admin.disableTable(TABLENAME);
     admin.enableTable(TABLENAME);
-    boolean ready = false;
-    while (!ready) {
-      ZKAssign.blockUntilNoRIT(zkw);
-      // Assert that every regionserver has some regions on it, else invoke the balancer.
-      ready = true;
-      for (int i = 0; i < NB_SLAVES; i++) {
-        HRegionServer hrs = cluster.getRegionServer(i);
-        if (hrs.getOnlineRegions().isEmpty()) {
-          ready = false;
-          break;
-        }
-      }
-      if (!ready) {
-        admin.balancer();
-        Thread.sleep(100);
-      }
+    ZKAssign.blockUntilNoRIT(zkw);
+    // Assert that every regionserver has some regions on it.
+    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
+    for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
+      HRegionServer hrs = cluster.getRegionServer(i);
+      Assert.assertFalse(hrs.getOnlineRegions().isEmpty());
     }
   }
 

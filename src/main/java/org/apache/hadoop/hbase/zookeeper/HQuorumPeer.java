@@ -61,12 +61,6 @@ public class HQuorumPeer {
       writeMyID(zkProperties);
       QuorumPeerConfig zkConfig = new QuorumPeerConfig();
       zkConfig.parseProperties(zkProperties);
-
-      // login the zookeeper server principal (if using security)
-      ZKUtil.loginServer(conf, "hbase.zookeeper.server.keytab.file",
-        "hbase.zookeeper.server.kerberos.principal",
-        zkConfig.getClientPortAddress().getHostName());
-
       runZKServer(zkConfig);
     } catch (Exception e) {
       e.printStackTrace();

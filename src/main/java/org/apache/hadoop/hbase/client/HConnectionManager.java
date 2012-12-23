@@ -494,7 +494,6 @@ public class HConnectionManager {
     private final Object masterLock = new Object();
     private volatile boolean closed;
     private volatile boolean aborted;
-    private volatile boolean resetting;
     private volatile HMasterInterface master;
     // ZooKeeper reference
     private volatile ZooKeeperWatcher zooKeeper;
@@ -506,8 +505,6 @@ public class HConnectionManager {
     private final Object metaRegionLock = new Object();
 
     private final Object userRegionLock = new Object();
-	
-    private final Object resetLock = new Object();
 
     private final Configuration conf;
     // Known region HServerAddress.toString() -> HRegionInterface
@@ -576,7 +573,6 @@ public class HConnectionManager {
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
       this.master = null;
-      this.resetting = false;
     }
 
     private synchronized void ensureZookeeperTrackers()
@@ -1682,12 +1678,7 @@ public class HConnectionManager {
           LOG.info("ZK session expired. This disconnect could have been" +
               " caused by a network partition or a long-running GC pause," +
               " either way it's recommended that you verify your environment.");
-          synchronized (resetLock) {
-            if (resetting) return;
-            this.resetting = true;
-          }
           resetZooKeeperTrackers();
-          this.resetting = false;
         }
         return;
       }
