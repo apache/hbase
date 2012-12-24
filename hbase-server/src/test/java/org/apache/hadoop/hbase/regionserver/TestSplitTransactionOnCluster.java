@@ -543,7 +543,7 @@ public class TestSplitTransactionOnCluster {
    * @throws KeeperException
    */
   @Test
-  public void testSplitBeforeSettingSplittingInZK() throws IOException,
+  public void testSplitBeforeSettingSplittingInZK() throws Exception,
       InterruptedException, KeeperException {
     testSplitBeforeSettingSplittingInZKInternals();
   }
@@ -727,8 +727,7 @@ public class TestSplitTransactionOnCluster {
 
   }
 
-  private void testSplitBeforeSettingSplittingInZKInternals() throws IOException,
-      KeeperException {
+  private void testSplitBeforeSettingSplittingInZKInternals() throws Exception {
     final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
     HBaseAdmin admin = TESTING_UTIL.getHBaseAdmin();
     try {
@@ -737,7 +736,12 @@ public class TestSplitTransactionOnCluster {
       htd.addFamily(new HColumnDescriptor("cf"));
       admin.createTable(htd);
 
-      List<HRegion> regions = cluster.getRegions(tableName);
+      List<HRegion> regions = null;
+      for (int i=0; i<100; i++) {
+        regions = cluster.getRegions(tableName);
+        if (regions.size() > 0) break;
+        Thread.sleep(100);
+      }
       int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
       SplitTransaction st = null;

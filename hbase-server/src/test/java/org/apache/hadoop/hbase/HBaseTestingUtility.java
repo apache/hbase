@@ -1859,17 +1859,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     throws IOException {
     boolean startedServer = ensureSomeRegionServersAvailable(num);
 
+    int nonStoppedServers = 0;
     for (JVMClusterUtil.RegionServerThread rst :
       getMiniHBaseCluster().getRegionServerThreads()) {
 
       HRegionServer hrs = rst.getRegionServer();
       if (hrs.isStopping() || hrs.isStopped()) {
         LOG.info("A region server is stopped or stopping:"+hrs);
-        LOG.info("Started new server=" + getMiniHBaseCluster().startRegionServer());
-        startedServer = true;
+      } else {
+        nonStoppedServers++;
       }
     }
-
+    for (int i=nonStoppedServers; i<num; ++i) {
+      LOG.info("Started new server=" + getMiniHBaseCluster().startRegionServer());
+      startedServer = true;
+    }
     return startedServer;
   }
 
