@@ -539,14 +539,13 @@ public class TestSplitTransactionOnCluster {
    * @throws KeeperException
    */
   @Test
-  public void testSplitBeforeSettingSplittingInZK() throws IOException,
+  public void testSplitBeforeSettingSplittingInZK() throws Exception,
       InterruptedException, KeeperException {
     testSplitBeforeSettingSplittingInZK(true);
     testSplitBeforeSettingSplittingInZK(false);
   }
 
-  private void testSplitBeforeSettingSplittingInZK(boolean nodeCreated) throws IOException,
-      KeeperException {
+  private void testSplitBeforeSettingSplittingInZK(boolean nodeCreated) throws Exception {
     final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
     
     HBaseAdmin admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
@@ -556,7 +555,12 @@ public class TestSplitTransactionOnCluster {
       htd.addFamily(new HColumnDescriptor("cf"));
       admin.createTable(htd);
 
-      List<HRegion> regions = cluster.getRegions(tableName);
+      List<HRegion> regions = null;
+      for (int i=0; i<100; i++) {
+        regions = cluster.getRegions(tableName);
+        if (regions.size() > 0) break;
+        Thread.sleep(100);
+      }
       int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
       SplitTransaction st = null;
@@ -582,6 +586,8 @@ public class TestSplitTransactionOnCluster {
       } catch (IOException e) {
         String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
             .getRegionInfo().getEncodedName());
+        // make sure the client is uptodate
+        regionServer.getZooKeeper().sync(node);
         if (nodeCreated) {
           assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
         } else {
