@@ -2881,7 +2881,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     checkOpen();
     //Check for permissions to close.
     HRegion actualRegion = this.getFromOnlineRegions(region.getEncodedName());
-    if (actualRegion.getCoprocessorHost() != null) {
+    if (actualRegion != null && actualRegion.getCoprocessorHost() != null) {
       actualRegion.getCoprocessorHost().preClose(false);
     }
     LOG.info("Received close region: " + region.getRegionNameAsString() +
@@ -2933,7 +2933,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       final boolean zk, final int versionOfClosingNode) {
     
     HRegion actualRegion = this.getFromOnlineRegions(region.getEncodedName());
-    if ((actualRegion != null) && (actualRegion.getCoprocessorHost() !=null)){
+    if (actualRegion != null && actualRegion.getCoprocessorHost() != null) {
       try {
         actualRegion.getCoprocessorHost().preClose(abort);
       } catch (IOException e) {
