@@ -36,6 +36,7 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.compress.DoNotPool;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -309,6 +310,9 @@ public final class Compression {
     public void returnDecompressor(Decompressor decompressor) {
       if (decompressor != null) {
         CodecPool.returnDecompressor(decompressor);
+        if (decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+          decompressor.end();
+        }
       }
     }
 
