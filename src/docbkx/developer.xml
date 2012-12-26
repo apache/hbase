@@ -1101,6 +1101,18 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
           </para>
           <para>Commiters will also resolve the Jira, typically after the patch passes a build.
           </para>
+          <section xml:id="committer.tests">
+              <title>Committers are responsible for making sure commits do not break the build or tests</title>
+          <para>
+              If a committer commits a patch it is their responsibility
+              to make sure it passes the test suite.  It is helpful
+              if contributors keep an eye out that their patch
+              does not break the hbase build and/or tests but ultimately,
+              a contributor cannot be expected to be up on the
+              particular vagaries and interconnections that occur
+              in a project like hbase.  A committer should.
+            </para>
+        </section>
         </section>
 
        </section>   <!--  submitting patches -->
