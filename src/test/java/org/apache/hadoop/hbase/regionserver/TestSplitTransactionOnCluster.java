@@ -21,9 +21,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -162,12 +164,8 @@ public class TestSplitTransactionOnCluster {
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
       waitUntilRegionServerDead();
+      awaitDaughters(tableName, daughters.size());
 
-      // Wait till regions are back on line again.
-      while(cluster.getRegions(tableName).size() < daughters.size()) {
-        LOG.info("Waiting for repair to happen");
-        Thread.sleep(1000);
-      }
       // Assert daughters are online.
       regions = cluster.getRegions(tableName);
       for (HRegion r: regions) {
@@ -282,11 +280,7 @@ public class TestSplitTransactionOnCluster {
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
       waitUntilRegionServerDead();
-      // Wait till regions are back on line again.
-      while(cluster.getRegions(tableName).size() < daughters.size()) {
-        LOG.info("Waiting for repair to happen");
-        Thread.sleep(1000);
-      }
+      awaitDaughters(tableName, daughters.size());
       // Assert daughters are online.
       regions = cluster.getRegions(tableName);
       for (HRegion r: regions) {
@@ -344,21 +338,18 @@ public class TestSplitTransactionOnCluster {
         if (r.getRegionInfo().equals(daughter)) daughterRegion = r;
       }
       assertTrue(daughterRegion != null);
-      while (true) {
+      for (int i=0; i<100; i++) {
         if (!daughterRegion.hasReferences()) break;
         Threads.sleep(100);
       }
+      assertFalse("Waiting for refereces to be compacted", daughterRegion.hasReferences());
       split(daughter, server, regionCount);
       // Get list of daughters
       daughters = cluster.getRegions(tableName);
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
       waitUntilRegionServerDead();
-      // Wait till regions are back on line again.
-      while(cluster.getRegions(tableName).size() < daughters.size()) {
-        LOG.info("Waiting for repair to happen");
-        Thread.sleep(1000);
-      }
+      awaitDaughters(tableName, daughters.size());
       // Assert daughters are online and ONLY the original daughters -- that
       // fixup didn't insert one during server shutdown recover.
       regions = cluster.getRegions(tableName);
@@ -504,12 +495,13 @@ public class TestSplitTransactionOnCluster {
       byte[] data = ZKUtil.getDataNoWatch(t.getConnection()
           .getZooKeeperWatcher(), node, stat);
       // ZKUtil.create
-      while (data != null) {
+      for (int i=0; data != null && i<60; i++) {
         Thread.sleep(1000);
         data = ZKUtil.getDataNoWatch(t.getConnection().getZooKeeperWatcher(),
             node, stat);
 
       }
+      assertNull("Waited too long for ZK node to be removed: "+node, data);
       
       MockMasterWithoutCatalogJanitor master = abortAndWaitForMaster();
 
@@ -634,18 +626,24 @@ public class TestSplitTransactionOnCluster {
 
         assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
         AssignmentManager am = cluster.getMaster().getAssignmentManager();
-        while (!am.getRegionsInTransition().containsKey(regions.get(0).getRegionInfo().getEncodedName())) {
+        for (int i = 0; !am.getRegionsInTransition().containsKey(
+            regions.get(0).getRegionInfo().getEncodedName())
+            && i < 10; i++) {
           Thread.sleep(200);
         }
+        assertTrue("region is not in transition",
+            am.getRegionsInTransition().containsKey(regions.get(0).getRegionInfo().getEncodedName()));
         RegionState regionState = am.getRegionsInTransition().get(regions.get(0).getRegionInfo()
             .getEncodedName());
         assertTrue(regionState.getState() == RegionState.State.SPLITTING);
         assertTrue(st.rollback(regionServer, regionServer));
         assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
-        while (am.getRegionsInTransition().containsKey(regions.get(0).getRegionInfo().getEncodedName())) {
+        for (int i=0; am.getRegionsInTransition().containsKey(regions.get(0).getRegionInfo().getEncodedName()) && i<10; i++) {
           // Just in case the nodeDeleted event did not get executed.
           Thread.sleep(200);
         }
+        assertFalse("region is still in transition",
+            am.getRegionsInTransition().containsKey(regions.get(0).getRegionInfo().getEncodedName()));
       }
     } finally {
       if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
@@ -667,9 +665,12 @@ public class TestSplitTransactionOnCluster {
       htd.addFamily(new HColumnDescriptor("cf"));
       admin.createTable(htd);
       HTable t = new HTable(cluster.getConfiguration(), tableName);
-      while (!(cluster.getRegions(tableName).size() == 1)) {
+      // wait for up to 10s
+      for (int i=0; cluster.getRegions(tableName).size() != 1 && i<100; i++) {
         Thread.sleep(100);
       }
+      assertTrue("waited too long for table to get online",
+          cluster.getRegions(tableName).size() == 1);
       final List<HRegion> regions = cluster.getRegions(tableName);
       HRegionInfo hri = getAndCheckSingleTableRegion(regions);
       int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
@@ -692,9 +693,10 @@ public class TestSplitTransactionOnCluster {
           }
         }
       }.start();
-      while (!callRollBack) {
+      for (int i=0; !callRollBack && i<100; i++) {
         Thread.sleep(100);
       }
+      assertTrue("Waited too long for rollback", callRollBack);
       SplitTransaction st = null;
       st = new MockedSplitTransaction(regions.get(0), Bytes.toBytes("row2"));
       try {
@@ -705,14 +707,16 @@ public class TestSplitTransactionOnCluster {
         LOG.debug("Rollback started :"+ e.getMessage());
         st.rollback(regionServer, regionServer);
       }
-      while (!firstSplitCompleted) {
+      for (int i=0; !firstSplitCompleted && i<100; i++) {
         Thread.sleep(100);
       }
+      assertTrue("fist split did not complete", firstSplitCompleted);
       NavigableMap<String, RegionState> rit = cluster.getMaster().getAssignmentManager()
           .getRegionsInTransition();
-      while (rit.containsKey(hri.getTableNameAsString())) {
+      for (int i=0; rit.containsKey(hri.getTableNameAsString()) && i<100; i++) {
         Thread.sleep(100);
       }
+      assertFalse("region still in transition", rit.containsKey(hri.getTableNameAsString()));
       List<HRegion> onlineRegions = regionServer.getOnlineRegions(tableName);
       // Region server side split is successful.
       assertEquals("The parent region should be splitted", 2, onlineRegions.size());
@@ -799,9 +803,10 @@ public class TestSplitTransactionOnCluster {
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor("cf"));
       admin.createTable(htd);
-      while (!(cluster.getRegions(tableName).size() == 1)) {
+      for (int i=0; cluster.getRegions(tableName).size() != 1 && i<100; i++) {
         Thread.sleep(100);
       }
+      assertTrue("Table not online", cluster.getRegions(tableName).size() == 1);
       List<HRegion> regions = cluster.getRegions(tableName);
       HRegionInfo hri = getAndCheckSingleTableRegion(regions);
       int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
@@ -910,10 +915,11 @@ public class TestSplitTransactionOnCluster {
       final int regionCount)
   throws IOException, InterruptedException {
     this.admin.split(hri.getRegionNameAsString());
-    while (server.getOnlineRegions().size() <= regionCount) {
+    for (int i=0; server.getOnlineRegions().size() <= regionCount && i<100; i++) {
       LOG.debug("Waiting on region to split");
       Thread.sleep(100);
     }
+    assertFalse("Waited too long for split", server.getOnlineRegions().size() <= regionCount);
   }
 
   private void removeDaughterFromMeta(final byte [] regionName) throws IOException {
@@ -960,13 +966,15 @@ public class TestSplitTransactionOnCluster {
         Bytes.toBytes(hrs.getServerName().toString()));
     }
     // Wait till table region is up on the server that is NOT carrying .META..
-    while (true) {
+    for (int i=0; i<100; i++) {
       tableRegionIndex = cluster.getServerWith(hri.getRegionName());
       if (tableRegionIndex != -1 && tableRegionIndex != metaServerIndex) break;
       LOG.debug("Waiting on region move off the .META. server; current index " +
         tableRegionIndex + " and metaServerIndex=" + metaServerIndex);
       Thread.sleep(100);
     }
+    assertTrue("Region not moved off .META. server", tableRegionIndex != -1
+        && tableRegionIndex != metaServerIndex);
     // Verify for sure table region is not on same server as .META.
     tableRegionIndex = cluster.getServerWith(hri.getRegionName());
     assertTrue(tableRegionIndex != -1);
@@ -1004,10 +1012,23 @@ public class TestSplitTransactionOnCluster {
 
   private void waitUntilRegionServerDead() throws InterruptedException {
     // Wait until the master processes the RS shutdown
-    while (cluster.getMaster().getClusterStatus().
-        getServers().size() == NB_SERVERS) {
+    for (int i=0; cluster.getMaster().getClusterStatus().
+        getServers().size() == NB_SERVERS && i<100; i++) {
       LOG.info("Waiting on server to go down");
       Thread.sleep(100);
+    }
+    assertFalse("Waited too long for RS to die", cluster.getMaster().getClusterStatus().
+    getServers().size() == NB_SERVERS);
+  }
+
+  private void awaitDaughters(byte[] tableName, int numDaughters) throws InterruptedException {
+    // Wait till regions are back on line again.
+    for (int i=0; cluster.getRegions(tableName).size() < numDaughters && i<60; i++) {
+      LOG.info("Waiting for repair to happen");
+      Thread.sleep(1000);
+    }
+    if (cluster.getRegions(tableName).size() < numDaughters) {
+      fail("Waiting too long for daughter regions");
     }
   }
 
