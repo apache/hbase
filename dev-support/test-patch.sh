@@ -583,6 +583,34 @@ $JIRA_COMMENT_FOOTER"
 }
 
 ###############################################################################
+### Check line lengths
+checkLineLengths () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking that no line have length > $MAX_LINE_LENGTH"
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  #see http://en.wikipedia.org/wiki/Diff#Unified_format
+
+  ll=`cat $PATCH_DIR/patch | grep "^+" | grep -v "^@@" | grep -v "^+++" | grep -v "import" | wc -L`
+  MAX_LINE_LENGTH_PATCH=`expr $MAX_LINE_LENGTH + 1`
+  if [[ "$ll" -gt "$MAX_LINE_LENGTH_PATCH" ]]; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:red}-1 lineLengths{color}.  The patch introduces lines longer than $MAX_LINE_LENGTH"
+    return 1
+  fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+1 lineLengths{color}.  The patch does not introduce lines longer than $MAX_LINE_LENGTH"
+  return 0
+}
+
+###############################################################################
 ### Run the tests
 runTests () {
   echo ""
@@ -781,6 +809,8 @@ checkJavacWarnings
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
 checkReleaseAuditWarnings
+(( RESULT = RESULT + $? ))
+checkLineLengths
 (( RESULT = RESULT + $? ))
 ### Do not call these when run by a developer 
 if [[ $JENKINS == "true" ]] ; then
