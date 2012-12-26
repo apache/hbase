@@ -308,6 +308,19 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
 [INFO] -----------------------------------------------------------------------</programlisting>
         </para>
       </section>
+      <section xml:id="documentation">
+          <title>Generating the HBase Reference Guide</title>
+          <para>The manual is marked up using <link xlink:href="http://www.docbook.org/">docbook</link>.
+              We then use the <link xlink:href="http://code.google.com/p/docbkx-tools/">docbkx maven plugin</link>
+              to transform the markup to html.  This plugin is run when you specify the <command>site</command>
+              goal as in when you run <command>mvn site</command> or you can call the plugin explicitly to
+              just generate the manual by doing <command>mvn docbkx:generate-html</command>
+              (TODO: It looks like you have to run <command>mvn site</command> first because docbkx wants to
+              include a transformed <filename>hbase-default.xml</filename>.  Fix).
+              When you run mvn site, we do the document generation twice, once to generate the multipage
+              manual and then again for the single page manual (the single page version is easier to search).
+          </para>
+      </section>
     <section xml:id="hbase.org">
     <title>Updating hbase.apache.org</title>
       <section xml:id="hbase.org.site.contributing">
