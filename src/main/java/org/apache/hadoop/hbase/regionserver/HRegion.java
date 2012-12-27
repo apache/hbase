@@ -1666,7 +1666,6 @@ public class HRegion implements HeapSize {
   }
 
   protected InternalScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
-    readRequests.incrTotalRequestCount();
     newScannerLock.readLock().lock();
     try {
       if (this.closed.get()) {
@@ -3401,7 +3400,6 @@ public class HRegion implements HeapSize {
 
     @Override
     public synchronized void close() {
-      readRequests.incrTotalRequestCount();
       if (storeHeap != null) {
         storeHeap.close();
         storeHeap = null;

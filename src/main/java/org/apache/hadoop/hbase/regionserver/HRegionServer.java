@@ -2573,6 +2573,7 @@ public class HRegionServer implements HRegionInterface,
     }
     try {
       HRegion r = getRegion(regionName);
+      r.getReadRequest().incrTotalRequestCount();
       return addScanner(r.getScanner(scan));
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t, "Failed openScanner"));

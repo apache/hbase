@@ -22,7 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -31,6 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
@@ -222,17 +226,17 @@ public class TestRegionServerMetrics {
         NUM_COLS_PER_ROW, NUM_FLUSHES, NUM_REGIONS, 1000);
     final HRegionServer rs =
         testUtil.getMiniHBaseCluster().getRegionServer(0);
-
-    // This may not be necessary since we verify the number of reads and writes from atomic
-    // variables and not from collected metrics.
-    rs.doMetrics(); 
     
-    for (HRegion r : rs.getOnlineRegions()) {
-      Get g = new Get(new byte[]{});
-      rs.get(r.getRegionName(), g);
+    HRegion[] regions = rs.getOnlineRegionsAsArray();
+    int reads = rs.getNumReads().get();
+    int writes = rs.getNumWrites().get();
+    for (int i=0; i<regions.length;  i++) {
+      Get g = new Get(Bytes.toBytes("row" + i));
+      regions[i].get(g, null);
     }
-    Assert.assertEquals(rs.getOnlineRegions().size(), rs.getNumReads().get());
-    Assert.assertEquals(0, rs.getNumWrites().get());
+    rs.doMetrics();
+    assertEquals(regions.length, (rs.getNumReads().get() - reads));
+    assertEquals(0, (rs.getNumWrites().get() - writes));
   }
 
   @Test
@@ -310,7 +314,7 @@ public class TestRegionServerMetrics {
     long startValue = HRegion.getNumericPersistentMetric(storeMetricFullName);
 
     int compactionThreshold = conf.getInt("hbase.hstore.compaction.min", 
-    		HConstants.DEFAULT_MIN_FILES_TO_COMPACT);
+        HConstants.DEFAULT_MIN_FILES_TO_COMPACT);
     for (int i=0; i<=compactionThreshold; i++) {
       String rowName = "row" + i;
       byte[] ROW = Bytes.toBytes(rowName);
@@ -349,6 +353,6 @@ public class TestRegionServerMetrics {
     long compactionWriteSizeAfterCompactionAfterDelete = 
       HRegion.getNumericPersistentMetric(storeMetricFullName);
     Assert.assertTrue(compactionWriteSizeAfterCompactionAfterDelete 
-    	              == compactionWriteSizeAfterCompaction);
+                    == compactionWriteSizeAfterCompaction);
   }
 }
