@@ -956,7 +956,7 @@ public class HTable implements HTableInterface {
   }
 
   // validate for well-formedness
-  private void validatePut(final Put put) throws IllegalArgumentException{
+  public void validatePut(final Put put) throws IllegalArgumentException{
     if (put.isEmpty()) {
       throw new IllegalArgumentException("No columns to insert");
     }
