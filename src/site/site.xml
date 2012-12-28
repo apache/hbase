@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -52,6 +52,7 @@
       <item name="X-Ref" href="xref/index.html" />
       <item name="Ref Guide (multi-page)"      href="book/book.html" />
       <item name="Ref Guide (single-page)"      href="book.html" />
+      <item name="参考指南" href="http://abloz.com/hbase/book.html" />
       <item name="FAQ" href="book/faq.html" />
       <item name="Videos/Presentations" href="book.html#other.info" />
       <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
