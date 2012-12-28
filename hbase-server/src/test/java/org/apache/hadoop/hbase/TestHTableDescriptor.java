@@ -78,4 +78,26 @@ public class TestHTableDescriptor {
     desc.remove(key);
     assertEquals(null, desc.getValue(key));
   }
+
+  /**
+   * Test default value handling for maxFileSize
+   */
+  @Test
+  public void testGetMaxFileSize() {
+    HTableDescriptor desc = new HTableDescriptor("table");
+    assertEquals(-1, desc.getMaxFileSize());
+    desc.setMaxFileSize(1111L);
+    assertEquals(1111L, desc.getMaxFileSize());
+  }
+
+  /**
+   * Test default value handling for memStoreFlushSize
+   */
+  @Test
+  public void testGetMemStoreFlushSize() {
+    HTableDescriptor desc = new HTableDescriptor("table");
+    assertEquals(-1, desc.getMemStoreFlushSize());
+    desc.setMemStoreFlushSize(1111L);
+    assertEquals(1111L, desc.getMemStoreFlushSize());
+  }
 }

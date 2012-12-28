@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
  * A {@link RegionSplitPolicy} implementation which splits a region
@@ -36,14 +38,15 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
-    long maxFileSize = region.getTableDesc().getMaxFileSize();
-
-    // By default we split region if a file > HConstants.DEFAULT_MAX_FILE_SIZE.
-    if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {
-      maxFileSize = getConf().getLong(HConstants.HREGION_MAX_FILESIZE,
+    Configuration conf = getConf();
+    HTableDescriptor desc = region.getTableDesc();
+    if (desc != null) {
+      this.desiredMaxFileSize = desc.getMaxFileSize();
+    }
+    if (this.desiredMaxFileSize <= 0) {
+      this.desiredMaxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
         HConstants.DEFAULT_MAX_FILE_SIZE);
     }
-    this.desiredMaxFileSize = maxFileSize;
   }
 
   @Override

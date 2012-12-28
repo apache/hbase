@@ -642,18 +642,19 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /** 
    * Returns the maximum size upto which a region can grow to after which a region
-   * split is triggered. The region size is represented by the size of the biggest 
+   * split is triggered. The region size is represented by the size of the biggest
    * store file in that region.
-   * 
-   * @return max hregion size for table
-   * 
+   *
+   * @return max hregion size for table, -1 if not set.
+   *
    * @see #setMaxFileSize(long)
    */
   public long getMaxFileSize() {
     byte [] value = getValue(MAX_FILESIZE_KEY);
-    if (value != null)
-      return Long.valueOf(Bytes.toString(value)).longValue();
-    return HConstants.DEFAULT_MAX_FILE_SIZE;
+    if (value != null) {
+      return Long.parseLong(Bytes.toString(value));
+    }
+    return -1;
   }
   
   /**
@@ -677,16 +678,17 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Returns the size of the memstore after which a flush to filesystem is triggered.
-   * 
-   * @return memory cache flush size for each hregion
-   * 
+   *
+   * @return memory cache flush size for each hregion, -1 if not set.
+   *
    * @see #setMemStoreFlushSize(long)
    */
   public long getMemStoreFlushSize() {
     byte [] value = getValue(MEMSTORE_FLUSHSIZE_KEY);
-    if (value != null)
-      return Long.valueOf(Bytes.toString(value)).longValue();
-    return DEFAULT_MEMSTORE_FLUSH_SIZE;
+    if (value != null) {
+      return Long.parseLong(Bytes.toString(value));
+    }
+    return -1;
   }
 
   /**
