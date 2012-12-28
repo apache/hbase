@@ -426,6 +426,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * @throws IOException
    *           on failure to read column family descriptors
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   static void configureCompression(HTable table, Configuration conf) throws IOException {
     StringBuilder compressionConfigValue = new StringBuilder();
     HTableDescriptor tableDescriptor = table.getTableDescriptor();

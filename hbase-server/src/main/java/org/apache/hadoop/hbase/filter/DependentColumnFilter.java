@@ -261,10 +261,12 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   /**
-   * @param other
+   * @param o
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof DependentColumnFilter)) return false;

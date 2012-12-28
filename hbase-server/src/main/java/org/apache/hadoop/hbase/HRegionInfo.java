@@ -164,14 +164,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     return encodedRegionName;
   }
 
-  /** HRegionInfo for root region */
-  public static final HRegionInfo ROOT_REGIONINFO =
-    new HRegionInfo(0L, Bytes.toBytes("-ROOT-"));
-
-  /** HRegionInfo for first meta region */
-  public static final HRegionInfo FIRST_META_REGIONINFO =
-    new HRegionInfo(1L, Bytes.toBytes(".META."));
-
   private byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;
   // This flag is in the parent of a split while the parent is still referenced
   // by daughter regions.  We USED to set this flag when we disabled a table
@@ -190,6 +182,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   // Current TableName
   private byte[] tableName = null;
+
+  /** HRegionInfo for root region */
+  public static final HRegionInfo ROOT_REGIONINFO =
+      new HRegionInfo(0L, Bytes.toBytes("-ROOT-"));
+
+  /** HRegionInfo for first meta region */
+  public static final HRegionInfo FIRST_META_REGIONINFO =
+      new HRegionInfo(1L, Bytes.toBytes(".META."));
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);

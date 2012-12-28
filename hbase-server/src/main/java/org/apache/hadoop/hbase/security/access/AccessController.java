@@ -149,8 +149,7 @@ public class AccessController extends BaseRegionObserver
     }
 
     public String toString() {
-      return new StringBuilder("AuthResult")
-          .append(toContextString()).toString();
+      return "AuthResult" + toContextString();
     }
 
     public static AuthResult allow(String request, String reason, User user, Permission.Action action,
@@ -235,7 +234,7 @@ public class AccessController extends BaseRegionObserver
         byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
         zkw.writeToZookeeper(tableName, serialized);
       } catch (IOException ex) {
-        LOG.error("Failed updating permissions mirror for '" + tableName + "'", ex);
+        LOG.error("Failed updating permissions mirror for '" + Bytes.toString(tableName) + "'", ex);
       }
     }
   }
@@ -455,7 +454,7 @@ public class AccessController extends BaseRegionObserver
     logResult(result);
 
     if (!result.isAllowed()) {
-      StringBuffer sb = new StringBuffer("");
+      StringBuilder sb = new StringBuilder("");
       if ((families != null && families.size() > 0)) {
         for (byte[] familyName : families.keySet()) {
           if (sb.length() != 0) {
@@ -785,7 +784,6 @@ public class AccessController extends BaseRegionObserver
     final HRegion region = env.getRegion();
     if (region == null) {
       LOG.error("NULL region from RegionCoprocessorEnvironment in preOpen()");
-      return;
     } else {
       HRegionInfo regionInfo = region.getRegionInfo();
       if (isSpecialTable(regionInfo)) {
@@ -849,8 +847,10 @@ public class AccessController extends BaseRegionObserver
   public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final Result result)
       throws IOException {
+    assert family != null;
+    //noinspection PrimitiveArrayArgumentToVariableArgMethod
     requirePermission("getClosestRowBefore", Permission.Action.READ, c.getEnvironment(),
-        (family != null ? Lists.newArrayList(family) : null));
+        Lists.newArrayList(family));
   }
 
   @Override
@@ -1258,9 +1258,9 @@ public class AccessController extends BaseRegionObserver
 
   private boolean isSpecialTable(HRegionInfo regionInfo) {
     byte[] tableName = regionInfo.getTableName();
-    return tableName.equals(AccessControlLists.ACL_TABLE_NAME)
-        || tableName.equals(Bytes.toBytes("-ROOT-"))
-        || tableName.equals(Bytes.toBytes(".META."));
+    return Arrays.equals(tableName, AccessControlLists.ACL_TABLE_NAME)
+        || Arrays.equals(tableName, Bytes.toBytes("-ROOT-"))
+        || Arrays.equals(tableName, Bytes.toBytes(".META."));
   }
 
   @Override

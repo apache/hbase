@@ -410,7 +410,7 @@ public class HConnectionManager {
    *
    */
   public static class HConnectionKey {
-    public static String[] CONNECTION_PROPERTIES = new String[] {
+    final static String[] CONNECTION_PROPERTIES = new String[] {
         HConstants.ZOOKEEPER_QUORUM, HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.ZOOKEEPER_CLIENT_PORT,
         HConstants.ZOOKEEPER_RECOVERABLE_WAITTIME,
@@ -464,6 +464,9 @@ public class HConnectionManager {
       return result;
     }
 
+
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings (value="ES_COMPARING_STRINGS_WITH_EQ",
+        justification="Optimization")
     @Override
     public boolean equals(Object obj) {
       if (this == obj)
@@ -489,6 +492,7 @@ public class HConnectionManager {
         for (String property : CONNECTION_PROPERTIES) {
           String thisValue = this.properties.get(property);
           String thatValue = that.properties.get(property);
+          //noinspection StringEquality
           if (thisValue == thatValue) {
             continue;
           }
@@ -731,11 +735,13 @@ public class HConnectionManager {
     /**
      * Create a master, retries if necessary.
      */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings (value="SWL_SLEEP_WITH_LOCK_HELD")
     private MasterProtocol createMasterWithRetries(
       MasterProtocolState masterProtocolState) throws MasterNotRunningException {
 
       // The lock must be at the beginning to prevent multiple master creation
       //  (and leaks) in a multithread context
+
       synchronized (this.masterAndZKLock) {
         Exception exceptionCaught = null;
         MasterProtocol master = null;
@@ -1309,7 +1315,7 @@ public class HConnectionManager {
       byte [] startKey = location.getRegionInfo().getStartKey();
       Map<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
-      boolean hasNewCache = false;
+      boolean hasNewCache;
       synchronized (this.cachedRegionLocations) {
         cachedServers.add(location.getHostnamePort());
         hasNewCache = (tableLocations.put(startKey, location) == null);
@@ -1459,7 +1465,7 @@ public class HConnectionManager {
     /**
      * Creates a Chore thread to check the connections to master & zookeeper
      *  and close them when they reach their closing time (
-     *  {@link #MasterProtocolState.keepAliveUntil} and
+     *  {@link MasterProtocolState#keepAliveUntil} and
      *  {@link #keepZooKeeperWatcherAliveUntil}). Keep alive time is
      *  managed by the release functions and the variable {@link #keepAlive}
      */
@@ -1614,7 +1620,7 @@ public class HConnectionManager {
     @Override
     public MasterAdminProtocol getMasterAdmin() throws MasterNotRunningException {
       return getKeepAliveMasterAdmin();
-    };
+    }
 
     @Override
     public MasterMonitorProtocol getMasterMonitor() throws MasterNotRunningException {
@@ -1759,9 +1765,10 @@ public class HConnectionManager {
     private void updateCachedLocations(final HRegionLocation hrl, final byte[] tableName,
       Row row, final Object exception) {
 
-      if ((row == null || tableName == null) && hrl == null){
-        LOG.warn ("Coding error, see method javadoc. row="+row+", tableName="+
-          Bytes.toString(tableName)+", hrl="+hrl);
+      if ((row == null || tableName == null) && hrl == null) {
+        LOG.warn("Coding error, see method javadoc. row=" + (row == null ? "null" : row) +
+            ", tableName=" + (tableName == null ? "null" : Bytes.toString(tableName) +
+            ", hrl= null"));
         return;
       }
 

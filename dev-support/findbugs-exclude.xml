@@ -115,7 +115,6 @@
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.hbase.filter.ParseConstants"/>
     <!--
     A mutable static field could be changed by malicious code or by accident. The field could be
     made package protected to avoid this vulnerability.
@@ -125,8 +124,12 @@
 
     Warning is not wrong, but difficult to avoid...
     !-->
-    <Bug pattern="PKGPROTECT"/>
+    <Bug pattern="MS_PKGPROTECT"/>
   </Match>
+  <Match>
+    <Bug pattern="MS_OOI_PKGPROTECT"/>
+  </Match>
+
 
   <Match>
     <!--
@@ -195,7 +198,42 @@
     <Bug pattern="DM_EXIT"/>
   </Match>
 
+  <Match>
+    <!--
+     This method returns a value that is not checked. The return value should be checked since
+     it can indicate an unusual or unexpected function execution. For example, the
+     File.delete() method returns false if the file could not be successfully deleted
+     (rather than throwing an Exception). If you don't check the result, you won't notice
+     if the method invocation signals unexpected behavior by returning an atypical return
+     value.
+
+     It's so bad that the reviews will catch all the wrong cases.
+    !-->
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+  </Match>
+  <Match>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_INFERRED"/>
+  </Match>
 
 
+  <Match>
+    <!--
+     This method contains a redundant check of a known non-null value against the constant null.
+
+     Most of the time we're securing ourselves, does no much harm.
+    !-->
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+  </Match>
+
+  <Match>
+    <!--
+    A final static field references an array and can be accessed by malicious code or by
+    accident from another package. This code can freely modify the contents of the array.
+
+     We've got this all over the place... Cloning the array by security is not a general
+     solution from a performance point of view
+    !-->
+    <Bug pattern="MS_MUTABLE_ARRAY"/>
+  </Match>
 
 </FindBugsFilter>

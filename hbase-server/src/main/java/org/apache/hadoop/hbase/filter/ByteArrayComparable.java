@@ -75,11 +75,10 @@ public abstract class ByteArrayComparable implements Comparable<byte[]> {
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
-  boolean areSerializedFieldsEqual(ByteArrayComparable o) {
-    if (o == this) return true;
-    if (!(o instanceof ByteArrayComparable)) return false;
+  boolean areSerializedFieldsEqual(ByteArrayComparable other) {
+    if (other == this) return true;
 
-    return Bytes.equals(this.getValue(), o.getValue());
+    return Bytes.equals(this.getValue(), other.getValue());
   }
 
   @Override

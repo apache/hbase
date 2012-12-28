@@ -506,7 +506,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>${findbugs.version}</version>
+          <version>${findbugs-maven-plugin.version}</version>
           <configuration>
             <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
             <findbugsXmlOutput>true</findbugsXmlOutput>
@@ -866,7 +866,8 @@
     <maven.assembly.version>2.3</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
-    <findbugs.version>2.5.2</findbugs.version>
+    <findbugs-maven-plugin.version>2.5.2</findbugs-maven-plugin.version>
+    <findbugs.version>2.0.1</findbugs.version> <!-- as the plugin version for safety -->
     <maven.site.version>3.1</maven.site.version>
     <javadoc.version>2.9</javadoc.version>
     <maven.resources.plugin.version>2.5</maven.resources.plugin.version>
@@ -1244,6 +1245,20 @@
   </dependencyManagement>
   <!-- Dependencies needed by subprojects -->
   <dependencies>
+
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>annotations</artifactId>
+      <version>${findbugs.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>${findbugs.version}</version>
+      <scope>compile</scope>
+    </dependency>
+
     <!-- Test dependencies -->
     <dependency>
       <groupId>junit</groupId>

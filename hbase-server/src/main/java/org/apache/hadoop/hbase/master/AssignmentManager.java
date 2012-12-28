@@ -610,7 +610,7 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private void handleRegion(final RegionTransition rt, int expectedVersion) {
     if (rt == null) {
-      LOG.warn("Unexpected NULL input " + rt);
+      LOG.warn("Unexpected NULL input for RegionTransition rt");
       return;
     }
     final ServerName sn = rt.getServerName();

@@ -418,16 +418,14 @@ public class HBaseClient {
         return null;
       }
       UserInformation.Builder userInfoPB = UserInformation.newBuilder();
-      if (ugi != null) {
-        if (authMethod == AuthMethod.KERBEROS) {
-          // Send effective user for Kerberos auth
-          userInfoPB.setEffectiveUser(ugi.getUserName());
-        } else if (authMethod == AuthMethod.SIMPLE) {
-          //Send both effective user and real user for simple auth
-          userInfoPB.setEffectiveUser(ugi.getUserName());
-          if (ugi.getRealUser() != null) {
-            userInfoPB.setRealUser(ugi.getRealUser().getUserName());
-          }
+      if (authMethod == AuthMethod.KERBEROS) {
+        // Send effective user for Kerberos auth
+        userInfoPB.setEffectiveUser(ugi.getUserName());
+      } else if (authMethod == AuthMethod.SIMPLE) {
+        //Send both effective user and real user for simple auth
+        userInfoPB.setEffectiveUser(ugi.getUserName());
+        if (ugi.getRealUser() != null) {
+          userInfoPB.setRealUser(ugi.getRealUser().getUserName());
         }
       }
       return userInfoPB.build();

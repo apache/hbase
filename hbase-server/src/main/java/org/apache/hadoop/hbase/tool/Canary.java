@@ -173,7 +173,7 @@ public final class Canary implements Tool {
   }
 
   private void printUsageAndExit() {
-    System.err.printf("Usage: bin/hbase %s [opts] [table 1 [table 2...]]\n", getClass().getName());
+    System.err.printf("Usage: bin/hbase %s [opts] [table 1 [table 2...]]%n", getClass().getName());
     System.err.println(" where [opts] are:");
     System.err.println("   -help          Show this help and exit.");
     System.err.println("   -daemon        Continuous check at defined intervals.");
