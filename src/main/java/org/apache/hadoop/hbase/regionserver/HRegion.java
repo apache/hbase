@@ -465,9 +465,9 @@ public class HRegion implements HeapSize { // , Writable{
     LOG.info("Setting up tabledescriptor config now ...");
     long flushSize = this.htableDescriptor.getMemStoreFlushSize();
 
-    if (flushSize == HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE) {
+    if (flushSize <= 0) {
       flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
-         HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
+        HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
     this.memstoreFlushSize = flushSize;
     this.blockingMemStoreSize = this.memstoreFlushSize *

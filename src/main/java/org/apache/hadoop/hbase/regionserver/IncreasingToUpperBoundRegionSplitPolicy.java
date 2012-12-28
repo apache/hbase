@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,10 +46,15 @@ extends ConstantSizeRegionSplitPolicy {
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
-    this.flushSize = region.getTableDesc() != null?
-      region.getTableDesc().getMemStoreFlushSize():
-      getConf().getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
+    Configuration conf = getConf();
+    HTableDescriptor desc = region.getTableDesc();
+    if (desc != null) {
+      this.flushSize = desc.getMemStoreFlushSize();
+    }
+    if (this.flushSize <= 0) {
+      this.flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
         HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
+    }
   }
 
   @Override

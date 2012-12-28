@@ -368,6 +368,9 @@ public class TestAdmin {
     assertTrue(htd.equals(copy));
     // Now amend the copy. Introduce differences.
     long newFlushSize = htd.getMemStoreFlushSize() / 2;
+    if (newFlushSize <=0) {
+      newFlushSize = HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE / 2;
+    }
     copy.setMemStoreFlushSize(newFlushSize);
     final String key = "anyoldkey";
     assertTrue(htd.getValue(key) == null);
@@ -456,6 +459,9 @@ public class TestAdmin {
     assertTrue(htd.equals(copy));
     // Now amend the copy. Introduce differences.
     long newFlushSize = htd.getMemStoreFlushSize() / 2;
+    if (newFlushSize <=0) {
+      newFlushSize = HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE / 2;
+    }
     copy.setMemStoreFlushSize(newFlushSize);
     final String key = "anyoldkey";
     assertTrue(htd.getValue(key) == null);
