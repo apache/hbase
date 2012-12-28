@@ -701,6 +701,7 @@
           <tocMaxDepth>2</tocMaxDepth>
           <insertXrefPageNumber>yes</insertXrefPageNumber>
           <targetDirectory>${basedir}/target/docbkx</targetDirectory>
+          <chunkerOutputEncoding>UTF-8</chunkerOutputEncoding>
         </configuration>
         <executions>
           <execution>
