@@ -53,8 +53,6 @@
 <% if (onlineRegionInfoAndOpenDate != null && onlineRegionInfoAndOpenDate.size() > 0) { %>
 <table>
 <tr><th>Region Name</th>
-	<th>Read Requests/sec</th>
-	<th>Write Requests/sec</th>
 	<th>Start Key</th>
 	<th>End Key</th>
   <th>Metrics</th>
@@ -65,12 +63,10 @@
  %>
 
 <tr><td><%= r.getRegionNameAsString() %></td>
-	<td><%= load.getReadRequestPerSec() %></td>
-	<td><%= load.getWriteRequestPerSec() %></td>
     <td><%= Bytes.toStringBinary(r.getStartKey()) %></td>
-	<td><%= Bytes.toStringBinary(r.getEndKey()) %></td>
+    <td><%= Bytes.toStringBinary(r.getEndKey()) %></td>
     <td><%= load.toString() %></td>
-  <td><%= onlineRegionInfoAndOpenDate.get(r) %></td>
+    <td><%= onlineRegionInfoAndOpenDate.get(r) %></td>
 </tr>
 <%
      }

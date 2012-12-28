@@ -207,8 +207,7 @@ public class TestWALReplay {
     wal.sync();
 
     // Now 'crash' the region by stealing its wal
-    Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf,
-        tableNameStr);
+    Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf);
     runWALSplit(newConf);
     HLog wal2 = createWAL(newConf);
     HRegion region2 = new HRegion(basedir, wal2, FileSystem.get(newConf),
@@ -291,8 +290,7 @@ public class TestWALReplay {
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
     // long gone.
     HBaseTestingUtility.setMaxRecoveryErrorCount(wal2.getOutputStream(), 1);
-    Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf,
-      tableNameStr);
+    Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf);
     runWALSplit(newConf);
     FileSystem newFS = FileSystem.get(newConf);
     // Make a new wal for new region open.
@@ -447,8 +445,7 @@ public class TestWALReplay {
 
     // Make a new conf and a new fs for the splitter to run on so we can take
     // over old wal.
-    Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf,
-      ".replay.wal.secondtime");
+    Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf);
     runWALSplit(newConf);
     FileSystem newFS = FileSystem.get(newConf);
     // 100k seems to make for about 4 flushes during HRegion#initialize.

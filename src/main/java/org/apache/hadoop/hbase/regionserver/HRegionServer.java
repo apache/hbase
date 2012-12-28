@@ -241,9 +241,6 @@ public class HRegionServer implements HRegionInterface,
   // Leases
   private Leases leases;
 
-  private volatile AtomicInteger numReads = new AtomicInteger();
-  private volatile AtomicInteger numWrites = new AtomicInteger();
-
   // Info server.  Default access so can be used by unit tests.  REGIONSERVER
   // is name of the webapp and the attribute name used stuffing this instance
   // into web context.
@@ -654,7 +651,8 @@ public class HRegionServer implements HRegionInterface,
             MemoryUsage memory =
               ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
             doMetrics();
-            HServerLoad hsl = new HServerLoad((numReads.get() + numWrites.get()),
+            HServerLoad hsl = new HServerLoad(
+              (int)this.metrics.requests.getPreviousIntervalValue(),
               (int)(memory.getUsed()/1024/1024),
               (int)(memory.getMax()/1024/1024));
             for (HRegion r: onlineRegions.values()) {
@@ -1017,8 +1015,6 @@ public class HRegionServer implements HRegionInterface,
       this.dynamicMetrics = RegionServerDynamicMetrics.newInstance(this);
       startServiceThreads();
       isOnline = true;
-      this.numReads.set(0);
-      this.numWrites.set(0);
 
       // Create the thread for the ThriftServer.
       // NOTE this defaults to FALSE so you have to enable it in conf
@@ -1077,8 +1073,7 @@ public class HRegionServer implements HRegionInterface,
     }
     return new HServerLoad.RegionLoad(name, stores, storefiles,
       storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, rootIndexSizeKB,
-      totalStaticIndexSizeKB, totalStaticBloomSizeKB, r.getReadRequest(),
-      r.getWriteRequest());
+      totalStaticIndexSizeKB, totalStaticBloomSizeKB);
   }
 
   /**
@@ -1339,9 +1334,6 @@ public class HRegionServer implements HRegionInterface,
   }
 
   protected void metrics() {
-    int numReads = 0;
-    int numWrites = 0;
-
     this.metrics.regions.set(this.onlineRegions.size());
     // Is this too expensive every three seconds getting a lock on onlineRegions
     // and then per store carried?  Can I make metrics be sloppier and avoid
@@ -1352,6 +1344,8 @@ public class HRegionServer implements HRegionInterface,
     long storefileIndexSize = 0;
     long totalStaticIndexSize = 0;
     long totalStaticBloomSize = 0;
+    int rowReadCnt = 0;
+    int rowUpdateCnt = 0;
 
     // Note that this is a map of Doubles instead of Longs. This is because we
     // do effective integer division, which would perhaps truncate more than it
@@ -1365,8 +1359,8 @@ public class HRegionServer implements HRegionInterface,
       for (Map.Entry<Integer, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
         memstoreSize += r.memstoreSize.get();
-        numReads += r.readRequests.getTotalRequestCount();
-        numWrites += r.writeRequests.getTotalRequestCount();
+        rowReadCnt += r.getAndResetRowReadCnt();
+        rowUpdateCnt += r.getAndResetRowUpdateCnt();
         synchronized (r.stores) {
           stores += r.stores.size();
           for(Map.Entry<byte [], Store> ee: r.stores.entrySet()) {
@@ -1379,7 +1373,6 @@ public class HRegionServer implements HRegionInterface,
                   StoreMetricType.STORE_FILE_COUNT, tmpStorefiles);
               storefiles += tmpStorefiles;
             }
-
 
             {
               long tmpStorefileIndexSize = store.getStorefilesIndexSize();
@@ -1423,13 +1416,12 @@ public class HRegionServer implements HRegionInterface,
     for (Entry<String, MutableDouble> e : tempVals.entrySet()) {
       HRegion.setNumericMetric(e.getKey(), e.getValue().longValue());
     }
-
-    this.numReads.set(numReads);
-    this.numWrites.set(numWrites);
-
-    this.metrics.requests.set(numReads + numWrites);
-    this.metrics.numReads.set(numReads);
-    this.metrics.numWrites.set(numWrites);
+    
+    
+    this.metrics.rowReadCnt.inc(rowReadCnt);
+    this.metrics.rowUpdatedCnt.inc(rowUpdateCnt);
+    this.metrics.requests.inc(rowReadCnt + rowUpdateCnt);
+    
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
     this.metrics.memstoreSizeMB.set((int)(memstoreSize/(1024*1024)));
@@ -2352,7 +2344,7 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public HRegionInfo getRegionInfo(final byte [] regionName)
   throws NotServingRegionException {
-    return getRegion(regionName).getRegionInfo(true);
+    return getRegion(regionName).getRegionInfo();
   }
 
 
@@ -2573,7 +2565,6 @@ public class HRegionServer implements HRegionInterface,
     }
     try {
       HRegion r = getRegion(regionName);
-      r.getReadRequest().incrTotalRequestCount();
       return addScanner(r.getScanner(scan));
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t, "Failed openScanner"));
@@ -3077,17 +3068,7 @@ public class HRegionServer implements HRegionInterface,
   public HRegion getOnlineRegion(final byte [] regionName) {
     return onlineRegions.get(Bytes.mapKey(regionName));
   }
-
-  /** @return the number of reads */
-  public AtomicInteger getNumReads() {
-    return this.numReads;
-  }
-
-  /** @return the number of writes */
-  public AtomicInteger getNumWrites() {
-    return this.numWrites;
-  }
-
+  
   /** @return reference to FlushRequester */
   public FlushRequester getFlushRequester() {
     return this.cacheFlusher;

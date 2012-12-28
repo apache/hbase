@@ -184,8 +184,12 @@ public class HRegion implements HeapSize {
   // private byte [] name = null;
 
   protected final AtomicLong memstoreSize = new AtomicLong(0);
-  protected final RequestMetrics readRequests = new RequestMetrics();
-  protected final RequestMetrics writeRequests = new RequestMetrics();
+  
+  // The number of rows are read
+  protected final AtomicInteger rowReadCnt = new AtomicInteger(0);
+  
+  // The numbe of rows are updated
+  protected final AtomicInteger rowUpdateCnt = new AtomicInteger(0);
 
   private HRegionServer regionServer = null;
   /**
@@ -737,13 +741,6 @@ public class HRegion implements HeapSize {
 
   /** @return a HRegionInfo object for this region */
   public HRegionInfo getRegionInfo() {
-    return getRegionInfo(false);
-  }
-  
-  protected HRegionInfo getRegionInfo(boolean callFromRPC) {
-    if (callFromRPC) {
-      readRequests.incrTotalRequestCount();
-    }
     return this.regionInfo;
   }
 
@@ -1743,7 +1740,6 @@ public class HRegion implements HeapSize {
    */
   public void delete(Delete delete, Integer lockid, boolean writeToWAL)
   throws IOException {
-    writeRequests.incrTotalRequestCount();
     checkReadOnly();
     checkResources();
     Integer lid = null;
@@ -1758,7 +1754,7 @@ public class HRegion implements HeapSize {
       delete(delete.getFamilyMap(), writeToWAL);
 
     } finally {
-      if(lockid == null) internalReleaseRowLock(lid);
+      if(lockid == null) releaseRowLock(lid);
       splitsAndClosesLock.readLock().unlock();
     }
   }
@@ -1826,7 +1822,7 @@ public class HRegion implements HeapSize {
   public void delete(Map<byte[], List<KeyValue>> familyMap, boolean writeToWAL)
   throws IOException {
     long now = EnvironmentEdgeManager.currentTimeMillis();
-
+    
     byte [] byteNow = Bytes.toBytes(now);
     boolean flush = false;
 
@@ -1914,7 +1910,6 @@ public class HRegion implements HeapSize {
     // read lock, resources may run out.  For now, the thought is that this
     // will be extremely rare; we'll deal with it when it happens.
     checkResources();
-    writeRequests.incrTotalRequestCount();
     splitsAndClosesLock.readLock().lock();
 
     try {
@@ -1931,7 +1926,7 @@ public class HRegion implements HeapSize {
         // All edits for the given row (across all column families) must happen atomically.
         put(put.getFamilyMap(), writeToWAL);
       } finally {
-        if(lockid == null) internalReleaseRowLock(lid);
+        if (lockid == null) releaseRowLock(lid);
       }
     } finally {
       splitsAndClosesLock.readLock().unlock();
@@ -1982,7 +1977,6 @@ public class HRegion implements HeapSize {
    */
   public OperationStatusCode[] batchMutateWithLocks(Pair<Mutation, Integer>[] putsAndLocks,
       String methodName) throws IOException {
-    writeRequests.incrTotalRequestCount();
     BatchOperationInProgress<Pair<Mutation, Integer>> batchOp =
       new BatchOperationInProgress<Pair<Mutation,Integer>>(putsAndLocks);
 
@@ -2013,6 +2007,7 @@ public class HRegion implements HeapSize {
     boolean isSignatureClear = true;
 
     long now = EnvironmentEdgeManager.currentTimeMillis();
+
     byte[] byteNow = Bytes.toBytes(now);
     boolean locked = false;
 
@@ -2183,7 +2178,6 @@ public class HRegion implements HeapSize {
   public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
       byte [] expectedValue, Writable w, Integer lockId, boolean writeToWAL)
   throws IOException{
-    writeRequests.incrTotalRequestCount();
     checkReadOnly();
     //TODO, add check for value length or maybe even better move this to the
     //client if this becomes a global setting
@@ -2233,7 +2227,7 @@ public class HRegion implements HeapSize {
         }
         return false;
       } finally {
-        if(lockId == null) internalReleaseRowLock(lid);
+        if(lockId == null) releaseRowLock(lid);
       }
     } finally {
       splitsAndClosesLock.readLock().unlock();
@@ -2254,28 +2248,6 @@ public class HRegion implements HeapSize {
       }
     }
   }
-
-//  /*
-//   * Utility method to verify values length.
-//   * @param batchUpdate The update to verify
-//   * @throws IOException Thrown if a value is too long
-//   */
-//  private void validateValuesLength(Put put)
-//  throws IOException {
-//    Map<byte[], List<KeyValue>> families = put.getFamilyMap();
-//    for(Map.Entry<byte[], List<KeyValue>> entry : families.entrySet()) {
-//      HColumnDescriptor hcd =
-//        this.regionInfo.getTableDesc().getFamily(entry.getKey());
-//      int maxLen = hcd.getMaxValueLength();
-//      for(KeyValue kv : entry.getValue()) {
-//        if(kv.getValueLength() > maxLen) {
-//          throw new ValueOverMaxLengthException("Value in column "
-//            + Bytes.toString(kv.getColumn()) + " is too long. "
-//            + kv.getValueLength() + " > " + maxLen);
-//        }
-//      }
-//    }
-//  }
 
   /*
    * Check if resources to support an update.
@@ -2406,7 +2378,11 @@ public class HRegion implements HeapSize {
 
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap,
                  MultiVersionConsistencyControl.WriteEntry writeEntryToUse) {
+    // Increment the rowUpdatedCnt
+    this.rowUpdateCnt.incrementAndGet();
+    
     long start = EnvironmentEdgeManager.currentTimeMillis();
+    
     MultiVersionConsistencyControl.WriteEntry w = null;
     long size = 0;
     try {
@@ -2819,7 +2795,6 @@ public class HRegion implements HeapSize {
    * @return The id of the held lock.
    */
   public Integer obtainRowLock(final byte [] row) throws IOException {
-    readRequests.incrTotalRequestCount();
     return internalObtainRowLock(row, true);
   }
 
@@ -2900,11 +2875,6 @@ public class HRegion implements HeapSize {
    * @param lockid  The lock ID to release.
    */
   public void releaseRowLock(final Integer lockid) {
-    readRequests.incrTotalRequestCount();
-    internalReleaseRowLock(lockid);
-  }
-
-  private void internalReleaseRowLock(final Integer lockid) {
     synchronized (lockedRows) {
       byte[] row = lockIds.remove(lockid);
       lockedRows.remove(row);
@@ -3218,7 +3188,6 @@ public class HRegion implements HeapSize {
      */
     public synchronized Result[] nextRows(int nbRows, String metric) 
     throws IOException {
-      readRequests.incrTotalRequestCount();
       preCondition();
       boolean prefetchingEnabled = getOriginalScan().getServerPrefetching();
       int limit = this.getOriginalScan().getBatch();
@@ -3251,12 +3220,12 @@ public class HRegion implements HeapSize {
         ScanPrefetcher callable = new ScanPrefetcher(nbRows, limit, metric);
         prefetchScanFuture = HRegionServer.scanPrefetchThreadPool.submit(callable);
       }
-      
+      rowReadCnt.addAndGet(scanResult.outResults.length);
       return scanResult.outResults;
     }
     
     /**
-     * This is used by Gets & Compactions & unit tests, whereas nextRows() is
+     * This is used by Gets & unit tests, whereas nextRows() is
      * used by Scans
      */
     @Override
@@ -3273,7 +3242,7 @@ public class HRegion implements HeapSize {
         returnResult = nextInternal(tmpList, limit, metric);
         outResults.addAll(tmpList);
       }
-
+      rowReadCnt.incrementAndGet();
       resetFilters();
       if (isFilterDone()) {
         return false;
@@ -3547,7 +3516,7 @@ public class HRegion implements HeapSize {
           Writables.getBytes(r.getRegionInfo())));
       meta.put(HConstants.CATALOG_FAMILY, edits);
     } finally {
-      meta.internalReleaseRowLock(lid);
+      meta.releaseRowLock(lid);
     }
   }
 
@@ -3914,7 +3883,6 @@ public class HRegion implements HeapSize {
    * @throws IOException read exceptions
    */
   public Result get(final Get get, final Integer lockid) throws IOException {
-    readRequests.incrTotalRequestCount();
     // Verify families are all valid
     if (get.hasFamilies()) {
       for (byte [] family: get.familySet()) {
@@ -3960,11 +3928,7 @@ public class HRegion implements HeapSize {
 
   public void mutateRow(RowMutations rm) throws IOException {
     boolean flush = false;
-
     Integer lid = null;
-
-    writeRequests.incrTotalRequestCount();
-
     splitsAndClosesLock.readLock().lock();
     try {
       // 1. run all pre-hooks before the atomic operation
@@ -4036,7 +4000,7 @@ public class HRegion implements HeapSize {
     } finally {
       if (lid != null) {
         // 11. release the row lock
-        internalReleaseRowLock(lid);
+        releaseRowLock(lid);
       }
       if (flush) {
         // 12. Flush cache if needed. Do it outside update lock.
@@ -4060,7 +4024,7 @@ public class HRegion implements HeapSize {
   throws IOException {
     // to be used for metrics
     long before = EnvironmentEdgeManager.currentTimeMillis();
-    writeRequests.incrTotalRequestCount();
+    this.rowUpdateCnt.incrementAndGet();
 
     checkRow(row);
     boolean flush = false;
@@ -4107,7 +4071,7 @@ public class HRegion implements HeapSize {
       flush = isFlushSize(size);
     } finally {
       this.updatesLock.readLock().unlock();
-      internalReleaseRowLock(lid);
+      releaseRowLock(lid);
       HRegion.writeOps.incrementAndGet();
     }
 
@@ -4296,12 +4260,16 @@ public class HRegion implements HeapSize {
     return false;
   }
 
-  public RequestMetrics getReadRequest() {
-    return this.readRequests;
+  public int getAndResetRowReadCnt() {
+    int readCnt = this.rowReadCnt.get();
+    this.rowReadCnt.addAndGet(-readCnt);
+    return readCnt;
   }
 
-  public RequestMetrics getWriteRequest() {
-    return this.writeRequests;
+  public int getAndResetRowUpdateCnt() {
+    int updateCnt = this.rowUpdateCnt.get();
+    this.rowUpdateCnt.addAndGet(-updateCnt);
+    return updateCnt;
   }
 
   /**

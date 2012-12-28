@@ -227,16 +227,27 @@ public class TestRegionServerMetrics {
     final HRegionServer rs =
         testUtil.getMiniHBaseCluster().getRegionServer(0);
     
+    long preNumRead = 0;
+    long preNumWrite = 0;
+    for (HRegion region: rs.getOnlineRegions()) {
+      preNumRead += region.rowReadCnt.get();
+      preNumRead += region.rowUpdateCnt.get();
+    }
+    
     HRegion[] regions = rs.getOnlineRegionsAsArray();
-    int reads = rs.getNumReads().get();
-    int writes = rs.getNumWrites().get();
     for (int i=0; i<regions.length;  i++) {
       Get g = new Get(Bytes.toBytes("row" + i));
       regions[i].get(g, null);
     }
-    rs.doMetrics();
-    assertEquals(regions.length, (rs.getNumReads().get() - reads));
-    assertEquals(0, (rs.getNumWrites().get() - writes));
+    
+    long numRead = 0;
+    long numWrite = 0;
+    for (HRegion region: rs.getOnlineRegions()) {
+      numRead += region.rowReadCnt.get();
+      numWrite += region.rowUpdateCnt.get();
+    }
+    assertEquals(regions.length, numRead - preNumRead);
+    assertEquals(0, numWrite - preNumWrite);
   }
 
   @Test

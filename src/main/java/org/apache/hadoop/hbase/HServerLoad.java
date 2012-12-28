@@ -94,15 +94,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      */
     private int totalStaticBloomSizeKB = -1;
 
-    /** The total read request count */
-    private long totalReadRequest = 0;
-    /** The total write request count */
-    private long totalWriteRequest = 0;
-    /** The total read request per sec*/
-    private int readRequestPerSec = 0;
-    /** The total write request per sec*/
-    private int writeRequestPerSec = 0;
-
     /**
      * Constructor, for Writable
      */
@@ -117,35 +108,16 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      * @param storefileSizeMB
      * @param memstoreSizeMB
      * @param storefileIndexSizeMB
+     * @param totalReadRequest
+     * @param totalReadRequest
+     * @param readRequestPerSec
+     * @param readRequestPerSec
      */
     public RegionLoad(final byte[] name, final int stores,
         final int storefiles, final int storefileSizeMB,
         final int memstoreSizeMB, final int storefileIndexSizeMB,
         final int rootIndexSizeKB, final int totalStaticIndexSizeKB,
         final int totalStaticBloomSizeKB) {
-      this(name, stores, storefiles, storefileSizeMB, memstoreSizeMB,
-          storefileIndexSizeMB, rootIndexSizeKB, totalStaticIndexSizeKB,
-          totalStaticBloomSizeKB, null, null);
-    }
-
-    /**
-     * @param name
-     * @param stores
-     * @param storefiles
-     * @param storefileSizeMB
-     * @param memstoreSizeMB
-     * @param storefileIndexSizeMB
-     * @param totalReadRequest
-     * @param totalReadRequest
-     * @param readRequestPerSec
-     * @param readRequestPerSec
-     */
-    public RegionLoad(final byte[] name, final int stores,
-        final int storefiles, final int storefileSizeMB,
-        final int memstoreSizeMB, final int storefileIndexSizeMB,
-        final int rootIndexSizeKB, final int totalStaticIndexSizeKB,
-        final int totalStaticBloomSizeKB, RequestMetrics readRequest,
-        RequestMetrics writeRequest) {
       this.name = name;
       this.stores = stores;
       this.storefiles = storefiles;
@@ -155,14 +127,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       this.rootIndexSizeKB = rootIndexSizeKB;
       this.totalStaticIndexSizeKB = totalStaticIndexSizeKB;
       this.totalStaticBloomSizeKB = totalStaticBloomSizeKB;
-      if (readRequest != null) {
-        this.totalReadRequest = readRequest.getTotalRequestCount();
-        this.readRequestPerSec = readRequest.getRequestPerSecond();
-      }
-      if (writeRequest != null) {
-        this.totalWriteRequest = writeRequest.getTotalRequestCount();
-        this.writeRequestPerSec = writeRequest.getRequestPerSecond();
-      }
     }
 
     // Getters
@@ -214,22 +178,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      */
     public int getStorefileIndexSizeMB() {
       return storefileIndexSizeMB;
-    }
-
-    public long getTotalReadRequest() {
-      return totalReadRequest;
-    }
-
-    public long getTotalWriteRequest() {
-      return totalWriteRequest;
-    }
-
-    public int getReadRequestPerSec() {
-      return readRequestPerSec;
-    }
-
-    public int getWriteRequestPerSec() {
-      return writeRequestPerSec;
     }
 
     // Setters
@@ -321,16 +269,6 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       if (totalStaticBloomSizeKB != -1) {
         sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
           Integer.valueOf(this.totalStaticBloomSizeKB));
-      }
-
-      if (this.totalReadRequest != 0) {
-        sb = Strings.appendKeyValue(sb, "totalReadRequest",
-          Long.valueOf(this.totalReadRequest));
-      }
-
-      if (this.totalWriteRequest != 0) {
-        sb = Strings.appendKeyValue(sb, "totalWriteRequest",
-          Long.valueOf(this.totalWriteRequest));
       }
       return sb.toString();
     }

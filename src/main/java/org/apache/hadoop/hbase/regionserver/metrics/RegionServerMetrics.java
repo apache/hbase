@@ -111,10 +111,20 @@ public class RegionServerMetrics implements Updater {
   public final MetricsIntValue blockCacheHitRatio = new MetricsIntValue("blockCacheHitRatio", registry);
 
   /*
-   * Count of requests to the regionservers since last call to metrics update
+   * Count of rows read or updated to the regionservers since last call to metrics update
    */
   public final MetricsRate requests = new MetricsRate("requests", registry);
+  
+  /*
+   * Count of rows read from the regionservers since last call to metrics update
+   */
+  public final MetricsRate rowReadCnt = new MetricsRate("rowReadCnt", registry);
 
+  /*
+   * Count of row updated to the regionservers since last call to metrics update
+   */
+  public final MetricsRate rowUpdatedCnt =  new MetricsRate("rowUpdatedCnt", registry);
+  
   /**
    * Count of stores open on the regionserver.
    */
@@ -204,12 +214,6 @@ public class RegionServerMetrics implements Updater {
 
   public final MetricsTimeVaryingRate mvccWaitTime =
     new MetricsTimeVaryingRate("mvccWait", registry);
-
-  public final MetricsRate numReads =
-    new MetricsRate("numReads", registry);
-
-  public final MetricsRate numWrites =
-    new MetricsRate("numWrites", registry);
 
   /**
    * time each scheduled compaction takes
@@ -317,8 +321,8 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheEvictedMultiCount.pushMetric(this.metricsRecord);
       this.blockCacheEvictedMemoryCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
-      this.numReads.pushMetric(this.metricsRecord);
-      this.numWrites.pushMetric(this.metricsRecord);
+      this.rowReadCnt.pushMetric(this.metricsRecord);
+      this.rowUpdatedCnt.pushMetric(this.metricsRecord);
 
       // Be careful. Here is code for MTVR from up in hadoop:
       // public synchronized void inc(final int numOps, final long time) {
@@ -476,9 +480,9 @@ public class RegionServerMetrics implements Updater {
     sb = Strings.appendKeyValue(sb, "compactionQueueSize",
       Integer.valueOf(this.compactionQueueSize.get()));
     sb = Strings.appendKeyValue(sb, "numWrites",
-      Float.valueOf(this.numWrites.getPreviousIntervalValue()));
+      Float.valueOf(this.rowUpdatedCnt.getPreviousIntervalValue()));
     sb = Strings.appendKeyValue(sb, "numReads",
-      Float.valueOf(this.numReads.getPreviousIntervalValue()));
+      Float.valueOf(this.rowReadCnt.getPreviousIntervalValue()));
 
     // Duplicate from jvmmetrics because metrics are private there so
     // inaccessible.
