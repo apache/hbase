@@ -199,7 +199,7 @@ public class MiniHBaseCluster {
       // Else distributed filesystem.  Make a new instance per daemon.  Below
       // code is taken from the AppendTestUtil over in hdfs.
       Configuration c2 = new Configuration(c);
-      String username = UGI.getUserName() + ".hrs." + index++;
+      String username = UGI.getUserName() + "-hrs-" + index++;
       UnixUserGroupInformation.saveToConf(c2,
         UnixUserGroupInformation.UGI_PROPERTY_NAME,
         new UnixUserGroupInformation(username, new String[]{"supergroup"}));
