@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -27,9 +27,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Map;
 import java.util.List;
-
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -83,7 +82,7 @@ public class TestZooKeeper {
     Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniZKCluster();
     conf.setBoolean("dfs.support.append", true);
-    conf.setInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT, 1000);
+    conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
         LoadBalancer.class);
     TEST_UTIL.startMiniCluster(2);

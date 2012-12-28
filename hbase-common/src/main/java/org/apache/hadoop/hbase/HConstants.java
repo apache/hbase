@@ -118,10 +118,6 @@ public final class HConstants {
   /** by default every master is a possible primary master unless the conf explicitly overrides it */
   public static final boolean DEFAULT_MASTER_TYPE_BACKUP = false;
 
-  /** Parameter name for ZooKeeper session time out.*/
-  public static final String ZOOKEEPER_SESSION_TIMEOUT =
-    "zookeeper.session.timeout";
-
   /** Name of ZooKeeper quorum configuration parameter. */
   public static final String ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
 
