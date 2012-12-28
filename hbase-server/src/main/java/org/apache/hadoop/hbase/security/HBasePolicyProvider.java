@@ -51,7 +51,7 @@ public class HBasePolicyProvider extends PolicyProvider {
     conf.set("hadoop.policy.file", "hbase-policy.xml");
     if (conf.getBoolean(
           ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
-      ServiceAuthorizationManager.refresh(conf, new HBasePolicyProvider());
+      authManager.refresh(conf, new HBasePolicyProvider());
     }
   }
 }
