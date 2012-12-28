@@ -309,6 +309,14 @@
       <organization>Cloudera</organization>
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
+    <developer>
+      <id>mbertozzi</id>
+      <name>Matteo Bertozzi</name>
+      <email>mbertozzi@apache.org</email>
+      <timezone>0</timezone>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com</organizationUrl>
+    </developer>
   </developers>
   <repositories>
     <repository>
