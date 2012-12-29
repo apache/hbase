@@ -2050,7 +2050,9 @@ Server {
   }
 
   public void shutdown() throws IOException {
-    spanReceiverHost.closeReceivers();
+    if (spanReceiverHost != null) { 
+      spanReceiverHost.closeReceivers();
+    }
     if (cpHost != null) {
       cpHost.preShutdown();
     }
