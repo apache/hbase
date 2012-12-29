@@ -159,7 +159,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private void createBaseZNodes() throws ZooKeeperConnectionException {
     try {
       // Create all the necessary "directories" of znodes
-      ZKUtil.createAndFailSilent(this, baseZNode);
+      ZKUtil.createWithParents(this, baseZNode);
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);
       ZKUtil.createAndFailSilent(this, drainingZNode);
