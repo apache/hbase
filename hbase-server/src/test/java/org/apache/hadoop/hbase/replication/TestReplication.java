@@ -77,8 +77,8 @@ public class TestReplication {
   private static final int NB_ROWS_IN_BATCH = 100;
   private static final int NB_ROWS_IN_BIG_BATCH =
       NB_ROWS_IN_BATCH * 10;
-  private static final long SLEEP_TIME = 1500;
-  private static final int NB_RETRIES = 10;
+  private static final long SLEEP_TIME = 2000;
+  private static final int NB_RETRIES = 20;
 
   private static final byte[] tableName = Bytes.toBytes("test");
   private static final byte[] famName = Bytes.toBytes("f");
