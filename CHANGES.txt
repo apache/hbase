@@ -1,5 +1,87 @@
 HBase Change Log
 
+Release 0.94.4 - 12/28/2012
+Sub-task
+
+    [HBASE-3776] - Add Bloom Filter Support to HFileOutputFormat
+    [HBASE-6206] - Large tests fail with jdk1.7
+    [HBASE-7009] - Port HBaseCluster interface/tests to 0.94
+    [HBASE-7042] - Master Coprocessor Endpoint
+    [HBASE-7282] - Backport Compaction Tool to 0.94
+    [HBASE-7331] - Add access control for region open and close, row locking, and stopping the regionserver
+    [HBASE-7336] - HFileBlock.readAtOffset does not work well with multiple threads
+    [HBASE-7371] - Blocksize in TestHFileBlock is unintentionally small
+    [HBASE-7431] - TestSplitTransactionOnCluster tests still flaky
+    [HBASE-7438] - TestSplitTransactionOnCluster has too many infinite loops
+
+Bug
+
+    [HBASE-6175] - TestFSUtils flaky on hdfs getFileStatus method
+    [HBASE-6317] - Master clean start up and Partially enabled tables make region assignment inconsistent.
+    [HBASE-6327] - HLog can be null when create table
+    [HBASE-6423] - Writes should not block reads on blocking updates to memstores
+    [HBASE-7091] - support custom GC options in hbase-env.sh
+    [HBASE-7158] - Allow CopyTable to identify the source cluster (for replication scenarios)
+    [HBASE-7165] - TestSplitLogManager.testUnassignedTimeout is flaky
+    [HBASE-7166] - TestSplitTransactionOnCluster tests are flaky
+    [HBASE-7172] - TestSplitLogManager.testVanishingTaskZNode() fails when run individually and is flaky
+    [HBASE-7177] - TestZooKeeperScanPolicyObserver.testScanPolicyObserver is flaky
+    [HBASE-7180] - RegionScannerImpl.next() is inefficient.
+    [HBASE-7205] - Coprocessor classloader is replicated for all regions in the HRegionServer
+    [HBASE-7214] - CleanerChore logs too much, so much so it obscures all else that is going on
+    [HBASE-7230] - port HBASE-7109 integration tests on cluster are not getting picked up from distribution to 0.94
+    [HBASE-7235] - TestMasterObserver is flaky
+    [HBASE-7251] - Avoid flood logs during client disconnect during batch get operation
+    [HBASE-7252] - TestSizeBasedThrottler fails occasionally
+    [HBASE-7259] - Deadlock in HBaseClient when KeeperException occured
+    [HBASE-7260] - Upgrade hadoop 1 dependency to hadoop 1.1.1
+    [HBASE-7273] - Upgrade zookeeper dependency to 3.4.5 for 0.94
+    [HBASE-7279] - Avoid copying the rowkey in RegionScanner, StoreScanner, and ScanQueryMatcher
+    [HBASE-7300] - HbckTestingUtil needs to keep a static executor to lower the number of threads used
+    [HBASE-7301] - Force ipv4 for unit tests
+    [HBASE-7307] - MetaReader.tableExists should not return false if the specified table regions has been split
+    [HBASE-7338] - Fix flaky condition for org.apache.hadoop.hbase.TestRegionRebalancing.testRebalanceOnRegionServerNumberChange
+    [HBASE-7342] - Split operation without split key incorrectly finds the middle key in off-by-one error
+    [HBASE-7343] - Fix flaky condition for TestDrainingServer
+    [HBASE-7357] - HBaseClient and HBaseServer should use hbase.security.authentication when negotiating authentication
+    [HBASE-7376] - Acquiring readLock does not apply timeout in HRegion#flushcache
+    [HBASE-7398] - [0.94 UNIT TESTS] TestAssignmentManager fails frequently on CentOS 5
+    [HBASE-7412] - Fix how HTableDescriptor handles default max file size and flush size
+    [HBASE-7417] - TestReplication is flaky
+    [HBASE-7421] - TestHFileCleaner->testHFileCleaning has an aggressive timeout
+    [HBASE-7422] - MasterFS doesn't set configuration for internal FileSystem
+    [HBASE-7432] - TestHBaseFsck prevents testsuite from finishing
+    [HBASE-7435] - BuiltInGzipDecompressor is only released during full GC
+
+Improvement
+
+    [HBASE-4791] - Allow Secure Zookeeper JAAS configuration to be programmatically set (rather than only by reading JAAS configuration file)
+    [HBASE-5616] - Make compaction code standalone
+    [HBASE-5693] - When creating a region, the master initializes it and creates a memstore within the master server
+    [HBASE-5778] - Fix HLog compression's incompatibilities
+    [HBASE-5888] - Clover profile in build
+    [HBASE-6585] - Audit log messages should contain info about the higher level operation being executed
+    [HBASE-6775] - Use ZK.multi when available for HBASE-6710 0.92/0.94 compatibility fix
+    [HBASE-7190] - Add an option to hbck to check only meta and assignment
+    [HBASE-7197] - Add multi get to RemoteHTable
+    [HBASE-7199] - hbck should check lingering reference hfile and have option to sideline them automatically
+    [HBASE-7204] - Make hbck ErrorReporter pluggable
+    [HBASE-7231] - port HBASE-7200 create integration test for balancing regions and killing region servers to 0.94
+    [HBASE-7249] - add test name filter to IntegrationTestsDriver
+    [HBASE-7328] - IntegrationTestRebalanceAndKillServersTargeted supercedes IntegrationTestRebalanceAndKillServers, remove
+    [HBASE-7359] - [REST] 'accessToken' in RemoteHTable is vestigial
+    [HBASE-7374] - Expose master table operations for coprocessors by way of MasterServices
+    [HBASE-7377] - Clean up TestHBase7051
+    [HBASE-7381] - Lightweight data transfer for Class Result
+
+Task
+
+    [HBASE-5258] - Move coprocessors set out of RegionLoad
+    [HBASE-7170] - [0.94 branch] Allow HConnectionImplementation to reconnect to master multiple times
+    [HBASE-7283] - Backport HBASE-6564 + HBASE-7202 to 0.94
+    [HBASE-7341] - Deprecate RowLocks in 0.94
+
+
 Release 0.94.3 - 11/12/2012
 Sub-task
 
