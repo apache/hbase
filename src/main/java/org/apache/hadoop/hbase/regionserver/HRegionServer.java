@@ -351,6 +351,8 @@ public class HRegionServer implements HRegionInterface,
   // large GC issues.
   private static long responseSizeLimit;
   public static boolean enableServerSideProfilingForAllCalls;
+  
+  private int numRowRequests = 0;
 
   public static long getResponseSizeLimit() {
     return responseSizeLimit;
@@ -652,7 +654,7 @@ public class HRegionServer implements HRegionInterface,
               ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
             doMetrics();
             HServerLoad hsl = new HServerLoad(
-              (int)this.metrics.requests.getPreviousIntervalValue(),
+              this.numRowRequests,
               (int)(memory.getUsed()/1024/1024),
               (int)(memory.getMax()/1024/1024));
             for (HRegion r: onlineRegions.values()) {
@@ -1417,10 +1419,10 @@ public class HRegionServer implements HRegionInterface,
       HRegion.setNumericMetric(e.getKey(), e.getValue().longValue());
     }
     
-    
     this.metrics.rowReadCnt.inc(rowReadCnt);
     this.metrics.rowUpdatedCnt.inc(rowUpdateCnt);
-    this.metrics.requests.inc(rowReadCnt + rowUpdateCnt);
+    this.numRowRequests  = rowReadCnt + rowUpdateCnt;
+    this.metrics.requests.inc(numRowRequests);
     
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
