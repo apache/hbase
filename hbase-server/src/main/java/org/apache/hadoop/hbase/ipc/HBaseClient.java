@@ -1337,7 +1337,6 @@ public class HBaseClient {
    * @param exception the relevant exception
    * @return an exception to throw
    */
-  @SuppressWarnings({"ThrowableInstanceNeverThrown"})
   protected IOException wrapException(InetSocketAddress addr,
                                          IOException exception) {
     if (exception instanceof ConnectException) {

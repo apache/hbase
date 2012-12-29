@@ -24,7 +24,15 @@ import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.MasterAdminProtocol;
+import org.apache.hadoop.hbase.MasterMonitorProtocol;
+import org.apache.hadoop.hbase.RegionServerStatusProtocol;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -34,6 +42,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -76,6 +85,21 @@ public class ProtobufRpcClientEngine implements RpcClientEngine {
     final private int rpcTimeout;
     private final long clientProtocolVersion;
 
+    // For generated protocol classes which don't have VERSION field,
+    // such as protobuf interfaces.
+    static final Map<Class<?>, Long>
+      PROTOCOL_VERSION = new HashMap<Class<?>, Long>();
+    static {
+      PROTOCOL_VERSION.put(ClientService.BlockingInterface.class,
+        Long.valueOf(ClientProtocol.VERSION));
+      PROTOCOL_VERSION.put(AdminService.BlockingInterface.class,
+        Long.valueOf(AdminProtocol.VERSION));
+      PROTOCOL_VERSION.put(RegionServerStatusService.BlockingInterface.class,
+        Long.valueOf(RegionServerStatusProtocol.VERSION));
+      PROTOCOL_VERSION.put(MasterMonitorProtocol.class,Long.valueOf(MasterMonitorProtocol.VERSION));
+      PROTOCOL_VERSION.put(MasterAdminProtocol.class,Long.valueOf(MasterAdminProtocol.VERSION));
+    }
+
     public Invoker(Class<? extends VersionedProtocol> protocol,
                    InetSocketAddress addr, User ticket, Configuration conf,
                    SocketFactory factory, int rpcTimeout) throws IOException {
@@ -84,7 +108,7 @@ public class ProtobufRpcClientEngine implements RpcClientEngine {
       this.ticket = ticket;
       this.client = CLIENTS.getClient(conf, factory);
       this.rpcTimeout = rpcTimeout;
-      Long version = Invocation.PROTOCOL_VERSION.get(protocol);
+      Long version = PROTOCOL_VERSION.get(protocol);
       if (version != null) {
         this.clientProtocolVersion = version;
       } else {

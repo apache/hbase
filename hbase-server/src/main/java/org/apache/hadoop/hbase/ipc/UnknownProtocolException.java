@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 /**
  * An error requesting an RPC protocol that the server is not serving.
  */
+@SuppressWarnings("serial")
 public class UnknownProtocolException extends DoNotRetryIOException {
   private Class<?> protocol;
 

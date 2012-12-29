@@ -19,12 +19,7 @@ package org.apache.hadoop.hbase.protobuf;
 
 import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -65,7 +60,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
@@ -1010,29 +1004,6 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer Parameter to a Java object
-   *
-   * @param parameter the protocol buffer Parameter to convert
-   * @return the converted Java object
-   * @throws IOException if failed to deserialize the parameter
-   */
-  public static Object toObject(
-      final NameBytesPair parameter) throws IOException {
-    if (parameter == null || !parameter.hasValue()) return null;
-    byte[] bytes = parameter.getValue().toByteArray();
-    ByteArrayInputStream bais = null;
-    try {
-      bais = new ByteArrayInputStream(bytes);
-      DataInput in = new DataInputStream(bais);
-      return HbaseObjectWritable.readObject(in, null);
-    } finally {
-      if (bais != null) {
-        bais.close();
-      }
-    }
-  }
-
-  /**
    * Convert a stringified protocol buffer exception Parameter to a Java Exception
    *
    * @param parameter the protocol buffer Parameter to convert
@@ -1054,57 +1025,6 @@ public final class ProtobufUtil {
     } catch (Exception e) {
       throw new IOException(e);
     }
-  }
-
-  /**
-   * Serialize a Java Object into a Parameter. The Java Object should be a
-   * Writable or protocol buffer Message
-   *
-   * @param value the Writable/Message object to be serialized
-   * @return the converted protocol buffer Parameter
-   * @throws IOException if failed to serialize the object
-   */
-  public static NameBytesPair toParameter(
-      final Object value) throws IOException {
-    Class<?> declaredClass = Object.class;
-    if (value != null) {
-      declaredClass = value.getClass();
-    }
-    return toParameter(declaredClass, value);
-  }
-
-  /**
-   * Serialize a Java Object into a Parameter. The Java Object should be a
-   * Writable or protocol buffer Message
-   *
-   * @param declaredClass the declared class of the parameter
-   * @param value the Writable/Message object to be serialized
-   * @return the converted protocol buffer Parameter
-   * @throws IOException if failed to serialize the object
-   */
-  public static NameBytesPair toParameter(
-      final Class<?> declaredClass, final Object value) throws IOException {
-    NameBytesPair.Builder builder = NameBytesPair.newBuilder();
-    builder.setName(declaredClass.getName());
-    if (value != null) {
-      ByteArrayOutputStream baos = null;
-      try {
-        baos = new ByteArrayOutputStream();
-        DataOutput out = new DataOutputStream(baos);
-        Class<?> clz = declaredClass;
-        if (HbaseObjectWritable.getClassCode(declaredClass) == null) {
-          clz = value.getClass();
-        }
-        HbaseObjectWritable.writeObject(out, value, clz, null);
-        builder.setValue(
-          ByteString.copyFrom(baos.toByteArray()));
-      } finally {
-        if (baos != null) {
-          baos.close();
-        }
-      }
-    }
-    return builder.build();
   }
 
 // Start helpers for Client
@@ -1185,8 +1105,7 @@ public final class ProtobufUtil {
         if (actions.size() > rowMutations) {
           MultiRequest request =
             RequestConverter.buildMultiRequest(regionName, actions);
-          ClientProtos.MultiResponse
-            proto = client.multi(null, request);
+          ClientProtos.MultiResponse proto = client.multi(null, request);
           List<Object> results = ResponseConverter.getResults(proto);
           for (int i = 0, n = results.size(); i < n; i++) {
             int originalIndex = actions.get(i).getOriginalIndex();

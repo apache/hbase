@@ -24,19 +24,21 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.io.Text;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -103,6 +106,56 @@ public class TestTablePermissions {
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
+
+
+  /**
+   * Test we can read permissions serialized with Writables.
+   * @throws DeserializationException
+   */
+  @Test
+  public void testMigration() throws DeserializationException {
+    Configuration conf = UTIL.getConfiguration();
+    ListMultimap<String,TablePermission> permissions = createPermissions();
+    byte [] bytes = writePermissionsAsBytes(permissions, conf);
+    AccessControlLists.readPermissions(bytes, conf);
+  }
+
+  /**
+   * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances                                                                                                                     
+   * and returns the resulting byte array.  Used to verify we can read stuff written
+   * with Writable.
+   */
+  public static byte[] writePermissionsAsBytes(ListMultimap<String,? extends Permission> perms,
+      Configuration conf) {
+    try {
+       ByteArrayOutputStream bos = new ByteArrayOutputStream();
+       writePermissions(new DataOutputStream(bos), perms, conf);
+       return bos.toByteArray();
+    } catch (IOException ioe) {
+      // shouldn't happen here
+      throw new RuntimeException("Error serializing permissions", ioe);
+    }
+  }
+
+  /**
+   * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances
+   * to the given output stream.
+   * @param out
+   * @param perms
+   * @param conf
+   * @throws IOException
+  */
+  public static void writePermissions(DataOutput out,                                                                                                                                                   
+      ListMultimap<String,? extends Permission> perms, Configuration conf)
+  throws IOException {
+    Set<String> keys = perms.keySet();
+    out.writeInt(keys.size());
+    for (String key : keys) {
+      Text.writeString(out, key);
+      HbaseObjectWritableFor96Migration.writeObject(out, perms.get(key), List.class, conf);
+    }
+  }
+
 
   @Test
   public void testBasicWrite() throws Exception {
@@ -243,6 +296,16 @@ public class TestTablePermissions {
   @Test
   public void testSerialization() throws Exception {
     Configuration conf = UTIL.getConfiguration();
+    ListMultimap<String,TablePermission> permissions = createPermissions();
+    byte[] permsData = AccessControlLists.writePermissionsAsBytes(permissions, conf);
+
+    ListMultimap<String,TablePermission> copy =
+        AccessControlLists.readPermissions(permsData, conf);
+
+    checkMultimapEqual(permissions, copy);
+  }
+
+  private ListMultimap<String,TablePermission> createPermissions() {
     ListMultimap<String,TablePermission> permissions = ArrayListMultimap.create();
     permissions.put("george", new TablePermission(TEST_TABLE, null,
         TablePermission.Action.READ));
@@ -252,13 +315,7 @@ public class TestTablePermissions {
         TablePermission.Action.READ));
     permissions.put("hubert", new TablePermission(TEST_TABLE2, null,
         TablePermission.Action.READ, TablePermission.Action.WRITE));
-
-    byte[] permsData = AccessControlLists.writePermissionsAsBytes(permissions, conf);
-
-    ListMultimap<String,TablePermission> copy =
-        AccessControlLists.readPermissions(permsData, conf);
-
-    checkMultimapEqual(permissions, copy);
+    return permissions;
   }
 
   public void checkMultimapEqual(ListMultimap<String,TablePermission> first,

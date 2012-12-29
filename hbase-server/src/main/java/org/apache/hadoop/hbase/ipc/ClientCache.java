@@ -27,8 +27,6 @@ import javax.net.SocketFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Cache a client using its socket factory as the hash key.

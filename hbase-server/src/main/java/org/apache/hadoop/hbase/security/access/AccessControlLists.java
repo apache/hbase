@@ -18,9 +18,17 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import java.io.ByteArrayInputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,26 +45,23 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.filter.RegexStringComparator;
-import org.apache.hadoop.hbase.filter.QualifierFilter;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.util.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Maintains lists of permission grants to users and groups to allow for
@@ -510,7 +515,8 @@ public class AccessControlLists {
    *
    * Writes a set of permission [user: table permission]
    */
-  public static byte[] writePermissionsAsBytes(ListMultimap<String, TablePermission> perms, Configuration conf) {
+  public static byte[] writePermissionsAsBytes(ListMultimap<String, TablePermission> perms,
+      Configuration conf) {
     return ProtobufUtil.prependPBMagic(ProtobufUtil.toUserTablePermissions(perms).toByteArray());
   }
 
@@ -519,7 +525,8 @@ public class AccessControlLists {
    * from the input stream.
    */
   public static ListMultimap<String, TablePermission> readPermissions(byte[] data,
-      Configuration conf) throws DeserializationException {
+      Configuration conf)
+  throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(data)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
@@ -537,7 +544,8 @@ public class AccessControlLists {
         int length = in.readInt();
         for (int i=0; i<length; i++) {
           String user = Text.readString(in);
-          List<TablePermission> userPerms = (List)HbaseObjectWritable.readObject(in, conf);
+          List<TablePermission> userPerms =
+            (List)HbaseObjectWritableFor96Migration.readObject(in, conf);
           perms.putAll(user, userPerms);
         }
       } catch (IOException e) {

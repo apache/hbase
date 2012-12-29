@@ -521,17 +521,6 @@ public class TestSerialization {
   }
   */
 
-  @Test public void testTimeRange() throws Exception{
-    TimeRange tr = new TimeRange(0,5);
-    byte [] mb = Writables.getBytes(tr);
-    TimeRange deserializedTr =
-      (TimeRange)Writables.getWritable(mb, new TimeRange());
-
-    assertEquals(tr.getMax(), deserializedTr.getMax());
-    assertEquals(tr.getMin(), deserializedTr.getMin());
-
-  }
-
   protected static final int MAXVERSIONS = 3;
   protected final static byte [] fam1 = Bytes.toBytes("colfamily1");
   protected final static byte [] fam2 = Bytes.toBytes("colfamily2");

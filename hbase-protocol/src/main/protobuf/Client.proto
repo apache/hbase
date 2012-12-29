@@ -291,7 +291,7 @@ message MultiAction {
  * is returned as a stringified parameter.
  */
 message ActionResult {
-  optional NameBytesPair value = 1;
+  optional Result value = 1;
   optional NameBytesPair exception = 2;
 }
 

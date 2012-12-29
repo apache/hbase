@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.io;
+package org.apache.hadoop.hbase.security.access;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BitComparator;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
@@ -81,10 +82,10 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.io.DataOutputOutputStream;
+import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -101,7 +102,7 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 
 /**
- * This is a customized version of the polymorphic hadoop
+ * <p>This is a customized version of the polymorphic hadoop
  * {@link ObjectWritable}.  It removes UTF8 (HADOOP-414).
  * Using {@link Text} intead of UTF-8 saves ~2% CPU between reading and writing
  * objects running a short sequentialWrite Performance Evaluation test just in
@@ -114,10 +115,15 @@ import com.google.protobuf.RpcController;
  * data is small (If < a couple of kilobytes, the encoding/decoding of class
  * name and reflection to instantiate class was costing in excess of the cell
  * handling).
+ * @deprecated This class is needed migrating TablePermissions written with
+ * Writables.  It is needed to read old permissions written pre-0.96.  This
+ * class is to be removed after HBase 0.96 ships since then all permissions
+ * will have been migrated and written with protobufs.
  */
+@Deprecated
 @InterfaceAudience.Private
-public class HbaseObjectWritable implements Writable, WritableWithSize, Configurable {
-  protected final static Log LOG = LogFactory.getLog(HbaseObjectWritable.class);
+class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, Configurable {
+  protected final static Log LOG = LogFactory.getLog(HbaseObjectWritableFor96Migration.class);
 
   // Here we maintain two static maps of classes to code and vice versa.
   // Add new classes+codes as wanted or figure way to auto-generate these
@@ -283,14 +289,14 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
   private Configuration conf;
 
   /** default constructor for writable */
-  public HbaseObjectWritable() {
+  HbaseObjectWritableFor96Migration() {
     super();
   }
 
   /**
    * @param instance
    */
-  public HbaseObjectWritable(Object instance) {
+  HbaseObjectWritableFor96Migration(Object instance) {
     set(instance);
   }
 
@@ -298,22 +304,22 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
    * @param declaredClass
    * @param instance
    */
-  public HbaseObjectWritable(Class<?> declaredClass, Object instance) {
+  HbaseObjectWritableFor96Migration(Class<?> declaredClass, Object instance) {
     this.declaredClass = declaredClass;
     this.instance = instance;
   }
 
   /** @return the instance, or null if none. */
-  public Object get() { return instance; }
+  Object get() { return instance; }
 
   /** @return the class this is meant to be. */
-  public Class<?> getDeclaredClass() { return declaredClass; }
+  Class<?> getDeclaredClass() { return declaredClass; }
 
   /**
    * Reset the instance.
    * @param instance
    */
-  public void set(Object instance) {
+  void set(Object instance) {
     this.declaredClass = instance.getClass();
     this.instance = instance;
   }
@@ -363,7 +369,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     }
   }
 
-  public static Integer getClassCode(final Class<?> c)
+  static Integer getClassCode(final Class<?> c)
   throws IOException {
     Integer code = CLASS_TO_CODE.get(c);
     if (code == null ) {
@@ -412,7 +418,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     WritableUtils.writeVInt(out, code);
   }
 
-  public static long getWritableSize(Object instance, Class declaredClass,
+  static long getWritableSize(Object instance, Class declaredClass,
                                      Configuration conf) {
     return 0L; // no hint is the default.
   }
@@ -426,7 +432,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public static void writeObject(DataOutput out, Object instance,
+  static void writeObject(DataOutput out, Object instance,
                                  Class declaredClass,
                                  Configuration conf)
   throws IOException {
@@ -578,7 +584,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
    * @return the object
    * @throws IOException
    */
-  public static Object readObject(DataInput in, Configuration conf)
+  static Object readObject(DataInput in, Configuration conf)
     throws IOException {
     return readObject(in, null, conf);
   }
@@ -593,8 +599,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public static Object readObject(DataInput in,
-      HbaseObjectWritable objectWritable, Configuration conf)
+  static Object readObject(DataInput in,
+      HbaseObjectWritableFor96Migration objectWritable, Configuration conf)
   throws IOException {
     Class<?> declaredClass = CODE_TO_CLASS.get(WritableUtils.readVInt(in));
     Object instance;
@@ -726,7 +732,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
    * @return the instantiated Message instance
    * @throws IOException if an IO problem occurs
    */
-  public static Message tryInstantiateProtobuf(
+  static Message tryInstantiateProtobuf(
       Class<?> protoClass,
       DataInput dataIn) throws IOException {
 
@@ -786,7 +792,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     }
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     if(cl == null) {
-      cl = HbaseObjectWritable.class.getClassLoader();
+      cl = HbaseObjectWritableFor96Migration.class.getClassLoader();
     }
     return Class.forName(className, true, cl);
   }

@@ -18533,10 +18533,10 @@ public final class ClientProtos {
   public interface ActionResultOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional .NameBytesPair value = 1;
+    // optional .Result value = 1;
     boolean hasValue();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getValue();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getValueOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result getValue();
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder getValueOrBuilder();
     
     // optional .NameBytesPair exception = 2;
     boolean hasException();
@@ -18572,16 +18572,16 @@ public final class ClientProtos {
     }
     
     private int bitField0_;
-    // optional .NameBytesPair value = 1;
+    // optional .Result value = 1;
     public static final int VALUE_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value_;
+    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result value_;
     public boolean hasValue() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getValue() {
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result getValue() {
       return value_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getValueOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder getValueOrBuilder() {
       return value_;
     }
     
@@ -18599,7 +18599,7 @@ public final class ClientProtos {
     }
     
     private void initFields() {
-      value_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+      value_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance();
       exception_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
@@ -18818,7 +18818,7 @@ public final class ClientProtos {
       public Builder clear() {
         super.clear();
         if (valueBuilder_ == null) {
-          value_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+          value_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance();
         } else {
           valueBuilder_.clear();
         }
@@ -18949,7 +18949,7 @@ public final class ClientProtos {
               break;
             }
             case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.newBuilder();
               if (hasValue()) {
                 subBuilder.mergeFrom(getValue());
               }
@@ -18972,21 +18972,21 @@ public final class ClientProtos {
       
       private int bitField0_;
       
-      // optional .NameBytesPair value = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+      // optional .Result value = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result value_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder> valueBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder> valueBuilder_;
       public boolean hasValue() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getValue() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result getValue() {
         if (valueBuilder_ == null) {
           return value_;
         } else {
           return valueBuilder_.getMessage();
         }
       }
-      public Builder setValue(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value) {
+      public Builder setValue(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result value) {
         if (valueBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -19000,7 +19000,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder setValue(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder builderForValue) {
         if (valueBuilder_ == null) {
           value_ = builderForValue.build();
           onChanged();
@@ -19010,12 +19010,12 @@ public final class ClientProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder mergeValue(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value) {
+      public Builder mergeValue(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result value) {
         if (valueBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              value_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance()) {
+              value_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance()) {
             value_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.newBuilder(value_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.newBuilder(value_).mergeFrom(value).buildPartial();
           } else {
             value_ = value;
           }
@@ -19028,7 +19028,7 @@ public final class ClientProtos {
       }
       public Builder clearValue() {
         if (valueBuilder_ == null) {
-          value_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+          value_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance();
           onChanged();
         } else {
           valueBuilder_.clear();
@@ -19036,12 +19036,12 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder getValueBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder getValueBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getValueFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getValueOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder getValueOrBuilder() {
         if (valueBuilder_ != null) {
           return valueBuilder_.getMessageOrBuilder();
         } else {
@@ -19049,11 +19049,11 @@ public final class ClientProtos {
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder> 
           getValueFieldBuilder() {
         if (valueBuilder_ == null) {
           valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder>(
                   value_,
                   getParentForChildren(),
                   isClean());
@@ -21479,25 +21479,25 @@ public final class ClientProtos {
       "oprocessorServiceResponse\022 \n\006region\030\001 \002(" +
       "\0132\020.RegionSpecifier\022\035\n\005value\030\002 \002(\0132\016.Nam" +
       "eBytesPair\"9\n\013MultiAction\022\027\n\006mutate\030\001 \001(" +
-      "\0132\007.Mutate\022\021\n\003get\030\002 \001(\0132\004.Get\"P\n\014ActionR" +
-      "esult\022\035\n\005value\030\001 \001(\0132\016.NameBytesPair\022!\n\t",
-      "exception\030\002 \001(\0132\016.NameBytesPair\"^\n\014Multi" +
-      "Request\022 \n\006region\030\001 \002(\0132\020.RegionSpecifie" +
-      "r\022\034\n\006action\030\002 \003(\0132\014.MultiAction\022\016\n\006atomi" +
-      "c\030\003 \001(\010\".\n\rMultiResponse\022\035\n\006result\030\001 \003(\013" +
-      "2\r.ActionResult2\223\003\n\rClientService\022 \n\003get" +
-      "\022\013.GetRequest\032\014.GetResponse\022)\n\006mutate\022\016." +
-      "MutateRequest\032\017.MutateResponse\022#\n\004scan\022\014" +
-      ".ScanRequest\032\r.ScanResponse\022,\n\007lockRow\022\017" +
-      ".LockRowRequest\032\020.LockRowResponse\0222\n\tunl" +
-      "ockRow\022\021.UnlockRowRequest\032\022.UnlockRowRes",
-      "ponse\022>\n\rbulkLoadHFile\022\025.BulkLoadHFileRe" +
-      "quest\032\026.BulkLoadHFileResponse\022F\n\013execSer" +
-      "vice\022\032.CoprocessorServiceRequest\032\033.Copro" +
-      "cessorServiceResponse\022&\n\005multi\022\r.MultiRe" +
-      "quest\032\016.MultiResponseBB\n*org.apache.hado" +
-      "op.hbase.protobuf.generatedB\014ClientProto" +
-      "sH\001\210\001\001\240\001\001"
+      "\0132\007.Mutate\022\021\n\003get\030\002 \001(\0132\004.Get\"I\n\014ActionR" +
+      "esult\022\026\n\005value\030\001 \001(\0132\007.Result\022!\n\texcepti",
+      "on\030\002 \001(\0132\016.NameBytesPair\"^\n\014MultiRequest" +
+      "\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006ac" +
+      "tion\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 \001(\010" +
+      "\".\n\rMultiResponse\022\035\n\006result\030\001 \003(\0132\r.Acti" +
+      "onResult2\223\003\n\rClientService\022 \n\003get\022\013.GetR" +
+      "equest\032\014.GetResponse\022)\n\006mutate\022\016.MutateR" +
+      "equest\032\017.MutateResponse\022#\n\004scan\022\014.ScanRe" +
+      "quest\032\r.ScanResponse\022,\n\007lockRow\022\017.LockRo" +
+      "wRequest\032\020.LockRowResponse\0222\n\tunlockRow\022" +
+      "\021.UnlockRowRequest\032\022.UnlockRowResponse\022>",
+      "\n\rbulkLoadHFile\022\025.BulkLoadHFileRequest\032\026" +
+      ".BulkLoadHFileResponse\022F\n\013execService\022\032." +
+      "CoprocessorServiceRequest\032\033.CoprocessorS" +
+      "erviceResponse\022&\n\005multi\022\r.MultiRequest\032\016" +
+      ".MultiResponseBB\n*org.apache.hadoop.hbas" +
+      "e.protobuf.generatedB\014ClientProtosH\001\210\001\001\240" +
+      "\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

@@ -19,11 +19,7 @@
 
 package org.apache.hadoop.hbase.io;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-
-import org.apache.hadoop.io.Writable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -39,7 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class TimeRange implements Writable {
+public class TimeRange {
   private long minStamp = 0L;
   private long maxStamp = Long.MAX_VALUE;
   private boolean allTime = false;
@@ -183,18 +179,5 @@ public class TimeRange implements Writable {
     sb.append(", minStamp=");
     sb.append(this.minStamp);
     return sb.toString();
-  }
-
-  //Writable
-  public void readFields(final DataInput in) throws IOException {
-    this.minStamp = in.readLong();
-    this.maxStamp = in.readLong();
-    this.allTime = in.readBoolean();
-  }
-
-  public void write(final DataOutput out) throws IOException {
-    out.writeLong(minStamp);
-    out.writeLong(maxStamp);
-    out.writeBoolean(this.allTime);
   }
 }

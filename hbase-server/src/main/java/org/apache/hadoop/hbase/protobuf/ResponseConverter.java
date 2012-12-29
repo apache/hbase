@@ -91,7 +91,8 @@ public final class ResponseConverter {
       if (result.hasException()) {
         results.add(ProtobufUtil.toException(result.getException()));
       } else if (result.hasValue()) {
-        Object value = ProtobufUtil.toObject(result.getValue());
+        ClientProtos.Result r = result.getValue();
+        Object value = ProtobufUtil.toResult(r);
         if (value instanceof ClientProtos.Result) {
           results.add(ProtobufUtil.toResult((ClientProtos.Result)value));
         } else {

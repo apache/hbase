@@ -101,11 +101,9 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
-import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -163,7 +161,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -3191,7 +3188,7 @@ public class  HRegionServer implements ClientProtocol,
         for (ClientProtos.MultiAction actionUnion : request.getActionList()) {
           requestCount.increment();
           try {
-            Object result = null;
+            ClientProtos.Result result = null;
             if (actionUnion.hasGet()) {
               Get get = ProtobufUtil.toGet(actionUnion.getGet());
               Integer lock = getLockFromId(get.getLockId());
@@ -3242,8 +3239,7 @@ public class  HRegionServer implements ClientProtocol,
               } else {
                 resultBuilder.clear();
               }
-              NameBytesPair value = ProtobufUtil.toParameter(result);
-              resultBuilder.setValue(value);
+              resultBuilder.setValue(result);
               builder.addResult(resultBuilder.build());
             }
           } catch (IOException ie) {
@@ -3757,10 +3753,8 @@ public class  HRegionServer implements ClientProtocol,
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
       ActionResult.Builder resultBuilder = ActionResult.newBuilder();
-      NameBytesPair value = ProtobufUtil.toParameter(ClientProtos.Result.newBuilder().build());
-      resultBuilder.setValue(value);
+      resultBuilder.setValue(ClientProtos.Result.newBuilder().build());
       ActionResult result = resultBuilder.build();
-
       int i = 0;
       for (Mutate m : mutates) {
         Mutation mutation = null;

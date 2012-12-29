@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.io;
+package org.apache.hadoop.hbase.security.access;
 
 import java.util.*;
 
@@ -29,37 +29,41 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * blocks the possibility of altering the variables and changing their types,
  * it is put here in this static interface where the static final Maps are
  * loaded one time. Only byte[] and Cell are supported at this time.
+ * @deprecated  In place until we come up on 0.96 and then it can be removed
+ * along with {@link HbaseObjectWritableFor96Migration}; needed to read
+ * pre-0.96 TablePermissions.
  */
+@Deprecated
 @InterfaceAudience.Private
-public interface CodeToClassAndBack {
+interface CodeToClassAndBackFor96Migration {
   /**
    * Static map that contains mapping from code to class
    */
-  public static final Map<Byte, Class<?>> CODE_TO_CLASS =
+  static final Map<Byte, Class<?>> CODE_TO_CLASS =
     new HashMap<Byte, Class<?>>();
 
   /**
    * Static map that contains mapping from class to code
    */
-  public static final Map<Class<?>, Byte> CLASS_TO_CODE =
+  static final Map<Class<?>, Byte> CLASS_TO_CODE =
     new HashMap<Class<?>, Byte>();
 
   /**
    * Class list for supported classes
    */
-  public Class<?>[] classList = {byte[].class};
+  Class<?>[] classList = {byte[].class};
 
   /**
    * The static loader that is used instead of the static constructor in
    * HbaseMapWritable.
    */
-  public InternalStaticLoader sl =
+  InternalStaticLoader sl =
     new InternalStaticLoader(classList, CODE_TO_CLASS, CLASS_TO_CODE);
 
   /**
    * Class that loads the static maps with their values.
    */
-  public class InternalStaticLoader{
+  class InternalStaticLoader{
     InternalStaticLoader(Class<?>[] classList,
         Map<Byte,Class<?>> CODE_TO_CLASS, Map<Class<?>, Byte> CLASS_TO_CODE){
       byte code = 1;
