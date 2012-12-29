@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -81,6 +82,10 @@ public class TestHFileArchiving {
     conf.setInt("hbase.hregion.memstore.flush.size", 25000);
     // disable major compactions
     conf.setInt(HConstants.MAJOR_COMPACTION_PERIOD, 0);
+
+    // prevent aggressive region split
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      ConstantSizeRegionSplitPolicy.class.getName());
   }
 
   @Before
