@@ -52,6 +52,8 @@ Bug
     [HBASE-7422] - MasterFS doesn't set configuration for internal FileSystem
     [HBASE-7432] - TestHBaseFsck prevents testsuite from finishing
     [HBASE-7435] - BuiltInGzipDecompressor is only released during full GC
+    [HBASE-7440] - ReplicationZookeeper#addPeer is racy
+    [HBASE-7455] - Increase timeouts in TestReplication and TestSplitLogWorker
 
 Improvement
 

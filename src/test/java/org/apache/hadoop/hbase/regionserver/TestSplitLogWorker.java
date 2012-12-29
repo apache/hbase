@@ -139,7 +139,7 @@ public class TestSplitLogWorker {
       "rs", neverEndingTask);
     slw.start();
     try {
-      waitForCounter(tot_wkr_task_acquired, 0, 1, 100);
+      waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "tatas")), "rs"));
     } finally {
