@@ -65,6 +65,7 @@ public class TestMultiParallel {
     UTIL.startMiniCluster(slaves);
     HTable t = UTIL.createTable(Bytes.toBytes(TEST_TABLE), Bytes.toBytes(FAMILY));
     UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
+    UTIL.waitTableAvailable(Bytes.toBytes(TEST_TABLE), 15 * 1000);
     t.close();
   }
 
@@ -226,6 +227,11 @@ public class TestMultiParallel {
     doTestFlushCommits(true);
   }
 
+  /**
+   * Set table auto flush to false and test flushing commits
+   * @param doAbort true if abort one regionserver in the testing
+   * @throws Exception
+   */
   private void doTestFlushCommits(boolean doAbort) throws Exception {
     // Load the data
     LOG.info("get new table");
@@ -242,7 +248,14 @@ public class TestMultiParallel {
     table.flushCommits();
     if (doAbort) {
       LOG.info("Aborted=" + UTIL.getMiniHBaseCluster().abortRegionServer(0));
-
+      // If we wait for no regions being online after we abort the server, we
+      // could ensure the master has re-assigned the regions on killed server
+      // after writing successfully. It means the server we aborted is dead
+      // and detected by matser
+      while (UTIL.getMiniHBaseCluster().getRegionServer(0)
+          .getNumberOfOnlineRegions() != 0) {
+        Thread.sleep(10);
+      }
       // try putting more keys after the abort. same key/qual... just validating
       // no exceptions thrown
       puts = constructPutRequests();
