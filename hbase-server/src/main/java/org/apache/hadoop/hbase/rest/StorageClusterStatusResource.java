@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 
 @InterfaceAudience.Private
@@ -69,8 +68,7 @@ public class StorageClusterStatusResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-      ClusterStatus status = admin.getClusterStatus();
+      ClusterStatus status = servlet.getAdmin().getClusterStatus();
       StorageClusterStatusModel model = new StorageClusterStatusModel();
       model.setRegions(status.getRegionsCount());
       model.setRequests(status.getRequestsCount());
