@@ -34,7 +34,6 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
 
 public class StorageClusterVersionResource extends ResourceBase {
@@ -64,9 +63,8 @@ public class StorageClusterVersionResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       StorageClusterVersionModel model = new StorageClusterVersionModel();
-      model.setVersion(admin.getClusterStatus().getHBaseVersion());
+      model.setVersion(servlet.getAdmin().getClusterStatus().getHBaseVersion());
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);
       servlet.getMetrics().incrementSucessfulGetRequests(1);
