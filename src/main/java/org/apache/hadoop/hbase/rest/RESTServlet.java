@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.rest.metrics.RESTMetrics;
 
@@ -34,6 +35,7 @@ public class RESTServlet implements Constants {
   private final Configuration conf;
   private final HTablePool pool;
   private final RESTMetrics metrics = new RESTMetrics();
+  private final HBaseAdmin admin;
 
   /**
    * @return the RESTServlet singleton instance
@@ -69,6 +71,11 @@ public class RESTServlet implements Constants {
   RESTServlet(Configuration conf) throws IOException {
     this.conf = conf;
     this.pool = new HTablePool(conf, 10);
+    this.admin = new HBaseAdmin(conf);
+  }
+
+  HBaseAdmin getAdmin() {
+    return admin;
   }
 
   HTablePool getTablePool() {

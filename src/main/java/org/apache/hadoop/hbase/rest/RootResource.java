@@ -37,7 +37,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.model.TableListModel;
 import org.apache.hadoop.hbase.rest.model.TableModel;
 
@@ -62,8 +61,7 @@ public class RootResource extends ResourceBase {
 
   private final TableListModel getTableList() throws IOException {
     TableListModel tableList = new TableListModel();
-    HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-    HTableDescriptor[] list = admin.listTables();
+    HTableDescriptor[] list = servlet.getAdmin().listTables();
     for (HTableDescriptor htd: list) {
       tableList.add(new TableModel(htd.getNameAsString()));
     }

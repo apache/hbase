@@ -182,7 +182,7 @@ public class SchemaResource extends ResourceBase {
       final UriInfo uriInfo) {
     try {
       byte[] name = Bytes.toBytes(tableResource.getName());
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
+      HBaseAdmin admin = servlet.getAdmin();
       if (replace || !admin.tableExists(name)) {
         return replace(name, model, uriInfo, admin);
       } else {
@@ -224,7 +224,7 @@ public class SchemaResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
+      HBaseAdmin admin = servlet.getAdmin();
       boolean success = false;
       for (int i = 0; i < 10; i++) try {
         admin.disableTable(tableResource.getName());
