@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
@@ -79,7 +79,7 @@ public interface RegionServerServices extends OnlineRegions {
    * Get the regions that are currently being opened or closed in the RS
    * @return map of regions in transition in this RS
    */
-  public Map<byte[], Boolean> getRegionsInTransitionInRS();
+  public ConcurrentMap<byte[], Boolean> getRegionsInTransitionInRS();
 
   /**
    * @return Return the FileSystem object used by the regionserver

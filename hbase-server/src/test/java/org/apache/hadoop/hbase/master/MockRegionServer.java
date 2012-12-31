@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -324,7 +325,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public Map<byte[], Boolean> getRegionsInTransitionInRS() {
+  public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
     // TODO Auto-generated method stub
     return null;
   }

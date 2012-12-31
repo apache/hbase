@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -49,6 +48,15 @@ public class MockRegionServerServices implements RegionServerServices {
   private final ConcurrentSkipListMap<byte[], Boolean> rit = 
     new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
+  private ZooKeeperWatcher zkw = null;
+
+  public MockRegionServerServices(ZooKeeperWatcher zkw){
+    this.zkw = zkw;
+  }
+
+  public MockRegionServerServices(){
+    this(null);
+  }
 
   @Override
   public boolean removeFromOnlineRegions(String encodedRegionName, ServerName destination) {
@@ -112,7 +120,7 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public ZooKeeperWatcher getZooKeeper() {
-    return null;
+    return zkw;
   }
   
   public RegionServerAccounting getRegionServerAccounting() {

@@ -1035,7 +1035,13 @@ public class ZKUtil {
       waitForZKConnectionIfAuthenticating(zkw);
       zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.PERSISTENT);
-      return zkw.getRecoverableZooKeeper().exists(znode, zkw).getVersion();
+      Stat stat = zkw.getRecoverableZooKeeper().exists(znode, zkw);
+      if (stat == null){
+        // Likely a race condition. Someone deleted the znode.
+        throw KeeperException.create(KeeperException.Code.SYSTEMERROR,
+            "ZK.exists returned null (i.e.: znode does not exist) for znode=" + znode);
+      }
+     return stat.getVersion();
     } catch (InterruptedException e) {
       zkw.interruptedException(e);
       return -1;

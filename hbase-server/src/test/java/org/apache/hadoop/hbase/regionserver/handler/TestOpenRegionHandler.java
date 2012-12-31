@@ -88,7 +88,7 @@ public class TestOpenRegionHandler {
   @Test public void testYankingRegionFromUnderIt()
   throws IOException, NodeExistsException, KeeperException {
     final Server server = new MockServer(HTU);
-    final RegionServerServices rss = new MockRegionServerServices();
+    final RegionServerServices rss = new MockRegionServerServices(HTU.getZooKeeperWatcher());
 
     HTableDescriptor htd = TEST_HTD;
     final HRegionInfo hri = TEST_HRI;

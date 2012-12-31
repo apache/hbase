@@ -126,13 +126,21 @@ public class CloseRegionHandler extends EventHandler {
       // Check that this region is being served here
       HRegion region = this.rsServices.getFromOnlineRegions(encodedRegionName);
       if (region == null) {
-        LOG.warn("Received CLOSE for region " + name +
-            " but currently not serving");
+        LOG.warn("Received CLOSE for region " + name + " but currently not serving - ignoring");
+        if (zk){
+          LOG.error("The znode is not modified as we are not serving " + name);
+        }
+        // TODO: do better than a simple warning
         return;
       }
 
       // Close the region
       try {
+        if (zk && !ZKAssign.checkClosingState(server.getZooKeeper(), regionInfo, expectedVersion)){
+          // bad znode state
+          return; // We're node deleting the znode, but it's not ours...
+        }
+
         // TODO: If we need to keep updating CLOSING stamp to prevent against
         // a timeout if this is long-running, need to spin up a thread?
         if (region.close(abort) == null) {

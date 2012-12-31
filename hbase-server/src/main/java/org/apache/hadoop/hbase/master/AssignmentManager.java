@@ -162,8 +162,10 @@ public class AssignmentManager extends ZooKeeperListener {
    * that ServerShutdownHandler can be fully enabled and re-assign regions
    * of dead servers. So that when re-assignment happens, AssignmentManager
    * has proper region states.
+   *
+   * Protected to ease testing.
    */
-  final AtomicBoolean failoverCleanupDone = new AtomicBoolean(false);
+  protected final AtomicBoolean failoverCleanupDone = new AtomicBoolean(false);
 
   /**
    * Constructs a new assignment manager.
@@ -1461,6 +1463,7 @@ public class AssignmentManager extends ZooKeeperListener {
           return;
         }
         // This never happens. Currently regionserver close always return true.
+        // Todo; this can now happen (0.96) if there is an exception in a coprocessor
         LOG.warn("Server " + server + " region CLOSE RPC returned false for " +
           region.getRegionNameAsString());
       } catch (Throwable t) {
