@@ -23,7 +23,6 @@ import java.io.IOException;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -72,8 +71,9 @@ public class StorageClusterVersionResource extends ResourceBase {
       return response.build();
     } catch (IOException e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      throw new WebApplicationException(e, 
-                  Response.Status.SERVICE_UNAVAILABLE);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
   }
 }

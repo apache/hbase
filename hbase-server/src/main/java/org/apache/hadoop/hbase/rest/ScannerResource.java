@@ -30,7 +30,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
@@ -78,7 +77,9 @@ public class ScannerResource extends ResourceBase {
       final UriInfo uriInfo) {
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
-      throw new WebApplicationException(Response.Status.FORBIDDEN);
+      return Response.status(Response.Status.FORBIDDEN)
+        .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
+        .build();
     }
     byte[] endRow = model.hasEndRow() ? model.getEndRow() : null;
     RowSpec spec = new RowSpec(model.getStartRow(), endRow,
@@ -100,19 +101,21 @@ public class ScannerResource extends ResourceBase {
       URI uri = builder.path(id).build();
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.created(uri).build();
-    } catch (IOException e) {
-      servlet.getMetrics().incrementFailedPutRequests(1);
-      throw new WebApplicationException(e,
-              Response.Status.SERVICE_UNAVAILABLE);
     } catch (RuntimeException e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
       if (e.getCause() instanceof TableNotFoundException) {
-        throw new WebApplicationException(e, Response.Status.NOT_FOUND);
+        return Response.status(Response.Status.NOT_FOUND)
+          .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
+          .build();
       }
-      throw new WebApplicationException(e, Response.Status.BAD_REQUEST);
+      return Response.status(Response.Status.BAD_REQUEST)
+        .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+        .build();
     } catch (Exception e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
-      throw new WebApplicationException(e, Response.Status.BAD_REQUEST);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
   }
 
@@ -138,11 +141,11 @@ public class ScannerResource extends ResourceBase {
 
   @Path("{scanner: .+}")
   public ScannerInstanceResource getScannerInstanceResource(
-      final @PathParam("scanner") String id) {
+      final @PathParam("scanner") String id) throws IOException {
     ScannerInstanceResource instance = scanners.get(id);
     if (instance == null) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      throw new WebApplicationException(Response.Status.NOT_FOUND);
+      return new ScannerInstanceResource();
     } else {
       servlet.getMetrics().incrementSucessfulGetRequests(1);
     }

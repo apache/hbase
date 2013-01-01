@@ -25,7 +25,6 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -55,9 +54,11 @@ public class ScannerInstanceResource extends ResourceBase {
     cacheControl.setNoTransform(false);
   }
 
-  ResultGenerator generator;
-  String id;
+  ResultGenerator generator = null;
+  String id = null;
   int batch = 1;
+
+  public ScannerInstanceResource() throws IOException { }
 
   public ScannerInstanceResource(String table, String id, 
       ResultGenerator generator, int batch) throws IOException {
@@ -74,6 +75,12 @@ public class ScannerInstanceResource extends ResourceBase {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
+    if (generator == null) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
+      return Response.status(Response.Status.NOT_FOUND)
+        .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
+        .build();
+    }
     CellSetModel model = new CellSetModel();
     RowModel rowModel = null;
     byte[] rowKey = null;
@@ -93,7 +100,9 @@ public class ScannerInstanceResource extends ResourceBase {
           servlet.getMetrics().incrementFailedDeleteRequests(1);
         }
         servlet.getMetrics().incrementFailedGetRequests(1);
-        throw new WebApplicationException(Response.Status.GONE);
+        return Response.status(Response.Status.GONE)
+          .type(MIMETYPE_TEXT).entity("Gone" + CRLF)
+          .build();
       }
       if (value == null) {
         LOG.info("generator exhausted");
@@ -162,7 +171,9 @@ public class ScannerInstanceResource extends ResourceBase {
         servlet.getMetrics().incrementFailedDeleteRequests(1);
       }
       servlet.getMetrics().incrementFailedGetRequests(1);
-      throw new WebApplicationException(Response.Status.GONE);
+      return Response.status(Response.Status.GONE)
+        .type(MIMETYPE_TEXT).entity("Gone" + CRLF)
+        .build();
     }
   }
 
@@ -173,7 +184,9 @@ public class ScannerInstanceResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
-      throw new WebApplicationException(Response.Status.FORBIDDEN);
+      return Response.status(Response.Status.FORBIDDEN)
+        .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
+        .build();
     }
     if (ScannerResource.delete(id)) {
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);
