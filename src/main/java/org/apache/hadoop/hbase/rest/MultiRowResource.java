@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
@@ -74,9 +73,12 @@ public class MultiRowResource extends ResourceBase {
           rowSpec.setMaxVersions(this.versions);
         }
 
-        ResultGenerator generator = ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null);
+        ResultGenerator generator =
+          ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null);
         if (!generator.hasNext()) {
-          throw new WebApplicationException(Response.Status.NOT_FOUND);
+          return Response.status(Response.Status.NOT_FOUND)
+            .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
+            .build();
         }
 
         KeyValue value = null;
@@ -93,8 +95,9 @@ public class MultiRowResource extends ResourceBase {
       return Response.ok(model).build();
     } catch (IOException e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      throw new WebApplicationException(e,
-              Response.Status.SERVICE_UNAVAILABLE);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
 
   }
