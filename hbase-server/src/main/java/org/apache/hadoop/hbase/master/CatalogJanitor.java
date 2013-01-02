@@ -245,7 +245,7 @@ class CatalogJanitor extends Chore {
       }
       FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
       LOG.debug("Archiving parent region:" + parent);
-      HFileArchiver.archiveRegion(fs, parent);
+      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
       MetaEditor.deleteRegion(this.server.getCatalogTracker(), parent);
       result = true;
     }

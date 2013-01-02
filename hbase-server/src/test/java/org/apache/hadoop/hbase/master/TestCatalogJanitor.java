@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -73,6 +72,7 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 @Category(SmallTests.class)
@@ -220,7 +220,7 @@ public class TestCatalogJanitor {
 
     @Override
     public Configuration getConfiguration() {
-      return null;
+      return mfs.conf;
     }
 
     @Override
