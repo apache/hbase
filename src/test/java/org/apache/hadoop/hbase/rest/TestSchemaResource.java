@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.rest.model.TestTableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.*;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -110,6 +111,7 @@ public class TestSchemaResource {
     // retrieve the schema and validate it
     response = client.get(schemaPath, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     model = fromXML(response.getBody());
     TestTableSchemaModel.checkModel(model, TABLE1);
 
@@ -148,6 +150,15 @@ public class TestSchemaResource {
     // retrieve the schema and validate it
     response = client.get(schemaPath, Constants.MIMETYPE_PROTOBUF);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
+    model = new TableSchemaModel();
+    model.getObjectFromMessage(response.getBody());
+    TestTableSchemaModel.checkModel(model, TABLE2);
+
+    // retrieve the schema and validate it with alternate pbuf type
+    response = client.get(schemaPath, Constants.MIMETYPE_PROTOBUF_IETF);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new TableSchemaModel();
     model.getObjectFromMessage(response.getBody());
     TestTableSchemaModel.checkModel(model, TABLE2);

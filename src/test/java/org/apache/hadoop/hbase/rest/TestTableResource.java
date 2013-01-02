@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.junit.Assert.*;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -179,12 +180,14 @@ public class TestTableResource {
   public void testTableListText() throws IOException {
     Response response = client.get("/", Constants.MIMETYPE_TEXT);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_TEXT, response.getHeader("content-type"));
   }
 
   @Test
   public void testTableListXML() throws IOException, JAXBException {
     Response response = client.get("/", Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     TableListModel model = (TableListModel)
       context.createUnmarshaller()
         .unmarshal(new ByteArrayInputStream(response.getBody()));
@@ -195,29 +198,37 @@ public class TestTableResource {
   public void testTableListJSON() throws IOException {
     Response response = client.get("/", Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
   }
 
   @Test
   public void testTableListPB() throws IOException, JAXBException {
     Response response = client.get("/", Constants.MIMETYPE_PROTOBUF);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     TableListModel model = new TableListModel();
+    model.getObjectFromMessage(response.getBody());
+    checkTableList(model);
+    response = client.get("/", Constants.MIMETYPE_PROTOBUF_IETF);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
+    model = new TableListModel();
     model.getObjectFromMessage(response.getBody());
     checkTableList(model);
   }
 
   @Test
   public void testTableInfoText() throws IOException {
-    Response response = client.get("/" + TABLE + "/regions",
-      Constants.MIMETYPE_TEXT);
+    Response response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_TEXT);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_TEXT, response.getHeader("content-type"));
   }
 
   @Test
   public void testTableInfoXML() throws IOException, JAXBException {
-    Response response = client.get("/" + TABLE + "/regions", 
-      Constants.MIMETYPE_XML);
+    Response response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     TableInfoModel model = (TableInfoModel)
       context.createUnmarshaller()
         .unmarshal(new ByteArrayInputStream(response.getBody()));
@@ -226,17 +237,23 @@ public class TestTableResource {
 
   @Test
   public void testTableInfoJSON() throws IOException {
-    Response response = client.get("/" + TABLE + "/regions", 
-      Constants.MIMETYPE_JSON);
+    Response response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
   }
 
   @Test
   public void testTableInfoPB() throws IOException, JAXBException {
-    Response response = client.get("/" + TABLE + "/regions",
-      Constants.MIMETYPE_PROTOBUF);
+    Response response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_PROTOBUF);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     TableInfoModel model = new TableInfoModel();
+    model.getObjectFromMessage(response.getBody());
+    checkTableInfo(model);
+    response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_PROTOBUF_IETF);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
+    model = new TableInfoModel();
     model.getObjectFromMessage(response.getBody());
     checkTableInfo(model);
   }
