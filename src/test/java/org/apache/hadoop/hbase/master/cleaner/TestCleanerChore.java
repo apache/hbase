@@ -47,10 +47,7 @@ public class TestCleanerChore {
   @After
   public void cleanup() throws Exception {
     // delete and recreate the test directory, ensuring a clean test dir between tests
-    Path testDir = UTIL.getDataTestDir();
-    FileSystem fs = UTIL.getTestFileSystem();
-    fs.delete(testDir, true);
-    fs.mkdirs(testDir);
+    UTIL.cleanupTestDir();
   }
 
   @Test
@@ -94,8 +91,10 @@ public class TestCleanerChore {
     // create the directory layout in the directory to clean
     Path parent = new Path(testDir, "parent");
     Path child = new Path(parent, "child");
+    Path emptyChild = new Path(parent, "emptyChild");
     Path file = new Path(child, "someFile");
     fs.mkdirs(child);
+    fs.mkdirs(emptyChild);
     // touch a new file
     fs.create(file).close();
     // also create a file in the top level directory
@@ -222,6 +221,66 @@ public class TestCleanerChore {
     assertFalse("Original file unexpectedly retained", fs.exists(file));
     Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any(Path.class));
     Mockito.reset(spy);
+  }
+  
+  /**
+   * The cleaner runs in a loop, where it first checks to see all the files under a directory can be
+   * deleted. If they all can, then we try to delete the directory. However, a file may be added
+   * that directory to after the original check. This ensures that we don't accidentally delete that
+   * directory on and don't get spurious IOExceptions.
+   * <p>
+   * This was from HBASE-7465.
+   * @throws Exception on failure
+   */
+  @Test
+  public void testNoExceptionFromDirectoryWithRacyChildren() throws Exception {
+    Stoppable stop = new StoppableImplementation();
+    // need to use a localutil to not break the rest of the test that runs on the local FS, which
+    // gets hosed when we start to use a minicluster.
+    HBaseTestingUtility localUtil = new HBaseTestingUtility();
+    Configuration conf = localUtil.getConfiguration();
+    final Path testDir = UTIL.getDataTestDir();
+    final FileSystem fs = UTIL.getTestFileSystem();
+    LOG.debug("Writing test data to: " + testDir);
+    String confKey = "hbase.test.cleaner.delegates";
+    conf.set(confKey, AlwaysDelete.class.getName());
+
+    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    // spy on the delegate to ensure that we don't check for directories
+    AlwaysDelete delegate = (AlwaysDelete) chore.cleanersChain.get(0);
+    AlwaysDelete spy = Mockito.spy(delegate);
+    chore.cleanersChain.set(0, spy);
+
+    // create the directory layout in the directory to clean
+    final Path parent = new Path(testDir, "parent");
+    Path file = new Path(parent, "someFile");
+    fs.mkdirs(parent);
+    // touch a new file
+    fs.create(file).close();
+    assertTrue("Test file didn't get created.", fs.exists(file));
+    final Path racyFile = new Path(parent, "addedFile");
+
+    // when we attempt to delete the original file, add another file in the same directory
+    Mockito.doAnswer(new Answer<Boolean>() {
+      @Override
+      public Boolean answer(InvocationOnMock invocation) throws Throwable {
+        fs.create(racyFile).close();
+        FSUtils.logFileSystemState(fs, testDir, LOG);
+        return (Boolean) invocation.callRealMethod();
+      }
+    }).when(spy).isFileDeletable(Mockito.any(Path.class));
+
+    // attempt to delete the directory, which
+    if (chore.checkAndDeleteDirectory(parent)) {
+      throw new Exception(
+          "Reported success deleting directory, should have failed when adding file mid-iteration");
+    }
+
+    // make sure all the directories + added file exist, but the original file is deleted
+    assertTrue("Added file unexpectedly deleted", fs.exists(racyFile));
+    assertTrue("Parent directory deleted unexpectedly", fs.exists(parent));
+    assertFalse("Original file unexpectedly retained", fs.exists(file));
+    Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any(Path.class));
   }
 
   private static class AllValidPaths extends CleanerChore<BaseHFileCleanerDelegate> {
