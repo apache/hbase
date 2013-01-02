@@ -65,7 +65,8 @@ public class RegionsResource extends ResourceBase {
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());

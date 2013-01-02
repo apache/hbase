@@ -59,7 +59,8 @@ public class MultiRowResource extends ResourceBase {
   }
 
   @GET
-  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response get(final @Context UriInfo uriInfo) {
     MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
 

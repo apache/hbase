@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
  * ProtobufMessageHandler interface capable handlers for decoding protobuf input.
  */
 @Provider
-@Consumes(Constants.MIMETYPE_PROTOBUF)
+@Consumes({Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF})
 public class ProtobufMessageBodyConsumer 
     implements MessageBodyReader<ProtobufMessageHandler> {
   private static final Log LOG =

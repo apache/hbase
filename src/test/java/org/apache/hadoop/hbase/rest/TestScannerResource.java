@@ -125,6 +125,7 @@ public class TestScannerResource {
       response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
       assertTrue(response.getCode() == 200 || response.getCode() == 204);
       if (response.getCode() == 200) {
+        assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
         CellSetModel cellSet = new CellSetModel();
         cellSet.getObjectFromMessage(response.getBody());
         Iterator<RowModel> rows = cellSet.getRows().iterator();
@@ -208,6 +209,7 @@ public class TestScannerResource {
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     // confirm batch size conformance
@@ -251,6 +253,7 @@ public class TestScannerResource {
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     CellSetModel cellSet = new CellSetModel();
     cellSet.getObjectFromMessage(response.getBody());
     // confirm batch size conformance
@@ -293,6 +296,7 @@ public class TestScannerResource {
     // get a cell
     response = client.get(scannerURI, Constants.MIMETYPE_BINARY);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_BINARY, response.getHeader("content-type"));
     // verify that data was returned
     assertTrue(response.getBody().length > 0);
     // verify that the expected X-headers are present

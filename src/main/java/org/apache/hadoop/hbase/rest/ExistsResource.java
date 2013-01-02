@@ -53,7 +53,7 @@ public class ExistsResource extends ResourceBase {
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_BINARY})
+    MIMETYPE_PROTOBUF_IETF, MIMETYPE_BINARY})
   public Response get(final @Context UriInfo uriInfo) {
     try {
       if (!tableResource.exists()) {
