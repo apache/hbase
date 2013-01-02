@@ -120,7 +120,8 @@ public class ScannerResource extends ResourceBase {
   }
 
   @PUT
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response put(final ScannerModel model, 
       final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
@@ -130,7 +131,8 @@ public class ScannerResource extends ResourceBase {
   }
 
   @POST
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response post(final ScannerModel model,
       final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {

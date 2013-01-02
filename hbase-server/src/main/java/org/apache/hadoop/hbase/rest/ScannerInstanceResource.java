@@ -68,7 +68,8 @@ public class ScannerInstanceResource extends ResourceBase {
   }
 
   @GET
-  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response get(final @Context UriInfo uriInfo, 
       @QueryParam("n") int maxRows, final @QueryParam("c") int maxValues) {
     if (LOG.isDebugEnabled()) {
