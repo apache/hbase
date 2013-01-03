@@ -219,6 +219,19 @@ public class TableMapReduceUtil {
   public static void initCredentials(Job job) throws IOException {
     if (User.isHBaseSecurityEnabled(job.getConfiguration())) {
       try {
+        // init credentials for remote cluster
+        String quorumAddress = job.getConfiguration().get(
+            TableOutputFormat.QUORUM_ADDRESS);
+        if (quorumAddress != null) {
+          String[] parts = ZKUtil.transformClusterKey(quorumAddress);
+          Configuration peerConf = HBaseConfiguration.create(job
+              .getConfiguration());
+          peerConf.set(HConstants.ZOOKEEPER_QUORUM, parts[0]);
+          peerConf.set("hbase.zookeeper.client.port", parts[1]);
+          peerConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parts[2]);
+          User.getCurrent().obtainAuthTokenForJob(peerConf, job);
+        }
+
         User.getCurrent().obtainAuthTokenForJob(job.getConfiguration(), job);
       } catch (InterruptedException ie) {
         LOG.info("Interrupted obtaining user authentication token");

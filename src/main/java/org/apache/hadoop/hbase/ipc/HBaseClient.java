@@ -1098,4 +1098,11 @@ public class HBaseClient {
              (ticket == null ? 0 : ticket.hashCode()) )) ^ rpcTimeout;
     }
   }
+
+  /**
+   * @return the clusterId
+   */
+  public String getClusterId() {
+    return clusterId;
+  }
 }
