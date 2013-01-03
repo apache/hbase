@@ -84,8 +84,9 @@ public class TestHRegionOnCluster {
       hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
           Bytes.toBytes(targetServer.getServerName().getServerName()));
       do {
-        Thread.sleep(1);
-      } while (cluster.getServerWith(regionInfo.getRegionName()) == originServerNum);
+        Thread.sleep(10);
+      } while (cluster.getServerWith(regionInfo.getRegionName()) == originServerNum ||
+          cluster.getMaster().getAssignmentManager().getRegionServerOfRegion(regionInfo) == null);
 
       // Put data: r2->v2
       putDataAndVerify(table, "r2", FAMILY, "v2", 2);

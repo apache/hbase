@@ -962,6 +962,11 @@ public class TestSplitTransactionOnCluster {
       LOG.
         info("Moving " + hri.getRegionNameAsString() + " to " +
         hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
+      for (int i = 0; cluster.getMaster().getAssignmentManager()
+          .getRegionServerOfRegion(hri) == null
+          && i < 100; i++) {
+        Thread.sleep(10);
+      }
       admin.move(hri.getEncodedNameAsBytes(),
         Bytes.toBytes(hrs.getServerName().toString()));
     }
