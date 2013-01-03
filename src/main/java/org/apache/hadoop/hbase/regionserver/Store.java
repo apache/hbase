@@ -1224,8 +1224,6 @@ public class Store extends SchemaConfigured implements HeapSize {
                 }
               } else {
                 writer.append(kv);
-                InjectionHandler.processEvent(
-                    InjectionEvent.STORE_AFTER_APPEND_KV, (Object) kv);
               }
               // check periodically to see if a system stop is requested
               if (Store.closeCheckInterval > 0) {

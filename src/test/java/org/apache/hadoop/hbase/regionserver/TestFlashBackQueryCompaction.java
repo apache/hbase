@@ -135,18 +135,17 @@ public class TestFlashBackQueryCompaction extends FlashBackQueryTestUtil {
         random.nextInt(CURRENT_TIME) / 1000, random.nextInt(MAX_MAXVERSIONS));
   }
 
-  private class CompactionHookHandler extends InjectionHandler {
-    protected void _processEvent(InjectionEvent event, Object... args) {
-      if (InjectionEvent.STORE_AFTER_APPEND_KV == event) {
-        KeyValue kv = (KeyValue) args[0];
-        if (Type.codeToType(kv.getType()) == Type.Put) {
-          compactionSet.add((KeyValue) args[0]);
-        }
-      }
+  private static HashSet<KeyValue> compactionSet = new HashSet<KeyValue>();
+
+  private void scanTable(HTable table, long effectiveTS) throws Exception {
+    compactionSet.clear();
+    Scan s = new Scan();
+    s.setEffectiveTS(55000);
+    s.setMaxVersions();
+    for (Result result : table.getScanner(s)) {
+      compactionSet.addAll(result.list());
     }
   }
-
-  private static HashSet<KeyValue> compactionSet = new HashSet<KeyValue>();
 
   private KeyValue loadTableAndDelete(boolean family) throws Exception {
     HTable table = setupTable(30, 20, 100);
@@ -168,9 +167,9 @@ public class TestFlashBackQueryCompaction extends FlashBackQueryTestUtil {
 
     flushAllRegions();
 
-    compactionSet.clear();
     majorCompact(table.getTableName(), table.getTableDescriptor()
         .getColumnFamilies());
+    scanTable(table, 55000);
 
     assertEquals(2, compactionSet.size());
 
@@ -184,35 +183,25 @@ public class TestFlashBackQueryCompaction extends FlashBackQueryTestUtil {
 
     flushAllRegions();
 
-    compactionSet.clear();
     majorCompact(table.getTableName(), table.getTableDescriptor()
         .getColumnFamilies());
+    scanTable(table, 55000);
 
     return kv1;
   }
 
   @Test
   public void testDeleteRow() throws Exception {
-    InjectionHandler.set(new CompactionHookHandler());
-    try {
-      KeyValue kv1 = loadTableAndDelete(false);
-      assertEquals(1, compactionSet.size());
-      assertTrue(compactionSet.contains(kv1));
-    } finally {
-      InjectionHandler.clear();
-    }
+    KeyValue kv1 = loadTableAndDelete(false);
+    assertEquals(1, compactionSet.size());
+    assertTrue(compactionSet.contains(kv1));
   }
 
   @Test
   public void testDeleteFamily() throws Exception {
-    InjectionHandler.set(new CompactionHookHandler());
-    try {
-      KeyValue kv1 = loadTableAndDelete(true);
-      assertEquals(1, compactionSet.size());
-      assertTrue(compactionSet.contains(kv1));
-    } finally {
-      InjectionHandler.clear();
-    }
+    KeyValue kv1 = loadTableAndDelete(true);
+    assertEquals(1, compactionSet.size());
+    assertTrue(compactionSet.contains(kv1));
   }
 
   @Test
