@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -368,6 +369,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   private RegionServerCoprocessorHost rsHost;
 
+  /** The health check chore. */
+  private HealthCheckChore healthCheckChore;
+
   /**
    * Starts a HRegionServer at the default location
    *
@@ -660,6 +664,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.compactionChecker = new CompactionChecker(this,
       this.threadWakeFrequency * multiplier, this);
 
+    // Health checker thread.
+    int sleepTime = this.conf.getInt(HConstants.HEALTH_CHORE_WAKE_FREQ,
+      HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
+    if (isHealthCheckerConfigured()) {
+      healthCheckChore = new HealthCheckChore(sleepTime, this, getConfiguration());
+    }
+
     this.leases = new Leases((int) conf.getLong(
         HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
         HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD),
@@ -775,6 +786,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (this.hlogRoller != null) this.hlogRoller.interruptIfNecessary();
     if (this.compactionChecker != null)
       this.compactionChecker.interrupt();
+    if (this.healthCheckChore != null) {
+      this.healthCheckChore.interrupt();
+    }
 
     if (this.killed) {
       // Just skip out w/o closing regions.  Used when testing.
@@ -1559,6 +1573,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       handler);
     Threads.setDaemonThreadRunning(this.compactionChecker.getThread(), n +
       ".compactionChecker", handler);
+    if (this.healthCheckChore != null) {
+      Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker",
+        handler);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -1789,6 +1807,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   protected void join() {
     Threads.shutdown(this.compactionChecker.getThread());
     Threads.shutdown(this.cacheFlusher.getThread());
+    if (this.healthCheckChore != null) {
+      Threads.shutdown(this.healthCheckChore.getThread());
+    }
     if (this.hlogRoller != null) {
       Threads.shutdown(this.hlogRoller.getThread());
     }
@@ -3863,5 +3884,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       return server.getResponseQueueSize();
     }
     return 0;
+  }
+
+  private boolean isHealthCheckerConfigured() {
+    String healthScriptLocation = this.conf.get(HConstants.HEALTH_SCRIPT_LOC);
+    return org.apache.commons.lang.StringUtils.isNotBlank(healthScriptLocation);
   }
 }

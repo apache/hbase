@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
@@ -235,6 +236,9 @@ Server {
   private Map<String, Class<? extends CoprocessorProtocol>>
       protocolHandlerNames = Maps.newHashMap();
 
+  /** The health check chore. */
+  private HealthCheckChore healthCheckChore;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -303,6 +307,13 @@ Server {
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" + isa.getPort(), this, true);
     this.rpcServer.startThreads();
     this.metrics = new MasterMetrics(getServerName().toString());
+
+    // Health checker thread.
+    int sleepTime = this.conf.getInt(HConstants.HEALTH_CHORE_WAKE_FREQ,
+      HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
+    if (isHealthCheckerConfigured()) {
+      healthCheckChore = new HealthCheckChore(sleepTime, this, getConfiguration());
+    }
   }
 
   /**
@@ -878,7 +889,12 @@ Server {
      this.infoServer.setAttribute(MASTER, this);
      this.infoServer.start();
     }
-   
+
+   // Start the health checker
+   if (this.healthCheckChore != null) {
+     Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker");
+   }
+
     // Start allowing requests to happen.
     this.rpcServer.openServer();
     if (LOG.isDebugEnabled()) {
@@ -905,6 +921,9 @@ Server {
       }
     }
     if (this.executorService != null) this.executorService.shutdown();
+    if (this.healthCheckChore != null) {
+      this.healthCheckChore.interrupt();
+    }
   }
 
   private static Thread getAndStartBalancerChore(final HMaster master) {
@@ -1925,5 +1944,10 @@ Server {
    */
   public HFileCleaner getHFileCleaner() {
     return this.hfileCleaner;
+  }
+
+  private boolean isHealthCheckerConfigured() {
+    String healthScriptLocation = this.conf.get(HConstants.HEALTH_SCRIPT_LOC);
+    return org.apache.commons.lang.StringUtils.isNotBlank(healthScriptLocation);
   }
 }
