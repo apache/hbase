@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.4 - 12/28/2012
+Release 0.94.4 - 1/2/2012
 Sub-task
 
     [HBASE-3776] - Add Bloom Filter Support to HFileOutputFormat
@@ -11,6 +11,8 @@ Sub-task
     [HBASE-7331] - Add access control for region open and close, row locking, and stopping the regionserver
     [HBASE-7336] - HFileBlock.readAtOffset does not work well with multiple threads
     [HBASE-7371] - Blocksize in TestHFileBlock is unintentionally small
+    [HBASE-7399] - Health check chore for HMaster
+    [HBASE-7406] - Example health checker script
     [HBASE-7431] - TestSplitTransactionOnCluster tests still flaky
     [HBASE-7438] - TestSplitTransactionOnCluster has too many infinite loops
 
@@ -53,7 +55,13 @@ Bug
     [HBASE-7432] - TestHBaseFsck prevents testsuite from finishing
     [HBASE-7435] - BuiltInGzipDecompressor is only released during full GC
     [HBASE-7440] - ReplicationZookeeper#addPeer is racy
+    [HBASE-7442] - HBase remote CopyTable not working when security enabled
     [HBASE-7455] - Increase timeouts in TestReplication and TestSplitLogWorker
+    [HBASE-7464] - [REST] Sending HTML for errors is unhelpful
+    [HBASE-7466] - Fix junit dependency typo in 0.94
+    [HBASE-7467] - CleanerChore checkAndDeleteDirectory not deleting empty directories
+    [HBASE-7483] - TestHRegionOnCluster and TestSplitTransactionOnCluster are racy with HBaseAdmin.move()
+    [HBASE-7485] - TestSplitLogManager is still flaky on windows
 
 Improvement
 
@@ -71,10 +79,13 @@ Improvement
     [HBASE-7231] - port HBASE-7200 create integration test for balancing regions and killing region servers to 0.94
     [HBASE-7249] - add test name filter to IntegrationTestsDriver
     [HBASE-7328] - IntegrationTestRebalanceAndKillServersTargeted supercedes IntegrationTestRebalanceAndKillServers, remove
+    [HBASE-7351] - Periodic health check chore
     [HBASE-7359] - [REST] 'accessToken' in RemoteHTable is vestigial
     [HBASE-7374] - Expose master table operations for coprocessors by way of MasterServices
     [HBASE-7377] - Clean up TestHBase7051
     [HBASE-7381] - Lightweight data transfer for Class Result
+    [HBASE-7469] - [REST] Share a HBaseAdmin instance
+    [HBASE-7472] - [REST] Support MIME type application/protobuf
 
 Task
 
