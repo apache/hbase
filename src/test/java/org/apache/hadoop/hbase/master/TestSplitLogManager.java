@@ -202,7 +202,7 @@ public class TestSplitLogManager {
 
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
-    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 100);
+    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
     Task task = slm.findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
     waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
@@ -447,6 +447,7 @@ public class TestSplitLogManager {
   public void testVanishingTaskZNode() throws Exception {
     LOG.info("testVanishingTaskZNode");
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 0);
+    conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 1000);
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -475,7 +476,7 @@ public class TestSplitLogManager {
       // remove the task znode, to finish the distributed log splitting
       ZKUtil.deleteNode(zkw, znode);
       waitForCounter(tot_mgr_get_data_nonode, 0, 1, 30000);
-      waitForCounter(tot_mgr_log_split_batch_success, 0, 1, 1000);
+      waitForCounter(tot_mgr_log_split_batch_success, 0, 1, to/2);
       assertTrue(fs.exists(logFile));
     } finally {
       if (thread != null) {
