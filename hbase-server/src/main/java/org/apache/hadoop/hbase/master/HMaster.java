@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -320,6 +321,9 @@ Server {
 
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
+  /** The health check chore. */
+  private HealthCheckChore healthCheckChore;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -399,6 +403,13 @@ Server {
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
+
+    // Health checker thread.
+    int sleepTime = this.conf.getInt(HConstants.HEALTH_CHORE_WAKE_FREQ,
+      HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
+    if (isHealthCheckerConfigured()) {
+      healthCheckChore = new HealthCheckChore(sleepTime, this, getConfiguration());
+    }
   }
 
   /**
@@ -1069,6 +1080,11 @@ Server {
      this.infoServer.start();
     }
 
+   // Start the health checker
+   if (this.healthCheckChore != null) {
+     Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker");
+   }
+
     // Start allowing requests to happen.
     this.rpcServer.openServer();
     this.rpcServerOpen = true;
@@ -1104,6 +1120,9 @@ Server {
       }
     }
     if (this.executorService != null) this.executorService.shutdown();
+    if (this.healthCheckChore != null) {
+      this.healthCheckChore.interrupt();
+    }
   }
 
   private static Thread getAndStartClusterStatusChore(HMaster master) {
@@ -2428,5 +2447,10 @@ Server {
 
   public HFileCleaner getHFileCleaner() {
     return this.hfileCleaner;
+  }
+
+  private boolean isHealthCheckerConfigured() {
+    String healthScriptLocation = this.conf.get(HConstants.HEALTH_SCRIPT_LOC);
+    return org.apache.commons.lang.StringUtils.isNotBlank(healthScriptLocation);
   }
 }
