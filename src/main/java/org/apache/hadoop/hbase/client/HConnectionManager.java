@@ -2811,9 +2811,10 @@ public class HConnectionManager {
       HRegionLocation oldLocation  = !batchedUploadUpdatesMap.containsKey(tableName) ? null
           : batchedUploadUpdatesMap.get(tableName).putIfAbsent(regionInfo, location);
       if (oldLocation != null && !oldLocation.equals(location)) {
-        // check if the old server is alive
+        // check if the old server is alive and update the map with the new location
         try {
           checkIfAlive(oldLocation);
+          batchedUploadUpdatesMap.get(tableName).put(regionInfo, location);
         } catch (IOException e) {
           throw new ClientSideDoNotRetryException("Region "
               + regionInfo.getRegionNameAsString() + " moved from " + oldLocation

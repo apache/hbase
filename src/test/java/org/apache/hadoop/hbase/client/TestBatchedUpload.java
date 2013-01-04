@@ -21,12 +21,21 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.AfterClass;
@@ -45,7 +54,11 @@ public class TestBatchedUpload {
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static int SLAVES = 5;
-
+  private enum RegionServerAction {
+    KILL_REGIONSERVER,
+    MOVE_REGION
+  }
+  
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
@@ -67,7 +80,7 @@ public class TestBatchedUpload {
     // start batch processing
     // do a bunch of puts
     // finish batch. Check for Exceptions.
-    int attempts = writeData(ht, NUM_ROWS, true);
+    int attempts = writeData(ht, NUM_ROWS, RegionServerAction.KILL_REGIONSERVER);
     assert(attempts > 1);
 
     readData(ht, NUM_ROWS);
@@ -91,7 +104,7 @@ public class TestBatchedUpload {
     // start batch processing
     // do a bunch of puts
     // finish batch. Check for Exceptions.
-    int attempts = writeData(ht, NUM_ROWS, false);
+    int attempts = writeData(ht, NUM_ROWS, RegionServerAction.MOVE_REGION);
     assert(attempts == 1);
 
     readData(ht, NUM_ROWS);
@@ -103,15 +116,15 @@ public class TestBatchedUpload {
    * Write data to the htable. While randomly killing/shutting down regionservers.
    * @param table
    * @param numRows
-   * @param killRS -- true to kill the RS. false to do a clean shutdown.
+   * @param action -- enum RegionServerAction which defines the type of action.
    * @return number of attempts to complete the batch.
    * @throws IOException
+   * @throws InterruptedException 
    */
-  public int writeData(HTable table, long numRows, boolean killRS) throws IOException {
+  public int writeData(HTable table, long numRows, RegionServerAction action) throws IOException, InterruptedException {
     int attempts = 0;
     int MAX = 10;
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
-    int numRS;
     Random rand = new Random(5234234);
     double killProb = 2.0 / numRows;
     double prob;
@@ -132,28 +145,37 @@ public class TestBatchedUpload {
           byte[] value = rowKey; // value is the same as the row key
           put.add(FAMILY, QUALIFIER, value);
           put.setWriteToWAL(false);
-          table.put(put);
-
+          
           prob = rand.nextDouble();
           if (kills < 2 && prob < killProb) { // kill up to 2 rs
             kills++;
-            // kill a random one
-            numRS = cluster.getRegionServerThreads().size();
-            int idxToKill = Math.abs(rand.nextInt()) % numRS;
+            // Find the region server for the next put
+            HRegionLocation regLoc = table.getRegionLocation(put.row);
+            int srcRSIdx = cluster.getServerWith(regLoc.getRegionInfo().getRegionName());
+ 
             LOG.debug("Try " + attempts + " written Puts : " + i);
-            if (killRS) {
-              LOG.info("Randomly killing region server " + idxToKill
-                  + ". Got probability " + prob + " < " + killProb);
-              cluster.abortRegionServer(idxToKill);
-            } else { // clean shutdown
-              LOG.info("Randomly shutting down region server " + idxToKill
-                  + ". Got probability " + prob + " < " + killProb);
-              cluster.stopRegionServer(idxToKill);
+            if (action == RegionServerAction.KILL_REGIONSERVER) {
+              // abort the region server
+              LOG.info("Killing region server " + srcRSIdx
+                  + " before the next put. Got probability " + 
+                  prob + " < " + killProb);
+              cluster.abortRegionServer(srcRSIdx);
+              
+            } else if (action == RegionServerAction.MOVE_REGION) {
+              
+              // move the region to some other Region Server
+              HRegionServer dstRS = cluster.getRegionServer(
+                  (srcRSIdx + 1) % cluster.getLiveRegionServerThreads().size());
+              LOG.info("Moving region " + regLoc.getRegionInfo().getRegionName()
+                 + "from " + cluster.getRegionServer(srcRSIdx) + " to "
+                 + dstRS);
+              moveRegionAndWait(cluster.getRegionServer(srcRSIdx).
+                  getOnlineRegion(regLoc.getRegionInfo().getRegionName()), dstRS);
             }
-
             // keep decreasing the probability of killing the RS
             killProb = killProb / 2;
           }
+          table.put(put);
         }
 
         LOG.info("Written all puts. Trying to end Batch");
@@ -178,7 +200,20 @@ public class TestBatchedUpload {
       get.addColumn(FAMILY, QUALIFIER);
       get.setMaxVersions(1);
       Result result = table.get(get);
+      
       assertTrue(Arrays.equals(rowKey, result.getValue(FAMILY, QUALIFIER)));
+    }
+  }
+
+  private void moveRegionAndWait(HRegion regionToMove, HRegionServer destServer)
+      throws InterruptedException, MasterNotRunningException,
+       IOException {
+    TEST_UTIL.getHBaseAdmin().moveRegion(
+        regionToMove.getRegionName(),
+        destServer.getServerInfo().getHostnamePort());
+    while (destServer.getOnlineRegion(regionToMove.getRegionName()) == null) {
+      //Wait for this move to complete.
+      Thread.sleep(10);
     }
   }
 
