@@ -37,6 +37,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -65,25 +66,6 @@ public class TestHCM {
 
   @AfterClass public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  /**
-   * @throws InterruptedException 
-   * @throws IllegalAccessException 
-   * @throws NoSuchFieldException 
-   * @throws ZooKeeperConnectionException 
-   * @throws IllegalArgumentException 
-   * @throws SecurityException 
-   * @see https://issues.apache.org/jira/browse/HBASE-2925
-   */
-  // Disabling.  Of course this test will OOME using new Configuration each time
-  // St.Ack 20110428
-  // @Test
-  public void testManyNewConnectionsDoesnotOOME()
-  throws SecurityException, IllegalArgumentException,
-  ZooKeeperConnectionException, NoSuchFieldException, IllegalAccessException,
-  InterruptedException {
-    createNewConfigurations();
   }
 
   private static Random _randy = new Random();
@@ -156,18 +138,21 @@ public class TestHCM {
     table.put(put2);
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
 
+    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+
     // We can wait for all regions to be online, that makes log reading easier when debugging
-    while (TEST_UTIL.getMiniHBaseCluster().getMaster().
-      getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+    while (master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+      Thread.sleep(1);
     }
 
     // Now moving the region to the second server
-    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
     HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME, ROW);
     byte[] regionName = toMove.getRegionInfo().getRegionName();
+    byte[] encodedRegionNameBytes = toMove.getRegionInfo().getEncodedNameAsBytes();
 
     // Choose the other server.
-    int curServerId = TEST_UTIL.getHBaseCluster().getServerWith( regionName  );
+    int curServerId = TEST_UTIL.getHBaseCluster().getServerWith(regionName);
     int destServerId = (curServerId == 0 ? 1 : 0);
 
     HRegionServer curServer = TEST_UTIL.getHBaseCluster().getRegionServer(curServerId);
@@ -181,6 +166,8 @@ public class TestHCM {
     Assert.assertFalse( toMove.getPort() == destServerName.getPort());
     Assert.assertNotNull(curServer.getOnlineRegion(regionName));
     Assert.assertNull(destServer.getOnlineRegion(regionName));
+    Assert.assertFalse(TEST_UTIL.getMiniHBaseCluster().getMaster().
+        getAssignmentManager().getRegionStates().isRegionsInTransition());
 
     // Moving. It's possible that we don't have all the regions online at this point, so
     //  the test must depends only on the region we're looking at.
@@ -190,18 +177,26 @@ public class TestHCM {
       destServerName.getServerName().getBytes()
     );
 
-    while ( destServer.getOnlineRegion(regionName) == null ){
+    while (destServer.getOnlineRegion(regionName) == null ||
+        destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+        curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+        master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
       // wait for the move to be finished
+      Thread.sleep(1);
     }
 
+    LOG.info("Move finished for region="+toMove.getRegionInfo().getRegionNameAsString());
 
     // Check our new state.
     Assert.assertNull(curServer.getOnlineRegion(regionName));
     Assert.assertNotNull(destServer.getOnlineRegion(regionName));
-    LOG.info("Move finished for region="+toMove.getRegionInfo().getRegionNameAsString());
+    Assert.assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+    Assert.assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+
 
     // Cache was NOT updated and points to the wrong server
-    Assert.assertFalse( conn.getCachedLocation(TABLE_NAME, ROW).getPort() == destServerName.getPort());
+    Assert.assertFalse(
+        conn.getCachedLocation(TABLE_NAME, ROW).getPort() == destServerName.getPort());
 
     // Hijack the number of retry to fail immediately instead of retrying: there will be no new
     //  connection to the master
@@ -233,6 +228,8 @@ public class TestHCM {
       "Previous server was "+curServer.getServerName().getHostAndPort(),
       destServerName.getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
 
+    Assert.assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+    Assert.assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
 
     // We move it back to do another test with a scan
     LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
@@ -241,8 +238,12 @@ public class TestHCM {
       curServer.getServerName().getServerName().getBytes()
     );
 
-    while ( curServer.getOnlineRegion(regionName) == null ){
+    while (curServer.getOnlineRegion(regionName) == null ||
+        destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+        curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+        master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
       // wait for the move to be finished
+      Thread.sleep(1);
     }
 
     // Check our new state.
@@ -260,11 +261,12 @@ public class TestHCM {
     sc.setStopRow(ROW);
 
     try {
-    ResultScanner rs = table.getScanner(sc);
-    while (rs.next() != null){}
+      ResultScanner rs = table.getScanner(sc);
+      while (rs.next() != null) {
+      }
       Assert.assertFalse("Unreachable point", true);
-    }catch (Throwable e){
-      LOG.info("Put done, expected exception caught: "+e.getClass());
+    } catch (Throwable e) {
+      LOG.info("Put done, expected exception caught: " + e.getClass());
     }
 
     // Cache is updated with the right value.
@@ -302,7 +304,7 @@ public class TestHCM {
   }
 
   /**
-   * Make sure that {@link HConfiguration} instances that are essentially the
+   * Make sure that {@link Configuration} instances that are essentially the
    * same map to the same {@link HConnection} instance.
    */
   @Test
@@ -332,7 +334,7 @@ public class TestHCM {
 
   /**
    * Makes sure that there is no leaking of
-   * {@link HConnectionManager.TableServers} in the {@link HConnectionManager}
+   * {@link HConnectionManager.HConnectionImplementation} in the {@link HConnectionManager}
    * class.
    */
   @Test
