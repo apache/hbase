@@ -214,7 +214,7 @@ class CatalogJanitor extends Chore {
 
   /**
    * If daughters no longer hold reference to the parents, delete the parent.
-   * @param server HRegionInterface of meta server to talk to 
+   * @param server HRegionInterface of meta server to talk to
    * @param parent HRegionInfo of split offlined parent
    * @param rowContent Content of <code>parent</code> row in
    * <code>metaRegionName</code>
@@ -246,7 +246,7 @@ class CatalogJanitor extends Chore {
         this.services.getAssignmentManager().regionOffline(parent);
       }
       FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
-      HFileArchiver.archiveRegion(fs, parent);
+      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
       MetaEditor.deleteRegion(this.server.getCatalogTracker(), parent);
       result = true;
     }
@@ -291,7 +291,7 @@ class CatalogJanitor extends Chore {
   /**
    * Checks if a daughter region -- either splitA or splitB -- still holds
    * references to parent.
-   * @param parent Parent region name. 
+   * @param parent Parent region name.
    * @param split Which column family.
    * @param qualifier Which of the daughters to look at, splitA or splitB.
    * @return A pair where the first boolean says whether or not the daughter

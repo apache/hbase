@@ -247,13 +247,13 @@ public class MasterFileSystem {
       }
     } while (retrySplitting);
   }
-  
+
   public void splitLog(final ServerName serverName) throws IOException {
     List<ServerName> serverNames = new ArrayList<ServerName>();
     serverNames.add(serverName);
     splitLog(serverNames);
   }
-  
+
   public void splitLog(final List<ServerName> serverNames) throws IOException {
     long splitTime = 0, splitLogSize = 0;
     List<Path> logDirs = new ArrayList<Path>();
@@ -279,7 +279,7 @@ public class MasterFileSystem {
       LOG.info("No logs to split");
       return;
     }
-      
+
     if (distributedLogSplitting) {
       splitLogManager.handleDeadWorkers(serverNames);
       splitTime = EnvironmentEdgeManager.currentTimeMillis();
@@ -290,7 +290,7 @@ public class MasterFileSystem {
         // splitLogLock ensures that dead region servers' logs are processed
         // one at a time
         this.splitLogLock.lock();
-        try {              
+        try {
           HLogSplitter splitter = HLogSplitter.createLogSplitter(
             conf, rootdir, logDir, oldLogDir, this.fs);
           try {
@@ -344,7 +344,7 @@ public class MasterFileSystem {
         // there is one datanode it will succeed. Permission problems should have
         // already been caught by mkdirs above.
         FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, 
+          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
         		  HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
       } else {
         if (!fs.isDirectory(rd)) {
@@ -352,7 +352,7 @@ public class MasterFileSystem {
         }
         // as above
         FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, 
+          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
         		  HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
       }
     } catch (IllegalArgumentException iae) {
@@ -443,7 +443,7 @@ public class MasterFileSystem {
 
 
   public void deleteRegion(HRegionInfo region) throws IOException {
-    HFileArchiver.archiveRegion(fs, region);
+    HFileArchiver.archiveRegion(conf, fs, region);
   }
 
   public void deleteTable(byte[] tableName) throws IOException {
@@ -481,7 +481,7 @@ public class MasterFileSystem {
 
   /**
    * Create new HTableDescriptor in HDFS.
-   * 
+   *
    * @param htableDescriptor
    */
   public void createTableDescriptor(HTableDescriptor htableDescriptor)

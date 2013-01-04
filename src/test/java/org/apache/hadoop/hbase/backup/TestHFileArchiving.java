@@ -137,7 +137,7 @@ public class TestHFileArchiving {
     // now attempt to depose the region
     Path regionDir = HRegion.getRegionDir(region.getTableDir().getParent(), region.getRegionInfo());
 
-    HFileArchiver.archiveRegion(fs, region.getRegionInfo());
+    HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
 
     // check for the existence of the archive directory and some files in it
     Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(), region);
@@ -197,7 +197,7 @@ public class TestHFileArchiving {
     }
 
     // then archive the region
-    HFileArchiver.archiveRegion(fs, region.getRegionInfo());
+    HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
 
     // and check to make sure the region directoy got deleted
     assertFalse("Region directory (" + regionDir + "), still exists.", fs.exists(regionDir));

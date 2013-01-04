@@ -68,7 +68,6 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -129,7 +128,7 @@ public class TestCatalogJanitor {
     public void abort(String why, Throwable e) {
       //no-op
     }
-    
+
     @Override
     public boolean isAborted() {
       return false;
@@ -206,7 +205,7 @@ public class TestCatalogJanitor {
 
     @Override
     public Configuration getConfiguration() {
-      return null;
+      return mfs.conf;
     }
 
     @Override
@@ -218,7 +217,7 @@ public class TestCatalogJanitor {
     public void abort(String why, Throwable e) {
       //no-op
     }
-    
+
     @Override
     public boolean isAborted() {
       return false;
