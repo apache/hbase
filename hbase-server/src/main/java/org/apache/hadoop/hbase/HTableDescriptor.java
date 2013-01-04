@@ -358,7 +358,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     byte [] value = getValue(key);
     if (value != null) {
       // TODO: Make value be a boolean rather than String of boolean.
-      return Boolean.valueOf(Bytes.toString(value)).booleanValue();
+      return Boolean.valueOf(Bytes.toString(value));
     }
     return valueIfNull;
   }
@@ -618,12 +618,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * This get the class associated with the region split policy which 
    * determines when a region split should occur.  The class used by
-   * default is {@link org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy}
-   * which split the region base on a constant {@link #getMaxFileSize()}
+   * default is defined in {@link org.apache.hadoop.hbase.regionserver.RegionSplitPolicy}
    * 
    * @return the class name of the region split policy for this table.
-   * If this returns null, the default constant size based split policy
-   * is used.
+   * If this returns null, the default split policy is used.
    */
    public String getRegionSplitPolicyClassName() {
     return getValue(SPLIT_POLICY);
@@ -998,7 +996,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #getFamilies()
    */
   public HColumnDescriptor[] getColumnFamilies() {
-    return getFamilies().toArray(new HColumnDescriptor[0]);
+    Collection<HColumnDescriptor> hColumnDescriptors = getFamilies();
+    return hColumnDescriptors.toArray(new HColumnDescriptor[hColumnDescriptors.size()]);
   }
   
 
@@ -1256,7 +1255,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     }
     int pblen = ProtobufUtil.lengthOfPBMagic();
     TableSchema.Builder builder = TableSchema.newBuilder();
-    TableSchema ts = null;
+    TableSchema ts;
     try {
       ts = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
     } catch (InvalidProtocolBufferException e) {

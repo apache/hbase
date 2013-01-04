@@ -31,7 +31,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -72,6 +74,10 @@ public class TestUpgradeFromHFileV1ToEncoding {
   public void testUpgrade() throws Exception {
     int numBatches = 0;
     HTableDescriptor htd = new HTableDescriptor(TABLE);
+
+    // We don't want a split in this test.
+    htd.setValue(HTableDescriptor.SPLIT_POLICY, ConstantSizeRegionSplitPolicy.class.getName());
+    htd.setMaxFileSize(Long.MAX_VALUE);
     HColumnDescriptor hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
     HBaseAdmin admin = new HBaseAdmin(conf);
