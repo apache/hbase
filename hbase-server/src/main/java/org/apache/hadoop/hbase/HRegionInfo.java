@@ -413,6 +413,15 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
+   * Gets the start key from the specified region name.
+   * @param regionName
+   * @return Start key.
+   */
+  public static byte[] getStartKey(final byte[] regionName) throws IOException {
+    return parseRegionName(regionName)[1];
+  }
+
+  /**
    * Separate elements of a regionName.
    * @param regionName
    * @return Array of byte[] containing tableName, startKey and id
