@@ -847,11 +847,17 @@ public class HBaseClient {
           start();
           return;
         }
-      } catch (IOException e) {
+      } catch (Throwable t) {
         failedServers.addToFailedServers(remoteId.address);
-        markClosed(e);
+        IOException e = null;
+        if (t instanceof IOException) {
+          e = (IOException)t;
+          markClosed(e);
+        } else {
+          e = new IOException("Coundn't set up IO Streams", t);
+          markClosed(e);
+        }
         close();
-
         throw e;
       }
     }
