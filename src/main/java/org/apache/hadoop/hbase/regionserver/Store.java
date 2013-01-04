@@ -584,7 +584,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
-    
+
     LOG.info("Moved hfile " + srcPath + " into store directory " +
         homedir + " - updating store file list.");
 
@@ -1626,7 +1626,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
       // let the archive util decide if we should archive or delete the files
       LOG.debug("Removing store files after compaction...");
-      HFileArchiver.archiveStoreFiles(this.fs, this.region, this.conf, this.family.getName(),
+      HFileArchiver.archiveStoreFiles(this.conf, this.fs, this.region, this.family.getName(),
         compactedFiles);
 
     } catch (IOException e) {
@@ -2076,10 +2076,10 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   boolean throttleCompaction(long compactionSize) {
     long throttlePoint = conf.getLong(
-        "hbase.regionserver.thread.compaction.throttle",  
-        2 * this.minFilesToCompact * this.region.memstoreFlushSize);  
-    return compactionSize > throttlePoint;  
-  } 
+        "hbase.regionserver.thread.compaction.throttle",
+        2 * this.minFilesToCompact * this.region.memstoreFlushSize);
+    return compactionSize > throttlePoint;
+  }
 
   public HRegion getHRegion() {
     return this.region;
