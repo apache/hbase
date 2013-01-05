@@ -930,4 +930,27 @@
         properties from a zoo.cfg file has been deprecated.
     </description>
   </property>
+  <property>
+    <name>hbase.rest.threads.max</name>
+    <value>100</value>
+    <description>
+        The maximum number of threads of the REST server thread pool.
+        Threads in the pool are reused to process REST requests. This
+        controls the maximum number of requests processed concurrently.
+        It may help to control the memory used by the REST server to
+        avoid OOM issues. If the thread pool is full, incoming requests
+        will be queued up and wait for some free threads. The default
+        is 100.
+    </description>
+  </property>
+  <property>
+    <name>hbase.rest.threads.min</name>
+    <value>2</value>
+    <description>
+        The minimum number of threads of the REST server thread pool.
+        The thread pool always has at least these number of threads so
+        the REST server is ready to serve incoming requests. The default
+        is 2.
+    </description>
+  </property>
 </configuration>
