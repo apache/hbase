@@ -86,7 +86,8 @@ public class TestHRegionOnCluster {
       do {
         Thread.sleep(10);
       } while (cluster.getServerWith(regionInfo.getRegionName()) == originServerNum ||
-          cluster.getMaster().getAssignmentManager().getRegionServerOfRegion(regionInfo) == null);
+          !targetServer.getServerName().equals(
+              cluster.getMaster().getAssignmentManager().getRegionServerOfRegion(regionInfo)));
 
       // Put data: r2->v2
       putDataAndVerify(table, "r2", FAMILY, "v2", 2);
