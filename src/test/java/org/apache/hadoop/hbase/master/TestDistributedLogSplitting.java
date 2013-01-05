@@ -269,7 +269,7 @@ public class TestDistributedLogSplitting {
         "tot_wkr_preempt_task");
   }
 
-  @Test(timeout=25000)
+  @Test(timeout=30000)
   public void testDelayedDeleteOnFailure() throws Exception {
     LOG.info("testDelayedDeleteOnFailure");
     startCluster(1);
