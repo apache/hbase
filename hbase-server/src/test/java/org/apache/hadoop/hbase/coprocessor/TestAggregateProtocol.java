@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -131,7 +133,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci = 
+        new LongColumnInterpreter();
     long median = aClient.median(TEST_TABLE, ci,
         scan);
     assertEquals(8L, median);
@@ -153,7 +156,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[2]);
     scan.setStopRow(ROWS[14]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long rowCount = aClient.rowCount(TEST_TABLE, ci, scan);
     assertEquals(12, rowCount);
   }
@@ -168,7 +172,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long rowCount = aClient.rowCount(TEST_TABLE, ci,
         scan);
     assertEquals(ROWSIZE, rowCount);
@@ -187,7 +192,8 @@ public class TestAggregateProtocol {
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[2]);
 
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long rowCount = -1;
     try {
       rowCount = aClient.rowCount(TEST_TABLE, ci, scan);
@@ -211,7 +217,8 @@ public class TestAggregateProtocol {
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[5]);
 
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long rowCount = -1;
     try {
       rowCount = aClient.rowCount(TEST_TABLE, ci, scan);
@@ -230,7 +237,8 @@ public class TestAggregateProtocol {
     Scan scan = new Scan();
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long rowCount = -1;
     try {
       rowCount = aClient.rowCount(TEST_TABLE, ci, scan);
@@ -245,7 +253,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long rowCount = aClient.rowCount(TEST_TABLE, ci,
         scan);
     assertEquals(20, rowCount);
@@ -256,7 +265,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     scan.setFilter(f);
     long rowCount = aClient.rowCount(TEST_TABLE, ci,
@@ -277,7 +287,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long maximum = aClient.max(TEST_TABLE, ci, scan);
     assertEquals(19, maximum);
   }
@@ -292,7 +303,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long max = aClient.max(TEST_TABLE, ci, scan);
     assertEquals(14, max);
   }
@@ -302,7 +314,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long maximum = aClient.max(TEST_TABLE, ci, scan);
     assertEquals(190, maximum);
   }
@@ -314,7 +327,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long max = aClient.max(TEST_TABLE, ci, scan);
     assertEquals(60, max);
   }
@@ -322,7 +336,8 @@ public class TestAggregateProtocol {
   @Test
   public void testMaxWithValidRangeWithNullCF() {
     AggregationClient aClient = new AggregationClient(conf);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Scan scan = new Scan();
     Long max = null;
     try {
@@ -337,7 +352,8 @@ public class TestAggregateProtocol {
   @Test
   public void testMaxWithInvalidRange() {
     AggregationClient aClient = new AggregationClient(conf);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Scan scan = new Scan();
     scan.setStartRow(ROWS[4]);
     scan.setStopRow(ROWS[2]);
@@ -360,7 +376,8 @@ public class TestAggregateProtocol {
     scan.setStopRow(ROWS[4]);
     try {
       AggregationClient aClient = new AggregationClient(conf);
-      final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+      final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+          new LongColumnInterpreter();
       max = aClient.max(TEST_TABLE, ci, scan);
     } catch (Exception e) {
       max = 0;
@@ -376,7 +393,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     scan.setFilter(f);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     max = aClient.max(TEST_TABLE, ci, scan);
     assertEquals(null, max);
   }
@@ -395,7 +413,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(HConstants.EMPTY_START_ROW);
     scan.setStopRow(HConstants.EMPTY_END_ROW);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Long min = aClient.min(TEST_TABLE, ci,
         scan);
     assertEquals(0l, min.longValue());
@@ -411,7 +430,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long min = aClient.min(TEST_TABLE, ci, scan);
     assertEquals(5, min);
   }
@@ -423,7 +443,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(HConstants.EMPTY_START_ROW);
     scan.setStopRow(HConstants.EMPTY_END_ROW);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long min = aClient.min(TEST_TABLE, ci,
         scan);
     assertEquals(0, min);
@@ -436,7 +457,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long min = aClient.min(TEST_TABLE, ci, scan);
     assertEquals(6, min);
   }
@@ -447,7 +469,8 @@ public class TestAggregateProtocol {
     Scan scan = new Scan();
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Long min = null;
     try {
       min = aClient.min(TEST_TABLE, ci, scan);
@@ -465,7 +488,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[4]);
     scan.setStopRow(ROWS[2]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     try {
       min = aClient.min(TEST_TABLE, ci, scan);
     } catch (Throwable e) {
@@ -480,7 +504,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[6]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Long min = null;
     try {
       min = aClient.min(TEST_TABLE, ci, scan);
@@ -496,7 +521,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     scan.setFilter(f);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Long min = null;
     min = aClient.min(TEST_TABLE, ci, scan);
     assertEquals(null, min);
@@ -513,7 +539,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long sum = aClient.sum(TEST_TABLE, ci,
         scan);
     assertEquals(190, sum);
@@ -529,7 +556,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long sum = aClient.sum(TEST_TABLE, ci, scan);
     assertEquals(95, sum);
   }
@@ -539,7 +567,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long sum = aClient.sum(TEST_TABLE, ci,
         scan);
     assertEquals(190 + 1900, sum);
@@ -552,7 +581,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     long sum = aClient.sum(TEST_TABLE, ci, scan);
     assertEquals(6 + 60, sum);
   }
@@ -563,7 +593,8 @@ public class TestAggregateProtocol {
     Scan scan = new Scan();
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Long sum = null;
     try {
       sum = aClient.sum(TEST_TABLE, ci, scan);
@@ -580,7 +611,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[2]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Long sum = null;
     try {
       sum = aClient.sum(TEST_TABLE, ci, scan);
@@ -596,7 +628,8 @@ public class TestAggregateProtocol {
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setFilter(f);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Long sum = null;
     sum = aClient.sum(TEST_TABLE, ci, scan);
     assertEquals(null, sum);
@@ -613,7 +646,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     double avg = aClient.avg(TEST_TABLE, ci,
         scan);
     assertEquals(9.5, avg, 0);
@@ -629,7 +663,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     double avg = aClient.avg(TEST_TABLE, ci, scan);
     assertEquals(9.5, avg, 0);
   }
@@ -639,7 +674,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     double avg = aClient.avg(TEST_TABLE, ci,
         scan);
     assertEquals(104.5, avg, 0);
@@ -652,7 +688,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     double avg = aClient.avg(TEST_TABLE, ci, scan);
     assertEquals(6 + 60, avg, 0);
   }
@@ -661,7 +698,8 @@ public class TestAggregateProtocol {
   public void testAvgWithValidRangeWithNullCF() {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Double avg = null;
     try {
       avg = aClient.avg(TEST_TABLE, ci, scan);
@@ -678,7 +716,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[1]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Double avg = null;
     try {
       avg = aClient.avg(TEST_TABLE, ci, scan);
@@ -694,7 +733,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     scan.setFilter(f);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Double avg = null;
     avg = aClient.avg(TEST_TABLE, ci, scan);
     assertEquals(Double.NaN, avg, 0);
@@ -711,7 +751,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     double std = aClient.std(TEST_TABLE, ci,
         scan);
     assertEquals(5.766, std, 0.05d);
@@ -727,7 +768,8 @@ public class TestAggregateProtocol {
     scan.addColumn(TEST_FAMILY,TEST_QUALIFIER);
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     double std = aClient.std(TEST_TABLE, ci, scan);
     assertEquals(2.87, std, 0.05d);
   }
@@ -737,7 +779,8 @@ public class TestAggregateProtocol {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     double std = aClient.std(TEST_TABLE, ci,
         scan);
     assertEquals(63.42, std, 0.05d);
@@ -750,7 +793,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     double std = aClient.std(TEST_TABLE, ci, scan);
     assertEquals(0, std, 0);
   }
@@ -761,7 +805,8 @@ public class TestAggregateProtocol {
     Scan scan = new Scan();
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[17]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Double std = null;
     try {
       std = aClient.std(TEST_TABLE, ci, scan);
@@ -778,7 +823,8 @@ public class TestAggregateProtocol {
     scan.addFamily(TEST_FAMILY);
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[1]);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Double std = null;
     try {
       std = aClient.std(TEST_TABLE, ci, scan);
@@ -794,7 +840,8 @@ public class TestAggregateProtocol {
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     scan.setFilter(f);
-    final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+    final ColumnInterpreter<Long, Long, EmptyMsg, LongMsg, LongMsg> ci =
+        new LongColumnInterpreter();
     Double std = null;
     std = aClient.std(TEST_TABLE, ci, scan);
     assertEquals(Double.NaN, std, 0);

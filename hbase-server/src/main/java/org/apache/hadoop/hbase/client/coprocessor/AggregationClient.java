@@ -20,6 +20,10 @@
 package org.apache.hadoop.hbase.client.coprocessor;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 
 /**
  * This client class is for invoking the aggregate functions deployed on the
@@ -98,7 +103,8 @@ public class AggregationClient {
    *           The caller is supposed to handle the exception as they are thrown
    *           & propagated to it.
    */
-  public <R, S> R max(final byte[] tableName, final ColumnInterpreter<R, S> ci,
+  public <R, S, P extends Message, Q extends Message, T extends Message> 
+  R max(final byte[] tableName, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class MaxCallBack implements Batch.Callback<R> {
@@ -130,9 +136,9 @@ public class AggregationClient {
                 throw controller.getFailedOn();
               }
               if (response.getFirstPartCount() > 0) {
-                return ci.castToCellType(
-                          ci.parseResponseAsPromotedType(
-                              getBytesFromResponse(response.getFirstPart(0))));
+                ByteString b = response.getFirstPart(0);
+                Q q = ProtobufUtil.getParsedGenericInstance(ci.getClass(), 3, b);
+                return ci.getCellValueFromProto(q);
               }
               return null;
             }
@@ -168,7 +174,8 @@ public class AggregationClient {
    * @return min val <R>
    * @throws Throwable
    */
-  public <R, S> R min(final byte[] tableName, final ColumnInterpreter<R, S> ci,
+  public <R, S, P extends Message, Q extends Message, T extends Message> 
+  R min(final byte[] tableName, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class MinCallBack implements Batch.Callback<R> {
@@ -202,9 +209,9 @@ public class AggregationClient {
                 throw controller.getFailedOn();
               }
               if (response.getFirstPartCount() > 0) {
-                return ci.castToCellType(
-                  ci.parseResponseAsPromotedType(
-                      getBytesFromResponse(response.getFirstPart(0))));
+                ByteString b = response.getFirstPart(0);
+                Q q = ProtobufUtil.getParsedGenericInstance(ci.getClass(), 3, b);
+                return ci.getCellValueFromProto(q);
               }
               return null;
             }
@@ -231,8 +238,9 @@ public class AggregationClient {
    * @return <R, S>
    * @throws Throwable
    */
-  public <R, S> long rowCount(final byte[] tableName,
-      final ColumnInterpreter<R, S> ci, final Scan scan) throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message> 
+  long rowCount(final byte[] tableName,
+      final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class RowNumCallback implements Batch.Callback<Long> {
       private final AtomicLong rowCountL = new AtomicLong(0);
@@ -285,7 +293,8 @@ public class AggregationClient {
    * @return sum <S>
    * @throws Throwable
    */
-  public <R, S> S sum(final byte[] tableName, final ColumnInterpreter<R, S> ci,
+  public <R, S, P extends Message, Q extends Message, T extends Message> 
+  S sum(final byte[] tableName, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     
@@ -320,8 +329,10 @@ public class AggregationClient {
               if (response.getFirstPartCount() == 0) {
                 return null;
               }
-              return ci.parseResponseAsPromotedType(
-                  getBytesFromResponse(response.getFirstPart(0)));
+              ByteString b = response.getFirstPart(0);
+              T t = ProtobufUtil.getParsedGenericInstance(ci.getClass(), 4, b);
+              S s = ci.getPromotedValueFromProto(t);
+              return s;
             }
           }, sumCallBack);
     } finally {
@@ -340,8 +351,9 @@ public class AggregationClient {
    * @param scan
    * @throws Throwable
    */
-  private <R, S> Pair<S, Long> getAvgArgs(final byte[] tableName,
-      final ColumnInterpreter<R, S> ci, final Scan scan) throws Throwable {
+  private <R, S, P extends Message, Q extends Message, T extends Message>
+  Pair<S, Long> getAvgArgs(final byte[] tableName,
+      final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class AvgCallBack implements Batch.Callback<Pair<S, Long>> {
       S sum = null;
@@ -379,8 +391,10 @@ public class AggregationClient {
               if (response.getFirstPartCount() == 0) {
                 return pair;
               }
-              pair.setFirst(ci.parseResponseAsPromotedType(
-                  getBytesFromResponse(response.getFirstPart(0))));
+              ByteString b = response.getFirstPart(0);
+              T t = ProtobufUtil.getParsedGenericInstance(ci.getClass(), 4, b);
+              S s = ci.getPromotedValueFromProto(t);
+              pair.setFirst(s);
               ByteBuffer bb = ByteBuffer.allocate(8).put(
                   getBytesFromResponse(response.getSecondPart()));
               bb.rewind();
@@ -408,8 +422,9 @@ public class AggregationClient {
    * @return <R, S>
    * @throws Throwable
    */
-  public <R, S> double avg(final byte[] tableName,
-      final ColumnInterpreter<R, S> ci, Scan scan) throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message>
+  double avg(final byte[] tableName,
+      final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<S, Long> p = getAvgArgs(tableName, ci, scan);
     return ci.divideForAvg(p.getFirst(), p.getSecond());
   }
@@ -425,8 +440,9 @@ public class AggregationClient {
    * @return
    * @throws Throwable
    */
-  private <R, S> Pair<List<S>, Long> getStdArgs(final byte[] tableName,
-      final ColumnInterpreter<R, S> ci, final Scan scan) throws Throwable {
+  private <R, S, P extends Message, Q extends Message, T extends Message>
+  Pair<List<S>, Long> getStdArgs(final byte[] tableName,
+      final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class StdCallback implements Batch.Callback<Pair<List<S>, Long>> {
       long rowCountVal = 0l;
@@ -474,8 +490,10 @@ public class AggregationClient {
               }
               List<S> list = new ArrayList<S>();
               for (int i = 0; i < response.getFirstPartCount(); i++) {
-                list.add(ci.parseResponseAsPromotedType(
-                    getBytesFromResponse(response.getFirstPart(i))));
+                ByteString b = response.getFirstPart(i);
+                T t = ProtobufUtil.getParsedGenericInstance(ci.getClass(), 4, b);
+                S s = ci.getPromotedValueFromProto(t);
+                list.add(s);
               }
               pair.setFirst(list);
               ByteBuffer bb = ByteBuffer.allocate(8).put(
@@ -505,7 +523,8 @@ public class AggregationClient {
    * @return <R, S>
    * @throws Throwable
    */
-  public <R, S> double std(final byte[] tableName, ColumnInterpreter<R, S> ci,
+  public <R, S, P extends Message, Q extends Message, T extends Message>
+  double std(final byte[] tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
     Pair<List<S>, Long> p = getStdArgs(tableName, ci, scan);
     double res = 0d;
@@ -528,9 +547,10 @@ public class AggregationClient {
    *  (sum of values, sum of weights) for all the regions chosen
    * @throws Throwable
    */
-  private <R, S> Pair<NavigableMap<byte[], List<S>>, List<S>>
+  private <R, S, P extends Message, Q extends Message, T extends Message>
+  Pair<NavigableMap<byte[], List<S>>, List<S>>
   getMedianArgs(final byte[] tableName,
-      final ColumnInterpreter<R, S> ci, final Scan scan) throws Throwable {
+      final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     final NavigableMap<byte[], List<S>> map =
       new TreeMap<byte[], List<S>>(Bytes.BYTES_COMPARATOR);
@@ -572,8 +592,10 @@ public class AggregationClient {
 
               List<S> list = new ArrayList<S>();
               for (int i = 0; i < response.getFirstPartCount(); i++) {
-                list.add(ci.parseResponseAsPromotedType(
-                    getBytesFromResponse(response.getFirstPart(i))));
+                ByteString b = response.getFirstPart(i);
+                T t = ProtobufUtil.getParsedGenericInstance(ci.getClass(), 4, b);
+                S s = ci.getPromotedValueFromProto(t);
+                list.add(s);
               }
               return list;
             }
@@ -597,7 +619,8 @@ public class AggregationClient {
    * @return R the median
    * @throws Throwable
    */
-  public <R, S> R median(final byte[] tableName, ColumnInterpreter<R, S> ci,
+  public <R, S, P extends Message, Q extends Message, T extends Message>
+  R median(final byte[] tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
     Pair<NavigableMap<byte[], List<S>>, List<S>> p = getMedianArgs(tableName, ci, scan);
     byte[] startRow = null;
@@ -672,16 +695,17 @@ public class AggregationClient {
     return null;
   }
 
-  <R,S>AggregateArgument validateArgAndGetPB(Scan scan, ColumnInterpreter<R,S> ci)
+  <R, S, P extends Message, Q extends Message, T extends Message> AggregateArgument 
+  validateArgAndGetPB(Scan scan, ColumnInterpreter<R,S,P,Q,T> ci)
       throws IOException {
     validateParameters(scan);
     final AggregateArgument.Builder requestBuilder = 
         AggregateArgument.newBuilder();
     requestBuilder.setInterpreterClassName(ci.getClass().getCanonicalName());
-    ByteString columnInterpreterSpecificData = null;
-    if ((columnInterpreterSpecificData = ci.columnInterpreterSpecificData()) 
+    P columnInterpreterSpecificData = null;
+    if ((columnInterpreterSpecificData = ci.getRequestData()) 
        != null) {
-      requestBuilder.setInterpreterSpecificBytes(columnInterpreterSpecificData);
+      requestBuilder.setInterpreterSpecificBytes(columnInterpreterSpecificData.toByteString());
     }
     requestBuilder.setScan(ProtobufUtil.toScan(scan));
     return requestBuilder.build();

@@ -19,15 +19,14 @@
 package org.apache.hadoop.hbase.client.coprocessor;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.ByteString;
 
 /**
  * a concrete column interpreter implementation. The cell value is a Long value
@@ -39,7 +38,8 @@ import com.google.protobuf.ByteString;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class LongColumnInterpreter implements ColumnInterpreter<Long, Long> {
+public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
+                 EmptyMsg, LongMsg, LongMsg> {
 
   public Long getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)
       throws IOException {
@@ -97,45 +97,40 @@ public class LongColumnInterpreter implements ColumnInterpreter<Long, Long> {
     return o;
   }
 
-
-  @Override
-  public Long parseResponseAsPromotedType(byte[] response) {
-    ByteBuffer b = ByteBuffer.allocate(8).put(response);
-    b.rewind();
-    long l = b.getLong();
-    return l;
-  }
-
   @Override
   public Long castToCellType(Long l) {
     return l;
   }
 
   @Override
-  public ByteString columnInterpreterSpecificData() {
-    // nothing
-    return null;
+  public EmptyMsg getRequestData() {
+    return EmptyMsg.getDefaultInstance();
   }
 
   @Override
-  public void initialize(ByteString bytes) {
-    // nothing
+  public void initialize(EmptyMsg msg) {
+    //nothing 
   }
 
   @Override
-  public ByteString getProtoForCellType(Long t) {
-    return getProtoForPromotedOrCellType(t);
+  public LongMsg getProtoForCellType(Long t) {
+    LongMsg.Builder builder = LongMsg.newBuilder();
+    return builder.setLongMsg(t).build();
   }
 
   @Override
-  public ByteString getProtoForPromotedType(Long s) {
-    return getProtoForPromotedOrCellType(s);
+  public LongMsg getProtoForPromotedType(Long s) {
+    LongMsg.Builder builder = LongMsg.newBuilder();
+    return builder.setLongMsg(s).build();
   }
 
-  private ByteString getProtoForPromotedOrCellType(Long s) {
-    ByteBuffer bb = ByteBuffer.allocate(8).putLong(s);
-    bb.rewind();
-    ByteString bs = ByteString.copyFrom(bb);
-    return bs;
+  @Override
+  public Long getPromotedValueFromProto(LongMsg r) {
+    return r.getLongMsg();
+  }
+
+  @Override
+  public Long getCellValueFromProto(LongMsg q) {
+    return q.getLongMsg();
   }
 }
