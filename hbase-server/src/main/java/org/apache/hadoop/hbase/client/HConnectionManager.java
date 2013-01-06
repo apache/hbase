@@ -211,6 +211,10 @@ public class HConnectionManager {
       if (connection == null) {
         connection = new HConnectionImplementation(conf, true);
         HBASE_INSTANCES.put(connectionKey, connection);
+      } else if (connection.isClosed()) {
+        HConnectionManager.deleteConnection(connectionKey, true, true);
+        connection = new HConnectionImplementation(conf, true);
+        HBASE_INSTANCES.put(connectionKey, connection);
       }
       connection.incCount();
       return connection;
@@ -2196,13 +2200,14 @@ public class HConnectionManager {
             closeZooKeeperWatcher();
           }
         }
-      }else {
+      } else {
         if (t != null) {
           LOG.fatal(msg, t);
         } else {
           LOG.fatal(msg);
         }
         this.aborted = true;
+        close();
         this.closed = true;
       }
     }
@@ -2282,7 +2287,11 @@ public class HConnectionManager {
     @Override
     public void close() {
       if (managed) {
-        HConnectionManager.deleteConnection(this, stopProxy, false);
+        if (aborted) {
+          HConnectionManager.deleteStaleConnection(this);
+        } else {
+          HConnectionManager.deleteConnection(this, stopProxy, false);
+        }
       } else {
         close(true);
       }
