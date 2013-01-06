@@ -52,7 +52,7 @@ public class TestScannerTimeout {
   // Be careful w/ what you set this timer to... it can get in the way of
   // the mini cluster coming up -- the verification in particular.
   private final static int THREAD_WAKE_FREQUENCY = 1000;
-  private final static int SCANNER_TIMEOUT = 10000;
+  private final static int SCANNER_TIMEOUT = 15000;
   private final static int SCANNER_CACHING = 5;
 
    /**
