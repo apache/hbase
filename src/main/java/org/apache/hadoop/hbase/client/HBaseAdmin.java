@@ -1269,6 +1269,44 @@ public class HBaseAdmin {
   }
 
   /**
+   * Set the number of threads to be used for HDFS quorum reads.
+   *
+   * @param hsa
+   *          the address of the RegionServer to stop
+   * @param numThreads
+   *          the number of threads to be used for HDFS quorum reads
+   *          <= 0 will disable quorum Reads.
+   * @throws IOException
+   *           if a remote or network exception occurs
+   */
+  public synchronized void setNumHDFSQuorumReadThreads(final HServerAddress hsa,
+      int numThreads) throws IOException {
+    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+      LOG.info("Setting numHDFSQuorumReadThreads for RegionServer" + hsa.toString()
+          + " to " + numThreads);
+      rs.setNumHDFSQuorumReadThreads(numThreads);
+  }
+
+  /**
+   * Set the number of threads to be used for HDFS quorum reads.
+   *
+   * @param hsa
+   *          the address of the RegionServer to stop
+   * @param numThreads
+   *          the number of threads to be used for HDFS quorum reads
+   *          <= 0 will disable quorum Reads.
+   * @throws IOException
+   *           if a remote or network exception occurs
+   */
+  public synchronized void setHDFSQuorumReadTimeoutMillis(final HServerAddress hsa,
+      long timeoutMillis) throws IOException {
+    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+      LOG.info("Setting quorumReadTimeout for RegionServer" + hsa.toString()
+          + " to " + timeoutMillis);
+      rs.setHDFSQuorumReadTimeoutMillis(timeoutMillis);
+  }
+
+  /**
    * @return cluster status
    * @throws IOException
    *           if a remote or network exception occurs

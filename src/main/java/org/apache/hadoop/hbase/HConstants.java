@@ -274,6 +274,19 @@ public final class HConstants {
   public static final String HREGIONSERVER_SPLITLOG_WORKERS_NUM =
     "hbase.hregionserver.hlog.split.workers.num";
 
+  /**
+   * If using quorum reads from HDFS, the maximum size of the thread pool.
+   * value <= 0 disables quorum reads.
+   */
+  public static final String HDFS_QUORUM_READ_THREADS_MAX =
+    "hbase.dfsclient.quorum.reads.threads.max";
+
+  /**
+   * The default number for the size of thread pool used in quorum reads.
+   * value <= 0 disables quorum reads.
+   */
+  public static final int DEFAULT_HDFS_QUORUM_READ_THREADS_MAX = 50;
+
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
   

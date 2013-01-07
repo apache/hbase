@@ -142,6 +142,8 @@ import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapWritable;
@@ -450,6 +452,11 @@ public class HRegionServer implements HRegionInterface,
                 return t;
               }
             });
+
+    int parallelHDFSReadPoolSize = conf.getInt(HConstants.HDFS_QUORUM_READ_THREADS_MAX,
+            HConstants.DEFAULT_HDFS_QUORUM_READ_THREADS_MAX);
+    LOG.debug("parallelHDFSReadPoolSize is (for quorum)" + parallelHDFSReadPoolSize);
+    this.setNumHDFSQuorumReadThreads(parallelHDFSReadPoolSize);
   }
 
   /**
@@ -2823,6 +2830,33 @@ public class HRegionServer implements HRegionInterface,
       boolean assignSeqNum) throws IOException {
     HRegion region = getRegion(regionName);
     region.bulkLoadHFile(hfilePath, familyName, assignSeqNum);
+  }
+
+  @Override
+  public void setNumHDFSQuorumReadThreads(int maxThreads) {
+    LOG.debug("Setting setNumHDFSQuorumReadThreads to " + maxThreads);
+    DFSClient client = null;
+    if (this.fs instanceof DistributedFileSystem) {
+      client = ((DistributedFileSystem)fs).getClient();
+
+      if (maxThreads > 0) {
+        client.enableParallelReads();
+        client.setNumParallelThreadsForReads(maxThreads);
+      } else {
+        client.disableParallelReads();
+      }
+    }
+  }
+
+  @Override
+  public void setHDFSQuorumReadTimeoutMillis(long timeoutMillis) {
+    LOG.debug("Setting setHDFSQuorumReadTimeoutMillis to " + timeoutMillis + " ms.");
+    DFSClient client;
+    if (this.fs instanceof DistributedFileSystem) {
+      client = ((DistributedFileSystem)fs).getClient();
+
+      client.setQuorumReadTimeout(timeoutMillis);
+    }
   }
 
   Map<String, Integer> rowlocks =

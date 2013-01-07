@@ -410,4 +410,21 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
   /** @return why we are stopping */
   String getStopReason();
 
+
+  /**
+   * Set the number of threads to be used for HDFS Quorum reads
+   *
+   * @param maxThreads. quourm reads will be disabled if set to <= 0
+   *
+   */
+  public void setNumHDFSQuorumReadThreads(int maxThreads);
+
+  /**
+   * Set the amount of time we wait before initiating a second read when
+   * using HDFS Quorum reads
+   *
+   * @param timeoutMillis.
+   *
+   */
+  public void setHDFSQuorumReadTimeoutMillis(long timeoutMillis);
 }
