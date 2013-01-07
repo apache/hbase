@@ -89,7 +89,8 @@ module Hbase
         count += 1
         next unless (block_given? && count % interval == 0)
         # Allow command modules to visualize counting process
-        yield(count, String.from_java_bytes(row.getRow))
+        yield(count, 
+              org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow))
       end
 
       # Return the counter
