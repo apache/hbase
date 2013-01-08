@@ -106,71 +106,6 @@ import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Acc
 public class AccessController extends BaseRegionObserver
     implements MasterObserver, RegionServerObserver,
       AccessControlService.Interface, CoprocessorService {
-  /**
-   * Represents the result of an authorization check for logging and error
-   * reporting.
-   */
-  private static class AuthResult {
-    private final boolean allowed;
-    private final byte[] table;
-    private final byte[] family;
-    private final byte[] qualifier;
-    private final Permission.Action action;
-    private final String request;
-    private final String reason;
-    private final User user;
-
-    public AuthResult(boolean allowed, String request, String reason,  User user,
-        Permission.Action action, byte[] table, byte[] family, byte[] qualifier) {
-      this.allowed = allowed;
-      this.request = request;
-      this.reason = reason;
-      this.user = user;
-      this.table = table;
-      this.family = family;
-      this.qualifier = qualifier;
-      this.action = action;
-    }
-
-    public boolean isAllowed() { return allowed; }
-
-    public User getUser() { return user; }
-
-    public String getReason() { return reason; }
-
-    public String getRequest() { return request; }
-
-    public String toContextString() {
-      return "(user=" + (user != null ? user.getName() : "UNKNOWN") + ", " +
-          "scope=" + (table == null ? "GLOBAL" : Bytes.toString(table)) + ", " +
-          "family=" + (family != null ? Bytes.toString(family) : "") + ", " +
-          "qualifer=" + (qualifier != null ? Bytes.toString(qualifier) : "") + ", " +
-          "action=" + (action != null ? action.toString() : "") + ")";
-    }
-
-    public String toString() {
-      return "AuthResult" + toContextString();
-    }
-
-    public static AuthResult allow(String request, String reason, User user, Permission.Action action,
-        byte[] table, byte[] family, byte[] qualifier) {
-      return new AuthResult(true, request, reason, user, action, table, family, qualifier);
-    }
-
-    public static AuthResult allow(String request, String reason, User user, Permission.Action action, byte[] table) {
-      return new AuthResult(true, request, reason, user, action, table, null, null);
-    }
-
-    public static AuthResult deny(String request, String reason, User user,
-        Permission.Action action, byte[] table) {
-      return new AuthResult(false, request, reason, user, action, table, null, null);
-    }
-
-    public static AuthResult deny(String request, String reason, User user,
-        Permission.Action action, byte[] table, byte[] family, byte[] qualifier) {
-      return new AuthResult(false, request, reason, user, action, table, family, qualifier);
-    }
-  }
 
   public static final Log LOG = LogFactory.getLog(AccessController.class);
 
@@ -341,8 +276,8 @@ public class AccessController extends BaseRegionObserver
 
   private void logResult(AuthResult result) {
     if (AUDITLOG.isTraceEnabled()) {
-      InetAddress remoteAddr = null;
       RequestContext ctx = RequestContext.get();
+      InetAddress remoteAddr = null;
       if (ctx != null) {
         remoteAddr = ctx.getRemoteAddress();
       }
@@ -880,7 +815,7 @@ public class AccessController extends BaseRegionObserver
           get.setFilter(filter);
         }
         logResult(AuthResult.allow("get", "Access allowed with filter", requestUser,
-            Permission.Action.READ, authResult.table));
+            Permission.Action.READ, authResult.getTable()));
       } else {
         logResult(authResult);
         throw new AccessDeniedException("Insufficient permissions (table=" +
@@ -1010,7 +945,7 @@ public class AccessController extends BaseRegionObserver
           scan.setFilter(filter);
         }
         logResult(AuthResult.allow("scannerOpen", "Access allowed with filter", user,
-            Permission.Action.READ, authResult.table));
+            Permission.Action.READ, authResult.getTable()));
       } else {
         // no table/family level perms and no qualifier level perms, reject
         logResult(authResult);
