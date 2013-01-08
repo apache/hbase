@@ -91,13 +91,13 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class LoadIncrementalHFiles extends Configured implements Tool {
-  private static Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
-  static AtomicLong regionCount = new AtomicLong(0);
+  private static final Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
+  static final AtomicLong regionCount = new AtomicLong(0);
   private HBaseAdmin hbAdmin;
   private Configuration cfg;
 
-  public static String NAME = "completebulkload";
-  private static String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
+  public static final String NAME = "completebulkload";
+  private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
   private boolean assignSeqIds;
 
   public LoadIncrementalHFiles(Configuration conf) throws Exception {
@@ -626,11 +626,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = null;
+    HColumnDescriptor hcd;
 
     // Add column families
     // Build a set of keys
-    byte[][] keys = null;
+    byte[][] keys;
     TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     
     for (FileStatus stat : familyDirStatuses) {
@@ -667,10 +667,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
             " last="  + Bytes.toStringBinary(last));
           
           // To eventually infer start key-end key boundaries
-          Integer value = map.containsKey(first)?(Integer)map.get(first):0;
+          Integer value = map.containsKey(first)? map.get(first):0;
           map.put(first, value+1);
 
-          value = map.containsKey(last)?(Integer)map.get(last):0;
+          value = map.containsKey(last)? map.get(last):0;
           map.put(last, value-1);
         }  finally {
           reader.close();

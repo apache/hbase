@@ -22,9 +22,6 @@ package org.apache.hadoop.hbase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.HealthChecker.HealthCheckerExitStatus;
 import org.apache.hadoop.util.StringUtils;
 
@@ -51,7 +48,7 @@ import org.apache.hadoop.util.StringUtils;
     healthChecker.init(healthCheckScript, scriptTimeout);
     this.threshold = config.getInt(HConstants.HEALTH_FAILURE_THRESHOLD,
       HConstants.DEFAULT_HEALTH_FAILURE_THRESHOLD);
-    this.failureWindow = this.threshold * sleepTime;
+    this.failureWindow = (long)this.threshold * (long)sleepTime;
   }
 
   @Override

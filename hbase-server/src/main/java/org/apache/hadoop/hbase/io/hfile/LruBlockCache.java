@@ -532,6 +532,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
       if(this.overflow() == that.overflow()) return 0;
       return this.overflow() > that.overflow() ? 1 : -1;
     }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null || !(that instanceof BlockBucket)){
+        return false;
+      }
+
+      return compareTo(( BlockBucket)that) == 0;
+    }
+
   }
 
   /**
@@ -625,13 +635,13 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
     public void evict() {
       synchronized(this) {
-        this.notify(); // FindBugs NN_NAKED_NOTIFY
+        this.notifyAll(); // FindBugs NN_NAKED_NOTIFY
       }
     }
 
-    void shutdown() {
+    synchronized void shutdown() {
       this.go = false;
-      interrupt();
+      this.notifyAll();
     }
 
     /**

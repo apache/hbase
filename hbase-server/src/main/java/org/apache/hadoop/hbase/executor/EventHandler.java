@@ -67,7 +67,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   protected Server server;
 
   // sequence id generator for default FIFO ordering of events
-  protected static AtomicLong seqids = new AtomicLong(0);
+  protected static final AtomicLong seqids = new AtomicLong(0);
 
   // sequence id for this event
   private final long seqid;

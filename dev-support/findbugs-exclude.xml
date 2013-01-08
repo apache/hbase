@@ -37,6 +37,11 @@
   </Match>
 
   <Match>
+    <Package name="org.apache.hadoop.hbase.tmpl"/>
+  </Match>
+
+
+  <Match>
     <Class name="org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost"/>
     <Or>
       <Method name="preExists"/>

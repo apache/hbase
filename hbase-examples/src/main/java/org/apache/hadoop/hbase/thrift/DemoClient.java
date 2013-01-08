@@ -127,7 +127,7 @@ public class DemoClient {
         // Create the demo table with two column families, entry: and unused:
         //
         ArrayList<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>();
-        ColumnDescriptor col = null;
+        ColumnDescriptor col;
         col = new ColumnDescriptor();
         col.name = ByteBuffer.wrap(bytes("entry:"));
         col.maxVersions = 10;
@@ -227,7 +227,7 @@ public class DemoClient {
             client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
             printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
 
-            Mutation m = null;
+            Mutation m;
             mutations = new ArrayList<Mutation>();
             m = new Mutation();
             m.column = ByteBuffer.wrap(bytes("entry:foo"));
@@ -272,7 +272,7 @@ public class DemoClient {
             }
 
             List<TCell> result = client.get(ByteBuffer.wrap(t), ByteBuffer.wrap(row), ByteBuffer.wrap(bytes("entry:foo")), dummyAttributes);
-            if (result.isEmpty() == false) {
+            if (!result.isEmpty()) {
                 System.out.println("FATAL: shouldn't get here");
                 System.exit(-1);
             }
@@ -305,7 +305,7 @@ public class DemoClient {
         transport.close();
     }
 
-    private final void printVersions(ByteBuffer row, List<TCell> versions) {
+    private void printVersions(ByteBuffer row, List<TCell> versions) {
         StringBuilder rowStr = new StringBuilder();
         for (TCell cell : versions) {
             rowStr.append(utf8(cell.value.array()));
@@ -314,7 +314,7 @@ public class DemoClient {
         System.out.println("row: " + utf8(row.array()) + ", values: " + rowStr);
     }
 
-    private final void printRow(TRowResult rowResult) {
+    private void printRow(TRowResult rowResult) {
         // copy values into a TreeMap to get them in sorted order
 
         TreeMap<String, TCell> sorted = new TreeMap<String, TCell>();

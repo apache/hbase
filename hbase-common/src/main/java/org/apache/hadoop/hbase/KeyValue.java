@@ -80,37 +80,37 @@ public class KeyValue implements Cell, HeapSize {
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values.
    */
-  public static KVComparator COMPARATOR = new KVComparator();
+  public static final KVComparator COMPARATOR = new KVComparator();
 
   /**
    * Comparator for plain key; i.e. non-catalog table key.  Works on Key portion
    * of KeyValue only.
    */
-  public static KeyComparator KEY_COMPARATOR = new KeyComparator();
+  public static final KeyComparator KEY_COMPARATOR = new KeyComparator();
 
   /**
    * A {@link KVComparator} for <code>.META.</code> catalog table
    * {@link KeyValue}s.
    */
-  public static KVComparator META_COMPARATOR = new MetaComparator();
+  public static final KVComparator META_COMPARATOR = new MetaComparator();
 
   /**
    * A {@link KVComparator} for <code>.META.</code> catalog table
    * {@link KeyValue} keys.
    */
-  public static KeyComparator META_KEY_COMPARATOR = new MetaKeyComparator();
+  public static final KeyComparator META_KEY_COMPARATOR = new MetaKeyComparator();
 
   /**
    * A {@link KVComparator} for <code>-ROOT-</code> catalog table
    * {@link KeyValue}s.
    */
-  public static KVComparator ROOT_COMPARATOR = new RootComparator();
+  public static final KVComparator ROOT_COMPARATOR = new RootComparator();
 
   /**
    * A {@link KVComparator} for <code>-ROOT-</code> catalog table
    * {@link KeyValue} keys.
    */
-  public static KeyComparator ROOT_KEY_COMPARATOR = new RootKeyComparator();
+  public static final KeyComparator ROOT_KEY_COMPARATOR = new RootKeyComparator();
 
   /**
    * Get the appropriate row comparator for the specified table.

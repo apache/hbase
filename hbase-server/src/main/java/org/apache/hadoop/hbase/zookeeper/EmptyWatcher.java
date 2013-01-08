@@ -27,7 +27,7 @@ import org.apache.zookeeper.WatchedEvent;
 @InterfaceAudience.Private
 public class EmptyWatcher implements Watcher {
   // Used in this package but also by tests so needs to be public
-  public static EmptyWatcher instance = new EmptyWatcher();
+  public static final EmptyWatcher instance = new EmptyWatcher();
   private EmptyWatcher() {}
 
   public void process(WatchedEvent event) {}

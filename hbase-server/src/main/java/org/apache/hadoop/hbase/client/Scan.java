@@ -95,9 +95,9 @@ public class Scan extends OperationWithAttributes {
   
   // If application wants to collect scan metrics, it needs to
   // call scan.setAttribute(SCAN_ATTRIBUTES_ENABLE, Bytes.toBytes(Boolean.TRUE))
-  static public String SCAN_ATTRIBUTES_METRICS_ENABLE =
+  static public final String SCAN_ATTRIBUTES_METRICS_ENABLE =
     "scan.attributes.metrics.enable";
-  static public String SCAN_ATTRIBUTES_METRICS_DATA =
+  static public final String SCAN_ATTRIBUTES_METRICS_DATA =
     "scan.attributes.metrics.data";
 
   /*

@@ -34,7 +34,6 @@ import java.lang.reflect.Method;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.hadoop.util.Shell;
 
 /**
  * This class is a wrapper for the implementation of
@@ -127,6 +126,7 @@ public class JVM
       ofdc = runUnixMXBeanMethod("getOpenFileDescriptorCount");
       return (ofdc != null ? ofdc.longValue () : -1);
     }
+    InputStream in = null;
     try {
       //need to get the PID number of the process first
       RuntimeMXBean rtmbean = ManagementFactory.getRuntimeMXBean();
@@ -137,7 +137,7 @@ public class JVM
       Process p = Runtime.getRuntime().exec(
       new String[] { "bash", "-c",
           "ls /proc/" + pidhost[0] + "/fdinfo | wc -l" });
-      InputStream in = p.getInputStream();
+      in = p.getInputStream();
       BufferedReader output = new BufferedReader(
         		new InputStreamReader(in));
 
@@ -146,6 +146,14 @@ public class JVM
              return Long.parseLong(openFileDesCount);
      } catch (IOException ie) {
      	     LOG.warn("Not able to get the number of open file descriptors", ie);
+    } finally {
+      if (in != null){
+        try {
+          in.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close the InputStream", e);
+        }
+      }
     }
     return -1;
   }
@@ -164,13 +172,14 @@ public class JVM
       mfdc = runUnixMXBeanMethod("getMaxFileDescriptorCount");
       return (mfdc != null ? mfdc.longValue () : -1);
     }
+    InputStream in = null;
     try {
       
       //using linux bash commands to retrieve info
       Process p = Runtime.getRuntime().exec(
         	  new String[] { "bash", "-c",
         	  "ulimit -n" });
-      InputStream in = p.getInputStream();
+      in = p.getInputStream();
       BufferedReader output = new BufferedReader(
         new InputStreamReader(in));
 
@@ -179,6 +188,14 @@ public class JVM
         	return Long.parseLong(maxFileDesCount);
     }   catch (IOException ie) {
       		LOG.warn("Not able to get the max number of file descriptors", ie);
+    } finally {
+      if (in != null){
+        try {
+          in.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close the InputStream", e);
+        }
+      }
     }
     return -1;
  }

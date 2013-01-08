@@ -46,6 +46,7 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
   /**
    * For testing only!  Set to true to skip handling of split.
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_SHOULD_BE_FINAL")
   public static boolean TEST_SKIP = false;
 
   public SplitRegionHandler(Server server,

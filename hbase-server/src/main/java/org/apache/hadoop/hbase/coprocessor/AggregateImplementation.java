@@ -67,7 +67,7 @@ import com.google.protobuf.Service;
 @InterfaceStability.Evolving
 public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message> 
 extends AggregateService implements CoprocessorService, Coprocessor {
-  protected static Log log = LogFactory.getLog(AggregateImplementation.class);
+  protected static final Log log = LogFactory.getLog(AggregateImplementation.class);
   private RegionCoprocessorEnvironment env;
 
   /**

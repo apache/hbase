@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -49,10 +48,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 @InterfaceAudience.Public
 public class HLogInputFormat extends InputFormat<HLogKey, WALEdit> {
-  private static Log LOG = LogFactory.getLog(HLogInputFormat.class);
+  private static final Log LOG = LogFactory.getLog(HLogInputFormat.class);
 
-  public static String START_TIME_KEY = "hlog.start.time";
-  public static String END_TIME_KEY = "hlog.end.time";
+  public static final String START_TIME_KEY = "hlog.start.time";
+  public static final String END_TIME_KEY = "hlog.end.time";
 
   /**
    * {@link InputSplit} for {@link HLog} files. Each split represent
