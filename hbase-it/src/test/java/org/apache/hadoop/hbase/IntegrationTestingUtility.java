@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Facility for <strong>integration/system</strong> tests. This extends {@link HBaseTestingUtility}
@@ -58,6 +59,11 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
    */
   public static final String IS_DISTRIBUTED_CLUSTER = "hbase.test.cluster.distributed";
 
+  /** Config for pluggable hbase cluster manager */
+  private static final String HBASE_CLUSTER_MANAGER_CLASS = "hbase.it.clustermanager.class";
+  private static final Class<? extends ClusterManager> DEFAULT_HBASE_CLUSTER_MANAGER_CLASS = 
+    HBaseClusterManager.class;
+  
   /**
    * Initializes the state of the cluster. It starts a new in-process mini cluster, OR
    * if we are given an already deployed distributed cluster it initializes the state.
@@ -122,7 +128,10 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
 
   private void createDistributedHBaseCluster() throws IOException {
     Configuration conf = getConfiguration();
-    ClusterManager clusterManager = new HBaseClusterManager();
+    Class<? extends ClusterManager> clusterManagerClass = conf.getClass(HBASE_CLUSTER_MANAGER_CLASS,
+      DEFAULT_HBASE_CLUSTER_MANAGER_CLASS, ClusterManager.class);
+    ClusterManager clusterManager = ReflectionUtils.newInstance(
+      clusterManagerClass, conf);
     setHBaseCluster(new DistributedHBaseCluster(conf, clusterManager));
     getHBaseAdmin();
   }
