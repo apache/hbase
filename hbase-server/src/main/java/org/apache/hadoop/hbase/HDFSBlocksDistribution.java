@@ -30,7 +30,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 
 /**
- * Data structure to describe the distribution of HDFS blocks amount hosts
+ * Data structure to describe the distribution of HDFS blocks amount hosts.
+ *
+ * Adding erroneous data will be ignored silently.
  */
 @InterfaceAudience.Private
 public class HDFSBlocksDistribution {
@@ -122,8 +124,10 @@ public class HDFSBlocksDistribution {
    */
   public void addHostsAndBlockWeight(String[] hosts, long weight) {
     if (hosts == null || hosts.length == 0) {
-      throw new NullPointerException("empty hosts");
+      // erroneous data
+      return;
     }
+
     addUniqueWeight(weight);
     for (String hostname : hosts) {
       addHostAndBlockWeight(hostname, weight);
@@ -146,7 +150,8 @@ public class HDFSBlocksDistribution {
    */
   private void addHostAndBlockWeight(String host, long weight) {
     if (host == null) {
-      throw new NullPointerException("Passed hostname is null");
+      // erroneous data
+      return;
     }
 
     HostAndWeight hostAndWeight = this.hostAndWeights.get(host);
