@@ -246,14 +246,19 @@ public class TestMultiParallel {
     }
     LOG.info("puts");
     table.flushCommits();
+    int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
+        .size();
+    assert liveRScount > 0;
+    JVMClusterUtil.RegionServerThread liveRS = UTIL.getMiniHBaseCluster()
+        .getLiveRegionServerThreads().get(0);
     if (doAbort) {
-      LOG.info("Aborted=" + UTIL.getMiniHBaseCluster().abortRegionServer(0));
+      liveRS.getRegionServer().abort("Aborting for tests",
+          new Exception("doTestFlushCommits"));
       // If we wait for no regions being online after we abort the server, we
       // could ensure the master has re-assigned the regions on killed server
       // after writing successfully. It means the server we aborted is dead
       // and detected by matser
-      while (UTIL.getMiniHBaseCluster().getRegionServer(0)
-          .getNumberOfOnlineRegions() != 0) {
+      while (liveRS.getRegionServer().getNumberOfOnlineRegions() != 0) {
         Thread.sleep(10);
       }
       // try putting more keys after the abort. same key/qual... just validating
@@ -277,7 +282,8 @@ public class TestMultiParallel {
       LOG.info("Count=" + count + ", Alive=" + t.getRegionServer());
     }
     LOG.info("Count=" + count);
-    Assert.assertEquals("Server count=" + count + ", abort=" + doAbort, (doAbort? 1 : 2), count);
+    Assert.assertEquals("Server count=" + count + ", abort=" + doAbort,
+        (doAbort ? (liveRScount - 1) : liveRScount), count);
     for (JVMClusterUtil.RegionServerThread t: liveRSs) {
       int regions = ProtobufUtil.getOnlineRegions(t.getRegionServer()).size();
       // Assert.assertTrue("Count of regions=" + regions, regions > 10);
@@ -298,7 +304,13 @@ public class TestMultiParallel {
     validateSizeAndEmpty(results, KEYS.length);
 
     if (true) {
-      UTIL.getMiniHBaseCluster().abortRegionServer(0);
+      int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
+          .size();
+      assert liveRScount > 0;
+      JVMClusterUtil.RegionServerThread liveRS = UTIL.getMiniHBaseCluster()
+          .getLiveRegionServerThreads().get(0);
+      liveRS.getRegionServer().abort("Aborting for tests",
+          new Exception("testBatchWithPut"));
 
       puts = constructPutRequests();
       results = table.batch(puts);
