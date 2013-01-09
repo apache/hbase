@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -412,25 +413,37 @@ public class Store extends SchemaConfigured implements HeapSize {
       totalValidStoreFile++;
     }
 
+    IOException ioe = null;
     try {
       for (int i = 0; i < totalValidStoreFile; i++) {
-        Future<StoreFile> future = completionService.take();
-        StoreFile storeFile = future.get();
-        long length = storeFile.getReader().length();
-        this.storeSize += length;
-        this.totalUncompressedBytes +=
-          storeFile.getReader().getTotalUncompressedBytes();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("loaded " + storeFile.toStringDetailed());
-        }
-        results.add(storeFile);
-      }
-    } catch (InterruptedException e) {
-      throw new IOException(e);
-    } catch (ExecutionException e) {
-      throw new IOException(e.getCause());
+        try {
+          Future<StoreFile> future = completionService.take();
+          StoreFile storeFile = future.get();
+          long length = storeFile.getReader().length();
+          this.storeSize += length;
+          this.totalUncompressedBytes +=
+              storeFile.getReader().getTotalUncompressedBytes();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("loaded " + storeFile.toStringDetailed());
+          }
+          results.add(storeFile);
+        } catch (InterruptedException e) {
+          if (ioe == null) ioe = new InterruptedIOException(e.getMessage());
+        } catch (ExecutionException e) {
+          if (ioe == null) ioe = new IOException(e.getCause());
+        } 
+      } 
     } finally {
       storeFileOpenerThreadPool.shutdownNow();
+    }
+    if (ioe != null) {
+      // close StoreFile readers
+      try {
+        for (StoreFile file : results) {
+          if (file != null) file.closeReader(true);
+        }
+      } catch (IOException e) { }
+      throw ioe;
     }
 
     return results;
@@ -651,18 +664,25 @@ public class Store extends SchemaConfigured implements HeapSize {
           });
         }
 
+        IOException ioe = null;
         try {
           for (int i = 0; i < result.size(); i++) {
-            Future<Void> future = completionService.take();
-            future.get();
+            try {
+              Future<Void> future = completionService.take();
+              future.get();
+            } catch (InterruptedException e) {
+              if (ioe == null) {
+                ioe = new InterruptedIOException();
+                ioe.initCause(e);
+              }
+            } catch (ExecutionException e) {
+              if (ioe == null) ioe = new IOException(e.getCause());
+            }
           }
-        } catch (InterruptedException e) {
-          throw new IOException(e);
-        } catch (ExecutionException e) {
-          throw new IOException(e.getCause());
         } finally {
           storeFileCloserThreadPool.shutdownNow();
         }
+        if (ioe != null) throw ioe;
       }
       LOG.info("Closed " + this);
       return result;
