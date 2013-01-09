@@ -266,6 +266,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       "mapred.local.dir",
       testPath, "mapred-local-dir");
 
+    createSubDir(
+      "hbase.local.dir",
+      testPath, "hbase-local-dir");
     return testPath;
   }
 

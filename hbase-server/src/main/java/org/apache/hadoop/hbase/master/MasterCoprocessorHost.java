@@ -63,6 +63,7 @@ public class MasterCoprocessorHost
   private MasterServices masterServices;
 
   MasterCoprocessorHost(final MasterServices services, final Configuration conf) {
+    this.conf = conf;
     this.masterServices = services;
     loadSystemCoprocessors(conf, MASTER_COPROCESSOR_CONF_KEY);
   }

@@ -134,6 +134,7 @@ public class RegionCoprocessorHost
    */
   public RegionCoprocessorHost(final HRegion region,
       final RegionServerServices rsServices, final Configuration conf) {
+    this.conf = conf;
     this.rsServices = rsServices;
     this.region = region;
     this.pathPrefix = Integer.toString(this.region.getRegionInfo().hashCode());
