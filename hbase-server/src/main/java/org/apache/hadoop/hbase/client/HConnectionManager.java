@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MasterProtocol;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.RegionMovedException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
@@ -74,7 +75,6 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
@@ -550,8 +550,8 @@ public class HConnectionManager {
     private final Configuration conf;
 
     // Known region ServerName.toString() -> RegionClient/Admin
-    private final ConcurrentHashMap<String, Map<String, VersionedProtocol>> servers =
-      new ConcurrentHashMap<String, Map<String, VersionedProtocol>>();
+    private final ConcurrentHashMap<String, Map<String, IpcProtocol>> servers =
+      new ConcurrentHashMap<String, Map<String, IpcProtocol>>();
     private final ConcurrentHashMap<String, String> connectionLock =
       new ConcurrentHashMap<String, String>();
 
@@ -681,12 +681,10 @@ public class HConnectionManager {
       public int userCount;
       public long keepAliveUntil = Long.MAX_VALUE;
       public final Class<? extends MasterProtocol> protocolClass;
-      public long version;
 
       public MasterProtocolState (
-          final Class<? extends MasterProtocol> protocolClass, long version) {
+          final Class<? extends MasterProtocol> protocolClass) {
         this.protocolClass = protocolClass;
-        this.version = version;
       }
     }
 
@@ -718,9 +716,8 @@ public class HConnectionManager {
 
         InetSocketAddress isa =
           new InetSocketAddress(sn.getHostname(), sn.getPort());
-        MasterProtocol tryMaster = (MasterProtocol) HBaseClientRPC.getProxy(
+        MasterProtocol tryMaster = (MasterProtocol)HBaseClientRPC.getProxy(
             masterProtocolState.protocolClass,
-            masterProtocolState.version,
             isa, this.conf, this.rpcTimeout);
 
         if (tryMaster.isMasterRunning(
@@ -1349,17 +1346,16 @@ public class HConnectionManager {
     }
 
     @Override
-    public ClientProtocol getClient(
-        final String hostname, final int port) throws IOException {
-      return (ClientProtocol)getProtocol(hostname, port,
-        clientClass, ClientProtocol.VERSION);
+    public ClientProtocol getClient(final String hostname, final int port)
+    throws IOException {
+      return (ClientProtocol)getProtocol(hostname, port, clientClass);
     }
 
     @Override
-    public AdminProtocol getAdmin(final String hostname,
-        final int port, final boolean master) throws IOException {
-      return (AdminProtocol)getProtocol(hostname, port,
-        adminClass, AdminProtocol.VERSION);
+    public AdminProtocol getAdmin(final String hostname, final int port,
+        final boolean master)
+    throws IOException {
+      return (AdminProtocol)getProtocol(hostname, port, adminClass);
     }
 
     /**
@@ -1372,22 +1368,22 @@ public class HConnectionManager {
      * @return Proxy.
      * @throws IOException
      */
-    VersionedProtocol getProtocol(final String hostname,
-        final int port, final Class <? extends VersionedProtocol> protocolClass,
-        final long version) throws IOException {
+    IpcProtocol getProtocol(final String hostname,
+        final int port, final Class <? extends IpcProtocol> protocolClass)
+    throws IOException {
       String rsName = Addressing.createHostAndPortStr(hostname, port);
       // See if we already have a connection (common case)
-      Map<String, VersionedProtocol> protocols = this.servers.get(rsName);
+      Map<String, IpcProtocol> protocols = this.servers.get(rsName);
       if (protocols == null) {
-        protocols = new HashMap<String, VersionedProtocol>();
-        Map<String, VersionedProtocol> existingProtocols =
+        protocols = new HashMap<String, IpcProtocol>();
+        Map<String, IpcProtocol> existingProtocols =
           this.servers.putIfAbsent(rsName, protocols);
         if (existingProtocols != null) {
           protocols = existingProtocols;
         }
       }
       String protocol = protocolClass.getName();
-      VersionedProtocol server = protocols.get(protocol);
+      IpcProtocol server = protocols.get(protocol);
       if (server == null) {
         // create a unique lock for this RS + protocol (if necessary)
         String lockKey = protocol + "@" + rsName;
@@ -1402,7 +1398,7 @@ public class HConnectionManager {
               InetSocketAddress address = new InetSocketAddress(hostname, port);
               // definitely a cache miss. establish an RPC for this RS
               server = HBaseClientRPC.waitForProxy(
-                  protocolClass, version, address, this.conf,
+                  protocolClass, address, this.conf,
                   this.maxRPCAttempts, this.rpcTimeout, this.rpcTimeout);
               protocols.put(protocol, server);
             } catch (RemoteException e) {
@@ -1599,9 +1595,9 @@ public class HConnectionManager {
     }
 
     MasterProtocolState masterAdminProtocol =
-      new MasterProtocolState(MasterAdminProtocol.class, MasterAdminProtocol.VERSION);
+      new MasterProtocolState(MasterAdminProtocol.class);
     MasterProtocolState masterMonitorProtocol =
-      new MasterProtocolState(MasterMonitorProtocol.class, MasterMonitorProtocol.VERSION);
+      new MasterProtocolState(MasterMonitorProtocol.class);
 
     /**
      * This function allows HBaseAdmin and potentially others
@@ -2273,8 +2269,8 @@ public class HConnectionManager {
       delayedClosing.stop("Closing connection");
       if (stopProxy) {
         closeMaster();
-        for (Map<String, VersionedProtocol> i : servers.values()) {
-          for (VersionedProtocol server: i.values()) {
+        for (Map<String, IpcProtocol> i : servers.values()) {
+          for (IpcProtocol server: i.values()) {
             HBaseClientRPC.stopProxy(server);
           }
         }

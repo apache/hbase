@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
@@ -52,7 +53,7 @@ public class TestProtoBufRpc {
   private static RpcServer server;
 
   public interface TestRpcService
-      extends TestProtobufRpcProto.BlockingInterface, VersionedProtocol {
+      extends TestProtobufRpcProto.BlockingInterface, IpcProtocol {
     public long VERSION = 1;
   }
 
@@ -75,20 +76,6 @@ public class TestProtoBufRpc {
     public EmptyResponseProto error(RpcController unused,
         EmptyRequestProto request) throws ServiceException {
       throw new ServiceException("error", new IOException("error"));
-    }
-
-    @Override
-    public long getProtocolVersion(String protocol, long clientVersion)
-        throws IOException {
-      // TODO Auto-generated method stub
-      return 0;
-    }
-
-    @Override
-    public ProtocolSignature getProtocolSignature(String protocol,
-        long clientVersion, int clientMethodsHash) throws IOException {
-      // TODO Auto-generated method stub
-      return null;
     }
   }
 
@@ -120,7 +107,7 @@ public class TestProtoBufRpc {
     HBaseClientRPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcClientEngine.class);
     HBaseServerRPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcServerEngine.class);
 
-    return (TestRpcService) HBaseClientRPC.getProxy(TestRpcService.class, 0,
+    return (TestRpcService) HBaseClientRPC.getProxy(TestRpcService.class,
         addr, conf, 10000);
   }
 

@@ -81,7 +81,6 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
-import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.UnknownProtocolException;
@@ -963,33 +962,6 @@ Server {
     LOG.info("Forcing splitLog and expire of " + sn);
     fileSystemManager.splitLog(sn);
     serverManager.expireServer(sn);
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(
-      String protocol, long version, int clientMethodsHashCode)
-  throws IOException {
-    if (MasterMonitorProtocol.class.getName().equals(protocol)) {
-      return new ProtocolSignature(MasterMonitorProtocol.VERSION, null);
-    } else if (MasterAdminProtocol.class.getName().equals(protocol)) {
-      return new ProtocolSignature(MasterAdminProtocol.VERSION, null);
-    } else if (RegionServerStatusProtocol.class.getName().equals(protocol)) {
-      return new ProtocolSignature(RegionServerStatusProtocol.VERSION, null);
-    }
-    throw new IOException("Unknown protocol: " + protocol);
-  }
-
-  public long getProtocolVersion(String protocol, long clientVersion) {
-    if (MasterMonitorProtocol.class.getName().equals(protocol)) {
-      return MasterMonitorProtocol.VERSION;
-    } else if (MasterAdminProtocol.class.getName().equals(protocol)) {
-      return MasterAdminProtocol.VERSION;
-    } else if (RegionServerStatusProtocol.class.getName().equals(protocol)) {
-      return RegionServerStatusProtocol.VERSION;
-    }
-    // unknown protocol
-    LOG.warn("Version requested for unimplemented protocol: "+protocol);
-    return -1;
   }
 
   @Override

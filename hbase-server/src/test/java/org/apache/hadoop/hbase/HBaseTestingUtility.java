@@ -383,7 +383,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     //file system, the tests should use getBaseTestDir, otherwise, we can use
     //the working directory, and create a unique sub dir there
     FileSystem fs = getTestFileSystem();
-    if (fs.getUri().getScheme().equals(fs.getLocal(conf).getUri().getScheme())) {
+    if (fs.getUri().getScheme().equals(FileSystem.getLocal(conf).getUri().getScheme())) {
       File dataTestDir = new File(getDataTestDir().toString());
       dataTestDirOnTestFS = new Path(dataTestDir.getAbsolutePath());
     } else {

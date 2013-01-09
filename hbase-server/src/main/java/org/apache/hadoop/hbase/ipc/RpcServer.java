@@ -23,16 +23,18 @@ import com.google.common.base.Function;
 import com.google.protobuf.Message;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-/**
- */
 @InterfaceAudience.Private
 public interface RpcServer {
+  // TODO: Needs cleanup.  Why a 'start', and then a 'startThreads' and an 'openServer'?
+  // Also, the call takes a RpcRequestBody, an already composed combination of
+  // rpc Request and metadata.  Should disentangle metadata and rpc Request Message.
 
   void setSocketSendBufSize(int size);
 
@@ -45,12 +47,12 @@ public interface RpcServer {
   InetSocketAddress getListenerAddress();
 
   /** Called for each call.
-   * @param param writable parameter
+   * @param param parameter
    * @param receiveTime time
-   * @return Message
+   * @return Message Protobuf response Message
    * @throws java.io.IOException e
    */
-  Message call(Class<? extends VersionedProtocol> protocol,
+  Message call(Class<? extends IpcProtocol> protocol,
       RpcRequestBody param, long receiveTime, MonitoredRPCHandler status)
       throws IOException;
 
@@ -61,7 +63,6 @@ public interface RpcServer {
   void openServer();
 
   void startThreads();
-
 
   /**
    * Returns the metrics instance for reporting RPC call statistics

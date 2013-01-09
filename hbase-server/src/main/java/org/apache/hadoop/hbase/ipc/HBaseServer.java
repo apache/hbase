@@ -67,6 +67,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -168,18 +169,18 @@ public abstract class HBaseServer implements RpcServer {
     new ThreadLocal<RpcServer>();
   private volatile boolean started = false;
 
-  private static final Map<String, Class<? extends VersionedProtocol>>
-      PROTOCOL_CACHE =
-      new ConcurrentHashMap<String, Class<? extends VersionedProtocol>>();
+  private static final Map<String, Class<? extends IpcProtocol>> PROTOCOL_CACHE =
+      new ConcurrentHashMap<String, Class<? extends IpcProtocol>>();
 
-  static Class<? extends VersionedProtocol> getProtocolClass(
+  @SuppressWarnings("unchecked")
+  static Class<? extends IpcProtocol> getProtocolClass(
       String protocolName, Configuration conf)
   throws ClassNotFoundException {
-    Class<? extends VersionedProtocol> protocol =
+    Class<? extends IpcProtocol> protocol =
         PROTOCOL_CACHE.get(protocolName);
 
     if (protocol == null) {
-      protocol = (Class<? extends VersionedProtocol>)
+      protocol = (Class<? extends IpcProtocol>)
           conf.getClassByName(protocolName);
       PROTOCOL_CACHE.put(protocolName, protocol);
     }
@@ -271,7 +272,7 @@ public abstract class HBaseServer implements RpcServer {
   protected BlockingQueue<Call> replicationQueue;
   private int numOfReplicationHandlers = 0;
   private Handler[] replicationHandlers = null;
-  
+
   protected HBaseRPCErrorHandler errorHandler = null;
 
   /**
@@ -351,7 +352,7 @@ public abstract class HBaseServer implements RpcServer {
       if (errorClass != null) {
         this.isError = true;
       }
- 
+
       ByteBufferOutputStream buf = null;
       if (value != null) {
         buf = new ByteBufferOutputStream(((Message)value).getSerializedSize());
@@ -453,7 +454,7 @@ public abstract class HBaseServer implements RpcServer {
     public synchronized boolean isReturnValueDelayed() {
       return this.delayReturnValue;
     }
-    
+
     @Override
     public void throwExceptionIfCallerDisconnected() throws CallerDisconnectedException {
       if (!connection.channel.isOpen()) {
@@ -1111,7 +1112,7 @@ public abstract class HBaseServer implements RpcServer {
     protected String hostAddress;
     protected int remotePort;
     ConnectionHeader header;
-    Class<? extends VersionedProtocol> protocol;
+    Class<? extends IpcProtocol> protocol;
     protected UserGroupInformation user = null;
     private AuthMethod authMethod;
     private boolean saslContextEstablished;
@@ -1315,7 +1316,7 @@ public abstract class HBaseServer implements RpcServer {
             LOG.debug("SASL server context established. Authenticated client: "
               + user + ". Negotiated QoP is "
               + saslServer.getNegotiatedProperty(Sasl.QOP));
-          }          
+          }
           metrics.authenticationSuccess();
           AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
           saslContextEstablished = true;
@@ -1428,7 +1429,7 @@ public abstract class HBaseServer implements RpcServer {
             }
           }
           if (dataLength < 0) {
-            throw new IllegalArgumentException("Unexpected data length " 
+            throw new IllegalArgumentException("Unexpected data length "
                 + dataLength + "!! from " + getHostAddress());
           }
           data = ByteBuffer.allocate(dataLength);
@@ -1749,7 +1750,7 @@ public abstract class HBaseServer implements RpcServer {
           status.pause("Waiting for a call");
           Call call = myCallQueue.take(); // pop the queue; maybe blocked here
           status.setStatus("Setting up call");
-          status.setConnection(call.connection.getHostAddress(), 
+          status.setConnection(call.connection.getHostAddress(),
               call.connection.getRemotePort());
 
           if (LOG.isDebugEnabled())
@@ -2010,11 +2011,12 @@ public abstract class HBaseServer implements RpcServer {
     }
     return handlers;
   }
-  
+
   public SecretManager<? extends TokenIdentifier> getSecretManager() {
     return this.secretManager;
   }
 
+  @SuppressWarnings("unchecked")
   public void setSecretManager(SecretManager<? extends TokenIdentifier> secretManager) {
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
   }
@@ -2042,7 +2044,7 @@ public abstract class HBaseServer implements RpcServer {
       }
     }
   }
-  
+
   /** Wait for the server to be stopped.
    * Does not wait for all subthreads to finish.
    *  See {@link #stop()}.
@@ -2101,7 +2103,7 @@ public abstract class HBaseServer implements RpcServer {
                                          connection.getProtocol());
       }
       authManager.authorize(user != null ? user : null,
-          protocol, getConf(), addr);
+        protocol, getConf(), addr);
     }
   }
 

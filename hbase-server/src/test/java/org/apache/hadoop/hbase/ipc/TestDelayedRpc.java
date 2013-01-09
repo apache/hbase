@@ -24,22 +24,20 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.IpcProtocol;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
-import org.apache.log4j.Level;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mortbay.log.Log;
@@ -69,13 +67,13 @@ public class TestDelayedRpc {
   private void testDelayedRpc(boolean delayReturnValue) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
-
-    rpcServer = HBaseServerRPC.getServer(new TestRpcImpl(delayReturnValue),
+    TestRpcImpl instance = new TestRpcImpl(delayReturnValue);
+    rpcServer = HBaseServerRPC.getServer(instance.getClass(), instance,
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
-    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class, 0,
+    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class,
         rpcServer.getListenerAddress(), conf, 1000);
 
     List<Integer> results = new ArrayList<Integer>();
@@ -133,11 +131,12 @@ public class TestDelayedRpc {
     log.setLevel(Level.WARN);
 
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
-    rpcServer = HBaseServerRPC.getServer(new TestRpcImpl(true),
+    TestRpcImpl instance = new TestRpcImpl(true);
+    rpcServer = HBaseServerRPC.getServer(instance.getClass(), instance,
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
-    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class, 0,
+    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class,
         rpcServer.getListenerAddress(), conf, 1000);
 
     Thread threads[] = new Thread[MAX_DELAYED_RPC + 1];
@@ -165,8 +164,7 @@ public class TestDelayedRpc {
     log.removeAppender(listAppender);
   }
 
-  public interface TestRpc extends VersionedProtocol {
-    public static final long VERSION = 1L;
+  public interface TestRpc extends IpcProtocol {
     TestResponse test(TestArg delay);
   }
 
@@ -213,22 +211,6 @@ public class TestDelayedRpc {
       responseBuilder.setResponse(0xDEADBEEF);
       return responseBuilder.build();
     }
-
-    @Override
-    public long getProtocolVersion(String arg0, long arg1) throws IOException {
-      return 0;
-    }
-
-    @Override
-    public ProtocolSignature getProtocolSignature(String protocol,
-        long clientVersion, int clientMethodsHash) throws IOException {
-      Method [] methods = this.getClass().getMethods();
-      int [] hashes = new int [methods.length];
-      for (int i = 0; i < methods.length; i++) {
-        hashes[i] = methods[i].hashCode();
-      }
-      return new ProtocolSignature(clientVersion, hashes);
-    }
   }
 
   private static class TestThread extends Thread {
@@ -263,13 +245,13 @@ public class TestDelayedRpc {
   public void testEndDelayThrowing() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
-
-    rpcServer = HBaseServerRPC.getServer(new FaultyTestRpc(),
+    FaultyTestRpc instance = new FaultyTestRpc();
+    rpcServer = HBaseServerRPC.getServer(instance.getClass(), instance,
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
-    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class, 0,
+    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class,
         rpcServer.getListenerAddress(), conf, 1000);
 
     int result = 0xDEADBEEF;
@@ -312,18 +294,5 @@ public class TestDelayedRpc {
       // Client will receive the Exception, not this value.
       return TestResponse.newBuilder().setResponse(DELAYED).build();
     }
-
-    @Override
-    public long getProtocolVersion(String arg0, long arg1) throws IOException {
-      return 0;
-    }
-
-    @Override
-    public ProtocolSignature getProtocolSignature(String protocol,
-        long clientVersion, int clientMethodsHash) throws IOException {
-      return new ProtocolSignature(clientVersion, new int [] {});
-    }
   }
-
 }
-

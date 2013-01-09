@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -56,10 +57,10 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
   }
 
   @Override
-  public Server getServer(Class<? extends VersionedProtocol> protocol,
-                          Object instance, Class<?>[] ifaces, String bindAddress, int port,
-                          int numHandlers, int metaHandlerCount, boolean verbose,
-                          Configuration conf, int highPriorityLevel) throws IOException {
+  public Server getServer(Object instance, Class<?>[] ifaces,
+      String bindAddress, int port, int numHandlers, int metaHandlerCount,
+      boolean verbose, Configuration conf, int highPriorityLevel)
+  throws IOException {
     return new Server(instance, ifaces, conf, bindAddress, port, numHandlers,
         metaHandlerCount, verbose, highPriorityLevel);
   }
@@ -77,9 +78,6 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
     /** Default value for above params */
     private static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
     private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
-
-    /** Names for suffixed metrics */
-    private static final String ABOVE_ONE_SEC_METRIC = ".aboveOneSec.";
 
     private final int warnResponseTime;
     private final int warnResponseSize;
@@ -153,9 +151,9 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
      * the return response has protobuf response payload. On failure, the
      * exception name and the stack trace are returned in the protobuf response.
      */
-    public Message call(Class<? extends VersionedProtocol> protocol,
-                        RpcRequestBody rpcRequest, long receiveTime, MonitoredRPCHandler status)
-        throws IOException {
+    public Message call(Class<? extends IpcProtocol> protocol,
+      RpcRequestBody rpcRequest, long receiveTime, MonitoredRPCHandler status)
+    throws IOException {
       try {
         String methodName = rpcRequest.getMethodName();
         Method method = getMethod(protocol, methodName);
@@ -170,13 +168,6 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
          * The rpcProxy's has a declared protocol name that is
          * sent form client to server at connection time.
          */
-        //TODO: use the clientVersion to do protocol compatibility checks, and
-        //this could be used here to handle complex use cases like deciding
-        //which implementation of the protocol should be used to service the
-        //current request, etc. Ideally, we shouldn't land up in a situation
-        //where we need to support such a use case.
-        //For now the clientVersion field is simply ignored
-        long clientVersion = rpcRequest.getClientProtocolVersion();
 
         if (verbose) {
           LOG.info("Call: protocol name=" + protocol.getName() +
@@ -243,7 +234,6 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
           buffer.append("(");
           buffer.append(param.getClass().getName());
           buffer.append(")");
-          buffer.append(", client version="+clientVersion);
           logResponse(new Object[]{rpcRequest.getRequest()},
               methodName, buffer.toString(), (tooLarge ? "TooLarge" : "TooSlow"),
               status.getClient(), startTime, processingTime, qTime,
@@ -271,7 +261,7 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
       }
     }
 
-    static Method getMethod(Class<? extends VersionedProtocol> protocol,
+    static Method getMethod(Class<? extends IpcProtocol> protocol,
                             String methodName) {
       Method method = methodInstances.get(methodName);
       if (method != null) {

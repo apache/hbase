@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -45,11 +46,9 @@ import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
-import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -86,8 +85,7 @@ public class TestTokenAuthentication {
       serverPrincipal = "hbase.test.kerberos.principal")
   @TokenInfo("HBASE_AUTH_TOKEN")
   private static interface BlockingAuthenticationService
-      extends AuthenticationProtos.AuthenticationService.BlockingInterface, VersionedProtocol {
-    long VERSION = 1L;
+  extends AuthenticationProtos.AuthenticationService.BlockingInterface, IpcProtocol {
   }
 
   /**
@@ -292,17 +290,6 @@ public class TestTokenAuthentication {
         throw new ServiceException(ioe);
       }
     }
-
-    /* VersionedProtocol implementation */
-    @Override
-    public long getProtocolVersion(String protocol, long clientVersion) throws IOException {
-      return BlockingAuthenticationService.VERSION;
-    }
-
-    @Override
-    public ProtocolSignature getProtocolSignature(String protocol, long clientVersion, int clientMethodsHash) throws IOException {
-      return new ProtocolSignature(BlockingAuthenticationService.VERSION, null);
-    }
   }
 
 
@@ -365,7 +352,7 @@ public class TestTokenAuthentication {
     testuser.setAuthenticationMethod(
         UserGroupInformation.AuthenticationMethod.TOKEN);
     final Configuration conf = TEST_UTIL.getConfiguration();
-    testuser.setConfiguration(conf);
+    UserGroupInformation.setConfiguration(conf);
     Token<AuthenticationTokenIdentifier> token =
         secretManager.generateToken("testuser");
     LOG.debug("Got token: " + token.toString());
@@ -379,7 +366,6 @@ public class TestTokenAuthentication {
         AuthenticationProtos.AuthenticationService.BlockingInterface proxy =
             (AuthenticationProtos.AuthenticationService.BlockingInterface)
             HBaseClientRPC.waitForProxy(BlockingAuthenticationService.class,
-                BlockingAuthenticationService.VERSION,
                 server.getAddress(), c,
                 HConstants.DEFAULT_HBASE_CLIENT_RPC_MAXATTEMPTS,
                 HConstants.DEFAULT_HBASE_RPC_TIMEOUT,

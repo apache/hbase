@@ -55,6 +55,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
@@ -105,8 +106,8 @@ import com.google.protobuf.Message.Builder;
 @InterfaceAudience.Private
 public class HBaseClient {
 
-  public static final Log LOG = LogFactory
-      .getLog("org.apache.hadoop.ipc.HBaseClient");
+  public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
   protected final PoolMap<ConnectionId, Connection> connections;
   private static final Map<String, Method> methodInstances =
       new ConcurrentHashMap<String, Method>();
@@ -190,11 +191,12 @@ public class HBaseClient {
   }
 
   public static class FailedServerException extends IOException {
+    private static final long serialVersionUID = -4744376109431464127L;
+
     public FailedServerException(String s) {
       super(s);
     }
   }
-
 
   /**
    * set the ping interval value in configuration
@@ -260,9 +262,9 @@ public class HBaseClient {
 
   /** A call waiting for a value. */
   protected class Call {
-    final int id;                                       // call id
-    final RpcRequestBody param;                         // rpc request object
-    Message value;                               // value, null if error
+    final int id;                                 // call id
+    final RpcRequestBody param;                   // rpc request object
+    Message value;                                // value, null if error
     IOException error;                            // exception, null if value
     boolean done;                                 // true when call is done
     long startTime;
@@ -306,6 +308,7 @@ public class HBaseClient {
       return this.startTime;
     }
   }
+
   protected static Map<String,TokenSelector<? extends TokenIdentifier>> tokenHandlers =
       new HashMap<String,TokenSelector<? extends TokenIdentifier>>();
   static {
@@ -339,9 +342,12 @@ public class HBaseClient {
     private int reloginMaxBackoff; // max pause before relogin on sasl failure
 
     // currently active calls
-    protected final ConcurrentSkipListMap<Integer, Call> calls = new ConcurrentSkipListMap<Integer, Call>();
-    protected final AtomicLong lastActivity = new AtomicLong();// last I/O activity time
-    protected final AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
+    protected final ConcurrentSkipListMap<Integer, Call> calls =
+      new ConcurrentSkipListMap<Integer, Call>();
+    protected final AtomicLong lastActivity =
+      new AtomicLong(); // last I/O activity time
+    protected final AtomicBoolean shouldCloseConnection =
+      new AtomicBoolean();  // indicate if the connection is closed
     protected IOException closeException; // close reason
 
     Connection(ConnectionId remoteId) throws IOException {
@@ -968,8 +974,8 @@ public class HBaseClient {
     }
 
 
-    private Method getMethod(Class<? extends VersionedProtocol> protocol,
-                             String methodName) {
+    private Method getMethod(Class<? extends IpcProtocol> protocol,
+        String methodName) {
       Method method = methodInstances.get(methodName);
       if (method != null) {
         return method;
@@ -1296,7 +1302,7 @@ public class HBaseClient {
    * Throws exceptions if there are network problems or if the remote code
    * threw an exception. */
   public Message call(RpcRequestBody param, InetSocketAddress addr,
-                       Class<? extends VersionedProtocol> protocol,
+                       Class<? extends IpcProtocol> protocol,
                        User ticket, int rpcTimeout)
       throws InterruptedException, IOException {
     Call call = new Call(param);
@@ -1365,25 +1371,9 @@ public class HBaseClient {
   /** Makes a set of calls in parallel.  Each parameter is sent to the
    * corresponding address.  When all values are available, or have timed out
    * or errored, the collected results are returned in an array.  The array
-   * contains nulls for calls that timed out or errored.
-   * @param params RpcRequestBody parameters
-   * @param addresses socket addresses
-   * @return  RpcResponseBody[]
-   * @throws IOException e
-   * @deprecated Use {@code #call(RpcRequestBody[], InetSocketAddress[], Class, User)} instead
-   */
-  @Deprecated
-  public Message[] call(RpcRequestBody[] params, InetSocketAddress[] addresses)
-    throws IOException, InterruptedException {
-    return call(params, addresses, null, null);
-  }
-
-  /** Makes a set of calls in parallel.  Each parameter is sent to the
-   * corresponding address.  When all values are available, or have timed out
-   * or errored, the collected results are returned in an array.  The array
    * contains nulls for calls that timed out or errored.  */
   public Message[] call(RpcRequestBody[] params, InetSocketAddress[] addresses,
-                         Class<? extends VersionedProtocol> protocol,
+                         Class<? extends IpcProtocol> protocol,
                          User ticket)
       throws IOException, InterruptedException {
     if (addresses.length == 0) return new RpcResponseBody[0];
@@ -1418,7 +1408,7 @@ public class HBaseClient {
   /* Get a connection from the pool, or create a new one and add it to the
    * pool.  Connections to a given host/port are reused. */
   protected Connection getConnection(InetSocketAddress addr,
-                                   Class<? extends VersionedProtocol> protocol,
+                                   Class<? extends IpcProtocol> protocol,
                                    User ticket,
                                    int rpcTimeout,
                                    Call call)
@@ -1461,11 +1451,10 @@ public class HBaseClient {
     final InetSocketAddress address;
     final User ticket;
     final int rpcTimeout;
-    Class<? extends VersionedProtocol> protocol;
+    Class<? extends IpcProtocol> protocol;
     private static final int PRIME = 16777619;
 
-    ConnectionId(InetSocketAddress address,
-        Class<? extends VersionedProtocol> protocol,
+    ConnectionId(InetSocketAddress address, Class<? extends IpcProtocol> protocol,
         User ticket,
         int rpcTimeout) {
       this.protocol = protocol;
@@ -1478,7 +1467,7 @@ public class HBaseClient {
       return address;
     }
 
-    Class<? extends VersionedProtocol> getProtocol() {
+    Class<? extends IpcProtocol> getProtocol() {
       return protocol;
     }
 

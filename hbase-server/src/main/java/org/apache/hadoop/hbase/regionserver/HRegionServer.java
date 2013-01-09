@@ -106,7 +106,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
-import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -1794,7 +1793,7 @@ public class  HRegionServer implements ClientProtocol,
         // Do initial RPC setup. The final argument indicates that the RPC
         // should retry indefinitely.
         master = (RegionServerStatusProtocol) HBaseClientRPC.waitForProxy(
-            RegionServerStatusProtocol.class, RegionServerStatusProtocol.VERSION,
+            RegionServerStatusProtocol.class,
             isa, this.conf, -1,
             this.rpcTimeout, this.rpcTimeout);
         LOG.info("Connected to master at " + isa);
@@ -2040,31 +2039,6 @@ public class  HRegionServer implements ClientProtocol,
       }
     }
     return regions.toArray(new HRegionInfo[regions.size()]);
-  }
-
-  @Override
-  @QosPriority(priority=HConstants.HIGH_QOS)
-  public ProtocolSignature getProtocolSignature(
-      String protocol, long version, int clientMethodsHashCode)
-  throws IOException {
-    if (protocol.equals(ClientProtocol.class.getName())) {
-      return new ProtocolSignature(ClientProtocol.VERSION, null);
-    } else if (protocol.equals(AdminProtocol.class.getName())) {
-      return new ProtocolSignature(AdminProtocol.VERSION, null);
-    }
-    throw new IOException("Unknown protocol: " + protocol);
-  }
-
-  @Override
-  @QosPriority(priority=HConstants.HIGH_QOS)
-  public long getProtocolVersion(final String protocol, final long clientVersion)
-  throws IOException {
-    if (protocol.equals(ClientProtocol.class.getName())) {
-      return ClientProtocol.VERSION;
-    } else if (protocol.equals(AdminProtocol.class.getName())) {
-      return AdminProtocol.VERSION;
-    }
-    throw new IOException("Unknown protocol: " + protocol);
   }
 
   @Override

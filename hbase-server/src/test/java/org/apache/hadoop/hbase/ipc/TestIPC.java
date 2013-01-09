@@ -18,41 +18,40 @@
   */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
-import java.net.Socket;
-import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
-import javax.net.SocketFactory;
-import java.lang.reflect.Method;
-import java.util.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 
-import static org.junit.Assert.*;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+
+import javax.net.SocketFactory;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.IpcProtocol;
+import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.mockito.Mockito.*;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.SmallTests;
-
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 import com.google.protobuf.Message;
-import org.apache.hadoop.hbase.security.User;
-
-import org.apache.commons.logging.*;
-import org.apache.log4j.Logger;
 
 @Category(SmallTests.class)
 public class TestIPC {
   public static final Log LOG = LogFactory.getLog(TestIPC.class);
-  private static final Random RANDOM = new Random();
 
   private static class TestRpcServer extends HBaseServer {
     TestRpcServer() throws IOException {
@@ -60,11 +59,10 @@ public class TestIPC {
     }
 
     @Override
-    public Message call(Class<? extends VersionedProtocol> protocol,
-        RpcRequestBody rpcRequest, 
-        long receiveTime, 
-        MonitoredRPCHandler status) throws IOException {
-      return rpcRequest;
+    public Message call(Class<? extends IpcProtocol> protocol,
+        RpcRequestBody param, long receiveTime, MonitoredRPCHandler status)
+    throws IOException {
+      return param;
     }
   }
 

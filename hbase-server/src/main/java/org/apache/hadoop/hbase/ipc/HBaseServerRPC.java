@@ -19,16 +19,16 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.util.ReflectionUtils;
-
-import java.io.IOException;
-import java.lang.reflect.Proxy;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * A simple RPC mechanism.
@@ -56,8 +56,8 @@ public class HBaseServerRPC {
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseServerRPC");
 
   // cache of RpcEngines by protocol
-  private static final Map<Class, RpcServerEngine> PROTOCOL_ENGINES
-      = new HashMap<Class, RpcServerEngine>();
+  private static final Map<Class<? extends IpcProtocol>, RpcServerEngine> PROTOCOL_ENGINES =
+      new HashMap<Class<? extends IpcProtocol>, RpcServerEngine>();
 
   /**
    * Configuration key for the {@link org.apache.hadoop.hbase.ipc.RpcServerEngine} implementation to
@@ -65,24 +65,20 @@ public class HBaseServerRPC {
    * configured using {@code "hbase.rpc.server.engine." + protocol.class.name}.
    */
   public static final String RPC_ENGINE_PROP = "hbase.rpc.server.engine";
-  // track what RpcEngine is used by a proxy class, for stopProxy()
-  private static final Map<Class, RpcServerEngine> PROXY_ENGINES
-      = new HashMap<Class, RpcServerEngine>();
 
   private HBaseServerRPC() {
     super();
   }                                  // no public ctor
 
-
   // set a protocol to use a non-default RpcEngine
   static void setProtocolEngine(Configuration conf,
-                                Class protocol, Class engine) {
+      Class<? extends IpcProtocol> protocol, Class<? extends RpcServerEngine> engine) {
     conf.setClass(RPC_ENGINE_PROP + "." + protocol.getName(), engine, RpcServerEngine.class);
   }
 
   // return the RpcEngine configured to handle a protocol
-  static synchronized RpcServerEngine getProtocolEngine(Class protocol,
-                                                        Configuration conf) {
+  static synchronized RpcServerEngine getProtocolEngine(Class<? extends IpcProtocol> protocol,
+      Configuration conf) {
     RpcServerEngine engine = PROTOCOL_ENGINES.get(protocol);
     if (engine == null) {
       // check for a configured default engine
@@ -94,59 +90,15 @@ public class HBaseServerRPC {
           defaultEngine);
       LOG.debug("Using " + impl.getName() + " for " + protocol.getName());
       engine = (RpcServerEngine) ReflectionUtils.newInstance(impl, conf);
-      if (protocol.isInterface())
-        PROXY_ENGINES.put(Proxy.getProxyClass(protocol.getClassLoader(),
-            protocol),
-            engine);
       PROTOCOL_ENGINES.put(protocol, engine);
     }
     return engine;
   }
 
-  // return the RpcEngine that handles a proxy object
-  private static synchronized RpcServerEngine getProxyEngine(Object proxy) {
-    return PROXY_ENGINES.get(proxy.getClass());
-  }
-
-
-  /**
-   * Construct a server for a protocol implementation instance listening on a
-   * port and address.
-   *
-   * @param instance    instance
-   * @param bindAddress bind address
-   * @param port        port to bind to
-   * @param numHandlers number of handlers to start
-   * @param verbose     verbose flag
-   * @param conf        configuration
-   * @return Server
-   * @throws IOException e
-   */
-  public static RpcServer getServer(final Object instance,
-                                    final Class<?>[] ifaces,
-                                    final String bindAddress, final int port,
-                                    final int numHandlers,
-                                    int metaHandlerCount,
-                                    final boolean verbose,
-                                    Configuration conf,
-                                    int highPriorityLevel)
-      throws IOException {
-    return getServer(instance.getClass(),
-        instance,
-        ifaces,
-        bindAddress,
-        port,
-        numHandlers,
-        metaHandlerCount,
-        verbose,
-        conf,
-        highPriorityLevel);
-  }
-
   /**
    * Construct a server for a protocol implementation instance.
    */
-  public static RpcServer getServer(Class protocol,
+  public static RpcServer getServer(Class<? extends IpcProtocol> protocol,
                                     final Object instance,
                                     final Class<?>[] ifaces,
                                     String bindAddress,
@@ -157,9 +109,8 @@ public class HBaseServerRPC {
                                     Configuration conf,
                                     int highPriorityLevel)
       throws IOException {
-    return getProtocolEngine(protocol, conf)
-        .getServer(protocol,
-            instance,
+    return getProtocolEngine(protocol, conf).
+      getServer(instance,
             ifaces,
             bindAddress,
             port,
@@ -169,5 +120,4 @@ public class HBaseServerRPC {
             conf,
             highPriorityLevel);
   }
-
 }

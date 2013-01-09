@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.KerberosInfo;
@@ -31,7 +31,5 @@ import org.apache.hadoop.hbase.security.KerberosInfo;
   serverPrincipal = "hbase.regionserver.kerberos.principal")
 @TokenInfo("HBASE_AUTH_TOKEN")
 @InterfaceAudience.Private
-public interface AdminProtocol extends
-    AdminService.BlockingInterface, VersionedProtocol {
-  public static final long VERSION = 1L;
-}
+public interface AdminProtocol
+extends AdminService.BlockingInterface, IpcProtocol {}

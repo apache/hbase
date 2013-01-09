@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -184,20 +183,6 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
    */
   void setNextResults(final byte [] regionName, final Result [] rs) {
     this.nexts.put(regionName, rs);
-  }
-
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    // TODO Auto-generated method stub
-    return null;
   }
 
   @Override

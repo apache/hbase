@@ -26,11 +26,9 @@ import java.io.IOException;
 /** An RPC implementation for the server. */
 @InterfaceAudience.Private
 interface RpcServerEngine {
-
   /** Construct a server for a protocol implementation instance. */
-  RpcServer getServer(Class<? extends VersionedProtocol> protocol, Object instance,
-                       Class<?>[] ifaces, String bindAddress,
-                       int port, int numHandlers, int metaHandlerCount,
-                       boolean verbose, Configuration conf, int highPriorityLevel)
-      throws IOException;
+  RpcServer getServer(Object instance, Class<?>[] protocols,
+    String bindAddress, int port, int numHandlers, int metaHandlerCount,
+    boolean verbose, Configuration conf, int highPriorityLevel)
+  throws IOException;
 }
