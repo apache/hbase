@@ -624,7 +624,16 @@ public class StoreFile {
    */
   public Reader createReader() throws IOException {
     if (this.reader == null) {
-      this.reader = open();
+      try {
+        this.reader = open();
+      } catch (IOException e) {
+        try {
+          this.closeReader(true);
+        } catch (IOException ee) {              
+        }
+        throw e;
+      }
+
     }
     return this.reader;
   }
