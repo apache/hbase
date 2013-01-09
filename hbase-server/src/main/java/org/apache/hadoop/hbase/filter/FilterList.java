@@ -361,6 +361,16 @@ public class FilterList extends Filter {
   }
 
   @Override
+  public boolean isFamilyEssential(byte[] name) {
+    for (Filter filter : filters) {
+      if (filter.isFamilyEssential(name)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
   public String toString() {
     return toString(MAX_LOG_FILTERS);
   }

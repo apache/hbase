@@ -565,6 +565,10 @@ public final class ProtobufUtil {
     if (scan.getMaxResultSize() > 0) {
       scanBuilder.setMaxResultSize(scan.getMaxResultSize());
     }
+    Boolean loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
+    if (loadColumnFamiliesOnDemand != null) {
+      scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand.booleanValue());
+    }
     scanBuilder.setMaxVersions(scan.getMaxVersions());
     TimeRange timeRange = scan.getTimeRange();
     if (!timeRange.isAllTime()) {
@@ -647,6 +651,9 @@ public final class ProtobufUtil {
     }
     if (proto.hasStoreOffset()) {
       scan.setRowOffsetPerColumnFamily(proto.getStoreOffset());
+    }
+    if (proto.hasLoadColumnFamiliesOnDemand()) {
+      scan.setLoadColumnFamiliesOnDemand(proto.getLoadColumnFamiliesOnDemand());
     }
     if (proto.hasTimeRange()) {
       HBaseProtos.TimeRange timeRange = proto.getTimeRange();

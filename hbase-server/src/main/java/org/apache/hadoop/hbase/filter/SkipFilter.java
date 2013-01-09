@@ -138,6 +138,10 @@ public class SkipFilter extends FilterBase {
     return getFilter().areSerializedFieldsEqual(other.getFilter());
   }
 
+  public boolean isFamilyEssential(byte[] name) {
+    return filter.isFamilyEssential(name);
+  }
+
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + this.filter.toString();

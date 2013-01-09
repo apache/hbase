@@ -92,7 +92,7 @@ public class Scan extends OperationWithAttributes {
 
   private int storeLimit = -1;
   private int storeOffset = 0;
-  
+
   // If application wants to collect scan metrics, it needs to
   // call scan.setAttribute(SCAN_ATTRIBUTES_ENABLE, Bytes.toBytes(Boolean.TRUE))
   static public final String SCAN_ATTRIBUTES_METRICS_ENABLE =
@@ -110,6 +110,7 @@ public class Scan extends OperationWithAttributes {
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
+  private Boolean loadColumnFamiliesOnDemand = null;
 
   /**
    * Create a Scan operation across all rows.
@@ -159,6 +160,7 @@ public class Scan extends OperationWithAttributes {
     maxResultSize = scan.getMaxResultSize();
     cacheBlocks = scan.getCacheBlocks();
     filter = scan.getFilter(); // clone?
+    loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
@@ -519,6 +521,41 @@ public class Scan extends OperationWithAttributes {
   }
 
   /**
+   * Set the value indicating whether loading CFs on demand should be allowed (cluster
+   * default is false). On-demand CF loading doesn't load column families until necessary, e.g.
+   * if you filter on one column, the other column family data will be loaded only for the rows
+   * that are included in result, not all rows like in normal case.
+   * With column-specific filters, like SingleColumnValueFilter w/filterIfMissing == true,
+   * this can deliver huge perf gains when there's a cf with lots of data; however, it can
+   * also lead to some inconsistent results, as follows:
+   * - if someone does a concurrent update to both column families in question you may get a row
+   *   that never existed, e.g. for { rowKey = 5, { cat_videos => 1 }, { video => "my cat" } }
+   *   someone puts rowKey 5 with { cat_videos => 0 }, { video => "my dog" }, concurrent scan
+   *   filtering on "cat_videos == 1" can get { rowKey = 5, { cat_videos => 1 },
+   *   { video => "my dog" } }.
+   * - if there's a concurrent split and you have more than 2 column families, some rows may be
+   *   missing some column families.
+   */
+  public void setLoadColumnFamiliesOnDemand(boolean value) {
+    this.loadColumnFamiliesOnDemand = value;
+  }
+
+  /**
+   * Get the raw loadColumnFamiliesOnDemand setting; if it's not set, can be null.
+   */
+  public Boolean getLoadColumnFamiliesOnDemandValue() {
+    return this.loadColumnFamiliesOnDemand;
+  }
+
+  /**
+   * Get the logical value indicating whether on-demand CF loading should be allowed.
+   */
+  public boolean doLoadColumnFamiliesOnDemand() {
+    return (this.loadColumnFamiliesOnDemand != null)
+      && this.loadColumnFamiliesOnDemand.booleanValue();
+  }
+
+  /**
    * Compile the table and column family (i.e. schema) information
    * into a String. Useful for parsing and aggregation by debugging,
    * logging, and administration tools.
@@ -547,7 +584,7 @@ public class Scan extends OperationWithAttributes {
    * Useful for debugging, logging, and administration tools.
    * @param maxCols a limit on the number of columns output prior to truncation
    * @return Map
-   */ 
+   */
   @Override
   public Map<String, Object> toMap(int maxCols) {
     // start with the fingerpring map and build on top of it
@@ -564,6 +601,7 @@ public class Scan extends OperationWithAttributes {
     map.put("caching", this.caching);
     map.put("maxResultSize", this.maxResultSize);
     map.put("cacheBlocks", this.cacheBlocks);
+    map.put("loadColumnFamiliesOnDemand", this.loadColumnFamiliesOnDemand);
     List<Long> timeRange = new ArrayList<Long>();
     timeRange.add(this.tr.getMin());
     timeRange.add(this.tr.getMax());

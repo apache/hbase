@@ -2898,7 +2898,12 @@ public class  HRegionServer implements ClientProtocol,
         } else {
           region = getRegion(request.getRegion());
           ClientProtos.Scan protoScan = request.getScan();
+          boolean isLoadingCfsOnDemandSet = protoScan.hasLoadColumnFamiliesOnDemand();
           Scan scan = ProtobufUtil.toScan(protoScan);
+          // if the request doesn't set this, get the default region setting.
+          if (!isLoadingCfsOnDemandSet) {
+            scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
+          }
           region.prepareScanner(scan);
           if (region.getCoprocessorHost() != null) {
             scanner = region.getCoprocessorHost().preScannerOpen(scan);

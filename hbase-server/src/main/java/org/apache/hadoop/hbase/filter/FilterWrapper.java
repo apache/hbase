@@ -136,6 +136,11 @@ public class FilterWrapper extends Filter {
     }
   }
 
+  @Override
+  public boolean isFamilyEssential(byte[] name) {
+    return filter.isFamilyEssential(name);
+  };
+
   /**
    * @param other
    * @return true if and only if the fields of the filter that are serialized
