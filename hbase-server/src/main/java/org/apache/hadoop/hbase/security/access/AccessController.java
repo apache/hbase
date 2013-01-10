@@ -347,15 +347,7 @@ public class AccessController extends BaseRegionObserver
    * @throws AccessDeniedException if authorization is denied
    */
   private void requirePermission(String request, Permission.Action perm) throws IOException {
-    User user = getActiveUser();
-    if (authManager.authorize(user, perm)) {
-      logResult(AuthResult.allow(request, "Global check allowed", user, perm, null, null));
-    } else {
-      logResult(AuthResult.deny(request, "Global check failed", user, perm, null, null));
-      throw new AccessDeniedException("Insufficient permissions for user '" +
-          (user != null ? user.getShortName() : "null") +"' (global, action=" +
-          perm.toString() + ")");
-    }
+    requireGlobalPermission(request, perm, null, null);
   }
 
   /**
@@ -482,7 +474,12 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-    requirePermission("createTable", Permission.Action.CREATE);
+    Set<byte[]> families = desc.getFamiliesKeys();
+    HashMap<byte[], Set<byte[]>> familyMap = Maps.newHashMapWithExpectedSize(families.size());
+    for (byte[] family: families) {
+      familyMap.put(family, null);
+    }
+    requireGlobalPermission("createTable", Permission.Action.CREATE, desc.getName(), familyMap);
   }
 
   @Override
