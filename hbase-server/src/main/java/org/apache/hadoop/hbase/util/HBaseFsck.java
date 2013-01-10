@@ -482,7 +482,7 @@ public class HBaseFsck extends Configured implements Tool {
 
     String tableName = Bytes.toString(hi.getTableName());
     TableInfo tableInfo = tablesInfo.get(tableName);
-    Preconditions.checkNotNull("Table " + tableName + "' not present!", tableInfo);
+    Preconditions.checkNotNull(tableInfo, "Table '" + tableName + "' not present!");
     HTableDescriptor template = tableInfo.getHTD();
 
     // find min and max key values
