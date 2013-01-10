@@ -107,6 +107,12 @@ public class ServerShutdownHandler extends EventHandler {
       getLong("hbase.catalog.verification.timeout", 1000);
     if (!this.server.getCatalogTracker().verifyRootRegionLocation(timeout)) {
       this.services.getAssignmentManager().assignRoot();
+    } else if (serverName.equals(server.getCatalogTracker().getRootLocation())) {
+      throw new IOException("-ROOT- is onlined on the dead server "
+          + serverName);
+    } else {
+      LOG.info("Skip assigning -ROOT-, because it is online on the "
+          + server.getCatalogTracker().getRootLocation());
     }
   }
 
