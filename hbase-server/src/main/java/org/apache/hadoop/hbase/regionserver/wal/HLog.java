@@ -50,6 +50,8 @@ public interface HLog {
   /** File Extension used while splitting an HLog into regions (HBASE-2312) */
   public static final String SPLITTING_EXT = "-splitting";
   public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
+  /** The META region's HLog filename extension */
+  public static final String META_HLOG_FILE_EXTN = ".meta";
 
   /*
    * Name of directory that holds recovered edits written by the wal log

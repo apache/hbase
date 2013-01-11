@@ -274,12 +274,6 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public HLog getWAL() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
   public CompactionRequestor getCompactionRequester() {
     // TODO Auto-generated method stub
     return null;
@@ -496,6 +490,12 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
 
   @Override
   public Leases getLeases() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public HLog getWAL(HRegionInfo regionInfo) throws IOException {
     // TODO Auto-generated method stub
     return null;
   }
