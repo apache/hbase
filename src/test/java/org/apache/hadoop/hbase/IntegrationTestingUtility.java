@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
+
+import java.io.IOException;
 
 /**
  * Facility for <strong>integration/system</strong> tests. This extends {@link HBaseTestingUtility}
@@ -122,7 +123,11 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
 
   private void createDistributedHBaseCluster() throws IOException {
     Configuration conf = getConfiguration();
-    ClusterManager clusterManager = new HBaseClusterManager();
+    Class<? extends ClusterManager> clusterManagerClass = conf.getClass(
+      HConstants.HBASE_CLUSTER_MANAGER_CLASS, HBaseClusterManager.class,
+      ClusterManager.class);
+    ClusterManager clusterManager = ReflectionUtils.newInstance(
+      clusterManagerClass, conf);
     setHBaseCluster(new DistributedHBaseCluster(conf, clusterManager));
     getHBaseAdmin();
   }

@@ -72,7 +72,10 @@ public final class HConstants {
 
   /** Config for pluggable load balancers */
   public static final String HBASE_MASTER_LOADBALANCER_CLASS = "hbase.master.loadbalancer.class";
-
+  
+  /** Config for pluggable hbase cluster manager */
+  public static final String HBASE_CLUSTER_MANAGER_CLASS = "hbase.it.clustermanager.class";
+  
   /** Cluster is standalone or pseudo-distributed */
   public static final boolean CLUSTER_IS_LOCAL = false;
 
