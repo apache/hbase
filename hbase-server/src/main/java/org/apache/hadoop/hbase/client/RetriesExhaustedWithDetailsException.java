@@ -54,7 +54,7 @@ extends RetriesExhaustedException {
     super("Failed " + exceptions.size() + " action" +
         pluralize(exceptions) + ": " +
         getDesc(exceptions, actions, hostnameAndPort));
-
+    
     this.exceptions = exceptions;
     this.actions = actions;
     this.hostnameAndPort = hostnameAndPort;

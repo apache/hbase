@@ -518,7 +518,7 @@ public class HConnectionManager {
     }
   }
 
-  /* Encapsulates connection to zookeeper and regionservers.*/
+  /** Encapsulates connection to zookeeper and regionservers.*/
   static class HConnectionImplementation implements HConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
     private final Class<? extends AdminProtocol> adminClass;
@@ -1856,12 +1856,6 @@ public class HConnectionManager {
       private final Object[] results;
       private final Batch.Callback<R> callback;
 
-      // Error management: these lists are filled by the errors on the final try. Indexes
-      //  are consistent, i.e. exceptions[i] matches failedActions[i] and failedAddresses[i]
-      private final List<Throwable> exceptions;
-      private final List<Row> failedActions;
-      private final List<String> failedAddresses;
-
       // Used during the batch process
       private final List<Action<R>> toReplay;
       private final LinkedList<Triple<MultiAction<R>, HRegionLocation, Future<MultiResponse>>>
@@ -1883,9 +1877,6 @@ public class HConnectionManager {
         this.toReplay = new ArrayList<Action<R>>();
         this.inProgress =
           new LinkedList<Triple<MultiAction<R>, HRegionLocation, Future<MultiResponse>>>();
-        this.exceptions = new ArrayList<Throwable>();
-        this.failedActions = new ArrayList<Row>();
-        this.failedAddresses = new ArrayList<String>();
         this.curNumRetries = 0;
       }
 
@@ -1924,19 +1915,19 @@ public class HConnectionManager {
         for (Entry<HRegionLocation, MultiAction<R>> e : actionsByServer.entrySet()) {
           Callable<MultiResponse> callable =
             createDelayedCallable(sleepTime, e.getKey(), e.getValue());
+          if (LOG.isTraceEnabled() && (sleepTime > 0)) {
+            StringBuilder sb = new StringBuilder();
+            for (Action<R> action : e.getValue().allActions()) {
+              sb.append(Bytes.toStringBinary(action.getAction().getRow()) + ";");
+            }
+            LOG.trace("Sending requests to [" + e.getKey().getHostnamePort()
+              + "] with delay of [" + sleepTime + "] for rows [" + sb.toString() + "]");
+          }
           Triple<MultiAction<R>, HRegionLocation, Future<MultiResponse>> p =
             new Triple<MultiAction<R>, HRegionLocation, Future<MultiResponse>>(
               e.getValue(), e.getKey(), this.pool.submit(callable));
           this.inProgress.addLast(p);
         }
-      }
-
-
-      private void addToErrorsLists(Exception ex, Row row, Triple<MultiAction<R>,
-          HRegionLocation, Future<MultiResponse>> obj) {
-        this.exceptions.add(ex);
-        this.failedActions.add(row);
-        this.failedAddresses.add(obj.getSecond().getHostnamePort());
       }
 
      /**
@@ -1965,6 +1956,13 @@ public class HConnectionManager {
           return;
         }
 
+        boolean isTraceEnabled = LOG.isTraceEnabled();
+        BatchErrors errors = new BatchErrors();
+        BatchErrors retriedErrors = null;
+        if (isTraceEnabled) {
+          retriedErrors = new BatchErrors();
+        }
+
         // We keep the number of retry per action.
         int[] nbRetries = new int[this.results.length];
 
@@ -1990,7 +1988,6 @@ public class HConnectionManager {
 
         // Analyze and resubmit until all actions are done successfully or failed after numRetries
         while (!this.inProgress.isEmpty()) {
-
           // We need the original multi action to find out what actions to replay if
           //  we have a 'total' failure of the Future<MultiResponse>
           // We need the HRegionLocation as we give it back if we go out of retries
@@ -2013,8 +2010,11 @@ public class HConnectionManager {
                 Row row = action.getAction();
                 hci.updateCachedLocations(this.tableName, row, exception);
                 if (noRetry) {
-                  addToErrorsLists(exception, row, currentTask);
+                  errors.add(exception, row, currentTask);
                 } else {
+                  if (isTraceEnabled) {
+                    retriedErrors.add(exception, row, currentTask);
+                  }
                   lastRetry = addToReplay(nbRetries, action);
                 }
               }
@@ -2036,8 +2036,11 @@ public class HConnectionManager {
                   Row row = correspondingAction.getAction();
                   hci.updateCachedLocations(this.tableName, row, result);
                   if (result instanceof DoNotRetryIOException || noRetry) {
-                    addToErrorsLists((Exception)result, row, currentTask);
+                    errors.add((Exception)result, row, currentTask);
                   } else {
+                    if (isTraceEnabled) {
+                      retriedErrors.add((Exception)result, row, currentTask);
+                    }
                     lastRetry = addToReplay(nbRetries, correspondingAction);
                   }
                 } else // success
@@ -2052,19 +2055,59 @@ public class HConnectionManager {
 
           // Retry all actions in toReplay then clear it.
           if (!noRetry && !toReplay.isEmpty()) {
+            if (isTraceEnabled) {
+              LOG.trace("Retrying due to errors: " + retriedErrors.getDescriptionAndClear());
+            }
             doRetry();
             if (lastRetry) {
+              if (isTraceEnabled) {
+                LOG.trace("No more retries");
+              }
               noRetry = true;
             }
           }
         }
 
-        if (!exceptions.isEmpty()) {
-          throw new RetriesExhaustedWithDetailsException(this.exceptions,
-            this.failedActions,
-            this.failedAddresses);
+        errors.rethrowIfAny();
+      }
+
+
+      private class BatchErrors {
+        private List<Throwable> exceptions = new ArrayList<Throwable>();
+        private List<Row> actions = new ArrayList<Row>();
+        private List<String> addresses = new ArrayList<String>();
+
+        public void add(Exception ex, Row row,
+          Triple<MultiAction<R>, HRegionLocation, Future<MultiResponse>> obj) {
+          exceptions.add(ex);
+          actions.add(row);
+          addresses.add(obj.getSecond().getHostnamePort());
+        }
+
+        public void rethrowIfAny() throws RetriesExhaustedWithDetailsException {
+          if (!exceptions.isEmpty()) {
+            throw makeException();
+          }
+        }
+
+        public String getDescriptionAndClear()
+        {
+          if (exceptions.isEmpty()) {
+            return "";
+          }
+          String result = makeException().getMessage();
+          exceptions.clear();
+          actions.clear();
+          addresses.clear();
+          return result;
+        };
+
+        private RetriesExhaustedWithDetailsException makeException() {
+          return new RetriesExhaustedWithDetailsException(exceptions, actions, addresses);
         }
       }
+
+
 
       /**
        * Put the action that has to be retried in the Replay list.
