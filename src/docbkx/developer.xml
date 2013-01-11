@@ -1059,6 +1059,12 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
          </section>
           <section xml:id="common.patch.feedback.writable">
             <title>Implementing Writable</title>
+            <note>
+                <title>Applies pre-0.96 only</title>
+                <para>In 0.96, HBase moved to protobufs.  The below section on Writables
+                    applies to 0.94.x and previous, not to 0.96 and beyond.
+                </para>
+            </note>
             <para>Every class returned by RegionServers must implement <code>Writable</code>.  If you
             are creating a new class that needs to implement this interface, don't forget the default constructor.
             </para>
@@ -1066,8 +1072,29 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
           <section xml:id="common.patch.feedback.javadoc">
             <title>Javadoc</title>
             <para>This is also a very common feedback item.  Don't forget Javadoc!
+                <para>Javadoc warnings are checked during precommit. If the precommit tool gives you a '-1',
+                    please fix the javadoc issue. Your patch won't be committed if it adds such warnings.
+                </para>
             </para>
           </section>
+          <section xml:id="common.patch.feedback.findbugs">
+            <title>Findbugs</title>
+                <para>
+                    Findbugs is used to detect common bugs pattern. As Javadoc, it is checked during
+                    the precommit build up on Apache's Jenkins, and as with Javadoc, please fix them.
+                    You can run findbugs locally with 'mvn findbugs:findbugs': it will generate the
+                    findbugs files locally.  Sometimes, you may have to write code smarter than
+                    Findbugs. You can annotate your code to tell Findbugs you know what you're
+                    doing, by annotating your class with:
+                    <programlisting>@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+                    value="HE_EQUALS_USE_HASHCODE",
+                    justification="I know what I'm doing")</programlisting>
+            </para>
+            <para>
+                    Note that we're using the apache licensed version of the annotations.
+            </para>
+          </section>
+
           <section xml:id="common.patch.feedback.javadoc.defaults">
             <title>Javadoc - Useless Defaults</title>
             <para>Don't just leave the @param arguments the way your IDE generated them.  Don't do this...
