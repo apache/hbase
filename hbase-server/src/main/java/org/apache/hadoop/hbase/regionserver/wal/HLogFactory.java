@@ -26,9 +26,9 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
 
@@ -49,13 +49,6 @@ public class HLogFactory {
         final Configuration conf, final List<WALActionsListener> listeners,
         final String prefix) throws IOException {
       return new FSHLog(fs, root, logName, conf, listeners, prefix);
-    }
-
-    public static HLog createMetaHLog(final FileSystem fs, final Path root, final String logName,
-        final Configuration conf, final List<WALActionsListener> listeners,
-        final String prefix) throws IOException {
-      return new FSHLog(fs, root, logName, HConstants.HREGION_OLDLOGDIR_NAME, 
-            conf, listeners, false, prefix, true);
     }
     
     /*

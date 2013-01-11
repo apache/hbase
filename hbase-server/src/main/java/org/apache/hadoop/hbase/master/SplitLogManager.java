@@ -40,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.DeserializationException;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -196,7 +194,7 @@ public class SplitLogManager extends ZooKeeperListener {
     }
   }
 
-  private FileStatus[] getFileList(List<Path> logDirs, PathFilter filter) throws IOException {
+  private FileStatus[] getFileList(List<Path> logDirs) throws IOException {
     List<FileStatus> fileStatus = new ArrayList<FileStatus>();
     for (Path hLogDir : logDirs) {
       this.fs = hLogDir.getFileSystem(conf);
@@ -204,7 +202,8 @@ public class SplitLogManager extends ZooKeeperListener {
         LOG.warn(hLogDir + " doesn't exist. Nothing to do!");
         continue;
       }
-      FileStatus[] logfiles = FSUtils.listStatus(fs, hLogDir, filter);
+      // TODO filter filenames?
+      FileStatus[] logfiles = FSUtils.listStatus(fs, hLogDir, null);
       if (logfiles == null || logfiles.length == 0) {
         LOG.info(hLogDir + " is empty dir, no logs to split");
       } else {
@@ -229,7 +228,6 @@ public class SplitLogManager extends ZooKeeperListener {
     logDirs.add(logDir);
     return splitLogDistributed(logDirs);
   }
-
   /**
    * The caller will block until all the log files of the given region server
    * have been processed - successfully split or an error is encountered - by an
@@ -241,25 +239,9 @@ public class SplitLogManager extends ZooKeeperListener {
    * @return cumulative size of the logfiles split
    */
   public long splitLogDistributed(final List<Path> logDirs) throws IOException {
-    return splitLogDistributed(logDirs, null);
-  }
-
-  /**
-   * The caller will block until all the META log files of the given region server
-   * have been processed - successfully split or an error is encountered - by an
-   * available worker region server. This method must only be called after the
-   * region servers have been brought online.
-   *
-   * @param logDirs List of log dirs to split
-   * @param filter the Path filter to select specific files for considering
-   * @throws IOException If there was an error while splitting any log file
-   * @return cumulative size of the logfiles split
-   */
-  public long splitLogDistributed(final List<Path> logDirs, PathFilter filter) 
-      throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus(
           "Doing distributed log split in " + logDirs);
-    FileStatus[] logfiles = getFileList(logDirs, filter);
+    FileStatus[] logfiles = getFileList(logDirs);
     status.setStatus("Checking directory contents...");
     LOG.debug("Scheduling batch of logs to split");
     SplitLogCounters.tot_mgr_log_split_batch_start.incrementAndGet();

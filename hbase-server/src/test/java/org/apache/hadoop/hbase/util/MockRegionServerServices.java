@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -87,6 +86,11 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public boolean isStopping() {
     return this.stopping;
+  }
+
+  @Override
+  public HLog getWAL() {
+    return null;
   }
 
   @Override
@@ -164,12 +168,6 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public Leases getLeases() {
-    return null;
-  }
-
-  @Override
-  public HLog getWAL(HRegionInfo regionInfo) throws IOException {
-    // TODO Auto-generated method stub
     return null;
   }
 }

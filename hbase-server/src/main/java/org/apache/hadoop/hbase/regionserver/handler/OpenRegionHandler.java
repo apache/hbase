@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
@@ -45,7 +44,7 @@ import org.apache.zookeeper.KeeperException;
 public class OpenRegionHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(OpenRegionHandler.class);
 
-  protected final RegionServerServices rsServices;
+  private final RegionServerServices rsServices;
 
   private final HRegionInfo regionInfo;
   private final HTableDescriptor htd;
@@ -425,8 +424,7 @@ public class OpenRegionHandler extends EventHandler {
       // Instantiate the region.  This also periodically tickles our zk OPENING
       // state so master doesn't timeout this region in transition.
       region = HRegion.openHRegion(this.regionInfo, this.htd,
-          this.rsServices.getWAL(this.regionInfo), 
-          this.server.getConfiguration(),
+          this.rsServices.getWAL(), this.server.getConfiguration(),
           this.rsServices,
         new CancelableProgressable() {
           public boolean progress() {

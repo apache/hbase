@@ -154,8 +154,6 @@ class FSHLog implements HLog, Syncable {
 
   private final AtomicLong logSeqNum = new AtomicLong(0);
 
-  private boolean forMeta = false;
-
   // The timestamp (in ms) when the log file was created.
   private volatile long filenum = -1;
 
@@ -213,15 +211,15 @@ class FSHLog implements HLog, Syncable {
    *
    * @param fs filesystem handle
    * @param root path for stored and archived hlogs
-   * @param logDir dir where hlogs are stored
+   * @param logName dir where hlogs are stored
    * @param conf configuration to use
    * @throws IOException
    */
-  public FSHLog(final FileSystem fs, final Path root, final String logDir,
+  public FSHLog(final FileSystem fs, final Path root, final String logName,
                 final Configuration conf)
   throws IOException {
-    this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, 
-        conf, null, true, null, false);
+    this(fs, root, logName, HConstants.HREGION_OLDLOGDIR_NAME, 
+        conf, null, true, null);
   }
   
   /**
@@ -229,16 +227,16 @@ class FSHLog implements HLog, Syncable {
    *
    * @param fs filesystem handle
    * @param root path for stored and archived hlogs
-   * @param logDir dir where hlogs are stored
-   * @param oldLogDir dir where hlogs are archived
+   * @param logName dir where hlogs are stored
+   * @param oldLogName dir where hlogs are archived
    * @param conf configuration to use
    * @throws IOException
    */
-  public FSHLog(final FileSystem fs, final Path root, final String logDir,
-                final String oldLogDir, final Configuration conf)
+  public FSHLog(final FileSystem fs, final Path root, final String logName,
+                final String oldLogName, final Configuration conf)
   throws IOException {
-    this(fs, root, logDir, oldLogDir, 
-        conf, null, true, null, false);
+    this(fs, root, logName, oldLogName, 
+        conf, null, true, null);
   }
 
   /**
@@ -250,7 +248,7 @@ class FSHLog implements HLog, Syncable {
    *
    * @param fs filesystem handle
    * @param root path for stored and archived hlogs
-   * @param logDir dir where hlogs are stored
+   * @param logName dir where hlogs are stored
    * @param conf configuration to use
    * @param listeners Listeners on WAL events. Listeners passed here will
    * be registered before we do anything else; e.g. the
@@ -260,11 +258,11 @@ class FSHLog implements HLog, Syncable {
    *        If prefix is null, "hlog" will be used
    * @throws IOException
    */
-  public FSHLog(final FileSystem fs, final Path root, final String logDir,
+  public FSHLog(final FileSystem fs, final Path root, final String logName,
       final Configuration conf, final List<WALActionsListener> listeners,
       final String prefix) throws IOException {
-    this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, 
-        conf, listeners, true, prefix, false);
+    this(fs, root, logName, HConstants.HREGION_OLDLOGDIR_NAME, 
+        conf, listeners, true, prefix);
   }
 
   /**
@@ -276,8 +274,7 @@ class FSHLog implements HLog, Syncable {
    *
    * @param fs filesystem handle
    * @param root path to where logs and oldlogs
-   * @param logDir dir where hlogs are stored
-   * @param oldLogDir dir where hlogs are archived
+   * @param oldLogName path to where hlogs are archived
    * @param conf configuration to use
    * @param listeners Listeners on WAL events. Listeners passed here will
    * be registered before we do anything else; e.g. the
@@ -286,20 +283,18 @@ class FSHLog implements HLog, Syncable {
    * @param prefix should always be hostname and port in distributed env and
    *        it will be URL encoded before being used.
    *        If prefix is null, "hlog" will be used
-   * @param forMeta if this hlog is meant for meta updates
    * @throws IOException
    */
-  public FSHLog(final FileSystem fs, final Path root, final String logDir,
-      final String oldLogDir, final Configuration conf, 
+  private FSHLog(final FileSystem fs, final Path root, final String logName,
+      final String oldLogName, final Configuration conf, 
       final List<WALActionsListener> listeners,
-      final boolean failIfLogDirExists, final String prefix, boolean forMeta)
+      final boolean failIfLogDirExists, final String prefix)
   throws IOException {
     super();
     this.fs = fs;
     this.rootDir = root;
-    this.dir = new Path(this.rootDir, logDir);
-    this.oldLogDir = new Path(this.rootDir, oldLogDir);
-    this.forMeta = forMeta;
+    this.dir = new Path(this.rootDir, logName);
+    this.oldLogDir = new Path(this.rootDir, oldLogName);
     this.conf = conf;
    
     if (listeners != null) {
@@ -338,16 +333,15 @@ class FSHLog implements HLog, Syncable {
     // If prefix is null||empty then just name it hlog
     this.prefix = prefix == null || prefix.isEmpty() ?
         "hlog" : URLEncoder.encode(prefix, "UTF8");
-
-    boolean dirExists = false;
-    if (failIfLogDirExists && (dirExists = this.fs.exists(dir))) {
+   
+    if (failIfLogDirExists && this.fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
-    if (!dirExists && !fs.mkdirs(dir)) {
+    if (!fs.mkdirs(dir)) {
       throw new IOException("Unable to mkdir " + dir);
     }
 
-    if (!fs.exists(this.oldLogDir)) {
+    if (!fs.exists(oldLogDir)) {
       if (!fs.mkdirs(this.oldLogDir)) {
         throw new IOException("Unable to mkdir " + this.oldLogDir);
       }
@@ -489,7 +483,6 @@ class FSHLog implements HLog, Syncable {
       long currentFilenum = this.filenum;
       Path oldPath = null;
       if (currentFilenum > 0) {
-        //computeFilename  will take care of meta hlog filename
         oldPath = computeFilename(currentFilenum);
       }
       this.filenum = System.currentTimeMillis();
@@ -568,9 +561,6 @@ class FSHLog implements HLog, Syncable {
    */
   protected Writer createWriterInstance(final FileSystem fs, final Path path,
       final Configuration conf) throws IOException {
-    if (forMeta) {
-      //TODO: set a higher replication for the hlog files (HBASE-6773)
-    }
     return HLogFactory.createWriter(fs, path, conf);
   }
 
@@ -739,11 +729,7 @@ class FSHLog implements HLog, Syncable {
     if (filenum < 0) {
       throw new RuntimeException("hlog file number can't be < 0");
     }
-    String child = prefix + "." + filenum;
-    if (forMeta) {
-      child += HLog.META_HLOG_FILE_EXTN;
-    }
-    return new Path(dir, child);
+    return new Path(dir, prefix + "." + filenum);
   }
 
   @Override
