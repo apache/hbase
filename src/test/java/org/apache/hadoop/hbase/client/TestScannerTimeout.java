@@ -84,7 +84,7 @@ public class TestScannerTimeout {
    */
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL.ensureSomeRegionServersAvailable(2);
+    TEST_UTIL.ensureSomeNonStoppedRegionServersAvailable(2);
   }
 
   /**
