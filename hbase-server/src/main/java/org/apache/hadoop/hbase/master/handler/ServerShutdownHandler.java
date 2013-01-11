@@ -196,20 +196,33 @@ public class ServerShutdownHandler extends EventHandler {
 
       // Assign root and meta if we were carrying them.
       if (isCarryingRoot()) { // -ROOT-
-        LOG.info("Server " + serverName +
-            " was carrying ROOT. Trying to assign.");
-        this.services.getAssignmentManager().
-          regionOffline(HRegionInfo.ROOT_REGIONINFO);
-        verifyAndAssignRootWithRetries();
+        // Check again: region may be assigned to other where because of RIT
+        // timeout
+        if (this.services.getAssignmentManager().isCarryingRoot(serverName)) {
+          LOG.info("Server " + serverName
+              + " was carrying ROOT. Trying to assign.");
+          this.services.getAssignmentManager().regionOffline(
+              HRegionInfo.ROOT_REGIONINFO);
+          verifyAndAssignRootWithRetries();
+        } else {
+          LOG.info("ROOT has been assigned to otherwhere, skip assigning.");
+        }
       }
 
       // Carrying meta?
       if (isCarryingMeta()) {
-        LOG.info("Server " + serverName +
-          " was carrying META. Trying to assign.");
-        this.services.getAssignmentManager().
-          regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
-        this.services.getAssignmentManager().assignMeta();
+        // Check again: region may be assigned to other where because of RIT
+        // timeout
+        if (this.services.getAssignmentManager().isCarryingMeta(serverName)) {
+          LOG.info("Server " + serverName
+              + " was carrying META. Trying to assign.");
+          this.services.getAssignmentManager().regionOffline(
+              HRegionInfo.FIRST_META_REGIONINFO);
+          this.services.getAssignmentManager().assignMeta();
+        } else {
+          LOG.info("META has been assigned to otherwhere, skip assigning.");
+        }
+       
       }
 
       // We don't want worker thread in the MetaServerShutdownHandler
