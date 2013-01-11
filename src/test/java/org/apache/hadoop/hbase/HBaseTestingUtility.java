@@ -315,6 +315,10 @@ public class HBaseTestingUtility {
     createSubDirAndSystemProperty(
       "mapred.working.dir",
       testPath, "mapred-working-dir");
+
+    createSubDir(
+      "hbase.local.dir",
+      testPath, "hbase-local-dir");
   }
 
   private void createSubDir(String propertyName, Path parent, String subDirName){

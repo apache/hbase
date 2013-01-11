@@ -49,11 +49,18 @@
   </property>
   <property>
     <name>hbase.tmp.dir</name>
-    <value>/tmp/hbase-${user.name}</value>
+    <value>${java.io.tmpdir}/hbase-${user.name}</value>
     <description>Temporary directory on the local filesystem.
     Change this setting to point to a location more permanent
     than '/tmp' (The '/tmp' directory is often cleared on
     machine restart).
+    </description>
+  </property>
+  <property>
+    <name>hbase.local.dir</name>
+    <value>${hbase.tmp.dir}/local/</value>
+    <description>Directory on the local filesystem to be used 
+    as a local storage.
     </description>
   </property>
   <property>

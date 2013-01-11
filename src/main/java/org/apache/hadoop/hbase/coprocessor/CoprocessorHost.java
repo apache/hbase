@@ -68,6 +68,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   public static final String WAL_COPROCESSOR_CONF_KEY =
     "hbase.coprocessor.wal.classes";
 
+  //coprocessor jars are put under ${hbase.local.dir}/coprocessor/jars/
+  private static final String COPROCESSOR_JARS_DIR = File.separator
+      + "coprocessor" + File.separator + "jars" + File.separator;
+
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   /** Ordered set of loaded coprocessors with lock */
   protected SortedSet<E> coprocessors =
@@ -205,13 +209,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       if (!path.toString().endsWith(".jar")) {
         throw new IOException(path.toString() + ": not a jar file?");
       }
-      FileSystem fs = path.getFileSystem(HBaseConfiguration.create());
-      Path dst = new Path(System.getProperty("java.io.tmpdir") +
-          java.io.File.separator +"." + pathPrefix +
+      FileSystem fs = path.getFileSystem(this.conf);
+      File parentDir = new File(this.conf.get("hbase.local.dir") + COPROCESSOR_JARS_DIR);
+      parentDir.mkdirs();
+      File dst = new File(parentDir, "." + pathPrefix +
           "." + className + "." + System.currentTimeMillis() + ".jar");
-      fs.copyToLocalFile(path, dst);
-      File tmpLocal = new File(dst.toString());
-      tmpLocal.deleteOnExit();
+      fs.copyToLocalFile(path, new Path(dst.toString()));
+      dst.deleteOnExit();
 
       // TODO: code weaving goes here
 
@@ -225,7 +229,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       // unsurprisingly wants URLs, not URIs; so we will use the deprecated
       // method which returns URLs for as long as it is available
       List<URL> paths = new ArrayList<URL>();
-      URL url = new File(dst.toString()).getCanonicalFile().toURL();
+      URL url = dst.getCanonicalFile().toURL();
       paths.add(url);
 
       JarFile jarFile = new JarFile(dst.toString());
@@ -233,8 +237,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
         if (entry.getName().matches("/lib/[^/]+\\.jar")) {
-          File file = new File(System.getProperty("java.io.tmpdir") +
-              java.io.File.separator +"." + pathPrefix +
+          File file = new File(parentDir, "." + pathPrefix +
               "." + className + "." + System.currentTimeMillis() + "." + entry.getName().substring(5));
           IOUtils.copyBytes(jarFile.getInputStream(entry), new FileOutputStream(file), conf, true);
           file.deleteOnExit();
