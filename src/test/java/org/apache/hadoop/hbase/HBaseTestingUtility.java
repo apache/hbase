@@ -1124,6 +1124,19 @@ public class HBaseTestingUtility {
     Bytes.toBytes("xxx"), Bytes.toBytes("yyy")
   };
 
+  public static final byte[][] KEYS_FOR_HBA_CREATE_TABLE = {
+      Bytes.toBytes("bbb"),
+      Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
+      Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
+      Bytes.toBytes("iii"), Bytes.toBytes("jjj"), Bytes.toBytes("kkk"),
+      Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
+      Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
+      Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"),
+      Bytes.toBytes("uuu"), Bytes.toBytes("vvv"), Bytes.toBytes("www"),
+      Bytes.toBytes("xxx"), Bytes.toBytes("yyy"), Bytes.toBytes("zzz")
+  };
+
+
   /**
    * Creates many regions names "aaa" to "zzz".
    *
