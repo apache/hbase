@@ -44,38 +44,38 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 public class StoreScanner extends NonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(StoreScanner.class);
-  private HStore store;
-  private ScanQueryMatcher matcher;
-  private KeyValueHeap heap;
-  private boolean cacheBlocks;
+  protected HStore store;
+  protected ScanQueryMatcher matcher;
+  protected KeyValueHeap heap;
+  protected boolean cacheBlocks;
 
-  private int countPerRow = 0;
-  private int storeLimit = -1;
-  private int storeOffset = 0;
+  protected int countPerRow = 0;
+  protected int storeLimit = -1;
+  protected int storeOffset = 0;
 
   // Used to indicate that the scanner has closed (see HBASE-1107)
   // Doesnt need to be volatile because it's always accessed via synchronized methods
-  private boolean closing = false;
-  private final boolean isGet;
-  private final boolean explicitColumnQuery;
-  private final boolean useRowColBloom;
-  private final Scan scan;
-  private final NavigableSet<byte[]> columns;
-  private final long oldestUnexpiredTS;
-  private final int minVersions;
+  protected boolean closing = false;
+  protected final boolean isGet;
+  protected final boolean explicitColumnQuery;
+  protected final boolean useRowColBloom;
+  protected final Scan scan;
+  protected final NavigableSet<byte[]> columns;
+  protected final long oldestUnexpiredTS;
+  protected final int minVersions;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
 
   /** Used during unit testing to ensure that lazy seek does save seek ops */
-  private static boolean lazySeekEnabledGlobally =
+  protected static boolean lazySeekEnabledGlobally =
       LAZY_SEEK_ENABLED_BY_DEFAULT;
 
   // if heap == null and lastTop != null, you need to reseek given the key below
-  private KeyValue lastTop = null;
+  protected KeyValue lastTop = null;
 
   /** An internal constructor. */
-  private StoreScanner(HStore store, boolean cacheBlocks, Scan scan,
+  protected StoreScanner(HStore store, boolean cacheBlocks, Scan scan,
       final NavigableSet<byte[]> columns, long ttl, int minVersions) {
     this.store = store;
     this.cacheBlocks = cacheBlocks;
@@ -203,7 +203,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * Get a filtered list of scanners. Assumes we are not in a compaction.
    * @return list of scanners to seek
    */
-  private List<KeyValueScanner> getScannersNoCompaction() throws IOException {
+  protected List<KeyValueScanner> getScannersNoCompaction() throws IOException {
     final boolean isCompaction = false;
     return selectScannersFrom(store.getScanners(cacheBlocks, isGet,
         isCompaction, matcher));
@@ -213,7 +213,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * Filters the given list of scanners using Bloom filter, time range, and
    * TTL.
    */
-  private List<KeyValueScanner> selectScannersFrom(
+  protected List<KeyValueScanner> selectScannersFrom(
       final List<? extends KeyValueScanner> allScanners) {
     boolean memOnly;
     boolean filesOnly;
@@ -486,7 +486,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
    *         next KV)
    * @throws IOException
    */
-  private boolean checkReseek() throws IOException {
+  protected boolean checkReseek() throws IOException {
     if (this.heap == null && this.lastTop != null) {
       resetScannerStack(this.lastTop);
       if (this.heap.peek() == null
@@ -502,7 +502,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
     return false;
   }
 
-  private void resetScannerStack(KeyValue lastTopKey) throws IOException {
+  protected void resetScannerStack(KeyValue lastTopKey) throws IOException {
     if (heap != null) {
       throw new RuntimeException("StoreScanner.reseek run on an existing heap!");
     }
