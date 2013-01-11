@@ -554,6 +554,7 @@ public class ReplicationSource extends Thread
       }
     } catch (IOException ioe) {
       LOG.warn(peerClusterZnode + " Got: ", ioe);
+      this.reader = null;
       // TODO Need a better way to determinate if a file is really gone but
       // TODO without scanning all logs dir
       if (sleepMultiplier == this.maxRetriesMultiplier) {

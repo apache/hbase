@@ -92,9 +92,8 @@ public class TestReplication {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
-    // smaller block size and capacity to trigger more operations
-    // and test them
-    conf1.setInt("hbase.regionserver.hlog.blocksize", 1024*20);
+    // smaller log roll size to trigger more events
+    conf1.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
     conf1.setInt("replication.source.size.capacity", 1024);
     conf1.setLong("replication.source.sleepforretries", 100);
     conf1.setInt("hbase.regionserver.maxlogs", 10);
@@ -142,7 +141,7 @@ public class TestReplication {
     table.addFamily(fam);
     HBaseAdmin admin1 = new HBaseAdmin(conf1);
     HBaseAdmin admin2 = new HBaseAdmin(conf2);
-    admin1.createTable(table);
+    admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     admin2.createTable(table);
     htable1 = new HTable(conf1, tableName);
     htable1.setWriteBufferSize(1024);
@@ -716,8 +715,6 @@ public class TestReplication {
    */
   @Test(timeout=300000)
   public void queueFailover() throws Exception {
-    utility1.createMultiRegions(htable1, famName, false);
-
     // killing the RS with .META. can result into failed puts until we solve
     // IO fencing
     int rsToKill1 =
