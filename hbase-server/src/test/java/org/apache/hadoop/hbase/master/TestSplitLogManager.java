@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.regionserver.TestMasterAddressManager.NodeCreationListener;
@@ -142,7 +143,8 @@ public class TestSplitLogManager {
     public long eval();
   }
 
-  private void waitForCounter(final AtomicLong ctr, long oldval, long newval, long timems) {
+  private void waitForCounter(final AtomicLong ctr, long oldval, long newval, long timems)
+      throws Exception {
     Expr e = new Expr() {
       public long eval() {
         return ctr.get();
@@ -152,23 +154,17 @@ public class TestSplitLogManager {
     return;
   }
 
-  private void waitForCounter(Expr e, long oldval, long newval,
-      long timems) {
-    long curt = System.currentTimeMillis();
-    long endt = curt + timems;
-    while (curt < endt) {
-      if (e.eval() == oldval) {
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException eintr) {
+  private void waitForCounter(final Expr e, final long oldval, long newval, long timems)
+      throws Exception {
+
+    TEST_UTIL.waitFor(timems, 10, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+            return (e.eval() != oldval);
         }
-        curt = System.currentTimeMillis();
-      } else {
-        assertEquals(newval, e.eval());
-        return;
-      }
-    }
-    assertTrue(false);
+    });
+
+    assertEquals(newval, e.eval());
   }
 
   private String submitTaskAndWait(TaskBatch batch, String name)
@@ -550,4 +546,3 @@ public class TestSplitLogManager {
   }
 
 }
-

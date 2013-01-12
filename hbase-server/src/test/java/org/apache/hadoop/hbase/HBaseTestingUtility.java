@@ -52,6 +52,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -2348,5 +2349,29 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public void setFileSystemURI(String fsURI) {
     FS_URI = fsURI;
+  }
+  
+  /**
+   * Wrapper method for {@link Waiter#waitFor(Configuration, long, Predicate)}.
+   */
+  public <E extends Exception> long waitFor(long timeout, Predicate<E> predicate)
+      throws E {
+    return Waiter.waitFor(this.conf, timeout, predicate);
+  }
+
+  /**
+   * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, Predicate)}.
+   */
+  public <E extends Exception> long waitFor(long timeout, long interval, Predicate<E> predicate)
+      throws E {
+    return Waiter.waitFor(this.conf, timeout, interval, predicate);
+  }
+
+  /**
+   * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate)}.
+   */
+  public <E extends Exception> long waitFor(long timeout, long interval,
+      boolean failIfTimeout, Predicate<E> predicate) throws E {
+    return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
   }
 }

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -56,29 +57,34 @@ public class TestSplitLogWorker {
   private ZooKeeperWatcher zkw;
   private SplitLogWorker slw;
 
-  private void waitForCounter(AtomicLong ctr, long oldval, long newval,
-      long timems) {
+  private void waitForCounter(AtomicLong ctr, long oldval, long newval, long timems)
+      throws Exception {
     assertTrue("ctr=" + ctr.get() + ", oldval=" + oldval + ", newval=" + newval,
       waitForCounterBoolean(ctr, oldval, newval, timems));
   }
 
-  private boolean waitForCounterBoolean(AtomicLong ctr, long oldval, long newval,
-      long timems) {
-    long curt = System.currentTimeMillis();
-    long endt = curt + timems;
-    while (curt < endt) {
-      if (ctr.get() == oldval) {
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException e) {
-        }
-        curt = System.currentTimeMillis();
-      } else {
-        assertEquals(newval, ctr.get());
-        return true;
+  private boolean waitForCounterBoolean(final AtomicLong ctr, final long oldval, long newval,
+      long timems) throws Exception {
+
+    return waitForCounterBoolean(ctr, oldval, newval, timems, true);
+  }
+
+  private boolean waitForCounterBoolean(final AtomicLong ctr, final long oldval, long newval,
+      long timems, boolean failIfTimeout) throws Exception {
+
+    long timeWaited = TEST_UTIL.waitFor(timems, 10, failIfTimeout,
+      new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return (ctr.get() != oldval);
       }
+    });
+
+    if( timeWaited > 0) {
+      // when not timed out
+      assertEquals(newval, ctr.get());
     }
-    return false;
+    return true;
   }
 
   @Before
@@ -173,7 +179,7 @@ public class TestSplitLogWorker {
       waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1000);
       // Assert that either the tot_wkr_failed_to_grab_task_owned count was set of if
       // not it, that we fell through to the next counter in line and it was set.
-      assertTrue(waitForCounterBoolean(SplitLogCounters.tot_wkr_failed_to_grab_task_owned, 0, 1, 1000) ||
+      assertTrue(waitForCounterBoolean(SplitLogCounters.tot_wkr_failed_to_grab_task_owned, 0, 1, 1000, false) ||
           SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.get() == 1);
       byte [] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TRFT));
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);
