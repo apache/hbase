@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
+import org.apache.hadoop.hbase.client.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -1228,6 +1229,10 @@ TOP_LOOP:
         s = meta.getScanner(scan);
       } catch (RetriesExhaustedException ex) {
         // This function has infinite patience.
+        Threads.sleepWithoutInterrupt(2000);
+        continue;
+      } catch (PreemptiveFastFailException ex) {
+      	// Be more patient
         Threads.sleepWithoutInterrupt(2000);
         continue;
       }
