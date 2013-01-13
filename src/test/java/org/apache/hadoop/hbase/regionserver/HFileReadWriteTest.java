@@ -641,7 +641,7 @@ public class HFileReadWriteTest {
 
     private volatile boolean stopRequested;
     private volatile Thread thread;
-    private long totalSeekAndReads, totalPositionalReads;
+    private long totalPositionalReads;
 
     /**
      * Run the statistics collector in a separate thread without an executor.
@@ -696,13 +696,10 @@ public class HFileReadWriteTest {
       // accumulate them here. HRegion metrics publishing thread should not
       // be running in this tool, so no one else should be resetting these
       // metrics.
-      totalSeekAndReads += HFile.getReadOpsAndReset();
       totalPositionalReads += HFile.getPreadOpsAndReset();
-      long totalBlocksRead = totalSeekAndReads + totalPositionalReads;
+      
+      double blkReadPerSec = totalPositionalReads / timeSec;
 
-      double blkReadPerSec = totalBlocksRead / timeSec;
-
-      double seekReadPerSec = totalSeekAndReads / timeSec;
       double preadPerSec = totalPositionalReads / timeSec;
 
       boolean isRead = workload == Workload.RANDOM_READS;
@@ -716,9 +713,8 @@ public class HFileReadWriteTest {
       sb.append(", blk/sec: " + (long) blkReadPerSec);
       sb.append(", total KV: " + numKV);
       sb.append(", total bytes: " + totalBytes);
-      sb.append(", total blk: " + totalBlocksRead);
+      sb.append(", total blk: " + totalPositionalReads);
 
-      sb.append(", seekRead/sec: " + (long) seekReadPerSec);
       sb.append(", pread/sec: " + (long) preadPerSec);
 
       if (isRead)

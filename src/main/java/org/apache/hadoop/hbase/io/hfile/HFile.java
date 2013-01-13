@@ -159,29 +159,12 @@ public class HFile {
    */
   public final static int MIN_NUM_HFILE_PATH_LEVELS = 5;
 
-  // For measuring latency of "sequential" reads and writes
-  static final AtomicInteger readOps = new AtomicInteger();
-  static final AtomicLong readTimeNano = new AtomicLong();
   static final AtomicInteger writeOps = new AtomicInteger();
   static final AtomicLong writeTimeNano = new AtomicLong();
 
   // For measuring latency of pread
   static final AtomicInteger preadOps = new AtomicInteger();
   static final AtomicLong preadTimeNano = new AtomicLong();
-
-  /**
-   * Get the number of sequential read (seek-and-read) operations and reset it to zero.
-   */
-  public static final int getReadOpsAndReset() {
-    return readOps.getAndSet(0);
-  }
-
-  /**
-   * Get the total time of sequential reads in milliseconds and reset it to zero.
-   */
-  public static final long getReadTimeMsAndReset() {
-    return readTimeNano.getAndSet(0) / 1000000;
-  }
 
   /**
    * Get the number of positional read operations and reset it to zero.

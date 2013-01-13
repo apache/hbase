@@ -168,16 +168,10 @@ public class RegionServerMetrics implements Updater {
     new MetricsIntValue("compactionQueueSize", registry);
 
   /**
-   * filesystem read latency for seek-and-read operations
-   */
-  public final MetricsTimeVaryingRate fsReadLatency =
-    new MetricsTimeVaryingRate("fsReadLatency", registry);
-
-  /**
    * filesystem read latency for positional read operations
    */
-  public final MetricsTimeVaryingRate fsPreadLatency =
-      new MetricsTimeVaryingRate("fsPreadLatency", registry);
+  public final MetricsTimeVaryingRate fsReadLatency =
+      new MetricsTimeVaryingRate("fsReadLatency", registry);
 
   /**
    * filesystem write latency
@@ -340,8 +334,6 @@ public class RegionServerMetrics implements Updater {
 
       // HFile metrics
       collectHFileMetric(fsReadLatency,
-          HFile.getReadOpsAndReset(), HFile.getReadTimeMsAndReset());
-      collectHFileMetric(fsPreadLatency,
           HFile.getPreadOpsAndReset(), HFile.getPreadTimeMsAndReset());
 
       /* NOTE: removed HFile write latency.  2 reasons:
