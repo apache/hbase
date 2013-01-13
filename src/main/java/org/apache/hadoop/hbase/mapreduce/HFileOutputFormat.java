@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
@@ -46,14 +47,18 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.Job;
@@ -76,6 +81,11 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   //This stores a string in the format family1=bloomType1&family2=bloomType2&...&familyN=bloomTypeN
   static final String BLOOMFILTER_TYPE_PER_CF_KEY =
     "hbase.hfileoutputformat.families.bloomfilter.typePerCF";
+  
+  static final String ENCODING_TYPE_PER_CF_KEY =
+  	"hbase.hfileoutputformat.families.encoding.typePerCF";
+  
+  static final String UTF8 = "UTF-8";
 
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
@@ -97,6 +107,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     final Map<byte[], String> compressionMap = createFamilyCompressionMap(conf);
 
     final Map<byte[], BloomType> bloomTypeMap = createFamilyBloomTypeMap(conf);
+    
+    final Map<byte[], HFileDataBlockEncoder> encoderTypeMap = 
+    	createFamilyDeltaEncodingMap(conf);
 
     return new RecordWriter<ImmutableBytesWritable, KeyValue>() {
       // Map of families to writers and how much has been output on the writer.
@@ -175,10 +188,17 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         String compression = compressionMap.get(family);
         compression = compression == null ? defaultCompression : compression;
         BloomType bloomType = bloomTypeMap.get(family);
+        HFileDataBlockEncoder encoder = encoderTypeMap.get(family);
         if (bloomType == null) {
           bloomType = BloomType.NONE;
         }
-
+        if (encoder == null) {
+        	encoder = new HFileDataBlockEncoderImpl(DataBlockEncoding.NONE, 
+        		DataBlockEncoding.NONE);
+        }
+        LOG.info("Using " + encoder.getEncodingInCache() + " in cache and " +
+        	encoder.getEncodingOnDisk() + " on disk for the column family " +
+        	Bytes.toString(family));
         /* new bloom filter does not require maxKeys. */
         int maxKeys = 0;
         wl.writer = new StoreFile.WriterBuilder(conf, new CacheConfig(conf),
@@ -187,6 +207,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
                 .withCompression(compression)
                 .withBloomType(bloomType)
                 .withMaxKeyCount(maxKeys)
+                .withDataBlockEncoder(encoder)
                 .build();
         this.writers.put(family, wl);
         return wl;
@@ -293,7 +314,6 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     LOG.warn("Set up the HFileOutputFormat as MapperOutputFormat." +
     		"It is the mapper task's responsibility to make sure that each mapper emits values " +
     		"for one region only and in a sorted order. !");
-    
     Configuration conf = job.getConfiguration();
     if (!KeyValue.class.equals(job.getMapOutputValueClass())) {
       LOG.error("Only support the KeyValue.class as MapOutputValueClass so far!");
@@ -305,7 +325,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // Set BloomFilter type based on column families and
     // relevant parameters.
     configureBloomFilter(table, conf);
-    
+
+    // Configure the DeltaEncoding per family
+    configureDeltaEncoding(table, conf);
+
     LOG.info("Configured the HFileOutputFormat as MapperOutputFormat for table: " +
         table.getTableDescriptor().getNameAsString());
   }
@@ -373,6 +396,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // Set BloomFilter type based on column families and
     // relevant parameters.
     configureBloomFilter(table, conf);
+    
+    // Configure the DeltaEncoding per family
+    configureDeltaEncoding(table, conf);
 
     LOG.info("Incremental table output configured.");
   }
@@ -497,5 +523,67 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       }
     }
     return bloomTypeMap;
+  }
+
+  protected static void configureDeltaEncoding(HTable table, Configuration conf)
+  throws IOException {
+  	HTableDescriptor tableDescriptor = table.getTableDescriptor();
+    if (tableDescriptor == null){
+      return;
+    }
+
+    StringBuilder encodingTypePerCFConfigValue = new StringBuilder();
+    Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
+    int i = 0;
+    for (HColumnDescriptor familyDescriptor : families) {
+      if (i++ > 0) {
+        encodingTypePerCFConfigValue.append('&');
+      }
+
+      encodingTypePerCFConfigValue.append(
+          URLEncoder.encode(familyDescriptor.getNameAsString(), UTF8));
+      encodingTypePerCFConfigValue.append('=');
+      encodingTypePerCFConfigValue.append(
+          URLEncoder.encode(familyDescriptor.getDataBlockEncodingOnDisk().toString(),
+          	UTF8));
+      encodingTypePerCFConfigValue.append(':');
+      encodingTypePerCFConfigValue.append(
+          URLEncoder.encode(familyDescriptor.getDataBlockEncoding().toString(),
+          	UTF8));
+    }
+
+    conf.set(ENCODING_TYPE_PER_CF_KEY, encodingTypePerCFConfigValue.toString());
+  }
+
+  static Map<byte[], HFileDataBlockEncoder> createFamilyDeltaEncodingMap(Configuration conf) {
+    Map<byte[], HFileDataBlockEncoder> encodingTypeMap =
+      new TreeMap<byte[], HFileDataBlockEncoder >(Bytes.BYTES_COMPARATOR);
+    String encodingTypeConf = conf.get(ENCODING_TYPE_PER_CF_KEY, "");
+
+    if (encodingTypeConf.isEmpty()) {
+      return encodingTypeMap;
+    }
+
+    for (String familyConf : encodingTypeConf.split("&")) {
+      String[] familySplit = familyConf.split("=");
+      if (familySplit.length != 2) {
+        throw new AssertionError("Invalid Encoding type per family configuration");
+      }
+
+      try {
+      	String[] encodingsForFamily =
+      		URLDecoder.decode(familySplit[1], UTF8).split(":");
+      	HFileDataBlockEncoder encoder = new HFileDataBlockEncoderImpl(
+      		DataBlockEncoding.valueOf(URLDecoder.decode(encodingsForFamily[0], UTF8)), 
+      		DataBlockEncoding.valueOf(URLDecoder.decode(encodingsForFamily[1], UTF8)));
+      	encodingTypeMap.put(
+      		URLDecoder.decode(familySplit[0], UTF8).getBytes(),
+          encoder);
+      } catch (UnsupportedEncodingException e) {
+        // will not happen with UTF-8 encoding
+        throw new AssertionError(e);
+      }
+    }
+    return encodingTypeMap;
   }
 }

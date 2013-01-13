@@ -1615,7 +1615,7 @@ public class StoreFile extends SchemaConfigured {
       return reader.getTrailer().getVersion();
     }
 
-    HFile.Reader getHFileReader() {
+    public HFile.Reader getHFileReader() {
       return reader;
     }
 

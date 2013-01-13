@@ -56,9 +56,11 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
@@ -880,6 +882,111 @@ public class TestHFileOutputFormat  {
     }
   }
 
+  private void setupColumnFamiliesEncodingType(HTable table, 
+  		Map<String, DataBlockEncoding> familyToEncoding) throws IOException {
+  	HTableDescriptor mockTableDesc = new HTableDescriptor();
+  	for (Entry<String, DataBlockEncoding> entry : familyToEncoding.entrySet()) {
+  		mockTableDesc.addFamily(
+  			new HColumnDescriptor(entry.getKey().getBytes(), 
+  				1, 
+  				Compression.Algorithm.NONE.toString(), 
+  				true, 
+  				entry.getValue().toString(), 
+  				false, 
+  				false, 
+  				HColumnDescriptor.DEFAULT_BLOCKSIZE, 
+  				0,
+  				BloomType.NONE.toString(),
+  				HColumnDescriptor.DEFAULT_REPLICATION_SCOPE,
+  				HColumnDescriptor.DEFAULT_BLOOMFILTER_ERROR_RATE));
+  	}
+  	Mockito.doReturn(mockTableDesc).when(table).getTableDescriptor();
+  }
+  
+  /**
+   * Test that {@link HFileOutputFormat} RecordWriter uses encoding settings
+   * from the column family descriptor
+   */
+  @Test
+  public void testColumnFamilyEncoding()
+      throws IOException, InterruptedException {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
+    TaskAttemptContext context = null;
+    Path dir =
+        util.getTestDir("testColumnFamilyEncoding");
+
+    HTable table = Mockito.mock(HTable.class);
+
+    Map<String, DataBlockEncoding> configuredEncoding =
+      new HashMap<String, DataBlockEncoding>();
+    DataBlockEncoding[] EncodingTypeValues = DataBlockEncoding.values();
+
+    int familyIndex = 0;
+    for (byte[] family : FAMILIES) {
+    	configuredEncoding.put(Bytes.toString(family),
+    		EncodingTypeValues[familyIndex++ % EncodingTypeValues.length]);
+    }
+
+    setupColumnFamiliesEncodingType(table, configuredEncoding);
+
+    // set up the table to return some mock keys
+    setupMockStartKeys(table);
+
+    try {
+      // partial map red setup to get an operational writer for testing
+      Job job = new Job(conf, "testLocalMRIncrementalLoad");
+      setupRandomGeneratorMapper(job);
+      HFileOutputFormat.configureIncrementalLoad(job, table);
+      FileOutputFormat.setOutputPath(job, dir);
+      context = new TaskAttemptContext(job.getConfiguration(),
+          new TaskAttemptID());
+      HFileOutputFormat hof = new HFileOutputFormat();
+      writer = hof.getRecordWriter(context);
+
+      // write out random rows
+      writeRandomKeyValues(writer, context, ROWSPERSPLIT);
+      writer.close(context);
+
+      // Make sure that a directory was created for every CF
+      FileSystem fileSystem = dir.getFileSystem(conf);
+
+      // commit so that the filesystem has one directory per column family
+      hof.getOutputCommitter(context).commitTask(context);
+      for (byte[] family : FAMILIES) {
+        String familyStr = Bytes.toString(family);
+        boolean found = false;
+        for (FileStatus f : fileSystem.listStatus(dir)) {
+
+          if (Bytes.toString(family).equals(f.getPath().getName())) {
+            // we found a matching directory
+            found = true;
+
+            // verify that the Encoding type on this file matches the
+            // configured Encoding type.
+            Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
+            StoreFile.Reader reader = new StoreFile.Reader(fileSystem,
+                dataFilePath, new CacheConfig(conf), null);
+            Map<byte[], byte[]> metadataMap = reader.loadFileInfo();
+
+            assertTrue("timeRange is not set", metadataMap.get(StoreFile.TIMERANGE_KEY) != null);
+            assertEquals("Incorrect Encoding Type used for column family " 
+            	+ familyStr + "(reader: " + reader + ")",
+              configuredEncoding.get(familyStr),
+              reader.getHFileReader().getEncodingOnDisk());
+            break;
+          }
+        }
+
+        if (!found) {
+          fail("HFile for column family " + familyStr + " not found");
+        }
+      }
+
+    } finally {
+      dir.getFileSystem(conf).delete(dir, true);
+    }
+  }
 
   /**
    * Write random values to the writer assuming a table created using

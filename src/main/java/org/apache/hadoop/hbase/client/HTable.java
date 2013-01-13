@@ -378,7 +378,7 @@ public class HTable implements HTableInterface {
     return new Pair(startKeyList.toArray(new byte[startKeyList.size()][]),
                 endKeyList.toArray(new byte[endKeyList.size()][]));
   }
-
+  
   /**
    * Gets all the regions and their address for this table.
    * <p>
