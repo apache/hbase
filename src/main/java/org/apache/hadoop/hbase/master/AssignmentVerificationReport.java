@@ -436,13 +436,18 @@ public class AssignmentVerificationReport {
     }
   }
 
-  public void printDispersionInformation() {
-    DecimalFormat df = new java.text.DecimalFormat("#.##");
-    // Print the region balance information
-    System.out.println("\tAvg dispersion num: " + df.format(avgDispersionNum)
-        + " hosts;\tMax dispersion num: " + df.format(maxDispersionNum)
-        + " hosts;\tMin dispersion num: " + df.format(minDispersionNum)
-        + " hosts;");
+  /**
+   * @return list which contains just 3 elements: average dispersion score, max
+   * dispersion score and min dispersion score as first, second and third element
+   * respectively.
+   *
+   */
+  public List<Float> getDispersionInformation() {
+    List<Float> dispersion = new ArrayList<Float>();
+    dispersion.add(avgDispersionScore);
+    dispersion.add(maxDispersionScore);
+    dispersion.add(minDispersionScore);
+    return dispersion;
   }
 
   public void print(boolean isDetailMode) {

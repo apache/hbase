@@ -934,13 +934,24 @@ public class RegionPlacement implements RegionPlacementPolicy{
   }
 
   public void printDispersionScores(String table,
-      RegionAssignmentSnapshot snapshot, AssignmentPlan newPlan) {
+      RegionAssignmentSnapshot snapshot, int numRegions, AssignmentPlan newPlan,
+      boolean simplePrint) {
     if (!this.targetTableSet.isEmpty() && !this.targetTableSet.contains(table)) {
       return;
     }
     AssignmentVerificationReport report = new AssignmentVerificationReport();
     report.fillUpDispersion(table, snapshot, newPlan);
-    report.printDispersionInformation();
+    List<Float> dispersion = report.getDispersionInformation();
+    if (simplePrint) {
+      DecimalFormat df = new java.text.DecimalFormat("#.##");
+      System.out.println("\tAvg dispersion score: "
+          + df.format(dispersion.get(0)) + " hosts;\tMax dispersion score: "
+          + df.format(dispersion.get(1)) + " hosts;\tMin dispersion score: "
+          + df.format(dispersion.get(2)) + " hosts;");
+    } else {
+      LOG.info("For Table: " + table + " ; #Total Regions: " + numRegions
+          + " ; The average dispersion score is " + dispersion.get(0));
+    }
   }
 
   public void setTargetTableName(String[] tableNames) {
@@ -1087,6 +1098,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
     opt.addOption("diff", false, "calculate difference between assignment plans");
     opt.addOption("munkres", false,
         "use munkres to place secondaries and tertiaries");
+    opt.addOption("ld", "locality-dispersion", false, "print locality and dispersion information for current plan");
     try {
       // Set the log4j
       Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
@@ -1185,6 +1197,10 @@ public class RegionPlacement implements RegionPlacementPolicy{
           rp.updateAssignmentPlan(newPlan);
         }
         s.close();
+      } else if (cmd.hasOption("ld")) {
+        Map<String, Map<String, Float>> locality = FSUtils
+            .getRegionDegreeLocalityMappingFromFS(conf);
+        rp.printLocalityAndDispersionForCurrentPlan(locality);
       } else if (cmd.hasOption("p") || cmd.hasOption("print")) {
         AssignmentPlan plan = rp.getExistingAssignmentPlan();
         RegionPlacement.printAssignmentPlan(plan);
@@ -1213,7 +1229,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
           newPlan.updateAssignmentPlan(regionInfo, favoredNodes);
           rp.updateAssignmentPlan(newPlan);
         }
-      }else {
+      } else {
         printHelp(opt);
       }
     } catch (ParseException e) {
@@ -1447,8 +1463,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
         if (newServers != null && oldServers != null) {
           int i=0;
           for (AssignmentPlan.POSITION p : AssignmentPlan.POSITION.values()) {
-            HServerAddress newServer = oldServers.get(p.ordinal());
-            HServerAddress oldServer = newServers.get(p.ordinal());
+            HServerAddress newServer = newServers.get(p.ordinal());
+            HServerAddress oldServer = oldServers.get(p.ordinal());
             Float oldLocality = 0f;
             if (oldServers != null) {
               oldLocality = regionLocality.get(oldServer.getHostname());
@@ -1482,9 +1498,63 @@ public class RegionPlacement implements RegionPlacementPolicy{
             + "%");
       }
       System.out.println("\t Baseline dispersion");
-      printDispersionScores(table, snapshot, null);
+      printDispersionScores(table, snapshot, regions.size(), null, true);
       System.out.println("\t Projected dispersion");
-      printDispersionScores(table, snapshot, newPlan);
+      printDispersionScores(table, snapshot, regions.size(), newPlan, true);
+    }
+  }
+
+  public void printLocalityAndDispersionForCurrentPlan(
+      Map<String, Map<String, Float>> regionLocalityMap) throws IOException {
+    RegionAssignmentSnapshot snapshot = this.getRegionAssignmentSnapshot();
+    AssignmentPlan assignmentPlan = snapshot.getExistingAssignmentPlan();
+    Set<String> tables = snapshot.getTableSet();
+    Map<String, List<HRegionInfo>> tableToRegionsMap = snapshot
+        .getTableToRegionMap();
+    for (String table : tables) {
+      float[] locality = new float[3];
+      if (!this.targetTableSet.isEmpty()
+          && !this.targetTableSet.contains(table)) {
+        continue;
+      }
+      List<HRegionInfo> regions = tableToRegionsMap.get(table);
+      for (HRegionInfo currentRegion : regions) {
+        Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion
+            .getEncodedName());
+        if (regionLocality == null) {
+          continue;
+        }
+        List<HServerAddress> servers = assignmentPlan.getAssignment(currentRegion);
+        if (servers != null) {
+          int i = 0;
+          for (AssignmentPlan.POSITION p : AssignmentPlan.POSITION.values()) {
+            HServerAddress server = servers.get(p.ordinal());
+            Float currentLocality = 0f;
+            if (servers != null) {
+              currentLocality = regionLocality.get(server.getHostname());
+              if (currentLocality == null) {
+                currentLocality = 0f;
+              }
+              locality[i] += currentLocality;
+            }
+            i++;
+          }
+        }
+      }
+      for (int i = 0; i < locality.length; i++) {
+        String copy =  null;
+        if (i == 0) {
+          copy = "primary";
+        } else if (i == 1) {
+          copy = "secondary";
+        } else if (i == 2) {
+          copy = "tertiary" ;
+        }
+        float avgLocality = 100 * locality[i] / regions.size();
+        LOG.info("For Table: " + table + " ; #Total Regions: " + regions.size()
+            + " ; The average locality for " + copy+ " is " + avgLocality + " %");
+      }
+      printDispersionScores(table, snapshot, regions.size(), null, false);
     }
   }
 }
