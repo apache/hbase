@@ -1046,13 +1046,16 @@ public class HConnectionManager {
           // exist. rethrow the error immediately. this should always be coming
           // from the HTable constructor.
           throw e;
+        } catch (PreemptiveFastFailException e) {
+          // already processed this. Don't process this again.
+          throw e;
         } catch (IOException e) {
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException(
                 (RemoteException) e);
           } else if (isNetworkException(e)) {
             couldNotCommunicateWithServer = true;
-            handleFailureToServer(server);
+            handleFailureToServer(server, e);
           }
           if (tries < numRetries - 1) {
             if (LOG.isDebugEnabled()) {
@@ -1584,7 +1587,7 @@ public class HConnectionManager {
         // non-IOException.
         if (isLocalException && isNetworkException(t2)) {
           couldNotCommunicateWithServer = true;
-          handleFailureToServer(server);
+          handleFailureToServer(server, t2);
         }
 
         if (t2 instanceof IOException) {
@@ -1606,11 +1609,12 @@ public class HConnectionManager {
      * Fast fail mode.
      *
      * @param server
+     * @param t - the throwable to be handled.
      * @throws PreemptiveFastFailException
      */
-    private void handleFailureToServer(HServerAddress server)
+    private void handleFailureToServer(HServerAddress server, Throwable t)
         throws PreemptiveFastFailException {
-      if (server == null) return;
+      if (server == null || t == null) return;
 
       long currentTime = System.currentTimeMillis();
       FailureInfo fInfo = repeatedFailuresMap.get(server);
@@ -1631,6 +1635,9 @@ public class HConnectionManager {
             fInfo.timeOfLatestCacheClearMilliSec = currentTime;
             clearCachedLocationForServer(server.toString());
           }
+
+          LOG.error("Preemptive fast fail exception caused by : " +  t.toString());
+
           throw  new PreemptiveFastFailException(fInfo.numConsecutiveFailures.get(),
             fInfo.timeOfFirstFailureMilliSec, fInfo.timeOfLatestAttemptMilliSec);
       }
