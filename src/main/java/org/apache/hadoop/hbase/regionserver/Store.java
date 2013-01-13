@@ -1445,7 +1445,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       this.memstore.getRowKeyAtOrBefore(state);
       // Check if match, if we got a candidate on the asked for 'kv' row.
       // Process each store file. Run through from newest to oldest.
-      for (StoreFile sf : Iterables.reverse(storefiles)) {
+      for (StoreFile sf : storefiles.reverse()) {
         // Update the candidate keys from the current map file
         rowAtOrBeforeFromStoreFile(sf, state);
       }
