@@ -40,7 +40,7 @@ NAME = "manage_dfs_quorum_reads"
 
 # Print usage for this script
 def usage
-  puts 'Usage: %s.rb' % NAME '<setNumThreads | setTimeout>    <value>'
+  puts 'Usage: %s.rb <setNumThreads | setTimeout>    <value>' % NAME
   exit!
 end
 
@@ -50,10 +50,10 @@ if ARGV.size != 2
 end
 
 command = ARGV[0]
-value = ARGV[1]
 if command != 'setNumThreads' && command != 'setTimeout'
   usage
 end
+value = ARGV[1]
 
 # Get configuration to use.
 c = HBaseConfiguration.create()
@@ -83,8 +83,8 @@ else
 
   servers.each do |server|
     if server.getServerAddress().getHostname() == InetAddress.getLocalHost().getHostName()
-    address = server.getServerAddress()
-    break
+      address = server.getServerAddress()
+      break
     end
   end
 end
@@ -95,8 +95,7 @@ if address == nil
 end
 
 if command == 'setNumThreads'
-  admin.setNumHDFSQuorumReadThreads(value)
+  admin.setNumHDFSQuorumReadThreads(address, value.to_i)
 else
-  admin.setHDFSQuorumReadTimeoutMillis(value)
+  admin.setHDFSQuorumReadTimeoutMillis(address, value.to_i)
 end
-
