@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 
 /**
  * A command-line tool that spins up a local process-based cluster, loads
@@ -59,8 +60,8 @@ public class RestartMetaTest extends AbstractHBaseTool {
   private void loadData() throws IOException {
     long startKey = 0;
     long endKey = 100000;
-    long minColsPerKey = 5;
-    long maxColsPerKey = 15;
+    int minColsPerKey = 5;
+    int maxColsPerKey = 15;
     int minColDataSize = 256;
     int maxColDataSize = 256 * 3;
     int numThreads = 10;
@@ -74,11 +75,10 @@ public class RestartMetaTest extends AbstractHBaseTool {
     System.out.printf("Client Threads: %d\n", numThreads);
 
     // start the writers
-    MultiThreadedWriter writer = new MultiThreadedWriter(conf, TABLE_NAME,
-        LoadTestTool.COLUMN_FAMILY);
+    LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(
+      minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey, LoadTestTool.COLUMN_FAMILY);
+    MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
     writer.setMultiPut(true);
-    writer.setColumnsPerKey(minColsPerKey, maxColsPerKey);
-    writer.setDataSize(minColDataSize, maxColDataSize);
     writer.start(startKey, endKey, numThreads);
     System.out.printf("Started loading data...");
     writer.waitForFinish();

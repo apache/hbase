@@ -3641,7 +3641,7 @@ public class HRegion implements HeapSize { // , Writable{
           // First, check if we are at a stop row. If so, there are no more results.
           if (stopRow) {
             if (filter != null && filter.hasFilterRow()) {
-              filter.filterRow(results);        
+              filter.filterRow(results);
             }
             return false;
           }
@@ -3670,7 +3670,7 @@ public class HRegion implements HeapSize { // , Writable{
           final boolean isEmptyRow = results.isEmpty();
 
           // We have the part of the row necessary for filtering (all of it, usually).
-          // First filter with the filterRow(List).            
+          // First filter with the filterRow(List).
           if (filter != null && filter.hasFilterRow()) {
             filter.filterRow(results);
           }

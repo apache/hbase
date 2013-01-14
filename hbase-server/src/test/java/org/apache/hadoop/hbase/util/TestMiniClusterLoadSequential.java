@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -139,9 +140,10 @@ public class TestMiniClusterLoadSequential {
 
     TEST_UTIL.waitUntilAllRegionsAssigned(numRegions);
 
-    writerThreads = new MultiThreadedWriter(conf, TABLE, CF);
+    LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(CF);
+    writerThreads = new MultiThreadedWriter(dataGen, conf, TABLE);
     writerThreads.setMultiPut(isMultiPut);
-    readerThreads = new MultiThreadedReader(conf, TABLE, CF, 100);
+    readerThreads = new MultiThreadedReader(dataGen, conf, TABLE, 100);
   }
 
   protected int numKeys() {
