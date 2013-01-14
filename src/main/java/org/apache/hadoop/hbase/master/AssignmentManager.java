@@ -1161,7 +1161,9 @@ public class AssignmentManager extends ZooKeeperListener {
         } else if (rs.isSplitting()) {
           LOG.debug("Ephemeral node deleted.  Found in SPLITTING state. " + "Removing from RIT "
               + rs.getRegion());
-          this.regionsInTransition.remove(regionName);
+          synchronized(this.regionsInTransition) {
+            this.regionsInTransition.remove(regionName);
+          }
         } else {
           LOG.debug("The znode of region " + regionInfo.getRegionNameAsString()
               + " has been deleted.");
