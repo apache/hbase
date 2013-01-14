@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -129,8 +130,9 @@ public class HFileBlock implements Cacheable {
   public static final int BYTE_BUFFER_HEAP_SIZE = (int) ClassSize.estimateBase(
       ByteBuffer.wrap(new byte[0], 0, 0).getClass(), false);
 
-  static final int EXTRA_SERIALIZATION_SPACE = Bytes.SIZEOF_LONG +
-      Bytes.SIZEOF_INT;
+  // minorVersion+offset+nextBlockOnDiskSizeWithHeader
+  public static final int EXTRA_SERIALIZATION_SPACE = 2 * Bytes.SIZEOF_INT
+      + Bytes.SIZEOF_LONG;
 
   /**
    * Each checksum value is an integer that can be stored in 4 bytes.
@@ -139,22 +141,39 @@ public class HFileBlock implements Cacheable {
 
   private static final CacheableDeserializer<Cacheable> blockDeserializer =
       new CacheableDeserializer<Cacheable>() {
-        public HFileBlock deserialize(ByteBuffer buf) throws IOException{
-          ByteBuffer newByteBuffer = ByteBuffer.allocate(buf.limit()
-              - HFileBlock.EXTRA_SERIALIZATION_SPACE);
-          buf.limit(buf.limit()
-              - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
-          newByteBuffer.put(buf);
-          HFileBlock ourBuffer = new HFileBlock(newByteBuffer, 
-                                   MINOR_VERSION_NO_CHECKSUM);
-
+        public HFileBlock deserialize(ByteBuffer buf, boolean reuse) throws IOException{
+          buf.limit(buf.limit() - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
+          ByteBuffer newByteBuffer;
+          if (reuse) {
+            newByteBuffer = buf.slice();
+          } else {
+           newByteBuffer = ByteBuffer.allocate(buf.limit());
+           newByteBuffer.put(buf);
+          }
           buf.position(buf.limit());
           buf.limit(buf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE);
+          int minorVersion=buf.getInt();
+          HFileBlock ourBuffer = new HFileBlock(newByteBuffer, minorVersion);
           ourBuffer.offset = buf.getLong();
           ourBuffer.nextBlockOnDiskSizeWithHeader = buf.getInt();
           return ourBuffer;
         }
+        
+        @Override
+        public int getDeserialiserIdentifier() {
+          return deserializerIdentifier;
+        }
+
+        @Override
+        public HFileBlock deserialize(ByteBuffer b) throws IOException {
+          return deserialize(b, false);
+        }
       };
+  private static final int deserializerIdentifier;
+  static {
+    deserializerIdentifier = CacheableDeserializerIdManager
+        .registerDeserializer(blockDeserializer);
+  }
 
   private BlockType blockType;
 
@@ -356,6 +375,17 @@ public class HFileBlock implements Cacheable {
   public ByteBuffer getBufferReadOnly() {
     return ByteBuffer.wrap(buf.array(), buf.arrayOffset(),
         buf.limit() - totalChecksumBytes()).slice();
+  }
+
+  /**
+   * Returns the buffer of this block, including header data. The clients must
+   * not modify the buffer object. This method has to be public because it is
+   * used in {@link BucketCache} to avoid buffer copy.
+   * 
+   * @return the byte buffer with header included for read-only operations
+   */
+  public ByteBuffer getBufferReadOnlyWithHeader() {
+    return ByteBuffer.wrap(buf.array(), buf.arrayOffset(), buf.limit()).slice();
   }
 
   /**
@@ -1780,7 +1810,17 @@ public class HFileBlock implements Cacheable {
 
   @Override
   public void serialize(ByteBuffer destination) {
-    destination.put(this.buf.duplicate());
+    ByteBuffer dupBuf = this.buf.duplicate();
+    dupBuf.rewind();
+    destination.put(dupBuf);
+    destination.putInt(this.minorVersion);
+    destination.putLong(this.offset);
+    destination.putInt(this.nextBlockOnDiskSizeWithHeader);
+    destination.rewind();
+  }
+
+  public void serializeExtraInfo(ByteBuffer destination) {
+    destination.putInt(this.minorVersion);
     destination.putLong(this.offset);
     destination.putInt(this.nextBlockOnDiskSizeWithHeader);
     destination.rewind();

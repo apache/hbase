@@ -171,6 +171,22 @@ public class CacheStats {
     windowIndex = (windowIndex + 1) % numPeriodsInWindow;
   }
 
+  public long getSumHitCountsPastNPeriods() {
+    return sum(hitCounts);
+  }
+
+  public long getSumRequestCountsPastNPeriods() {
+    return sum(requestCounts);
+  }
+
+  public long getSumHitCachingCountsPastNPeriods() {
+    return sum(hitCachingCounts);
+  }
+
+  public long getSumRequestCachingCountsPastNPeriods() {
+    return sum(requestCachingCounts);
+  }
+
   public double getHitRatioPastNPeriods() {
     double ratio = ((double)sum(hitCounts)/(double)sum(requestCounts));
     return Double.isNaN(ratio) ? 0 : ratio;

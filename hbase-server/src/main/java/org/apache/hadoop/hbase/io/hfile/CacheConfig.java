@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.DirectMemoryUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -71,6 +73,28 @@ public class CacheConfig {
    */
   public static final String EVICT_BLOCKS_ON_CLOSE_KEY =
       "hbase.rs.evictblocksonclose";
+
+  /**
+   * Configuration keys for Bucket cache
+   */
+  public static final String BUCKET_CACHE_IOENGINE_KEY = "hbase.bucketcache.ioengine";
+  public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
+  public static final String BUCKET_CACHE_PERSISTENT_PATH_KEY = 
+      "hbase.bucketcache.persistent.path";
+  public static final String BUCKET_CACHE_COMBINED_KEY = 
+      "hbase.bucketcache.combinedcache.enabled";
+  public static final String BUCKET_CACHE_COMBINED_PERCENTAGE_KEY = 
+      "hbase.bucketcache.percentage.in.combinedcache";
+  public static final String BUCKET_CACHE_WRITER_THREADS_KEY = "hbase.bucketcache.writer.threads";
+  public static final String BUCKET_CACHE_WRITER_QUEUE_KEY = 
+      "hbase.bucketcache.writer.queuelength";
+  /**
+   * Defaults for Bucket cache
+   */
+  public static final boolean DEFAULT_BUCKET_CACHE_COMBINED = true;
+  public static final int DEFAULT_BUCKET_CACHE_WRITER_THREADS = 3;
+  public static final int DEFAULT_BUCKET_CACHE_WRITER_QUEUE = 64;
+  public static final float DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE = 0.9f;
 
   // Defaults
 
@@ -341,19 +365,60 @@ public class CacheConfig {
 
     // Calculate the amount of heap to give the heap.
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    long cacheSize = (long)(mu.getMax() * cachePercentage);
+    long lruCacheSize = (long) (mu.getMax() * cachePercentage);
     int blockSize = conf.getInt("hbase.offheapcache.minblocksize",
         HFile.DEFAULT_BLOCKSIZE);
     long offHeapCacheSize =
       (long) (conf.getFloat("hbase.offheapcache.percentage", (float) 0) *
           DirectMemoryUtils.getDirectMemorySize());
-    LOG.info("Allocating LruBlockCache with maximum size " +
-      StringUtils.humanReadableInt(cacheSize));
     if (offHeapCacheSize <= 0) {
-      globalBlockCache = new LruBlockCache(cacheSize,
-          StoreFile.DEFAULT_BLOCKSIZE_SMALL, conf);
+      String bucketCacheIOEngineName = conf
+          .get(BUCKET_CACHE_IOENGINE_KEY, null);
+      float bucketCachePercentage = conf.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
+      // A percentage of max heap size or a absolute value with unit megabytes
+      long bucketCacheSize = (long) (bucketCachePercentage < 1 ? mu.getMax()
+          * bucketCachePercentage : bucketCachePercentage * 1024 * 1024);
+
+      boolean combinedWithLru = conf.getBoolean(BUCKET_CACHE_COMBINED_KEY,
+          DEFAULT_BUCKET_CACHE_COMBINED);
+      BucketCache bucketCache = null;
+      if (bucketCacheIOEngineName != null && bucketCacheSize > 0) {
+        int writerThreads = conf.getInt(BUCKET_CACHE_WRITER_THREADS_KEY,
+            DEFAULT_BUCKET_CACHE_WRITER_THREADS);
+        int writerQueueLen = conf.getInt(BUCKET_CACHE_WRITER_QUEUE_KEY,
+            DEFAULT_BUCKET_CACHE_WRITER_QUEUE);
+        String persistentPath = conf.get(BUCKET_CACHE_PERSISTENT_PATH_KEY);
+        float combinedPercentage = conf.getFloat(
+            BUCKET_CACHE_COMBINED_PERCENTAGE_KEY,
+            DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE);
+        if (combinedWithLru) {
+          lruCacheSize = (long) ((1 - combinedPercentage) * bucketCacheSize);
+          bucketCacheSize = (long) (combinedPercentage * bucketCacheSize);
+        }
+        try {
+          int ioErrorsTolerationDuration = conf.getInt(
+              "hbase.bucketcache.ioengine.errors.tolerated.duration",
+              BucketCache.DEFAULT_ERROR_TOLERATION_DURATION);
+          bucketCache = new BucketCache(bucketCacheIOEngineName,
+              bucketCacheSize, writerThreads, writerQueueLen, persistentPath,
+              ioErrorsTolerationDuration);
+        } catch (IOException ioex) {
+          LOG.error("Can't instantiate bucket cache", ioex);
+          throw new RuntimeException(ioex);
+        }
+      }
+      LOG.info("Allocating LruBlockCache with maximum size "
+          + StringUtils.humanReadableInt(lruCacheSize));
+      LruBlockCache lruCache = new LruBlockCache(lruCacheSize,
+          StoreFile.DEFAULT_BLOCKSIZE_SMALL);
+      lruCache.setVictimCache(bucketCache);
+      if (bucketCache != null && combinedWithLru) {
+        globalBlockCache = new CombinedBlockCache(lruCache, bucketCache);
+      } else {
+        globalBlockCache = lruCache;
+      }
     } else {
-      globalBlockCache = new DoubleBlockCache(cacheSize, offHeapCacheSize,
+      globalBlockCache = new DoubleBlockCache(lruCacheSize, offHeapCacheSize,
           StoreFile.DEFAULT_BLOCKSIZE_SMALL, blockSize, conf);
     }
     return globalBlockCache;
