@@ -56,7 +56,9 @@ import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingReq
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -146,7 +148,10 @@ public class TestServerCustomProtocol {
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       PingHandler.class.getName());
     util.startMiniCluster();
+  }
 
+  @Before
+  public void before()  throws Exception {
     HTable table = util.createTable(TEST_TABLE, TEST_FAMILY);
     util.createMultiRegions(util.getConfiguration(), table, TEST_FAMILY,
       new byte[][]{ HConstants.EMPTY_BYTE_ARRAY, ROW_B, ROW_C});
@@ -162,6 +167,11 @@ public class TestServerCustomProtocol {
     Put putc = new Put( ROW_C );
     putc.add(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
     table.put(putc);
+  }
+
+  @After
+  public void after() throws Exception {
+    util.deleteTable(TEST_TABLE);
   }
 
   @AfterClass
@@ -216,7 +226,7 @@ public class TestServerCustomProtocol {
     // There are three regions so should get back three results.
     assertEquals(3, results.size());
     for (Map.Entry<byte [], Integer> e: intResults.entrySet()) {
-      assertTrue(e.getValue() == count + diff);
+      assertEquals(e.getValue().intValue(), count + diff);
     }
     table.close();
   }
