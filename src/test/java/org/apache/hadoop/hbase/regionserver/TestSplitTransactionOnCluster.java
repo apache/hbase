@@ -541,58 +541,55 @@ public class TestSplitTransactionOnCluster {
     final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
     
     HBaseAdmin admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
-    try {
-      // Create table then get the single region for our new table.
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      htd.addFamily(new HColumnDescriptor("cf"));
-      admin.createTable(htd);
+    // Create table then get the single region for our new table.
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor("cf"));
+    admin.createTable(htd);
 
-      List<HRegion> regions = null;
-      for (int i=0; i<100; i++) {
-        regions = cluster.getRegions(tableName);
-        if (regions.size() > 0) break;
-        Thread.sleep(100);
-      }
-      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
-      HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
-      SplitTransaction st = null;
-      if (nodeCreated) {
-        st = new MockedSplitTransaction(regions.get(0), null) {
-          @Override
-          int transitionNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo parent,
-              ServerName serverName, int version) throws KeeperException, IOException {
-            throw new IOException();
-          }
-        };
-      } else {
-        st = new MockedSplitTransaction(regions.get(0), null) {
-          @Override
-          void createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region, ServerName serverName)
-              throws KeeperException, IOException {
-            throw new IOException();
-          }
-        };
-      }
-      try {
-        st.execute(regionServer, regionServer);
-      } catch (IOException e) {
-        String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
-            .getRegionInfo().getEncodedName());
-        // make sure the client is uptodate
-        regionServer.getZooKeeper().sync(node);
-        if (nodeCreated) {
-          assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
-        } else {
-          assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+    List<HRegion> regions = null;
+    for (int i=0; i<100; i++) {
+      regions = cluster.getRegions(tableName);
+      if (regions.size() > 0) break;
+      Thread.sleep(100);
+    }
+    int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+    SplitTransaction st = null;
+    if (nodeCreated) {
+      st = new MockedSplitTransaction(regions.get(0), null) {
+        @Override
+        int transitionNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo parent,
+            ServerName serverName, int version) throws KeeperException, IOException {
+          throw new IOException();
         }
-        assertTrue(st.rollback(regionServer, regionServer));
+      };
+    } else {
+      st = new MockedSplitTransaction(regions.get(0), null) {
+        @Override
+        void createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region, ServerName serverName)
+            throws KeeperException, IOException {
+          throw new IOException();
+        }
+      };
+    }
+    try {
+      st.execute(regionServer, regionServer);
+    } catch (IOException e) {
+      String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
+          .getRegionInfo().getEncodedName());
+      // make sure the client is uptodate
+      regionServer.getZooKeeper().sync(node);
+      if (nodeCreated) {
+        assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+      } else {
         assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
       }
-    } finally {
-      if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
-        admin.disableTable(tableName);
-        admin.deleteTable(tableName);
-      }
+      assertTrue(st.rollback(regionServer, regionServer));
+      assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+    }
+    if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
     }
   }
   
@@ -600,57 +597,54 @@ public class TestSplitTransactionOnCluster {
   public void testShouldClearRITWhenNodeFoundInSplittingState() throws Exception {
     final byte[] tableName = Bytes.toBytes("testShouldClearRITWhenNodeFoundInSplittingState");
     HBaseAdmin admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
+    // Create table then get the single region for our new table.
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor("cf"));
+    admin.createTable(htd);
+
+    HRegion region = cluster.getRegions(tableName).get(0);
+    int regionServerIndex = cluster.getServerWith(region.getRegionName());
+    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+    SplitTransaction st = null;
+
+    st = new MockedSplitTransaction(region, null) {
+      @Override
+      void createSplitDir(FileSystem fs, Path splitdir) throws IOException {
+        throw new IOException("");
+      }
+    };
+
     try {
-      // Create table then get the single region for our new table.
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      htd.addFamily(new HColumnDescriptor("cf"));
-      admin.createTable(htd);
+      st.execute(regionServer, regionServer);
+    } catch (IOException e) {
+      String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), region
+          .getRegionInfo().getEncodedName());
 
-      List<HRegion> regions = cluster.getRegions(tableName);
-      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
-      HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
-      SplitTransaction st = null;
-
-      st = new MockedSplitTransaction(regions.get(0), null) {
-        @Override
-        void createSplitDir(FileSystem fs, Path splitdir) throws IOException {
-          throw new IOException("");
-        }
-      };
-
-      try {
-        st.execute(regionServer, regionServer);
-      } catch (IOException e) {
-        String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
-            .getRegionInfo().getEncodedName());
-
-        assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
-        AssignmentManager am = cluster.getMaster().getAssignmentManager();
-        for (int i = 0; !am.getRegionsInTransition().containsKey(
-            regions.get(0).getRegionInfo().getEncodedName())
-            && i < 10; i++) {
-          Thread.sleep(200);
-        }
-        assertTrue("region is not in transition",
-            am.getRegionsInTransition().containsKey(regions.get(0).getRegionInfo().getEncodedName()));
-        RegionState regionState = am.getRegionsInTransition().get(regions.get(0).getRegionInfo()
-            .getEncodedName());
-        assertTrue(regionState.getState() == RegionState.State.SPLITTING);
-        assertTrue(st.rollback(regionServer, regionServer));
-        assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
-        for (int i=0; am.getRegionsInTransition().containsKey(regions.get(0).getRegionInfo().getEncodedName()) && i<10; i++) {
-          // Just in case the nodeDeleted event did not get executed.
-          Thread.sleep(200);
-        }
-        assertFalse("region is still in transition",
-            am.getRegionsInTransition().containsKey(regions.get(0).getRegionInfo().getEncodedName()));
+      assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+      AssignmentManager am = cluster.getMaster().getAssignmentManager();
+      for (int i = 0; !am.getRegionsInTransition().containsKey(
+          region.getRegionInfo().getEncodedName())
+          && i < 100; i++) {
+        Thread.sleep(200);
       }
-    } finally {
-      if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
-        admin.disableTable(tableName);
-        admin.deleteTable(tableName);
-        admin.close();
+      assertTrue("region is not in transition "+region,
+          am.getRegionsInTransition().containsKey(region.getRegionInfo().getEncodedName()));
+      RegionState regionState = am.getRegionsInTransition().get(region.getRegionInfo()
+          .getEncodedName());
+      assertTrue(regionState.getState() == RegionState.State.SPLITTING);
+      assertTrue(st.rollback(regionServer, regionServer));
+      assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+      for (int i=0; am.getRegionsInTransition().containsKey(region.getRegionInfo().getEncodedName()) && i<100; i++) {
+        // Just in case the nodeDeleted event did not get executed.
+        Thread.sleep(200);
       }
+      assertFalse("region is still in transition",
+          am.getRegionsInTransition().containsKey(region.getRegionInfo().getEncodedName()));
+    }
+    if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+      admin.close();
     }
   }
   
@@ -730,11 +724,11 @@ public class TestSplitTransactionOnCluster {
       firstSplitCompleted = false;
       callRollBack = false;
       cluster.getMaster().setCatalogJanitorEnabled(true);
-      if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
-        admin.disableTable(tableName);
-        admin.deleteTable(tableName);
-        admin.close();
-      }
+    }
+    if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+      admin.close();
     }
   }
 
@@ -831,16 +825,19 @@ public class TestSplitTransactionOnCluster {
             .getRegionInfo().getEncodedName());
         assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
         assertTrue(st.rollback(regionServer, regionServer));
+        for(int i=0; ZKUtil.checkExists(regionServer.getZooKeeper(), node) != -1 && i<100; i++) {
+          Thread.sleep(100);
+        }
         assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
       }
     } finally {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
-      if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
-        admin.disableTable(tableName);
-        admin.deleteTable(tableName);
-        admin.close();
-      }
+    }
+    if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+      admin.close();
     }
   }
   public static class MockedSplitTransaction extends SplitTransaction {
