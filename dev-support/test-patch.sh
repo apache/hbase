@@ -622,6 +622,10 @@ runTests () {
   echo "======================================================================"
   echo ""
   echo ""
+
+
+  ### kill any process remaining from another test, maybe even another project
+  jps | grep surefirebooter | cut -d ' ' -f 1 | xargs kill -9 2>/dev/null
   
   failed_tests=""
   ### Kill any rogue build processes from the last attempt
@@ -663,6 +667,7 @@ runTests () {
 
      {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} zombie test(s): ${ZB_STACK}"
       BAD=1
+      jps | grep surefirebooter | cut -d ' ' -f 1 | xargs kill -9
     else
       echo "We're ok: there is no zombie test, but some tests took some time to stop"
     fi
