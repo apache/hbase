@@ -131,6 +131,16 @@ public abstract class FilterBase implements Filter {
   }
 
   /**
+   * By default, we require all scan's column families to be present. Our
+   * subclasses may be more precise.
+   *
+   * @inheritDoc
+   */
+  public boolean isFamilyEssential(byte[] name) {
+    return true;
+  }
+
+  /**
    * Given the filter's arguments it constructs the filter
    * <p>
    * @param filterArguments the filter's arguments
