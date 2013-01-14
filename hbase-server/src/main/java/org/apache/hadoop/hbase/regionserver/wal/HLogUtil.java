@@ -76,7 +76,8 @@ public class HLogUtil {
   /**
    * Pattern used to validate a HLog file name
    */
-  private static final Pattern pattern = Pattern.compile(".*\\.\\d*");
+  private static final Pattern pattern = 
+      Pattern.compile(".*\\.\\d*("+HLog.META_HLOG_FILE_EXTN+")*");
 
   /**
    * @param filename
@@ -311,5 +312,12 @@ public class HLogUtil {
       filesSorted.add(status.getPath());
     }
     return filesSorted;
+  }
+
+  public static boolean isMetaFile(Path p) {
+    if (p.getName().endsWith(HLog.META_HLOG_FILE_EXTN)) {
+      return true;
+    }
+    return false;
   }
 }

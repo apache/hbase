@@ -49,6 +49,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -302,6 +303,11 @@ public class HLogSplitter {
             + ": " + logPath + ", length=" + logLength);
         Reader in = null;
         try {
+          //actually, for meta-only hlogs, we don't need to go thru the process
+          //of parsing and segregating by regions since all the logs are for
+          //meta only. However, there is a sequence number that can be obtained
+          //only by parsing.. so we parse for all files currently
+          //TODO: optimize this part somehow
           in = getReader(fs, log, conf, skipErrors);
           if (in != null) {
             parseHLog(in, logPath, entryBuffers, fs, conf, skipErrors);

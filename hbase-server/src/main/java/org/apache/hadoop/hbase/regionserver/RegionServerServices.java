@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -38,8 +39,9 @@ public interface RegionServerServices extends OnlineRegions {
    */
   public boolean isStopping();
 
-  /** @return the HLog */
-  public HLog getWAL();
+  /** @return the HLog for a particular region. Pass null for getting the 
+   * default (common) WAL */
+  public HLog getWAL(HRegionInfo regionInfo) throws IOException;
 
   /**
    * @return Implementation of {@link CompactionRequestor} or null.

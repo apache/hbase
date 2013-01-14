@@ -960,6 +960,7 @@ Server {
       return;
     }
     LOG.info("Forcing splitLog and expire of " + sn);
+    fileSystemManager.splitMetaLog(sn);
     fileSystemManager.splitLog(sn);
     serverManager.expireServer(sn);
   }
