@@ -2382,6 +2382,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     try {
       HRegion r = getRegion(regionName);
       r.checkRow(scan.getStartRow(), "Scan");
+      scan.setLoadColumnFamiliesOnDemand(r.isLoadingCfsOnDemandDefault()
+          || scan.doLoadColumnFamiliesOnDemand());
       r.prepareScanner(scan);
       RegionScanner s = null;
       if (r.getCoprocessorHost() != null) {

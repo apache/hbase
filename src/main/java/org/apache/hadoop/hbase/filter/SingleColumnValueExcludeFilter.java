@@ -24,6 +24,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Iterator;
 
 /**
  * A {@link Filter} that checks a single column value, but does not emit the
@@ -76,16 +78,22 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
     super(family, qualifier, compareOp, comparator);
   }
 
-  public ReturnCode filterKeyValue(KeyValue keyValue) {
-    ReturnCode superRetCode = super.filterKeyValue(keyValue);
-    if (superRetCode == ReturnCode.INCLUDE) {
+  // We cleaned result row in FilterRow to be consistent with scanning process.
+  public boolean hasFilterRow() {
+   return true;
+  }
+
+  // Here we remove from row all key values from testing column
+  public void filterRow(List<KeyValue> kvs) {
+    Iterator it = kvs.iterator();
+    while (it.hasNext()) {
+      KeyValue kv = (KeyValue)it.next();
       // If the current column is actually the tested column,
       // we will skip it instead.
-      if (keyValue.matchingColumn(this.columnFamily, this.columnQualifier)) {
-        return ReturnCode.SKIP;
+      if (kv.matchingColumn(this.columnFamily, this.columnQualifier)) {
+        it.remove();
       }
     }
-    return superRetCode;
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {

@@ -1751,6 +1751,19 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Create a KeyValue that is smaller than all other possible KeyValues
+   * for the given row. That is any (valid) KeyValue on 'row' would sort
+   * _after_ the result.
+   *
+   * @param row - row key (arbitrary byte array)
+   * @return First possible KeyValue on passed <code>row</code>
+   */
+  public static KeyValue createFirstOnRow(final byte [] row, int roffset, short rlength) {
+    return new KeyValue(row, roffset, rlength,
+        null, 0, 0, null, 0, 0, HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
+  }
+
+  /**
    * Creates a KeyValue that is smaller than all other KeyValues that
    * are older than the passed timestamp.
    * @param row - row key (arbitrary byte array)

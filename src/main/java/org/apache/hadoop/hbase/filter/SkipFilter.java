@@ -104,6 +104,10 @@ public class SkipFilter extends FilterBase {
     }
   }
 
+  public boolean isFamilyEssential(byte[] name) {
+    return filter.isFamilyEssential(name);
+  }
+
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + this.filter.toString();

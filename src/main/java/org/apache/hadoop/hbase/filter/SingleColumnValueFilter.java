@@ -307,6 +307,15 @@ public class SingleColumnValueFilter extends FilterBase {
     out.writeBoolean(latestVersionOnly);
   }
 
+  /**
+   * The only CF this filter needs is given column family. So, it's the only essential
+   * column in whole scan. If filterIfMissing == false, all families are essential,
+   * because of possibility of skipping the rows without any data in filtered CF.
+   */
+  public boolean isFamilyEssential(byte[] name) {
+    return !this.filterIfMissing || Bytes.equals(name, this.columnFamily);
+  }
+
   @Override
   public String toString() {
     return String.format("%s (%s, %s, %s, %s)",

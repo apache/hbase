@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -66,9 +68,11 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -200,7 +204,7 @@ public class TestHRegion extends HBaseTestCase {
     System.out.println(results);
     assertEquals(0, results.size());
   }
-  
+
   @Test
   public void testToShowNPEOnRegionScannerReseek() throws Exception{
     String method = "testToShowNPEOnRegionScannerReseek";
@@ -2809,6 +2813,173 @@ public class TestHRegion extends HBaseTestCase {
       //Verify result
       for(int i=0; i<expected.size(); i++) {
         assertEquals(expected.get(i), actual.get(i));
+      }
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  /**
+   * Added for HBASE-5416
+   *
+   * Here we test scan optimization when only subset of CFs are used in filter
+   * conditions.
+   */
+  public void testScanner_JoinedScanners() throws IOException {
+    byte [] tableName = Bytes.toBytes("testTable");
+    byte [] cf_essential = Bytes.toBytes("essential");
+    byte [] cf_joined = Bytes.toBytes("joined");
+    byte [] cf_alpha = Bytes.toBytes("alpha");
+    this.region = initHRegion(tableName, getName(), conf, cf_essential, cf_joined, cf_alpha);
+    try {
+      byte [] row1 = Bytes.toBytes("row1");
+      byte [] row2 = Bytes.toBytes("row2");
+      byte [] row3 = Bytes.toBytes("row3");
+
+      byte [] col_normal = Bytes.toBytes("d");
+      byte [] col_alpha = Bytes.toBytes("a");
+
+      byte [] filtered_val = Bytes.toBytes(3);
+
+      Put put = new Put(row1);
+      put.add(cf_essential, col_normal, Bytes.toBytes(1));
+      put.add(cf_joined, col_alpha, Bytes.toBytes(1));
+      region.put(put);
+
+      put = new Put(row2);
+      put.add(cf_essential, col_alpha, Bytes.toBytes(2));
+      put.add(cf_joined, col_normal, Bytes.toBytes(2));
+      put.add(cf_alpha, col_alpha, Bytes.toBytes(2));
+      region.put(put);
+
+      put = new Put(row3);
+      put.add(cf_essential, col_normal, filtered_val);
+      put.add(cf_joined, col_normal, filtered_val);
+      region.put(put);
+
+      // Check two things:
+      // 1. result list contains expected values
+      // 2. result list is sorted properly
+
+      Scan scan = new Scan();
+      Filter filter = new SingleColumnValueExcludeFilter(cf_essential, col_normal,
+                                                         CompareOp.NOT_EQUAL, filtered_val);
+      scan.setFilter(filter);
+      scan.setLoadColumnFamiliesOnDemand(true);
+      InternalScanner s = region.getScanner(scan);
+
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      assertTrue(s.next(results));
+      assertEquals(results.size(), 1);
+      results.clear();
+
+      assertTrue(s.next(results));
+      assertEquals(results.size(), 3);
+      assertTrue("orderCheck", results.get(0).matchingFamily(cf_alpha));
+      assertTrue("orderCheck", results.get(1).matchingFamily(cf_essential));
+      assertTrue("orderCheck", results.get(2).matchingFamily(cf_joined));
+      results.clear();
+
+      assertFalse(s.next(results));
+      assertEquals(results.size(), 0);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  /**
+   * HBASE-5416
+   *
+   * Test case when scan limits amount of KVs returned on each next() call.
+   */
+  public void testScanner_JoinedScannersWithLimits() throws IOException {
+    final byte [] tableName = Bytes.toBytes("testTable");
+    final byte [] cf_first = Bytes.toBytes("first");
+    final byte [] cf_second = Bytes.toBytes("second");
+
+    this.region = initHRegion(tableName, getName(), conf, cf_first, cf_second);
+    try {
+      final byte [] col_a = Bytes.toBytes("a");
+      final byte [] col_b = Bytes.toBytes("b");
+
+      Put put;
+
+      for (int i = 0; i < 10; i++) {
+        put = new Put(Bytes.toBytes("r" + Integer.toString(i)));
+        put.add(cf_first, col_a, Bytes.toBytes(i));
+        if (i < 5) {
+          put.add(cf_first, col_b, Bytes.toBytes(i));
+          put.add(cf_second, col_a, Bytes.toBytes(i));
+          put.add(cf_second, col_b, Bytes.toBytes(i));
+        }
+        region.put(put);
+      }
+
+      Scan scan = new Scan();
+      scan.setLoadColumnFamiliesOnDemand(true);
+      Filter bogusFilter = new FilterBase() {
+        @Override
+        public boolean isFamilyEssential(byte[] name) {
+          return Bytes.equals(name, cf_first);
+        }
+        @Override
+        public void readFields(DataInput arg0) throws IOException {
+        }
+
+        @Override
+        public void write(DataOutput arg0) throws IOException {
+        }
+      };
+
+      scan.setFilter(bogusFilter);
+      InternalScanner s = region.getScanner(scan);
+
+      // Our data looks like this:
+      // r0: first:a, first:b, second:a, second:b
+      // r1: first:a, first:b, second:a, second:b
+      // r2: first:a, first:b, second:a, second:b
+      // r3: first:a, first:b, second:a, second:b
+      // r4: first:a, first:b, second:a, second:b
+      // r5: first:a
+      // r6: first:a
+      // r7: first:a
+      // r8: first:a
+      // r9: first:a
+
+      // But due to next's limit set to 3, we should get this:
+      // r0: first:a, first:b, second:a
+      // r0: second:b
+      // r1: first:a, first:b, second:a
+      // r1: second:b
+      // r2: first:a, first:b, second:a
+      // r2: second:b
+      // r3: first:a, first:b, second:a
+      // r3: second:b
+      // r4: first:a, first:b, second:a
+      // r4: second:b
+      // r5: first:a
+      // r6: first:a
+      // r7: first:a
+      // r8: first:a
+      // r9: first:a
+
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      int index = 0;
+      while (true) {
+        boolean more = s.next(results, 3);
+        if ((index >> 1) < 5) {
+          if (index % 2 == 0)
+            assertEquals(results.size(), 3);
+          else
+            assertEquals(results.size(), 1);
+        }
+        else
+          assertEquals(results.size(), 1);
+        results.clear();
+        index++;
+        if (!more) break;
       }
     } finally {
       HRegion.closeHRegion(this.region);
