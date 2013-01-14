@@ -833,11 +833,12 @@ public class ReplicationSource extends Thread
 
   @Override
   public String getStats() {
-    String position;
+    String position = "N/A";
     try {
-      position = this.reader.getPosition()+"";
+      if (this.reader != null) {
+        position = this.reader.getPosition()+"";
+      }
     } catch (IOException ioe) {
-      position = "N/A";
     }
     return "Total replicated edits: " + totalReplicatedEdits +
       ", currently replicating from: " + this.currentPath +

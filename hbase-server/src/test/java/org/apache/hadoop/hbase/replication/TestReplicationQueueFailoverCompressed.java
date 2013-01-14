@@ -27,7 +27,7 @@ import org.junit.experimental.categories.Category;
  * Run the same test as TestReplication but with HLog compression enabled
  */
 @Category(LargeTests.class)
-public class TestReplicationWithCompression extends TestReplication {
+public class TestReplicationQueueFailoverCompressed extends TestReplicationBase {
 
   /**
    * @throws java.lang.Exception
@@ -35,6 +35,6 @@ public class TestReplicationWithCompression extends TestReplication {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
-    TestReplication.setUpBeforeClass();
+    TestReplicationBase.setUpBeforeClass();
   }
 }
