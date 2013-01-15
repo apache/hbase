@@ -333,12 +333,20 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
       </section>
       <section xml:id="hbase.org.site.publishing">
       <title>Publishing hbase.apache.org</title>
-      <para>If you're a committer with rights to publish the site artifacts: set up your apache credentials and the target site location locally in a place and
-      form that maven can pick it up, in <filename>~/.m2/settings.xml</filename>.  See <xref linked="mvn_repo" /> for an example.
-      Next, run the following:
-      <programlisting>$ mvn -DskipTests -Papache-release site site:deploy</programlisting>
-      You will be asked for your password.  It can take a little time.
-      Remember that it can take a few hours for your site changes to show up.
+      <para>As of <link xlink:href="https://issues.apache.org/jira/browse/INFRA-5680">INFRA-5680 Migrate apache hbase website</link>,
+          to publish the website, build it, and then deploy it over a checkout of <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>,
+          and then check it in.  For example, if trunk is checkout out at <filename>/Users/stack/checkouts/hbase</filename>
+          and hbase.apache.org is checked out at <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
+          the site, do the following:
+          <programlisting>
+              # Build the site and deploy it to the checked out directory
+              $ MAVEN_OPTS=" -Xmx3g" mvn site site:stage -DskipTests -DstagingDirectory="/Users/stack/checkouts/hbase.apache.org/trunk"
+              # Check the deployed site by viewing in a brower.
+              # If all is good, commit it and it will show up at http://hbase.apache.org
+              #
+              $ cd /Users/stack/checkouts/hbase.apache.org/trunk
+              $ svn commit -m 'Committing latest version of website...'
+          </programlisting>
       </para>
       </section>
     </section>
