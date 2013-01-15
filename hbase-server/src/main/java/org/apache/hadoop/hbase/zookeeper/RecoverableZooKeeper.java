@@ -69,7 +69,7 @@ import org.apache.zookeeper.data.Stat;
 public class RecoverableZooKeeper {
   private static final Log LOG = LogFactory.getLog(RecoverableZooKeeper.class);
   // the actual ZooKeeper client instance
-  private ZooKeeper zk;
+  volatile private ZooKeeper zk;
   private final RetryCounterFactory retryCounterFactory;
   // An identifier of this process in the cluster
   private final String identifier;
