@@ -387,35 +387,6 @@ public class HRegion implements HeapSize { // , Writable{
   private final MetricsRegionWrapperImpl metricsRegionWrapper;
 
   /**
-   * Should only be used for testing purposes
-   */
-  public HRegion(){
-    this.tableDir = null;
-    this.blockingMemStoreSize = 0L;
-    this.conf = null;
-    this.rowLockWaitDuration = DEFAULT_ROWLOCK_WAIT_DURATION;
-    this.rsServices = null;
-    this.baseConf = null;
-    this.fs = null;
-    this.timestampSlop = HConstants.LATEST_TIMESTAMP;
-    this.rowProcessorTimeout = DEFAULT_ROW_PROCESSOR_TIMEOUT;
-    this.memstoreFlushSize = 0L;
-    this.log = null;
-    this.regiondir = null;
-    this.regionInfo = null;
-    this.htableDescriptor = null;
-    this.threadWakeFrequency = 0L;
-    this.coprocessorHost = null;
-    this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
-
-    this.metricsRegionWrapper = new MetricsRegionWrapperImpl(this);
-    this.metricsRegion = new MetricsRegion(this.metricsRegionWrapper);
-    this.maxBusyWaitDuration = 2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
-    this.busyWaitDuration = DEFAULT_BUSY_WAIT_DURATION;
-    this.maxBusyWaitMultiplier = 2;
-  }
-
-  /**
    * HRegion copy constructor. Useful when reopening a closed region (normally
    * for unit tests)
    * @param other original object
@@ -451,6 +422,9 @@ public class HRegion implements HeapSize { // , Writable{
   public HRegion(Path tableDir, HLog log, FileSystem fs,
       Configuration confParam, final HRegionInfo regionInfo,
       final HTableDescriptor htd, RegionServerServices rsServices) {
+    if (htd == null) {
+      throw new IllegalArgumentException("Need table descriptor");
+    }
     this.tableDir = tableDir;
     this.comparator = regionInfo.getComparator();
     this.log = log;
@@ -595,8 +569,7 @@ public class HRegion implements HeapSize { // , Writable{
     // initialized to -1 so that we pick up MemstoreTS from column families
     long maxMemstoreTS = -1;
 
-    if (this.htableDescriptor != null &&
-        !htableDescriptor.getFamilies().isEmpty()) {
+    if (!htableDescriptor.getFamilies().isEmpty()) {
       // initialize the thread pool for opening stores in parallel.
       ThreadPoolExecutor storeOpenerThreadPool =
         getStoreOpenAndCloseThreadPool(
@@ -652,9 +625,7 @@ public class HRegion implements HeapSize { // , Writable{
     // being split but we crashed in the middle of it all.
     SplitTransaction.cleanupAnySplitDetritus(this);
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
-    if (this.htableDescriptor != null) {
-      this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
-    }
+    this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
 
     this.writestate.flushRequested = false;
     this.writestate.compacting = 0;
