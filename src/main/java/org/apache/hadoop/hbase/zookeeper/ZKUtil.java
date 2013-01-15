@@ -1420,6 +1420,7 @@ public class ZKUtil {
              LOG.info("On call to ZK.multi, received exception: " + ke.toString() + "."
                + "  Attempting to run operations sequentially because"
                + " runSequentialOnMultiFailure is: " + runSequentialOnMultiFailure + ".");
+             processSequentially(zkw, ops);
              break;
            }
           default:
@@ -1428,19 +1429,24 @@ public class ZKUtil {
       } catch (InterruptedException ie) {
         zkw.interruptedException(ie);
       }
+    } else {
+      // run sequentially
+      processSequentially(zkw, ops);
     }
+  }
 
-    // run sequentially
+  private static void processSequentially(ZooKeeperWatcher zkw, List<ZKUtilOp> ops)
+      throws KeeperException, NoNodeException {
     for (ZKUtilOp op : ops) {
       if (op instanceof CreateAndFailSilent) {
-        createAndFailSilent(zkw, (CreateAndFailSilent)op);
+        createAndFailSilent(zkw, (CreateAndFailSilent) op);
       } else if (op instanceof DeleteNodeFailSilent) {
-        deleteNodeFailSilent(zkw, (DeleteNodeFailSilent)op);
+        deleteNodeFailSilent(zkw, (DeleteNodeFailSilent) op);
       } else if (op instanceof SetData) {
-        setData(zkw, (SetData)op);
+        setData(zkw, (SetData) op);
       } else {
         throw new UnsupportedOperationException("Unexpected ZKUtilOp type: "
-          + op.getClass().getName());
+            + op.getClass().getName());
       }
     }
   }
