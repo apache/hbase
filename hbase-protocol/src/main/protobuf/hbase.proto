@@ -29,11 +29,7 @@ option optimize_for = SPEED;
  */
 message TableSchema {
   optional bytes name = 1;
-  message Attribute {
-    required bytes name = 1;
-    required bytes value = 2;
-  }
-  repeated Attribute attributes = 2;
+  repeated BytesBytesPair attributes = 2;
   repeated ColumnFamilySchema columnFamilies = 3;
 }
 
@@ -43,11 +39,7 @@ message TableSchema {
  */
 message ColumnFamilySchema {
   required bytes name = 1;
-  message Attribute {
-    required bytes name = 1;
-    required bytes value = 2;
-  }
-  repeated Attribute attributes = 2;
+  repeated BytesBytesPair attributes = 2;
 }
 
 /**

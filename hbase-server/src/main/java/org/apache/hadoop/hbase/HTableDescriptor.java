@@ -38,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.security.User;
@@ -63,8 +64,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    *  Version 3 adds metadata as a map where keys and values are byte[].
    *  Version 4 adds indexes
    *  Version 5 removed transactional pollution -- e.g. indexes
+   *  Version 6 changed metadata to BytesBytesPair in PB
    */
-  private static final byte TABLE_DESCRIPTOR_VERSION = 5;
+  private static final byte TABLE_DESCRIPTOR_VERSION = 6;
 
   private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
 
@@ -1271,9 +1273,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.setName(ByteString.copyFrom(getName()));
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
-      TableSchema.Attribute.Builder aBuilder = TableSchema.Attribute.newBuilder();
-      aBuilder.setName(ByteString.copyFrom(e.getKey().get()));
-      aBuilder.setValue(ByteString.copyFrom(e.getValue().get()));
+      BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
+      aBuilder.setFirst(ByteString.copyFrom(e.getKey().get()));
+      aBuilder.setSecond(ByteString.copyFrom(e.getValue().get()));
       builder.addAttributes(aBuilder.build());
     }
     for (HColumnDescriptor hcd: getColumnFamilies()) {
@@ -1294,8 +1296,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       hcds[index++] = HColumnDescriptor.convert(cfs);
     }
     HTableDescriptor htd = new HTableDescriptor(ts.getName().toByteArray(), hcds);
-    for (TableSchema.Attribute a: ts.getAttributesList()) {
-      htd.setValue(a.getName().toByteArray(), a.getValue().toByteArray());
+    for (BytesBytesPair a: ts.getAttributesList()) {
+      htd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
     }
     return htd;
   }

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,14 +59,15 @@ import com.google.protobuf.InvalidProtocolBufferException;
 public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> {
   // For future backward compatibility
 
-  // Version 3 was when column names become byte arrays and when we picked up
+  // Version  3 was when column names become byte arrays and when we picked up
   // Time-to-live feature.  Version 4 was when we moved to byte arrays, HBASE-82.
-  // Version 5 was when bloom filter descriptors were removed.
-  // Version 6 adds metadata as a map where keys and values are byte[].
-  // Version 7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
-  // Version 8 -- reintroduction of bloom filters, changed from boolean to enum
-  // Version 9 -- add data block encoding
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte) 9;
+  // Version  5 was when bloom filter descriptors were removed.
+  // Version  6 adds metadata as a map where keys and values are byte[].
+  // Version  7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
+  // Version  8 -- reintroduction of bloom filters, changed from boolean to enum
+  // Version  9 -- add data block encoding
+  // Version 10 -- change metadata to standard type.
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte) 10;
 
   // These constants are used as FileInfo keys
   public static final String COMPRESSION = "COMPRESSION";
@@ -1120,8 +1122,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     // unrelated-looking test failures that are hard to trace back to here.
     HColumnDescriptor hcd = new HColumnDescriptor();
     hcd.name = cfs.getName().toByteArray();
-    for (ColumnFamilySchema.Attribute a: cfs.getAttributesList()) {
-      hcd.setValue(a.getName().toByteArray(), a.getValue().toByteArray());
+    for (BytesBytesPair a: cfs.getAttributesList()) {
+      hcd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
     }
     return hcd;
   }
@@ -1133,9 +1135,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
     builder.setName(ByteString.copyFrom(getName()));
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
-      ColumnFamilySchema.Attribute.Builder aBuilder = ColumnFamilySchema.Attribute.newBuilder();
-      aBuilder.setName(ByteString.copyFrom(e.getKey().get()));
-      aBuilder.setValue(ByteString.copyFrom(e.getValue().get()));
+      BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
+      aBuilder.setFirst(ByteString.copyFrom(e.getKey().get()));
+      aBuilder.setSecond(ByteString.copyFrom(e.getValue().get()));
       builder.addAttributes(aBuilder.build());
     }
     return builder.build();
