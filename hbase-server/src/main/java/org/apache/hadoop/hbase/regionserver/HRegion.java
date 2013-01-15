@@ -753,27 +753,49 @@ public class HRegion implements HeapSize { // , Writable{
     return this.memstoreSize.getAndAdd(memStoreSize);
   }
 
-  /*
-   * Write out an info file under the region directory.  Useful recovering
-   * mangled regions.
+  /**
+   * Write out an info file under the stored region directory. Useful recovering mangled regions.
    * @throws IOException
    */
   private void checkRegioninfoOnFilesystem() throws IOException {
-    Path regioninfoPath = new Path(this.regiondir, REGIONINFO_FILE);
-    // Compose the content of the file so we can compare to length in filesystem.  If not same,
-    // rewrite it (it may have been written in the old format using Writables instead of pb).  The
+    checkRegioninfoOnFilesystem(this.regiondir);
+  }
+
+  /**
+   * Write out an info file under the region directory. Useful recovering mangled regions.
+   * @param regiondir directory under which to write out the region info
+   * @throws IOException
+   */
+  private void checkRegioninfoOnFilesystem(Path regiondir) throws IOException {
+    writeRegioninfoOnFilesystem(regionInfo, regiondir, getFilesystem(), conf);
+  }
+
+  /**
+   * Write out an info file under the region directory. Useful recovering mangled regions. If the
+   * regioninfo already exists on disk and there is information in the file, then we fast exit.
+   * @param regionInfo information about the region
+   * @param regiondir directory under which to write out the region info
+   * @param fs {@link FileSystem} on which to write the region info
+   * @param conf {@link Configuration} from which to extract specific file locations
+   * @throws IOException on unexpected error.
+   */
+  public static void writeRegioninfoOnFilesystem(HRegionInfo regionInfo, Path regiondir,
+      FileSystem fs, Configuration conf) throws IOException {
+    Path regioninfoPath = new Path(regiondir, REGIONINFO_FILE);
+    // Compose the content of the file so we can compare to length in filesystem. If not same,
+    // rewrite it (it may have been written in the old format using Writables instead of pb). The
     // pb version is much shorter -- we write now w/o the toString version -- so checking length
-    // only should be sufficient.  I don't want to read the file every time to check if it pb
+    // only should be sufficient. I don't want to read the file every time to check if it pb
     // serialized.
-    byte [] content = getDotRegionInfoFileContent(this.getRegionInfo());
-    boolean exists = this.fs.exists(regioninfoPath);
-    FileStatus status = exists? this.fs.getFileStatus(regioninfoPath): null;
+    byte[] content = getDotRegionInfoFileContent(regionInfo);
+    boolean exists = fs.exists(regioninfoPath);
+    FileStatus status = exists ? fs.getFileStatus(regioninfoPath) : null;
     if (status != null && status.getLen() == content.length) {
       // Then assume the content good and move on.
       return;
     }
     // Create in tmpdir and then move into place in case we crash after
-    // create but before close.  If we don't successfully close the file,
+    // create but before close. If we don't successfully close the file,
     // subsequent region reopens will fail the below because create is
     // registered in NN.
 
@@ -781,7 +803,7 @@ public class HRegion implements HeapSize { // , Writable{
     FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
 
     // And then create the file
-    Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
+    Path tmpPath = new Path(getTmpDir(regiondir), REGIONINFO_FILE);
 
     // If datanode crashes or if the RS goes down just before the close is called while trying to
     // close the created regioninfo file in the .tmp directory then on next
@@ -1227,7 +1249,15 @@ public class HRegion implements HeapSize { // , Writable{
    * will have its contents removed when the region is reopened.
    */
   Path getTmpDir() {
-    return new Path(getRegionDir(), REGION_TEMP_SUBDIR);
+    return getTmpDir(getRegionDir());
+  }
+
+  /**
+   * Get the temporary directory for the specified region. This directory
+   * will have its contents removed when the region is reopened.
+   */
+  static Path getTmpDir(Path regionDir) {
+    return new Path(regionDir, REGION_TEMP_SUBDIR);
   }
 
   void triggerMajorCompaction() {
@@ -3924,6 +3954,8 @@ public class HRegion implements HeapSize { // , Writable{
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
+    // Write HRI to a file in case we need to recover .META.
+    writeRegioninfoOnFilesystem(info, regionDir, fs, conf);
     HLog effectiveHLog = hlog;
     if (hlog == null && !ignoreHLog) {
       effectiveHLog = HLogFactory.createHLog(fs, regionDir,
@@ -4004,15 +4036,15 @@ public class HRegion implements HeapSize { // , Writable{
     return r.openHRegion(reporter);
   }
 
-  public static HRegion openHRegion(Path tableDir, final HRegionInfo info,
+  public static HRegion openHRegion(Path rootDir, final HRegionInfo info,
       final HTableDescriptor htd, final HLog wal, final Configuration conf)
   throws IOException {
-    return openHRegion(tableDir, info, htd, wal, conf, null, null);
+    return openHRegion(rootDir, info, htd, wal, conf, null, null);
   }
 
   /**
    * Open a Region.
-   * @param tableDir Table directory
+   * @param rootDir Root directory for HBase instance
    * @param info Info for region to be opened.
    * @param wal HLog for region to use. This method will call
    * HLog#setSequenceNumber(long) passing the result of the call to
@@ -4024,7 +4056,7 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @throws IOException
    */
-  public static HRegion openHRegion(final Path tableDir, final HRegionInfo info,
+  public static HRegion openHRegion(final Path rootDir, final HRegionInfo info,
       final HTableDescriptor htd, final HLog wal, final Configuration conf,
       final RegionServerServices rsServices,
       final CancelableProgressable reporter)
@@ -4034,7 +4066,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
-    Path dir = HTableDescriptor.getTableDir(tableDir, info.getTableName());
+    Path dir = HTableDescriptor.getTableDir(rootDir, info.getTableName());
     HRegion r = HRegion.newHRegion(dir, wal, FileSystem.get(conf), conf, info, htd, rsServices);
     return r.openHRegion(reporter);
   }

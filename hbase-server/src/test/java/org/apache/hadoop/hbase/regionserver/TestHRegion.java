@@ -3506,7 +3506,55 @@ public class TestHRegion extends HBaseTestCase {
       HRegion.closeHRegion(region);
     }
   }
-  
+
+  /**
+   * Verifies that the .regioninfo file is written on region creation
+   * and that is recreated if missing during region opening.
+   */
+  public void testRegionInfoFileCreation() throws IOException {
+    Path rootDir = new Path(DIR + "testRegionInfoFileCreation");
+    Configuration conf = HBaseConfiguration.create(this.conf);
+
+    HTableDescriptor htd = new HTableDescriptor("testtb");
+    htd.addFamily(new HColumnDescriptor("cf"));
+
+    HRegionInfo hri = new HRegionInfo(htd.getName());
+
+    // Create a region and skip the initialization (like CreateTableHandler)
+    HRegion region = HRegion.createHRegion(hri, rootDir, conf, htd, null, false, true);
+    Path regionDir = region.getRegionDir();
+    FileSystem fs = region.getFilesystem();
+    HRegion.closeHRegion(region);
+
+    Path regionInfoFile = new Path(regionDir, HRegion.REGIONINFO_FILE);
+
+    // Verify that the .regioninfo file is present
+    assertTrue(HRegion.REGIONINFO_FILE + " should be present in the region dir",
+      fs.exists(regionInfoFile));
+
+    // Try to open the region
+    region = HRegion.openHRegion(rootDir, hri, htd, null, conf);
+    assertEquals(regionDir, region.getRegionDir());
+    HRegion.closeHRegion(region);
+
+    // Verify that the .regioninfo file is still there
+    assertTrue(HRegion.REGIONINFO_FILE + " should be present in the region dir",
+      fs.exists(regionInfoFile));
+
+    // Remove the .regioninfo file and verify is recreated on region open
+    fs.delete(regionInfoFile);
+    assertFalse(HRegion.REGIONINFO_FILE + " should be removed from the region dir",
+      fs.exists(regionInfoFile));
+
+    region = HRegion.openHRegion(rootDir, hri, htd, null, conf);
+    assertEquals(regionDir, region.getRegionDir());
+    HRegion.closeHRegion(region);
+
+    // Verify that the .regioninfo file is still there
+    assertTrue(HRegion.REGIONINFO_FILE + " should be present in the region dir",
+      fs.exists(new Path(regionDir, HRegion.REGIONINFO_FILE)));
+  }
+
   /**
    * TestCase for increment
    *
