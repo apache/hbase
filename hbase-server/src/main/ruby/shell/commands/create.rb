@@ -40,7 +40,7 @@ Examples:
 
   hbase> create 't1', 'f1', SPLITS => ['10', '20', '30', '40']
   hbase> create 't1', 'f1', SPLITS_FILE => 'splits.txt', OWNER => 'johndoe'
-  hbase> create 't1', {NAME => 'f1', VERSIONS => 5}, CONFIG => { 'mykey' => 'myvalue' }
+  hbase> create 't1', {NAME => 'f1', VERSIONS => 5}, METADATA => { 'mykey' => 'myvalue' }
   hbase> # Optionally pre-split the table into NUMREGIONS, using
   hbase> # SPLITALGO ("HexStringSplit", "UniformSplit" or classname)
   hbase> create 't1', 'f1', {NUMREGIONS => 15, SPLITALGO => 'HexStringSplit'}

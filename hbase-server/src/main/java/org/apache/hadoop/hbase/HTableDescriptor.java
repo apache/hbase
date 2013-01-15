@@ -801,7 +801,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       // print all non-reserved, advanced config keys as a separate subset
       if (printCommaForAttr) s.append(", ");
       printCommaForAttr = true;
-      s.append(HConstants.CONFIG).append(" => ");
+      s.append(HConstants.METADATA).append(" => ");
       s.append("{");
       boolean printCommaForCfg = false;
       for (ImmutableBytesWritable k : configKeys) {

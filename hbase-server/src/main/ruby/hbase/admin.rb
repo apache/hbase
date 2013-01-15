@@ -259,9 +259,7 @@ module Hbase
         htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
         htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
         htd.setDeferredLogFlush(JBoolean.valueOf(arg.delete(DEFERRED_LOG_FLUSH))) if arg[DEFERRED_LOG_FLUSH]
-        if arg[CONFIG]
-          apply_config(htd, arg.delete(CONFIG))
-        end
+        set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
         
         arg.each_key do |ignored_key|
           puts("An argument ignored (unknown or overridden): %s" % [ ignored_key ])
@@ -448,7 +446,7 @@ module Hbase
         # 3) Some args for the table, optionally with METHOD => table_att (deprecated)
         raise(ArgumentError, "NAME argument in an unexpected place") if name
         htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER] 
-        apply_config(htd, arg.delete(CONFIG)) if arg[CONFIG]
+        set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
         htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
         htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
         htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
@@ -614,10 +612,8 @@ module Hbase
         end
       end
 
-      if config = arg.delete(CONFIG)
-        apply_config(family, config)
-      end
-      
+      set_user_metadata(family, arg.delete(METADATA)) if arg[METADATA]
+
       arg.each_key do |unknown_key|
         puts("Unknown argument ignored for column family %s: %s" % [name, unknown_key])
       end
@@ -647,11 +643,10 @@ module Hbase
       put.add(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY, org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER, org.apache.hadoop.hbase.util.Writables.getBytes(hri))
       meta.put(put)
     end
-    
-    # Apply config to table/column descriptor
-    def apply_config(descriptor, config)
-      raise(ArgumentError, "#{CONFIG} must be a Hash type") unless config.kind_of?(Hash)
-        for k,v in config
+    # Apply user metadata to table/column descriptor
+    def set_user_metadata(descriptor, metadata)
+      raise(ArgumentError, "#{METADATA} must be a Hash type") unless metadata.kind_of?(Hash)
+        for k,v in metadata
           v = v.to_s unless v.nil?
           descriptor.setValue(k, v)
         end

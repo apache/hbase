@@ -72,7 +72,7 @@ There could be more than one alteration in one command:
 
   hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 }, 
    { MAX_FILESIZE => '134217728' }, { METHOD => 'delete', NAME => 'f2' },
-   OWNER => 'johndoe', CONFIG => { 'mykey' => 'myvalue' }
+   OWNER => 'johndoe', METADATA => { 'mykey' => 'myvalue' }
 EOF
       end
 

@@ -931,7 +931,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     // print all non-reserved, advanced config keys as a separate subset
     if (hasConfigKeys) {
       s.append(", ");
-      s.append(HConstants.CONFIG).append(" => ");
+      s.append(HConstants.METADATA).append(" => ");
       s.append('{');
       boolean printComma = false;
       for (ImmutableBytesWritable k : values.keySet()) {
