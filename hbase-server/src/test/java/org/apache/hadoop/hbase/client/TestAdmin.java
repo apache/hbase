@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -189,7 +190,8 @@ public class TestAdmin {
 
     // Now make it so at least the table exists and then do tests against a
     // nonexistent column family -- see if we get right exceptions.
-    final String tableName = "t";
+    final String tableName =
+        "testDeleteEditUnknownColumnFamilyAndOrTable" + System.currentTimeMillis();
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("cf"));
     this.admin.createTable(htd);
@@ -200,7 +202,8 @@ public class TestAdmin {
       } catch (IOException e) {
         exception = e;
       }
-      assertTrue(exception instanceof InvalidFamilyOperationException);
+      assertTrue("found=" + exception.getClass().getName(),
+          exception instanceof InvalidFamilyOperationException);
 
       exception = null;
       try {
@@ -208,7 +211,8 @@ public class TestAdmin {
       } catch (IOException e) {
         exception = e;
       }
-      assertTrue(exception instanceof InvalidFamilyOperationException);
+      assertTrue("found=" + exception.getClass().getName(),
+          exception instanceof InvalidFamilyOperationException);
     } finally {
       this.admin.disableTable(tableName);
       this.admin.deleteTable(tableName);
@@ -341,7 +345,7 @@ public class TestAdmin {
 
   @Test
   public void testHColumnValidName() {
-       boolean exceptionThrown = false;
+       boolean exceptionThrown;
        try {
          new HColumnDescriptor("\\test\\abc");
        } catch(IllegalArgumentException iae) {
@@ -393,7 +397,6 @@ public class TestAdmin {
     assertEquals(key, modifiedHtd.getValue(key));
 
     // Now work on column family changes.
-    htd = this.admin.getTableDescriptor(tableName);
     int countOfFamilies = modifiedHtd.getFamilies().size();
     assertTrue(countOfFamilies > 0);
     HColumnDescriptor hcd = modifiedHtd.getFamilies().iterator().next();
@@ -415,7 +418,6 @@ public class TestAdmin {
     // Try adding a column
     assertFalse(this.admin.isTableDisabled(tableName));
     final String xtracolName = "xtracol";
-    htd = this.admin.getTableDescriptor(tableName);
     HColumnDescriptor xtracol = new HColumnDescriptor(xtracolName);
     xtracol.setValue(xtracolName, xtracolName);
     expectedException = false;
@@ -477,6 +479,10 @@ public class TestAdmin {
       expectedException = true;
     }
     assertTrue("Online schema update should not happen.", expectedException);
+
+    // Reset the value for the other tests
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
+        "hbase.online.schema.update.enable", true);
   }
 
   /**
@@ -493,6 +499,7 @@ public class TestAdmin {
     executor.registerListener(EventType.C_M_MODIFY_TABLE, new DoneListener(done));
     this.admin.modifyTable(tableName, htd);
     while (!done.get()) {
+      //noinspection SynchronizationOnLocalVariableOrMethodParameter
       synchronized (done) {
         try {
           done.wait(100);
@@ -530,6 +537,7 @@ public class TestAdmin {
     }
   }
 
+  @SuppressWarnings("deprecation")
   protected void verifyRoundRobinDistribution(HTable ht, int expectedRegions) throws IOException {
     int numRS = ht.getConnection().getCurrentNrHRS();
     Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
@@ -756,7 +764,7 @@ public class TestAdmin {
   @Test
   public void testTableExist() throws IOException {
     final byte [] table = Bytes.toBytes("testTableExist");
-    boolean exist = false;
+    boolean exist;
     exist = this.admin.tableExists(table);
     assertEquals(false, exist);
     TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
@@ -812,8 +820,7 @@ public class TestAdmin {
         HConstants.META_TABLE_NAME);
     List<HRegionInfo> regionInfos = admin.getTableRegions(tableName);
     Map<String, Integer> serverMap = new HashMap<String, Integer>();
-    for (int i = 0, j = regionInfos.size(); i < j; i++) {
-      HRegionInfo hri = regionInfos.get(i);
+    for (HRegionInfo hri : regionInfos) {
       Get get = new Get(hri.getRegionName());
       Result result = metaTable.get(get);
       String server = Bytes.toString(result.getValue(HConstants.CATALOG_FAMILY,
@@ -967,7 +974,8 @@ public class TestAdmin {
         e.printStackTrace();
       }
       assertEquals(2, regions.size());
-      HRegionInfo[] r = regions.keySet().toArray(new HRegionInfo[0]);
+      Set<HRegionInfo> hRegionInfos = regions.keySet();
+      HRegionInfo[] r = hRegionInfos.toArray(new HRegionInfo[hRegionInfos.size()]);
       if (splitPoint != null) {
         // make sure the split point matches our explicit configuration
         assertEquals(Bytes.toString(splitPoint),
@@ -997,6 +1005,7 @@ public class TestAdmin {
    * HADOOP-2156
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   @Test (expected=IllegalArgumentException.class)
   public void testEmptyHTableDescriptor() throws IOException {
     this.admin.createTable(new HTableDescriptor());
@@ -1165,11 +1174,11 @@ public class TestAdmin {
         HConstants.ROOT_TABLE_NAME,
         HConstants.META_TABLE_NAME
     };
-    for (int i = 0; i < illegalNames.length; i++) {
+    for (byte[] illegalName : illegalNames) {
       try {
-        new HTableDescriptor(illegalNames[i]);
+        new HTableDescriptor(illegalName);
         throw new IOException("Did not detect '" +
-          Bytes.toString(illegalNames[i]) + "' as an illegal user table name");
+            Bytes.toString(illegalName) + "' as an illegal user table name");
       } catch (IllegalArgumentException e) {
         // expected
       }
@@ -1232,6 +1241,8 @@ public class TestAdmin {
   public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
     new HTable(TEST_UTIL.getConfiguration(),"testTableNotFoundExceptionWithoutAnyTables");
   }
+
+
   @Test
   public void testShouldCloseTheRegionBasedOnTheEncodedRegionName()
       throws Exception {
@@ -1527,8 +1538,6 @@ public class TestAdmin {
     // When the META table can be opened, the region servers are running
     new HTable(
       TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME).close();
-    HRegionServer regionServer = TEST_UTIL.getHBaseCluster()
-        .getRegionServerThreads().get(0).getRegionServer();
 
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -1536,8 +1545,7 @@ public class TestAdmin {
     admin.createTable(desc);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 
-    regionServer = TEST_UTIL.getRSForFirstRegionInTable(Bytes
-        .toBytes(tableName));
+    HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
       put.add(HConstants.CATALOG_FAMILY, null, value);
