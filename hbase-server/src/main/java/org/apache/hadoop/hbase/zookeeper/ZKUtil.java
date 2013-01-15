@@ -911,6 +911,7 @@ public class ZKUtil {
           (node.equals(zkw.clusterIdZNode) == true) ||
           (node.equals(zkw.rsZNode) == true) ||
           (node.equals(zkw.backupMasterAddressesZNode) == true) ||
+          (node.startsWith(zkw.assignmentZNode) == true) ||
           (node.startsWith(zkw.tableZNode) == true)) {
         return ZooKeeperWatcher.CREATOR_ALL_AND_WORLD_READABLE;
       }
