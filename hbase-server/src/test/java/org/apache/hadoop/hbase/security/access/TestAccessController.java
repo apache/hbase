@@ -30,12 +30,17 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Append;
@@ -53,6 +58,9 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -199,22 +207,29 @@ public class TestAccessController {
       try {
         user.runAs(action);
         fail("Expected AccessDeniedException for user '" + user.getShortName() + "'");
-      } catch (RetriesExhaustedWithDetailsException e) {
-        // in case of batch operations, and put, the client assembles a
-        // RetriesExhaustedWithDetailsException instead of throwing an
-        // AccessDeniedException
+      } catch (IOException e) {
         boolean isAccessDeniedException = false;
-        for (Throwable ex : e.getCauses()) {
-          if (ex instanceof ServiceException) {
-            ServiceException se = (ServiceException)ex;
-            if (se.getCause() != null && se.getCause() instanceof AccessDeniedException) {
+        if(e instanceof RetriesExhaustedWithDetailsException) {
+          // in case of batch operations, and put, the client assembles a
+          // RetriesExhaustedWithDetailsException instead of throwing an
+          // AccessDeniedException
+          for(Throwable ex : ((RetriesExhaustedWithDetailsException) e).getCauses()) {
+            if (ex instanceof AccessDeniedException) {
               isAccessDeniedException = true;
               break;
             }
-          } else if (ex instanceof AccessDeniedException) {
-            isAccessDeniedException = true;
-            break;
           }
+        }
+        else {
+          // For doBulkLoad calls AccessDeniedException
+          // is buried in the stack trace
+          Throwable ex = e;
+          do {
+            if (ex instanceof AccessDeniedException) {
+              isAccessDeniedException = true;
+              break;
+            }
+          } while((ex = ex.getCause()) != null);
         }
         if (!isAccessDeniedException) {
           fail("Not receiving AccessDeniedException for user '" + user.getShortName() + "'");
@@ -233,8 +248,6 @@ public class TestAccessController {
           }
         }
         fail("Not receiving AccessDeniedException for user '" + user.getShortName() + "'");
-      } catch (AccessDeniedException ade) {
-        // expected result
       }
     }
   }
@@ -672,6 +685,104 @@ public class TestAccessController {
       }
     };
     verifyReadWrite(checkAndPut);
+  }
+
+  @Test
+  public void testBulkLoad() throws Exception {
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    final Path dir = TEST_UTIL.getDataTestDir("testBulkLoad");
+    fs.mkdirs(dir);
+    //need to make it globally writable
+    //so users creating HFiles have write permissions
+    fs.setPermission(dir, FsPermission.valueOf("-rwxrwxrwx"));
+
+    PrivilegedExceptionAction bulkLoadAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        int numRows = 3;
+
+        //Making the assumption that the test table won't split between the range
+        byte[][][] hfileRanges = {{{(byte)0}, {(byte)9}}};
+
+        Path bulkLoadBasePath = new Path(dir, new Path(User.getCurrent().getName()));
+        new BulkLoadHelper(bulkLoadBasePath)
+            .bulkLoadHFile(TEST_TABLE, TEST_FAMILY, Bytes.toBytes("q"), hfileRanges, numRows);
+
+        return null;
+      }
+    };
+    verifyWrite(bulkLoadAction);
+  }
+
+  public class BulkLoadHelper {
+    private final FileSystem fs;
+    private final Path loadPath;
+    private final Configuration conf;
+
+    public BulkLoadHelper(Path loadPath) throws IOException {
+      fs = TEST_UTIL.getTestFileSystem();
+      conf = TEST_UTIL.getConfiguration();
+      loadPath = loadPath.makeQualified(fs);
+      this.loadPath = loadPath;
+    }
+
+    private void createHFile(Path path,
+        byte[] family, byte[] qualifier,
+        byte[] startKey, byte[] endKey, int numRows) throws IOException {
+
+      HFile.Writer writer = null;
+      long now = System.currentTimeMillis();
+      try {
+        writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
+            .withPath(fs, path)
+            .withComparator(KeyValue.KEY_COMPARATOR)
+            .create();
+        // subtract 2 since numRows doesn't include boundary keys
+        for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, true, numRows-2)) {
+          KeyValue kv = new KeyValue(key, family, qualifier, now, key);
+          writer.append(kv);
+        }
+      } finally {
+        if(writer != null)
+          writer.close();
+      }
+    }
+
+    private void bulkLoadHFile(
+        byte[] tableName,
+        byte[] family,
+        byte[] qualifier,
+        byte[][][] hfileRanges,
+        int numRowsPerRange) throws Exception {
+
+      Path familyDir = new Path(loadPath, Bytes.toString(family));
+      fs.mkdirs(familyDir);
+      int hfileIdx = 0;
+      for (byte[][] range : hfileRanges) {
+        byte[] from = range[0];
+        byte[] to = range[1];
+        createHFile(new Path(familyDir, "hfile_"+(hfileIdx++)),
+            family, qualifier, from, to, numRowsPerRange);
+      }
+      //set global read so RegionServer can move it
+      setPermission(loadPath, FsPermission.valueOf("-rwxrwxrwx"));
+
+      HTable table = new HTable(conf, tableName);
+      TEST_UTIL.waitTableAvailable(tableName, 30000);
+      LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+      loader.doBulkLoad(loadPath, table);
+    }
+
+    public void setPermission(Path dir, FsPermission perm) throws IOException {
+      if(!fs.getFileStatus(dir).isDir()) {
+        fs.setPermission(dir,perm);
+      }
+      else {
+        for(FileStatus el : fs.listStatus(dir)) {
+          fs.setPermission(el.getPath(), perm);
+          setPermission(el.getPath() , perm);
+        }
+      }
+    }
   }
 
   @Test

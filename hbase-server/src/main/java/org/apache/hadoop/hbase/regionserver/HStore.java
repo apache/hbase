@@ -577,7 +577,11 @@ public class HStore implements Store, StoreConfiguration {
     // Copy the file if it's on another filesystem
     FileSystem srcFs = srcPath.getFileSystem(conf);
     FileSystem desFs = fs instanceof HFileSystem ? ((HFileSystem)fs).getBackingFs() : fs;
-    if (!srcFs.equals(desFs)) {
+    //We can't compare FileSystem instances as
+    //equals() includes UGI instance as part of the comparison
+    //and won't work when doing SecureBulkLoad
+    //TODO deal with viewFS
+    if (!srcFs.getUri().equals(desFs.getUri())) {
       LOG.info("Bulk-load file " + srcPath + " is on different filesystem than " +
           "the destination store. Copying file over to destination filesystem.");
       Path tmpPath = getTmpPath();
