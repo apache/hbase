@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ServerCallable;
+import org.apache.hadoop.hbase.coprocessor.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.Reference.Range;
@@ -73,8 +74,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -98,10 +101,21 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   public static String NAME = "completebulkload";
 
-  public LoadIncrementalHFiles(Configuration conf) throws Exception {
+  private boolean useSecure;
+  private Token<?> userToken;
+  private String bulkToken;
+
+  //package private for testing
+  LoadIncrementalHFiles(Configuration conf, Boolean useSecure) throws Exception {
     super(conf);
     this.cfg = conf;
     this.hbAdmin = new HBaseAdmin(conf);
+    //added simple for testing
+    this.useSecure = useSecure != null ? useSecure : User.isHBaseSecurityEnabled(conf);
+  }
+
+  public LoadIncrementalHFiles(Configuration conf) throws Exception {
+    this(conf, null);
   }
 
   private void usage() {
@@ -212,6 +226,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         return;
       }
 
+      //If using secure bulk load
+      //prepare staging directory and token
+      if(useSecure) {
+        //This condition is here for unit testing
+        //Since delegation token doesn't work in mini cluster
+        if(User.isSecurityEnabled()) {
+          FileSystem fs = FileSystem.get(cfg);
+          userToken = fs.getDelegationToken("renewer");
+        }
+        bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getTableName());
+      }
+
       // Assumes that region splits can happen while this occurs.
       while (!queue.isEmpty()) {
         // need to reload split keys each iteration.
@@ -240,6 +266,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
 
     } finally {
+      if(useSecure) {
+        if(userToken != null) {
+          try {
+            userToken.cancel(cfg);
+          } catch (Exception e) {
+            LOG.warn("Failed to cancel HDFS delegation token.", e);
+          }
+        }
+        if(bulkToken != null) {
+          new SecureBulkLoadClient(table).cleanupBulkLoad(bulkToken);
+        }
+      }
       pool.shutdown();
       if (queue != null && !queue.isEmpty()) {
         StringBuilder err = new StringBuilder();
@@ -473,11 +511,49 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         tableName, first) {
       @Override
       public Boolean call() throws Exception {
-        LOG.debug("Going to connect to server " + location + " for row "
-            + Bytes.toStringBinary(row));
-        byte[] regionName = location.getRegionInfo().getRegionName();
-        return server.bulkLoadHFiles(famPaths, regionName);
+        SecureBulkLoadClient secureClient = null;
+        boolean success = false;
+
+        try {
+          LOG.debug("Going to connect to server " + location + " for row "
+              + Bytes.toStringBinary(row));
+          byte[] regionName = location.getRegionInfo().getRegionName();
+          if(!useSecure) {
+            success = server.bulkLoadHFiles(famPaths, regionName);
+          } else {
+            HTable table = new HTable(conn.getConfiguration(), tableName);
+            secureClient = new SecureBulkLoadClient(table, location.getRegionInfo().getStartKey());
+            success = secureClient.bulkLoadHFiles(famPaths, userToken, bulkToken);
+          }
+          return success;
+        } finally {
+          //Best effort copying of files that might not have been imported
+          //from the staging directory back to original location
+          //in user directory
+          if(secureClient != null && !success) {
+            FileSystem fs = FileSystem.get(cfg);
+            for(Pair<byte[], String> el : famPaths) {
+              Path hfileStagingPath = null;
+              Path hfileOrigPath = new Path(el.getSecond());
+              try {
+                hfileStagingPath= new Path(secureClient.getStagingPath(bulkToken, el.getFirst()),
+                    hfileOrigPath.getName());
+                if(fs.rename(hfileStagingPath, hfileOrigPath)) {
+                  LOG.debug("Moved back file " + hfileOrigPath + " from " +
+                      hfileStagingPath);
+                } else if(fs.exists(hfileStagingPath)){
+                  LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
+                      hfileStagingPath);
+                }
+              } catch(Exception ex) {
+                LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
+                    hfileStagingPath, ex);
+              }
+            }
+          }
+        }
       }
+
     };
 
     try {
