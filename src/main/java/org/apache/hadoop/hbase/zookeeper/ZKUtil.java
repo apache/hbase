@@ -1428,19 +1428,19 @@ public class ZKUtil {
       } catch (InterruptedException ie) {
         zkw.interruptedException(ie);
       }
-    }
-
-    // run sequentially
-    for (ZKUtilOp op : ops) {
-      if (op instanceof CreateAndFailSilent) {
-        createAndFailSilent(zkw, (CreateAndFailSilent)op);
-      } else if (op instanceof DeleteNodeFailSilent) {
-        deleteNodeFailSilent(zkw, (DeleteNodeFailSilent)op);
-      } else if (op instanceof SetData) {
-        setData(zkw, (SetData)op);
-      } else {
-        throw new UnsupportedOperationException("Unexpected ZKUtilOp type: "
-          + op.getClass().getName());
+    } else {
+      // run sequentially
+      for (ZKUtilOp op : ops) {
+        if (op instanceof CreateAndFailSilent) {
+          createAndFailSilent(zkw, (CreateAndFailSilent) op);
+        } else if (op instanceof DeleteNodeFailSilent) {
+          deleteNodeFailSilent(zkw, (DeleteNodeFailSilent) op);
+        } else if (op instanceof SetData) {
+          setData(zkw, (SetData) op);
+        } else {
+          throw new UnsupportedOperationException("Unexpected ZKUtilOp type: "
+              + op.getClass().getName());
+        }
       }
     }
   }
