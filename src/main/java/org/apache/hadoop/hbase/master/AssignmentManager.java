@@ -1205,9 +1205,20 @@ public class AssignmentManager extends ZooKeeperListener {
   public void nodeChildrenChanged(String path) {
     if(path.equals(watcher.assignmentZNode)) {
       try {
-        // Just make sure we see the changes for the new znodes
-        ZKUtil.listChildrenAndWatchThem(watcher,
+        List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
             watcher.assignmentZNode);
+        if (children != null) {
+          Stat stat = new Stat();
+          for (String child : children) {
+            stat.setVersion(0);
+            RegionTransitionData data = ZKAssign.getDataAndWatch(watcher,
+                ZKUtil.joinZNode(watcher.assignmentZNode, child), stat);
+            // See HBASE-7551, handle splitting here as well, in case we miss the node change event
+            if (stat.getVersion() > 0 && data.getEventType() == EventType.RS_ZK_REGION_SPLITTING) {
+              handleRegion(data, stat.getVersion());
+            }
+          }
+        }
       } catch(KeeperException e) {
         master.abort("Unexpected ZK exception reading unassigned children", e);
       }
