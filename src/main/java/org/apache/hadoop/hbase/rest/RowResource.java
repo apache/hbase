@@ -239,7 +239,9 @@ public class RowResource extends ResourceBase {
     } finally {
       if (table != null) try {
         table.close();
-      } catch (IOException ioe) { }
+      } catch (IOException ioe) {
+        LOG.debug("Exception received while closing the table", ioe);
+      }
     }
   }
 
@@ -554,7 +556,9 @@ public class RowResource extends ResourceBase {
     } finally {
       if (table != null) try {
         table.close();
-      } catch (IOException ioe) { }
+      } catch (IOException ioe) {
+        LOG.debug("Exception received while closing the table", ioe);
+      }
     }
   }
 }
