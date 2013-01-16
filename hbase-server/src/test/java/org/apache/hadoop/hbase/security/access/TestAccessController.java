@@ -675,10 +675,9 @@ public class TestAccessController {
     // action for checkAndPut()
     PrivilegedExceptionAction checkAndPut = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE);
         Put p = new Put(Bytes.toBytes("random_row"));
         p.add(TEST_FAMILY, Bytes.toBytes("Qualifier"), Bytes.toBytes(1));
-
-        HTable t = new HTable(conf, TEST_TABLE);
         t.checkAndPut(Bytes.toBytes("random_row"), TEST_FAMILY, Bytes.toBytes("q"),
           Bytes.toBytes("test_value"), p);
         return null;
@@ -711,6 +710,10 @@ public class TestAccessController {
       }
     };
     verifyWrite(bulkLoadAction);
+
+    // Reinit after the bulk upload
+    TEST_UTIL.getHBaseAdmin().disableTable(TEST_TABLE);
+    TEST_UTIL.getHBaseAdmin().enableTable(TEST_TABLE);
   }
 
   public class BulkLoadHelper {
