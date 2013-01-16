@@ -3019,8 +3019,10 @@ public class  HRegionServer implements ClientProtocol,
                 scanner, results, rows);
               if (!results.isEmpty()) {
                 for (Result r : results) {
-                  for (KeyValue kv : r.raw()) {
-                    currentScanResultSize += kv.heapSize();
+                  if (maxScannerResultSize < Long.MAX_VALUE){
+                    for (KeyValue kv : r.raw()) {
+                      currentScanResultSize += kv.heapSize();
+                    }
                   }
                 }
               }
@@ -3045,8 +3047,10 @@ public class  HRegionServer implements ClientProtocol,
                     // Collect values to be returned here
                     boolean moreRows = scanner.nextRaw(values);
                     if (!values.isEmpty()) {
-                      for (KeyValue kv : values) {
-                        currentScanResultSize += kv.heapSize();
+                      if (maxScannerResultSize < Long.MAX_VALUE){
+                        for (KeyValue kv : values) {
+                          currentScanResultSize += kv.heapSize();
+                        }
                       }
                       results.add(new Result(values));
                     }
