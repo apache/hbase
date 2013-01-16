@@ -335,12 +335,15 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
       <title>Publishing hbase.apache.org</title>
       <para>As of <link xlink:href="https://issues.apache.org/jira/browse/INFRA-5680">INFRA-5680 Migrate apache hbase website</link>,
           to publish the website, build it, and then deploy it over a checkout of <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>,
-          and then check it in.  For example, if trunk is checkout out at <filename>/Users/stack/checkouts/hbase</filename>
+          and then check it in.  For example, if trunk is checked out out at <filename>/Users/stack/checkouts/trunk</filename>
           and hbase.apache.org is checked out at <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
           the site, do the following:
           <programlisting>
               # Build the site and deploy it to the checked out directory
-              $ MAVEN_OPTS=" -Xmx3g" mvn site site:stage -DskipTests -DstagingDirectory="/Users/stack/checkouts/hbase.apache.org/trunk"
+              # Getting the javadoc into site is a little tricky.  You have to build it independent, then
+              # 'aggregate' it at top-level so the pre-site site lifecycle step can find it; that is
+              # what the javadoc:javadoc and javadoc:aggregate is about.
+              $ MAVEN_OPTS=" -Xmx3g" mvn clean -DskipTests javadoc:javadoc javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
               # Check the deployed site by viewing in a brower.
               # If all is good, commit it and it will show up at http://hbase.apache.org
               #

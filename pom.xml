@@ -32,7 +32,7 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>8</version>
+    <version>12</version>
     <relativePath/>
     <!-- no parent resolution -->
   </parent>
@@ -747,6 +747,7 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <version>${maven.resources.plugin.version}</version>
         <!--$NO-MVN-MAN-VER$ -->
@@ -886,7 +887,7 @@
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <maven.site.version>3.1</maven.site.version>
     <javadoc.version>2.9</javadoc.version>
-    <maven.resources.plugin.version>2.5</maven.resources.plugin.version>
+    <maven.resources.plugin.version>2.6</maven.resources.plugin.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
@@ -1701,9 +1702,10 @@
     </plugins>
   </reporting>
   <distributionManagement>
-    <site>
-      <id>apache.website</id>
-      <url>scp://people.apache.org/www/hbase.apache.org/</url>
-    </site>
+      <site>
+          <id>hbase.apache.org</id>
+          <name>HBase Website at hbase.apache.org</name>
+          <url>file:///tmp</url>
+      </site>
   </distributionManagement>
 </project>
