@@ -758,9 +758,15 @@ public class TestAccessController {
 
     PrivilegedExceptionAction appendAction = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
-        Append append = new Append(TEST_TABLE);
-        append.add(TEST_FAMILY, Bytes.toBytes("qualifier"), Bytes.toBytes("value"));
-        ACCESS_CONTROLLER.preAppend(ObserverContext.createAndPrepare(RCP_ENV, null), append);
+        byte[] row = Bytes.toBytes("random_row");
+        byte[] qualifier = Bytes.toBytes("q");
+        HTable t = new HTable(conf, TEST_TABLE);
+        Put put = new Put(row);
+        put.add(TEST_FAMILY, qualifier, Bytes.toBytes(1));
+        t.put(put);
+        Append append = new Append(row);
+        append.add(TEST_FAMILY, qualifier, Bytes.toBytes(2));
+        t.append(append);
         return null;
       }
     };
