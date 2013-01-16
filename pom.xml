@@ -864,7 +864,7 @@
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.8</jruby.version>
-    <junit.version>4.10-HBASE-1</junit.version>
+    <junit.version>4.11</junit.version>
     <htrace.version>1.49</htrace.version>
     <slf4j.version>1.4.3</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
@@ -1243,8 +1243,6 @@
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
         <scope>test</scope>
-        <!-- FIXME: the following needs to go away once HBASE-4955 is fixed -->
-        <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>org.cloudera.htrace</groupId>
