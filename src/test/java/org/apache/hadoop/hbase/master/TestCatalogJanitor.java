@@ -101,7 +101,7 @@ public class TestCatalogJanitor {
       this.ct = Mockito.mock(CatalogTracker.class);
       HRegionInterface hri = Mockito.mock(HRegionInterface.class);
       Mockito.when(this.ct.getConnection()).thenReturn(this.connection);
-      Mockito.when(ct.waitForMetaServerConnectionDefault()).thenReturn(hri);
+      Mockito.when(ct.waitForMetaServerConnection(Mockito.anyLong())).thenReturn(hri);
     }
 
     @Override
