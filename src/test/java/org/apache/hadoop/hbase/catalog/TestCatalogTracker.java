@@ -103,7 +103,7 @@ public class TestCatalogTracker {
   private CatalogTracker constructAndStartCatalogTracker(final HConnection c)
   throws IOException, InterruptedException {
     CatalogTracker ct = new CatalogTracker(this.watcher, UTIL.getConfiguration(),
-      c, this.abortable, 0);
+      c, this.abortable);
     ct.start();
     return ct;
   }
@@ -213,10 +213,8 @@ public class TestCatalogTracker {
           @Override
           public void run() {
             try {
-              metaSet.set(ct.waitForMetaServerConnectionDefault() !=  null);
-            } catch (NotAllMetaRegionsOnlineException e) {
-              throw new RuntimeException(e);
-            } catch (IOException e) {
+              metaSet.set(ct.waitForMetaServerConnection(100000) !=  null);
+            } catch (Exception e) {
               throw new RuntimeException(e);
             }
           }

@@ -118,11 +118,6 @@ public class CatalogTracker {
    */
   private ServerName metaLocation;
 
-  /*
-   * Timeout waiting on root or meta to be set.
-   */
-  private final int defaultTimeout;
-
   private boolean stopped = false;
 
   static final byte [] ROOT_REGION_NAME =
@@ -158,33 +153,13 @@ public class CatalogTracker {
    * @throws IOException 
    */
   public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
-      final Abortable abortable)
+      Abortable abortable)
   throws IOException {
-    this(zk, conf, abortable,
-      conf.getInt("hbase.catalogtracker.default.timeout", 1000));
-  }
-
-  /**
-   * Constructs the catalog tracker.  Find current state of catalog tables.
-   * Begin active tracking by executing {@link #start()} post construction.
-   * @param zk If zk is null, we'll create an instance (and shut it down
-   * when {@link #stop()} is called) else we'll use what is passed.
-   * @param conf
-   * @param abortable If fatal exception we'll call abort on this.  May be null.
-   * If it is we'll use the Connection associated with the passed
-   * {@link Configuration} as our Abortable.
-   * @param defaultTimeout Timeout to use.  Pass zero for no timeout
-   * ({@link Object#wait(long)} when passed a <code>0</code> waits for ever).
-   * @throws IOException
-   */
-  public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
-      Abortable abortable, final int defaultTimeout)
-  throws IOException {
-    this(zk, conf, HConnectionManager.getConnection(conf), abortable, defaultTimeout);
+    this(zk, conf, HConnectionManager.getConnection(conf), abortable);
   }
 
   CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
-      HConnection connection, Abortable abortable, final int defaultTimeout)
+      HConnection connection, Abortable abortable)
   throws IOException {
     this.connection = connection;
     if (abortable == null) {
@@ -222,7 +197,6 @@ public class CatalogTracker {
         ct.resetMetaLocation();
       }
     };
-    this.defaultTimeout = defaultTimeout;
   }
 
   /**
@@ -370,24 +344,6 @@ public class CatalogTracker {
   }
 
   /**
-   * Gets a connection to the server hosting root, as reported by ZooKeeper,
-   * waiting for the default timeout specified on instantiation.
-   * @see #waitForRoot(long) for additional information
-   * @return connection to server hosting root
-   * @throws NotAllMetaRegionsOnlineException if timed out waiting
-   * @throws IOException
-   * @deprecated Use #getRootServerConnection(long)
-   */
-  public HRegionInterface waitForRootServerConnectionDefault()
-  throws NotAllMetaRegionsOnlineException, IOException {
-    try {
-      return getRootServerConnection(this.defaultTimeout);
-    } catch (InterruptedException e) {
-      throw new NotAllMetaRegionsOnlineException("Interrupted");
-    }
-  }
-
-  /**
    * Gets a connection to the server currently hosting <code>.META.</code> or
    * null if location is not currently available.
    * <p>
@@ -476,10 +432,10 @@ public class CatalogTracker {
    */
   public ServerName waitForMeta(long timeout)
   throws InterruptedException, IOException, NotAllMetaRegionsOnlineException {
-    long stop = System.currentTimeMillis() + timeout;
+    long stop = timeout == 0 ? Long.MAX_VALUE : System.currentTimeMillis() + timeout;
     long waitTime = Math.min(50, timeout);
     synchronized (metaAvailable) {
-      while(!stopped && (timeout == 0 || System.currentTimeMillis() < stop)) {
+      while(!stopped && System.currentTimeMillis() < stop) {
         if (getMetaServerConnection() != null) {
           return metaLocation;
         }
@@ -506,25 +462,6 @@ public class CatalogTracker {
   public HRegionInterface waitForMetaServerConnection(long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
     return getCachedConnection(waitForMeta(timeout));
-  }
-
-  /**
-   * Gets a connection to the server hosting meta, as reported by ZooKeeper,
-   * waiting up to the specified timeout for availability.
-   * Used in tests.
-   * @see #waitForMeta(long) for additional information
-   * @return connection to server hosting meta
-   * @throws NotAllMetaRegionsOnlineException if timed out or interrupted
-   * @throws IOException
-   * @deprecated Does not retry; use an HTable instance instead.
-   */
-  public HRegionInterface waitForMetaServerConnectionDefault()
-  throws NotAllMetaRegionsOnlineException, IOException {
-    try {
-      return getCachedConnection(waitForMeta(defaultTimeout));
-    } catch (InterruptedException e) {
-      throw new NotAllMetaRegionsOnlineException("Interrupted");
-    }
   }
 
   /**
