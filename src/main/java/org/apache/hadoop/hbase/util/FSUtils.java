@@ -1096,11 +1096,11 @@ public abstract class FSUtils {
     // presumes any directory under hbase.rootdir is a table
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
     for (FileStatus tableDir : tableDirs) {
-      // Skip the .log directory.  All others should be tables.  Inside a table,
-      // there are compaction.dir directories to skip.  Otherwise, all else
+      // Skip the .log and other non-table directories.  All others should be tables.
+      // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
       // should be regions. 
       Path d = tableDir.getPath();
-      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
+      if (HConstants.HBASE_NON_TABLE_DIRS.contains(d.getName())) {
         continue;
       }
       FileStatus[] regionDirs = fs.listStatus(d, df);
