@@ -1473,11 +1473,14 @@ public class  HRegionServer implements ClientProtocol,
 
   protected List<WALActionsListener> getMetaWALActionListeners() {
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
-    // Log roller.
-    this.metaHLogRoller = new MetaLogRoller(this, this);
+    // Using a tmp log roller to ensure metaLogRoller is alive once it is not
+    // null
+    MetaLogRoller tmpLogRoller = new MetaLogRoller(this, this);
     String n = Thread.currentThread().getName();
-    Threads.setDaemonThreadRunning(this.metaHLogRoller.getThread(), 
+    Threads.setDaemonThreadRunning(tmpLogRoller.getThread(),
         n + "MetaLogRoller", uncaughtExceptionHandler);
+    this.metaHLogRoller = tmpLogRoller;
+    tmpLogRoller = null;
     listeners.add(this.metaHLogRoller);
     return listeners;
   }
