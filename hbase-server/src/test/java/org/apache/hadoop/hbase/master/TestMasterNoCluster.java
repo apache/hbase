@@ -198,7 +198,7 @@ public class TestMasterNoCluster {
 
       @Override
       CatalogTracker createCatalogTracker(ZooKeeperWatcher zk,
-          Configuration conf, Abortable abortable, int defaultTimeout)
+          Configuration conf, Abortable abortable)
       throws IOException {
         // Insert a mock for the connection used by the CatalogTracker.  Any
         // regionserver should do.  Use TESTUTIL.getConfiguration rather than
@@ -207,7 +207,7 @@ public class TestMasterNoCluster {
         HConnection connection =
           HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(),
             rs0, rs0, rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
-        return new CatalogTracker(zk, conf, connection, abortable, defaultTimeout);
+        return new CatalogTracker(zk, conf, connection, abortable);
       }
     };
     master.start();
@@ -284,7 +284,7 @@ public class TestMasterNoCluster {
 
       @Override
       CatalogTracker createCatalogTracker(ZooKeeperWatcher zk,
-          Configuration conf, Abortable abortable, int defaultTimeout)
+          Configuration conf, Abortable abortable)
       throws IOException {
         // Insert a mock for the connection used by the CatalogTracker.   Use
         // TESTUTIL.getConfiguration rather than the conf from the master; the
@@ -293,7 +293,7 @@ public class TestMasterNoCluster {
         HConnection connection =
           HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(),
             rs0, rs0, rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
-        return new CatalogTracker(zk, conf, connection, abortable, defaultTimeout);
+        return new CatalogTracker(zk, conf, connection, abortable);
       }
     };
     master.start();

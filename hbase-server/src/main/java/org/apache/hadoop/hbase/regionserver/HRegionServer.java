@@ -769,8 +769,7 @@ public class  HRegionServer implements ClientProtocol,
     blockAndCheckIfStopped(this.clusterStatusTracker);
 
     // Create the catalog tracker and start it;
-    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf,
-      this, this.conf.getInt("hbase.regionserver.catalog.timeout", 600000));
+    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf, this);
     catalogTracker.start();
 
     // Retrieve clusterId

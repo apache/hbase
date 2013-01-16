@@ -195,7 +195,7 @@ public class TestMetaReaderEditorNoCluster {
         when(connection).getClient(Mockito.anyString(), Mockito.anyInt());
 
       // Now start up the catalogtracker with our doctored Connection.
-      ct = new CatalogTracker(zkw, null, connection, ABORTABLE, 0);
+      ct = new CatalogTracker(zkw, null, connection, ABORTABLE);
       ct.start();
       // Scan meta for user tables and verify we got back expected answer.
       NavigableMap<HRegionInfo, Result> hris = MetaReader.getServerUserRegions(ct, sn);

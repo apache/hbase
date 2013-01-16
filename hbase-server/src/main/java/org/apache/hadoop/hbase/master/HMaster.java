@@ -541,8 +541,7 @@ Server {
    */
   private void initializeZKBasedSystemTrackers() throws IOException,
       InterruptedException, KeeperException {
-    this.catalogTracker = createCatalogTracker(this.zooKeeper, this.conf,
-        this, conf.getInt("hbase.master.catalog.timeout", 600000));
+    this.catalogTracker = createCatalogTracker(this.zooKeeper, this.conf, this);
     this.catalogTracker.start();
 
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
@@ -585,9 +584,9 @@ Server {
    * @throws IOException
    */
   CatalogTracker createCatalogTracker(final ZooKeeperWatcher zk,
-      final Configuration conf, Abortable abortable, final int defaultTimeout)
+      final Configuration conf, Abortable abortable)
   throws IOException {
-    return new CatalogTracker(zk, conf, abortable, defaultTimeout);
+    return new CatalogTracker(zk, conf, abortable);
   }
 
   // Check if we should stop every 100ms
