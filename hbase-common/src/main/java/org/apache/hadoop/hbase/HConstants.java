@@ -18,12 +18,13 @@
 package org.apache.hadoop.hbase;
 
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -737,10 +738,18 @@ public final class HConstants {
   /** Directory under /hbase where archived hfiles are stored */
   public static final String HFILE_ARCHIVE_DIRECTORY = ".archive";
 
-  public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(
-      Arrays.asList(new String[] { HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME,
-          toString(META_TABLE_NAME), toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
-          HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY }));
+  /** Directories that are not HBase table directories */
+  public static final List<String> HBASE_NON_TABLE_DIRS =
+    Collections.unmodifiableList(Arrays.asList(new String[] { HREGION_LOGDIR_NAME,
+      HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME, SPLIT_LOGDIR_NAME,
+      HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY }));
+
+  /** Directories that are not HBase user table directories */
+  public static final List<String> HBASE_NON_USER_TABLE_DIRS =
+    Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
+      new String[] { toString(META_TABLE_NAME), toString(ROOT_TABLE_NAME) },
+      HBASE_NON_TABLE_DIRS.toArray())));
+
   /** Health script related settings. */
   public static final String HEALTH_SCRIPT_LOC = "hbase.node.health.script.location";
   public static final String HEALTH_SCRIPT_TIMEOUT = "hbase.node.health.script.timeout";
