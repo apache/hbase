@@ -81,8 +81,15 @@ public class TestHRegionOnCluster {
       int targetServerNum = (originServerNum + 1) % NUM_RS;
       HRegionServer targetServer = cluster.getRegionServer(targetServerNum);
       assertFalse(originServer.equals(targetServer));
+
+      do {
+        Thread.sleep(10);
+      } while (!originServer.getServerName().equals(
+              cluster.getMaster().getAssignmentManager().getRegionServerOfRegion(regionInfo)));
+
       hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
           Bytes.toBytes(targetServer.getServerName().getServerName()));
+
       do {
         Thread.sleep(10);
       } while (cluster.getServerWith(regionInfo.getRegionName()) == originServerNum ||
