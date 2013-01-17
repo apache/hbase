@@ -145,31 +145,35 @@ public class TestAccessController {
     htd.setOwner(USER_OWNER);
     admin.createTable(htd);
 
-    // initilize access control
-    HTable meta = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    AccessControllerProtocol protocol = meta.coprocessorProxy(AccessControllerProtocol.class,
-      TEST_TABLE);
-
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
     RCP_ENV = rcpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
-    protocol.grant(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
+    // initilize access control
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        TEST_TABLE);
+
+     protocol.grant(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
         Permission.Action.ADMIN, Permission.Action.CREATE, Permission.Action.READ,
         Permission.Action.WRITE));
 
-    protocol.grant(new UserPermission(Bytes.toBytes(USER_RW.getShortName()), TEST_TABLE,
+      protocol.grant(new UserPermission(Bytes.toBytes(USER_RW.getShortName()), TEST_TABLE,
         TEST_FAMILY, Permission.Action.READ, Permission.Action.WRITE));
 
-    protocol.grant(new UserPermission(Bytes.toBytes(USER_RO.getShortName()), TEST_TABLE,
+      protocol.grant(new UserPermission(Bytes.toBytes(USER_RO.getShortName()), TEST_TABLE,
         TEST_FAMILY, Permission.Action.READ));
 
-    protocol.grant(new UserPermission(Bytes.toBytes(USER_CREATE.getShortName()), TEST_TABLE, null,
+      protocol.grant(new UserPermission(Bytes.toBytes(USER_CREATE.getShortName()), TEST_TABLE, null,
         Permission.Action.CREATE));
     
-    protocol.grant(new UserPermission(Bytes.toBytes(USER_RW_ON_TABLE.getShortName()), TEST_TABLE,
-      null, Permission.Action.READ, Permission.Action.WRITE));
+      protocol.grant(new UserPermission(Bytes.toBytes(USER_RW_ON_TABLE.getShortName()), TEST_TABLE,
+        null, Permission.Action.READ, Permission.Action.WRITE));
+    } finally {
+      acl.close();
+    }
   }
 
   @AfterClass
@@ -374,8 +378,13 @@ public class TestAccessController {
 
   @Test
   public void testMove() throws Exception {
+    Map<HRegionInfo, HServerAddress> regions;
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE);
-    Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
+    try {
+      regions = table.getRegionsInfo();
+    } finally {
+      table.close();
+    }
     final Map.Entry<HRegionInfo, HServerAddress> firstRegion = regions.entrySet().iterator().next();
     final ServerName server = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
@@ -392,8 +401,13 @@ public class TestAccessController {
 
   @Test
   public void testAssign() throws Exception {
+    Map<HRegionInfo, HServerAddress> regions;
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE);
-    Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
+    try {
+      regions = table.getRegionsInfo();
+    } finally {
+      table.close();
+    }
     final Map.Entry<HRegionInfo, HServerAddress> firstRegion = regions.entrySet().iterator().next();
 
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
@@ -410,8 +424,13 @@ public class TestAccessController {
 
   @Test
   public void testUnassign() throws Exception {
+    Map<HRegionInfo, HServerAddress> regions;
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE);
-    Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
+    try {
+      regions = table.getRegionsInfo();
+    } finally {
+      table.close();
+    }
     final Map.Entry<HRegionInfo, HServerAddress> firstRegion = regions.entrySet().iterator().next();
 
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
@@ -553,7 +572,11 @@ public class TestAccessController {
         Get g = new Get(Bytes.toBytes("random_row"));
         g.addFamily(TEST_FAMILY);
         HTable t = new HTable(conf, TEST_TABLE);
-        t.get(g);
+        try {
+          t.get(g);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -566,14 +589,18 @@ public class TestAccessController {
         s.addFamily(TEST_FAMILY);
 
         HTable table = new HTable(conf, TEST_TABLE);
-        ResultScanner scanner = table.getScanner(s);
         try {
-          for (Result r = scanner.next(); r != null; r = scanner.next()) {
-            // do nothing
+          ResultScanner scanner = table.getScanner(s);
+          try {
+            for (Result r = scanner.next(); r != null; r = scanner.next()) {
+              // do nothing
+            }
+          } catch (IOException e) {
+          } finally {
+            scanner.close();
           }
-        } catch (IOException e) {
         } finally {
-          scanner.close();
+          table.close();
         }
         return null;
       }
@@ -590,7 +617,11 @@ public class TestAccessController {
         Put p = new Put(Bytes.toBytes("random_row"));
         p.add(TEST_FAMILY, Bytes.toBytes("Qualifier"), Bytes.toBytes(1));
         HTable t = new HTable(conf, TEST_TABLE);
-        t.put(p);
+        try {
+          t.put(p);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -602,7 +633,11 @@ public class TestAccessController {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteFamily(TEST_FAMILY);
         HTable t = new HTable(conf, TEST_TABLE);
-        t.delete(d);
+        try {
+          t.delete(d);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -614,7 +649,11 @@ public class TestAccessController {
         Increment inc = new Increment(Bytes.toBytes("random_row"));
         inc.addColumn(TEST_FAMILY, Bytes.toBytes("Qualifier"), 1);
         HTable t = new HTable(conf, TEST_TABLE);
-        t.increment(inc);
+        try {
+          t.increment(inc);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -628,10 +667,13 @@ public class TestAccessController {
       public Object run() throws Exception {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteFamily(TEST_FAMILY);
-
         HTable t = new HTable(conf, TEST_TABLE);
-        t.checkAndDelete(Bytes.toBytes("random_row"), TEST_FAMILY, Bytes.toBytes("q"),
-          Bytes.toBytes("test_value"), d);
+        try {
+          t.checkAndDelete(Bytes.toBytes("random_row"), TEST_FAMILY, Bytes.toBytes("q"),
+            Bytes.toBytes("test_value"), d);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -640,11 +682,15 @@ public class TestAccessController {
     // action for checkAndPut()
     PrivilegedExceptionAction checkAndPut = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE);
         Put p = new Put(Bytes.toBytes("random_row"));
         p.add(TEST_FAMILY, Bytes.toBytes("Qualifier"), Bytes.toBytes(1));
-        t.checkAndPut(Bytes.toBytes("random_row"), TEST_FAMILY, Bytes.toBytes("q"),
-          Bytes.toBytes("test_value"), p);
+        HTable t = new HTable(conf, TEST_TABLE);
+        try {
+          t.checkAndPut(Bytes.toBytes("random_row"), TEST_FAMILY, Bytes.toBytes("q"),
+           Bytes.toBytes("test_value"), p);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -735,9 +781,13 @@ public class TestAccessController {
       setPermission(loadPath, FsPermission.valueOf("-rwxrwxrwx"));
 
       HTable table = new HTable(conf, tableName);
-      TEST_UTIL.waitTableAvailable(tableName, 30000);
-      LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
-      loader.doBulkLoad(loadPath, table);
+      try {
+        TEST_UTIL.waitTableAvailable(tableName, 30000);
+        LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+        loader.doBulkLoad(loadPath, table);
+      } finally {
+        table.close();
+      }
     }
 
     public void setPermission(Path dir, FsPermission perm) throws IOException {
@@ -760,13 +810,17 @@ public class TestAccessController {
       public Object run() throws Exception {
         byte[] row = Bytes.toBytes("random_row");
         byte[] qualifier = Bytes.toBytes("q");
-        HTable t = new HTable(conf, TEST_TABLE);
         Put put = new Put(row);
         put.add(TEST_FAMILY, qualifier, Bytes.toBytes(1));
-        t.put(put);
         Append append = new Append(row);
         append.add(TEST_FAMILY, qualifier, Bytes.toBytes(2));
-        t.append(append);
+        HTable t = new HTable(conf, TEST_TABLE);
+        try {
+          t.put(put);
+          t.append(append);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -781,10 +835,14 @@ public class TestAccessController {
     PrivilegedExceptionAction grantAction = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-          TEST_TABLE);
-        protocol.grant(new UserPermission(Bytes.toBytes(USER_RO.getShortName()), TEST_TABLE,
+        try {
+          AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+            TEST_TABLE);
+          protocol.grant(new UserPermission(Bytes.toBytes(USER_RO.getShortName()), TEST_TABLE,
             TEST_FAMILY, (byte[]) null, Action.READ));
+        } finally {
+          acl.close();
+        }
         return null;
       }
     };
@@ -792,10 +850,14 @@ public class TestAccessController {
     PrivilegedExceptionAction revokeAction = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-          TEST_TABLE);
-        protocol.revoke(new UserPermission(Bytes.toBytes(USER_RO.getShortName()), TEST_TABLE,
+        try {
+          AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+            TEST_TABLE);
+          protocol.revoke(new UserPermission(Bytes.toBytes(USER_RO.getShortName()), TEST_TABLE,
             TEST_FAMILY, (byte[]) null, Action.READ));
+        } finally {
+          acl.close();
+        }
         return null;
       }
     };
@@ -803,9 +865,13 @@ public class TestAccessController {
     PrivilegedExceptionAction getPermissionsAction = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-          TEST_TABLE);
-        protocol.getUserPermissions(TEST_TABLE);
+        try {
+          AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+            TEST_TABLE);
+          protocol.getUserPermissions(TEST_TABLE);
+        } finally {
+          acl.close();
+        }
         return null;
       }
     };
@@ -844,11 +910,6 @@ public class TestAccessController {
     User gblUser = User
         .createUserForTesting(TEST_UTIL.getConfiguration(), "gbluser", new String[0]);
 
-    // perms only stored against the first region
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-      tableName);
-
     // prepare actions:
     PrivilegedExceptionAction putActionAll = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
@@ -856,7 +917,11 @@ public class TestAccessController {
         p.add(family1, qualifier, Bytes.toBytes("v1"));
         p.add(family2, qualifier, Bytes.toBytes("v2"));
         HTable t = new HTable(conf, tableName);
-        t.put(p);
+        try {
+          t.put(p);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -865,7 +930,11 @@ public class TestAccessController {
         Put p = new Put(Bytes.toBytes("a"));
         p.add(family1, qualifier, Bytes.toBytes("v1"));
         HTable t = new HTable(conf, tableName);
-        t.put(p);
+        try {
+          t.put(p);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -874,7 +943,11 @@ public class TestAccessController {
         Put p = new Put(Bytes.toBytes("a"));
         p.add(family2, qualifier, Bytes.toBytes("v2"));
         HTable t = new HTable(conf, tableName);
-        t.put(p);
+        try {
+          t.put(p);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -884,7 +957,11 @@ public class TestAccessController {
         g.addFamily(family1);
         g.addFamily(family2);
         HTable t = new HTable(conf, tableName);
-        t.get(g);
+        try {
+          t.get(g);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -893,7 +970,11 @@ public class TestAccessController {
         Get g = new Get(Bytes.toBytes("random_row"));
         g.addFamily(family1);
         HTable t = new HTable(conf, tableName);
-        t.get(g);
+        try {
+          t.get(g);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -902,7 +983,11 @@ public class TestAccessController {
         Get g = new Get(Bytes.toBytes("random_row"));
         g.addFamily(family2);
         HTable t = new HTable(conf, tableName);
-        t.get(g);
+        try {
+          t.get(g);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -912,7 +997,11 @@ public class TestAccessController {
         d.deleteFamily(family1);
         d.deleteFamily(family2);
         HTable t = new HTable(conf, tableName);
-        t.delete(d);
+        try {
+          t.delete(d);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -921,7 +1010,11 @@ public class TestAccessController {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteFamily(family1);
         HTable t = new HTable(conf, tableName);
-        t.delete(d);
+        try {
+          t.delete(d);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -930,7 +1023,11 @@ public class TestAccessController {
         Delete d = new Delete(Bytes.toBytes("random_row"));
         d.deleteFamily(family2);
         HTable t = new HTable(conf, tableName);
-        t.delete(d);
+        try {
+          t.delete(d);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -945,12 +1042,20 @@ public class TestAccessController {
     verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant table read permission
-    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null,
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null,
         Permission.Action.READ));
-    protocol
-        .grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()), Permission.Action.READ));
+      protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()),
+        Permission.Action.READ));
+    } finally {
+      acl.close();
+    }
 
     Thread.sleep(100);
+
     // check
     verifyAllowed(tblUser, getActionAll, getAction1, getAction2);
     verifyDenied(tblUser, putActionAll, putAction1, putAction2);
@@ -961,10 +1066,18 @@ public class TestAccessController {
     verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant table write permission
-    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null,
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null,
         Permission.Action.WRITE));
-    protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()),
+      protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()),
         Permission.Action.WRITE));
+    } finally {
+      acl.close();
+    }
+
     Thread.sleep(100);
 
     verifyDenied(tblUser, getActionAll, getAction1, getAction2);
@@ -976,10 +1089,18 @@ public class TestAccessController {
     verifyAllowed(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // revoke table permission
-    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null,
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null,
         Permission.Action.READ, Permission.Action.WRITE));
-    protocol.revoke(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null));
-    protocol.revoke(new UserPermission(Bytes.toBytes(gblUser.getShortName())));
+      protocol.revoke(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null));
+      protocol.revoke(new UserPermission(Bytes.toBytes(gblUser.getShortName())));
+    } finally {
+      acl.close();
+    }
+
     Thread.sleep(100);
 
     verifyDenied(tblUser, getActionAll, getAction1, getAction2);
@@ -991,10 +1112,17 @@ public class TestAccessController {
     verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant column family read permission
-    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, family1,
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, family1,
         Permission.Action.READ));
-    protocol
-        .grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()), Permission.Action.READ));
+      protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()),
+        Permission.Action.READ));
+    } finally {
+      acl.close();
+    }
 
     Thread.sleep(100);
 
@@ -1009,10 +1137,18 @@ public class TestAccessController {
     verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant column family write permission
-    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, family2,
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, family2,
         Permission.Action.WRITE));
-    protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()),
+      protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()),
         Permission.Action.WRITE));
+    } finally {
+      acl.close();
+    }
+
     Thread.sleep(100);
 
     // READ from family1, WRITE to family2 are allowed
@@ -1027,8 +1163,15 @@ public class TestAccessController {
     verifyAllowed(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // revoke column family permission
-    protocol.revoke(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, family2));
-    protocol.revoke(new UserPermission(Bytes.toBytes(gblUser.getShortName())));
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.revoke(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, family2));
+      protocol.revoke(new UserPermission(Bytes.toBytes(gblUser.getShortName())));
+    } finally {
+      acl.close();
+    }
 
     Thread.sleep(100);
 
@@ -1061,7 +1204,6 @@ public class TestAccessController {
 
     // create table
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
@@ -1074,16 +1216,16 @@ public class TestAccessController {
     // create temp users
     User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "user", new String[0]);
 
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-      tableName);
-
     PrivilegedExceptionAction getQualifierAction = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
         Get g = new Get(Bytes.toBytes("random_row"));
         g.addColumn(family1, qualifier);
         HTable t = new HTable(conf, tableName);
-        t.get(g);
+        try {
+          t.get(g);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -1092,7 +1234,11 @@ public class TestAccessController {
         Put p = new Put(Bytes.toBytes("random_row"));
         p.add(family1, qualifier, Bytes.toBytes("v1"));
         HTable t = new HTable(conf, tableName);
-        t.put(p);
+        try {
+          t.put(p);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
@@ -1102,18 +1248,38 @@ public class TestAccessController {
         d.deleteColumn(family1, qualifier);
         // d.deleteFamily(family1);
         HTable t = new HTable(conf, tableName);
-        t.delete(d);
+        try {
+          t.delete(d);
+        } finally {
+          t.close();
+        }
         return null;
       }
     };
 
-    protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1));
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1));
+    } finally {
+      acl.close();
+    }
+
     verifyDenied(user, getQualifierAction);
     verifyDenied(user, putQualifierAction);
     verifyDenied(user, deleteQualifierAction);
 
-    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1,
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1,
         qualifier, Permission.Action.READ));
+    } finally {
+      acl.close();
+    }
+
     Thread.sleep(100);
 
     verifyAllowed(user, getQualifierAction);
@@ -1122,8 +1288,16 @@ public class TestAccessController {
 
     // only grant write permission
     // TODO: comment this portion after HBASE-3583
-    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1,
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1,
         qualifier, Permission.Action.WRITE));
+    } finally {
+      acl.close();
+    }
+
     Thread.sleep(100);
 
     verifyDenied(user, getQualifierAction);
@@ -1131,8 +1305,16 @@ public class TestAccessController {
     verifyAllowed(user, deleteQualifierAction);
 
     // grant both read and write permission.
-    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1,
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1,
         qualifier, Permission.Action.READ, Permission.Action.WRITE));
+    } finally {
+      acl.close();
+    }
+
     Thread.sleep(100);
 
     verifyAllowed(user, getQualifierAction);
@@ -1140,8 +1322,16 @@ public class TestAccessController {
     verifyAllowed(user, deleteQualifierAction);
 
     // revoke family level permission won't impact column level.
-    protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1,
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()), tableName, family1,
         qualifier));
+    } finally {
+      acl.close();
+    }
+
     Thread.sleep(100);
 
     verifyDenied(user, getQualifierAction);
@@ -1173,11 +1363,15 @@ public class TestAccessController {
     htd.setOwner(USER_OWNER);
     admin.createTable(htd);
 
+    List<UserPermission> perms;
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-      tableName);
-
-    List<UserPermission> perms = protocol.getUserPermissions(tableName);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      perms = protocol.getUserPermissions(tableName);
+    } finally {
+      acl.close();
+    }
 
     UserPermission ownerperm = new UserPermission(Bytes.toBytes(USER_OWNER.getName()), tableName,
         null, Action.values());
@@ -1192,8 +1386,16 @@ public class TestAccessController {
     // grant read permission
     UserPermission upToSet = new UserPermission(user, tableName, family1, qualifier,
         Permission.Action.READ);
-    protocol.grant(upToSet);
-    perms = protocol.getUserPermissions(tableName);
+
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(upToSet);
+      perms = protocol.getUserPermissions(tableName);
+    } finally {
+      acl.close();
+    }
 
     UserPermission upToVerify = new UserPermission(user, tableName, family1, qualifier,
         Permission.Action.READ);
@@ -1207,16 +1409,31 @@ public class TestAccessController {
     // grant read+write
     upToSet = new UserPermission(user, tableName, family1, qualifier, Permission.Action.WRITE,
         Permission.Action.READ);
-    protocol.grant(upToSet);
-    perms = protocol.getUserPermissions(tableName);
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.grant(upToSet);
+      perms = protocol.getUserPermissions(tableName);
+    } finally {
+      acl.close();
+    }
 
     upToVerify = new UserPermission(user, tableName, family1, qualifier, Permission.Action.WRITE,
         Permission.Action.READ);
     assertTrue("User should be granted permission: " + upToVerify.toString(),
       hasFoundUserPermission(upToVerify, perms));
 
-    protocol.revoke(upToSet);
-    perms = protocol.getUserPermissions(tableName);
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      protocol.revoke(upToSet);
+      perms = protocol.getUserPermissions(tableName);
+    } finally {
+      acl.close();
+    }
+
     assertFalse("User should not be granted permission: " + upToVerify.toString(),
       hasFoundUserPermission(upToVerify, perms));
 
@@ -1226,7 +1443,16 @@ public class TestAccessController {
     User newOwner = User.createUserForTesting(conf, "new_owner", new String[] {});
     htd.setOwner(newOwner);
     admin.modifyTable(tableName, htd);
-    perms = protocol.getUserPermissions(tableName);
+
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        tableName);
+      perms = protocol.getUserPermissions(tableName);
+    } finally {
+      acl.close();
+    }
+
     UserPermission newOwnerperm = new UserPermission(Bytes.toBytes(newOwner.getName()), tableName,
         null, Action.values());
     assertTrue("New owner should have all permissions on table",
@@ -1244,16 +1470,18 @@ public class TestAccessController {
   }
 
   public void checkGlobalPerms(Permission.Action... actions) throws IOException {
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-      new byte[0]);
-
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
       perms[i] = new Permission(actions[i]);
     }
-
-    protocol.checkPermissions(perms);
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        new byte[0]);
+      protocol.checkPermissions(perms);
+    } finally {
+      acl.close();
+    }
   }
 
   public void checkTablePerms(byte[] table, byte[] family, byte[] column,
@@ -1268,10 +1496,13 @@ public class TestAccessController {
 
   public void checkTablePerms(byte[] table, Permission... perms) throws IOException {
     HTable acl = new HTable(conf, table);
-    AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-      new byte[0]);
-
-    protocol.checkPermissions(perms);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        new byte[0]);
+      protocol.checkPermissions(perms);
+    } finally {
+      acl.close();
+    }
   }
 
   public void grant(AccessControllerProtocol protocol, User user, byte[] t, byte[] f, byte[] q,
@@ -1281,10 +1512,6 @@ public class TestAccessController {
 
   @Test
   public void testCheckPermissions() throws Exception {
-    final HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    final AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-      TEST_TABLE);
-
     // --------------------------------------
     // test global permissions
     PrivilegedExceptionAction<Void> globalAdmin = new PrivilegedExceptionAction<Void>() {
@@ -1318,9 +1545,16 @@ public class TestAccessController {
     User userColumn = User.createUserForTesting(conf, "user_check_perms_family", new String[0]);
     User userQualifier = User.createUserForTesting(conf, "user_check_perms_q", new String[0]);
 
-    grant(protocol, userTable, TEST_TABLE, null, null, Permission.Action.READ);
-    grant(protocol, userColumn, TEST_TABLE, TEST_FAMILY, null, Permission.Action.READ);
-    grant(protocol, userQualifier, TEST_TABLE, TEST_FAMILY, TEST_Q1, Permission.Action.READ);
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        TEST_TABLE);
+      grant(protocol, userTable, TEST_TABLE, null, null, Permission.Action.READ);
+      grant(protocol, userColumn, TEST_TABLE, TEST_FAMILY, null, Permission.Action.READ);
+      grant(protocol, userQualifier, TEST_TABLE, TEST_FAMILY, TEST_Q1, Permission.Action.READ);
+    } finally {
+      acl.close();
+    }
 
     PrivilegedExceptionAction<Void> tableRead = new PrivilegedExceptionAction<Void>() {
       @Override
@@ -1405,15 +1639,21 @@ public class TestAccessController {
 
     // --------------------------------------
     // check for wrong table region
+    acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      // but ask for TablePermissions for TEST_TABLE
-      protocol.checkPermissions(new Permission[] { (Permission) new TablePermission(TEST_TABLE,
+      AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+        TEST_TABLE);
+      try {
+        // but ask for TablePermissions for TEST_TABLE
+        protocol.checkPermissions(new Permission[] { (Permission) new TablePermission(TEST_TABLE,
           null, (byte[]) null, Permission.Action.CREATE) });
-      fail("this should have thrown CoprocessorException");
-    } catch (CoprocessorException ex) {
-      // expected
+        fail("this should have thrown CoprocessorException");
+      } catch (CoprocessorException ex) {
+        // expected
+      }
+    } finally {
+      acl.close();
     }
-
   }
 
   @Test
