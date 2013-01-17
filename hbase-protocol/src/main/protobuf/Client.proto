@@ -218,6 +218,7 @@ message ScanResponse {
   optional uint64 scannerId = 2;
   optional bool moreResults = 3;
   optional uint32 ttl = 4;
+  optional uint64 resultSizeBytes = 5;
 }
 
 message LockRowRequest {

@@ -2947,6 +2947,7 @@ public class  HRegionServer implements ClientProtocol,
         RegionScannerHolder rsh = null;
         boolean moreResults = true;
         boolean closeScanner = false;
+        Long resultsWireSize = null;
         ScanResponse.Builder builder = ScanResponse.newBuilder();
         if (request.hasCloseScanner()) {
           closeScanner = request.getCloseScanner();
@@ -2972,6 +2973,8 @@ public class  HRegionServer implements ClientProtocol,
           if (!isLoadingCfsOnDemandSet) {
             scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
           }
+          byte[] hasMetrics = scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
+          resultsWireSize = (hasMetrics != null && Bytes.toBoolean(hasMetrics)) ? 0L : null;
           region.prepareScanner(scan);
           if (region.getCoprocessorHost() != null) {
             scanner = region.getCoprocessorHost().preScannerOpen(scan);
@@ -3079,8 +3082,15 @@ public class  HRegionServer implements ClientProtocol,
             } else {
               for (Result result: results) {
                 if (result != null) {
-                  builder.addResult(ProtobufUtil.toResult(result));
+                  ClientProtos.Result pbResult = ProtobufUtil.toResult(result);
+                  if (resultsWireSize != null) {
+                    resultsWireSize += pbResult.getSerializedSize();
+                  }
+                  builder.addResult(pbResult);
                 }
+              }
+              if (resultsWireSize != null) {
+                builder.setResultSizeBytes(resultsWireSize.longValue());
               }
             }
           } finally {

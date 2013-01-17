@@ -140,8 +140,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           incRPCcallsMetrics();
           ScanRequest request =
             RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
+          ScanResponse response = null;
           try {
-            ScanResponse response = server.scan(null, request);
+            response = server.scan(null, request);
             // Client and RS maintain a nextCallSeq number during the scan. Every next() call
             // from client to server will increment this number in both sides. Client passes this
             // number along with the request and at RS side both the incoming nextCallSeq and its
@@ -171,7 +172,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
           }
-          updateResultsMetrics(rrs);
+          updateResultsMetrics(response);
         } catch (IOException e) {
           if (logScannerActivity) {
             LOG.info("Got exception in fetching from scanner="
@@ -226,22 +227,15 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     }
   }
 
-  private void updateResultsMetrics(Result[] rrs) {
-    if (this.scanMetrics == null || rrs == null) {
+  private void updateResultsMetrics(ScanResponse response) {
+    if (this.scanMetrics == null || !response.hasResultSizeBytes()) {
       return;
     }
-    /*
-     * broken by protobufs
-    for (Result rr : rrs) {
-      if (rr.getBytes() != null) {
-        this.scanMetrics.countOfBytesInResults.inc(rr.getBytes().getLength());
-        if (isRegionServerRemote) {
-          this.scanMetrics.countOfBytesInRemoteResults.inc(
-            rr.getBytes().getLength());
-        }
-      }
+    long value = response.getResultSizeBytes();
+    this.scanMetrics.countOfBytesInResults.addAndGet(value);
+    if (isRegionServerRemote) {
+      this.scanMetrics.countOfBytesInRemoteResults.addAndGet(value);
     }
-    */
   }
 
   private void close() {
