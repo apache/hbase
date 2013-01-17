@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -181,7 +182,7 @@ public class HStore implements Store, StoreConfiguration {
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.conf = new CompoundConfiguration()
       .add(confParam)
-      .add(family.getValues());
+      .addWritableMap(family.getValues());
     this.blocksize = family.getBlocksize();
 
     this.dataBlockEncoder =
