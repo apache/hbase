@@ -1839,20 +1839,16 @@ public class HConnectionManager {
       if (this.master == null) {
         this.master = getMaster();
       }
-      HTableDescriptor hTableDescriptor = null;
+
       HTableDescriptor[] htds = master.getHTableDescriptors();
       if (htds != null && htds.length > 0) {
         for (HTableDescriptor htd: htds) {
           if (Bytes.equals(tableName, htd.getName())) {
-            hTableDescriptor = htd;
+            return htd;
           }
         }
       }
-      //HTableDescriptor htd = master.getHTableDescriptor(tableName);
-      if (hTableDescriptor == null) {
-        throw new TableNotFoundException(Bytes.toString(tableName));
-      }
-      return hTableDescriptor;
+      throw new TableNotFoundException(Bytes.toString(tableName));
     }
   }
 
