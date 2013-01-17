@@ -4322,9 +4322,9 @@ public class TestFromClientSide {
 
     // Build a SynchronousQueue that we use for thread coordination
     final SynchronousQueue<Object> queue = new SynchronousQueue<Object>();
-    List<Thread> threads = new ArrayList<Thread>(5);
+    List<Runnable> tasks = new ArrayList<Runnable>(5);
     for (int i = 0; i < 5; i++) {
-      threads.add(new Thread() {
+      tasks.add(new Runnable() {
         public void run() {
           try {
             // The thread blocks here until we decide to let it go
@@ -4333,25 +4333,28 @@ public class TestFromClientSide {
         }
       });
     }
-    // First, add two threads and make sure the pool size follows
-    pool.submit(threads.get(0));
+    // First, add two tasks and make sure the pool size follows
+    pool.submit(tasks.get(0));
     assertEquals(1, pool.getPoolSize());
-    pool.submit(threads.get(1));
+    pool.submit(tasks.get(1));
     assertEquals(2, pool.getPoolSize());
 
-    // Next, terminate those threads and then make sure the pool is still the
+    // Next, terminate those tasks and then make sure the pool is still the
     // same size
     queue.put(new Object());
-    threads.get(0).join();
     queue.put(new Object());
-    threads.get(1).join();
     assertEquals(2, pool.getPoolSize());
+
+    //ensure that ThreadPoolExecutor knows that tasks are finished.
+    while (pool.getCompletedTaskCount() < 2) {
+      Threads.sleep(1);
+    }
 
     // Now let's simulate adding a RS meaning that we'll go up to three
     // concurrent threads. The pool should not grow larger than three.
-    pool.submit(threads.get(2));
-    pool.submit(threads.get(3));
-    pool.submit(threads.get(4));
+    pool.submit(tasks.get(2));
+    pool.submit(tasks.get(3));
+    pool.submit(tasks.get(4));
     assertEquals(3, pool.getPoolSize());
     queue.put(new Object());
     queue.put(new Object());
