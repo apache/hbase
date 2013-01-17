@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -46,13 +46,9 @@ import org.apache.hadoop.util.StringUtils;
  * configuration objects and have changes reflected everywhere. In contrast to a
  * deep merge, that requires you to explicitly know all applicable copies to
  * propagate changes.
- * <p>
- * This class is package private because we expect significant refactoring here
- * on the HBase side when certain HDFS changes are added & ubiquitous. Will
- * revisit expanding access at that point.
  */
 @InterfaceAudience.Private
-class CompoundConfiguration extends Configuration {
+public class CompoundConfiguration extends Configuration {
   /**
    * Default Constructor. Initializes empty configuration
    */
@@ -71,12 +67,9 @@ class CompoundConfiguration extends Configuration {
   protected List<ImmutableConfigMap> configs
     = new ArrayList<ImmutableConfigMap>();
 
-  /****************************************************************************
-   * These initial APIs actually required original thought
-   ***************************************************************************/
-
   /**
-   * Add Hadoop Configuration object to config list
+   * Add Hadoop Configuration object to config list.
+   * The added configuration overrides the previous ones if there are name collisions.
    * @param conf configuration object
    * @return this, for builder pattern
    */
@@ -121,13 +114,14 @@ class CompoundConfiguration extends Configuration {
   /**
    * Add ImmutableBytesWritable map to config list. This map is generally
    * created by HTableDescriptor or HColumnDescriptor, but can be abstractly
-   * used.
+   * used. The added configuration overrides the previous ones if there are
+   * name collisions.
    *
    * @param map
    *          ImmutableBytesWritable map
    * @return this, for builder pattern
    */
-  public CompoundConfiguration add(
+  public CompoundConfiguration addWritableMap(
       final Map<ImmutableBytesWritable, ImmutableBytesWritable> map) {
     // put new map at the front of the list (top priority)
     this.configs.add(0, new ImmutableConfigMap() {
@@ -158,7 +152,47 @@ class CompoundConfiguration extends Configuration {
 
       @Override
       public int size() {
-        // TODO Auto-generated method stub
+        return m.size();
+      }
+
+      @Override
+      public String toString() {
+        return m.toString();
+      }
+    });
+    return this;
+  }
+
+  /**
+   * Add String map to config list. This map is generally created by HTableDescriptor
+   * or HColumnDescriptor, but can be abstractly used. The added configuration
+   * overrides the previous ones if there are name collisions.
+   *
+   * @return this, for builder pattern
+   */
+  public CompoundConfiguration addStringMap(final Map<String, String> map) {
+    // put new map at the front of the list (top priority)
+    this.configs.add(0, new ImmutableConfigMap() {
+      Map<String, String> m = map;
+
+      @Override
+      public String get(String key) {
+        return m.get(key);
+      }
+
+      @Override
+      public String getRaw(String key) {
+        return get(key);
+      }
+
+      @Override
+      public Class<?> getClassByName(String name)
+      throws ClassNotFoundException {
+        return null;
+      }
+
+      @Override
+      public int size() {
         return m.size();
       }
 
@@ -205,14 +239,9 @@ class CompoundConfiguration extends Configuration {
   @Override
   public Class<?> getClassByName(String name) throws ClassNotFoundException {
     for (ImmutableConfigMap m : this.configs) {
-      try {
-        Class<?> value = m.getClassByName(name);
-        if (value != null) {
-          return value;
-        }
-      } catch (ClassNotFoundException e) {
-        // don't propagate an exception until all configs fail
-        continue;
+      Class<?> value = m.getClassByName(name);
+      if (value != null) {
+        return value;
       }
     }
     throw new ClassNotFoundException();

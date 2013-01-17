@@ -17,14 +17,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.regionserver.CompoundConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.SmallTests;
 
@@ -99,7 +98,7 @@ public class TestCompoundConfiguration extends TestCase {
 
     CompoundConfiguration compoundConf = new CompoundConfiguration()
       .add(baseConf)
-      .add(map);
+      .addWritableMap(map);
     assertEquals("1", compoundConf.get("A"));
     assertEquals("2b", compoundConf.get("B"));
     assertEquals(33, compoundConf.getInt("C", 0));
@@ -110,4 +109,41 @@ public class TestCompoundConfiguration extends TestCase {
     assertNull(compoundConf.get("G"));
   }
 
+  @Test
+  public void testWithStringMap() {
+    Map<String, String> map = new HashMap<String, String>();
+    map.put("B", "2b");
+    map.put("C", "33");
+    map.put("D", "4");
+    // unlike config, note that IBW Maps can accept null values
+    map.put("G", null);
+
+    CompoundConfiguration compoundConf = new CompoundConfiguration().addStringMap(map);
+    assertEquals("2b", compoundConf.get("B"));
+    assertEquals(33, compoundConf.getInt("C", 0));
+    assertEquals("4", compoundConf.get("D"));
+    assertEquals(4, compoundConf.getInt("D", 0));
+    assertNull(compoundConf.get("E"));
+    assertEquals(6, compoundConf.getInt("F", 6));
+    assertNull(compoundConf.get("G"));
+  }
+
+  @Test
+  public void testLaterConfigsOverrideEarlier() {
+    Map<String, String> map1 = new HashMap<String, String>();
+    map1.put("A", "2");
+    map1.put("D", "5");
+    Map<String, String> map2 = new HashMap<String, String>();
+    map2.put("A", "3");
+    map2.put("B", "4");
+
+    CompoundConfiguration compoundConf = new CompoundConfiguration()
+      .addStringMap(map1).add(baseConf);
+    assertEquals("1", compoundConf.get("A"));
+    assertEquals("5", compoundConf.get("D"));
+    compoundConf.addStringMap(map2);
+    assertEquals("3", compoundConf.get("A"));
+    assertEquals("4", compoundConf.get("B"));
+    assertEquals("5", compoundConf.get("D"));
+  }
 }
