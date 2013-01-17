@@ -157,7 +157,7 @@ public class ReplicationSourceManager {
     }
     synchronized (this.hlogsById) {
       SortedSet<String> hlogs = this.hlogsById.get(id);
-      if (!queueRecovered && hlogs.first() != key) {
+      if (!queueRecovered && !hlogs.first().equals(key)) {
         SortedSet<String> hlogSet = hlogs.headSet(key);
         for (String hlog : hlogSet) {
           this.zkHelper.removeLogFromList(hlog, id);
