@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -68,14 +67,12 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.InjectionEvent;
-import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -262,7 +259,12 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
     String compactHookString = conf.get(HConstants.COMPACTION_HOOK);
     if (compactHookString != null && !compactHookString.isEmpty()) {
+      String compactionHookJar = conf.get(HConstants.COMPACTION_HOOK_JAR);
+      if (compactionHookJar == null || compactionHookJar.isEmpty()) {
+        throw new IllegalArgumentException("The path of the custom jar for the compaction hook  is not provided");
+      }
       try {
+        DynamicClassLoader.load(compactionHookJar,  compactHookString);
         this.compactHook = (CompactionHook) Class.forName(compactHookString).newInstance();
       } catch (InstantiationException e) {
         throw new IllegalArgumentException(e);

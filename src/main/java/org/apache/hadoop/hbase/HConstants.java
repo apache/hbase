@@ -646,6 +646,11 @@ public final class HConstants {
    */
   public static final String COMPACTION_HOOK = "compaction_hook";
 
+  /**
+   * Absolute path of the external jar which will contain the custom compaction hook
+   */
+  public static  String COMPACTION_HOOK_JAR = "compaction_hook_jar";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
