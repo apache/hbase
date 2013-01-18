@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -27,9 +32,13 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.ipc.HBaseClient;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -40,8 +49,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 @Category(MediumTests.class)
 public class TestMultiParallel {
@@ -73,11 +80,20 @@ public class TestMultiParallel {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before public void before() throws IOException {
+  @Before public void before() throws Exception {
     LOG.info("before");
     if (UTIL.ensureSomeRegionServersAvailable(slaves)) {
       // Distribute regions
       UTIL.getMiniHBaseCluster().getMaster().balance();
+      // Wait until completing balance
+      final RegionStates regionStates = UTIL.getMiniHBaseCluster().getMaster()
+          .getAssignmentManager().getRegionStates();
+      UTIL.waitFor(15 * 1000, new Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return !regionStates.isRegionsInTransition();
+        }
+      });
     }
     LOG.info("before done");
   }
