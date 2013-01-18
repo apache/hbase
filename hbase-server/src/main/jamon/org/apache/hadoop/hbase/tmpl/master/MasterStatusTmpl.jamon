@@ -283,7 +283,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 <%def userTables>
 <%java>
    HTableDescriptor[] tables = admin.listTables();
-   HConnectionManager.deleteConnection(admin.getConfiguration(), false);
+   HConnectionManager.deleteConnection(admin.getConfiguration());
 </%java>
 <%if (tables != null && tables.length > 0)%>
 <table class="table table-striped">

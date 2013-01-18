@@ -73,28 +73,33 @@ public class TestDelayedRpc {
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
-    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class,
-        rpcServer.getListenerAddress(), conf, 1000);
+    ProtobufRpcClientEngine clientEngine = new ProtobufRpcClientEngine(conf);
+    try {
+      TestRpc client = clientEngine.getProxy(TestRpc.class,
+          rpcServer.getListenerAddress(), conf, 1000);
 
-    List<Integer> results = new ArrayList<Integer>();
+      List<Integer> results = new ArrayList<Integer>();
 
-    TestThread th1 = new TestThread(client, true, results);
-    TestThread th2 = new TestThread(client, false, results);
-    TestThread th3 = new TestThread(client, false, results);
-    th1.start();
-    Thread.sleep(100);
-    th2.start();
-    Thread.sleep(200);
-    th3.start();
+      TestThread th1 = new TestThread(client, true, results);
+      TestThread th2 = new TestThread(client, false, results);
+      TestThread th3 = new TestThread(client, false, results);
+      th1.start();
+      Thread.sleep(100);
+      th2.start();
+      Thread.sleep(200);
+      th3.start();
 
-    th1.join();
-    th2.join();
-    th3.join();
+      th1.join();
+      th2.join();
+      th3.join();
 
-    assertEquals(UNDELAYED, results.get(0).intValue());
-    assertEquals(UNDELAYED, results.get(1).intValue());
-    assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :
-        0xDEADBEEF);
+      assertEquals(UNDELAYED, results.get(0).intValue());
+      assertEquals(UNDELAYED, results.get(1).intValue());
+      assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :
+          0xDEADBEEF);
+    } finally {
+      clientEngine.close();
+    }
   }
 
   private static class ListAppender extends AppenderSkeleton {
@@ -136,32 +141,38 @@ public class TestDelayedRpc {
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
-    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class,
-        rpcServer.getListenerAddress(), conf, 1000);
 
-    Thread threads[] = new Thread[MAX_DELAYED_RPC + 1];
+    ProtobufRpcClientEngine clientEngine = new ProtobufRpcClientEngine(conf);
+    try {
+      TestRpc client = clientEngine.getProxy(TestRpc.class,
+          rpcServer.getListenerAddress(), conf, 1000);
 
-    for (int i = 0; i < MAX_DELAYED_RPC; i++) {
-      threads[i] = new TestThread(client, true, null);
-      threads[i].start();
+      Thread threads[] = new Thread[MAX_DELAYED_RPC + 1];
+
+      for (int i = 0; i < MAX_DELAYED_RPC; i++) {
+        threads[i] = new TestThread(client, true, null);
+        threads[i].start();
+      }
+
+      /* No warnings till here. */
+      assertTrue(listAppender.getMessages().isEmpty());
+
+      /* This should give a warning. */
+      threads[MAX_DELAYED_RPC] = new TestThread(client, true, null);
+      threads[MAX_DELAYED_RPC].start();
+
+      for (int i = 0; i < MAX_DELAYED_RPC; i++) {
+        threads[i].join();
+      }
+
+      assertFalse(listAppender.getMessages().isEmpty());
+      assertTrue(listAppender.getMessages().get(0).startsWith(
+          "Too many delayed calls"));
+
+      log.removeAppender(listAppender);
+    } finally {
+      clientEngine.close();
     }
-
-    /* No warnings till here. */
-    assertTrue(listAppender.getMessages().isEmpty());
-
-    /* This should give a warning. */
-    threads[MAX_DELAYED_RPC] = new TestThread(client, true, null);
-    threads[MAX_DELAYED_RPC].start();
-
-    for (int i = 0; i < MAX_DELAYED_RPC; i++) {
-      threads[i].join();
-    }
-
-    assertFalse(listAppender.getMessages().isEmpty());
-    assertTrue(listAppender.getMessages().get(0).startsWith(
-        "Too many delayed calls"));
-
-    log.removeAppender(listAppender);
   }
 
   public interface TestRpc extends IpcProtocol {
@@ -178,7 +189,6 @@ public class TestDelayedRpc {
     /**
      * @param delayReturnValue Should the response to the delayed call be set
      * at the start or the end of the delay.
-     * @param delay Amount of milliseconds to delay the call by
      */
     public TestRpcImpl(boolean delayReturnValue) {
       this.delayReturnValue = delayReturnValue;
@@ -251,29 +261,34 @@ public class TestDelayedRpc {
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
-    TestRpc client = (TestRpc) HBaseClientRPC.getProxy(TestRpc.class,
-        rpcServer.getListenerAddress(), conf, 1000);
-
-    int result = 0xDEADBEEF;
-
+    ProtobufRpcClientEngine clientEngine = new ProtobufRpcClientEngine(conf);
     try {
-      result = client.test(TestArg.newBuilder().setDelay(false).build()).getResponse();
-    } catch (Exception e) {
-      fail("No exception should have been thrown.");
-    }
-    assertEquals(result, UNDELAYED);
+      TestRpc client = clientEngine.getProxy(TestRpc.class,
+          rpcServer.getListenerAddress(), conf, 1000);
 
-    boolean caughtException = false;
-    try {
-      result = client.test(TestArg.newBuilder().setDelay(true).build()).getResponse();
-    } catch(Exception e) {
-      // Exception thrown by server is enclosed in a RemoteException.
-      if (e.getCause().getMessage().contains(
-          "java.lang.Exception: Something went wrong"))
-        caughtException = true;
-      Log.warn(e);
+      int result = 0xDEADBEEF;
+
+      try {
+        result = client.test(TestArg.newBuilder().setDelay(false).build()).getResponse();
+      } catch (Exception e) {
+        fail("No exception should have been thrown.");
+      }
+      assertEquals(result, UNDELAYED);
+
+      boolean caughtException = false;
+      try {
+        result = client.test(TestArg.newBuilder().setDelay(true).build()).getResponse();
+      } catch(Exception e) {
+        // Exception thrown by server is enclosed in a RemoteException.
+        if (e.getCause().getMessage().contains(
+            "java.lang.Exception: Something went wrong"))
+          caughtException = true;
+        Log.warn(e);
+      }
+      assertTrue(caughtException);
+    } finally {
+      clientEngine.close();
     }
-    assertTrue(caughtException);
   }
 
   /**

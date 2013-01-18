@@ -530,13 +530,6 @@
   </property>
 
   <property>
-    <name>hbase.rpc.client.engine</name>
-    <value>org.apache.hadoop.hbase.ipc.ProtobufRpcClientEngine</value>
-    <description>Implementation of org.apache.hadoop.hbase.ipc.RpcClientEngine to be
-    used for client RPC call marshalling.
-    </description>
-  </property>
-  <property>
     <name>hbase.rpc.server.engine</name>
     <value>org.apache.hadoop.hbase.ipc.ProtobufRpcServerEngine</value>
     <description>Implementation of org.apache.hadoop.hbase.ipc.RpcServerEngine to be

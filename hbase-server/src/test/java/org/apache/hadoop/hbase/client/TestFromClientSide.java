@@ -285,7 +285,7 @@ public class TestFromClientSide {
      z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
 
 
-     HConnectionManager.deleteConnection(newConfig, true);
+     HConnectionManager.deleteConnection(newConfig);
      try {
        z2.getRecoverableZooKeeper().getZooKeeper().exists("/z2", false);
        assertTrue("We should not have a valid connection for z2", false);
@@ -296,7 +296,7 @@ public class TestFromClientSide {
      // We expect success here.
 
 
-     HConnectionManager.deleteConnection(newConfig2, true);
+     HConnectionManager.deleteConnection(newConfig2);
      try {
        z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
        assertTrue("We should not have a valid connection for z4", false);

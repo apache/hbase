@@ -45,27 +45,24 @@ public class ProtobufRpcClientEngine implements RpcClientEngine {
   private static final Log LOG =
       LogFactory.getLog("org.apache.hadoop.hbase.ipc.ProtobufRpcClientEngine");
 
-  ProtobufRpcClientEngine() {
-    super();
+  protected HBaseClient client;
+
+  public ProtobufRpcClientEngine(Configuration conf) {
+    this.client = new HBaseClient(conf);
   }
 
-  protected final static ClientCache CLIENTS = new ClientCache();
   @Override
-  public IpcProtocol getProxy(
-      Class<? extends IpcProtocol> protocol,
-      InetSocketAddress addr, User ticket, Configuration conf,
-      SocketFactory factory, int rpcTimeout) throws IOException {
-    final Invoker invoker = new Invoker(protocol, addr, ticket, conf, factory,
-        rpcTimeout);
-    return (IpcProtocol) Proxy.newProxyInstance(
+  public <T extends IpcProtocol> T getProxy(
+      Class<T> protocol, InetSocketAddress addr,
+      Configuration conf, int rpcTimeout) throws IOException {
+    final Invoker invoker = new Invoker(protocol, addr, User.getCurrent(), rpcTimeout, client);
+    return (T) Proxy.newProxyInstance(
         protocol.getClassLoader(), new Class[]{protocol}, invoker);
   }
 
   @Override
-  public void stopProxy(IpcProtocol proxy) {
-    if (proxy!=null) {
-      ((Invoker)Proxy.getInvocationHandler(proxy)).close();
-    }
+  public void close() {
+    this.client.stop();
   }
 
   static class Invoker implements InvocationHandler {
@@ -75,16 +72,14 @@ public class ProtobufRpcClientEngine implements RpcClientEngine {
     private InetSocketAddress address;
     private User ticket;
     private HBaseClient client;
-    private boolean isClosed = false;
     final private int rpcTimeout;
 
-    public Invoker(Class<? extends IpcProtocol> protocol,
-                   InetSocketAddress addr, User ticket, Configuration conf,
-                   SocketFactory factory, int rpcTimeout) throws IOException {
+    public Invoker(Class<? extends IpcProtocol> protocol, InetSocketAddress addr, User ticket,
+        int rpcTimeout, HBaseClient client) throws IOException {
       this.protocol = protocol;
       this.address = addr;
       this.ticket = ticket;
-      this.client = CLIENTS.getClient(conf, factory);
+      this.client = client;
       this.rpcTimeout = rpcTimeout;
     }
 
@@ -154,13 +149,6 @@ public class ProtobufRpcClientEngine implements RpcClientEngine {
           throw new ServiceException(cause);
         }
         throw new ServiceException(e);
-      }
-    }
-
-    synchronized protected void close() {
-      if (!isClosed) {
-        isClosed = true;
-        CLIENTS.stopClient(client);
       }
     }
 

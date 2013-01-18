@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.security.User;
 
-import javax.net.SocketFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -32,10 +31,9 @@ import java.net.InetSocketAddress;
 @InterfaceAudience.Private
 public interface RpcClientEngine {
   /** Construct a client-side proxy object. */
-  IpcProtocol getProxy(Class<? extends IpcProtocol> protocol,
-    InetSocketAddress addr, User ticket, Configuration conf,
-    SocketFactory factory, int rpcTimeout) throws IOException;
+  <T extends IpcProtocol> T getProxy(Class<T> protocol, InetSocketAddress addr,
+      Configuration conf, int rpcTimeout) throws IOException;
 
-  /** Stop this proxy. */
-  void stopProxy(IpcProtocol proxy);
+  /** Shutdown this instance */
+  void close();
 }

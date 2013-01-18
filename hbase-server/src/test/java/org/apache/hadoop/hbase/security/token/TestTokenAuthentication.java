@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
+import org.apache.hadoop.hbase.ipc.ProtobufRpcClientEngine;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -363,20 +364,25 @@ public class TestTokenAuthentication {
       public Object run() throws Exception {
         Configuration c = server.getConfiguration();
         c.set(HConstants.CLUSTER_ID, clusterId.toString());
-        AuthenticationProtos.AuthenticationService.BlockingInterface proxy =
-            (AuthenticationProtos.AuthenticationService.BlockingInterface)
-            HBaseClientRPC.waitForProxy(BlockingAuthenticationService.class,
-                server.getAddress(), c,
-                HConstants.DEFAULT_HBASE_CLIENT_RPC_MAXATTEMPTS,
-                HConstants.DEFAULT_HBASE_RPC_TIMEOUT,
-                HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+        ProtobufRpcClientEngine rpcClient =
+            new ProtobufRpcClientEngine(c);
+        try {
+          AuthenticationProtos.AuthenticationService.BlockingInterface proxy =
+              HBaseClientRPC.waitForProxy(rpcClient, BlockingAuthenticationService.class,
+                  server.getAddress(), c,
+                  HConstants.DEFAULT_HBASE_CLIENT_RPC_MAXATTEMPTS,
+                  HConstants.DEFAULT_HBASE_RPC_TIMEOUT,
+                  HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
-        AuthenticationProtos.WhoAmIResponse response =
-            proxy.whoami(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
-        String myname = response.getUsername();
-        assertEquals("testuser", myname);
-        String authMethod = response.getAuthMethod();
-        assertEquals("TOKEN", authMethod);
+          AuthenticationProtos.WhoAmIResponse response =
+              proxy.whoami(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
+          String myname = response.getUsername();
+          assertEquals("testuser", myname);
+          String authMethod = response.getAuthMethod();
+          assertEquals("TOKEN", authMethod);
+        } finally {
+          rpcClient.close();
+        }
         return null;
       }
     });

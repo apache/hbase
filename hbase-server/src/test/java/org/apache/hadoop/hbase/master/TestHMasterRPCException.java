@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.MasterMonitorProtocol;
+import org.apache.hadoop.hbase.ipc.ProtobufRpcClientEngine;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.junit.Test;
@@ -50,31 +51,36 @@ public class TestHMasterRPCException {
 
     ServerName sm = hm.getServerName();
     InetSocketAddress isa = new InetSocketAddress(sm.getHostname(), sm.getPort());
-    int i = 0;
-    //retry the RPC a few times; we have seen SocketTimeoutExceptions if we
-    //try to connect too soon. Retry on SocketTimeoutException.
-    while (i < 20) { 
-      try {
-        MasterMonitorProtocol inf = (MasterMonitorProtocol) HBaseClientRPC.getProxy(
-            MasterMonitorProtocol.class, isa, conf, 100 * 10);
-        inf.isMasterRunning(null, IsMasterRunningRequest.getDefaultInstance());
-        fail();
-      } catch (ServiceException ex) {
-        IOException ie = ProtobufUtil.getRemoteException(ex);
-        if (!(ie instanceof SocketTimeoutException)) {
-          if(ie.getMessage().startsWith(
-              "org.apache.hadoop.hbase.ipc.ServerNotRunningYetException: Server is not running yet")) {
-            return;
+    ProtobufRpcClientEngine engine = new ProtobufRpcClientEngine(conf);
+    try {
+      int i = 0;
+      //retry the RPC a few times; we have seen SocketTimeoutExceptions if we
+      //try to connect too soon. Retry on SocketTimeoutException.
+      while (i < 20) {
+        try {
+          MasterMonitorProtocol inf = engine.getProxy(
+              MasterMonitorProtocol.class, isa, conf, 100 * 10);
+          inf.isMasterRunning(null, IsMasterRunningRequest.getDefaultInstance());
+          fail();
+        } catch (ServiceException ex) {
+          IOException ie = ProtobufUtil.getRemoteException(ex);
+          if (!(ie instanceof SocketTimeoutException)) {
+            if(ie.getMessage().startsWith(
+                "org.apache.hadoop.hbase.ipc.ServerNotRunningYetException: Server is not running yet")) {
+              return;
+            }
+          } else {
+            System.err.println("Got SocketTimeoutException. Will retry. ");
           }
-        } else {
-          System.err.println("Got SocketTimeoutException. Will retry. ");
+        } catch (Throwable t) {
+          fail("Unexpected throwable: " + t);
         }
-      } catch (Throwable t) {
-        fail("Unexpected throwable: " + t);
+        Thread.sleep(100);
+        i++;
       }
-      Thread.sleep(100);
-      i++;
+      fail();
+    } finally {
+      engine.close();
     }
-    fail();
   }
 }

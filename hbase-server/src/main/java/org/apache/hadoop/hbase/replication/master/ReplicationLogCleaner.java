@@ -148,7 +148,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
       this.zkHelper.getZookeeperWatcher().close();
     }
     // Not sure why we're deleting a connection that we never acquired or used
-    HConnectionManager.deleteConnection(this.getConf(), true);
+    HConnectionManager.deleteConnection(this.getConf());
   }
 
   @Override

@@ -75,6 +75,8 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
+import org.apache.hadoop.hbase.ipc.ProtobufRpcClientEngine;
+import org.apache.hadoop.hbase.ipc.RpcClientEngine;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
@@ -117,7 +119,7 @@ import com.google.protobuf.ServiceException;
  * <p>But sharing connections
  * makes clean up of {@link HConnection} instances a little awkward.  Currently,
  * clients cleanup by calling
- * {@link #deleteConnection(Configuration, boolean)}.  This will shutdown the
+ * {@link #deleteConnection(Configuration)}.  This will shutdown the
  * zookeeper connection the HConnection was using and clean up all
  * HConnection resources as well as stopping proxies to servers out on the
  * cluster. Not running the cleanup will not end the world; it'll
@@ -138,7 +140,7 @@ import com.google.protobuf.ServiceException;
  * }
  * </pre>
  * <p>Cleanup used to be done inside in a shutdown hook.  On startup we'd
- * register a shutdown hook that called {@link #deleteAllConnections(boolean)}
+ * register a shutdown hook that called {@link #deleteAllConnections()}
  * on its way out but the order in which shutdown hooks run is not defined so
  * were problematic for clients of HConnection that wanted to register their
  * own shutdown hooks so we removed ours though this shifts the onus for
@@ -212,7 +214,7 @@ public class HConnectionManager {
         connection = new HConnectionImplementation(conf, true);
         HBASE_INSTANCES.put(connectionKey, connection);
       } else if (connection.isClosed()) {
-        HConnectionManager.deleteConnection(connectionKey, true, true);
+        HConnectionManager.deleteConnection(connectionKey, true);
         connection = new HConnectionImplementation(conf, true);
         HBASE_INSTANCES.put(connectionKey, connection);
       }
@@ -244,14 +246,9 @@ public class HConnectionManager {
    * @param conf
    *          configuration whose identity is used to find {@link HConnection}
    *          instance.
-   * @param stopProxy
-   *          Shuts down all the proxy's put up to cluster members including to
-   *          cluster HMaster. Calls
-   *          {@link HBaseClientRPC#stopProxy(IpcProtocol)}
-   *          .
    */
-  public static void deleteConnection(Configuration conf, boolean stopProxy) {
-    deleteConnection(new HConnectionKey(conf), stopProxy, false);
+  public static void deleteConnection(Configuration conf) {
+    deleteConnection(new HConnectionKey(conf), false);
   }
 
   /**
@@ -262,40 +259,37 @@ public class HConnectionManager {
    * @param connection
    */
   public static void deleteStaleConnection(HConnection connection) {
-    deleteConnection(connection, true, true);
+    deleteConnection(connection, true);
   }
 
   /**
    * Delete information for all connections.
-   * @param stopProxy stop the proxy as well
    * @throws IOException
    */
-  public static void deleteAllConnections(boolean stopProxy) {
+  public static void deleteAllConnections() {
     synchronized (HBASE_INSTANCES) {
       Set<HConnectionKey> connectionKeys = new HashSet<HConnectionKey>();
       connectionKeys.addAll(HBASE_INSTANCES.keySet());
       for (HConnectionKey connectionKey : connectionKeys) {
-        deleteConnection(connectionKey, stopProxy, false);
+        deleteConnection(connectionKey, false);
       }
       HBASE_INSTANCES.clear();
     }
   }
 
-  private static void deleteConnection(HConnection connection, boolean stopProxy,
-      boolean staleConnection) {
+  private static void deleteConnection(HConnection connection, boolean staleConnection) {
     synchronized (HBASE_INSTANCES) {
       for (Entry<HConnectionKey, HConnectionImplementation> connectionEntry : HBASE_INSTANCES
           .entrySet()) {
         if (connectionEntry.getValue() == connection) {
-          deleteConnection(connectionEntry.getKey(), stopProxy, staleConnection);
+          deleteConnection(connectionEntry.getKey(), staleConnection);
           break;
         }
       }
     }
   }
 
-  private static void deleteConnection(HConnectionKey connectionKey,
-      boolean stopProxy, boolean staleConnection) {
+  private static void deleteConnection(HConnectionKey connectionKey, boolean staleConnection) {
     synchronized (HBASE_INSTANCES) {
       HConnectionImplementation connection = HBASE_INSTANCES
           .get(connectionKey);
@@ -303,11 +297,9 @@ public class HConnectionManager {
         connection.decCount();
         if (connection.isZeroReference() || staleConnection) {
           HBASE_INSTANCES.remove(connectionKey);
-          connection.close(stopProxy);
-        } else if (stopProxy) {
-          connection.stopProxyOnClose(stopProxy);
+          connection.internalClose();
         }
-      }else {
+      } else {
         LOG.error("Connection not found in the list, can't delete it "+
           "(connection key="+connectionKey+"). May be the key was modified?");
       }
@@ -549,6 +541,9 @@ public class HConnectionManager {
 
     private final Configuration conf;
 
+    // client RPC
+    private RpcClientEngine rpcEngine;
+
     // Known region ServerName.toString() -> RegionClient/Admin
     private final ConcurrentHashMap<String, Map<String, IpcProtocol>> servers =
       new ConcurrentHashMap<String, Map<String, IpcProtocol>>();
@@ -575,7 +570,6 @@ public class HConnectionManager {
     private final Set<Integer> regionCachePrefetchDisabledTables =
       new CopyOnWriteArraySet<Integer>();
 
-    private boolean stopProxy;
     private int refCount;
 
     // indicates whether this connection's life cycle is managed (by us)
@@ -589,6 +583,9 @@ public class HConnectionManager {
     throws ZooKeeperConnectionException {
       this.conf = conf;
       this.managed = managed;
+      // ProtobufRpcClientEngine is the main RpcClientEngine implementation,
+      // but we maintain access through an interface to allow overriding for tests
+      this.rpcEngine = new ProtobufRpcClientEngine(conf);
       String adminClassName = conf.get(REGION_PROTOCOL_CLASS,
         DEFAULT_ADMIN_PROTOCOL_CLASS);
       this.closed = false;
@@ -716,7 +713,7 @@ public class HConnectionManager {
 
         InetSocketAddress isa =
           new InetSocketAddress(sn.getHostname(), sn.getPort());
-        MasterProtocol tryMaster = (MasterProtocol)HBaseClientRPC.getProxy(
+        MasterProtocol tryMaster = rpcEngine.getProxy(
             masterProtocolState.protocolClass,
             isa, this.conf, this.rpcTimeout);
 
@@ -724,7 +721,6 @@ public class HConnectionManager {
             null, RequestConverter.buildIsMasterRunningRequest()).getIsMasterRunning()) {
           return tryMaster;
         } else {
-          HBaseClientRPC.stopProxy(tryMaster);
           String msg = "Can create a proxy to master, but it is not running";
           LOG.info(msg);
           throw new MasterNotRunningException(msg);
@@ -897,7 +893,7 @@ public class HConnectionManager {
     @Override
     public HRegionLocation locateRegion(final byte[] regionName) throws IOException {
       return locateRegion(HRegionInfo.getTableName(regionName),
-        HRegionInfo.getStartKey(regionName), false, true);
+          HRegionInfo.getStartKey(regionName), false, true);
     }
 
     @Override
@@ -1364,7 +1360,6 @@ public class HConnectionManager {
      * @param hostname
      * @param port
      * @param protocolClass
-     * @param version
      * @return Proxy.
      * @throws IOException
      */
@@ -1397,8 +1392,7 @@ public class HConnectionManager {
               // Only create isa when we need to.
               InetSocketAddress address = new InetSocketAddress(hostname, port);
               // definitely a cache miss. establish an RPC for this RS
-              server = HBaseClientRPC.waitForProxy(
-                  protocolClass, address, this.conf,
+              server = HBaseClientRPC.waitForProxy(rpcEngine, protocolClass, address, this.conf,
                   this.maxRPCAttempts, this.rpcTimeout, this.rpcTimeout);
               protocols.put(protocol, server);
             } catch (RemoteException e) {
@@ -1611,9 +1605,6 @@ public class HConnectionManager {
         throws MasterNotRunningException {
       synchronized (masterAndZKLock) {
         if (!isKeepAliveMasterConnectedAndRunning(protocolState)) {
-          if (protocolState.protocol != null) {
-            HBaseClientRPC.stopProxy(protocolState.protocol);
-          }
           protocolState.protocol = null;
           protocolState.protocol = createMasterWithRetries(protocolState);
         }
@@ -1688,7 +1679,6 @@ public class HConnectionManager {
     private void closeMasterProtocol(MasterProtocolState protocolState) {
       if (protocolState.protocol != null){
         LOG.info("Closing master protocol: " + protocolState.protocolClass.getName());
-        HBaseClientRPC.stopProxy(protocolState.protocol);
         protocolState.protocol = null;
       }
       protocolState.userCount = 0;
@@ -2276,10 +2266,6 @@ public class HConnectionManager {
       }
     }
 
-    public void stopProxyOnClose(boolean stopProxy) {
-      this.stopProxy = stopProxy;
-    }
-
     /**
      * Increment this client's reference count.
      */
@@ -2305,21 +2291,15 @@ public class HConnectionManager {
       return refCount == 0;
     }
 
-    void close(boolean stopProxy) {
+    void internalClose() {
       if (this.closed) {
         return;
       }
       delayedClosing.stop("Closing connection");
-      if (stopProxy) {
-        closeMaster();
-        for (Map<String, IpcProtocol> i : servers.values()) {
-          for (IpcProtocol server: i.values()) {
-            HBaseClientRPC.stopProxy(server);
-          }
-        }
-      }
+      closeMaster();
       closeZooKeeperWatcher();
       this.servers.clear();
+      this.rpcEngine.close();
       this.closed = true;
     }
 
@@ -2329,10 +2309,10 @@ public class HConnectionManager {
         if (aborted) {
           HConnectionManager.deleteStaleConnection(this);
         } else {
-          HConnectionManager.deleteConnection(this, stopProxy, false);
+          HConnectionManager.deleteConnection(this, false);
         }
       } else {
-        close(true);
+        internalClose();
       }
     }
 
@@ -2418,6 +2398,14 @@ public class HConnectionManager {
         }
       }
       throw new TableNotFoundException(Bytes.toString(tableName));
+    }
+
+    /**
+     * Override the RpcClientEngine implementation used by this connection.
+     * <strong>FOR TESTING PURPOSES ONLY!</strong>
+     */
+    void setRpcEngine(RpcClientEngine engine) {
+      this.rpcEngine = engine;
     }
   }
 
