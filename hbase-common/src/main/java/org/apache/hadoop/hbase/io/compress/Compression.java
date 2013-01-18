@@ -100,34 +100,54 @@ public final class Compression {
   public static enum Algorithm {
     LZO("lzo") {
       // Use base type to avoid compile-time dependencies.
-      private transient CompressionCodec lzoCodec;
+      private volatile transient CompressionCodec lzoCodec;
+      private transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (lzoCodec == null) {
-          try {
-            Class<?> externalCodec =
-                getClassLoaderForCodec().loadClass("com.hadoop.compression.lzo.LzoCodec");
-            lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
-                new Configuration(conf));
-          } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
+          synchronized (lock) {
+            if (lzoCodec == null) {
+              lzoCodec = buildCodec(conf);
+            }
           }
         }
         return lzoCodec;
       }
+
+      private CompressionCodec buildCodec(Configuration conf) {
+        try {
+          Class<?> externalCodec =
+              ClassLoader.getSystemClassLoader()
+                  .loadClass("com.hadoop.compression.lzo.LzoCodec");
+          return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
+              new Configuration(conf));
+        } catch (ClassNotFoundException e) {
+          throw new RuntimeException(e);
+        }
+      }
     },
     GZ("gz") {
-      private transient GzipCodec codec;
+      private volatile transient GzipCodec codec;
+      private transient Object lock = new Object();
 
       @Override
       DefaultCodec getCodec(Configuration conf) {
         if (codec == null) {
-          codec = new ReusableStreamGzipCodec();
-          codec.setConf(new Configuration(conf));
+          synchronized (lock) {
+            if (codec == null) {
+              codec = buildCodec(conf);
+            }
+          }
         }
 
         return codec;
+      }
+
+      private GzipCodec buildCodec(Configuration conf) {
+        GzipCodec gzcodec = new ReusableStreamGzipCodec();
+        gzcodec.setConf(new Configuration(conf));
+        return gzcodec;
       }
     },
 
@@ -164,39 +184,61 @@ public final class Compression {
       }
     },
     SNAPPY("snappy") {
-        // Use base type to avoid compile-time dependencies.
-        private transient CompressionCodec snappyCodec;
+      // Use base type to avoid compile-time dependencies.
+      private volatile transient CompressionCodec snappyCodec;
+      private transient Object lock = new Object();
 
-        @Override
-        CompressionCodec getCodec(Configuration conf) {
-          if (snappyCodec == null) {
-            try {
-              Class<?> externalCodec =
-                  getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.SnappyCodec");
-              snappyCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
-            } catch (ClassNotFoundException e) {
-              throw new RuntimeException(e);
+      @Override
+      CompressionCodec getCodec(Configuration conf) {
+        if (snappyCodec == null) {
+          synchronized (lock) {
+            if (snappyCodec == null) {
+              snappyCodec = buildCodec(conf);
             }
           }
-          return snappyCodec;
         }
+        return snappyCodec;
+      }
+
+      private CompressionCodec buildCodec(Configuration conf) {
+        try {
+          Class<?> externalCodec =
+              ClassLoader.getSystemClassLoader()
+                  .loadClass("org.apache.hadoop.io.compress.SnappyCodec");
+          return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
+              conf);
+        } catch (ClassNotFoundException e) {
+          throw new RuntimeException(e);
+        }
+      }
     },
     LZ4("lz4") {
       // Use base type to avoid compile-time dependencies.
-      private transient CompressionCodec lz4Codec;
+      private volatile transient CompressionCodec lz4Codec;
+      private transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (lz4Codec == null) {
-          try {
-            Class<?> externalCodec =
-                getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.Lz4Codec");
-            lz4Codec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
-          } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
+          synchronized (lock) {
+            if (lz4Codec == null) {
+              lz4Codec = buildCodec(conf);
+            }
           }
+          buildCodec(conf);
         }
         return lz4Codec;
+      }
+
+      private CompressionCodec buildCodec(Configuration conf) {
+        try {
+          Class<?> externalCodec =
+              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.Lz4Codec");
+          return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
+              conf);
+        } catch (ClassNotFoundException e) {
+          throw new RuntimeException(e);
+        }
       }
   };
 
