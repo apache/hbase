@@ -90,7 +90,7 @@ public class ReplicationPeer implements Abortable, Closeable {
   }
 
   private void readPeerStateZnode() throws DeserializationException {
-    this.peerEnabled.set(ReplicationZookeeper.isPeerEnabled(this.peerStateTracker.getData(false)));
+    this.peerEnabled.set(ReplicationZookeeper.isStateEnabled(this.peerStateTracker.getData(false)));
   }
 
   /**
