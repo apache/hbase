@@ -2343,7 +2343,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           </itemizedlist>
           </para>
           <para>The following StoreFiles exist: 100, 25, 12, and 12 bytes apiece (oldest to newest).
-          With the above parameters, the files that would be selected for minor compaction are 23, 12, and 12.
+          With the above parameters, no compaction will be started.
           </para>
           <para>Why?
           <itemizedlist>
