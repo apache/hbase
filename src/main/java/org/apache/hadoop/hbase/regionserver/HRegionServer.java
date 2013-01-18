@@ -453,10 +453,6 @@ public class HRegionServer implements HRegionInterface,
               }
             });
 
-    int parallelHDFSReadPoolSize = conf.getInt(HConstants.HDFS_QUORUM_READ_THREADS_MAX,
-            HConstants.DEFAULT_HDFS_QUORUM_READ_THREADS_MAX);
-    LOG.debug("parallelHDFSReadPoolSize is (for quorum)" + parallelHDFSReadPoolSize);
-    this.setNumHDFSQuorumReadThreads(parallelHDFSReadPoolSize);
   }
 
   /**
@@ -1018,6 +1014,13 @@ public class HRegionServer implements HRegionInterface,
       }
       // Initialize the HLogs
       setupHLog(logdir, oldLogDir, this.hlogRollers.length);
+
+      // Set num of HDFS threads after this.fs is initialized.
+      int parallelHDFSReadPoolSize = conf.getInt(
+              HConstants.HDFS_QUORUM_READ_THREADS_MAX,
+              HConstants.DEFAULT_HDFS_QUORUM_READ_THREADS_MAX);
+      LOG.debug("parallelHDFSReadPoolSize is (for quorum)" + parallelHDFSReadPoolSize);
+      this.setNumHDFSQuorumReadThreads(parallelHDFSReadPoolSize);
       
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
