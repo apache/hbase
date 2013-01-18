@@ -260,11 +260,14 @@ public class Store extends SchemaConfigured implements HeapSize {
     String compactHookString = conf.get(HConstants.COMPACTION_HOOK);
     if (compactHookString != null && !compactHookString.isEmpty()) {
       String compactionHookJar = conf.get(HConstants.COMPACTION_HOOK_JAR);
-      if (compactionHookJar == null || compactionHookJar.isEmpty()) {
-        throw new IllegalArgumentException("The path of the custom jar for the compaction hook  is not provided");
+      if (compactionHookJar != null && !compactionHookJar.isEmpty()) {
+        try {
+          DynamicClassLoader.load(compactionHookJar, compactHookString);
+        } catch (ClassNotFoundException e) {
+          throw new IllegalArgumentException(e);
+        }
       }
       try {
-        DynamicClassLoader.load(compactionHookJar,  compactHookString);
         this.compactHook = (CompactionHook) Class.forName(compactHookString).newInstance();
       } catch (InstantiationException e) {
         throw new IllegalArgumentException(e);
