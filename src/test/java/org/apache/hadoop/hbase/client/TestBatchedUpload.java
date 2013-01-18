@@ -21,19 +21,16 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -41,6 +38,7 @@ import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -54,6 +52,7 @@ public class TestBatchedUpload {
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static int SLAVES = 5;
+  
   private enum RegionServerAction {
     KILL_REGIONSERVER,
     MOVE_REGION
@@ -75,6 +74,7 @@ public class TestBatchedUpload {
     int NUM_REGIONS = 10;
     HTable ht = TEST_UTIL.createTable(TABLE, new byte[][]{FAMILY},
         3, Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
+   
     int NUM_ROWS = 1000;
 
     // start batch processing
@@ -104,7 +104,14 @@ public class TestBatchedUpload {
     // start batch processing
     // do a bunch of puts
     // finish batch. Check for Exceptions.
+    HMaster m = TEST_UTIL.getHBaseCluster().getMaster();
+    
+    // Disable the load balancer as the movement of the region might cause the
+    // load balancer to kick in and move the regions causing the end of batched
+    // upload to fail.
+    m.disableLoadBalancer();
     int attempts = writeData(ht, NUM_ROWS, RegionServerAction.MOVE_REGION);
+    m.enableLoadBalancer();
     assert(attempts == 1);
 
     readData(ht, NUM_ROWS);
@@ -166,8 +173,8 @@ public class TestBatchedUpload {
               // move the region to some other Region Server
               HRegionServer dstRS = cluster.getRegionServer(
                   (srcRSIdx + 1) % cluster.getLiveRegionServerThreads().size());
-              LOG.info("Moving region " + regLoc.getRegionInfo().getRegionName()
-                 + "from " + cluster.getRegionServer(srcRSIdx) + " to "
+              LOG.info("Moving region " + regLoc.getRegionInfo().getRegionNameAsString()
+                 + " from " + cluster.getRegionServer(srcRSIdx) + " to "
                  + dstRS);
               moveRegionAndWait(cluster.getRegionServer(srcRSIdx).
                   getOnlineRegion(regLoc.getRegionInfo().getRegionName()), dstRS);
