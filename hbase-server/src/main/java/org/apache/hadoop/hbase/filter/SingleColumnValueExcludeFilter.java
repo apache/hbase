@@ -86,16 +86,13 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @param qualifier
    * @param compareOp
    * @param comparator
-   * @param foundColumn
-   * @param matchedColumn
    * @param filterIfMissing
    * @param latestVersionOnly
    */
-  protected SingleColumnValueExcludeFilter(final byte[] family, final byte [] qualifier,
-    final CompareOp compareOp, ByteArrayComparable comparator, final boolean foundColumn,
-    final boolean matchedColumn, final boolean filterIfMissing, final boolean latestVersionOnly) {
-    super(family,qualifier,compareOp,comparator,foundColumn,
-      matchedColumn,filterIfMissing,latestVersionOnly);
+  protected SingleColumnValueExcludeFilter(final byte[] family, final byte[] qualifier,
+      final CompareOp compareOp, ByteArrayComparable comparator, final boolean filterIfMissing,
+      final boolean latestVersionOnly) {
+    super(family, qualifier, compareOp, comparator, filterIfMissing, latestVersionOnly);
   }
 
   // We cleaned result row in FilterRow to be consistent with scanning process.
@@ -165,11 +162,10 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
       throw new DeserializationException(ioe);
     }
 
-    return new SingleColumnValueExcludeFilter(
-      parentProto.hasColumnFamily()?parentProto.getColumnFamily().toByteArray():null,
-      parentProto.hasColumnQualifier()?parentProto.getColumnQualifier().toByteArray():null,
-      compareOp, comparator, parentProto.getFoundColumn(),parentProto.getMatchedColumn(),
-      parentProto.getFilterIfMissing(),parentProto.getLatestVersionOnly());
+    return new SingleColumnValueExcludeFilter(parentProto.hasColumnFamily() ? parentProto
+        .getColumnFamily().toByteArray() : null, parentProto.hasColumnQualifier() ? parentProto
+        .getColumnQualifier().toByteArray() : null, compareOp, comparator, parentProto
+        .getFilterIfMissing(), parentProto.getLatestVersionOnly());
   }
 
   /**

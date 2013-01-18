@@ -129,10 +129,8 @@ message SingleColumnValueFilter {
   optional bytes columnQualifier = 2;
   required CompareType compareOp = 3;
   required Comparator comparator = 4;
-  optional bool foundColumn = 5;
-  optional bool matchedColumn = 6;
-  optional bool filterIfMissing = 7;
-  optional bool latestVersionOnly = 8;
+  optional bool filterIfMissing = 5;
+  optional bool latestVersionOnly = 6;
 }
 
 message SkipFilter {

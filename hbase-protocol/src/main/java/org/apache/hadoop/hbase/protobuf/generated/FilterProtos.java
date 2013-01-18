@@ -9755,19 +9755,11 @@ public final class FilterProtos {
     org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator getComparator();
     org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ComparatorOrBuilder getComparatorOrBuilder();
     
-    // optional bool foundColumn = 5;
-    boolean hasFoundColumn();
-    boolean getFoundColumn();
-    
-    // optional bool matchedColumn = 6;
-    boolean hasMatchedColumn();
-    boolean getMatchedColumn();
-    
-    // optional bool filterIfMissing = 7;
+    // optional bool filterIfMissing = 5;
     boolean hasFilterIfMissing();
     boolean getFilterIfMissing();
     
-    // optional bool latestVersionOnly = 8;
+    // optional bool latestVersionOnly = 6;
     boolean hasLatestVersionOnly();
     boolean getLatestVersionOnly();
   }
@@ -9843,41 +9835,21 @@ public final class FilterProtos {
       return comparator_;
     }
     
-    // optional bool foundColumn = 5;
-    public static final int FOUNDCOLUMN_FIELD_NUMBER = 5;
-    private boolean foundColumn_;
-    public boolean hasFoundColumn() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
-    }
-    public boolean getFoundColumn() {
-      return foundColumn_;
-    }
-    
-    // optional bool matchedColumn = 6;
-    public static final int MATCHEDCOLUMN_FIELD_NUMBER = 6;
-    private boolean matchedColumn_;
-    public boolean hasMatchedColumn() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
-    }
-    public boolean getMatchedColumn() {
-      return matchedColumn_;
-    }
-    
-    // optional bool filterIfMissing = 7;
-    public static final int FILTERIFMISSING_FIELD_NUMBER = 7;
+    // optional bool filterIfMissing = 5;
+    public static final int FILTERIFMISSING_FIELD_NUMBER = 5;
     private boolean filterIfMissing_;
     public boolean hasFilterIfMissing() {
-      return ((bitField0_ & 0x00000040) == 0x00000040);
+      return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     public boolean getFilterIfMissing() {
       return filterIfMissing_;
     }
     
-    // optional bool latestVersionOnly = 8;
-    public static final int LATESTVERSIONONLY_FIELD_NUMBER = 8;
+    // optional bool latestVersionOnly = 6;
+    public static final int LATESTVERSIONONLY_FIELD_NUMBER = 6;
     private boolean latestVersionOnly_;
     public boolean hasLatestVersionOnly() {
-      return ((bitField0_ & 0x00000080) == 0x00000080);
+      return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     public boolean getLatestVersionOnly() {
       return latestVersionOnly_;
@@ -9888,8 +9860,6 @@ public final class FilterProtos {
       columnQualifier_ = com.google.protobuf.ByteString.EMPTY;
       compareOp_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.LESS;
       comparator_ = org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.getDefaultInstance();
-      foundColumn_ = false;
-      matchedColumn_ = false;
       filterIfMissing_ = false;
       latestVersionOnly_ = false;
     }
@@ -9930,16 +9900,10 @@ public final class FilterProtos {
         output.writeMessage(4, comparator_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeBool(5, foundColumn_);
+        output.writeBool(5, filterIfMissing_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeBool(6, matchedColumn_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeBool(7, filterIfMissing_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        output.writeBool(8, latestVersionOnly_);
+        output.writeBool(6, latestVersionOnly_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -9968,19 +9932,11 @@ public final class FilterProtos {
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(5, foundColumn_);
+          .computeBoolSize(5, filterIfMissing_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(6, matchedColumn_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(7, filterIfMissing_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(8, latestVersionOnly_);
+          .computeBoolSize(6, latestVersionOnly_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -10025,16 +9981,6 @@ public final class FilterProtos {
         result = result && getComparator()
             .equals(other.getComparator());
       }
-      result = result && (hasFoundColumn() == other.hasFoundColumn());
-      if (hasFoundColumn()) {
-        result = result && (getFoundColumn()
-            == other.getFoundColumn());
-      }
-      result = result && (hasMatchedColumn() == other.hasMatchedColumn());
-      if (hasMatchedColumn()) {
-        result = result && (getMatchedColumn()
-            == other.getMatchedColumn());
-      }
       result = result && (hasFilterIfMissing() == other.hasFilterIfMissing());
       if (hasFilterIfMissing()) {
         result = result && (getFilterIfMissing()
@@ -10069,14 +10015,6 @@ public final class FilterProtos {
       if (hasComparator()) {
         hash = (37 * hash) + COMPARATOR_FIELD_NUMBER;
         hash = (53 * hash) + getComparator().hashCode();
-      }
-      if (hasFoundColumn()) {
-        hash = (37 * hash) + FOUNDCOLUMN_FIELD_NUMBER;
-        hash = (53 * hash) + hashBoolean(getFoundColumn());
-      }
-      if (hasMatchedColumn()) {
-        hash = (37 * hash) + MATCHEDCOLUMN_FIELD_NUMBER;
-        hash = (53 * hash) + hashBoolean(getMatchedColumn());
       }
       if (hasFilterIfMissing()) {
         hash = (37 * hash) + FILTERIFMISSING_FIELD_NUMBER;
@@ -10215,14 +10153,10 @@ public final class FilterProtos {
           comparatorBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000008);
-        foundColumn_ = false;
-        bitField0_ = (bitField0_ & ~0x00000010);
-        matchedColumn_ = false;
-        bitField0_ = (bitField0_ & ~0x00000020);
         filterIfMissing_ = false;
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000010);
         latestVersionOnly_ = false;
-        bitField0_ = (bitField0_ & ~0x00000080);
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       
@@ -10284,17 +10218,9 @@ public final class FilterProtos {
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
         }
-        result.foundColumn_ = foundColumn_;
+        result.filterIfMissing_ = filterIfMissing_;
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000020;
-        }
-        result.matchedColumn_ = matchedColumn_;
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
-          to_bitField0_ |= 0x00000040;
-        }
-        result.filterIfMissing_ = filterIfMissing_;
-        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
-          to_bitField0_ |= 0x00000080;
         }
         result.latestVersionOnly_ = latestVersionOnly_;
         result.bitField0_ = to_bitField0_;
@@ -10324,12 +10250,6 @@ public final class FilterProtos {
         }
         if (other.hasComparator()) {
           mergeComparator(other.getComparator());
-        }
-        if (other.hasFoundColumn()) {
-          setFoundColumn(other.getFoundColumn());
-        }
-        if (other.hasMatchedColumn()) {
-          setMatchedColumn(other.getMatchedColumn());
         }
         if (other.hasFilterIfMissing()) {
           setFilterIfMissing(other.getFilterIfMissing());
@@ -10412,21 +10332,11 @@ public final class FilterProtos {
             }
             case 40: {
               bitField0_ |= 0x00000010;
-              foundColumn_ = input.readBool();
+              filterIfMissing_ = input.readBool();
               break;
             }
             case 48: {
               bitField0_ |= 0x00000020;
-              matchedColumn_ = input.readBool();
-              break;
-            }
-            case 56: {
-              bitField0_ |= 0x00000040;
-              filterIfMissing_ = input.readBool();
-              break;
-            }
-            case 64: {
-              bitField0_ |= 0x00000080;
               latestVersionOnly_ = input.readBool();
               break;
             }
@@ -10598,85 +10508,43 @@ public final class FilterProtos {
         return comparatorBuilder_;
       }
       
-      // optional bool foundColumn = 5;
-      private boolean foundColumn_ ;
-      public boolean hasFoundColumn() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
-      }
-      public boolean getFoundColumn() {
-        return foundColumn_;
-      }
-      public Builder setFoundColumn(boolean value) {
-        bitField0_ |= 0x00000010;
-        foundColumn_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearFoundColumn() {
-        bitField0_ = (bitField0_ & ~0x00000010);
-        foundColumn_ = false;
-        onChanged();
-        return this;
-      }
-      
-      // optional bool matchedColumn = 6;
-      private boolean matchedColumn_ ;
-      public boolean hasMatchedColumn() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
-      }
-      public boolean getMatchedColumn() {
-        return matchedColumn_;
-      }
-      public Builder setMatchedColumn(boolean value) {
-        bitField0_ |= 0x00000020;
-        matchedColumn_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearMatchedColumn() {
-        bitField0_ = (bitField0_ & ~0x00000020);
-        matchedColumn_ = false;
-        onChanged();
-        return this;
-      }
-      
-      // optional bool filterIfMissing = 7;
+      // optional bool filterIfMissing = 5;
       private boolean filterIfMissing_ ;
       public boolean hasFilterIfMissing() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
+        return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       public boolean getFilterIfMissing() {
         return filterIfMissing_;
       }
       public Builder setFilterIfMissing(boolean value) {
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000010;
         filterIfMissing_ = value;
         onChanged();
         return this;
       }
       public Builder clearFilterIfMissing() {
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000010);
         filterIfMissing_ = false;
         onChanged();
         return this;
       }
       
-      // optional bool latestVersionOnly = 8;
+      // optional bool latestVersionOnly = 6;
       private boolean latestVersionOnly_ ;
       public boolean hasLatestVersionOnly() {
-        return ((bitField0_ & 0x00000080) == 0x00000080);
+        return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       public boolean getLatestVersionOnly() {
         return latestVersionOnly_;
       }
       public Builder setLatestVersionOnly(boolean value) {
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000020;
         latestVersionOnly_ = value;
         onChanged();
         return this;
       }
       public Builder clearLatestVersionOnly() {
-        bitField0_ = (bitField0_ & ~0x00000080);
+        bitField0_ = (bitField0_ & ~0x00000020);
         latestVersionOnly_ = false;
         onChanged();
         return this;
@@ -12700,19 +12568,17 @@ public final class FilterProtos {
       "Filter\030\001 \002(\0132\016.CompareFilter\"[\n\036SingleCo" +
       "lumnValueExcludeFilter\0229\n\027singleColumnVa" +
       "lueFilter\030\001 \002(\0132\030.SingleColumnValueFilte" +
-      "r\"\352\001\n\027SingleColumnValueFilter\022\024\n\014columnF" +
+      "r\"\276\001\n\027SingleColumnValueFilter\022\024\n\014columnF" +
       "amily\030\001 \001(\014\022\027\n\017columnQualifier\030\002 \001(\014\022\037\n\t" +
       "compareOp\030\003 \002(\0162\014.CompareType\022\037\n\ncompara" +
-      "tor\030\004 \002(\0132\013.Comparator\022\023\n\013foundColumn\030\005 " +
-      "\001(\010\022\025\n\rmatchedColumn\030\006 \001(\010\022\027\n\017filterIfMi" +
-      "ssing\030\007 \001(\010\022\031\n\021latestVersionOnly\030\010 \001(\010\"%" +
-      "\n\nSkipFilter\022\027\n\006filter\030\001 \002(\0132\007.Filter\"&\n",
-      "\020TimestampsFilter\022\022\n\ntimestamps\030\001 \003(\003\"4\n" +
-      "\013ValueFilter\022%\n\rcompareFilter\030\001 \002(\0132\016.Co" +
-      "mpareFilter\"+\n\020WhileMatchFilter\022\027\n\006filte" +
-      "r\030\001 \002(\0132\007.FilterBB\n*org.apache.hadoop.hb" +
-      "ase.protobuf.generatedB\014FilterProtosH\001\210\001" +
-      "\001\240\001\001"
+      "tor\030\004 \002(\0132\013.Comparator\022\027\n\017filterIfMissin" +
+      "g\030\005 \001(\010\022\031\n\021latestVersionOnly\030\006 \001(\010\"%\n\nSk" +
+      "ipFilter\022\027\n\006filter\030\001 \002(\0132\007.Filter\"&\n\020Tim" +
+      "estampsFilter\022\022\n\ntimestamps\030\001 \003(\003\"4\n\013Val",
+      "ueFilter\022%\n\rcompareFilter\030\001 \002(\0132\016.Compar" +
+      "eFilter\"+\n\020WhileMatchFilter\022\027\n\006filter\030\001 " +
+      "\002(\0132\007.FilterBB\n*org.apache.hadoop.hbase." +
+      "protobuf.generatedB\014FilterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12892,7 +12758,7 @@ public final class FilterProtos {
           internal_static_SingleColumnValueFilter_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SingleColumnValueFilter_descriptor,
-              new java.lang.String[] { "ColumnFamily", "ColumnQualifier", "CompareOp", "Comparator", "FoundColumn", "MatchedColumn", "FilterIfMissing", "LatestVersionOnly", },
+              new java.lang.String[] { "ColumnFamily", "ColumnQualifier", "CompareOp", "Comparator", "FilterIfMissing", "LatestVersionOnly", },
               org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilter.class,
               org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilter.Builder.class);
           internal_static_SkipFilter_descriptor =
