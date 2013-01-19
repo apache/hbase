@@ -274,4 +274,16 @@ public class Increment implements Row {
   public int compareTo(Row i) {
     return Bytes.compareTo(this.getRow(), i.getRow());
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    Row other = (Row) obj;
+    return compareTo(other) == 0;
+  }
 }

@@ -106,7 +106,20 @@ public class TableSplit implements InputSplit, Comparable<TableSplit> {
       Bytes.toStringBinary(m_startRow) + "," + Bytes.toStringBinary(m_endRow);
   }
 
+  @Override
   public int compareTo(TableSplit o) {
     return Bytes.compareTo(getStartRow(), o.getStartRow());
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || !(o instanceof TableSplit)) {
+      return false;
+    }
+    TableSplit other = (TableSplit)o;
+    return Bytes.equals(m_tableName, other.m_tableName) &&
+      Bytes.equals(m_startRow, other.m_startRow) &&
+      Bytes.equals(m_endRow, other.m_endRow) &&
+      m_regionLocation.equals(other.m_regionLocation);
   }
 }

@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
@@ -418,8 +419,20 @@ public class Get extends OperationWithAttributes
   }
 
   //Row
+  @Override
   public int compareTo(Row other) {
     return Bytes.compareTo(this.getRow(), other.getRow());
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    Row other = (Row) obj;
+    return compareTo(other) == 0;
+  }
 }
