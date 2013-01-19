@@ -40,7 +40,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
 
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
-  protected long lockId = -1L;
   protected boolean writeToWAL = true;
   protected Map<byte [], List<KeyValue>> familyMap =
       new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
@@ -162,23 +161,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
 
   public int compareTo(final Row d) {
     return Bytes.compareTo(this.getRow(), d.getRow());
-  }
-
-  /**
-   * Method for retrieving the delete's RowLock
-   * @return RowLock
-   */
-  public RowLock getRowLock() {
-    return new RowLock(this.row, this.lockId);
-  }
-
-  /**
-   * Method for retrieving the delete's lock ID.
-   *
-   * @return The lock ID.
-   */
-  public long getLockId() {
-  return this.lockId;
   }
 
   /**

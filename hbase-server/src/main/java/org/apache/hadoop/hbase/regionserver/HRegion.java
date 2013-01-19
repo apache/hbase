@@ -95,7 +95,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -1729,7 +1728,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (key != null) {
         Get get = new Get(key.getRow());
         get.addFamily(family);
-        result = get(get, null);
+        result = get(get);
       }
       if (coprocessorHost != null) {
         coprocessorHost.postGetClosestRowBefore(row, family, result);
@@ -1810,28 +1809,19 @@ public class HRegion implements HeapSize { // , Writable{
   //////////////////////////////////////////////////////////////////////////////
   /**
    * @param delete delete object
-   * @param lockid existing lock id, or null for grab a lock
    * @param writeToWAL append to the write ahead lock or not
    * @throws IOException read exceptions
    */
-  public void delete(Delete delete, Integer lockid, boolean writeToWAL)
+  public void delete(Delete delete, boolean writeToWAL)
   throws IOException {
     checkReadOnly();
     checkResources();
-    Integer lid = null;
     startRegionOperation();
     this.writeRequestsCount.increment();
     try {
       byte [] row = delete.getRow();
-      // If we did not pass an existing row lock, obtain a new one
-      lid = getLock(lockid, row, true);
-
-      try {
-        // All edits for the given row (across all column families) must happen atomically.
-        doBatchMutate(delete, lid);
-      } finally {
-        if(lockid == null) releaseRowLock(lid);
-      }
+      // All edits for the given row (across all column families) must happen atomically.
+      doBatchMutate(delete, null);
     } finally {
       closeRegionOperation();
     }
@@ -1911,7 +1901,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   public void put(Put put) throws IOException {
-    this.put(put, null, put.getWriteToWAL());
+    this.put(put, put.getWriteToWAL());
   }
 
   /**
@@ -1919,28 +1909,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param writeToWAL
    * @throws IOException
    */
-  public void put(Put put, boolean writeToWAL) throws IOException {
-    this.put(put, null, writeToWAL);
-  }
-
-  /**
-   * @param put
-   * @param lockid
-   * @throws IOException
-   */
-  public void put(Put put, Integer lockid) throws IOException {
-    this.put(put, lockid, put.getWriteToWAL());
-  }
-
-
-
-  /**
-   * @param put
-   * @param lockid
-   * @param writeToWAL
-   * @throws IOException
-   */
-  public void put(Put put, Integer lockid, boolean writeToWAL)
+  public void put(Put put, boolean writeToWAL)
   throws IOException {
     checkReadOnly();
 
@@ -1958,15 +1927,9 @@ public class HRegion implements HeapSize { // , Writable{
       // See HRegionServer#RegionListener for how the expire on HRegionServer
       // invokes a HRegion#abort.
       byte [] row = put.getRow();
-      // If we did not pass an existing row lock, obtain a new one
-      Integer lid = getLock(lockid, row, true);
 
-      try {
-        // All edits for the given row (across all column families) must happen atomically.
-        doBatchMutate(put, lid);
-      } finally {
-        if(lockid == null) releaseRowLock(lid);
-      }
+      // All edits for the given row (across all column families) must happen atomically.
+      doBatchMutate(put, null);
     } finally {
       closeRegionOperation();
     }
@@ -2400,14 +2363,14 @@ public class HRegion implements HeapSize { // , Writable{
    * @param qualifier
    * @param compareOp
    * @param comparator
-   * @param lockId
+   * @param w
    * @param writeToWAL
    * @throws IOException
    * @return true if the new put was executed, false otherwise
    */
   public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
       CompareOp compareOp, ByteArrayComparable comparator, Mutation w,
-      Integer lockId, boolean writeToWAL)
+      boolean writeToWAL)
   throws IOException{
     checkReadOnly();
     //TODO, add check for value length or maybe even better move this to the
@@ -2423,13 +2386,12 @@ public class HRegion implements HeapSize { // , Writable{
 
     startRegionOperation();
     try {
-      RowLock lock = isPut ? ((Put)w).getRowLock() : ((Delete)w).getRowLock();
-      Get get = new Get(row, lock);
+      Get get = new Get(row);
       checkFamily(family);
       get.addColumn(family, qualifier);
 
       // Lock row
-      Integer lid = getLock(lockId, get.getRow(), true);
+      Integer lid = getLock(null, get.getRow(), true);
       // wait for all previous transactions to complete (with lock held)
       mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
       List<KeyValue> result = null;
@@ -2482,7 +2444,7 @@ public class HRegion implements HeapSize { // , Writable{
         this.checkAndMutateChecksFailed.increment();
         return false;
       } finally {
-        if(lockId == null) releaseRowLock(lid);
+        releaseRowLock(lid);
       }
     } finally {
       closeRegionOperation();
@@ -2598,7 +2560,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @praram now
    * @throws IOException
    */
-  private void put(final byte [] row, byte [] family, List<KeyValue> edits, Integer lid)
+  private void put(final byte [] row, byte [] family, List<KeyValue> edits)
   throws IOException {
     Map<byte[], List<KeyValue>> familyMap;
     familyMap = new HashMap<byte[], List<KeyValue>>();
@@ -2608,7 +2570,7 @@ public class HRegion implements HeapSize { // , Writable{
     p.setFamilyMap(familyMap);
     p.setClusterId(HConstants.DEFAULT_CLUSTER_ID);
     p.setWriteToWAL(true);
-    doBatchMutate(p, lid);
+    doBatchMutate(p, null);
   }
 
   /**
@@ -3127,13 +3089,8 @@ public class HRegion implements HeapSize { // , Writable{
    * <pre>
    *   LOCKS ==> ROWS
    * </pre>
-   *
-   * But it acts as a guard on the client; a miswritten client just can't
-   * submit the name of a row and start writing to it; it must know the correct
-   * lockid, which matches the lock list in memory.
-   *
-   * <p>It would be more memory-efficient to assume a correctly-written client,
-   * which maybe we'll do in the future.
+   * <p>It would be more memory-efficient to just have one mapping;
+   * maybe we'll do that in the future.
    *
    * @param row Name of row to lock.
    * @throws IOException
@@ -3156,7 +3113,7 @@ public class HRegion implements HeapSize { // , Writable{
    *        null if unavailable.
    */
   private Integer internalObtainRowLock(final byte[] row, boolean waitForLock)
-      throws IOException {
+  throws IOException {
     checkRow(row, "row lock");
     startRegionOperation();
     try {
@@ -3199,16 +3156,6 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       closeRegionOperation();
     }
-  }
-
-  /**
-   * Used by unit tests.
-   * @param lockid
-   * @return Row that goes with <code>lockid</code>
-   */
-  byte[] getRowFromLock(final Integer lockid) {
-    HashedBytes rowKey = lockIds.get(lockid);
-    return rowKey == null ? null : rowKey.getBytes();
   }
 
   /**
@@ -4119,21 +4066,16 @@ public class HRegion implements HeapSize { // , Writable{
     meta.checkResources();
     // The row key is the region name
     byte[] row = r.getRegionName();
-    Integer lid = meta.obtainRowLock(row);
-    try {
-      final long now = EnvironmentEdgeManager.currentTimeMillis();
-      final List<KeyValue> edits = new ArrayList<KeyValue>(2);
-      edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-        HConstants.REGIONINFO_QUALIFIER, now,
-        r.getRegionInfo().toByteArray()));
-      // Set into the root table the version of the meta table.
-      edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-        HConstants.META_VERSION_QUALIFIER, now,
-        Bytes.toBytes(HConstants.META_VERSION)));
-      meta.put(row, HConstants.CATALOG_FAMILY, edits, lid);
-    } finally {
-      meta.releaseRowLock(lid);
-    }
+    final long now = EnvironmentEdgeManager.currentTimeMillis();
+    final List<KeyValue> edits = new ArrayList<KeyValue>(2);
+    edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
+      HConstants.REGIONINFO_QUALIFIER, now,
+      r.getRegionInfo().toByteArray()));
+    // Set into the root table the version of the meta table.
+    edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
+      HConstants.META_VERSION_QUALIFIER, now,
+      Bytes.toBytes(HConstants.META_VERSION)));
+    meta.put(row, HConstants.CATALOG_FAMILY, edits);
   }
 
   /**
@@ -4440,11 +4382,10 @@ public class HRegion implements HeapSize { // , Writable{
   //
   /**
    * @param get get object
-   * @param lockid existing lock id, or null for no previous lock
    * @return result
    * @throws IOException read exceptions
    */
-  public Result get(final Get get, final Integer lockid) throws IOException {
+  public Result get(final Get get) throws IOException {
     checkRow(get.getRow(), "Get");
     // Verify families are all valid
     if (get.hasFamilies()) {
@@ -4735,12 +4676,11 @@ public class HRegion implements HeapSize { // , Writable{
    * Perform one or more append operations on a row.
    *
    * @param append
-   * @param lockid
    * @param writeToWAL
    * @return new keyvalues after increment
    * @throws IOException
    */
-  public Result append(Append append, Integer lockid, boolean writeToWAL)
+  public Result append(Append append, boolean writeToWAL)
       throws IOException {
     byte[] row = append.getRow();
     checkRow(row, "append");
@@ -4757,7 +4697,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.writeRequestsCount.increment();
     WriteEntry w = null;
     try {
-      Integer lid = getLock(lockid, row, true);
+      Integer lid = getLock(null, row, true);
       lock(this.updatesLock.readLock());
       // wait for all prior MVCC transactions to finish - while we hold the row lock
       // (so that we are guaranteed to see the latest state)
@@ -4899,13 +4839,11 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Perform one or more increment operations on a row.
    * @param increment
-   * @param lockid
    * @param writeToWAL
    * @return new keyvalues after increment
    * @throws IOException
    */
-  public Result increment(Increment increment, Integer lockid,
-      boolean writeToWAL)
+  public Result increment(Increment increment, boolean writeToWAL)
   throws IOException {
     byte [] row = increment.getRow();
     checkRow(row, "increment");
@@ -4923,7 +4861,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.writeRequestsCount.increment();
     WriteEntry w = null;
     try {
-      Integer lid = getLock(lockid, row, true);
+      Integer lid = getLock(null, row, true);
       lock(this.updatesLock.readLock());
       // wait for all prior MVCC transactions to finish - while we hold the row lock
       // (so that we are guaranteed to see the latest state)

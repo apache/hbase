@@ -464,16 +464,6 @@ public class HTablePool implements Closeable {
     }
 
     @Override
-    public RowLock lockRow(byte[] row) throws IOException {
-      return table.lockRow(row);
-    }
-
-    @Override
-    public void unlockRow(RowLock rl) throws IOException {
-      table.unlockRow(rl);
-    }
-
-    @Override
     public CoprocessorRpcChannel coprocessorService(byte[] row) {
       return table.coprocessorService(row);
     }

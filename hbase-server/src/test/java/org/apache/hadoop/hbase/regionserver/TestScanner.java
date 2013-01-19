@@ -234,7 +234,7 @@ public class TestScanner extends HBaseTestCase {
 
       // Write information to the meta table
 
-      Put put = new Put(ROW_KEY, System.currentTimeMillis(), null);
+      Put put = new Put(ROW_KEY, System.currentTimeMillis());
 
       put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
           REGION_INFO.toByteArray());
@@ -261,7 +261,7 @@ public class TestScanner extends HBaseTestCase {
 
       String address = HConstants.LOCALHOST_IP + ":" + HBaseTestingUtility.randomFreePort();
 
-      put = new Put(ROW_KEY, System.currentTimeMillis(), null);
+      put = new Put(ROW_KEY, System.currentTimeMillis());
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
           Bytes.toBytes(address));
 
@@ -299,7 +299,7 @@ public class TestScanner extends HBaseTestCase {
 
       address = "bar.foo.com:4321";
 
-      put = new Put(ROW_KEY, System.currentTimeMillis(), null);
+      put = new Put(ROW_KEY, System.currentTimeMillis());
 
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
           Bytes.toBytes(address));
@@ -428,7 +428,7 @@ public class TestScanner extends HBaseTestCase {
   private void getRegionInfo() throws IOException {
     Get get = new Get(ROW_KEY);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    Result result = region.get(get, null);
+    Result result = region.get(get);
     byte [] bytes = result.value();
     validateRegionInfo(bytes);
   }
@@ -498,7 +498,7 @@ public class TestScanner extends HBaseTestCase {
       Delete dc = new Delete(firstRowBytes);
       /* delete column1 of firstRow */
       dc.deleteColumns(fam1, col1);
-      r.delete(dc, null, true);
+      r.delete(dc, true);
       r.flushcache();
 
       addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),

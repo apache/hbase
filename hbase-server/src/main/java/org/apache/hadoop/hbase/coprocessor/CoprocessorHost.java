@@ -549,16 +549,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         return tableName;
       }
 
-      public RowLock lockRow(byte[] row) throws IOException {
-        throw new RuntimeException(
-          "row locking is not allowed within the coprocessor environment");
-      }
-
-      public void unlockRow(RowLock rl) throws IOException {
-        throw new RuntimeException(
-          "row locking is not allowed within the coprocessor environment");
-      }
-
       @Override
       public void batch(List<? extends Row> actions, Object[] results)
           throws IOException, InterruptedException {

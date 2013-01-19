@@ -233,7 +233,7 @@ public class TestMergeTool extends HBaseTestCase {
       for (int j = 0; j < rows[i].length; j++) {
         Get get = new Get(rows[i][j]);
         get.addFamily(FAMILY);
-        Result result = merged.get(get, null);
+        Result result = merged.get(get);
         assertEquals(1, result.size());
         byte [] bytes = result.raw()[0].getValue();
         assertNotNull(Bytes.toStringBinary(rows[i][j]), bytes);
@@ -253,7 +253,7 @@ public class TestMergeTool extends HBaseTestCase {
       for (int j = 0; j < rows[i].length; j++) {
         Get get = new Get(rows[i][j]);
         get.addFamily(FAMILY);
-        Result result = regions[i].get(get, null);
+        Result result = regions[i].get(get);
         byte [] bytes = result.raw()[0].getValue();
         assertNotNull(bytes);
         assertTrue(Bytes.equals(bytes, rows[i][j]));

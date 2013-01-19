@@ -57,12 +57,9 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -966,46 +963,6 @@ public class HTable implements HTableInterface {
         }
       }
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public RowLock lockRow(final byte [] row)
-  throws IOException {
-    return new ServerCallable<RowLock>(connection, tableName, row, operationTimeout) {
-        public RowLock call() throws IOException {
-          try {
-            LockRowRequest request = RequestConverter.buildLockRowRequest(
-              location.getRegionInfo().getRegionName(), row);
-            LockRowResponse response = server.lockRow(null, request);
-            return new RowLock(row, response.getLockId());
-          } catch (ServiceException se) {
-            throw ProtobufUtil.getRemoteException(se);
-          }
-        }
-      }.withRetries();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void unlockRow(final RowLock rl)
-  throws IOException {
-    new ServerCallable<Boolean>(connection, tableName, rl.getRow(), operationTimeout) {
-        public Boolean call() throws IOException {
-          try {
-            UnlockRowRequest request = RequestConverter.buildUnlockRowRequest(
-              location.getRegionInfo().getRegionName(), rl.getLockId());
-            server.unlockRow(null, request);
-            return Boolean.TRUE;
-          } catch (ServiceException se) {
-            throw ProtobufUtil.getRemoteException(se);
-          }
-        }
-      }.withRetries();
   }
 
   /**

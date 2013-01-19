@@ -87,7 +87,7 @@ public class TimestampTestBase extends HBaseTestCase {
 
     Delete delete = new Delete(ROW);
     delete.deleteColumns(FAMILY_NAME, QUALIFIER_NAME, T2);
-    incommon.delete(delete, null, true);
+    incommon.delete(delete, true);
 
     // Should only be current value in set.  Assert this is so
     assertOnlyLatest(incommon, HConstants.LATEST_TIMESTAMP);
@@ -241,7 +241,7 @@ public class TimestampTestBase extends HBaseTestCase {
   public static void put(final Incommon loader, final byte [] bytes,
     final long ts)
   throws IOException {
-    Put put = new Put(ROW, ts, null);
+    Put put = new Put(ROW, ts);
     put.setWriteToWAL(false);
     put.add(FAMILY_NAME, QUALIFIER_NAME, bytes);
     loader.put(put);
@@ -265,9 +265,9 @@ public class TimestampTestBase extends HBaseTestCase {
       final long ts)
   throws IOException {
     Delete delete = ts == HConstants.LATEST_TIMESTAMP?
-      new Delete(ROW): new Delete(ROW, ts, null);
+      new Delete(ROW): new Delete(ROW, ts);
     delete.deleteColumn(FAMILY_NAME, QUALIFIER_NAME, ts);
-    loader.delete(delete, null, true);
+    loader.delete(delete, true);
   }
 
   public static Result get(final Incommon loader) throws IOException {

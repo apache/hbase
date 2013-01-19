@@ -255,7 +255,7 @@ public class TestImportExport {
     p.add(FAMILYA, QUAL, now+4, QUAL);
     t.put(p);
 
-    Delete d = new Delete(ROW1, now+3, null);
+    Delete d = new Delete(ROW1, now+3);
     t.delete(d);
     d = new Delete(ROW1);
     d.deleteColumns(FAMILYA, QUAL, now+2);

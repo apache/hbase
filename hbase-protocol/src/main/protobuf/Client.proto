@@ -42,13 +42,12 @@ message Get {
   required bytes row = 1;
   repeated Column column = 2;
   repeated NameBytesPair attribute = 3;
-  optional uint64 lockId = 4;
-  optional Filter filter = 5;
-  optional TimeRange timeRange = 6;
-  optional uint32 maxVersions = 7 [default = 1];
-  optional bool cacheBlocks = 8 [default = true];
-  optional uint32 storeLimit = 9;
-  optional uint32 storeOffset = 10;
+  optional Filter filter = 4;
+  optional TimeRange timeRange = 5;
+  optional uint32 maxVersions = 6 [default = 1];
+  optional bool cacheBlocks = 7 [default = true];
+  optional uint32 storeLimit = 8;
+  optional uint32 storeOffset = 9;
 }
 
 message Result {
@@ -109,8 +108,7 @@ message Mutate {
   repeated ColumnValue columnValue = 3;
   repeated NameBytesPair attribute = 4;
   optional uint64 timestamp = 5;
-  optional uint64 lockId = 6;
-  optional bool writeToWAL = 7 [default = true];
+  optional bool writeToWAL = 6 [default = true];
 
   // For some mutate, result may be returned, in which case,
   // time range can be specified for potential performance gain
@@ -221,24 +219,6 @@ message ScanResponse {
   optional uint64 resultSizeBytes = 5;
 }
 
-message LockRowRequest {
-  required RegionSpecifier region = 1;
-  repeated bytes row = 2;
-}
-
-message LockRowResponse {
-  required uint64 lockId = 1;
-  optional uint32 ttl = 2;
-}
-
-message UnlockRowRequest {
-  required RegionSpecifier region = 1;
-  required uint64 lockId = 2;
-}
-
-message UnlockRowResponse {
-}
-
 /**
  * Atomically bulk load multiple HFiles (say from different column families)
  * into an open region.
@@ -324,12 +304,6 @@ service ClientService {
 
   rpc scan(ScanRequest)
     returns(ScanResponse);
-
-  rpc lockRow(LockRowRequest)
-    returns(LockRowResponse);
-
-  rpc unlockRow(UnlockRowRequest)
-    returns(UnlockRowResponse);
 
   rpc bulkLoadHFile(BulkLoadHFileRequest)
     returns(BulkLoadHFileResponse);

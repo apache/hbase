@@ -419,7 +419,7 @@ public class TestSeekOptimizations {
 
         region.put(put);
         if (!del.isEmpty()) {
-          region.delete(del, null, true);
+          region.delete(del, true);
         }
 
         // Add remaining timestamps (those we have not deleted) to expected

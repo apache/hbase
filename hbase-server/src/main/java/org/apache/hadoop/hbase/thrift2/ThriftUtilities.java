@@ -148,7 +148,7 @@ public class ThriftUtilities {
     Put out;
 
     if (in.isSetTimestamp()) {
-      out = new Put(in.getRow(), in.getTimestamp(), null);
+      out = new Put(in.getRow(), in.getTimestamp());
     } else {
       out = new Put(in.getRow());
     }
@@ -222,7 +222,7 @@ public class ThriftUtilities {
       }
     } else {
       if (in.isSetTimestamp()) {
-        out = new Delete(in.getRow(), in.getTimestamp(), null);
+        out = new Delete(in.getRow(), in.getTimestamp());
       } else {
         out = new Delete(in.getRow());
       }

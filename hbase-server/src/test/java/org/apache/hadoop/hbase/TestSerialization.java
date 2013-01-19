@@ -33,7 +33,6 @@ import java.util.NavigableSet;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -259,10 +258,8 @@ public class TestSerialization {
 
     long ts = System.currentTimeMillis();
     int maxVersions = 2;
-    long lockid = 5;
-    RowLock rowLock = new RowLock(lockid);
 
-    Get get = new Get(row, rowLock);
+    Get get = new Get(row);
     get.addColumn(fam, qf1);
     get.setTimeRange(ts, ts+1);
     get.setMaxVersions(maxVersions);
@@ -284,7 +281,6 @@ public class TestSerialization {
       }
     }
 
-    assertEquals(get.getLockId(), desGet.getLockId());
     assertEquals(get.getMaxVersions(), desGet.getMaxVersions());
     TimeRange tr = get.getTimeRange();
     TimeRange desTr = desGet.getTimeRange();

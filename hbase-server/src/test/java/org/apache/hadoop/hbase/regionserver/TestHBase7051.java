@@ -130,7 +130,7 @@ public class TestHBase7051 {
       }
       testStep = TestStep.CHECKANDPUT_STARTED;
       region.checkAndMutate(Bytes.toBytes("r1"), Bytes.toBytes(family), Bytes.toBytes("q1"),
-        CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("10")), put, null, true);
+        CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("10")), put, true);
       testStep = TestStep.CHECKANDPUT_COMPLETED;
     }
   }

@@ -114,7 +114,7 @@ public class TestForceCacheImportantBlocks {
 
     for (int i = 0; i < NUM_ROWS; ++i) {
       Get get = new Get(Bytes.toBytes("row" + i));
-      region.get(get, null);
+      region.get(get);
     }
 
     List<BlockCategory> importantBlockCategories =

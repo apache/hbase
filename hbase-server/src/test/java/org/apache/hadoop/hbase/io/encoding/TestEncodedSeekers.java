@@ -160,7 +160,7 @@ public class TestEncodedSeekers {
         final byte[] qualBytes = Bytes.toBytes(qualStr);
         Get get = new Get(rowKey);
         get.addColumn(CF_BYTES, qualBytes);
-        Result result = region.get(get, null);
+        Result result = region.get(get);
         assertEquals(1, result.size());
         byte[] value = result.getValue(CF_BYTES, qualBytes);
         assertTrue(LoadTestKVGenerator.verify(value, rowKey, qualBytes));

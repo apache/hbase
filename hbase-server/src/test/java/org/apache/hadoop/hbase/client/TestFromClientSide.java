@@ -184,10 +184,10 @@ public class TestFromClientSide {
      p.add(FAMILY, C0, T3);
      h.put(p);
 
-     Delete d = new Delete(T1, ts+3, null);
+     Delete d = new Delete(T1, ts+3);
      h.delete(d);
 
-     d = new Delete(T1, ts+3, null);
+     d = new Delete(T1, ts+3);
      d.deleteColumns(FAMILY, C0, ts+3);
      h.delete(d);
 

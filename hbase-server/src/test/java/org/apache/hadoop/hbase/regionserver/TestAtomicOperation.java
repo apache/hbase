@@ -93,11 +93,11 @@ public class TestAtomicOperation extends HBaseTestCase {
     a.setReturnResults(false);
     a.add(fam1, qual1, Bytes.toBytes(v1));
     a.add(fam1, qual2, Bytes.toBytes(v2));
-    assertNull(region.append(a, null, true));
+    assertNull(region.append(a, true));
     a = new Append(row);
     a.add(fam1, qual1, Bytes.toBytes(v2));
     a.add(fam1, qual2, Bytes.toBytes(v1));
-    Result result = region.append(a, null, true);
+    Result result = region.append(a, true);
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1+v2), result.getValue(fam1, qual1)));
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
   }
@@ -150,7 +150,7 @@ public class TestAtomicOperation extends HBaseTestCase {
     // run a get and see?
     Get get = new Get(row);
     get.addColumn(familiy, qualifier);
-    Result result = region.get(get, null);
+    Result result = region.get(get);
     assertEquals(1, result.size());
 
     KeyValue kv = result.raw()[0];
@@ -210,11 +210,11 @@ public class TestAtomicOperation extends HBaseTestCase {
           inc.addColumn(fam1, qual1, amount);
           inc.addColumn(fam1, qual2, amount*2);
           inc.addColumn(fam2, qual3, amount*3);
-          region.increment(inc, null, true);
+          region.increment(inc, true);
 
           // verify: Make sure we only see completed increments
           Get g = new Get(row);
-          Result result = region.get(g, null);
+          Result result = region.get(g);
           assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2, Bytes.toLong(result.getValue(fam1, qual2))); 
           assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*3, Bytes.toLong(result.getValue(fam2, qual3)));
         } catch (IOException e) {
@@ -246,10 +246,10 @@ public class TestAtomicOperation extends HBaseTestCase {
               a.add(fam1, qual1, val);
               a.add(fam1, qual2, val);
               a.add(fam2, qual3, val);
-              region.append(a, null, true);
+              region.append(a, true);
 
               Get g = new Get(row);
-              Result result = region.get(g, null);
+              Result result = region.get(g);
               assertEquals(result.getValue(fam1, qual1).length, result.getValue(fam1, qual2).length); 
               assertEquals(result.getValue(fam1, qual1).length, result.getValue(fam2, qual3).length); 
             } catch (IOException e) {
@@ -276,7 +276,7 @@ public class TestAtomicOperation extends HBaseTestCase {
     }
     assertEquals(0, failures.get());
     Get g = new Get(row);
-    Result result = region.get(g, null);
+    Result result = region.get(g);
     assertEquals(result.getValue(fam1, qual1).length, 10000);
     assertEquals(result.getValue(fam1, qual2).length, 10000);
     assertEquals(result.getValue(fam2, qual3).length, 10000);
@@ -336,7 +336,7 @@ public class TestAtomicOperation extends HBaseTestCase {
               op ^= true;
               // check: should always see exactly one column
               Get g = new Get(row);
-              Result r = region.get(g, null);
+              Result r = region.get(g);
               if (r.size() != 1) {
                 LOG.debug(r);
                 failures.incrementAndGet();

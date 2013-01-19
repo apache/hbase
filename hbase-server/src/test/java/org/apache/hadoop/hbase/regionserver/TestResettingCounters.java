@@ -78,14 +78,14 @@ public class TestResettingCounters {
       }
 
       // increment odd qualifiers 5 times and flush
-      for (int i=0;i<5;i++) region.increment(odd, null, false);
+      for (int i=0;i<5;i++) region.increment(odd, false);
       region.flushcache();
 
       // increment even qualifiers 5 times
-      for (int i=0;i<5;i++) region.increment(even, null, false);
+      for (int i=0;i<5;i++) region.increment(even, false);
 
       // increment all qualifiers, should have value=6 for all
-      Result result = region.increment(all, null, false);
+      Result result = region.increment(all, false);
       assertEquals(numQualifiers, result.size());
       KeyValue [] kvs = result.raw();
       for (int i=0;i<kvs.length;i++) {

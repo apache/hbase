@@ -323,7 +323,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     for (int i = 0; i < regions.length; i++) {
       try {
         Get g = new Get(regions[i].getStartKey());
-        regions[i].get(g, null);
+        regions[i].get(g);
         fail();
       } catch (DoNotRetryIOException xc) {
       }

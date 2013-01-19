@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -304,11 +303,7 @@ public final class ProtobufUtil {
       final ClientProtos.Get proto) throws IOException {
     if (proto == null) return null;
     byte[] row = proto.getRow().toByteArray();
-    RowLock rowLock = null;
-    if (proto.hasLockId()) {
-      rowLock = new RowLock(proto.getLockId());
-    }
-    Get get = new Get(row, rowLock);
+    Get get = new Get(row);
     if (proto.hasCacheBlocks()) {
       get.setCacheBlocks(proto.getCacheBlocks());
     }
@@ -371,11 +366,7 @@ public final class ProtobufUtil {
     if (proto.hasTimestamp()) {
       timestamp = proto.getTimestamp();
     }
-    RowLock lock = null;
-    if (proto.hasLockId()) {
-      lock = new RowLock(proto.getLockId());
-    }
-    Put put = new Put(row, timestamp, lock);
+    Put put = new Put(row, timestamp);
     put.setWriteToWAL(proto.getWriteToWAL());
     for (NameBytesPair attribute: proto.getAttributeList()) {
       put.setAttribute(attribute.getName(),
@@ -414,11 +405,7 @@ public final class ProtobufUtil {
     if (proto.hasTimestamp()) {
       timestamp = proto.getTimestamp();
     }
-    RowLock lock = null;
-    if (proto.hasLockId()) {
-      lock = new RowLock(proto.getLockId());
-    }
-    Delete delete = new Delete(row, timestamp, lock);
+    Delete delete = new Delete(row, timestamp);
     delete.setWriteToWAL(proto.getWriteToWAL());
     for (NameBytesPair attribute: proto.getAttributeList()) {
       delete.setAttribute(attribute.getName(),
@@ -513,12 +500,8 @@ public final class ProtobufUtil {
       final Mutate proto) throws IOException {
     MutateType type = proto.getMutateType();
     assert type == MutateType.INCREMENT : type.name();
-    RowLock lock = null;
-    if (proto.hasLockId()) {
-      lock = new RowLock(proto.getLockId());
-    }
     byte[] row = proto.getRow().toByteArray();
-    Increment increment = new Increment(row, lock);
+    Increment increment = new Increment(row);
     increment.setWriteToWAL(proto.getWriteToWAL());
     if (proto.hasTimeRange()) {
       HBaseProtos.TimeRange timeRange = proto.getTimeRange();
@@ -709,9 +692,6 @@ public final class ProtobufUtil {
     builder.setRow(ByteString.copyFrom(get.getRow()));
     builder.setCacheBlocks(get.getCacheBlocks());
     builder.setMaxVersions(get.getMaxVersions());
-    if (get.getLockId() >= 0) {
-      builder.setLockId(get.getLockId());
-    }
     if (get.getFilter() != null) {
       builder.setFilter(ProtobufUtil.toFilter(get.getFilter()));
     }
@@ -767,9 +747,6 @@ public final class ProtobufUtil {
     builder.setRow(ByteString.copyFrom(increment.getRow()));
     builder.setMutateType(MutateType.INCREMENT);
     builder.setWriteToWAL(increment.getWriteToWAL());
-    if (increment.getLockId() >= 0) {
-      builder.setLockId(increment.getLockId());
-    }
     TimeRange timeRange = increment.getTimeRange();
     if (!timeRange.isAllTime()) {
       HBaseProtos.TimeRange.Builder timeRangeBuilder =
@@ -812,9 +789,6 @@ public final class ProtobufUtil {
     mutateBuilder.setRow(ByteString.copyFrom(mutation.getRow()));
     mutateBuilder.setMutateType(mutateType);
     mutateBuilder.setWriteToWAL(mutation.getWriteToWAL());
-    if (mutation.getLockId() >= 0) {
-      mutateBuilder.setLockId(mutation.getLockId());
-    }
     mutateBuilder.setTimestamp(mutation.getTimeStamp());
     Map<String, byte[]> attributes = mutation.getAttributesMap();
     if (!attributes.isEmpty()) {

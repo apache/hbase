@@ -394,27 +394,6 @@ public interface HTableInterface extends Closeable {
   void close() throws IOException;
 
   /**
-   * Obtains a lock on a row.
-   *
-   * @param row The row to lock.
-   * @return A {@link RowLock} containing the row and lock id.
-   * @throws IOException if a remote or network exception occurs.
-   * @see RowLock
-   * @see #unlockRow
-   */
-  RowLock lockRow(byte[] row) throws IOException;
-
-  /**
-   * Releases a row lock.
-   *
-   * @param rl The row lock to release.
-   * @throws IOException if a remote or network exception occurs.
-   * @see RowLock
-   * @see #unlockRow
-   */
-  void unlockRow(RowLock rl) throws IOException;
-
-  /**
    * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the
    * table region containing the specified row.  The row given does not actually have
    * to exist.  Whichever region would contain the row based on start and end keys will

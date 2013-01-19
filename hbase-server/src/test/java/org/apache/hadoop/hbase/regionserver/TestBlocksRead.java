@@ -157,7 +157,7 @@ public class TestBlocksRead extends HBaseTestCase {
         get.addColumn(cf, Bytes.toBytes(column));
       }
 
-      kvs = region.get(get, null).raw();
+      kvs = region.get(get).raw();
       long blocksEnd = getBlkAccessCount(cf);
       if (expBlocks[i] != -1) {
         assertEquals("Blocks Read Check for Bloom: " + bloomType, expBlocks[i],
@@ -188,7 +188,7 @@ public class TestBlocksRead extends HBaseTestCase {
     del.deleteFamily(Bytes.toBytes(family + "_ROWCOL"), version);
     del.deleteFamily(Bytes.toBytes(family + "_ROW"), version);
     del.deleteFamily(Bytes.toBytes(family + "_NONE"), version);
-    region.delete(del, null, true);
+    region.delete(del, true);
   }
 
   private static void verifyData(KeyValue kv, String expectedRow,

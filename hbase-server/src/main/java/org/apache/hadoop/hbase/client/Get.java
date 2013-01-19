@@ -67,7 +67,6 @@ public class Get extends OperationWithAttributes
   implements Row, Comparable<Row> {
 
   private byte [] row = null;
-  private long lockId = -1L;
   private int maxVersions = 1;
   private boolean cacheBlocks = true;
   private int storeLimit = -1;
@@ -85,22 +84,7 @@ public class Get extends OperationWithAttributes
    * @param row row key
    */
   public Get(byte [] row) {
-    this(row, null);
-  }
-
-  /**
-   * Create a Get operation for the specified row, using an existing row lock.
-   * <p>
-   * If no further operations are done, this will get the latest version of
-   * all columns in all families of the specified row.
-   * @param row row key
-   * @param rowLock previously acquired row lock, or null
-   */
-  public Get(byte [] row, RowLock rowLock) {
     this.row = row;
-    if(rowLock != null) {
-      this.lockId = rowLock.getLockId();
-    }
   }
 
   /**
@@ -259,22 +243,6 @@ public class Get extends OperationWithAttributes
    */
   public byte [] getRow() {
     return this.row;
-  }
-
-  /**
-   * Method for retrieving the get's RowLock
-   * @return RowLock
-   */
-  public RowLock getRowLock() {
-    return new RowLock(this.row, this.lockId);
-  }
-
-  /**
-   * Method for retrieving the get's lockId
-   * @return lockId
-   */
-  public long getLockId() {
-    return this.lockId;
   }
 
   /**

@@ -365,7 +365,7 @@ public class RowResource extends ResourceBase {
     }
     Delete delete = null;
     if (rowspec.hasTimestamp())
-      delete = new Delete(rowspec.getRow(), rowspec.getTimestamp(), null);
+      delete = new Delete(rowspec.getRow(), rowspec.getTimestamp());
     else
       delete = new Delete(rowspec.getRow());
 

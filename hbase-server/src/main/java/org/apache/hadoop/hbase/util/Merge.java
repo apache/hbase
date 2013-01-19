@@ -151,13 +151,13 @@ public class Merge extends Configured implements Tool {
     HRegion rootRegion = utils.getRootRegion();
     Get get = new Get(region1);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    Result result1 =  rootRegion.get(get, null);
+    Result result1 =  rootRegion.get(get);
     Preconditions.checkState(!result1.isEmpty(), "First region cells can not be null");
     HRegionInfo info1 = HRegionInfo.getHRegionInfo(result1);
 
     get = new Get(region2);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    Result result2 =  rootRegion.get(get, null);
+    Result result2 =  rootRegion.get(get);
     Preconditions.checkState(!result2.isEmpty(), "Second region cells can not be null");
     HRegionInfo info2 = HRegionInfo.getHRegionInfo(result2);
     HRegion merged = merge(HTableDescriptor.META_TABLEDESC, info1, rootRegion, info2, rootRegion);
@@ -222,7 +222,7 @@ public class Merge extends Configured implements Tool {
     HRegion metaRegion1 = this.utils.getMetaRegion(meta1);
     Get get = new Get(region1);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    Result result1 =  metaRegion1.get(get, null);
+    Result result1 =  metaRegion1.get(get);
     Preconditions.checkState(!result1.isEmpty(),
         "First region cells can not be null");
     HRegionInfo info1 = HRegionInfo.getHRegionInfo(result1);
@@ -239,7 +239,7 @@ public class Merge extends Configured implements Tool {
     }
     get = new Get(region2);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    Result result2 =  metaRegion2.get(get, null);
+    Result result2 =  metaRegion2.get(get);
     Preconditions.checkState(!result2.isEmpty(),
         "Second region cells can not be null");
     HRegionInfo info2 = HRegionInfo.getHRegionInfo(result2);
@@ -335,8 +335,8 @@ public class Merge extends Configured implements Tool {
     }
 
     Delete delete  = new Delete(regioninfo.getRegionName(),
-        System.currentTimeMillis(), null);
-    meta.delete(delete, null, true);
+        System.currentTimeMillis());
+    meta.delete(delete, true);
   }
 
   /*

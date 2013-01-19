@@ -167,7 +167,7 @@ public class TestParallelPut extends HBaseTestCase {
     // run a get and see if the value matches
     Get get = new Get(row);
     get.addColumn(familiy, qualifier);
-    Result result = region.get(get, null);
+    Result result = region.get(get);
     assertEquals(1, result.size());
 
     KeyValue kv = result.raw()[0];
