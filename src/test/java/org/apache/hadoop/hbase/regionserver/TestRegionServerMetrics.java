@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -222,31 +223,38 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testNumReadsAndWrites() throws IOException, InterruptedException{
-    testUtil.createRandomTable("NumReadsWritesTest", Arrays.asList(FAMILIES), MAX_VERSIONS,
-        NUM_COLS_PER_ROW, NUM_FLUSHES, NUM_REGIONS, 1000);
-    final HRegionServer rs =
-        testUtil.getMiniHBaseCluster().getRegionServer(0);
-    
+    testUtil.createRandomTable("NumReadsWritesTest", Arrays.asList(FAMILIES),
+        MAX_VERSIONS, NUM_COLS_PER_ROW, NUM_FLUSHES, NUM_REGIONS, 1000);
+    List<RegionServerThread> threads = testUtil.getMiniHBaseCluster()
+        .getLiveRegionServerThreads();
+    HRegionServer rs = threads.get(0).getRegionServer();
     long preNumRead = 0;
     long preNumWrite = 0;
-    for (HRegion region: rs.getOnlineRegions()) {
-      preNumRead += region.rowReadCnt.get();
-      preNumRead += region.rowUpdateCnt.get();
+    for (HRegion region : rs.getOnlineRegions()) {
+      HRegionInfo regionInfo = region.getRegionInfo();
+      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+        System.out.println(region.getRegionNameAsString());
+        preNumRead += region.rowReadCnt.get();
+        preNumRead += region.rowUpdateCnt.get();
+      }
     }
-    
+
     HRegion[] regions = rs.getOnlineRegionsAsArray();
-    for (int i=0; i<regions.length;  i++) {
+    for (int i = 0; i < regions.length; i++) {
       Get g = new Get(Bytes.toBytes("row" + i));
       regions[i].get(g, null);
     }
-    
+
     long numRead = 0;
     long numWrite = 0;
-    for (HRegion region: rs.getOnlineRegions()) {
-      numRead += region.rowReadCnt.get();
-      numWrite += region.rowUpdateCnt.get();
+    for (HRegion region : rs.getOnlineRegions()) {
+      HRegionInfo regionInfo = region.getRegionInfo();
+      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+        numRead += region.rowReadCnt.get();
+        numWrite += region.rowUpdateCnt.get();
+      }
     }
-    assertEquals(regions.length, numRead - preNumRead);
+    assertEquals(regions.length - 2, numRead - preNumRead);
     assertEquals(0, numWrite - preNumWrite);
   }
 
