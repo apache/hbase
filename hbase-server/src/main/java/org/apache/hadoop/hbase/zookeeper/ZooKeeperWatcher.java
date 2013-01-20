@@ -206,7 +206,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     clusterStateZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.state", "running"));
     assignmentZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.unassigned", "unassigned"));
+        conf.get("zookeeper.znode.unassigned", "region-in-transition"));
     tableZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.tableEnableDisable", "table"));
     clusterIdZNode = ZKUtil.joinZNode(baseZNode,
