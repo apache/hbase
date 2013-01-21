@@ -61,6 +61,7 @@ public class TestHCM {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TABLE_NAME = Bytes.toBytes("test");
   private static final byte[] TABLE_NAME1 = Bytes.toBytes("test1");
+  private static final byte[] TABLE_NAME2 = Bytes.toBytes("test2");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
 
@@ -149,7 +150,9 @@ public class TestHCM {
       Bytes.toString(TABLE_NAME).getBytes() , Bytes.toString(ROW).getBytes()));
 
     final int nextPort = conn.getCachedLocation(TABLE_NAME, ROW).getPort() + 1;
-    conn.updateCachedLocation(conn.getCachedLocation(TABLE_NAME, ROW), "127.0.0.1", nextPort);
+    HRegionLocation loc = conn.getCachedLocation(TABLE_NAME, ROW);
+    conn.updateCachedLocation(loc.getRegionInfo(), loc, "127.0.0.1", nextPort,
+      HConstants.LATEST_TIMESTAMP);
     Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW).getPort(), nextPort);
 
     conn.deleteCachedLocation(TABLE_NAME.clone(), ROW.clone());
@@ -293,7 +296,7 @@ public class TestHCM {
       }
       Assert.assertFalse("Unreachable point", true);
     } catch (Throwable e) {
-      LOG.info("Put done, expected exception caught: " + e.getClass());
+      LOG.info("Scan done, expected exception caught: " + e.getClass());
     }
 
     // Cache is updated with the right value.
@@ -328,6 +331,54 @@ public class TestHCM {
     assertFalse(pool.isShutdown());
     conn.close();
     pool.shutdownNow();
+  }
+
+  /**
+   * Test that stale cache updates don't override newer cached values.
+   */
+  @Test(timeout = 60000)
+  public void testCacheSeqNums() throws Exception{
+    HTable table = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAM);
+    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    Put put = new Put(ROW);
+    put.add(FAM_NAM, ROW, ROW);
+    table.put(put);
+    HConnectionManager.HConnectionImplementation conn =
+      (HConnectionManager.HConnectionImplementation)table.getConnection();
+
+    HRegionLocation location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    assertNotNull(location);
+
+    HRegionLocation anySource = new HRegionLocation(location.getRegionInfo(),
+        location.getHostname(), location.getPort() - 1);
+
+    // Same server as already in cache reporting - overwrites any value despite seqNum.
+    int nextPort = location.getPort() + 1;
+    conn.updateCachedLocation(location.getRegionInfo(), location,
+        "127.0.0.1", nextPort, location.getSeqNum() - 1);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    Assert.assertEquals(nextPort, location.getPort());
+
+    // No source specified - same.
+    nextPort = location.getPort() + 1;
+    conn.updateCachedLocation(location.getRegionInfo(), location,
+        "127.0.0.1", nextPort, location.getSeqNum() - 1);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    Assert.assertEquals(nextPort, location.getPort());
+
+    // Higher seqNum - overwrites lower seqNum.
+    nextPort = location.getPort() + 1;
+    conn.updateCachedLocation(location.getRegionInfo(), anySource,
+        "127.0.0.1", nextPort, location.getSeqNum() + 1);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    Assert.assertEquals(nextPort, location.getPort());
+
+    // Lower seqNum - does not overwrite higher seqNum.
+    nextPort = location.getPort() + 1;
+    conn.updateCachedLocation(location.getRegionInfo(), anySource,
+        "127.0.0.1", nextPort, location.getSeqNum() - 1);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    Assert.assertEquals(nextPort - 1, location.getPort());
   }
 
   /**

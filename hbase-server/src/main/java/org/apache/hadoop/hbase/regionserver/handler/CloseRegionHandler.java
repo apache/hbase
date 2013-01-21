@@ -160,7 +160,7 @@ public class CloseRegionHandler extends EventHandler {
         throw new RuntimeException(t);
       }
 
-      this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName(), destination);
+      this.rsServices.removeFromOnlineRegions(region, destination);
 
       if (this.zk) {
         if (setClosedState(this.expectedVersion, region)) {

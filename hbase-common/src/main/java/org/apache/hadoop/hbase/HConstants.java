@@ -344,6 +344,9 @@ public final class HConstants {
   /** The startcode column qualifier */
   public static final byte [] STARTCODE_QUALIFIER = toBytes("serverstartcode");
 
+  /** The open seqnum column qualifier */
+  public static final byte [] SEQNUM_QUALIFIER = toBytes("seqnumDuringOpen");
+
   /** The lower-half split region column qualifier */
   public static final byte [] SPLITA_QUALIFIER = toBytes("splitA");
 
@@ -620,6 +623,12 @@ public final class HConstants {
    * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}
    */
   public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
+
+  /**
+   * Value indicating the server name was saved with no sequence number.
+   */
+  public static final long NO_SEQNUM = -1;
+
 
   /*
    * cluster replication constants.

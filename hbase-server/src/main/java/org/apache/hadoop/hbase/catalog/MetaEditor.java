@@ -175,8 +175,8 @@ public class MetaEditor {
    * Adds a (single) META row for the specified new region and its daughters. Note that this does
    * not add its daughter's as different rows, but adds information about the daughters
    * in the same row as the parent. Use
-   * {@link #offlineParentInMeta(CatalogTracker, HRegionInfo, HRegionInfo, HRegionInfo)}
-   * and {@link #addDaughter(CatalogTracker, HRegionInfo, ServerName)}  if you want to do that.
+   * {@link #offlineParentInMeta(CatalogTracker, HRegionInfo, HRegionInfo, HRegionInfo)} and
+   * {@link #addDaughter(CatalogTracker, HRegionInfo, ServerName, long)}  if you want to do that.
    * @param meta the HTable for META
    * @param regionInfo region information
    * @param splitA first split daughter of the parent regionInfo
@@ -236,12 +236,20 @@ public class MetaEditor {
     }
   }
 
+  /**
+   * Adds a daughter region entry to meta.
+   * @param regionInfo the region to put
+   * @param sn the location of the region
+   * @param openSeqNum the latest sequence number obtained when the region was open
+   */
   public static void addDaughter(final CatalogTracker catalogTracker,
-      final HRegionInfo regionInfo, final ServerName sn)
+      final HRegionInfo regionInfo, final ServerName sn, final long openSeqNum)
   throws NotAllMetaRegionsOnlineException, IOException {
     Put put = new Put(regionInfo.getRegionName());
     addRegionInfo(put, regionInfo);
-    if (sn != null) addLocation(put, sn);
+    if (sn != null) {
+      addLocation(put, sn, openSeqNum);
+    }
     putToMetaTable(catalogTracker, put);
     LOG.info("Added daughter " + regionInfo.getRegionNameAsString() +
       (sn == null? ", serverName=null": ", serverName=" + sn.toString()));
@@ -257,15 +265,16 @@ public class MetaEditor {
    * @param catalogTracker catalog tracker
    * @param regionInfo region to update location of
    * @param sn Server name
+   * @param openSeqNum the latest sequence number obtained when the region was open
    * @throws IOException
    * @throws ConnectException Usually because the regionserver carrying .META.
    * is down.
    * @throws NullPointerException Because no -ROOT- server connection
    */
   public static void updateMetaLocation(CatalogTracker catalogTracker,
-      HRegionInfo regionInfo, ServerName sn)
+      HRegionInfo regionInfo, ServerName sn, long openSeqNum)
   throws IOException, ConnectException {
-    updateLocation(catalogTracker, regionInfo, sn);
+    updateLocation(catalogTracker, regionInfo, sn, openSeqNum);
   }
 
   /**
@@ -281,9 +290,9 @@ public class MetaEditor {
    * @throws IOException
    */
   public static void updateRegionLocation(CatalogTracker catalogTracker,
-      HRegionInfo regionInfo, ServerName sn)
+      HRegionInfo regionInfo, ServerName sn, long updateSeqNum)
   throws IOException {
-    updateLocation(catalogTracker, regionInfo, sn);
+    updateLocation(catalogTracker, regionInfo, sn, updateSeqNum);
   }
 
   /**
@@ -295,14 +304,15 @@ public class MetaEditor {
    * @param catalogTracker
    * @param regionInfo region to update location of
    * @param sn Server name
+   * @param openSeqNum the latest sequence number obtained when the region was open
    * @throws IOException In particular could throw {@link java.net.ConnectException}
    * if the server is down on other end.
    */
   private static void updateLocation(final CatalogTracker catalogTracker,
-      HRegionInfo regionInfo, ServerName sn)
+      HRegionInfo regionInfo, ServerName sn, long openSeqNum)
   throws IOException {
     Put put = new Put(regionInfo.getRegionName());
-    addLocation(put, sn);
+    addLocation(put, sn, openSeqNum);
     putToCatalogTable(catalogTracker, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " with server=" + sn);
@@ -348,11 +358,13 @@ public class MetaEditor {
     return p;
   }
 
-  private static Put addLocation(final Put p, final ServerName sn) {
+  private static Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
     p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
       Bytes.toBytes(sn.getHostAndPort()));
     p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
       Bytes.toBytes(sn.getStartcode()));
+    p.add(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER,
+        Bytes.toBytes(openSeqNum));
     return p;
   }
 }

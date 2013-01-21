@@ -1010,6 +1010,20 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
+   * The latest seqnum that the server writing to meta observed when opening the region.
+   * E.g. the seqNum when the result of {@link #getServerName(Result)} was written.
+   * @param r Result to pull the seqNum from
+   * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
+   */
+  public static long getSeqNumDuringOpen(final Result r) {
+    byte[] value = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER);
+    if (value == null || value.length == 0) return HConstants.NO_SEQNUM;
+    Long result = Bytes.toLong(value);
+    if (result == null) return HConstants.NO_SEQNUM;
+    return result.longValue();
+  }
+
+  /**
    * Parses an HRegionInfo instance from the passed in stream.  Presumes the HRegionInfo was
    * serialized to the stream with {@link #toDelimitedByteArray()}
    * @param in

@@ -451,7 +451,7 @@ public class TestCatalogTracker {
       // been assigned).
       String node = ct.getMetaNodeTracker().getNode();
       ZKUtil.createAndFailSilent(this.watcher, node);
-      MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, SN);
+      MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, SN, 0);
       ZKUtil.deleteNode(this.watcher, node);
       // Go get the new meta location. waitForMeta gets and verifies meta.
       Assert.assertTrue(ct.waitForMeta(10000).equals(SN));

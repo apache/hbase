@@ -1685,21 +1685,27 @@ public class  HRegionServer implements ClientProtocol,
         getCompactionRequester().requestCompaction(r, s, "Opening Region");
       }
     }
+    long openSeqNum = r.getOpenSeqNum();
+    if (openSeqNum == HConstants.NO_SEQNUM) {
+      // If we opened a region, we should have read some sequence number from it.
+      LOG.error("No sequence number found when opening " + r.getRegionNameAsString());
+      openSeqNum = 0;
+    }
     // Update ZK, ROOT or META
     if (r.getRegionInfo().isRootRegion()) {
       RootRegionTracker.setRootLocation(getZooKeeper(),
        this.serverNameFromMasterPOV);
     } else if (r.getRegionInfo().isMetaRegion()) {
       MetaEditor.updateMetaLocation(ct, r.getRegionInfo(),
-        this.serverNameFromMasterPOV);
+        this.serverNameFromMasterPOV, openSeqNum);
     } else {
       if (daughter) {
         // If daughter of a split, update whole row, not just location.
         MetaEditor.addDaughter(ct, r.getRegionInfo(),
-          this.serverNameFromMasterPOV);
+          this.serverNameFromMasterPOV, openSeqNum);
       } else {
         MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
-          this.serverNameFromMasterPOV);
+          this.serverNameFromMasterPOV, openSeqNum);
       }
     }
     LOG.info("Done with post open deploy task for region=" +
@@ -2502,11 +2508,20 @@ public class  HRegionServer implements ClientProtocol,
 
 
   @Override
-  public boolean removeFromOnlineRegions(final String encodedRegionName, ServerName destination) {
-    HRegion toReturn = this.onlineRegions.remove(encodedRegionName);
+  public boolean removeFromOnlineRegions(final HRegion r, ServerName destination) {
+    HRegion toReturn = this.onlineRegions.remove(r.getRegionInfo().getEncodedName());
 
-    if (destination != null){
-      addToMovedRegions(encodedRegionName, destination);
+    if (destination != null) {
+      HLog wal = getWAL();
+      long closeSeqNum = wal.getEarliestMemstoreSeqNum(r.getRegionInfo().getEncodedNameAsBytes());
+      if (closeSeqNum == HConstants.NO_SEQNUM) {
+        // No edits in WAL for this region; get the sequence number when the region was opened.
+        closeSeqNum = r.getOpenSeqNum();
+        if (closeSeqNum == HConstants.NO_SEQNUM) {
+          closeSeqNum = 0;
+        }
+      }
+      addToMovedRegions(r.getRegionInfo().getEncodedName(), destination, closeSeqNum);
     }
 
     return toReturn != null;
@@ -2528,12 +2543,12 @@ public class  HRegionServer implements ClientProtocol,
 
   protected HRegion getRegionByEncodedName(String encodedRegionName)
     throws NotServingRegionException {
-
     HRegion region = this.onlineRegions.get(encodedRegionName);
     if (region == null) {
-      ServerName sn = getMovedRegion(encodedRegionName);
-      if (sn != null) {
-        throw new RegionMovedException(sn.getHostname(), sn.getPort());
+      MovedRegionInfo moveInfo = getMovedRegion(encodedRegionName);
+      if (moveInfo != null) {
+        throw new RegionMovedException(moveInfo.getServerName().getHostname(),
+            moveInfo.getServerName().getPort(), moveInfo.getSeqNum());
       } else {
         throw new NotServingRegionException("Region is not online: " + encodedRegionName);
       }
@@ -3371,7 +3386,7 @@ public class  HRegionServer implements ClientProtocol,
           } else {
             LOG.warn("The region " + region.getEncodedName() + " is online on this server" +
                 " but META does not have this server - continue opening.");
-            removeFromOnlineRegions(region.getEncodedName(), null);
+            removeFromOnlineRegions(onlineRegion, null);
           }
         }
         LOG.info("Received request to open region: " + region.getRegionNameAsString() + " on "
@@ -3850,34 +3865,55 @@ public class  HRegionServer implements ClientProtocol,
     region.mutateRow(rm);
   }
 
+  private static class MovedRegionInfo {
+    private final ServerName serverName;
+    private final long seqNum;
+    private final long ts;
+
+    public MovedRegionInfo(ServerName serverName, long closeSeqNum) {
+      this.serverName = serverName;
+      this.seqNum = closeSeqNum;
+      ts = EnvironmentEdgeManager.currentTimeMillis();
+     }
+
+    public ServerName getServerName() {
+      return serverName;
+    }
+
+    public long getSeqNum() {
+      return seqNum;
+    }
+
+    public long getMoveTime() {
+      return ts;
+    }
+  }
 
   // This map will contains all the regions that we closed for a move.
   //  We add the time it was moved as we don't want to keep too old information
-  protected Map<String, Pair<Long, ServerName>> movedRegions =
-      new ConcurrentHashMap<String, Pair<Long, ServerName>>(3000);
+  protected Map<String, MovedRegionInfo> movedRegions =
+      new ConcurrentHashMap<String, MovedRegionInfo>(3000);
 
   // We need a timeout. If not there is a risk of giving a wrong information: this would double
   //  the number of network calls instead of reducing them.
   private static final int TIMEOUT_REGION_MOVED = (2 * 60 * 1000);
 
-  protected void addToMovedRegions(HRegionInfo hri, ServerName destination){
-    addToMovedRegions(hri.getEncodedName(), destination);
-  }
-
-  protected void addToMovedRegions(String encodedName, ServerName destination){
-    final  Long time = System.currentTimeMillis();
-
+  protected void addToMovedRegions(String encodedName, ServerName destination, long closeSeqNum) {
+    LOG.info("Adding moved region record: " + encodedName + " to "
+        + destination.getServerName() + ":" + destination.getPort()
+        + " as of " + closeSeqNum);
     movedRegions.put(
         encodedName,
-        new Pair<Long, ServerName>(time, destination));
+        new MovedRegionInfo(destination, closeSeqNum));
   }
 
-  private ServerName getMovedRegion(final String encodedRegionName) {
-    Pair<Long, ServerName> dest = movedRegions.get(encodedRegionName);
+  private MovedRegionInfo getMovedRegion(final String encodedRegionName) {
+    MovedRegionInfo dest = movedRegions.get(encodedRegionName);
 
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     if (dest != null) {
-      if (dest.getFirst() > (System.currentTimeMillis() - TIMEOUT_REGION_MOVED)) {
-        return dest.getSecond();
+      if (dest.getMoveTime() > (now - TIMEOUT_REGION_MOVED)) {
+        return dest;
       } else {
         movedRegions.remove(encodedRegionName);
       }
@@ -3891,11 +3927,11 @@ public class  HRegionServer implements ClientProtocol,
    */
   protected void cleanMovedRegions(){
     final long cutOff = System.currentTimeMillis() - TIMEOUT_REGION_MOVED;
-    Iterator<Entry<String, Pair<Long, ServerName>>> it = movedRegions.entrySet().iterator();
+    Iterator<Entry<String, MovedRegionInfo>> it = movedRegions.entrySet().iterator();
 
     while (it.hasNext()){
-      Map.Entry<String, Pair<Long, ServerName>> e = it.next();
-      if (e.getValue().getFirst() < cutOff){
+      Map.Entry<String, MovedRegionInfo> e = it.next();
+      if (e.getValue().getMoveTime() < cutOff) {
         it.remove();
       }
     }

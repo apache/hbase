@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDe
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Triple;
@@ -956,8 +957,8 @@ public class HConnectionManager {
           LOG.debug("Looked up root region location, connection=" + this +
             "; serverName=" + ((servername == null) ? "null" : servername));
           if (servername == null) return null;
-          return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO,
-            servername.getHostname(), servername.getPort());
+          return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, servername.getHostname(),
+              servername.getPort(), 0);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           return null;
@@ -1006,10 +1007,9 @@ public class HConnectionManager {
             }
             // instantiate the location
             HRegionLocation loc = new HRegionLocation(regionInfo, serverName.getHostname(),
-                serverName.getPort());
+                serverName.getPort(), HRegionInfo.getSeqNumDuringOpen(result));
             // cache this meta entry
-            cacheLocation(tableName, loc);
-
+            cacheLocation(tableName, null, loc);
             return true;
           } catch (RuntimeException e) {
             throw new IOException(e);
@@ -1131,9 +1131,9 @@ public class HConnectionManager {
           }
 
           // Instantiate the location
-          location =
-              new HRegionLocation(regionInfo, serverName.getHostname(), serverName.getPort());
-          cacheLocation(tableName, location);
+          location = new HRegionLocation(regionInfo, serverName.getHostname(),
+                  serverName.getPort(), HRegionInfo.getSeqNumDuringOpen(regionInfoRow));
+          cacheLocation(tableName, null, location);
           return location;
         } catch (TableNotFoundException e) {
           // if we got this error, probably means the table just plain doesn't
@@ -1226,23 +1226,24 @@ public class HConnectionManager {
      * @param row
      */
     void deleteCachedLocation(final byte [] tableName, final byte [] row) {
+      HRegionLocation rl = null;
       synchronized (this.cachedRegionLocations) {
         Map<byte[], HRegionLocation> tableLocations =
             getTableLocations(tableName);
         // start to examine the cache. we can only do cache actions
         // if there's something in the cache for this table.
         if (!tableLocations.isEmpty()) {
-          HRegionLocation rl = getCachedLocation(tableName, row);
+          rl = getCachedLocation(tableName, row);
           if (rl != null) {
             tableLocations.remove(rl.getRegionInfo().getStartKey());
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Removed " +
-                rl.getRegionInfo().getRegionNameAsString() +
-                " for tableName=" + Bytes.toString(tableName) +
-                " from cache " + "because of " + Bytes.toStringBinary(row));
-            }
           }
         }
+      }
+      if ((rl != null) && LOG.isDebugEnabled()) {
+        LOG.debug("Removed " + rl.getHostname() + ":" + rl.getPort()
+          + " as a location of " + rl.getRegionInfo().getRegionNameAsString() +
+          " for tableName=" + Bytes.toString(tableName) +
+          " from cache because of " + Bytes.toStringBinary(row));
       }
     }
 
@@ -1315,23 +1316,52 @@ public class HConnectionManager {
       }
     }
 
-    /*
+    /**
      * Put a newly discovered HRegionLocation into the cache.
+     * @param tableName The table name.
+     * @param source the source of the new location, if it's not coming from meta
+     * @param location the new location
      */
-    private void cacheLocation(final byte [] tableName,
+    private void cacheLocation(final byte [] tableName, final HRegionLocation source,
         final HRegionLocation location) {
+      boolean isFromMeta = (source == null);
       byte [] startKey = location.getRegionInfo().getStartKey();
       Map<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
-      boolean hasNewCache;
+      boolean isNewCacheEntry = false;
+      boolean isStaleUpdate = false;
+      HRegionLocation oldLocation = null;
       synchronized (this.cachedRegionLocations) {
         cachedServers.add(location.getHostnamePort());
-        hasNewCache = (tableLocations.put(startKey, location) == null);
+        oldLocation = tableLocations.get(startKey);
+        isNewCacheEntry = (oldLocation == null);
+        // If the server in cache sends us a redirect, assume it's always valid.
+        if (!isNewCacheEntry && !oldLocation.equals(source)) {
+          long newLocationSeqNum = location.getSeqNum();
+          // Meta record is stale - some (probably the same) server has closed the region
+          // with later seqNum and told us about the new location.
+          boolean isStaleMetaRecord = isFromMeta && (oldLocation.getSeqNum() > newLocationSeqNum);
+          // Same as above for redirect. However, in this case, if the number is equal to previous
+          // record, the most common case is that first the region was closed with seqNum, and then
+          // opened with the same seqNum; hence we will ignore the redirect.
+          // There are so many corner cases with various combinations of opens and closes that
+          // an additional counter on top of seqNum would be necessary to handle them all.
+          boolean isStaleRedirect = !isFromMeta && (oldLocation.getSeqNum() >= newLocationSeqNum);
+          isStaleUpdate = (isStaleMetaRecord || isStaleRedirect);
+        }
+        if (!isStaleUpdate) {
+          tableLocations.put(startKey, location);
+        }
       }
-      if (hasNewCache) {
+      if (isNewCacheEntry) {
         LOG.debug("Cached location for " +
             location.getRegionInfo().getRegionNameAsString() +
             " is " + location.getHostnamePort());
+      } else if (isStaleUpdate && !location.equals(oldLocation)) {
+        LOG.debug("Ignoring stale location update for "
+          + location.getRegionInfo().getRegionNameAsString() + ": "
+          + location.getHostnamePort() + " at " + location.getSeqNum() + "; local "
+          + oldLocation.getHostnamePort() + " at " + oldLocation.getSeqNum());
       }
     }
 
@@ -1734,61 +1764,65 @@ public class HConnectionManager {
       };
    }
 
-
-    void updateCachedLocation(HRegionLocation hrl, String hostname, int port) {
-      HRegionLocation newHrl = new HRegionLocation(hrl.getRegionInfo(), hostname, port);
+   void updateCachedLocation(HRegionInfo hri, HRegionLocation source,
+       String hostname, int port, long seqNum) {
+      HRegionLocation newHrl = new HRegionLocation(hri, hostname, port, seqNum);
       synchronized (this.cachedRegionLocations) {
-        cacheLocation(hrl.getRegionInfo().getTableName(), newHrl);
+        cacheLocation(hri.getTableName(), source, newHrl);
       }
     }
 
-    void deleteCachedLocation(HRegionLocation rl) {
+    void deleteCachedLocation(HRegionInfo hri, HRegionLocation source) {
+      boolean isStaleDelete = false;
+      HRegionLocation oldLocation = null;
       synchronized (this.cachedRegionLocations) {
         Map<byte[], HRegionLocation> tableLocations =
-          getTableLocations(rl.getRegionInfo().getTableName());
-        tableLocations.remove(rl.getRegionInfo().getStartKey());
+          getTableLocations(hri.getTableName());
+        oldLocation = tableLocations.get(hri.getStartKey());
+         // Do not delete the cache entry if it's not for the same server that gave us the error.
+        isStaleDelete = (source != null) && !oldLocation.equals(source);
+        if (!isStaleDelete) {
+          tableLocations.remove(hri.getStartKey());
+        }
       }
-    }
-
-    private void updateCachedLocations(byte[] tableName, Row row, Object t) {
-      updateCachedLocations(null, tableName, row, t);
+      if (isStaleDelete) {
+        LOG.debug("Received an error from " + source.getHostnamePort() + " for region "
+          + hri.getRegionNameAsString() + "; not removing "
+          + oldLocation.getHostnamePort() + " from cache.");
+      }
     }
 
     /**
-     * Update the location with the new value (if the exception is a RegionMovedException) or delete
-     *  it from the cache.
-     * @param hrl - can be null. If it's the case, tableName and row should not be null
-     * @param tableName - can be null if hrl is not null.
-     * @param row  - can be null if hrl is not null.
-     * @param exception - An object (to simplify user code) on which we will try to find a nested
+     * Update the location with the new value (if the exception is a RegionMovedException)
+     * or delete it from the cache.
+     * @param exception an object (to simplify user code) on which we will try to find a nested
      *                  or wrapped or both RegionMovedException
+     * @param source server that is the source of the location update.
      */
-    private void updateCachedLocations(final HRegionLocation hrl, final byte[] tableName,
-      Row row, final Object exception) {
-
-      if ((row == null || tableName == null) && hrl == null) {
+    private void updateCachedLocations(final byte[] tableName, Row row,
+      final Object exception, final HRegionLocation source) {
+      if (row == null || tableName == null) {
         LOG.warn("Coding error, see method javadoc. row=" + (row == null ? "null" : row) +
-            ", tableName=" + (tableName == null ? "null" : Bytes.toString(tableName) +
-            ", hrl= null"));
+            ", tableName=" + (tableName == null ? "null" : Bytes.toString(tableName)));
         return;
       }
 
       // Is it something we have already updated?
-      final HRegionLocation myLoc = (hrl != null ?
-        hrl : getCachedLocation(tableName, row.getRow()));
-      if (myLoc == null) {
+      final HRegionLocation oldLocation = getCachedLocation(tableName, row.getRow());
+      if (oldLocation == null) {
         // There is no such location in the cache => it's been removed already => nothing to do
         return;
       }
 
+      HRegionInfo regionInfo = oldLocation.getRegionInfo();
       final RegionMovedException rme = RegionMovedException.find(exception);
       if (rme != null) {
-        LOG.info("Region " + myLoc.getRegionInfo().getRegionNameAsString() + " moved from " +
-          myLoc.getHostnamePort() + ", updating client location cache." +
-          " New server: " + rme.getHostname() + ":" + rme.getPort());
-        updateCachedLocation(myLoc, rme.getHostname(), rme.getPort());
+        LOG.info("Region " + regionInfo.getRegionNameAsString() + " moved to " +
+          rme.getHostname() + ":" + rme.getPort() + " according to " + source.getHostnamePort());
+        updateCachedLocation(
+            regionInfo, source, rme.getHostname(), rme.getPort(), rme.getLocationSeqNum());
       } else {
-        deleteCachedLocation(myLoc);
+        deleteCachedLocation(regionInfo, source);
       }
     }
 
@@ -1998,7 +2032,7 @@ public class HConnectionManager {
             for (List<Action<R>> actions : currentTask.getFirst().actions.values()) {
               for (Action<R> action : actions) {
                 Row row = action.getAction();
-                hci.updateCachedLocations(this.tableName, row, exception);
+                hci.updateCachedLocations(tableName, row, exception, currentTask.getSecond());
                 if (noRetry) {
                   errors.add(exception, row, currentTask);
                 } else {
@@ -2024,7 +2058,7 @@ public class HConnectionManager {
                 // Failure: retry if it's make sense else update the errors lists
                 if (result == null || result instanceof Throwable) {
                   Row row = correspondingAction.getAction();
-                  hci.updateCachedLocations(this.tableName, row, result);
+                  hci.updateCachedLocations(this.tableName, row, result, currentTask.getSecond());
                   if (result instanceof DoNotRetryIOException || noRetry) {
                     errors.add((Exception)result, row, currentTask);
                   } else {

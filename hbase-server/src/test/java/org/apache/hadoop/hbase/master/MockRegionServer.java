@@ -232,7 +232,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public boolean removeFromOnlineRegions(String encodedRegionName, ServerName destination) {
+  public boolean removeFromOnlineRegions(HRegion r, ServerName destination) {
     // TODO Auto-generated method stub
     return false;
   }

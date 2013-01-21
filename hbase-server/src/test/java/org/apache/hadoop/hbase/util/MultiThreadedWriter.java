@@ -17,6 +17,8 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -31,8 +33,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 
@@ -170,9 +176,44 @@ public class MultiThreadedWriter extends MultiThreadedAction {
         totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
       } catch (IOException e) {
         failedKeySet.add(keyBase);
-        LOG.error("Failed to insert: " + keyBase);
-        e.printStackTrace();
+        String exceptionInfo;
+        if (e instanceof RetriesExhaustedWithDetailsException) {
+          RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException)e;
+          exceptionInfo = aggEx.getExhaustiveDescription();
+        } else {
+          StringWriter stackWriter = new StringWriter();
+          PrintWriter pw = new PrintWriter(stackWriter);
+          e.printStackTrace(pw);
+          pw.flush();
+          exceptionInfo = StringUtils.stringifyException(e);
+        }
+        LOG.error("Failed to insert: " + keyBase + "; region information: "
+            + getRegionDebugInfoSafe(put.getRow()) + "; errors: "
+            + exceptionInfo);
       }
+    }
+
+    private String getRegionDebugInfoSafe(byte[] rowKey) {
+      HRegionLocation cached = null, real = null;
+      try {
+        cached = table.getRegionLocation(rowKey, false);
+        real = table.getRegionLocation(rowKey, true);
+      } catch (Throwable t) {
+        // Cannot obtain region information for another catch block - too bad!
+      }
+      String result = "no information can be obtained";
+      if (cached != null) {
+        result = "cached: " + cached.toString();
+      }
+      if (real != null) {
+        if (real.equals(cached)) {
+          result += "; cache is up to date";
+        } else {
+          result = (cached != null) ? (result + "; ") : "";
+          result += "real: " + real.toString();
+        }
+      }
+      return result;
     }
   }
 

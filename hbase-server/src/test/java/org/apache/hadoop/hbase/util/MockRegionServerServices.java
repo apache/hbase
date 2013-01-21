@@ -60,8 +60,8 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public boolean removeFromOnlineRegions(String encodedRegionName, ServerName destination) {
-    return this.regions.remove(encodedRegionName) != null;
+  public boolean removeFromOnlineRegions(HRegion r, ServerName destination) {
+    return this.regions.remove(r.getRegionInfo().getEncodedName()) != null;
   }
 
   @Override

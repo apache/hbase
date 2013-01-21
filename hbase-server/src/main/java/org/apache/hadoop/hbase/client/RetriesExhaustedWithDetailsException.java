@@ -22,7 +22,10 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.util.Bytes;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -115,6 +118,24 @@ extends RetriesExhaustedException {
     }
     return s;
   }
+
+  public String getExhaustiveDescription() {
+    StringWriter errorWriter = new StringWriter();
+    for (int i = 0; i < this.exceptions.size(); ++i) {
+      Throwable t = this.exceptions.get(i);
+      Row action = this.actions.get(i);
+      String server = this.hostnameAndPort.get(i);
+      errorWriter.append("Error #" + i + " from [" + server + "] for ["
+        + ((action == null) ? "unknown key" : Bytes.toStringBinary(action.getRow())) + "]");
+      if (t != null) {
+        PrintWriter pw = new PrintWriter(errorWriter);
+        t.printStackTrace(pw);
+        pw.flush();
+      }
+    }
+    return errorWriter.toString();
+  }
+
 
   public static Map<String, Integer> classifyExs(List<Throwable> ths) {
     Map<String, Integer> cls = new HashMap<String, Integer>();

@@ -443,7 +443,7 @@ class FSHLog implements HLog, Syncable {
         !this.logSeqNum.compareAndSet(id, newvalue); id = this.logSeqNum.get()) {
       // This could spin on occasion but better the occasional spin than locking
       // every increment of sequence number.
-      LOG.debug("Changed sequenceid from " + logSeqNum + " to " + newvalue);
+      LOG.debug("Changed sequenceid from " + id + " to " + newvalue);
     }
   }
 
@@ -1413,6 +1413,12 @@ class FSHLog implements HLog, Syncable {
   /** Provide access to currently deferred sequence num for tests */
   boolean hasDeferredEntries() {
     return lastDeferredTxid > syncedTillHere;
+  }
+
+  @Override
+  public long getEarliestMemstoreSeqNum(byte[] encodedRegionName) {
+    Long result = lastSeqWritten.get(encodedRegionName);
+    return result == null ? HConstants.NO_SEQNUM : result.longValue();
   }
 
   /**

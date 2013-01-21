@@ -284,11 +284,15 @@ public class HRegion implements HeapSize { // , Writable{
   private final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
 
   /**
+   * The sequence ID that was encountered when this region was opened.
+   */
+  private long openSeqNum = HConstants.NO_SEQNUM;
+
+  /**
    * The default setting for whether to enable on-demand CF loading for
    * scan requests to this region. Requests can override it.
    */
   private boolean isLoadingCfsOnDemandDefault = false;
-
 
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
@@ -4037,10 +4041,11 @@ public class HRegion implements HeapSize { // , Writable{
   throws IOException {
     checkCompressionCodecs();
 
-    long seqid = initialize(reporter);
+    this.openSeqNum = initialize(reporter);
     if (this.log != null) {
-      this.log.setSequenceNumber(seqid);
+      this.log.setSequenceNumber(this.openSeqNum);
     }
+
     return this;
   }
 
@@ -4990,7 +4995,7 @@ public class HRegion implements HeapSize { // , Writable{
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       39 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (9 * Bytes.SIZEOF_LONG) +
+      (10 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
@@ -5454,6 +5459,13 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
+   * Gets the latest sequence number that was read from storage when this region was opened.
+   */
+  public long getOpenSeqNum() {
+    return this.openSeqNum;
+  }
+
+  /**
    * Listener class to enable callers of
    * bulkLoadHFile() to perform any necessary
    * pre/post processing of a given bulkload call
@@ -5484,6 +5496,5 @@ public class HRegion implements HeapSize { // , Writable{
      * @throws IOException
      */
     void failedBulkLoad(byte[] family, String srcPath) throws IOException;
-
   }
 }

@@ -296,7 +296,7 @@ public class SplitTransaction {
       throw new IOException(errorMsg);
     }
     if (!testing) {
-      services.removeFromOnlineRegions(this.parent.getRegionInfo().getEncodedName(), null);
+      services.removeFromOnlineRegions(this.parent, null);
     }
     this.journal.add(JournalEntry.OFFLINED_PARENT);
 
