@@ -842,16 +842,13 @@ public class KeyValue implements Cell, HeapSize {
 
   /**
    * Needed doing 'contains' on List.  Only compares the key portion, not the value.
-   *
-   * For temporary backwards compatibility with the original KeyValue.equals method, we ignore the
-   * mvccVersion.
    */
   @Override
   public boolean equals(Object other) {
     if (!(other instanceof Cell)) {
       return false;
     }
-    return CellComparator.equalsIgnoreMvccVersion(this, (Cell)other);
+    return CellComparator.equals(this, (Cell)other);
   }
 
   @Override

@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.cell.CellComparator;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -1910,8 +1911,8 @@ public class TestHRegion extends HBaseTestCase {
 
       res = new ArrayList<KeyValue>();
       is.next(res);
-      for(int i=0; i<res.size(); i++) {
-        assertEquals(expected1.get(i), res.get(i));
+      for (int i = 0; i < res.size(); i++) {
+        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected1.get(i), res.get(i)));
       }
 
       //Result 2
@@ -1922,7 +1923,7 @@ public class TestHRegion extends HBaseTestCase {
       res = new ArrayList<KeyValue>();
       is.next(res);
       for(int i=0; i<res.size(); i++) {
-        assertEquals(expected2.get(i), res.get(i));
+        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
       }
     } finally {
       HRegion.closeHRegion(this.region);
@@ -2046,7 +2047,7 @@ public class TestHRegion extends HBaseTestCase {
 
       //Verify result
       for(int i=0; i<expected.size(); i++) {
-        assertEquals(expected.get(i), actual.get(i));
+        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HRegion.closeHRegion(this.region);
@@ -2129,7 +2130,7 @@ public class TestHRegion extends HBaseTestCase {
 
       //Verify result
       for(int i=0; i<expected.size(); i++) {
-        assertEquals(expected.get(i), actual.get(i));
+        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HRegion.closeHRegion(this.region);
@@ -2253,7 +2254,7 @@ public class TestHRegion extends HBaseTestCase {
 
       //Verify result
       for(int i=0; i<expected.size(); i++) {
-        assertEquals(expected.get(i), actual.get(i));
+        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HRegion.closeHRegion(this.region);
@@ -2412,7 +2413,7 @@ public class TestHRegion extends HBaseTestCase {
 
       //Verify result
       for(int i=0; i<expected.size(); i++) {
-        assertEquals(expected.get(i), actual.get(i));
+        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HRegion.closeHRegion(this.region);

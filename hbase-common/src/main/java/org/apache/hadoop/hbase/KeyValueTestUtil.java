@@ -23,10 +23,10 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
 import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hbase.cell.CellComparator;
 
 import com.google.common.collect.Lists;
 
@@ -61,7 +61,6 @@ public class KeyValueTestUtil {
       );
   }
 
-
   public static ByteBuffer toByteBufferAndRewind(final Iterable<? extends KeyValue> kvs,
       boolean includeMemstoreTS) {
     int totalBytes = KeyValueTool.totalLengthWithMvccVersion(kvs, includeMemstoreTS);
@@ -73,6 +72,27 @@ public class KeyValueTestUtil {
     return bb;
   }
 
+  /**
+   * Checks whether KeyValues from kvCollection2 are contained in kvCollection1.
+   * 
+   * The comparison is made without distinguishing MVCC version of the KeyValues
+   * 
+   * @param kvCollection1
+   * @param kvCollection2
+   * @return true if KeyValues from kvCollection2 are contained in kvCollection1
+   */
+  public static boolean containsIgnoreMvccVersion(Collection<KeyValue> kvCollection1,
+      Collection<KeyValue> kvCollection2) {
+    for (KeyValue kv1 : kvCollection1) {
+      boolean found = false;
+      for (KeyValue kv2 : kvCollection2) {
+        if (CellComparator.equalsIgnoreMvccVersion(kv1, kv2)) found = true;
+      }
+      if (!found) return false;
+    }
+    return true;
+  }
+  
   public static List<KeyValue> rewindThenToList(final ByteBuffer bb,
       final boolean includesMemstoreTS) {
     bb.rewind();
