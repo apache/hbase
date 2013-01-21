@@ -557,8 +557,8 @@ public class TestWALReplay {
     }
 
     // Add a cache flush, shouldn't have any effect
-    long logSeqId = wal.startCacheFlush(regionName);
-    wal.completeCacheFlush(regionName, tableName, logSeqId, hri.isMetaRegion());
+    wal.startCacheFlush(regionName);
+    wal.completeCacheFlush(regionName);
 
     // Add an edit to another family, should be skipped.
     WALEdit edit = new WALEdit();
@@ -661,7 +661,7 @@ public class TestWALReplay {
     wal.doCompleteCacheFlush = true;
     // allow complete cache flush with the previous seq number got after first
     // set of edits.
-    wal.completeCacheFlush(hri.getEncodedNameAsBytes(), hri.getTableName(), sequenceNumber, false);
+    wal.completeCacheFlush(hri.getEncodedNameAsBytes());
     wal.close();
     FileStatus[] listStatus = this.fs.listStatus(wal.getDir());
     HLogSplitter.splitLogFile(hbaseRootDir, listStatus[0], this.fs, this.conf,
@@ -686,12 +686,11 @@ public class TestWALReplay {
     }
 
     @Override
-    public void completeCacheFlush(byte[] encodedRegionName, byte[] tableName, long logSeqId,
-        boolean isMetaRegion) throws IOException {
+    public void completeCacheFlush(byte[] encodedRegionName) {
       if (!doCompleteCacheFlush) {
         return;
       }
-      super.completeCacheFlush(encodedRegionName, tableName, logSeqId, isMetaRegion);
+      super.completeCacheFlush(encodedRegionName);
     }
   }
 

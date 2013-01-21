@@ -323,11 +323,11 @@ public class TestHLog  {
       regionsToSeqids.put(l.toString().getBytes(), l);
     }
     byte [][] regions =
-      HLogUtil.findMemstoresWithEditsEqualOrOlderThan(1, regionsToSeqids);
+      FSHLog.findMemstoresWithEditsEqualOrOlderThan(1, regionsToSeqids);
     assertEquals(2, regions.length);
     assertTrue(Bytes.equals(regions[0], "0".getBytes()) ||
         Bytes.equals(regions[0], "1".getBytes()));
-    regions = HLogUtil.findMemstoresWithEditsEqualOrOlderThan(3, regionsToSeqids);
+    regions = FSHLog.findMemstoresWithEditsEqualOrOlderThan(3, regionsToSeqids);
     int count = 4;
     assertEquals(count, regions.length);
     // Regions returned are not ordered.
@@ -518,9 +518,8 @@ public class TestHLog  {
       htd.addFamily(new HColumnDescriptor("column"));
 
       log.append(info, tableName, cols, System.currentTimeMillis(), htd);
-      long logSeqId = log.startCacheFlush(info.getEncodedNameAsBytes());
-      log.completeCacheFlush(info.getEncodedNameAsBytes(), tableName, logSeqId,
-          info.isMetaRegion());
+      log.startCacheFlush(info.getEncodedNameAsBytes());
+      log.completeCacheFlush(info.getEncodedNameAsBytes());
       log.close();
       Path filename = ((FSHLog) log).computeFilename();
       log = null;
@@ -538,20 +537,6 @@ public class TestHLog  {
         KeyValue kv = val.getKeyValues().get(0);
         assertTrue(Bytes.equals(row, kv.getRow()));
         assertEquals((byte)(i + '0'), kv.getValue()[0]);
-        System.out.println(key + " " + val);
-      }
-      HLog.Entry entry = null;
-      while ((entry = reader.next(null)) != null) {
-        HLogKey key = entry.getKey();
-        WALEdit val = entry.getEdit();
-        // Assert only one more row... the meta flushed row.
-        assertTrue(Bytes.equals(info.getEncodedNameAsBytes(), key.getEncodedRegionName()));
-        assertTrue(Bytes.equals(tableName, key.getTablename()));
-        KeyValue kv = val.getKeyValues().get(0);
-        assertTrue(Bytes.equals(HLog.METAROW, kv.getRow()));
-        assertTrue(Bytes.equals(HLog.METAFAMILY, kv.getFamily()));
-        assertEquals(0, Bytes.compareTo(HLogUtil.COMPLETE_CACHE_FLUSH,
-          val.getKeyValues().get(0).getValue()));
         System.out.println(key + " " + val);
       }
     } finally {
@@ -589,8 +574,8 @@ public class TestHLog  {
       HTableDescriptor htd = new HTableDescriptor();
       htd.addFamily(new HColumnDescriptor("column"));
       log.append(hri, tableName, cols, System.currentTimeMillis(), htd);
-      long logSeqId = log.startCacheFlush(hri.getEncodedNameAsBytes());
-      log.completeCacheFlush(hri.getEncodedNameAsBytes(), tableName, logSeqId, false);
+      log.startCacheFlush(hri.getEncodedNameAsBytes());
+      log.completeCacheFlush(hri.getEncodedNameAsBytes());
       log.close();
       Path filename = ((FSHLog) log).computeFilename();
       log = null;
@@ -607,20 +592,6 @@ public class TestHLog  {
         assertEquals((byte)(idx + '0'), val.getValue()[0]);
         System.out.println(entry.getKey() + " " + val);
         idx++;
-      }
-
-      // Get next row... the meta flushed row.
-      entry = reader.next();
-      assertEquals(1, entry.getEdit().size());
-      for (KeyValue val : entry.getEdit().getKeyValues()) {
-        assertTrue(Bytes.equals(hri.getEncodedNameAsBytes(),
-          entry.getKey().getEncodedRegionName()));
-        assertTrue(Bytes.equals(tableName, entry.getKey().getTablename()));
-        assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));
-        assertTrue(Bytes.equals(HLog.METAFAMILY, val.getFamily()));
-        assertEquals(0, Bytes.compareTo(HLogUtil.COMPLETE_CACHE_FLUSH,
-          val.getValue()));
-        System.out.println(entry.getKey() + " " + val);
       }
     } finally {
       if (log != null) {
@@ -705,17 +676,19 @@ public class TestHLog  {
       assertEquals(3, ((FSHLog) log).getNumLogFiles());
 
       // Flush the first region, we expect to see the first two files getting
-      // archived
-      long seqId = log.startCacheFlush(hri.getEncodedNameAsBytes());
-      log.completeCacheFlush(hri.getEncodedNameAsBytes(), tableName, seqId, false);
+      // archived. We need to append something or writer won't be rolled.
+      addEdits(log, hri2, tableName2, 1);
+      log.startCacheFlush(hri.getEncodedNameAsBytes());
+      log.completeCacheFlush(hri.getEncodedNameAsBytes());
       log.rollWriter();
       assertEquals(2, ((FSHLog) log).getNumLogFiles());
 
       // Flush the second region, which removes all the remaining output files
       // since the oldest was completely flushed and the two others only contain
       // flush information
-      seqId = log.startCacheFlush(hri2.getEncodedNameAsBytes());
-      log.completeCacheFlush(hri2.getEncodedNameAsBytes(), tableName2, seqId, false);
+      addEdits(log, hri2, tableName2, 1);
+      log.startCacheFlush(hri2.getEncodedNameAsBytes());
+      log.completeCacheFlush(hri2.getEncodedNameAsBytes());
       log.rollWriter();
       assertEquals(0, ((FSHLog) log).getNumLogFiles());
     } finally {

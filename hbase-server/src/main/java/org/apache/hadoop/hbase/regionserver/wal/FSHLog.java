@@ -24,8 +24,10 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +59,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.DrainBarrier;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -132,23 +135,45 @@ class FSHLog implements HLog, Syncable {
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   final static Object [] NO_ARGS = new Object []{};
 
-  /*
+  /** The barrier used to ensure that close() waits for all log rolls and flushes to finish. */
+  private DrainBarrier closeBarrier = new DrainBarrier();
+
+  /**
    * Current log file.
    */
   Writer writer;
 
-  /*
+  /**
    * Map of all log files but the current one.
    */
   final SortedMap<Long, Path> outputfiles =
     Collections.synchronizedSortedMap(new TreeMap<Long, Path>());
 
-  /*
-   * Map of encoded region names to their most recent sequence/edit id in their
-   * memstore.
+
+  /**
+   * This lock synchronizes all operations on oldestUnflushedSeqNums and oldestFlushingSeqNums,
+   * with the exception of append's putIfAbsent into oldestUnflushedSeqNums.
+   * We only use these to find out the low bound seqNum, or to find regions with old seqNums to
+   * force flush them, so we don't care about these numbers messing with anything. */
+  private final Object oldestSeqNumsLock = new Object();
+
+  /**
+   * This lock makes sure only one log roll runs at the same time. Should not be taken while
+   * any other lock is held. We don't just use synchronized because that results in bogus and
+   * tedious findbugs warning when it thinks synchronized controls writer thread safety */
+  private final Object rollWriterLock = new Object();
+
+  /**
+   * Map of encoded region names to their most recent sequence/edit id in their memstore.
    */
-  private final ConcurrentSkipListMap<byte [], Long> lastSeqWritten =
+  private final ConcurrentSkipListMap<byte [], Long> oldestUnflushedSeqNums =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
+  /**
+   * Map of encoded region names to their most recent sequence/edit id in their memstore;
+   * contains the regions that are currently flushing. That way we can store two numbers for
+   * flushing and non-flushing (oldestUnflushedSeqNums) memstore for the same region.
+   */
+  private final Map<byte[], Long> oldestFlushingSeqNums = new HashMap<byte[], Long>();
 
   private volatile boolean closed = false;
 
@@ -177,10 +202,6 @@ class FSHLog implements HLog, Syncable {
   // If > than this size, roll the log. This is typically 0.95 times the size
   // of the default Hdfs block size.
   private final long logrollsize;
-
-  // This lock prevents starting a log roll during a cache flush.
-  // synchronized is insufficient because a cache flush spans two method calls.
-  private final Lock cacheFlushLock = new ReentrantLock();
 
   // We synchronize on updateLock to prevent updates and to prevent a log roll
   // during an update
@@ -472,88 +493,77 @@ class FSHLog implements HLog, Syncable {
   @Override
   public byte [][] rollWriter(boolean force)
       throws FailedLogCloseException, IOException {
-    // Return if nothing to flush.
-    if (!force && this.writer != null && this.numEntries.get() <= 0) {
-      return null;
-    }
-    byte [][] regionsToFlush = null;
-    this.cacheFlushLock.lock();
-    try {
-      this.logRollRunning = true;
-      if (closed) {
-        LOG.debug("HLog closed.  Skipping rolling of writer");
-        return regionsToFlush;
+    synchronized (rollWriterLock) {
+      // Return if nothing to flush.
+      if (!force && this.writer != null && this.numEntries.get() <= 0) {
+        return null;
       }
-      // Do all the preparation outside of the updateLock to block
-      // as less as possible the incoming writes
-      long currentFilenum = this.filenum;
-      Path oldPath = null;
-      if (currentFilenum > 0) {
-        //computeFilename  will take care of meta hlog filename
-        oldPath = computeFilename(currentFilenum);
-      }
-      this.filenum = System.currentTimeMillis();
-      Path newPath = computeFilename();
-
-      // Tell our listeners that a new log is about to be created
-      if (!this.listeners.isEmpty()) {
-        for (WALActionsListener i : this.listeners) {
-          i.preLogRoll(oldPath, newPath);
-        }
-      }
-      FSHLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
-      // Can we get at the dfsclient outputstream?  If an instance of
-      // SFLW, it'll have done the necessary reflection to get at the
-      // protected field name.
-      FSDataOutputStream nextHdfsOut = null;
-      if (nextWriter instanceof SequenceFileLogWriter) {
-        nextHdfsOut = ((SequenceFileLogWriter)nextWriter).getWriterFSDataOutputStream();
-      }
-
-      synchronized (updateLock) {
-        // Clean up current writer.
-        Path oldFile = cleanupCurrentWriter(currentFilenum);
-        this.writer = nextWriter;
-        this.hdfs_out = nextHdfsOut;
-
-        LOG.info((oldFile != null?
-            "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
-            this.numEntries.get() +
-            ", filesize=" +
-            this.fs.getFileStatus(oldFile).getLen() + ". ": "") +
-          " for " + FSUtils.getPath(newPath));
-        this.numEntries.set(0);
-      }
-      // Tell our listeners that a new log was created
-      if (!this.listeners.isEmpty()) {
-        for (WALActionsListener i : this.listeners) {
-          i.postLogRoll(oldPath, newPath);
-        }
-      }
-
-      // Can we delete any of the old log files?
-      if (this.outputfiles.size() > 0) {
-        if (this.lastSeqWritten.isEmpty()) {
-          LOG.debug("Last sequenceid written is empty. Deleting all old hlogs");
-          // If so, then no new writes have come in since all regions were
-          // flushed (and removed from the lastSeqWritten map). Means can
-          // remove all but currently open log file.
-          for (Map.Entry<Long, Path> e : this.outputfiles.entrySet()) {
-            archiveLogFile(e.getValue(), e.getKey());
-          }
-          this.outputfiles.clear();
-        } else {
-          regionsToFlush = cleanOldLogs();
-        }
-      }
-    } finally {
+      byte [][] regionsToFlush = null;
       try {
-        this.logRollRunning = false;
+        this.logRollRunning = true;
+        boolean isClosed = closed;
+        if (isClosed || !closeBarrier.beginOp()) {
+          LOG.debug("HLog " + (isClosed ? "closed" : "closing") + ". Skipping rolling of writer");
+          return regionsToFlush;
+        }
+        // Do all the preparation outside of the updateLock to block
+        // as less as possible the incoming writes
+        long currentFilenum = this.filenum;
+        Path oldPath = null;
+        if (currentFilenum > 0) {
+          //computeFilename  will take care of meta hlog filename
+          oldPath = computeFilename(currentFilenum);
+        }
+        this.filenum = System.currentTimeMillis();
+        Path newPath = computeFilename();
+
+        // Tell our listeners that a new log is about to be created
+        if (!this.listeners.isEmpty()) {
+          for (WALActionsListener i : this.listeners) {
+            i.preLogRoll(oldPath, newPath);
+          }
+        }
+        FSHLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
+        // Can we get at the dfsclient outputstream?  If an instance of
+        // SFLW, it'll have done the necessary reflection to get at the
+        // protected field name.
+        FSDataOutputStream nextHdfsOut = null;
+        if (nextWriter instanceof SequenceFileLogWriter) {
+          nextHdfsOut = ((SequenceFileLogWriter)nextWriter).getWriterFSDataOutputStream();
+        }
+
+        Path oldFile = null;
+        int oldNumEntries = 0;
+        synchronized (updateLock) {
+          // Clean up current writer.
+          oldNumEntries = this.numEntries.get();
+          oldFile = cleanupCurrentWriter(currentFilenum);
+          this.writer = nextWriter;
+          this.hdfs_out = nextHdfsOut;
+          this.numEntries.set(0);
+        }
+        LOG.info("Rolled log" + (oldFile != null ? " for file=" + FSUtils.getPath(oldFile)
+          + ", entries=" + oldNumEntries + ", filesize=" + this.fs.getFileStatus(oldFile).getLen()
+          : "" ) + "; new path=" + FSUtils.getPath(newPath));
+
+        // Tell our listeners that a new log was created
+        if (!this.listeners.isEmpty()) {
+          for (WALActionsListener i : this.listeners) {
+            i.postLogRoll(oldPath, newPath);
+          }
+        }
+
+        // Can we delete any of the old log files?
+        if (getNumLogFiles() > 0) {
+          cleanOldLogs();
+          regionsToFlush = getRegionsToForceFlush();
+        }
       } finally {
-        this.cacheFlushLock.unlock();
+        this.logRollRunning = false;
+        closeBarrier.endOp();
       }
+      return regionsToFlush;
     }
-    return regionsToFlush;
   }
 
   /**
@@ -581,36 +591,64 @@ class FSHLog implements HLog, Syncable {
    * encoded region names to flush.
    * @throws IOException
    */
-  private byte [][] cleanOldLogs() throws IOException {
-    Long oldestOutstandingSeqNum = getOldestOutstandingSeqNum();
+  private void cleanOldLogs() throws IOException {
+    long oldestOutstandingSeqNum = Long.MAX_VALUE;
+    synchronized (oldestSeqNumsLock) {
+      Long oldestFlushing = (oldestFlushingSeqNums.size() > 0)
+        ? Collections.min(oldestFlushingSeqNums.values()) : Long.MAX_VALUE;
+      Long oldestUnflushed = (oldestUnflushedSeqNums.size() > 0)
+        ? Collections.min(oldestUnflushedSeqNums.values()) : Long.MAX_VALUE;
+      oldestOutstandingSeqNum = Math.min(oldestFlushing, oldestUnflushed);
+    }
+
     // Get the set of all log files whose last sequence number is smaller than
     // the oldest edit's sequence number.
     TreeSet<Long> sequenceNumbers = new TreeSet<Long>(this.outputfiles.headMap(
         oldestOutstandingSeqNum).keySet());
     // Now remove old log files (if any)
-    int logsToRemove = sequenceNumbers.size();
-    if (logsToRemove > 0) {
-      if (LOG.isDebugEnabled()) {
-        // Find associated region; helps debugging.
-        byte [] oldestRegion = getOldestRegion(oldestOutstandingSeqNum);
-        LOG.debug("Found " + logsToRemove + " hlogs to remove" +
+    if (LOG.isDebugEnabled()) {
+      if (sequenceNumbers.size() > 0) {
+        LOG.debug("Found " + sequenceNumbers.size() + " hlogs to remove" +
           " out of total " + this.outputfiles.size() + ";" +
-          " oldest outstanding sequenceid is " + oldestOutstandingSeqNum +
-          " from region " + Bytes.toStringBinary(oldestRegion));
-      }
-      for (Long seq : sequenceNumbers) {
-        archiveLogFile(this.outputfiles.remove(seq), seq);
+          " oldest outstanding sequenceid is " + oldestOutstandingSeqNum);
       }
     }
+    for (Long seq : sequenceNumbers) {
+      archiveLogFile(this.outputfiles.remove(seq), seq);
+    }
+  }
 
+  /**
+   * Return regions that have edits that are equal or less than a certain sequence number.
+   * Static due to some old unit test.
+   * @param walSeqNum The sequence number to compare with.
+   * @param regionsToSeqNums Encoded region names to sequence ids
+   * @return All regions whose seqNum <= walSeqNum. Null if no regions found.
+   */
+  static byte[][] findMemstoresWithEditsEqualOrOlderThan(
+      final long walSeqNum, final Map<byte[], Long> regionsToSeqNums) {
+    List<byte[]> regions = null;
+    for (Map.Entry<byte[], Long> e : regionsToSeqNums.entrySet()) {
+      if (e.getValue().longValue() <= walSeqNum) {
+        if (regions == null) regions = new ArrayList<byte[]>();
+        regions.add(e.getKey());
+      }
+    }
+    return regions == null ? null : regions
+        .toArray(new byte[][] { HConstants.EMPTY_BYTE_ARRAY });
+  }
+
+  private byte[][] getRegionsToForceFlush() throws IOException {
     // If too many log files, figure which regions we need to flush.
     // Array is an array of encoded region names.
     byte [][] regions = null;
-    int logCount = this.outputfiles.size();
+    int logCount = getNumLogFiles();
     if (logCount > this.maxLogs && logCount > 0) {
       // This is an array of encoded region names.
-      regions = HLogUtil.findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
-        this.lastSeqWritten);
+      synchronized (oldestSeqNumsLock) {
+        regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
+          this.oldestUnflushedSeqNums);
+      }
       if (regions != null) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < regions.length; i++) {
@@ -623,29 +661,6 @@ class FSHLog implements HLog, Syncable {
       }
     }
     return regions;
-  }
-
-  /*
-   * @return Logs older than this id are safe to remove.
-   */
-  private Long getOldestOutstandingSeqNum() {
-    return Collections.min(this.lastSeqWritten.values());
-  }
-
-  /**
-   * @param oldestOutstandingSeqNum
-   * @return (Encoded) name of oldest outstanding region.
-   */
-  private byte [] getOldestRegion(final Long oldestOutstandingSeqNum) {
-    byte [] oldestRegion = null;
-    for (Map.Entry<byte [], Long> e: this.lastSeqWritten.entrySet()) {
-      if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
-        // Key is encoded region name.
-        oldestRegion = e.getKey();
-        break;
-      }
-    }
-    return oldestRegion;
   }
 
   /*
@@ -780,33 +795,39 @@ class FSHLog implements HLog, Syncable {
 
   @Override
   public void close() throws IOException {
+    if (this.closed) {
+      return;
+    }
     try {
       logSyncerThread.close();
       // Make sure we synced everything
       logSyncerThread.join(this.optionalFlushInterval*2);
     } catch (InterruptedException e) {
       LOG.error("Exception while waiting for syncer thread to die", e);
+      Thread.currentThread().interrupt();
+    }
+    try {
+      // Prevent all further flushing and rolling.
+      closeBarrier.stopAndDrainOps();
+    } catch (InterruptedException e) {
+      LOG.error("Exception while waiting for cache flushes and log rolls", e);
+      Thread.currentThread().interrupt();
     }
 
-    cacheFlushLock.lock();
-    try {
-      // Tell our listeners that the log is closing
-      if (!this.listeners.isEmpty()) {
-        for (WALActionsListener i : this.listeners) {
-          i.logCloseRequested();
-        }
+    // Tell our listeners that the log is closing
+    if (!this.listeners.isEmpty()) {
+      for (WALActionsListener i : this.listeners) {
+        i.logCloseRequested();
       }
-      synchronized (updateLock) {
-        this.closed = true;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("closing hlog writer in " + this.dir.toString());
-        }
-        if (this.writer != null) {
-          this.writer.close();
-        }
+    }
+    synchronized (updateLock) {
+      this.closed = true;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("closing hlog writer in " + this.dir.toString());
       }
-    } finally {
-      cacheFlushLock.unlock();
+      if (this.writer != null) {
+        this.writer.close();
+      }
     }
   }
 
@@ -838,7 +859,7 @@ class FSHLog implements HLog, Syncable {
       // memstore). When the cache is flushed, the entry for the
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
-      this.lastSeqWritten.putIfAbsent(regionInfo.getEncodedNameAsBytes(),
+      this.oldestUnflushedSeqNums.putIfAbsent(regionInfo.getEncodedNameAsBytes(),
         Long.valueOf(seqNum));
       doWrite(regionInfo, logKey, logEdit, htd);
       txid = this.unflushedEntries.incrementAndGet();
@@ -910,7 +931,7 @@ class FSHLog implements HLog, Syncable {
         // Use encoded name.  Its shorter, guaranteed unique and a subset of
         // actual  name.
         byte [] encodedRegionName = info.getEncodedNameAsBytes();
-        this.lastSeqWritten.putIfAbsent(encodedRegionName, seqNum);
+        this.oldestUnflushedSeqNums.putIfAbsent(encodedRegionName, seqNum);
         HLogKey logKey = makeKey(encodedRegionName, tableName, seqNum, now, clusterId);
         doWrite(info, logKey, edits, htd);
         this.numEntries.incrementAndGet();
@@ -1042,7 +1063,11 @@ class FSHLog implements HLog, Syncable {
     Writer tempWriter;
     synchronized (this.updateLock) {
       if (this.closed) return;
-      tempWriter = this.writer; // guaranteed non-null
+      // Guaranteed non-null.
+      // Note that parallel sync can close tempWriter.
+      // The current method of dealing with this is to catch exceptions.
+      // See HBASE-4387, HBASE-5623, HBASE-7329.
+      tempWriter = this.writer;
     }
     // if the transaction that we are interested in is already 
     // synced, then return immediately.
@@ -1078,9 +1103,11 @@ class FSHLog implements HLog, Syncable {
       }
       try {
         tempWriter.sync();
-      } catch(IOException io) {
+      } catch(IOException ex) {
         synchronized (this.updateLock) {
           // HBASE-4387, HBASE-5623, retry with updateLock held
+          // TODO: we don't actually need to do it for concurrent close - what is the point
+          //       of syncing new unrelated writer? Keep behavior for now.
           tempWriter = this.writer;
           tempWriter.sync();
         }
@@ -1088,6 +1115,9 @@ class FSHLog implements HLog, Syncable {
       this.syncedTillHere = Math.max(this.syncedTillHere, doneUpto);
 
       this.metrics.finishSync(EnvironmentEdgeManager.currentTimeMillis() - now);
+      // TODO: preserving the old behavior for now, but this check is strange. It's not
+      //       protected by any locks here, so for all we know rolling locks might start
+      //       as soon as we enter the "if". Is this best-effort optimization check?
       if (!this.logRollRunning) {
         checkLowReplication();
         try {
@@ -1250,107 +1280,61 @@ class FSHLog implements HLog, Syncable {
     return outputfiles.size();
   }
 
-  private byte[] getSnapshotName(byte[] encodedRegionName) {
-    byte snp[] = new byte[encodedRegionName.length + 3];
-    // an encoded region name has only hex digits. s, n or p are not hex
-    // and therefore snapshot-names will never collide with
-    // encoded-region-names
-    snp[0] = 's'; snp[1] = 'n'; snp[2] = 'p';
-    for (int i = 0; i < encodedRegionName.length; i++) {
-      snp[i+3] = encodedRegionName[i];
-    }
-    return snp;
-  }
-
   @Override
-  public long startCacheFlush(final byte[] encodedRegionName) {
-    this.cacheFlushLock.lock();
-    Long seq = this.lastSeqWritten.remove(encodedRegionName);
-    // seq is the lsn of the oldest edit associated with this region. If a
-    // snapshot already exists - because the last flush failed - then seq will
-    // be the lsn of the oldest edit in the snapshot
-    if (seq != null) {
-      // keeping the earliest sequence number of the snapshot in
-      // lastSeqWritten maintains the correctness of
-      // getOldestOutstandingSeqNum(). But it doesn't matter really because
-      // everything is being done inside of cacheFlush lock.
-      Long oldseq =
-        lastSeqWritten.put(getSnapshotName(encodedRegionName), seq);
-      if (oldseq != null) {
-        LOG.error("Logic Error Snapshot seq id from earlier flush still" +
-            " present! for region " + Bytes.toString(encodedRegionName) +
-            " overwritten oldseq=" + oldseq + "with new seq=" + seq);
-        Runtime.getRuntime().halt(1);
+  public Long startCacheFlush(final byte[] encodedRegionName) {
+    Long oldRegionSeqNum = null;
+    if (!closeBarrier.beginOp()) {
+      return null;
+    }
+    synchronized (oldestSeqNumsLock) {
+      oldRegionSeqNum = this.oldestUnflushedSeqNums.remove(encodedRegionName);
+      if (oldRegionSeqNum != null) {
+        Long oldValue = this.oldestFlushingSeqNums.put(encodedRegionName, oldRegionSeqNum);
+        assert oldValue == null : "Flushing map not cleaned up for "
+          + Bytes.toString(encodedRegionName);
       }
+    }
+    if (oldRegionSeqNum == null) {
+      // TODO: if we have no oldRegionSeqNum, and WAL is not disabled, presumably either
+      //       the region is already flushing (which would make this call invalid), or there
+      //       were no appends after last flush, so why are we starting flush? Maybe we should
+      //       assert not null, and switch to "long" everywhere. Less rigorous, but safer,
+      //       alternative is telling the caller to stop. For now preserve old logic.
+      LOG.warn("Couldn't find oldest seqNum for the region we are about to flush: ["
+        + Bytes.toString(encodedRegionName) + "]");
     }
     return obtainSeqNum();
   }
 
   @Override
-  public void completeCacheFlush(final byte [] encodedRegionName,
-      final byte [] tableName, final long logSeqId, final boolean isMetaRegion)
-  throws IOException {
-    try {
-      if (this.closed) {
-        return;
-      }
-      long txid = 0;
-      synchronized (updateLock) {
-        long now = EnvironmentEdgeManager.currentTimeMillis();
-        WALEdit edit = completeCacheFlushLogEdit();
-        HLogKey key = makeKey(encodedRegionName, tableName, logSeqId,
-            System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
-        logSyncerThread.append(new Entry(key, edit));
-        txid = this.unflushedEntries.incrementAndGet();
-        long took = EnvironmentEdgeManager.currentTimeMillis() - now;
-        long len = 0;
-        for (KeyValue kv : edit.getKeyValues()) {
-          len += kv.getLength();
-        }
-        this.metrics.finishAppend(took, len);
-        this.numEntries.incrementAndGet();
-      }
-      // sync txn to file system
-      this.sync(txid);
-
-    } finally {
-      // updateLock not needed for removing snapshot's entry
-      // Cleaning up of lastSeqWritten is in the finally clause because we
-      // don't want to confuse getOldestOutstandingSeqNum()
-      this.lastSeqWritten.remove(getSnapshotName(encodedRegionName));
-      this.cacheFlushLock.unlock();
+  public void completeCacheFlush(final byte [] encodedRegionName)
+  {
+    synchronized (oldestSeqNumsLock) {
+      this.oldestFlushingSeqNums.remove(encodedRegionName);
     }
-  }
-
-  private WALEdit completeCacheFlushLogEdit() {
-    KeyValue kv = new KeyValue(HLog.METAROW, HLog.METAFAMILY, null,
-      System.currentTimeMillis(), HLogUtil.COMPLETE_CACHE_FLUSH);
-    WALEdit e = new WALEdit();
-    e.add(kv);
-    return e;
+    closeBarrier.endOp();
   }
 
   @Override
   public void abortCacheFlush(byte[] encodedRegionName) {
-    Long snapshot_seq =
-      this.lastSeqWritten.remove(getSnapshotName(encodedRegionName));
-    if (snapshot_seq != null) {
-      // updateLock not necessary because we are racing against
-      // lastSeqWritten.putIfAbsent() in append() and we will always win
-      // before releasing cacheFlushLock make sure that the region's entry in
-      // lastSeqWritten points to the earliest edit in the region
-      Long current_memstore_earliest_seq =
-        this.lastSeqWritten.put(encodedRegionName, snapshot_seq);
-      if (current_memstore_earliest_seq != null &&
-          (current_memstore_earliest_seq.longValue() <=
-            snapshot_seq.longValue())) {
-        LOG.error("Logic Error region " + Bytes.toString(encodedRegionName) +
-            "acquired edits out of order current memstore seq=" +
-            current_memstore_earliest_seq + " snapshot seq=" + snapshot_seq);
-        Runtime.getRuntime().halt(1);
+    Long currentSeqNum = null, seqNumBeforeFlushStarts = null;
+    synchronized (oldestSeqNumsLock) {
+      seqNumBeforeFlushStarts = this.oldestFlushingSeqNums.remove(encodedRegionName);
+      if (seqNumBeforeFlushStarts != null) {
+        currentSeqNum =
+          this.oldestUnflushedSeqNums.put(encodedRegionName, seqNumBeforeFlushStarts);
       }
     }
-    this.cacheFlushLock.unlock();
+    closeBarrier.endOp();
+    if ((currentSeqNum != null)
+        && (currentSeqNum.longValue() <= seqNumBeforeFlushStarts.longValue())) {
+      String errorStr = "Region " + Bytes.toString(encodedRegionName) +
+          "acquired edits out of order current memstore seq=" + currentSeqNum
+          + ", previous oldest unflushed id=" + seqNumBeforeFlushStarts;
+      LOG.error(errorStr);
+      assert false : errorStr;
+      Runtime.getRuntime().halt(1);
+    }
   }
 
   @Override
@@ -1417,7 +1401,7 @@ class FSHLog implements HLog, Syncable {
 
   @Override
   public long getEarliestMemstoreSeqNum(byte[] encodedRegionName) {
-    Long result = lastSeqWritten.get(encodedRegionName);
+    Long result = oldestUnflushedSeqNums.get(encodedRegionName);
     return result == null ? HConstants.NO_SEQNUM : result.longValue();
   }
 
