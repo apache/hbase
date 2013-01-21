@@ -46,8 +46,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class HLogUtil {
   static final Log LOG = LogFactory.getLog(HLogUtil.class);
 
-  static final byte[] COMPLETE_CACHE_FLUSH = Bytes.toBytes("HBASE::CACHEFLUSH");
-
   /**
    * @param family
    * @return true if the column is a meta column
@@ -241,32 +239,6 @@ public class HLogUtil {
     }
 
     return ServerName.parseServerName(serverName);
-  }
-
-  /**
-   * Return regions (memstores) that have edits that are equal or less than the
-   * passed <code>oldestWALseqid</code>.
-   * 
-   * @param oldestWALseqid
-   * @param regionsToSeqids
-   *          Encoded region names to sequence ids
-   * @return All regions whose seqid is < than <code>oldestWALseqid</code> (Not
-   *         necessarily in order). Null if no regions found.
-   */
-  static byte[][] findMemstoresWithEditsEqualOrOlderThan(
-      final long oldestWALseqid, final Map<byte[], Long> regionsToSeqids) {
-    // This method is static so it can be unit tested the easier.
-    List<byte[]> regions = null;
-    for (Map.Entry<byte[], Long> e : regionsToSeqids.entrySet()) {
-      if (e.getValue().longValue() <= oldestWALseqid) {
-        if (regions == null)
-          regions = new ArrayList<byte[]>();
-        // Key is encoded region name.
-        regions.add(e.getKey());
-      }
-    }
-    return regions == null ? null : regions
-        .toArray(new byte[][] { HConstants.EMPTY_BYTE_ARRAY });
   }
 
   /**

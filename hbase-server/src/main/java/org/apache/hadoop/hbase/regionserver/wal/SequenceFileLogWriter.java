@@ -244,7 +244,12 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   @Override
   public void sync() throws IOException {
-    this.writer.syncFs();
+    try {
+      this.writer.syncFs();
+    } catch (NullPointerException npe) {
+      // Concurrent close...
+      throw new IOException(npe);
+    }
   }
 
   @Override
