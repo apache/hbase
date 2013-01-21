@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -51,6 +52,9 @@ public class TestFromClientSide3 {
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static Random random = new Random();
   private static int SLAVES = 3;
+  private final static byte[] COL_QUAL = Bytes.toBytes("f1");
+  private final static byte[] VAL_BYTES = Bytes.toBytes("v1");
+  private final static byte[] ROW_BYTES = Bytes.toBytes("r1");
 
   /**
    * @throws java.lang.Exception
@@ -256,4 +260,34 @@ public class TestFromClientSide3 {
         "hbase.hstore.compaction.min"));
   }
 
+  @Test
+  public void testGetEmptyRow() throws Exception {
+    //Create a table and put in 1 row
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    HTableDescriptor desc = new HTableDescriptor(Bytes.toBytes("test"));
+    desc.addFamily(new HColumnDescriptor(FAMILY));
+    admin.createTable(desc);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), "test");
+
+    Put put = new Put(ROW_BYTES);
+    put.add(FAMILY, COL_QUAL, VAL_BYTES);
+    table.put(put);
+    table.flushCommits();
+
+    //Try getting the row with an empty row key and make sure the other base cases work as well
+    Result res = table.get(new Get(new byte[0]));
+    assertTrue(res.isEmpty() == true);
+    res = table.get(new Get(Bytes.toBytes("r1-not-exist")));
+    assertTrue(res.isEmpty() == true);
+    res = table.get(new Get(ROW_BYTES));
+    assertTrue(Arrays.equals(res.getValue(FAMILY, COL_QUAL), VAL_BYTES));
+
+    //Now actually put in a row with an empty row key    
+    put = new Put(new byte[0]);
+    put.add(FAMILY, COL_QUAL, VAL_BYTES);
+    table.put(put);
+    table.flushCommits();
+    res = table.get(new Get(new byte[0]));
+    assertTrue(Arrays.equals(res.getValue(FAMILY, COL_QUAL), VAL_BYTES));
+  }
 }
