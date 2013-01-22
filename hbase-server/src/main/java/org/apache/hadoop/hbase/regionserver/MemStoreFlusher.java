@@ -500,21 +500,21 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     return "flush_queue="
         + flushQueue.size();
   }
-  
+
   public String dumpQueue() {
     StringBuilder queueList = new StringBuilder();
     queueList.append("Flush Queue Queue dump:\n");
     queueList.append("  Flush Queue:\n");
     java.util.Iterator<FlushQueueEntry> it = flushQueue.iterator();
-    
+
     while(it.hasNext()){
       queueList.append("    "+it.next().toString());
       queueList.append("\n");
     }
-    
+
     return queueList.toString();
   }
-  
+
   interface FlushQueueEntry extends Delayed {}
 
   /**
@@ -530,6 +530,12 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     public int compareTo(Delayed o) {
       return -1;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      return (this == obj);
+    }
+
   }
 
   /**
@@ -596,6 +602,18 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     @Override
     public String toString() {
       return "[flush region " + Bytes.toStringBinary(region.getRegionName()) + "]";
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null || getClass() != obj.getClass()) {
+        return false;
+      }
+      Delayed other = (Delayed) obj;
+      return compareTo(other) == 0;
     }
   }
 }
