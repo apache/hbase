@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
 
@@ -532,12 +530,6 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     public int compareTo(Delayed o) {
       return -1;
     }
-    
-    @Override
-    public boolean equals(Object obj) {
-      return (this == obj);
-    }  
-    
   }
 
   /**
@@ -600,21 +592,10 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
       return Long.valueOf(getDelay(TimeUnit.MILLISECONDS) -
         other.getDelay(TimeUnit.MILLISECONDS)).intValue();
     }
-    
 
     @Override
     public String toString() {
       return "[flush region " + Bytes.toStringBinary(region.getRegionName()) + "]";
     }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj)
-        return true;
-      if (obj == null || getClass() != obj.getClass())
-        return false;
-      Delayed other = (Delayed) obj;
-      return compareTo(other) == 0;
-    }  
   }
 }
