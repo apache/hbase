@@ -477,7 +477,7 @@
             <!-- surefire hack, if not we're
               using method parallelization class ! -->
             <testFailureIgnore>false</testFailureIgnore>
-            <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
+            <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
             <argLine>-enableassertions -Xmx1900m
               -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
@@ -914,6 +914,7 @@
     <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
     <test.output.tofile>true</test.output.tofile>
+    <surefire.timeout>900</surefire.timeout>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
