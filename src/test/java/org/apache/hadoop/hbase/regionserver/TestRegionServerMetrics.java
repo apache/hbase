@@ -235,7 +235,7 @@ public class TestRegionServerMetrics {
       if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
         System.out.println(region.getRegionNameAsString());
         preNumRead += region.rowReadCnt.get();
-        preNumRead += region.rowUpdateCnt.get();
+        preNumWrite += region.rowUpdateCnt.get();
       }
     }
 
