@@ -987,7 +987,7 @@ public class HConnectionManager {
                 return location;
               }
             } else {
-              deleteCachedLocation(tableName, row);
+              deleteCachedLocation(tableName, row, null);
             }
 
             // Query the root or meta region for the location of the meta region
@@ -1134,23 +1134,33 @@ public class HConnectionManager {
      * @param tableName tableName
      * @param row
      */
-    void deleteCachedLocation(final byte [] tableName, final byte [] row) {
+    void deleteCachedLocation(final byte[] tableName, final byte[] row, HRegionLocation source) {
+      boolean isStaleDelete = false;
+      HRegionLocation oldLocation = null;
       synchronized (this.cachedRegionLocations) {
         Map<byte[], HRegionLocation> tableLocations =
             getTableLocations(tableName);
         // start to examine the cache. we can only do cache actions
         // if there's something in the cache for this table.
         if (!tableLocations.isEmpty()) {
-          HRegionLocation rl = getCachedLocation(tableName, row);
-          if (rl != null) {
-            tableLocations.remove(rl.getRegionInfo().getStartKey());
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Removed " +
-                rl.getRegionInfo().getRegionNameAsString() +
-                " for tableName=" + Bytes.toString(tableName) +
-                " from cache " + "because of " + Bytes.toStringBinary(row));
+          oldLocation = getCachedLocation(tableName, row);
+          if (oldLocation != null) {
+            isStaleDelete = (source != null) && !oldLocation.equals(source);
+            if (!isStaleDelete) {
+              tableLocations.remove(oldLocation.getRegionInfo().getStartKey());
             }
           }
+        }
+      }
+      if (LOG.isDebugEnabled()) {
+        if (isStaleDelete) {
+          LOG.debug("Received an error from " + source.getHostnamePort() + " for ["
+            + oldLocation.getRegionInfo().getRegionNameAsString()  + "]; not removing "
+            + oldLocation.getHostnamePort() + " from cache.");
+        } else if (oldLocation != null) {
+          LOG.debug("Removed [" + oldLocation.getRegionInfo().getRegionNameAsString()
+            + "] for tableName=" + Bytes.toString(tableName) + " from cache because of ["
+            + Bytes.toStringBinary(row) + "]");
         }
       }
     }
@@ -1593,7 +1603,7 @@ public class HConnectionManager {
             actionCount++;
             Row row = list.get(i);
             workingList.add(row);
-            deleteCachedLocation(tableName, row.getRow());
+            deleteCachedLocation(tableName, row.getRow(), lastServers[i]);
           } else {
             if (results[i] != null && results[i] instanceof Throwable) {
               actionCount++;
