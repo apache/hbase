@@ -21,13 +21,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
@@ -43,6 +51,28 @@ public class TestKeepDeletes extends HBaseTestCase {
   private final byte[] c0 = COLUMNS[0];
   private final byte[] c1 = COLUMNS[1];
 
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    /* HBASE-6832: [WINDOWS] Tests should use explicit timestamp for Puts, and not rely on
+     * implicit RS timing.
+     * Use an explicit timer (IncrementingEnvironmentEdge) so that the put, delete
+     * compact timestamps are tracked. Otherwise, forced major compaction will not purge
+     * Delete's having the same timestamp. see ScanQueryMatcher.match():
+     * if (retainDeletesInOutput
+     *     || (!isUserScan && (EnvironmentEdgeManager.currentTimeMillis() - timestamp)
+     *     <= timeToPurgeDeletes) ... )
+     *
+     */
+    EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
+  }
+
+  @Override
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    EnvironmentEdgeManager.reset();
+  }
+
   /**
    * Make sure that deleted rows are retained.
    * Family delete markers are deleted.
@@ -55,7 +85,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -138,7 +168,7 @@ public class TestKeepDeletes extends HBaseTestCase {
   }
 
   /**
-   * Even when the store does not keep deletes a "raw" scan will 
+   * Even when the store does not keep deletes a "raw" scan will
    * return everything it can find (unless discarding cells is guaranteed
    * to have no effect).
    * Assuming this the desired behavior. Could also disallow "raw" scanning
@@ -151,7 +181,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, false);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -195,7 +225,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, false);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();  
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -242,7 +272,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     s.setRaw(true);
     s.setMaxVersions();
     s.addColumn(c0, c0);
-    
+
     try {
       InternalScanner scan = region.getScanner(s);
       fail("raw scanner with columns should have failed");
@@ -261,7 +291,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -307,7 +337,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
 
     Delete d = new Delete(T1, ts);
     d.deleteColumns(c0, c0, ts);
@@ -320,7 +350,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+1);
     region.delete(d, true);
-    
+
     d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+2);
     region.delete(d, true);
@@ -349,7 +379,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
@@ -372,7 +402,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+1);
     region.delete(d, true);
-    
+
     d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+2);
     region.delete(d, true);
@@ -411,7 +441,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     p.add(c0, c1, T1);
@@ -492,7 +522,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -502,7 +532,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     p = new Put(T1, ts-10);
     p.add(c0, c1, T1);
     region.put(p);
-    
+
     Delete d = new Delete(T1, ts);
     // test corner case (Put and Delete have same TS)
     d.deleteColumns(c0, c0, ts);
@@ -511,7 +541,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     d = new Delete(T1, ts+1);
     d.deleteColumn(c0, c0, ts+1);
     region.delete(d, true);
-    
+
     d = new Delete(T1, ts+3);
     d.deleteColumn(c0, c0, ts+3);
     region.delete(d, true);
@@ -527,7 +557,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     p = new Put(T1, ts+2);
     p.add(c0, c0, T2);
     region.put(p);
-    
+
     // delete, put, delete, delete, put
     assertEquals(3, countDeleteMarkers(region));
 
@@ -584,7 +614,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
@@ -634,7 +664,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000; // 2s in the past
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T3);

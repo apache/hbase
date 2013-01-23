@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.util.Progressable;
 import org.junit.experimental.categories.Category;
@@ -186,6 +187,8 @@ public class TestStore extends TestCase {
   public void testDeleteExpiredStoreFiles() throws Exception {
     int storeFileNum = 4;
     int ttl = 4;
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
+    EnvironmentEdgeManagerTestHelper.injectEdge(edge);
     
     Configuration conf = HBaseConfiguration.create();
     // Enable the expired store file deletion
@@ -205,7 +208,7 @@ public class TestStore extends TestCase {
       this.store.add(new KeyValue(row, family, qf2, timeStamp, (byte[]) null));
       this.store.add(new KeyValue(row, family, qf3, timeStamp, (byte[]) null));
       flush(i);
-      Thread.sleep(sleepTime);
+      edge.incrementTime(sleepTime);
     }
 
     // Verify the total number of store files
@@ -220,8 +223,8 @@ public class TestStore extends TestCase {
       // If not the first compaction, there is another empty store file,
       assertEquals(Math.min(i, 2), cr.getFiles().size());
       for (int j = 0; i < cr.getFiles().size(); j++) {
-        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() < (System
-            .currentTimeMillis() - this.store.scanInfo.getTtl()));
+        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() <
+            (EnvironmentEdgeManager.currentTimeMillis() - this.store.scanInfo.getTtl()));
       }
       // Verify that the expired store file is compacted to an empty store file.
       StoreFile compactedFile = this.store.compact(cr);
@@ -229,7 +232,7 @@ public class TestStore extends TestCase {
       assertEquals(0, compactedFile.getReader().getEntries());
 
       // Let the next store file expired.
-      Thread.sleep(sleepTime);
+      edge.incrementTime(sleepTime);
     }
   }
 

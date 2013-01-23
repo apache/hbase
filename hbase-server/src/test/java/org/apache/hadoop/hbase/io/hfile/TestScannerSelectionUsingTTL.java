@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -109,20 +110,24 @@ public class TestScannerSelectionUsingTTL {
         HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(info.getEncodedName()),
             conf, htd);
 
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long version = 0; //make sure each new set of Put's have a new ts
     for (int iFile = 0; iFile < totalNumFiles; ++iFile) {
       if (iFile == NUM_EXPIRED_FILES) {
         Threads.sleepWithoutInterrupt(TTL_MS);
+        version += TTL_MS;
       }
 
       for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
         Put put = new Put(Bytes.toBytes("row" + iRow));
         for (int iCol = 0; iCol < NUM_COLS_PER_ROW; ++iCol) {
           put.add(FAMILY_BYTES, Bytes.toBytes("col" + iCol),
-              Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
+              ts + version, Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
         }
         region.put(put);
       }
       region.flushcache();
+      version++;
     }
 
     Scan scan = new Scan();

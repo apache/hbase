@@ -26,7 +26,22 @@ import org.apache.hadoop.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class IncrementingEnvironmentEdge implements EnvironmentEdge {
 
-  private long timeIncrement = 1;
+  private long timeIncrement;
+
+  /**
+   * Construct an incremental edge starting from currentTimeMillis
+   */
+  public IncrementingEnvironmentEdge() {
+    this(System.currentTimeMillis());
+  }
+
+  /**
+   * Construct an incremental edge with an initial amount
+   * @param initialAmount the initial value to start with
+   */
+  public IncrementingEnvironmentEdge(long initialAmount) {
+    this.timeIncrement = initialAmount;
+  }
 
   /**
    * {@inheritDoc}
@@ -37,5 +52,13 @@ public class IncrementingEnvironmentEdge implements EnvironmentEdge {
   @Override
   public synchronized long currentTimeMillis() {
     return timeIncrement++;
+  }
+
+  /**
+   * Increment the time by the given amount
+   */
+  public synchronized long incrementTime(long amount) {
+    timeIncrement += amount;
+    return timeIncrement;
   }
 }
