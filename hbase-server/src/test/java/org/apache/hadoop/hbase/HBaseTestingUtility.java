@@ -681,7 +681,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return startMiniCluster(numMasters, numSlaves, null);
   }
 
-
   /**
    * Start up a minicluster of hbase, optionally dfs, and zookeeper.
    * Modifies Configuration.  Homes the cluster data directory under a random
@@ -707,7 +706,41 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return Mini hbase cluster instance created.
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
-    final int numSlaves, final String[] dataNodeHosts)
+      final int numSlaves, final String[] dataNodeHosts) throws Exception {
+    return startMiniCluster(numMasters, numSlaves, dataNodeHosts, null, null);
+  }
+
+  /**
+   * Start up a minicluster of hbase, optionally dfs, and zookeeper.
+   * Modifies Configuration.  Homes the cluster data directory under a random
+   * subdirectory in a directory under System property test.build.data.
+   * Directory is cleaned up on exit.
+   * @param numMasters Number of masters to start up.  We'll start this many
+   * hbase masters.  If numMasters > 1, you can find the active/primary master
+   * with {@link MiniHBaseCluster#getMaster()}.
+   * @param numSlaves Number of slaves to start up.  We'll start this many
+   * regionservers. If dataNodeHosts == null, this also indicates the number of
+   * datanodes to start. If dataNodeHosts != null, the number of datanodes is
+   * based on dataNodeHosts.length.
+   * If numSlaves is > 1, then make sure
+   * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
+   * bind errors.
+   * @param dataNodeHosts hostnames DNs to run on.
+   * This is useful if you want to run datanode on distinct hosts for things
+   * like HDFS block location verification.
+   * If you start MiniDFSCluster without host names,
+   * all instances of the datanodes will have the same host name.
+   * @param masterClass The class to use as HMaster, or null for default
+   * @param regionserverClass The class to use as HRegionServer, or null for
+   * default
+   * @throws Exception
+   * @see {@link #shutdownMiniCluster()}
+   * @return Mini hbase cluster instance created.
+   */
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+    final int numSlaves, final String[] dataNodeHosts,
+    Class<? extends HMaster> masterClass,
+    Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
   throws Exception {
     int numDataNodes = numSlaves;
     if ( dataNodeHosts != null && dataNodeHosts.length != 0) {
@@ -736,7 +769,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
 
     // Start the MiniHBaseCluster
-    return startMiniHBaseCluster(numMasters, numSlaves);
+    return startMiniHBaseCluster(numMasters, numSlaves, masterClass, regionserverClass);
   }
 
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters, final int numSlaves)

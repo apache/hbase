@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -114,7 +115,7 @@ public class FixedFileTrailer {
   private long lastDataBlockOffset;
 
   /** Raw key comparator class name in version 2 */
-  private String comparatorClassName = RawComparator.class.getName();
+  private String comparatorClassName = KeyValue.KEY_COMPARATOR.getClass().getName();
 
   /** The {@link HFile} format major version. */
   private final int majorVersion;
@@ -335,7 +336,7 @@ public class FixedFileTrailer {
       lastDataBlockOffset = builder.getLastDataBlockOffset();
     }
     if (builder.hasComparatorClassName()) {
-      comparatorClassName = builder.getComparatorClassName();
+      setComparatorClass(getComparatorClass(builder.getComparatorClassName()));
     }
     if (builder.hasCompressionCodec()) {
       compressionCodec = Compression.Algorithm.values()[builder.getCompressionCodec()];
@@ -367,7 +368,8 @@ public class FixedFileTrailer {
       numDataIndexLevels = input.readInt();
       firstDataBlockOffset = input.readLong();
       lastDataBlockOffset = input.readLong();
-      comparatorClassName = Bytes.readStringFixedSize(input, MAX_COMPARATOR_NAME_LENGTH);
+      setComparatorClass(getComparatorClass(Bytes.readStringFixedSize(input,
+        MAX_COMPARATOR_NAME_LENGTH)));
     }
   }
   
@@ -584,7 +586,13 @@ public class FixedFileTrailer {
 
   @SuppressWarnings("rawtypes")
   public void setComparatorClass(Class<? extends RawComparator> klass) {
-    expectAtLeastMajorVersion(2);
+    // Is the comparator instantiable
+    try {
+      klass.newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException("Comparator class " + klass.getName() +
+        " is not instantiable", e);
+    }
     comparatorClassName = klass.getName();
   }
 
@@ -604,9 +612,11 @@ public class FixedFileTrailer {
     try {
       return getComparatorClass(comparatorClassName).newInstance();
     } catch (InstantiationException e) {
-      throw new IOException(e);
+      throw new IOException("Comparator class " + comparatorClassName +
+        " is not instantiable", e);
     } catch (IllegalAccessException e) {
-      throw new IOException(e);
+      throw new IOException("Comparator class " + comparatorClassName +
+        " is not instantiable", e);
     }
   }
 
