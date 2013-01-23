@@ -42,9 +42,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -111,7 +108,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 class FSHLog implements HLog, Syncable {
   static final Log LOG = LogFactory.getLog(FSHLog.class);
-
+  
   private final FileSystem fs;
   private final Path rootDir;
   private final Path dir;
@@ -132,7 +129,7 @@ class FSHLog implements HLog, Syncable {
   private WALCoprocessorHost coprocessorHost;
 
   private FSDataOutputStream hdfs_out; // FSDataOutputStream associated with the current SequenceFile.writer
-  // Minimum tolerable replicas, if the actual value is lower than it,
+  // Minimum tolerable replicas, if the actual value is lower than it, 
   // rollWriter will be triggered
   private int minTolerableReplication;
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
@@ -244,10 +241,10 @@ class FSHLog implements HLog, Syncable {
   public FSHLog(final FileSystem fs, final Path root, final String logDir,
                 final Configuration conf)
   throws IOException {
-    this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME,
+    this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, 
         conf, null, true, null, false);
   }
-
+  
   /**
    * Constructor.
    *
@@ -314,7 +311,7 @@ class FSHLog implements HLog, Syncable {
    * @throws IOException
    */
   public FSHLog(final FileSystem fs, final Path root, final String logDir,
-      final String oldLogDir, final Configuration conf,
+      final String oldLogDir, final Configuration conf, 
       final List<WALActionsListener> listeners,
       final boolean failIfLogDirExists, final String prefix, boolean forMeta)
   throws IOException {
@@ -325,15 +322,15 @@ class FSHLog implements HLog, Syncable {
     this.oldLogDir = new Path(this.rootDir, oldLogDir);
     this.forMeta = forMeta;
     this.conf = conf;
-
+   
     if (listeners != null) {
       for (WALActionsListener i: listeners) {
         registerWALActionsListener(i);
       }
     }
-
+    
     this.failIfLogDirExists = failIfLogDirExists;
-
+    
     this.blocksize = this.conf.getLong("hbase.regionserver.hlog.blocksize",
         getDefaultBlockSize());
     // Roll at 95% of block size.
@@ -341,7 +338,7 @@ class FSHLog implements HLog, Syncable {
     this.logrollsize = (long)(this.blocksize * multi);
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 1 * 1000);
-
+    
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
     this.minTolerableReplication = conf.getInt(
         "hbase.regionserver.hlog.tolerable.lowreplication",
@@ -351,9 +348,9 @@ class FSHLog implements HLog, Syncable {
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
     this.closeErrorsTolerated = conf.getInt(
         "hbase.regionserver.logroll.errors.tolerated", 0);
-
+    
     this.logSyncerThread = new LogSyncer(this.optionalFlushInterval);
-
+    
     LOG.info("HLog configuration: blocksize=" +
       StringUtils.byteDesc(this.blocksize) +
       ", rollsize=" + StringUtils.byteDesc(this.logrollsize) +
@@ -378,7 +375,7 @@ class FSHLog implements HLog, Syncable {
     }
     // rollWriter sets this.hdfs_out if it can.
     rollWriter();
-
+    
     // handle the reflection necessary to call getNumCurrentReplicas()
     this.getNumCurrentReplicas = getGetNumCurrentReplicas(this.hdfs_out);
 
@@ -388,7 +385,7 @@ class FSHLog implements HLog, Syncable {
 
     this.metrics = new MetricsWAL();
   }
-
+  
   // use reflection to search for getDefaultBlockSize(Path f)
   // if the method doesn't exist, fall back to using getDefaultBlockSize()
   private long getDefaultBlockSize() throws IOException {
@@ -481,7 +478,7 @@ class FSHLog implements HLog, Syncable {
    * @return The wrapped stream our writer is using; its not the
    * writer's 'out' FSDatoOutputStream but the stream that this 'out' wraps
    * (In hdfs its an instance of DFSDataOutputStream).
-   *
+   * 
    * usage: see TestLogRolling.java
    */
   OutputStream getOutputStream() {
@@ -572,7 +569,7 @@ class FSHLog implements HLog, Syncable {
   /**
    * This method allows subclasses to inject different writers without having to
    * extend other methods like rollWriter().
-   *
+   * 
    * @param fs
    * @param path
    * @param conf
@@ -945,7 +942,7 @@ class FSHLog implements HLog, Syncable {
       }
       // Sync if catalog region, and if not then check if that table supports
       // deferred log flushing
-      if (doSync &&
+      if (doSync && 
           (info.isMetaRegion() ||
           !htd.isDeferredLogFlush())) {
         // sync txn to file system
@@ -955,14 +952,14 @@ class FSHLog implements HLog, Syncable {
     }
 
   @Override
-  public long appendNoSync(HRegionInfo info, byte [] tableName, WALEdit edits,
+  public long appendNoSync(HRegionInfo info, byte [] tableName, WALEdit edits, 
     UUID clusterId, final long now, HTableDescriptor htd)
     throws IOException {
     return append(info, tableName, edits, clusterId, now, htd, false);
   }
 
   @Override
-  public long append(HRegionInfo info, byte [] tableName, WALEdit edits,
+  public long append(HRegionInfo info, byte [] tableName, WALEdit edits, 
     UUID clusterId, final long now, HTableDescriptor htd)
     throws IOException {
     return append(info, tableName, edits, clusterId, now, htd, true);
@@ -984,8 +981,8 @@ class FSHLog implements HLog, Syncable {
 
     // List of pending writes to the HLog. There corresponds to transactions
     // that have not yet returned to the client. We keep them cached here
-    // instead of writing them to HDFS piecemeal, because the HDFS write
-    // method is pretty heavyweight as far as locking is concerned. The
+    // instead of writing them to HDFS piecemeal, because the HDFS write 
+    // method is pretty heavyweight as far as locking is concerned. The 
     // goal is to increase the batchsize for writing-to-hdfs as well as
     // sync-to-hdfs, so that we can get better system throughput.
     private List<Entry> pendingWrites = new LinkedList<Entry>();
@@ -1072,7 +1069,7 @@ class FSHLog implements HLog, Syncable {
       // See HBASE-4387, HBASE-5623, HBASE-7329.
       tempWriter = this.writer;
     }
-    // if the transaction that we are interested in is already
+    // if the transaction that we are interested in is already 
     // synced, then return immediately.
     if (txid <= this.syncedTillHere) {
       return;
@@ -1080,7 +1077,7 @@ class FSHLog implements HLog, Syncable {
     try {
       long doneUpto;
       long now = EnvironmentEdgeManager.currentTimeMillis();
-      // First flush all the pending writes to HDFS. Then
+      // First flush all the pending writes to HDFS. Then 
       // issue the sync to HDFS. If sync is successful, then update
       // syncedTillHere to indicate that transactions till this
       // number has been successfully synced.
@@ -1347,13 +1344,13 @@ class FSHLog implements HLog, Syncable {
 
   /**
    * Get the directory we are making logs in.
-   *
+   * 
    * @return dir
    */
   protected Path getDir() {
     return dir;
   }
-
+  
   static Path getHLogArchivePath(Path oldLogDir, Path p) {
     return new Path(oldLogDir, p.getName());
   }
@@ -1391,7 +1388,7 @@ class FSHLog implements HLog, Syncable {
         conf, baseDir, p, oldLogDir, fs);
     logSplitter.splitLog();
   }
-
+  
   @Override
   public WALCoprocessorHost getCoprocessorHost() {
     return coprocessorHost;

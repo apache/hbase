@@ -208,30 +208,16 @@ public class Threads {
   }
 
   /**
-   * Same as {#newDaemonThreadFactory(String, UncaughtExceptionHandler)},
-   * without setting the exception handler.
+   * Get a named {@link ThreadFactory} that just builds daemon threads
+   * @param prefix name prefix for all threads created from the factory
+   * @return a thread factory that creates named, daemon threads
    */
   public static ThreadFactory newDaemonThreadFactory(final String prefix) {
-    return newDaemonThreadFactory(prefix, null);
-  }
-
-  /**
-   * Get a named {@link ThreadFactory} that just builds daemon threads.
-   * @param prefix name prefix for all threads created from the factory
-   * @param handler unhandles exception handler to set for all threads
-   * @return a thread factory that creates named, daemon threads with
-   *         the supplied exception handler and normal priority
-   */
-  public static ThreadFactory newDaemonThreadFactory(final String prefix,
-      final UncaughtExceptionHandler handler) {
     final ThreadFactory namedFactory = getNamedThreadFactory(prefix);
     return new ThreadFactory() {
       @Override
       public Thread newThread(Runnable r) {
         Thread t = namedFactory.newThread(r);
-        if (handler != null) {
-          t.setUncaughtExceptionHandler(handler);
-        }
         if (!t.isDaemon()) {
           t.setDaemon(true);
         }
