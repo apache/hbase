@@ -102,7 +102,7 @@
           <execution>
 	    <!-- generates the file that will be used by the bin/hbase script in the dev env -->
             <id>create-hbase-generated-classpath</id>
-            <phase>compile</phase>    
+            <phase>test</phase>
             <goals>
               <goal>build-classpath</goal>
             </goals>

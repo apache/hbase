@@ -153,28 +153,8 @@ add_maven_deps_to_classpath() {
 }
 
 
-add_maven_main_classes_to_classpath() {
- # assumes all modules are named hbase-* in the top level directory
-  IFS=$ORIG_IFS
-  for module in `ls $HBASE_HOME | grep 'hbase-*'`
-  do
-    add_to_cp_if_exists "$HBASE_HOME/$module/target/classes"
-  done
-}
-
-add_maven_test_classes_to_classpath(){
- # assumes all modules are named hbase-* in the top level directory
-  IFS=$ORIG_IFS
-  for module in `ls $HBASE_HOME | grep 'hbase-*'`
-  do
-    add_to_cp_if_exists "$HBASE_HOME/$module/target/test-classes"
-  done
-}
-
 #Add the development env class path stuff
 if $in_dev_env; then
-  add_maven_main_classes_to_classpath
-  add_maven_test_classes_to_classpath
   add_maven_deps_to_classpath
 fi
 

@@ -52,8 +52,6 @@
     <module>hbase-server</module>
     <module>hbase-protocol</module>
     <module>hbase-client</module>
-    <module>hbase-hadoop2-compat</module>
-    <module>hbase-hadoop1-compat</module>
     <module>hbase-hadoop-compat</module>
     <module>hbase-common</module>
     <module>hbase-it</module>
@@ -903,7 +901,6 @@
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <surefire.version>2.12-TRUNK-HBASE-2</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
-    <compat.module>hbase-hadoop1-compat</compat.module>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
@@ -1362,6 +1359,9 @@
           <name>!hadoop.profile</name>
         </property>
       </activation>
+      <modules>
+        <module>hbase-hadoop1-compat</module>
+      </modules>
       <properties>
         <hadoop.version>${hadoop-one.version}</hadoop.version>
         <slf4j.version>1.4.3</slf4j.version>
@@ -1418,6 +1418,9 @@
           <value>2.0</value>
         </property>
       </activation>
+      <modules>
+        <module>hbase-hadoop2-compat</module>
+      </modules>
       <properties>
         <slf4j.version>1.6.1</slf4j.version>
         <hadoop.version>${hadoop-two.version}</hadoop.version>
