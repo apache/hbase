@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -82,6 +83,9 @@ public class TestAcidGuarantees implements Tool {
     // Set small flush size for minicluster so we exercise reseeking scanners
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(128*1024));
+    // prevent aggressive region split
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      ConstantSizeRegionSplitPolicy.class.getName());
     util = new HBaseTestingUtility(conf);
   }
   
