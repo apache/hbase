@@ -25,21 +25,26 @@ import java.util.GregorianCalendar;
 import java.util.List;
 
 import junit.framework.TestCase;
-import org.junit.experimental.categories.Category;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
-import org.apache.hadoop.hbase.regionserver.compactions.*;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.After;
+import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
@@ -61,6 +66,8 @@ public class TestDefaultCompactSelection extends TestCase {
   protected static final long minSize = 10;
   protected static final long maxSize = 1000;
 
+  private HLog hlog;
+  private HRegion region;
 
   @Override
   public void setUp() throws Exception {
@@ -87,9 +94,9 @@ public class TestDefaultCompactSelection extends TestCase {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
 
-    HLog hlog = HLogFactory.createHLog(fs, basedir,
+    hlog = HLogFactory.createHLog(fs, basedir,
         logName, conf);
-    HRegion region = HRegion.createHRegion(info, basedir, conf, htd);
+    region = HRegion.createHRegion(info, basedir, conf, htd);
     HRegion.closeHRegion(region);
     Path tableDir = new Path(basedir, Bytes.toString(htd.getName()));
     region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
@@ -99,6 +106,26 @@ public class TestDefaultCompactSelection extends TestCase {
 
     TEST_FILE = StoreFile.getRandomFilename(fs, store.getHomedir());
     fs.create(TEST_FILE);
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    IOException ex = null;
+    try {
+      region.close();
+    } catch (IOException e) {
+      LOG.warn("Caught Exception", e);
+      ex = e;
+    }
+    try {
+      hlog.closeAndDelete();
+    } catch (IOException e) {
+      LOG.warn("Caught Exception", e);
+      ex = e;
+    }
+    if (ex != null) {
+      throw ex;
+    }
   }
 
   // used so our tests don't deal with actual StoreFiles

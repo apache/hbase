@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,7 +61,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 /**
  * Tests {@link HFile} cache-on-write functionality for data blocks, non-root
- * index blocks, and Bloom filter blocks, as specified by the column family. 
+ * index blocks, and Bloom filter blocks, as specified by the column family.
  */
 @RunWith(Parameterized.class)
 @Category(MediumTests.class)
@@ -119,7 +118,9 @@ public class TestCacheOnWriteInSchema {
   private final CacheOnWriteType cowType;
   private Configuration conf;
   private final String testDescription;
+  private HRegion region;
   private HStore store;
+  private HLog hlog;
   private FileSystem fs;
 
   public TestCacheOnWriteInSchema(CacheOnWriteType cowType) {
@@ -161,18 +162,35 @@ public class TestCacheOnWriteInSchema {
     fs.delete(logdir, true);
 
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
-    HLog hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
-    
-    HRegion region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
+    hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
+
+    region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
     store = new HStore(basedir, region, hcd, fs, conf);
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws IOException {
+    IOException ex = null;
+    try {
+      region.close();
+    } catch (IOException e) {
+      LOG.warn("Caught Exception", e);
+      ex = e;
+    }
+    try {
+      hlog.closeAndDelete();
+    } catch (IOException e) {
+      LOG.warn("Caught Exception", e);
+      ex = e;
+    }
     try {
       fs.delete(new Path(DIR), true);
     } catch (IOException e) {
       LOG.error("Could not delete " + DIR, e);
+      ex = e;
+    }
+    if (ex != null) {
+      throw ex;
     }
   }
 
@@ -188,7 +206,7 @@ public class TestCacheOnWriteInSchema {
   }
 
   private void readStoreFile(Path path) throws IOException {
-    CacheConfig cacheConf = store.getCacheConfig(); 
+    CacheConfig cacheConf = store.getCacheConfig();
     BlockCache cache = cacheConf.getBlockCache();
     StoreFile sf = new StoreFile(fs, path, conf, cacheConf,
         BloomType.ROWCOL, null);
