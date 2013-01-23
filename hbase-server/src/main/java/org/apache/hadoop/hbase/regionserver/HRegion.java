@@ -1774,7 +1774,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   protected RegionScanner instantiateRegionScanner(Scan scan,
       List<KeyValueScanner> additionalScanners) throws IOException {
-    return new RegionScannerImpl(scan, additionalScanners);
+    return new RegionScannerImpl(scan, additionalScanners, this);
   }
 
   /*
@@ -3380,13 +3380,16 @@ public class HRegion implements HeapSize { // , Writable{
     private boolean filterClosed = false;
     private long readPt;
     private long maxResultSize;
+    private HRegion region;
 
     public HRegionInfo getRegionInfo() {
       return regionInfo;
     }
-    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
-      //DebugPrint.println("HRegionScanner.<init>");
-
+    
+    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
+        throws IOException {
+      // DebugPrint.println("HRegionScanner.<init>");
+      this.region = region;
       this.maxResultSize = scan.getMaxResultSize();
       if (scan.hasFilter()) {
         this.filter = new FilterWrapper(scan.getFilter());
@@ -3443,8 +3446,8 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
 
-    RegionScannerImpl(Scan scan) throws IOException {
-      this(scan, null);
+    RegionScannerImpl(Scan scan, HRegion region) throws IOException {
+      this(scan, null, region);
     }
 
     @Override
@@ -3625,7 +3628,8 @@ public class HRegion implements HeapSize { // , Writable{
           // Check if rowkey filter wants to exclude this row. If so, loop to next.
           // Technically, if we hit limits before on this row, we don't need this call.
           if (filterRowKey(currentRow, offset, length)) {
-            nextRow(currentRow, offset, length);
+            boolean moreRows = nextRow(currentRow, offset, length);
+            if (!moreRows) return false;
             results.clear();
             continue;
           }
@@ -3652,7 +3656,8 @@ public class HRegion implements HeapSize { // , Writable{
             filter.filterRow(results);
           }
           if (isEmptyRow) {
-            nextRow(currentRow, offset, length);
+            boolean moreRows = nextRow(currentRow, offset, length);
+            if (!moreRows) return false;
             results.clear();
             // This row was totally filtered out, if this is NOT the last row,
             // we should continue on. Otherwise, nothing else to do.
@@ -3691,7 +3696,8 @@ public class HRegion implements HeapSize { // , Writable{
         // Double check to prevent empty rows from appearing in result. It could be
         // the case when SingleColumnValueExcludeFilter is used.
         if (results.isEmpty()) {
-          nextRow(currentRow, offset, length);
+          boolean moreRows = nextRow(currentRow, offset, length);
+          if (!moreRows) return false;
           if (!stopRow) continue;
         }
 
@@ -3705,13 +3711,18 @@ public class HRegion implements HeapSize { // , Writable{
           && filter.filterRowKey(row, offset, length);
     }
 
-    protected void nextRow(byte [] currentRow, int offset, short length) throws IOException {
+    protected boolean nextRow(byte [] currentRow, int offset, short length) throws IOException {
       assert this.joinedContinuationRow == null : "Trying to go to next row during joinedHeap read.";
       KeyValue next;
       while ((next = this.storeHeap.peek()) != null && next.matchingRow(currentRow, offset, length)) {
         this.storeHeap.next(MOCKED_LIST);
       }
       resetFilters();
+      // Calling the hook in CP which allows it to do a fast forward
+      if (this.region.getCoprocessorHost() != null) {
+        return this.region.getCoprocessorHost().postScannerFilterRow(this, currentRow);
+      }
+      return true;
     }
 
     private boolean isStopRow(byte [] currentRow, int offset, short length) {
