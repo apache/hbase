@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.DependentColumnFilter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.FuzzyRowFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.PageFilter;
@@ -265,6 +266,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     //java.lang.reflect.Array is a placeholder for arrays not defined above
     GENERIC_ARRAY_CODE = code++;
     addToMap(Array.class, GENERIC_ARRAY_CODE);
+    
+    addToMap(FuzzyRowFilter.class, code++);
 
     // make sure that this is the last statement in this static block
     NEXT_CLASS_CODE = code;
