@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 
 import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.*;
@@ -196,7 +197,8 @@ public class TestHFileBlock {
       boolean includesMemstoreTS) throws IOException {
     final BlockType blockType = BlockType.DATA;
     HFileBlock.Writer hbw = new HFileBlock.Writer(algo, null,
-        includesMemstoreTS, HFile.DEFAULT_CHECKSUM_TYPE,
+        includesMemstoreTS, HFileReaderV2.MAX_MINOR_VERSION,
+        HFile.DEFAULT_CHECKSUM_TYPE,
         HFile.DEFAULT_BYTES_PER_CHECKSUM);
     DataOutputStream dos = hbw.startWriting(blockType);
     writeTestBlockContents(dos);
@@ -210,7 +212,7 @@ public class TestHFileBlock {
       int correctLength) throws IOException {
     HFileBlock.Writer hbw = createTestV2Block(algo, includesMemstoreTS);
     byte[] testV2Block = hbw.getHeaderAndDataForTest();
-    int osOffset = HFileBlock.HEADER_SIZE + 9;
+    int osOffset = HFileBlock.HEADER_SIZE_WITH_CHECKSUMS + 9;
     if (testV2Block.length == correctLength) {
       // Force-set the "OS" field of the gzip header to 3 (Unix) to avoid
       // variations across operating systems.
@@ -297,7 +299,9 @@ public class TestHFileBlock {
             + algo);
         FSDataOutputStream os = fs.create(path);
         HFileBlock.Writer hbw = new HFileBlock.Writer(algo, null,
-            includesMemstoreTS, HFile.DEFAULT_CHECKSUM_TYPE,
+            includesMemstoreTS,
+            HFileReaderV2.MAX_MINOR_VERSION,
+            HFile.DEFAULT_CHECKSUM_TYPE,
             HFile.DEFAULT_BYTES_PER_CHECKSUM);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
@@ -325,13 +329,13 @@ public class TestHFileBlock {
         if (algo == GZ) {
           is = fs.open(path);
           hbr = new HFileBlock.FSReaderV2(is, algo, totalSize);
-          b = hbr.readBlockData(0, 2173 + HFileBlock.HEADER_SIZE +
+          b = hbr.readBlockData(0, 2173 + HFileBlock.HEADER_SIZE_WITH_CHECKSUMS +
                                 b.totalChecksumBytes(), -1, pread);
           assertEquals(blockStr, b.toString());
           int wrongCompressedSize = 2172;
           try {
             b = hbr.readBlockData(0, wrongCompressedSize
-                + HFileBlock.HEADER_SIZE, -1, pread);
+                + HFileBlock.HEADER_SIZE_WITH_CHECKSUMS, -1, pread);
             fail("Exception expected");
           } catch (IOException ex) {
             String expectedPrefix = "On-disk size without header provided is "
@@ -363,7 +367,9 @@ public class TestHFileBlock {
           HFileDataBlockEncoder dataBlockEncoder =
               new HFileDataBlockEncoderImpl(encoding);
           HFileBlock.Writer hbw = new HFileBlock.Writer(algo, dataBlockEncoder,
-              includesMemstoreTS, HFile.DEFAULT_CHECKSUM_TYPE,
+              includesMemstoreTS,
+              HFileReaderV2.MAX_MINOR_VERSION,
+              HFile.DEFAULT_CHECKSUM_TYPE,
               HFile.DEFAULT_BYTES_PER_CHECKSUM);
           long totalSize = 0;
           final List<Integer> encodedSizes = new ArrayList<Integer>();
@@ -505,7 +511,7 @@ public class TestHFileBlock {
           for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
             if (!pread) {
               assertEquals(is.getPos(), curOffset + (i == 0 ? 0 :
-                  HFileBlock.HEADER_SIZE));
+                  HFileBlock.HEADER_SIZE_WITH_CHECKSUMS));
             }
 
             assertEquals(expectedOffsets.get(i).longValue(), curOffset);
@@ -706,7 +712,9 @@ public class TestHFileBlock {
     boolean cacheOnWrite = expectedContents != null;
     FSDataOutputStream os = fs.create(path);
     HFileBlock.Writer hbw = new HFileBlock.Writer(compressAlgo, null,
-        includesMemstoreTS, HFile.DEFAULT_CHECKSUM_TYPE,
+        includesMemstoreTS,
+        HFileReaderV2.MAX_MINOR_VERSION,
+        HFile.DEFAULT_CHECKSUM_TYPE,
         HFile.DEFAULT_BYTES_PER_CHECKSUM);
     Map<BlockType, Long> prevOffsetByType = new HashMap<BlockType, Long>();
     long totalSize = 0;
@@ -764,7 +772,7 @@ public class TestHFileBlock {
     }
 
     for (int size : new int[] { 100, 256, 12345 }) {
-      byte[] byteArr = new byte[HFileBlock.HEADER_SIZE + size];
+      byte[] byteArr = new byte[HFileBlock.HEADER_SIZE_WITH_CHECKSUMS + size];
       ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
           HFileBlock.FILL_HEADER, -1, includesMemstoreTS, 
@@ -772,7 +780,7 @@ public class TestHFileBlock {
           0);
       long byteBufferExpectedSize =
           ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)
-              + HFileBlock.HEADER_SIZE + size);
+              + HFileBlock.HEADER_SIZE_WITH_CHECKSUMS + size);
       long hfileBlockExpectedSize =
           ClassSize.align(ClassSize.estimateBase(HFileBlock.class, true));
       long expected = hfileBlockExpectedSize + byteBufferExpectedSize;

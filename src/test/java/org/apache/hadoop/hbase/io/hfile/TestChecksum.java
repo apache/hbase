@@ -21,20 +21,11 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.*;
 
-import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.zip.Checksum;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,13 +35,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.compress.Compressor;
 
 import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.*;
 import org.junit.Before;
@@ -96,7 +83,7 @@ public class TestChecksum {
             + algo);
         FSDataOutputStream os = fs.create(path);
         HFileBlock.Writer hbw = new HFileBlock.Writer(algo, null,
-            true, HFile.DEFAULT_CHECKSUM_TYPE,
+            true, 1, HFile.DEFAULT_CHECKSUM_TYPE,
             HFile.DEFAULT_BYTES_PER_CHECKSUM);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
@@ -189,7 +176,7 @@ public class TestChecksum {
                              algo + bytesPerChecksum);
         FSDataOutputStream os = fs.create(path);
         HFileBlock.Writer hbw = new HFileBlock.Writer(algo, null,
-          true, HFile.DEFAULT_CHECKSUM_TYPE, bytesPerChecksum);
+          true, 1,HFile.DEFAULT_CHECKSUM_TYPE, bytesPerChecksum);
 
         // write one block. The block has data
         // that is at least 6 times more than the checksum chunk size
@@ -206,7 +193,7 @@ public class TestChecksum {
         os.close();
 
         long expectedChunks = ChecksumUtil.numChunks(
-                               dataSize + HFileBlock.HEADER_SIZE,
+                               dataSize + HFileBlock.HEADER_SIZE_WITH_CHECKSUMS,
                                bytesPerChecksum);
         LOG.info("testChecksumChunks: pread=" + pread +
                    ", bytesPerChecksum=" + bytesPerChecksum +
@@ -228,7 +215,7 @@ public class TestChecksum {
         assertEquals(dataSize, b.getUncompressedSizeWithoutHeader());
 
         // verify that we have the expected number of checksum chunks
-        assertEquals(totalSize, HFileBlock.HEADER_SIZE + dataSize + 
+        assertEquals(totalSize, HFileBlock.HEADER_SIZE_WITH_CHECKSUMS + dataSize +
                      expectedChunks * HFileBlock.CHECKSUM_SIZE);
 
         // assert that we did not encounter hbase checksum verification failures

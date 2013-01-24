@@ -27,6 +27,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
@@ -46,13 +47,23 @@ import org.apache.hadoop.io.WritableUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Testing writing a version 2 {@link HFile}. This is a low-level test written
  * during the development of {@link HFileWriterV2}.
  */
 @Category(SmallTests.class)
+@RunWith(Parameterized.class)
 public class TestHFileWriterV2 {
+
+  private final boolean useChecksums;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> parameters() {
+    return HBaseTestingUtility.BOOLEAN_PARAMETERIZED;
+  }
 
   private static final Log LOG = LogFactory.getLog(TestHFileWriterV2.class);
 
@@ -62,9 +73,14 @@ public class TestHFileWriterV2 {
   private Configuration conf;
   private FileSystem fs;
 
+  public TestHFileWriterV2(boolean useChecksums) {
+    this.useChecksums = useChecksums;
+  }
+
   @Before
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, useChecksums);
     fs = FileSystem.get(conf);
   }
 
@@ -139,10 +155,13 @@ public class TestHFileWriterV2 {
         FixedFileTrailer.readFromStream(fsdis, fileSize);
 
     assertEquals(2, trailer.getMajorVersion());
+    assertEquals(useChecksums?1:0, trailer.getMinorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
 
     HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderV2(fsdis, compressAlgo, fileSize);
+        new HFileBlock.FSReaderV2(fsdis,fsdis, compressAlgo, fileSize,
+            this.useChecksums?HFileReaderV2.MAX_MINOR_VERSION:HFileReaderV2.MIN_MINOR_VERSION,
+            null, null);
     // Comparator class name is stored in the trailer in version 2.
     RawComparator<byte []> comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =

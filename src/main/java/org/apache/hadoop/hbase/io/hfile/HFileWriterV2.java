@@ -32,8 +32,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -87,6 +89,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   private final boolean includeMemstoreTS = true;
   private long maxMemstoreTS = 0;
 
+  private int minorVersion = HFileReaderV2.MAX_MINOR_VERSION;
+
   static class WriterFactoryV2 extends HFile.WriterFactory {
     WriterFactoryV2(Configuration conf, CacheConfig cacheConf) {
       super(conf, cacheConf);
@@ -115,6 +119,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     SchemaMetrics.configureGlobally(conf);
     this.checksumType = checksumType;
     this.bytesPerChecksum = bytesPerChecksum;
+    if (!conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, false)) {
+      this.minorVersion = 0;
+    }
     finishInit(conf);
   }
 
@@ -125,7 +132,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     // HFile filesystem-level (non-caching) block writer
     fsBlockWriter = new HFileBlock.Writer(compressAlgo, blockEncoder,
-        includeMemstoreTS, checksumType, bytesPerChecksum);
+        includeMemstoreTS, minorVersion, checksumType, bytesPerChecksum);
 
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
@@ -364,8 +371,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     finishBlock();
     writeInlineBlocks(true);
 
-    FixedFileTrailer trailer = new FixedFileTrailer(2, 
-                                 HFileReaderV2.MAX_MINOR_VERSION);
+    FixedFileTrailer trailer = new FixedFileTrailer(2, minorVersion);
 
     // Write out the metadata blocks if any.
     if (!metaNames.isEmpty()) {
