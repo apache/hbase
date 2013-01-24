@@ -155,7 +155,7 @@ public class TestHCM {
       HConstants.LATEST_TIMESTAMP);
     Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW).getPort(), nextPort);
 
-    conn.deleteCachedLocation(TABLE_NAME.clone(), ROW.clone());
+    conn.forceDeleteCachedLocation(TABLE_NAME.clone(), ROW.clone());
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
 
