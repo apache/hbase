@@ -61,7 +61,6 @@ public class TestHCM {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TABLE_NAME = Bytes.toBytes("test");
   private static final byte[] TABLE_NAME1 = Bytes.toBytes("test1");
-  private static final byte[] TABLE_NAME2 = Bytes.toBytes("test2");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
 
@@ -163,7 +162,7 @@ public class TestHCM {
     HConnectionManager.HConnectionImplementation conn =
         (HConnectionManager.HConnectionImplementation)table.getConnection();
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
-    conn.deleteCachedLocation(TABLE_NAME, ROW, null);
+    conn.deleteCachedLocation(TABLE_NAME, ROW);
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
     table.close();
@@ -325,31 +324,6 @@ public class TestHCM {
     HConnection c3 = HConnectionManager.getConnection(configuration);
     assertTrue(c1 != c3);
     assertTrue(c2 != c3);
-  }
-
-  @Test(timeout = 60000)
-  public void testDeleteFromCacheOnlyWorksFromTheSameSource() throws Exception{
-    HTable table = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAM);
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
-    Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
-    table.put(put);
-    HConnectionManager.HConnectionImplementation conn =
-        (HConnectionManager.HConnectionImplementation)table.getConnection();
-
-    HRegionLocation location = conn.getCachedLocation(TABLE_NAME2, ROW);
-    assertNotNull(location);
-    HRegionLocation anySource = new HRegionLocation(location.getRegionInfo(),
-        location.getHostname(), location.getPort() - 1);
-    conn.deleteCachedLocation(TABLE_NAME2, ROW, anySource);
-    location = conn.getCachedLocation(TABLE_NAME2, ROW);
-    assertNotNull(location); // different server, no delete.
-
-    conn.deleteCachedLocation(TABLE_NAME2, ROW, location);
-    location = conn.getCachedLocation(TABLE_NAME2, ROW);
-    assertNull(location); // same server, delete.
-
-    TEST_UTIL.deleteTable(TABLE_NAME2);
   }
 
   @org.junit.Rule
