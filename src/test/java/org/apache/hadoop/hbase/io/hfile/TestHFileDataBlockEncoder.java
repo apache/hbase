@@ -124,9 +124,9 @@ public class TestHFileDataBlockEncoder {
     HFileBlock block = getSampleHFileBlock();
     Pair<ByteBuffer, BlockType> result =
         blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
-            includesMemstoreTS, HFileBlock.DUMMY_HEADER);
+            includesMemstoreTS, HFileBlock.DUMMY_HEADER_WITH_CHECKSUM);
 
-    int size = result.getFirst().limit() - HFileBlock.HEADER_SIZE;
+    int size = result.getFirst().limit() - HFileBlock.HEADER_SIZE_WITH_CHECKSUMS;
     HFileBlock blockOnDisk = new HFileBlock(result.getSecond(),
         size, size, -1, result.getFirst(), HFileBlock.FILL_HEADER, 0,
         includesMemstoreTS, block.getMinorVersion(),
@@ -156,8 +156,8 @@ public class TestHFileDataBlockEncoder {
     ByteBuffer keyValues = RedundantKVGenerator.convertKvToByteBuffer(
         generator.generateTestKeyValues(60), includesMemstoreTS);
     int size = keyValues.limit();
-    ByteBuffer buf = ByteBuffer.allocate(size + HFileBlock.HEADER_SIZE);
-    buf.position(HFileBlock.HEADER_SIZE);
+    ByteBuffer buf = ByteBuffer.allocate(size + HFileBlock.HEADER_SIZE_WITH_CHECKSUMS);
+    buf.position(HFileBlock.HEADER_SIZE_WITH_CHECKSUMS);
     keyValues.rewind();
     buf.put(keyValues);
     HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, buf,

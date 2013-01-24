@@ -326,7 +326,7 @@ public class CacheTestUtils {
           prevBlockOffset, cachedBuffer, HFileBlock.DONT_FILL_HEADER,
           blockSize, includesMemstoreTS, HFileBlock.MINOR_VERSION_NO_CHECKSUM,
           0, ChecksumType.NULL.getCode(),
-          onDiskSizeWithoutHeader + HFileBlock.HEADER_SIZE);
+          onDiskSizeWithoutHeader + HFileBlock.HEADER_SIZE_WITH_CHECKSUMS);
 
       String strKey;
       /* No conflicting keys */

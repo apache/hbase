@@ -112,18 +112,18 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
    * There is a 1 byte checksum type, followed by a 4 byte bytesPerChecksum
    * followed by another 4 byte value to store sizeofDataOnDisk.
    */
-  static final int HEADER_SIZE = HEADER_SIZE_NO_CHECKSUM + Bytes.SIZEOF_BYTE +
+  static final int HEADER_SIZE_WITH_CHECKSUMS = HEADER_SIZE_NO_CHECKSUM + Bytes.SIZEOF_BYTE +
                                  2 * Bytes.SIZEOF_INT;
 
   /**
    * The size of block header when blockType is {@link BlockType#ENCODED_DATA}.
    * This extends normal header by adding the id of encoder.
    */
-  public static final int ENCODED_HEADER_SIZE = HEADER_SIZE
+  public static final int ENCODED_HEADER_SIZE = HEADER_SIZE_WITH_CHECKSUMS
       + DataBlockEncoding.ID_SIZE;
 
   /** Just an array of bytes of the right size. */
-  static final byte[] DUMMY_HEADER = new byte[HEADER_SIZE];
+  static final byte[] DUMMY_HEADER_WITH_CHECKSUM = new byte[HEADER_SIZE_WITH_CHECKSUMS];
   static final byte[] DUMMY_HEADER_NO_CHECKSUM = 
      new byte[HEADER_SIZE_NO_CHECKSUM];
 
@@ -194,7 +194,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
   /**
    * The on-disk size of the next block, including the header, obtained by
-   * peeking into the first {@link HEADER_SIZE} bytes of the next block's
+   * peeking into the first {@link HFileBlock#headerSize(int)} bytes of the next block's
    * header, or -1 if unknown.
    */
   private int nextBlockOnDiskSizeWithHeader = -1;
@@ -212,9 +212,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
    *          compression is disabled.
    * @param prevBlockOffset the offset of the previous block in the
    *          {@link HFile}
-   * @param buf block header ({@link #HEADER_SIZE} bytes) followed by
+   * @param buf block header {@link HFileBlock#headerSize(int)} bytes) followed by
    *          uncompressed data. This
-   * @param fillHeader true to fill in the first {@link #HEADER_SIZE} bytes of
+   * @param fillHeader true to fill in the first {@link HFileBlock#headerSize(int)} bytes of
    *          the buffer based on the header fields provided
    * @param offset the file offset the block was read from
    * @param minorVersion the minor version of this block
@@ -322,7 +322,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
   }
 
   /**
-   * Writes header fields into the first {@link HEADER_SIZE} bytes of the
+   * Writes header fields into the first {@link ©HEADER_SIZE_WITH_CHECKSUMS} bytes of the
    * buffer. Resets the buffer position to the end of header as side effect.
    */
   private void overwriteHeader() {
@@ -395,7 +395,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
   /**
    * Checks if the block is internally consistent, i.e. the first
-   * {@link #HEADER_SIZE} bytes of the buffer contain a valid header consistent
+   * {@link HFileBlock#headerSize(int)} bytes of the buffer contain a valid header consistent
    * with the fields. This function is primary for testing and debugging, and
    * is not thread-safe, because it alters the internal buffer pointer.
    */
@@ -433,7 +433,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           + ", got " + buf.limit());
     }
 
-    // We might optionally allocate HEADER_SIZE more bytes to read the next
+    // We might optionally allocate HEADER_SIZE_WITH_CHECKSUMS more bytes to read the next
     // block's, header, so there are two sensible values for buffer capacity.
     int size = uncompressedSizeWithoutHeader + hdrSize + cksumBytes;
     if (buf.capacity() != size &&
@@ -645,7 +645,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     /**
      * The stream we use to accumulate data in uncompressed format for each
      * block. We reset this stream at the end of each block and reuse it. The
-     * header is written as the first {@link #HEADER_SIZE} bytes into this
+     * header is written as the first {@link HFileBlock#headerSize(int)}  bytes into this
      * stream.
      */
     private ByteArrayOutputStream baosInMemory;
@@ -696,7 +696,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     /**
      * Valid in the READY state. Contains the header and the uncompressed (but
      * potentially encoded, if this is a data block) bytes, so the length is
-     * {@link #uncompressedSizeWithoutHeader} + {@link HFileBlock#HEADER_SIZE}.
+     * {@link #uncompressedSizeWithoutHeader} + {@link HFileBlock#headerSize(int)}.
      * Does not store checksums.
      */
     private byte[] uncompressedBytesWithHeader;
@@ -723,6 +723,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     private ChecksumType checksumType;
     private int bytesPerChecksum;
 
+    private final int minorVersion;
+
     /**
      * @param compressionAlgorithm compression algorithm to use
      * @param dataBlockEncoderAlgo data block encoding algorithm to use
@@ -731,7 +733,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      */
     public Writer(Compression.Algorithm compressionAlgorithm,
           HFileDataBlockEncoder dataBlockEncoder, boolean includesMemstoreTS,
+          int minorVersion,
           ChecksumType checksumType, int bytesPerChecksum) {
+      this.minorVersion = minorVersion;
       compressAlgo = compressionAlgorithm == null ? NONE : compressionAlgorithm;
       this.dataBlockEncoder = dataBlockEncoder != null
           ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
@@ -749,9 +753,10 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
               "for algorithm " + compressionAlgorithm, e);
         }
       }
-      if (bytesPerChecksum < HEADER_SIZE) {
+      if (minorVersion > MINOR_VERSION_NO_CHECKSUM
+          && bytesPerChecksum < HEADER_SIZE_WITH_CHECKSUMS) {
         throw new RuntimeException("Unsupported value of bytesPerChecksum. " +
-            " Minimum is " + HEADER_SIZE + " but the configured value is " +
+            " Minimum is " + HEADER_SIZE_WITH_CHECKSUMS + " but the configured value is " +
             bytesPerChecksum);
       }
       
@@ -782,7 +787,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       blockType = newBlockType;
 
       baosInMemory.reset();
-      baosInMemory.write(DUMMY_HEADER);
+      baosInMemory.write(getDummyHeaderForVersion(this.minorVersion));
 
       state = State.WRITING;
 
@@ -849,15 +854,62 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * outputbyte stream 'baos'.
      */
     private void doCompressionAndChecksumming() throws IOException {
-      // do the compression
+      if ( minorVersion <= MINOR_VERSION_NO_CHECKSUM) {
+        version20compression();
+      } else {
+        version21ChecksumAndCompression();
+      }
+    }
+
+    private void version20compression() throws IOException {
+      onDiskChecksum = HConstants.EMPTY_BYTE_ARRAY;
+
       if (compressAlgo != NONE) {
         compressedByteStream.reset();
-        compressedByteStream.write(DUMMY_HEADER);
+        compressedByteStream.write(DUMMY_HEADER_NO_CHECKSUM);
 
         compressionStream.resetState();
 
-        compressionStream.write(uncompressedBytesWithHeader, HEADER_SIZE,
-            uncompressedBytesWithHeader.length - HEADER_SIZE);
+        compressionStream.write(uncompressedBytesWithHeader, headerSize(this.minorVersion),
+            uncompressedBytesWithHeader.length - headerSize(this.minorVersion));
+
+
+        compressionStream.flush();
+        compressionStream.finish();
+        onDiskDataSizeWithHeader = compressedByteStream.size(); // data size
+        onDiskBytesWithHeader = compressedByteStream.toByteArray();
+
+        put20Header(onDiskBytesWithHeader, 0, onDiskBytesWithHeader.length,
+            uncompressedBytesWithHeader.length);
+
+
+        //set the header for the uncompressed bytes (for cache-on-write)
+        put20Header(uncompressedBytesWithHeader, 0,
+            onDiskBytesWithHeader.length + onDiskChecksum.length,
+            uncompressedBytesWithHeader.length);
+
+      } else {
+        onDiskBytesWithHeader = uncompressedBytesWithHeader;
+
+        onDiskDataSizeWithHeader = onDiskBytesWithHeader.length;
+
+        //set the header for the uncompressed bytes
+        put20Header(uncompressedBytesWithHeader, 0,
+            onDiskBytesWithHeader.length,
+            uncompressedBytesWithHeader.length);
+      }
+    }
+
+    private void version21ChecksumAndCompression() throws IOException {
+      // do the compression
+      if (compressAlgo != NONE) {
+        compressedByteStream.reset();
+        compressedByteStream.write(DUMMY_HEADER_WITH_CHECKSUM);
+
+        compressionStream.resetState();
+
+        compressionStream.write(uncompressedBytesWithHeader, headerSize(this.minorVersion),
+            uncompressedBytesWithHeader.length - headerSize(this.minorVersion));
 
         compressionStream.flush();
         compressionStream.finish();
@@ -871,7 +923,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
 
         onDiskBytesWithHeader = compressedByteStream.toByteArray();
-        putHeader(onDiskBytesWithHeader, 0, onDiskBytesWithHeader.length,
+        put21Header(onDiskBytesWithHeader, 0, onDiskBytesWithHeader.length,
             uncompressedBytesWithHeader.length, onDiskDataSizeWithHeader);
 
        // generate checksums for header and data. The checksums are
@@ -885,9 +937,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         onDiskChecksum = HConstants.EMPTY_BYTE_ARRAY;
 
         //set the header for the uncompressed bytes (for cache-on-write)
-        putHeader(uncompressedBytesWithHeader, 0,
-          onDiskBytesWithHeader.length + onDiskChecksum.length,
-          uncompressedBytesWithHeader.length, onDiskDataSizeWithHeader);
+        put21Header(uncompressedBytesWithHeader, 0,
+            onDiskBytesWithHeader.length + onDiskChecksum.length,
+            uncompressedBytesWithHeader.length, onDiskDataSizeWithHeader);
 
       } else {
         // If we are not using any compression, then the
@@ -901,9 +953,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         onDiskChecksum = new byte[numBytes];
 
         //set the header for the uncompressed bytes
-        putHeader(uncompressedBytesWithHeader, 0,
-          onDiskBytesWithHeader.length + onDiskChecksum.length,
-          uncompressedBytesWithHeader.length, onDiskDataSizeWithHeader);
+        put21Header(uncompressedBytesWithHeader, 0,
+            onDiskBytesWithHeader.length + onDiskChecksum.length,
+            uncompressedBytesWithHeader.length, onDiskDataSizeWithHeader);
 
         ChecksumUtil.generateChecksums(
           uncompressedBytesWithHeader, 0, uncompressedBytesWithHeader.length,
@@ -923,11 +975,11 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
       // do data block encoding, if data block encoder is set
       ByteBuffer rawKeyValues = ByteBuffer.wrap(uncompressedBytesWithHeader,
-          HEADER_SIZE, uncompressedBytesWithHeader.length -
-          HEADER_SIZE).slice();
+          headerSize(this.minorVersion), uncompressedBytesWithHeader.length -
+          headerSize(this.minorVersion)).slice();
       Pair<ByteBuffer, BlockType> encodingResult =
           dataBlockEncoder.beforeWriteToDisk(rawKeyValues,
-              includesMemstoreTS, DUMMY_HEADER);
+              includesMemstoreTS, getDummyHeaderForVersion(this.minorVersion));
 
       BlockType encodedBlockType = encodingResult.getSecond();
       if (encodedBlockType == BlockType.ENCODED_DATA) {
@@ -940,10 +992,10 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
               "block encoder: " + encodedBlockType);
         }
         if (userDataStream.size() !=
-            uncompressedBytesWithHeader.length - HEADER_SIZE) {
+            uncompressedBytesWithHeader.length - headerSize(this.minorVersion)) {
           throw new IOException("Uncompressed size mismatch: "
               + userDataStream.size() + " vs. "
-              + (uncompressedBytesWithHeader.length - HEADER_SIZE));
+              + (uncompressedBytesWithHeader.length - headerSize(this.minorVersion)));
         }
       }
     }
@@ -956,17 +1008,25 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * @param onDiskDataSize size of the block on disk with header
      *        and data but not including the checksums
      */
-    private void putHeader(byte[] dest, int offset, int onDiskSize,
-        int uncompressedSize, int onDiskDataSize) {
+    private void put21Header(byte[] dest, int offset, int onDiskSize,
+                             int uncompressedSize, int onDiskDataSize) {
       offset = blockType.put(dest, offset);
-      offset = Bytes.putInt(dest, offset, onDiskSize - HEADER_SIZE);
-      offset = Bytes.putInt(dest, offset, uncompressedSize - HEADER_SIZE);
+      offset = Bytes.putInt(dest, offset, onDiskSize - HEADER_SIZE_WITH_CHECKSUMS);
+      offset = Bytes.putInt(dest, offset, uncompressedSize - HEADER_SIZE_WITH_CHECKSUMS);
       offset = Bytes.putLong(dest, offset, prevOffset);
       offset = Bytes.putByte(dest, offset, checksumType.getCode());
       offset = Bytes.putInt(dest, offset, bytesPerChecksum);
       offset = Bytes.putInt(dest, offset, onDiskDataSizeWithHeader);
     }
 
+
+    private void put20Header(byte[] dest, int offset, int onDiskSize,
+                             int uncompressedSize) {
+      offset = blockType.put(dest, offset);
+      offset = Bytes.putInt(dest, offset, onDiskSize - HEADER_SIZE_NO_CHECKSUM);
+      offset = Bytes.putInt(dest, offset, uncompressedSize - HEADER_SIZE_NO_CHECKSUM);
+      Bytes.putLong(dest, offset, prevOffset);
+    }
     /**
      * Similar to {@link #writeHeaderAndData(FSDataOutputStream)}, but records
      * the offset of this block so that it can be referenced in the next block
@@ -999,7 +1059,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     private void writeHeaderAndData(DataOutputStream out) throws IOException {
       ensureBlockReady();
       out.write(onDiskBytesWithHeader);
-      if (compressAlgo == NONE) {
+      if (compressAlgo == NONE && minorVersion > MINOR_VERSION_NO_CHECKSUM) {
         if (onDiskChecksum == HConstants.EMPTY_BYTE_ARRAY) {
           throw new IOException("A " + blockType 
               + " without compression should have checksums " 
@@ -1062,7 +1122,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      */
     int getOnDiskSizeWithoutHeader() {
       expectState(State.BLOCK_READY);
-      return onDiskBytesWithHeader.length + onDiskChecksum.length - HEADER_SIZE;
+      return onDiskBytesWithHeader.length + onDiskChecksum.length - headerSize(this.minorVersion);
     }
 
     /**
@@ -1082,7 +1142,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      */
     int getUncompressedSizeWithoutHeader() {
       expectState(State.BLOCK_READY);
-      return uncompressedBytesWithHeader.length - HEADER_SIZE;
+      return uncompressedBytesWithHeader.length - headerSize(this.minorVersion);
     }
 
     /**
@@ -1158,7 +1218,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),
           getUncompressedSizeWithoutHeader(), prevOffset,
           getUncompressedBufferWithHeader(), DONT_FILL_HEADER, startOffset,
-          includesMemstoreTS, MINOR_VERSION_WITH_CHECKSUM,
+          includesMemstoreTS, this.minorVersion,
           0, ChecksumType.NULL.getCode(),  // no checksums in cached data
           onDiskBytesWithHeader.length + onDiskChecksum.length);
     }
@@ -1458,7 +1518,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * coming to end of the compressed section.
      *
      * The block returned is still a version 2 block, and in particular, its
-     * first {@link #HEADER_SIZE} bytes contain a valid version 2 header.
+     * first {@link #HEADER_SIZE_WITH_CHECKSUMS} bytes contain a valid version 2 header.
      *
      * @param offset the offset of the block to read in the file
      * @param onDiskSizeWithMagic the on-disk size of the version 1 block,
@@ -1540,8 +1600,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
    */
   private static class PrefetchedHeader {
     long offset = -1;
-    byte[] header = new byte[HEADER_SIZE];
-    ByteBuffer buf = ByteBuffer.wrap(header, 0, HEADER_SIZE);
+    byte[] header = new byte[HEADER_SIZE_WITH_CHECKSUMS];
+    ByteBuffer buf = ByteBuffer.wrap(header, 0, HEADER_SIZE_WITH_CHECKSUMS);
   }
 
   /** Reads version 2 blocks from the filesystem. */
@@ -1607,7 +1667,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      */
     FSReaderV2(FSDataInputStream istream, Algorithm compressAlgo,
         long fileSize) throws IOException {
-      this(istream, istream, compressAlgo, fileSize, 
+      this(istream, istream, compressAlgo, fileSize,
            HFileReaderV2.MAX_MINOR_VERSION, null, null);
     }
 
@@ -2074,24 +2134,24 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     if (minorVersion < MINOR_VERSION_WITH_CHECKSUM) {
       return HEADER_SIZE_NO_CHECKSUM;
     }
-    return HEADER_SIZE;
+    return HEADER_SIZE_WITH_CHECKSUMS;
   }
 
   /**
-   * Return the appropriate DUMMY_HEADER for the minor version
+   * Return the appropriate DUMMY_HEADER_WITH_CHECKSUM for the minor version
    */
   public byte[] getDummyHeaderForVersion() {
     return getDummyHeaderForVersion(minorVersion);
   }
 
   /**
-   * Return the appropriate DUMMY_HEADER for the minor version
+   * Return the appropriate DUMMY_HEADER_WITH_CHECKSUM for the minor version
    */
   static private byte[] getDummyHeaderForVersion(int minorVersion) {
     if (minorVersion < MINOR_VERSION_WITH_CHECKSUM) {
       return DUMMY_HEADER_NO_CHECKSUM;
     }
-    return DUMMY_HEADER;
+    return DUMMY_HEADER_WITH_CHECKSUM;
   }
 
   /**

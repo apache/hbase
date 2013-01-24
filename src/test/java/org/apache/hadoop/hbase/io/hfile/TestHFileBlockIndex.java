@@ -216,7 +216,9 @@ public class TestHFileBlockIndex {
   private void writeWholeIndex() throws IOException {
     assertEquals(0, keys.size());
     HFileBlock.Writer hbw = new HFileBlock.Writer(compr, null,
-        includesMemstoreTS, HFile.DEFAULT_CHECKSUM_TYPE,
+        includesMemstoreTS,
+        1,
+        HFile.DEFAULT_CHECKSUM_TYPE,
         HFile.DEFAULT_BYTES_PER_CHECKSUM);
     FSDataOutputStream outputStream = fs.create(path);
     HFileBlockIndex.BlockIndexWriter biw =
