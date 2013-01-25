@@ -61,7 +61,6 @@ public abstract class TableEventHandler extends EventHandler {
   protected final MasterServices masterServices;
   protected final byte [] tableName;
   protected final String tableNameStr;
-  protected boolean persistedToZk = false;
 
   public TableEventHandler(EventType eventType, byte [] tableName, Server server,
       MasterServices masterServices)
@@ -111,10 +110,7 @@ public abstract class TableEventHandler extends EventHandler {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
     } catch (KeeperException e) {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
-    } finally {
-      // notify the waiting thread that we're done persisting the request
-      setPersist();
-    }
+    } 
   }
 
   public boolean reOpenAllRegions(List<HRegionInfo> regions) throws IOException {
@@ -165,29 +161,6 @@ public abstract class TableEventHandler extends EventHandler {
     return done;
   }
 
-  /**
-   * Table modifications are processed asynchronously, but provide an API for
-   * you to query their status.
-   *
-   * @throws IOException
-   */
-  public synchronized void waitForPersist() throws IOException {
-    if (!persistedToZk) {
-      try {
-        wait();
-      } catch (InterruptedException ie) {
-        throw (IOException) new InterruptedIOException().initCause(ie);
-      }
-      assert persistedToZk;
-    }
-  }
-
-  private synchronized void setPersist() {
-    if (!persistedToZk) {
-      persistedToZk = true;
-      notify();
-    }
-  }
 
   /**
    * @return Table descriptor for this table

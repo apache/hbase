@@ -1772,9 +1772,8 @@ Server {
     if (cpHost != null) {
       cpHost.preModifyTable(tableName, descriptor);
     }
-    TableEventHandler tblHandle = new ModifyTableHandler(tableName, descriptor, this, this);
-    this.executorService.submit(tblHandle);
-    tblHandle.waitForPersist();
+    new ModifyTableHandler(tableName, descriptor, this, this).process();
+
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, descriptor);
     }
