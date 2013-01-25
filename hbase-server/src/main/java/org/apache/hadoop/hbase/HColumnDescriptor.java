@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
@@ -67,7 +68,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   // Version  8 -- reintroduction of bloom filters, changed from boolean to enum
   // Version  9 -- add data block encoding
   // Version 10 -- change metadata to standard type.
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte) 10;
+  // Version 11 -- add column family level configuration.
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte) 11;
 
   // These constants are used as FileInfo keys
   public static final String COMPRESSION = "COMPRESSION";
@@ -221,8 +223,15 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   private byte [] name;
 
   // Column metadata
-  protected final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
+  private final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable,ImmutableBytesWritable>();
+
+  /**
+   * A map which holds the configuration specific to the column family.
+   * The keys of the map have the same names as config keys and override the defaults with
+   * cf-specific settings. Example usage may be for compactions, etc.
+   */
+  private final Map<String, String> configuration = new HashMap<String, String>();
 
   /*
    * Cache the max versions rather than calculate it every time.
@@ -277,6 +286,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
         desc.values.entrySet()) {
       this.values.put(e.getKey(), e.getValue());
+    }
+    for (Map.Entry<String, String> e : desc.configuration.entrySet()) {
+      this.configuration.put(e.getKey(), e.getValue());
     }
     setMaxVersions(desc.getMaxVersions());
   }
@@ -950,6 +962,21 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       }
       s.append('}');
     }
+
+    if (!configuration.isEmpty()) {
+      s.append(", ");
+      s.append(HConstants.CONFIGURATION).append(" => ");
+      s.append('{');
+      boolean printCommaForConfiguration = false;
+      for (Map.Entry<String, String> e : configuration.entrySet()) {
+        if (printCommaForConfiguration) s.append(", ");
+        printCommaForConfiguration = true;
+        s.append('\'').append(e.getKey()).append('\'');
+        s.append(" => ");
+        s.append('\'').append(e.getValue()).append('\'');
+      }
+      s.append("}");
+    }
     return s;
   }
 
@@ -982,6 +1009,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     int result = Bytes.hashCode(this.name);
     result ^= Byte.valueOf(COLUMN_DESCRIPTOR_VERSION).hashCode();
     result ^= values.hashCode();
+    result ^= configuration.hashCode();
     return result;
   }
 
@@ -1052,6 +1080,19 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       String value = getValue(HConstants.VERSIONS);
       this.cachedMaxVersions = (value != null)?
           Integer.valueOf(value).intValue(): DEFAULT_VERSIONS;
+      if (version > 10) {
+        configuration.clear();
+        int numConfigs = in.readInt();
+        for (int i = 0; i < numConfigs; i++) {
+          ImmutableBytesWritable key = new ImmutableBytesWritable();
+          ImmutableBytesWritable val = new ImmutableBytesWritable();
+          key.readFields(in);
+          val.readFields(in);
+          configuration.put(
+            Bytes.toString(key.get(), key.getOffset(), key.getLength()),
+            Bytes.toString(val.get(), val.getOffset(), val.getLength()));
+        }
+      }
     }
   }
 
@@ -1068,6 +1109,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       e.getKey().write(out);
       e.getValue().write(out);
     }
+    out.writeInt(configuration.size());
+    for (Map.Entry<String, String> e : configuration.entrySet()) {
+      new ImmutableBytesWritable(Bytes.toBytes(e.getKey())).write(out);
+      new ImmutableBytesWritable(Bytes.toBytes(e.getValue())).write(out);
+    }
   }
 
   // Comparable
@@ -1077,6 +1123,13 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     if (result == 0) {
       // punt on comparison for ordering, just calculate difference
       result = this.values.hashCode() - o.values.hashCode();
+      if (result < 0)
+        result = -1;
+      else if (result > 0)
+        result = 1;
+    }
+    if (result == 0) {
+      result = this.configuration.hashCode() - o.configuration.hashCode();
       if (result < 0)
         result = -1;
       else if (result > 0)
@@ -1125,6 +1178,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     for (BytesBytesPair a: cfs.getAttributesList()) {
       hcd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
     }
+    for (NameStringPair a: cfs.getConfigurationList()) {
+      hcd.setConfiguration(a.getName(), a.getValue());
+    }
     return hcd;
   }
 
@@ -1140,6 +1196,47 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       aBuilder.setSecond(ByteString.copyFrom(e.getValue().get()));
       builder.addAttributes(aBuilder.build());
     }
+    for (Map.Entry<String, String> e : this.configuration.entrySet()) {
+      NameStringPair.Builder aBuilder = NameStringPair.newBuilder();
+      aBuilder.setName(e.getKey());
+      aBuilder.setValue(e.getValue());
+      builder.addConfiguration(aBuilder.build());
+    }
     return builder.build();
+  }
+
+  /**
+   * Getter for accessing the configuration value by key.
+   */
+  public String getConfigurationValue(String key) {
+    return configuration.get(key);
+  }
+
+  /**
+   * Getter for fetching an unmodifiable {@link #configuration} map.
+   */
+  public Map<String, String> getConfiguration() {
+    // shallow pointer copy
+    return Collections.unmodifiableMap(configuration);
+  }
+
+  /**
+   * Setter for storing a configuration setting in {@link #configuration} map.
+   * @param key Config key. Same as XML config key e.g. hbase.something.or.other.
+   * @param value String value. If null, removes the configuration.
+   */
+  public void setConfiguration(String key, String value) {
+    if (value == null) {
+      removeConfiguration(key);
+    } else {
+      configuration.put(key, value);
+    }
+  }
+
+  /**
+   * Remove a configuration setting represented by the key from the {@link #configuration} map.
+   */
+  public void removeConfiguration(final String key) {
+    configuration.remove(key);
   }
 }

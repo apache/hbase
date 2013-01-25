@@ -133,7 +133,7 @@ public final class Constraints {
     }
     // now remove all the keys we found
     for (ImmutableBytesWritable key : keys) {
-      desc.remove(key.get());
+      desc.remove(key);
     }
   }
 

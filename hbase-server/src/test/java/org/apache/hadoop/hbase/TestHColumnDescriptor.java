@@ -79,4 +79,18 @@ public class TestHColumnDescriptor {
       assertEquals("Family name can not be empty", e.getLocalizedMessage());
     }
   }
+
+  /**
+   * Test that we add and remove strings from configuration properly.
+   */
+  @Test
+  public void testAddGetRemoveConfiguration() throws Exception {
+    HColumnDescriptor desc = new HColumnDescriptor("foo");
+    String key = "Some";
+    String value = "value";
+    desc.setConfiguration(key, value);
+    assertEquals(value, desc.getConfigurationValue(key));
+    desc.removeConfiguration(key);
+    assertEquals(null, desc.getConfigurationValue(key));
+  }
 }

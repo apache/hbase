@@ -184,8 +184,12 @@ public class HStore implements Store, StoreConfiguration {
     this.region = region;
     this.family = family;
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
+    // CompoundConfiguration will look for keys in reverse order of addition, so we'd
+    // add global config first, then table and cf overrides, then cf metadata.
     this.conf = new CompoundConfiguration()
       .add(confParam)
+      .addStringMap(region.getTableDesc().getConfiguration())
+      .addStringMap(family.getConfiguration())
       .addWritableMap(family.getValues());
     this.blocksize = family.getBlocksize();
 

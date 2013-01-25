@@ -31,6 +31,7 @@ message TableSchema {
   optional bytes name = 1;
   repeated BytesBytesPair attributes = 2;
   repeated ColumnFamilySchema columnFamilies = 3;
+  repeated NameStringPair configuration = 4;
 }
 
 /**
@@ -40,6 +41,7 @@ message TableSchema {
 message ColumnFamilySchema {
   required bytes name = 1;
   repeated BytesBytesPair attributes = 2;
+  repeated NameStringPair configuration = 3;
 }
 
 /**

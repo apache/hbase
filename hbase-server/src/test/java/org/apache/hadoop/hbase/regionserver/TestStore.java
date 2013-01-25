@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -134,8 +135,14 @@ public class TestStore extends TestCase {
     hcd.setMaxVersions(4);
     init(methodName, conf, hcd);
   }
-  
+
   private void init(String methodName, Configuration conf,
+      HColumnDescriptor hcd) throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(table);
+    init(methodName, conf, htd, hcd);
+  }
+
+  private void init(String methodName, Configuration conf, HTableDescriptor htd,
       HColumnDescriptor hcd) throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
@@ -146,7 +153,6 @@ public class TestStore extends TestCase {
 
     fs.delete(logdir, true);
 
-    HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     HLog hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
@@ -817,5 +823,34 @@ public class TestStore extends TestCase {
     store.getHRegion().clearSplit_TESTS_ONLY();
   }
 
+  public void testStoreUsesConfigurationFromHcdAndHtd() throws Exception {
+    final String CONFIG_KEY = "hbase.regionserver.thread.compaction.throttle";
+    long anyValue = 10;
+
+    // We'll check that it uses correct config and propagates it appropriately by going thru
+    // the simplest "real" path I can find - "throttleCompaction", which just checks whether
+    // a number we pass in is higher than some config value, inside compactionPolicy.
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(CONFIG_KEY, anyValue);
+    init(getName() + "-xml", conf);
+    assertTrue(store.throttleCompaction(anyValue + 1));
+    assertFalse(store.throttleCompaction(anyValue));
+
+    // HTD overrides XML.
+    --anyValue;
+    HTableDescriptor htd = new HTableDescriptor(table);
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    htd.setConfiguration(CONFIG_KEY, Long.toString(anyValue));
+    init(getName() + "-htd", conf, htd, hcd);
+    assertTrue(store.throttleCompaction(anyValue + 1));
+    assertFalse(store.throttleCompaction(anyValue));
+
+    // HCD overrides them both.
+    --anyValue;
+    hcd.setConfiguration(CONFIG_KEY, Long.toString(anyValue));
+    init(getName() + "-hcd", conf, htd, hcd);
+    assertTrue(store.throttleCompaction(anyValue + 1));
+    assertFalse(store.throttleCompaction(anyValue));
+  }
 }
 

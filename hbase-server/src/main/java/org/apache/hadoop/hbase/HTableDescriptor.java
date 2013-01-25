@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -65,8 +66,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    *  Version 4 adds indexes
    *  Version 5 removed transactional pollution -- e.g. indexes
    *  Version 6 changed metadata to BytesBytesPair in PB
+   *  Version 7 adds table-level configuration
    */
-  private static final byte TABLE_DESCRIPTOR_VERSION = 6;
+  private static final byte TABLE_DESCRIPTOR_VERSION = 7;
 
   private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
 
@@ -77,8 +79,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * includes values like IS_ROOT, IS_META, DEFERRED_LOG_FLUSH, SPLIT_POLICY,
    * MAX_FILE_SIZE, READONLY, MEMSTORE_FLUSHSIZE etc...
    */
-  protected final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
+  private final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable, ImmutableBytesWritable>();
+
+  /**
+   * A map which holds the configuration specific to the table.
+   * The keys of the map have the same names as config keys and override the defaults with
+   * table-specific settings. Example usage may be for compactions, etc.
+   */
+  private final Map<String, String> configuration = new HashMap<String, String>();
 
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
 
@@ -236,7 +245,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     }
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry:
         values.entrySet()) {
-      this.values.put(entry.getKey(), entry.getValue());
+      setValue(entry.getKey(), entry.getValue());
     }
   }
 
@@ -295,7 +304,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     }
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
         desc.values.entrySet()) {
-      this.values.put(e.getKey(), e.getValue());
+      setValue(e.getKey(), e.getValue());
+    }
+    for (Map.Entry<String, String> e : desc.configuration.entrySet()) {
+      this.configuration.put(e.getKey(), e.getValue());
     }
   }
 
@@ -333,7 +345,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   protected void setRootRegion(boolean isRoot) {
     // TODO: Make the value a boolean rather than String of boolean.
-    values.put(IS_ROOT_KEY, isRoot? TRUE: FALSE);
+    setValue(IS_ROOT_KEY, isRoot? TRUE: FALSE);
   }
 
   /**
@@ -374,7 +386,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * <code> .META. </code> region 
    */
   protected void setMetaRegion(boolean isMeta) {
-    values.put(IS_META_KEY, isMeta? TRUE: FALSE);
+    setValue(IS_META_KEY, isMeta? TRUE: FALSE);
   }
 
   /** 
@@ -487,7 +499,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #values
    */
   public void setValue(byte[] key, byte[] value) {
-    setValue(new ImmutableBytesWritable(key), value);
+    setValue(new ImmutableBytesWritable(key), new ImmutableBytesWritable(value));
   }
 
   /*
@@ -495,8 +507,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param value The value.
    */
   private void setValue(final ImmutableBytesWritable key,
-      final byte[] value) {
-    values.put(key, new ImmutableBytesWritable(value));
+      final String value) {
+    setValue(key, new ImmutableBytesWritable(Bytes.toBytes(value)));
   }
 
   /*
@@ -517,20 +529,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public void setValue(String key, String value) {
     if (value == null) {
-      remove(Bytes.toBytes(key));
+      remove(key);
     } else {
       setValue(Bytes.toBytes(key), Bytes.toBytes(value));
     }
-  }
-
-  /**
-   * Remove metadata represented by the key from the {@link #values} map
-   * 
-   * @param key Key whose key and value we're to remove from HTableDescriptor
-   * parameters.
-   */
-  public void remove(final byte [] key) {
-    values.remove(new ImmutableBytesWritable(key));
   }
   
   /**
@@ -540,7 +542,17 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * parameters.
    */
   public void remove(final String key) {
-    remove(Bytes.toBytes(key));
+    remove(new ImmutableBytesWritable(Bytes.toBytes(key)));
+  }
+
+  /**
+   * Remove metadata represented by the key from the {@link #values} map
+   *
+   * @param key Key whose key and value we're to remove from HTableDescriptor
+   * parameters.
+   */
+  public void remove(ImmutableBytesWritable key) {
+    values.remove(key);
   }
 
   /**
@@ -673,7 +685,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * before a split is triggered.
    */
   public void setMaxFileSize(long maxFileSize) {
-    setValue(MAX_FILESIZE_KEY, Bytes.toBytes(Long.toString(maxFileSize)));
+    setValue(MAX_FILESIZE_KEY, Long.toString(maxFileSize));
   }
 
   /**
@@ -698,8 +710,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param memstoreFlushSize memory cache flush size for each hregion
    */
   public void setMemStoreFlushSize(long memstoreFlushSize) {
-    setValue(MEMSTORE_FLUSHSIZE_KEY,
-      Bytes.toBytes(Long.toString(memstoreFlushSize)));
+    setValue(MEMSTORE_FLUSHSIZE_KEY, Long.toString(memstoreFlushSize));
   }
 
   /**
@@ -757,13 +768,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
     // step 1: set partitioning and pruning
     Set<ImmutableBytesWritable> reservedKeys = new TreeSet<ImmutableBytesWritable>();
-    Set<ImmutableBytesWritable> configKeys = new TreeSet<ImmutableBytesWritable>();
+    Set<ImmutableBytesWritable> userKeys = new TreeSet<ImmutableBytesWritable>();
     for (ImmutableBytesWritable k : values.keySet()) {
       if (k == null || k.get() == null) continue;
       String key = Bytes.toString(k.get());
       // in this section, print out reserved keywords + coprocessor info
       if (!RESERVED_KEYWORDS.contains(k) && !key.startsWith("coprocessor$")) {
-        configKeys.add(k);
+        userKeys.add(k);
         continue;
       }
       // only print out IS_ROOT/IS_META if true
@@ -780,48 +791,65 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     }
 
     // early exit optimization
-    if (reservedKeys.isEmpty() && configKeys.isEmpty()) return s;
+    boolean hasAttributes = !reservedKeys.isEmpty() || !userKeys.isEmpty();
+    if (!hasAttributes && configuration.isEmpty()) return s;
 
-    // step 2: printing
-    s.append(", {TABLE_ATTRIBUTES => {");
+    s.append(", {");
+    // step 2: printing attributes
+    if (hasAttributes) {
+      s.append("TABLE_ATTRIBUTES => {");
 
-    // print all reserved keys first
-    boolean printCommaForAttr = false;
-    for (ImmutableBytesWritable k : reservedKeys) {
-      String key = Bytes.toString(k.get());
-      String value = Bytes.toString(values.get(k).get());
-      if (printCommaForAttr) s.append(", ");
-      printCommaForAttr = true;
-      s.append(key);
-      s.append(" => ");
-      s.append('\'').append(value).append('\'');
-    }
-
-    if (!configKeys.isEmpty()) {
-      // print all non-reserved, advanced config keys as a separate subset
-      if (printCommaForAttr) s.append(", ");
-      printCommaForAttr = true;
-      s.append(HConstants.METADATA).append(" => ");
-      s.append("{");
-      boolean printCommaForCfg = false;
-      for (ImmutableBytesWritable k : configKeys) {
+      // print all reserved keys first
+      boolean printCommaForAttr = false;
+      for (ImmutableBytesWritable k : reservedKeys) {
         String key = Bytes.toString(k.get());
         String value = Bytes.toString(values.get(k).get());
-        if (printCommaForCfg) s.append(", ");
-        printCommaForCfg = true;
-        s.append('\'').append(key).append('\'');
+        if (printCommaForAttr) s.append(", ");
+        printCommaForAttr = true;
+        s.append(key);
         s.append(" => ");
         s.append('\'').append(value).append('\'');
       }
-      s.append("}");
+
+      if (!userKeys.isEmpty()) {
+        // print all non-reserved, advanced config keys as a separate subset
+        if (printCommaForAttr) s.append(", ");
+        printCommaForAttr = true;
+        s.append(HConstants.METADATA).append(" => ");
+        s.append("{");
+        boolean printCommaForCfg = false;
+        for (ImmutableBytesWritable k : userKeys) {
+          String key = Bytes.toString(k.get());
+          String value = Bytes.toString(values.get(k).get());
+          if (printCommaForCfg) s.append(", ");
+          printCommaForCfg = true;
+          s.append('\'').append(key).append('\'');
+          s.append(" => ");
+          s.append('\'').append(value).append('\'');
+        }
+        s.append("}");
+      }
     }
 
-    s.append("}}"); // end METHOD
+    // step 3: printing all configuration:
+    if (!configuration.isEmpty()) {
+      if (hasAttributes) {
+        s.append(", ");
+      }
+      s.append(HConstants.CONFIGURATION).append(" => ");
+      s.append('{');
+      boolean printCommaForConfig = false;
+      for (Map.Entry<String, String> e : configuration.entrySet()) {
+        if (printCommaForConfig) s.append(", ");
+        printCommaForConfig = true;
+        s.append('\'').append(e.getKey()).append('\'');
+        s.append(" => ");
+        s.append('\'').append(e.getValue()).append('\'');
+      }
+      s.append("}");
+    }
+    s.append("}"); // end METHOD
     return s;
-  }
-
-  public static Map<String, String> getDefaultValues() {
-    return Collections.unmodifiableMap(DEFAULT_VALUES);
   }
 
   /**
@@ -860,6 +888,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       }
     }
     result ^= values.hashCode();
+    result ^= configuration.hashCode();
     return result;
   }
 
@@ -880,13 +909,14 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     setRootRegion(in.readBoolean());
     setMetaRegion(in.readBoolean());
     values.clear();
+    configuration.clear();
     int numVals = in.readInt();
     for (int i = 0; i < numVals; i++) {
       ImmutableBytesWritable key = new ImmutableBytesWritable();
       ImmutableBytesWritable value = new ImmutableBytesWritable();
       key.readFields(in);
       value.readFields(in);
-      values.put(key, value);
+      setValue(key, value);
     }
     families.clear();
     int numFamilies = in.readInt();
@@ -895,8 +925,17 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       c.readFields(in);
       families.put(c.getName(), c);
     }
-    if (version < 4) {
-      return;
+    if (version >= 7) {
+      int numConfigs = in.readInt();
+      for (int i = 0; i < numConfigs; i++) {
+        ImmutableBytesWritable key = new ImmutableBytesWritable();
+        ImmutableBytesWritable value = new ImmutableBytesWritable();
+        key.readFields(in);
+        value.readFields(in);
+        configuration.put(
+          Bytes.toString(key.get(), key.getOffset(), key.getLength()),
+          Bytes.toString(value.get(), value.getOffset(), value.getLength()));
+      }
     }
   }
 
@@ -924,6 +963,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
         it.hasNext(); ) {
       HColumnDescriptor family = it.next();
       family.write(out);
+    }
+    out.writeInt(configuration.size());
+    for (Map.Entry<String, String> e : configuration.entrySet()) {
+      new ImmutableBytesWritable(Bytes.toBytes(e.getKey())).write(out);
+      new ImmutableBytesWritable(Bytes.toBytes(e.getValue())).write(out);
     }
   }
 
@@ -958,6 +1002,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     if (result == 0) {
       // punt on comparison for ordering, just calculate difference
       result = this.values.hashCode() - other.values.hashCode();
+      if (result < 0)
+        result = -1;
+      else if (result > 0)
+        result = 1;
+    }
+    if (result == 0) {
+      result = this.configuration.hashCode() - other.configuration.hashCode();
       if (result < 0)
         result = -1;
       else if (result > 0)
@@ -1170,7 +1221,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     }
     // if we found a match, remove it
     if (match != null)
-      this.values.remove(match);
+      remove(match);
   }
   
   /**
@@ -1218,9 +1269,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   @Deprecated
   public void setOwnerString(String ownerString) {
     if (ownerString != null) {
-      setValue(OWNER_KEY, Bytes.toBytes(ownerString));
+      setValue(OWNER_KEY, ownerString);
     } else {
-      values.remove(OWNER_KEY);
+      remove(OWNER_KEY);
     }
   }
 
@@ -1281,6 +1332,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for (HColumnDescriptor hcd: getColumnFamilies()) {
       builder.addColumnFamilies(hcd.convert());
     }
+    for (Map.Entry<String, String> e : this.configuration.entrySet()) {
+      NameStringPair.Builder aBuilder = NameStringPair.newBuilder();
+      aBuilder.setName(e.getKey());
+      aBuilder.setValue(e.getValue());
+      builder.addConfiguration(aBuilder.build());
+    }
     return builder.build();
   }
 
@@ -1299,6 +1356,44 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for (BytesBytesPair a: ts.getAttributesList()) {
       htd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
     }
+    for (NameStringPair a: ts.getConfigurationList()) {
+      htd.setConfiguration(a.getName(), a.getValue());
+    }
     return htd;
+  }
+
+  /**
+   * Getter for accessing the configuration value by key
+   */
+  public String getConfigurationValue(String key) {
+    return configuration.get(key);
+  }
+
+  /**
+   * Getter for fetching an unmodifiable {@link #configuration} map.
+   */
+  public Map<String, String> getConfiguration() {
+    // shallow pointer copy
+    return Collections.unmodifiableMap(configuration);
+  }
+
+  /**
+   * Setter for storing a configuration setting in {@link #configuration} map.
+   * @param key Config key. Same as XML config key e.g. hbase.something.or.other.
+   * @param value String value. If null, removes the setting.
+   */
+  public void setConfiguration(String key, String value) {
+    if (value == null) {
+      removeConfiguration(key);
+    } else {
+      configuration.put(key, value);
+    }
+  }
+
+  /**
+   * Remove a config setting represented by the key from the {@link #configuration} map
+   */
+  public void removeConfiguration(final String key) {
+    configuration.remove(key);
   }
 }

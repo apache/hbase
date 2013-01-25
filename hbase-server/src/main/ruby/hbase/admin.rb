@@ -260,6 +260,7 @@ module Hbase
         htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
         htd.setDeferredLogFlush(JBoolean.valueOf(arg.delete(DEFERRED_LOG_FLUSH))) if arg[DEFERRED_LOG_FLUSH]
         set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
+        set_descriptor_config(htd, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
         
         arg.each_key do |ignored_key|
           puts("An argument ignored (unknown or overridden): %s" % [ ignored_key ])
@@ -420,7 +421,7 @@ module Hbase
             if (htd.getValue(name) == nil)
               raise ArgumentError, "Can not find attribute: #{name}"
             end
-            htd.remove(name.to_java_bytes)
+            htd.remove(name)
             @admin.modifyTable(table_name.to_java_bytes, htd)
           # Unknown method
           else
@@ -446,11 +447,12 @@ module Hbase
         # 3) Some args for the table, optionally with METHOD => table_att (deprecated)
         raise(ArgumentError, "NAME argument in an unexpected place") if name
         htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER] 
-        set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
         htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
         htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
         htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
         htd.setDeferredLogFlush(JBoolean.valueOf(arg.delete(DEFERRED_LOG_FLUSH))) if arg[DEFERRED_LOG_FLUSH]
+        set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
+        set_descriptor_config(htd, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
 
         # set a coprocessor attribute
         valid_coproc_keys = []
@@ -613,6 +615,7 @@ module Hbase
       end
 
       set_user_metadata(family, arg.delete(METADATA)) if arg[METADATA]
+      set_descriptor_config(family, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
 
       arg.each_key do |unknown_key|
         puts("Unknown argument ignored for column family %s: %s" % [name, unknown_key])
@@ -652,5 +655,14 @@ module Hbase
         end
     end
     
+    # Apply config specific to a table/column to its descriptor
+    def set_descriptor_config(descriptor, config)
+      raise(ArgumentError, "#{CONFIGURATION} must be a Hash type") unless config.kind_of?(Hash)
+        for k,v in config
+          v = v.to_s unless v.nil?
+          descriptor.setConfiguration(k, v)
+        end
+    end
+
   end
 end
