@@ -762,7 +762,8 @@ public class HConnectionManager {
           if (exceptionCaught != null)
             // It failed. If it's not the last try, we're going to wait a little
           if (tries < numRetries) {
-            long pauseTime = ConnectionUtils.getPauseTime(this.pause, tries);
+            // tries at this point is 1 or more; decrement to start from 0.
+            long pauseTime = ConnectionUtils.getPauseTime(this.pause, tries - 1);
             LOG.info("getMaster attempt " + tries + " of " + numRetries +
               " failed; retrying after sleep of " +pauseTime, exceptionCaught);
 
@@ -1966,9 +1967,10 @@ public class HConnectionManager {
       * @throws IOException
       */
       private void doRetry() throws IOException{
-          final long sleepTime = ConnectionUtils.getPauseTime(hci.pause, this.curNumRetries);
-          submit(this.toReplay, sleepTime);
-          this.toReplay.clear();
+        // curNumRetries at this point is 1 or more; decrement to start from 0.
+        final long sleepTime = ConnectionUtils.getPauseTime(hci.pause, this.curNumRetries - 1);
+        submit(this.toReplay, sleepTime);
+        this.toReplay.clear();
       }
 
       /**
