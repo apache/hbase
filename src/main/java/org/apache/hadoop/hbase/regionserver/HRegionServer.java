@@ -496,14 +496,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       annotatedQos = qosMap;
     }
 
-    public boolean isMetaRegion(byte[] regionName) {
+    public boolean isMetaTable(byte[] regionName) {
       HRegion region;
       try {
         region = getRegion(regionName);
       } catch (NotServingRegionException ignored) {
         return false;
       }
-      return region.getRegionInfo().isMetaRegion();
+      return region.getRegionInfo().isMetaTable();
     }
 
     @Override
@@ -530,7 +530,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
         String scannerIdString = Long.toString(scannerId);
         RegionScanner scanner = scanners.get(scannerIdString);
-        if (scanner != null && scanner.getRegionInfo().isMetaRegion()) {
+        if (scanner != null && scanner.getRegionInfo().isMetaTable()) {
           // LOG.debug("High priority scanner request: " + scannerId);
           return HConstants.HIGH_QOS;
         }
@@ -538,7 +538,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
        // Just let it through.  This is getOnlineRegions, etc.
       } else if (inv.getParameterClasses()[0] == byte[].class) {
         // first arg is byte array, so assume this is a regionname:
-        if (isMetaRegion((byte[]) inv.getParameters()[0])) {
+        if (isMetaTable((byte[]) inv.getParameters()[0])) {
           // LOG.debug("High priority with method: " + methodName +
           // " and region: "
           // + Bytes.toString((byte[]) inv.getParameters()[0]));
@@ -555,7 +555,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         // AND this
         // regionserver hosts META/-ROOT-
         for (byte[] region : regions) {
-          if (isMetaRegion(region)) {
+          if (isMetaTable(region)) {
             // LOG.debug("High priority multi with region: " +
             // Bytes.toString(region));
             return HConstants.HIGH_QOS; // short circuit for the win.
