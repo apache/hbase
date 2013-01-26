@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1158,10 +1159,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     setValue(key, value);
   }
 
-  
+
   /**
    * Check if the table has an attached co-processor represented by the name className
-   * 
+   *
    * @param className - Class name of the co-processor
    * @return true of the table has a co-processor className
    */
@@ -1189,6 +1190,30 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       }
     }
     return false;
+  }
+
+  /**
+   * Return the list of attached co-processor represented by their name className
+   *
+   * @return The list of co-processors classNames
+   */
+  public List<String> getCoprocessors() {
+    List<String> result = new ArrayList<String>();
+    Matcher keyMatcher;
+    Matcher valueMatcher;
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e : this.values.entrySet()) {
+      keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
+      if (!keyMatcher.matches()) {
+        continue;
+      }
+      valueMatcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(Bytes
+          .toString(e.getValue().get()));
+      if (!valueMatcher.matches()) {
+        continue;
+      }
+      result.add(valueMatcher.group(2).trim()); // classname is the 2nd field
+    }
+    return result;
   }
 
   /**
