@@ -688,7 +688,7 @@ public class  HRegionServer implements ClientProtocol,
             (RegionSpecifier)getRegion.invoke(deserializedRequestObj,
                 (Object[])null);
         HRegion region = hRegionServer.getRegion(regionSpecifier);
-        if (region.getRegionInfo().isMetaRegion()) {
+        if (region.getRegionInfo().isMetaTable()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("High priority: " + from.toString());
           }
@@ -704,7 +704,7 @@ public class  HRegionServer implements ClientProtocol,
           return HConstants.NORMAL_QOS;
         }
         RegionScanner scanner = hRegionServer.getScanner(request.getScannerId());
-        if (scanner != null && scanner.getRegionInfo().isMetaRegion()) {
+        if (scanner != null && scanner.getRegionInfo().isMetaTable()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("High priority scanner request: " + request.getScannerId());
           }
