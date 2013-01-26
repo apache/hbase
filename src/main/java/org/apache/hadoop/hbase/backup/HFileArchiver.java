@@ -55,6 +55,9 @@ public class HFileArchiver {
   private static final Log LOG = LogFactory.getLog(HFileArchiver.class);
   private static final String SEPARATOR = ".";
 
+  /** Number of retries in case of fs operation failure */
+  private static final int DEFAULT_RETRIES_NUMBER = 3;
+
   private HFileArchiver() {
     // hidden ctor since this is just a util
   }
@@ -136,6 +139,7 @@ public class HFileArchiver {
     try {
       success = resolveAndArchive(fs, regionArchiveDir, toArchive);
     } catch (IOException e) {
+      LOG.error("Failed to archive: " + toArchive, e);
       success = false;
     }
 
@@ -146,7 +150,7 @@ public class HFileArchiver {
     }
 
     throw new IOException("Received error when attempting to archive files (" + toArchive
-        + "), cannot delete region directory.");
+        + "), cannot delete region directory. ");
   }
 
   /**
@@ -254,14 +258,12 @@ public class HFileArchiver {
     long start = EnvironmentEdgeManager.currentTimeMillis();
     List<File> failures = resolveAndArchive(fs, baseArchiveDir, toArchive, start);
 
-    // clean out the failures by just deleting them
+    // notify that some files were not archived.
+    // We can't delete the files otherwise snapshots or other backup system
+    // that relies on the archiver end up with data loss.
     if (failures.size() > 0) {
-      try {
-        LOG.error("Failed to complete archive, deleting extra store files.");
-        deleteFilesWithoutArchiving(failures);
-      } catch (IOException e) {
-        LOG.warn("Failed to delete store file(s) when archiving failed", e);
-      }
+      LOG.warn("Failed to complete archive of: " + failures +
+        ". Those files are still in the original location, and they may slow down reads.");
       return false;
     }
     return true;
@@ -364,50 +366,51 @@ public class HFileArchiver {
         if (!fs.delete(archiveFile, false)) {
           throw new IOException("Couldn't delete existing archive file (" + archiveFile
               + ") or rename it to the backup file (" + backedupArchiveFile
-              + ")to make room for similarly named file.");
+              + ") to make room for similarly named file.");
         }
       }
       LOG.debug("Backed up archive file from: " + archiveFile);
     }
 
-    LOG.debug("No existing file in archive for:" + archiveFile + ", free to archive original file.");
+    LOG.debug("No existing file in archive for:" + archiveFile +
+        ", free to archive original file.");
 
     // at this point, we should have a free spot for the archive file
-    if (currentFile.moveAndClose(archiveFile)) {
+    boolean success = false;
+    for (int i = 0; !success && i < DEFAULT_RETRIES_NUMBER; ++i) {
+      if (i > 0) {
+        // Ensure that the archive directory exists.
+        // The previous "move to archive" operation has failed probably because
+        // the cleaner has removed our archive directory (HBASE-7643).
+        // (we're in a retry loop, so don't worry too much about the exception)
+        try {
+          if (!fs.exists(archiveDir)) {
+            if (fs.mkdirs(archiveDir)) {
+              LOG.debug("Created archive directory:" + archiveDir);
+            }
+          }
+        } catch (IOException e) {
+          LOG.warn("Failed to create the archive directory: " + archiveDir, e);
+        }
+      }
+
+      try {
+        success = currentFile.moveAndClose(archiveFile);
+      } catch (IOException e) {
+        LOG.warn("Failed to archive file: " + currentFile + " on try #" + i, e);
+        success = false;
+      }
+    }
+
+    if (!success) {
       LOG.error("Failed to archive file:" + currentFile);
       return false;
-    } else if (LOG.isDebugEnabled()) {
+    }
+
+    if (LOG.isDebugEnabled()) {
       LOG.debug("Finished archiving file from: " + currentFile + ", to: " + archiveFile);
     }
     return true;
-  }
-
-  /**
-   * Simple delete of regular files from the {@link FileSystem}.
-   * <p>
-   * This method is a more generic implementation that the other deleteXXX
-   * methods in this class, allowing more code reuse at the cost of a couple
-   * more, short-lived objects (which should have minimum impact on the jvm).
-   * @param fs {@link FileSystem} where the files live
-   * @param files {@link Collection} of files to be deleted
-   * @throws IOException if a file cannot be deleted. All files will be
-   *           attempted to deleted before throwing the exception, rather than
-   *           failing at the first file.
-   */
-  private static void deleteFilesWithoutArchiving(Collection<File> files) throws IOException {
-    List<IOException> errors = new ArrayList<IOException>(0);
-    for (File file : files) {
-      try {
-        LOG.debug("Deleting region file:" + file);
-        file.delete();
-      } catch (IOException e) {
-        LOG.error("Failed to delete file:" + file);
-        errors.add(e);
-      }
-    }
-    if (errors.size() > 0) {
-      throw MultipleIOException.createIOException(errors);
-    }
   }
 
   /**
@@ -553,7 +556,7 @@ public class HFileArchiver {
     public boolean moveAndClose(Path dest) throws IOException {
       this.close();
       Path p = this.getPath();
-      return !fs.rename(p, dest);
+      return fs.rename(p, dest);
     }
 
     /**
