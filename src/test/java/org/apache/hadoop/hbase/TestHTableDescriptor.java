@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -46,6 +47,43 @@ public class TestHTableDescriptor {
     // remove it and check that it is gone
     desc.removeCoprocessor(className);
     assertFalse(desc.hasCoprocessor(className));
+  }
+
+  /**
+   * Test cps in the table description
+   * @throws Exception
+   */
+  @Test
+  public void testSetListRemoveCP() throws Exception {
+    HTableDescriptor desc = new HTableDescriptor("testGetSetRemoveCP");
+    // simple CP
+    String className1 = BaseRegionObserver.class.getName();
+    String className2 = SampleRegionWALObserver.class.getName();
+    // Check that any coprocessor is present.
+    assertTrue(desc.getCoprocessors().size() == 0);
+
+    // Add the 1 coprocessor and check if present.
+    desc.addCoprocessor(className1);
+    assertTrue(desc.getCoprocessors().size() == 1);
+    assertTrue(desc.getCoprocessors().contains(className1));
+
+    // Add the 2nd coprocessor and check if present.
+    // remove it and check that it is gone
+    desc.addCoprocessor(className2);
+    assertTrue(desc.getCoprocessors().size() == 2);
+    assertTrue(desc.getCoprocessors().contains(className2));
+
+    // Remove one and check
+    desc.removeCoprocessor(className1);
+    assertTrue(desc.getCoprocessors().size() == 1);
+    assertFalse(desc.getCoprocessors().contains(className1));
+    assertTrue(desc.getCoprocessors().contains(className2));
+
+    // Remove the last and check
+    desc.removeCoprocessor(className2);
+    assertTrue(desc.getCoprocessors().size() == 0);
+    assertFalse(desc.getCoprocessors().contains(className1));
+    assertFalse(desc.getCoprocessors().contains(className2));
   }
 
   /**
