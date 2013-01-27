@@ -106,8 +106,6 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     Leases leases = re.getRegionServerServices().getLeases();
     leases.createLease("x", 2000, null);
     leases.cancelLease("x");
-    Integer lid = re.getRegion().getLock(null, Bytes.toBytes("some row"), true);
-    re.getRegion().releaseRowLock(lid);
   }
 
   @Override

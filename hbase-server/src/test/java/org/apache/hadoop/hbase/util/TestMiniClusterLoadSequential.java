@@ -58,7 +58,7 @@ public class TestMiniClusterLoadSequential {
   protected static final byte[] CF = Bytes.toBytes("load_test_cf");
   protected static final int NUM_THREADS = 8;
   protected static final int NUM_RS = 2;
-  protected static final int TIMEOUT_MS = 120000;
+  protected static final int TIMEOUT_MS = 180000;
   protected static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
 
