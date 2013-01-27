@@ -201,6 +201,7 @@ public class TestRegionServerMetrics {
       // Three gets. one for gets. One for append. One for increment.
       assertTimeVaryingMetricCount(4, TABLE_NAME, cf, regionName, "get_");
   
+      hTable.close();
     }
   
   @Test
@@ -227,6 +228,8 @@ public class TestRegionServerMetrics {
     admin.deleteTable(TABLE_NAME.getBytes());
 
     assertTimeVaryingMetricCount(0, TABLE_NAME, cf, regionName, "get_");
+
+    hTable.close();
   }
   
   @Test
@@ -346,6 +349,8 @@ public class TestRegionServerMetrics {
     }
     assertSizeMetric(tableName, cfs,
         new int[] {kvLength, kvLength, kvLength, kvLength});
+
+    hTable.close();
   }
 }
 
