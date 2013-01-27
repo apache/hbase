@@ -874,119 +874,116 @@ public class TestAdmin {
     assertFalse(admin.tableExists(tableName));
     final HTable table = TEST_UTIL.createTable(tableName, familyNames,
       numVersions, blockSize);
-    try {
-      int rowCount = 0;
-      byte[] q = new byte[0];
+    int rowCount = 0;
+    byte[] q = new byte[0];
 
-      // insert rows into column families. The number of rows that have values
-      // in a specific column family is decided by rowCounts[familyIndex]
-      for (int index = 0; index < familyNames.length; index++) {
-        ArrayList<Put> puts = new ArrayList<Put>(rowCounts[index]);
-        for (int i = 0; i < rowCounts[index]; i++) {
-          byte[] k = Bytes.toBytes(i);
-          Put put = new Put(k);
-          put.add(familyNames[index], q, k);
-          puts.add(put);
-        }
-        table.put(puts);
-
-        if ( rowCount < rowCounts[index] ) {
-          rowCount = rowCounts[index];
-        }
+    // insert rows into column families. The number of rows that have values
+    // in a specific column family is decided by rowCounts[familyIndex]
+    for (int index = 0; index < familyNames.length; index++) {
+      ArrayList<Put> puts = new ArrayList<Put>(rowCounts[index]);
+      for (int i = 0; i < rowCounts[index]; i++) {
+        byte[] k = Bytes.toBytes(i);
+        Put put = new Put(k);
+        put.add(familyNames[index], q, k);
+        puts.add(put);
       }
+      table.put(puts);
 
-      // get the initial layout (should just be one region)
-      Map<HRegionInfo,HServerAddress> m = table.getRegionsInfo();
-      System.out.println("Initial regions (" + m.size() + "): " + m);
-      assertTrue(m.size() == 1);
-
-      // Verify row count
-      Scan scan = new Scan();
-      ResultScanner scanner = table.getScanner(scan);
-      int rows = 0;
-      for(@SuppressWarnings("unused") Result result : scanner) {
-        rows++;
+      if ( rowCount < rowCounts[index] ) {
+        rowCount = rowCounts[index];
       }
-      scanner.close();
-      assertEquals(rowCount, rows);
-
-      // Have an outstanding scan going on to make sure we can scan over splits.
-      scan = new Scan();
-      scanner = table.getScanner(scan);
-      // Scan first row so we are into first region before split happens.
-      scanner.next();
-
-      final AtomicInteger count = new AtomicInteger(0);
-      Thread t = new Thread("CheckForSplit") {
-        public void run() {
-          for (int i = 0; i < 20; i++) {
-            try {
-              sleep(1000);
-            } catch (InterruptedException e) {
-              continue;
-            }
-            // check again    table = new HTable(conf, tableName);
-            Map<HRegionInfo, HServerAddress> regions = null;
-            try {
-              regions = table.getRegionsInfo();
-            } catch (IOException e) {
-              e.printStackTrace();
-            }
-            if (regions == null) continue;
-            count.set(regions.size());
-            if (count.get() >= 2) break;
-            LOG.debug("Cycle waiting on split");
-          }
-        }
-      };
-      t.start();
-      // Split the table
-      this.admin.split(tableName, splitPoint);
-      t.join();
-
-      // Verify row count
-      rows = 1; // We counted one row above.
-      for (@SuppressWarnings("unused") Result result : scanner) {
-        rows++;
-        if (rows > rowCount) {
-          scanner.close();
-          assertTrue("Scanned more than expected (" + rowCount + ")", false);
-        }
-      }
-      scanner.close();
-      assertEquals(rowCount, rows);
-
-      Map<HRegionInfo, HServerAddress> regions = null;
-      try {
-        regions = table.getRegionsInfo();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-      assertEquals(2, regions.size());
-      HRegionInfo[] r = regions.keySet().toArray(new HRegionInfo[0]);
-      if (splitPoint != null) {
-        // make sure the split point matches our explicit configuration
-        assertEquals(Bytes.toString(splitPoint),
-            Bytes.toString(r[0].getEndKey()));
-        assertEquals(Bytes.toString(splitPoint),
-            Bytes.toString(r[1].getStartKey()));
-        LOG.debug("Properly split on " + Bytes.toString(splitPoint));
-      } else {
-        if (familyNames.length > 1) {
-          int splitKey = Bytes.toInt(r[0].getEndKey());
-          // check if splitKey is based on the largest column family
-          // in terms of it store size
-          int deltaForLargestFamily = Math.abs(rowCount/2 - splitKey);
-          for (int index = 0; index < familyNames.length; index++) {
-            int delta = Math.abs(rowCounts[index]/2 - splitKey);
-            assertTrue(delta >= deltaForLargestFamily);
-          }
-        }
-      }
-    } finally {
-      TEST_UTIL.deleteTable(tableName);
-      table.close();
     }
+
+    // get the initial layout (should just be one region)
+    Map<HRegionInfo,HServerAddress> m = table.getRegionsInfo();
+    System.out.println("Initial regions (" + m.size() + "): " + m);
+    assertTrue(m.size() == 1);
+
+    // Verify row count
+    Scan scan = new Scan();
+    ResultScanner scanner = table.getScanner(scan);
+    int rows = 0;
+    for(@SuppressWarnings("unused") Result result : scanner) {
+      rows++;
+    }
+    scanner.close();
+    assertEquals(rowCount, rows);
+
+    // Have an outstanding scan going on to make sure we can scan over splits.
+    scan = new Scan();
+    scanner = table.getScanner(scan);
+    // Scan first row so we are into first region before split happens.
+    scanner.next();
+
+    final AtomicInteger count = new AtomicInteger(0);
+    Thread t = new Thread("CheckForSplit") {
+      public void run() {
+        for (int i = 0; i < 20; i++) {
+          try {
+            sleep(1000);
+          } catch (InterruptedException e) {
+            continue;
+          }
+          // check again    table = new HTable(conf, tableName);
+          Map<HRegionInfo, HServerAddress> regions = null;
+          try {
+            regions = table.getRegionsInfo();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+          if (regions == null) continue;
+          count.set(regions.size());
+          if (count.get() >= 2) break;
+          LOG.debug("Cycle waiting on split");
+        }
+      }
+    };
+    t.start();
+    // Split the table
+    this.admin.split(tableName, splitPoint);
+    t.join();
+
+    // Verify row count
+    rows = 1; // We counted one row above.
+    for (@SuppressWarnings("unused") Result result : scanner) {
+      rows++;
+      if (rows > rowCount) {
+        scanner.close();
+        assertTrue("Scanned more than expected (" + rowCount + ")", false);
+      }
+    }
+    scanner.close();
+    assertEquals(rowCount, rows);
+
+    Map<HRegionInfo, HServerAddress> regions = null;
+    try {
+      regions = table.getRegionsInfo();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    assertEquals(2, regions.size());
+    HRegionInfo[] r = regions.keySet().toArray(new HRegionInfo[0]);
+    if (splitPoint != null) {
+      // make sure the split point matches our explicit configuration
+      assertEquals(Bytes.toString(splitPoint),
+          Bytes.toString(r[0].getEndKey()));
+      assertEquals(Bytes.toString(splitPoint),
+          Bytes.toString(r[1].getStartKey()));
+      LOG.debug("Properly split on " + Bytes.toString(splitPoint));
+    } else {
+      if (familyNames.length > 1) {
+        int splitKey = Bytes.toInt(r[0].getEndKey());
+        // check if splitKey is based on the largest column family
+        // in terms of it store size
+        int deltaForLargestFamily = Math.abs(rowCount/2 - splitKey);
+        for (int index = 0; index < familyNames.length; index++) {
+          int delta = Math.abs(rowCounts[index]/2 - splitKey);
+          assertTrue(delta >= deltaForLargestFamily);
+        }
+      }
+    }
+    TEST_UTIL.deleteTable(tableName);
+    table.close();
   }
 
   /**

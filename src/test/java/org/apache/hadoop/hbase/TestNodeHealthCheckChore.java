@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -55,26 +56,28 @@ public class TestNodeHealthCheckChore {
     Configuration config = getConfForNodeHealthScript();
     config.addResource(healthScriptFile.getName());
     String location = healthScriptFile.getAbsolutePath();
-    long timeout = config.getLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 100);
+    long timeout = config.getLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 200);
+
+    HealthChecker checker = new HealthChecker();
+    checker.init(location, timeout);
 
     String normalScript = "echo \"I am all fine\"";
     createScript(normalScript, true);
-    HealthChecker checker = new HealthChecker();
-    checker.init(location, timeout);
     HealthReport report = checker.checkHealth();
-    assertTrue(report.getStatus() == HealthCheckerExitStatus.SUCCESS);
+    assertEquals(HealthCheckerExitStatus.SUCCESS, report.getStatus());
+
     LOG.info("Health Status:" + checker);
 
     String errorScript = "echo ERROR\n echo \"Node not healthy\"";
     createScript(errorScript, true);
     report = checker.checkHealth();
-    assertTrue(report.getStatus() == HealthCheckerExitStatus.FAILED);
+    assertEquals(HealthCheckerExitStatus.FAILED, report.getStatus());
     LOG.info("Health Status:" + report.getHealthReport());
 
     String timeOutScript = "sleep 4\n echo\"I am fine\"";
     createScript(timeOutScript, true);
     report = checker.checkHealth();
-    assertTrue(report.getStatus() == HealthCheckerExitStatus.TIMED_OUT);
+    assertEquals(HealthCheckerExitStatus.TIMED_OUT, report.getStatus());
     LOG.info("Health Status:" + report.getHealthReport());
 
     healthScriptFile.delete();
@@ -113,7 +116,7 @@ public class TestNodeHealthCheckChore {
     conf.set(HConstants.HEALTH_SCRIPT_LOC,
       healthScriptFile.getAbsolutePath());
     conf.setLong(HConstants.HEALTH_FAILURE_THRESHOLD, 3);
-    conf.setLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 100);
+    conf.setLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 200);
     return conf;
   }
 

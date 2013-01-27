@@ -106,7 +106,7 @@ public class TestSplitLogManager {
 
     stopped = false;
     resetCounters();
-    to = 4000;
+    to = 6000;
     conf.setInt("hbase.splitlog.manager.timeout", to);
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 2 * to);
     conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 100);

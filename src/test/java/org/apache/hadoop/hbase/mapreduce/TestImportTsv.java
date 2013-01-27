@@ -23,6 +23,8 @@ import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -52,6 +54,7 @@ import static org.junit.Assert.*;
 
 @Category(MediumTests.class)
 public class TestImportTsv {
+  private static final Log LOG = LogFactory.getLog(TestImportTsv.class);
 
   @Test
   public void testTsvParserSpecParsing() {
@@ -185,7 +188,7 @@ public class TestImportTsv {
     // Cluster
     HBaseTestingUtility htu1 = new HBaseTestingUtility();
 
-    MiniHBaseCluster cluster = htu1.startMiniCluster();
+    htu1.startMiniCluster();
     htu1.startMiniMapReduceCluster();
 
     GenericOptionsParser opts = new GenericOptionsParser(htu1.getConfiguration(), args);
@@ -193,7 +196,6 @@ public class TestImportTsv {
     args = opts.getRemainingArgs();
 
     try {
-
       FileSystem fs = FileSystem.get(conf);
       FSDataOutputStream op = fs.create(new Path(inputFile), true);
       String line = "KEY\u001bVALUE1\u001bVALUE2\n";
@@ -202,13 +204,14 @@ public class TestImportTsv {
 
       final byte[] FAM = Bytes.toBytes(family);
       final byte[] TAB = Bytes.toBytes(tableName);
-      final byte[] QA = Bytes.toBytes("A");
-      final byte[] QB = Bytes.toBytes("B");
       if (conf.get(ImportTsv.BULK_OUTPUT_CONF_KEY) == null) {
         HTableDescriptor desc = new HTableDescriptor(TAB);
         desc.addFamily(new HColumnDescriptor(FAM));
-        new HBaseAdmin(conf).createTable(desc);
+        HBaseAdmin admin = new HBaseAdmin(conf);
+        admin.createTable(desc);
+        admin.close();
       } else { // set the hbaseAdmin as we are not going through main()
+        LOG.info("set the hbaseAdmin");
         ImportTsv.createHbaseAdmin(conf);
       }
       Job job = ImportTsv.createSubmittableJob(conf, args);
@@ -250,6 +253,7 @@ public class TestImportTsv {
           // continue
         }
       }
+      table.close();
       assertTrue(verified);
     } finally {
       htu1.shutdownMiniMapReduceCluster();
