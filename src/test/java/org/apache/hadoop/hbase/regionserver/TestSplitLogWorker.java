@@ -139,7 +139,7 @@ public class TestSplitLogWorker {
       "rs", neverEndingTask);
     slw.start();
     try {
-      waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
+      waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "tatas")), "rs"));
     } finally {
@@ -174,10 +174,10 @@ public class TestSplitLogWorker {
     slw1.start();
     slw2.start();
     try {
-      waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
+      waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
       // Assert that either the tot_wkr_failed_to_grab_task_owned count was set of if
       // not it, that we fell through to the next counter in line and it was set.
-      assertTrue(waitForCounterBoolean(tot_wkr_failed_to_grab_task_owned, 0, 1, 1000) ||
+      assertTrue(waitForCounterBoolean(tot_wkr_failed_to_grab_task_owned, 0, 1, 1500) ||
         tot_wkr_failed_to_grab_task_lost_race.get() == 1);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "trft")), "svr1") ||
@@ -206,14 +206,14 @@ public class TestSplitLogWorker {
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-      waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
+      waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
       assertEquals(1, slw.taskReadySeq);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "tpt_task")), "tpt_svr"));
 
       ZKUtil.setData(zkw, ZKSplitLog.getEncodedNodeName(zkw, "tpt_task"),
         TaskState.TASK_UNASSIGNED.get("manager"));
-      waitForCounter(tot_wkr_preempt_task, 0, 1, 1000);
+      waitForCounter(tot_wkr_preempt_task, 0, 1, 1500);
     } finally {
       stopSplitLogWorker(slw);
     }
@@ -234,7 +234,7 @@ public class TestSplitLogWorker {
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-      waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
+      waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
       // now the worker is busy doing the above task
 
       // create another task
@@ -245,9 +245,9 @@ public class TestSplitLogWorker {
       // preempt the first task, have it owned by another worker
       ZKUtil.setData(zkw, ZKSplitLog.getEncodedNodeName(zkw, "tmt_task"),
         TaskState.TASK_OWNED.get("another-worker"));
-      waitForCounter(tot_wkr_preempt_task, 0, 1, 1000);
+      waitForCounter(tot_wkr_preempt_task, 0, 1, 1500);
 
-      waitForCounter(tot_wkr_task_acquired, 1, 2, 1000);
+      waitForCounter(tot_wkr_task_acquired, 1, 2, 1500);
       assertEquals(2, slw.taskReadySeq);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "tmt_task_2")), "tmt_svr"));
@@ -264,19 +264,19 @@ public class TestSplitLogWorker {
         "svr", neverEndingTask);
     slw.start();
     Thread.yield(); // let the worker start
-    Thread.sleep(100);
+    Thread.sleep(200);
 
     String task = ZKSplitLog.getEncodedNodeName(zkw, "task");
     zkw.getRecoverableZooKeeper().create(task,
       TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
       CreateMode.PERSISTENT);
 
-    waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
+    waitForCounter(tot_wkr_task_acquired, 0, 1, 1500);
     // now the worker is busy doing the above task
 
     // preempt the task, have it owned by another worker
     ZKUtil.setData(zkw, task, TaskState.TASK_UNASSIGNED.get("manager"));
-    waitForCounter(tot_wkr_preempt_task, 0, 1, 1000);
+    waitForCounter(tot_wkr_preempt_task, 0, 1, 1500);
 
     // create a RESCAN node
     String rescan = ZKSplitLog.getEncodedNodeName(zkw, "RESCAN");
@@ -284,13 +284,13 @@ public class TestSplitLogWorker {
       TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
       CreateMode.PERSISTENT_SEQUENTIAL);
 
-    waitForCounter(tot_wkr_task_acquired, 1, 2, 1000);
+    waitForCounter(tot_wkr_task_acquired, 1, 2, 1500);
     // RESCAN node might not have been processed if the worker became busy
     // with the above task. preempt the task again so that now the RESCAN
     // node is processed
     ZKUtil.setData(zkw, task, TaskState.TASK_UNASSIGNED.get("manager"));
-    waitForCounter(tot_wkr_preempt_task, 1, 2, 1000);
-    waitForCounter(tot_wkr_task_acquired_rescan, 0, 1, 1000);
+    waitForCounter(tot_wkr_preempt_task, 1, 2, 1500);
+    waitForCounter(tot_wkr_task_acquired_rescan, 0, 1, 1500);
 
     List<String> nodes = ZKUtil.listChildrenNoWatch(zkw, zkw.splitLogZNode);
     LOG.debug(nodes);
