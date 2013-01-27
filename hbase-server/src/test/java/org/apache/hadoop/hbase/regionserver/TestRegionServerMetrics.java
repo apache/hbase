@@ -149,6 +149,8 @@ public class TestRegionServerMetrics {
     metricsHelper.assertCounterGt("totalRequestCount", requests + 39, serverSource);
     metricsHelper.assertCounterGt("readRequestCount", readRequests + 9, serverSource);
     metricsHelper.assertCounterGt("writeRequestCount", writeRequests + 29, serverSource);
+
+    table.close();
   }
 
   @Test
@@ -176,6 +178,8 @@ public class TestRegionServerMetrics {
     metricsHelper.assertGauge("putsWithoutWALCount", 1, serverSource);
     long minLength = row.length + cf.length + qualifier.length + val.length;
     metricsHelper.assertGaugeGt("putsWithoutWALSize", minLength, serverSource);
+
+    t.close();
   }
 
   @Test
@@ -203,6 +207,8 @@ public class TestRegionServerMetrics {
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertGauge("storeCount", stores +1, serverSource);
     metricsHelper.assertGauge("storeFileCount", storeFiles + 1, serverSource);
+
+    t.close();
   }
 
   @Test
@@ -237,6 +243,8 @@ public class TestRegionServerMetrics {
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("checkMutateFailedCount", 1, serverSource);
     metricsHelper.assertCounter("checkMutatePassedCount", 1, serverSource);
+
+    t.close();
   }
 
   @Test
@@ -267,6 +275,8 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("incrementNumOps", 13, serverSource);
+
+    t.close();
   }
 
   @Test
@@ -297,5 +307,7 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("appendNumOps", 73, serverSource);
+
+    t.close();
   }
 }
