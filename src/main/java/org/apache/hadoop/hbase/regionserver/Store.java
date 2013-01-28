@@ -166,10 +166,6 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   private final Compactor compactor;
 
-  private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
-  private static int flush_retries_number;
-  private static int pauseTime;
-
   /**
    * Constructor
    * @param basedir qualified path under which the region directory lives;
@@ -249,17 +245,6 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.bytesPerChecksum = getBytesPerChecksum(conf);
     // Create a compaction tool instance
     this.compactor = new Compactor(this.conf);
-    if (Store.flush_retries_number == 0) {
-      Store.flush_retries_number = conf.getInt(
-          "hbase.hstore.flush.retries.number", DEFAULT_FLUSH_RETRIES_NUMBER);
-      Store.pauseTime = conf.getInt(HConstants.HBASE_SERVER_PAUSE,
-          HConstants.DEFAULT_HBASE_SERVER_PAUSE);
-      if (Store.flush_retries_number <= 0) {
-        throw new IllegalArgumentException(
-            "hbase.hstore.flush.retries.number must be > 0, not "
-                + Store.flush_retries_number);
-      }
-    }
   }
 
   /**
@@ -737,43 +722,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
-    // Retry after catching exception when flushing, otherwise server will abort
-    // itself
-    IOException lastException = null;
-    for (int i = 0; i < Store.flush_retries_number; i++) {
-      try {
-        Path pathName = internalFlushCache(snapshot, logCacheFlushId,
-            snapshotTimeRangeTracker, flushedSize, status);
-        try {
-          // Path name is null if there is no entry to flush
-          if (pathName != null) {
-            validateStoreFile(pathName);
-          }
-          return pathName;
-        } catch (Exception e) {
-          LOG.warn("Failed validating store file " + pathName
-              + ", retring num=" + i, e);
-          if (e instanceof IOException) {
-            lastException = (IOException) e;
-          } else {
-            lastException = new IOException(e);
-          }
-        }
-      } catch (IOException e) {
-        LOG.warn("Failed flushing store file, retring num=" + i, e);
-        lastException = e;
-      }
-      if (lastException != null) {
-        try {
-          Thread.sleep(pauseTime);
-        } catch (InterruptedException e) {
-          IOException iie = new InterruptedIOException();
-          iie.initCause(e);
-          throw iie;
-        }
-      }
-    }
-    throw lastException;
+    return internalFlushCache(
+        snapshot, logCacheFlushId, snapshotTimeRangeTracker, flushedSize, status);
   }
 
   /*
@@ -892,6 +842,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     // Write-out finished successfully, move into the right spot
     String fileName = path.getName();
     Path dstPath = new Path(homedir, fileName);
+    validateStoreFile(path);
     String msg = "Renaming flushed file at " + path + " to " + dstPath;
     LOG.debug(msg);
     status.setStatus("Flushing " + this + ": " + msg);
