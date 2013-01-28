@@ -163,7 +163,7 @@ mvn clean package -DskipTests
       <section xml:id="build.tgz">
         <title>Building the HBase tarball</title>
         <para>Do the following to build the HBase tarball.
-        Passing the -Drelease will generate javadoc and run the RAT plugin to verify licenses on source.
+        Passing the -Prelease will generate javadoc and run the RAT plugin to verify licenses on source.
         <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:assembly -DskipTests -Prelease</programlisting>
 </para>
       </section>
@@ -501,11 +501,13 @@ error will be reported when a non-existent test case is specified.
 
 <section xml:id="hbase.unittests.cmds.test.profiles">
 <title>Other test invocation permutations</title>
-<para>Running <programlisting>mvn test -P runSmallTests</programlisting> will execute small tests only, in a single JVM.
+<para>Running <programlisting>mvn test -P runSmallTests</programlisting> will execute "small" tests only, using a single JVM.
 </para>
-<para>Running <programlisting>mvn test -P runMediumTests</programlisting> will execute medium tests in a single JVM.
+<para>Running <programlisting>mvn test -P runMediumTests</programlisting> will execute "medium" tests only, launching a new JVM for each test-class.
 </para>
-<para>Running <programlisting>mvn test -P runLargeTests</programlisting> execute medium tests in a single JVM.
+<para>Running <programlisting>mvn test -P runLargeTests</programlisting> will execute "large" tests only, launching a new JVM for each test-class.
+</para>
+<para>For convenience, you can run <programlisting>mvn test -P runDevTests</programlisting> to execute both small and medium tests, using a single JVM.
 </para>
 </section>
 

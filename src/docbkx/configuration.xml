@@ -402,7 +402,7 @@ to ensure well-formedness of your document after an edit session.
 
         <para>Distributed modes require an instance of the <emphasis>Hadoop
         Distributed File System</emphasis> (HDFS). See the Hadoop <link
-        xlink:href="http://hadoop.apache.org/common/docs/current/api/overview-summary.html#overview_description">
+        xlink:href="http://hadoop.apache.org/common/docs/r1.1.1/api/overview-summary.html#overview_description">
         requirements and instructions</link> for how to set up a HDFS. Before
         proceeding, ensure you have an appropriate, working HDFS.</para>
 
