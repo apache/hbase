@@ -2357,7 +2357,7 @@ Server {
           .mergeFrom(call.getRequest()).build();
       final Message.Builder responseBuilder =
           service.getResponsePrototype(methodDesc).newBuilderForType();
-      service.callMethod(methodDesc, controller, execRequest, new RpcCallback<Message>() {
+      service.callMethod(methodDesc, execController, execRequest, new RpcCallback<Message>() {
         @Override
         public void run(Message message) {
           if (message != null) {

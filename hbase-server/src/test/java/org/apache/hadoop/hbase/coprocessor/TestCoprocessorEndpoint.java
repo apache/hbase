@@ -18,22 +18,20 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
+import com.google.protobuf.ByteString;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
@@ -44,6 +42,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
@@ -53,9 +52,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * TestEndpoint: test cases to verify coprocessor Endpoint
@@ -68,7 +69,7 @@ public class TestCoprocessorEndpoint {
   private static final byte[] TEST_FAMILY = Bytes.toBytes("TestFamily");
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("TestQualifier");
   private static byte[] ROW = Bytes.toBytes("testRow");
-  
+
   private static final int ROWSIZE = 20;
   private static final int rowSeperator1 = 5;
   private static final int rowSeperator2 = 12;
@@ -285,6 +286,41 @@ public class TestCoprocessorEndpoint {
         TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());
     assertEquals("hello", service.echo(null, request).getMessage());
     admin.close();
+  }
+
+  @Test
+  public void testCoprocessorError() throws Exception {
+    Configuration configuration = new Configuration(util.getConfiguration());
+    // Make it not retry forever
+    configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    HTable table = new HTable(configuration, TEST_TABLE);
+
+    try {
+      CoprocessorRpcChannel protocol = table.coprocessorService(ROWS[0]);
+
+      TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
+          TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(protocol);
+
+      service.error(null, TestProtos.EmptyRequestProto.getDefaultInstance());
+      fail("Should have thrown an exception");
+    } catch (ServiceException e) {
+    } finally {
+      table.close();
+    }
+  }
+
+  @Test
+  public void testMasterCoprocessorError() throws Throwable {
+    HBaseAdmin admin = util.getHBaseAdmin();
+    TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
+        TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());
+    try {
+      service.error(null, TestProtos.EmptyRequestProto.getDefaultInstance());
+      fail("Should have thrown an exception");
+    } catch (ServiceException e) {
+    } finally {
+      admin.close();
+    }
   }
 
   private static byte[][] makeN(byte[] base, int n) {
