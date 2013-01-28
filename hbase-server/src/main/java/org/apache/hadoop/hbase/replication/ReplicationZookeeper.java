@@ -995,6 +995,15 @@ public class ReplicationZookeeper implements Closeable {
   public Map<String, ReplicationPeer> getPeerClusters() {
     return this.peerClusters;
   }
+  
+  /**
+   * Determine if a ZK path points to a peer node.
+   * @param path path to be checked
+   * @return true if the path points to a peer node, otherwise false
+   */
+  public boolean isPeerPath(String path) {
+    return path.split("/").length == peersZNode.split("/").length + 1;
+  }
 
   /**
    * Extracts the znode name of a peer cluster from a ZK path

@@ -73,7 +73,7 @@ public class ReplicationSourceManager {
   private final ReplicationZookeeper zkHelper;
   // All about stopping
   private final Stoppable stopper;
-  // All logs we are currently trackign
+  // All logs we are currently tracking
   private final Map<String, SortedSet<String>> hlogsById;
   private final Configuration conf;
   private final FileSystem fs;
@@ -504,8 +504,10 @@ public class ReplicationSourceManager {
       if (peers == null) {
         return;
       }
-      String id = ReplicationZookeeper.getZNodeName(path);
-      removePeer(id);
+      if (zkHelper.isPeerPath(path)) {
+        String id = ReplicationZookeeper.getZNodeName(path);
+        removePeer(id);
+      }
     }
 
     /**
