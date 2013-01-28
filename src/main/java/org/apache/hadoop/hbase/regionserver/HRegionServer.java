@@ -2457,10 +2457,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             results, nbRows);
         if (!results.isEmpty()) {
           for (Result r : results) {
-            if (maxScannerResultSize < Long.MAX_VALUE){
-              for (KeyValue kv : r.raw()) {
-                currentScanResultSize += kv.heapSize();
-              }
+            for (KeyValue kv : r.raw()) {
+              currentScanResultSize += kv.heapSize();
             }
           }
         }
@@ -2480,10 +2478,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             // Collect values to be returned here
             boolean moreRows = s.nextRaw(values, SchemaMetrics.METRIC_NEXTSIZE);
             if (!values.isEmpty()) {
-              if (maxScannerResultSize < Long.MAX_VALUE){
-                for (KeyValue kv : values) {
-                  currentScanResultSize += kv.heapSize();
-                }
+              for (KeyValue kv : values) {
+                currentScanResultSize += kv.heapSize();
               }
               results.add(new Result(values));
             }
