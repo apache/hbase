@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -215,7 +216,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   private String reverseDNS(InetAddress ipAddress) throws NamingException {
     String hostName = this.reverseDNSCacheMap.get(ipAddress);
     if (hostName == null) {
-      hostName = DNS.reverseDns(ipAddress, this.nameServer);
+      hostName = Strings.domainNamePointerToHostName(DNS.reverseDns(ipAddress, this.nameServer));
       this.reverseDNSCacheMap.put(ipAddress, hostName);
     }
     return hostName;
