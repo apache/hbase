@@ -587,60 +587,6 @@ public class TestStoreFile extends HBaseTestCase {
     }
   }
 
-  public void testBloomEdgeCases() throws Exception {
-    float err = (float)0.005;
-    FileSystem fs = FileSystem.getLocal(conf);
-    Path f = new Path(ROOT_DIR, getName());
-    conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, err);
-    conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
-    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_MAX_KEYS, 1000);
-
-    // This test only runs for HFile format version 1.
-    conf.setInt(HFile.FORMAT_VERSION_KEY, 1);
-
-    // this should not create a bloom because the max keys is too small
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, fs,
-        StoreFile.DEFAULT_BLOCKSIZE_SMALL)
-            .withFilePath(f)
-            .withBloomType(BloomType.ROW)
-            .withMaxKeyCount(2000)
-            .withChecksumType(CKTYPE)
-            .withBytesPerChecksum(CKBYTES)
-            .build();
-    assertFalse(writer.hasGeneralBloom());
-    writer.close();
-    fs.delete(f, true);
-
-    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_MAX_KEYS,
-        Integer.MAX_VALUE);
-
-    // TODO: commented out because we run out of java heap space on trunk
-    // the below config caused IllegalArgumentException in our production cluster
-    // however, the resulting byteSize is < MAX_INT, so this should work properly
-    writer = new StoreFile.WriterBuilder(conf, cacheConf, fs,
-        StoreFile.DEFAULT_BLOCKSIZE_SMALL)
-            .withFilePath(f)
-            .withBloomType(BloomType.ROW)
-            .withMaxKeyCount(27244696)
-            .build();
-    assertTrue(writer.hasGeneralBloom());
-    bloomWriteRead(writer, fs);
-
-    // this, however, is too large and should not create a bloom
-    // because Java can't create a contiguous array > MAX_INT
-    writer = new StoreFile.WriterBuilder(conf, cacheConf, fs,
-        StoreFile.DEFAULT_BLOCKSIZE_SMALL)
-            .withFilePath(f)
-            .withBloomType(BloomType.ROW)
-            .withMaxKeyCount(Integer.MAX_VALUE)
-            .withChecksumType(CKTYPE)
-            .withBytesPerChecksum(CKBYTES)
-            .build();
-    assertFalse(writer.hasGeneralBloom());
-    writer.close();
-    fs.delete(f, true);
-  }
-
   public void testSeqIdComparator() {
     assertOrdering(StoreFile.Comparators.SEQ_ID,
         mockStoreFile(true, 1000, -1, "/foo/123"),

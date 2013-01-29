@@ -202,21 +202,6 @@ public class TestSplitTransaction {
     assertFalse(st.prepare());
   }
 
-  @Test public void testWholesomeSplitWithHFileV1() throws IOException {
-    int defaultVersion = TEST_UTIL.getConfiguration().getInt(
-        HFile.FORMAT_VERSION_KEY, 2);
-    TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 1);
-    try {
-      for (Store store : this.parent.stores.values()) {
-        store.getFamily().setBloomFilterType(BloomType.ROW);
-      }
-      testWholesomeSplit();
-    } finally {
-      TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY,
-          defaultVersion);
-    }
-  }
-
   @Test public void testWholesomeSplit() throws IOException {
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF, true);
     assertTrue(rowcount > 0);

@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
@@ -1535,7 +1534,7 @@ public class StoreFile {
           bloom = null;
           shouldCheckBloom = true;
         } else {
-          bloom = reader.getMetaBlock(HFileWriterV1.BLOOM_FILTER_DATA_KEY,
+          bloom = reader.getMetaBlock(HFile.BLOOM_FILTER_DATA_KEY,
               true);
           shouldCheckBloom = bloom != null;
         }
