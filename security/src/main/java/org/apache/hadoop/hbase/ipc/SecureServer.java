@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
@@ -620,8 +621,13 @@ public abstract class SecureServer extends HBaseServer {
 
       if (priorityCallQueue != null && getQosLevel(param) > highPriorityLevel) {
         priorityCallQueue.put(call);
+        updateCallQueueLenMetrics(priorityCallQueue);
+      } else if (replicationQueue != null && getQosLevel(param) == HConstants.REPLICATION_QOS) {
+        replicationQueue.put(call);
+        updateCallQueueLenMetrics(replicationQueue);
       } else {
         callQueue.put(call);              // queue the call; maybe blocked here
+        updateCallQueueLenMetrics(callQueue);
       }
     }
 
