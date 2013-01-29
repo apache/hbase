@@ -166,7 +166,7 @@ public class TestMetaReaderEditorNoCluster {
         openScanner((byte [])Mockito.any(), (Scan)Mockito.any());
     } finally {
       if (ct != null) ct.stop();
-      HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
+      HConnectionManager.deleteConnection(UTIL.getConfiguration());
       zkw.close();
     }
   }

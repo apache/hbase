@@ -83,14 +83,6 @@ public class HBaseRPC {
    */
   public static final String RPC_ENGINE_PROP = "hbase.rpc.engine";
 
-  // cache of RpcEngines by protocol
-  private static final Map<Class,RpcEngine> PROTOCOL_ENGINES
-    = new HashMap<Class,RpcEngine>();
-
-  // track what RpcEngine is used by a proxy class, for stopProxy()
-  private static final Map<Class,RpcEngine> PROXY_ENGINES
-    = new HashMap<Class,RpcEngine>();
-
   // thread-specific RPC timeout, which may override that of RpcEngine
   private static ThreadLocal<Integer> rpcTimeout = new ThreadLocal<Integer>() {
     @Override
@@ -99,38 +91,17 @@ public class HBaseRPC {
       }
     };
 
-  // set a protocol to use a non-default RpcEngine
-  static void setProtocolEngine(Configuration conf,
-                                Class protocol, Class engine) {
-    conf.setClass(RPC_ENGINE_PROP+"."+protocol.getName(), engine, RpcEngine.class);
-  }
+  /**
+   * Returns a new instance of the configured {@link RpcEngine} implementation.
+   */
+  public static synchronized RpcEngine getProtocolEngine(Configuration conf) {
+    // check for a configured default engine
+    Class<?> impl =
+        conf.getClass(RPC_ENGINE_PROP, WritableRpcEngine.class);
 
-  // return the RpcEngine configured to handle a protocol
-  private static synchronized RpcEngine getProtocolEngine(Class protocol,
-                                                          Configuration conf) {
-    RpcEngine engine = PROTOCOL_ENGINES.get(protocol);
-    if (engine == null) {
-      // check for a configured default engine
-      Class<?> defaultEngine =
-          conf.getClass(RPC_ENGINE_PROP, WritableRpcEngine.class);
-
-      // check for a per interface override
-      Class<?> impl = conf.getClass(RPC_ENGINE_PROP+"."+protocol.getName(),
-                                    defaultEngine);
-      LOG.debug("Using "+impl.getName()+" for "+protocol.getName());
-      engine = (RpcEngine) ReflectionUtils.newInstance(impl, conf);
-      if (protocol.isInterface())
-        PROXY_ENGINES.put(Proxy.getProxyClass(protocol.getClassLoader(),
-                                              protocol),
-                          engine);
-      PROTOCOL_ENGINES.put(protocol, engine);
-    }
+    LOG.debug("Using RpcEngine: "+impl.getName());
+    RpcEngine engine = (RpcEngine) ReflectionUtils.newInstance(impl, conf);
     return engine;
-  }
-
-  // return the RpcEngine that handles a proxy object
-  private static synchronized RpcEngine getProxyEngine(Object proxy) {
-    return PROXY_ENGINES.get(proxy.getClass());
   }
 
   /**
@@ -219,21 +190,22 @@ public class HBaseRPC {
    * @throws IOException e
    */
   @SuppressWarnings("unchecked")
-  public static VersionedProtocol waitForProxy(Class protocol,
+  public static <T extends VersionedProtocol> T waitForProxy(RpcEngine rpcClient,
+                                               Class<T> protocol,
                                                long clientVersion,
                                                InetSocketAddress addr,
                                                Configuration conf,
                                                int maxAttempts,
                                                int rpcTimeout,
                                                long timeout
-                                               ) throws IOException {
+  ) throws IOException {
     // HBase does limited number of reconnects which is different from hadoop.
     long startTime = System.currentTimeMillis();
     IOException ioe;
     int reconnectAttempts = 0;
     while (true) {
       try {
-        return getProxy(protocol, clientVersion, addr, conf, rpcTimeout);
+        return rpcClient.getProxy(protocol, clientVersion, addr, conf, rpcTimeout);
       } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);
         ioe = te;
@@ -294,88 +266,6 @@ public class HBaseRPC {
   }
   
   /**
-   * Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address.
-   *
-   * @param protocol interface
-   * @param clientVersion version we are expecting
-   * @param addr remote address
-   * @param conf configuration
-   * @param factory socket factory
-   * @param rpcTimeout timeout for each RPC
-   * @return proxy
-   * @throws IOException e
-   */
-  public static VersionedProtocol getProxy(Class<? extends VersionedProtocol> protocol,
-      long clientVersion, InetSocketAddress addr, Configuration conf,
-      SocketFactory factory, int rpcTimeout) throws IOException {
-    return getProxy(protocol, clientVersion, addr,
-        User.getCurrent(), conf, factory, rpcTimeout);
-  }
-
-  /**
-   * Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address.
-   *
-   * @param protocol interface
-   * @param clientVersion version we are expecting
-   * @param addr remote address
-   * @param ticket ticket
-   * @param conf configuration
-   * @param factory socket factory
-   * @param rpcTimeout timeout for each RPC
-   * @return proxy
-   * @throws IOException e
-   */
-  public static VersionedProtocol getProxy(
-      Class<? extends VersionedProtocol> protocol,
-      long clientVersion, InetSocketAddress addr, User ticket,
-      Configuration conf, SocketFactory factory, int rpcTimeout)
-  throws IOException {
-    VersionedProtocol proxy =
-        getProtocolEngine(protocol,conf)
-            .getProxy(protocol, clientVersion, addr, ticket, conf, factory, Math.min(rpcTimeout, HBaseRPC.getRpcTimeout()));
-    long serverVersion = proxy.getProtocolVersion(protocol.getName(),
-                                                  clientVersion);
-    if (serverVersion == clientVersion) {
-      return proxy;
-    }
-    throw new VersionMismatch(protocol.getName(), clientVersion,
-                              serverVersion);
-  }
-
-  /**
-   * Construct a client-side proxy object with the default SocketFactory
-   *
-   * @param protocol interface
-   * @param clientVersion version we are expecting
-   * @param addr remote address
-   * @param conf configuration
-   * @param rpcTimeout timeout for each RPC
-   * @return a proxy instance
-   * @throws IOException e
-   */
-  public static VersionedProtocol getProxy(
-      Class<? extends VersionedProtocol> protocol,
-      long clientVersion, InetSocketAddress addr, Configuration conf,
-      int rpcTimeout)
-      throws IOException {
-
-    return getProxy(protocol, clientVersion, addr, conf, NetUtils
-        .getDefaultSocketFactory(conf), rpcTimeout);
-  }
-
-  /**
-   * Stop this proxy and release its invoker's resource
-   * @param proxy the proxy to be stopped
-   */
-  public static void stopProxy(VersionedProtocol proxy) {
-    if (proxy!=null) {
-      getProxyEngine(proxy).stopProxy(proxy);
-    }
-  }
-
-  /**
    * Expert: Make multiple, parallel calls to a set of servers.
    *
    * @param method method to invoke
@@ -385,7 +275,7 @@ public class HBaseRPC {
    * @return values
    * @throws IOException e
    * @deprecated Instead of calling statically, use
-   *     {@link HBaseRPC#getProtocolEngine(Class, org.apache.hadoop.conf.Configuration)}
+   *     {@link HBaseRPC#getProtocolEngine(org.apache.hadoop.conf.Configuration)}
    *     to obtain an {@link RpcEngine} instance and then use
    *     {@link RpcEngine#call(java.lang.reflect.Method, Object[][], java.net.InetSocketAddress[], Class, org.apache.hadoop.hbase.security.User, org.apache.hadoop.conf.Configuration)}
    */
@@ -396,8 +286,15 @@ public class HBaseRPC {
       User ticket,
       Configuration conf)
     throws IOException, InterruptedException {
-    return getProtocolEngine(protocol, conf)
-      .call(method, params, addrs, protocol, ticket, conf);
+    Object[] result = null;
+    RpcEngine engine = null;
+    try {
+      engine = getProtocolEngine(conf);
+      result = engine.call(method, params, addrs, protocol, ticket, conf);
+    } finally {
+      engine.close();
+    }
+    return result;
   }
 
   /**
@@ -430,7 +327,7 @@ public class HBaseRPC {
                                  final int numHandlers,
                                  int metaHandlerCount, final boolean verbose, Configuration conf, int highPriorityLevel)
     throws IOException {
-    return getProtocolEngine(protocol, conf)
+    return getProtocolEngine(conf)
         .getServer(protocol, instance, ifaces, bindAddress, port, numHandlers, metaHandlerCount, verbose, conf, highPriorityLevel);
   }
 
@@ -444,5 +341,13 @@ public class HBaseRPC {
 
   public static void resetRpcTimeout() {
     HBaseRPC.rpcTimeout.remove();
+  }
+
+  /**
+   * Returns the lower of the thread-local RPC time from {@link #setRpcTimeout(int)} and the given
+   * default timeout.
+   */
+  public static int getRpcTimeout(int defaultTimeout) {
+    return Math.min(defaultTimeout, HBaseRPC.rpcTimeout.get());
   }
 }

@@ -193,7 +193,7 @@ public class TestHCM {
   }
 
   /**
-   * Make sure that {@link HConfiguration} instances that are essentially the
+   * Make sure that {@link Configuration} instances that are essentially the
    * same map to the same {@link HConnection} instance.
    */
   @Test
@@ -267,7 +267,7 @@ public class TestHCM {
     } finally {
       for (HConnection c: connections) {
         // Clean up connections made so we don't interfere w/ subsequent tests.
-        HConnectionManager.deleteConnection(c.getConfiguration(), true);
+        HConnectionManager.deleteConnection(c.getConfiguration());
       }
     }
   }

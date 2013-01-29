@@ -70,30 +70,38 @@ public class TestDelayedRpc {
     rpcServer = HBaseRPC.getServer(new TestRpcImpl(delayReturnValue),
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
-    rpcServer.start();
+    RpcEngine rpcEngine = null;
+    try {
+      rpcServer.start();
+      rpcEngine = HBaseRPC.getProtocolEngine(conf);
 
-    TestRpc client = (TestRpc) HBaseRPC.getProxy(TestRpc.class, 0,
+      TestRpc client = rpcEngine.getProxy(TestRpc.class, 0,
         rpcServer.getListenerAddress(), conf, 1000);
 
-    List<Integer> results = new ArrayList<Integer>();
+      List<Integer> results = new ArrayList<Integer>();
 
-    TestThread th1 = new TestThread(client, true, results);
-    TestThread th2 = new TestThread(client, false, results);
-    TestThread th3 = new TestThread(client, false, results);
-    th1.start();
-    Thread.sleep(100);
-    th2.start();
-    Thread.sleep(200);
-    th3.start();
+      TestThread th1 = new TestThread(client, true, results);
+      TestThread th2 = new TestThread(client, false, results);
+      TestThread th3 = new TestThread(client, false, results);
+      th1.start();
+      Thread.sleep(100);
+      th2.start();
+      Thread.sleep(200);
+      th3.start();
 
-    th1.join();
-    th2.join();
-    th3.join();
+      th1.join();
+      th2.join();
+      th3.join();
 
-    assertEquals(UNDELAYED, results.get(0).intValue());
-    assertEquals(UNDELAYED, results.get(1).intValue());
-    assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :
-        0xDEADBEEF);
+      assertEquals(UNDELAYED, results.get(0).intValue());
+      assertEquals(UNDELAYED, results.get(1).intValue());
+      assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :
+          0xDEADBEEF);
+    } finally {
+      if (rpcEngine != null) {
+        rpcEngine.close();
+      }
+    }
   }
 
   private static class ListAppender extends AppenderSkeleton {
@@ -133,33 +141,42 @@ public class TestDelayedRpc {
     rpcServer = HBaseRPC.getServer(new TestRpcImpl(true),
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
-    rpcServer.start();
-    TestRpc client = (TestRpc) HBaseRPC.getProxy(TestRpc.class, 0,
-        rpcServer.getListenerAddress(), conf, 1000);
+    RpcEngine rpcEngine = null;
+    try {
+      rpcServer.start();
+      rpcEngine = HBaseRPC.getProtocolEngine(conf);
 
-    Thread threads[] = new Thread[MAX_DELAYED_RPC + 1];
+      TestRpc client = rpcEngine.getProxy(TestRpc.class, 0,
+          rpcServer.getListenerAddress(), conf, 1000);
 
-    for (int i = 0; i < MAX_DELAYED_RPC; i++) {
-      threads[i] = new TestThread(client, true, null);
-      threads[i].start();
+      Thread threads[] = new Thread[MAX_DELAYED_RPC + 1];
+
+      for (int i = 0; i < MAX_DELAYED_RPC; i++) {
+        threads[i] = new TestThread(client, true, null);
+        threads[i].start();
+      }
+
+      /* No warnings till here. */
+      assertTrue(listAppender.getMessages().isEmpty());
+
+      /* This should give a warning. */
+      threads[MAX_DELAYED_RPC] = new TestThread(client, true, null);
+      threads[MAX_DELAYED_RPC].start();
+
+      for (int i = 0; i < MAX_DELAYED_RPC; i++) {
+        threads[i].join();
+      }
+
+      assertFalse(listAppender.getMessages().isEmpty());
+      assertTrue(listAppender.getMessages().get(0).startsWith(
+          "Too many delayed calls"));
+
+      log.removeAppender(listAppender);
+    } finally {
+      if (rpcEngine != null) {
+        rpcEngine.close();
+      }
     }
-
-    /* No warnings till here. */
-    assertTrue(listAppender.getMessages().isEmpty());
-
-    /* This should give a warning. */
-    threads[MAX_DELAYED_RPC] = new TestThread(client, true, null);
-    threads[MAX_DELAYED_RPC].start();
-
-    for (int i = 0; i < MAX_DELAYED_RPC; i++) {
-      threads[i].join();
-    }
-
-    assertFalse(listAppender.getMessages().isEmpty());
-    assertTrue(listAppender.getMessages().get(0).startsWith(
-        "Too many delayed calls"));
-
-    log.removeAppender(listAppender);
   }
 
   public interface TestRpc extends VersionedProtocol {
@@ -177,7 +194,6 @@ public class TestDelayedRpc {
     /**
      * @param delayReturnValue Should the response to the delayed call be set
      * at the start or the end of the delay.
-     * @param delay Amount of milliseconds to delay the call by
      */
     public TestRpcImpl(boolean delayReturnValue) {
       this.delayReturnValue = delayReturnValue;
@@ -256,30 +272,38 @@ public class TestDelayedRpc {
     rpcServer = HBaseRPC.getServer(new FaultyTestRpc(),
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
-    rpcServer.start();
-
-    TestRpc client = (TestRpc) HBaseRPC.getProxy(TestRpc.class, 0,
-        rpcServer.getListenerAddress(), conf, 1000);
-
-    int result = 0xDEADBEEF;
-
+    RpcEngine rpcEngine = null;
     try {
-      result = client.test(false);
-    } catch (Exception e) {
-      fail("No exception should have been thrown.");
-    }
-    assertEquals(result, UNDELAYED);
+      rpcServer.start();
+      rpcEngine = HBaseRPC.getProtocolEngine(conf);
 
-    boolean caughtException = false;
-    try {
-      result = client.test(true);
-    } catch(Exception e) {
-      // Exception thrown by server is enclosed in a RemoteException.
-      if (e.getCause().getMessage().startsWith(
-          "java.lang.Exception: Something went wrong"))
-        caughtException = true;
+      TestRpc client = rpcEngine.getProxy(TestRpc.class, 0,
+          rpcServer.getListenerAddress(), conf, 1000);
+
+      int result = 0xDEADBEEF;
+
+      try {
+        result = client.test(false);
+      } catch (Exception e) {
+        fail("No exception should have been thrown.");
+      }
+      assertEquals(result, UNDELAYED);
+
+      boolean caughtException = false;
+      try {
+        result = client.test(true);
+      } catch(Exception e) {
+        // Exception thrown by server is enclosed in a RemoteException.
+        if (e.getCause().getMessage().startsWith(
+            "java.lang.Exception: Something went wrong"))
+          caughtException = true;
+      }
+      assertTrue(caughtException);
+    } finally {
+      if (rpcEngine != null) {
+        rpcEngine.close();
+      }
     }
-    assertTrue(caughtException);
   }
 
   /**

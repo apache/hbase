@@ -123,6 +123,7 @@ import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.Invocation;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
+import org.apache.hadoop.hbase.ipc.RpcEngine;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
@@ -233,6 +234,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // Remote HMaster
   private HMasterRegionInterface hbaseMaster;
+
+  // RPC Engine for master connection
+  private RpcEngine rpcEngine;
 
   // Server to handle client requests. Default access so can be accessed by
   // unit tests.
@@ -587,6 +591,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       for (int i = 0; i < nbBlocks; i++) {
         reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
       }
+
+      this.rpcEngine = HBaseRPC.getProtocolEngine(conf);
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.
@@ -828,10 +834,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
 
     // Make sure the proxy is down.
-    if (this.hbaseMaster != null) {
-      HBaseRPC.stopProxy(this.hbaseMaster);
-      this.hbaseMaster = null;
-    }
+    this.hbaseMaster = null;
+    this.rpcEngine.close();
     this.leases.close();
 
     if (!killed) {
@@ -1878,7 +1882,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       try {
         // Do initial RPC setup. The final argument indicates that the RPC
         // should retry indefinitely.
-        master = (HMasterRegionInterface) HBaseRPC.waitForProxy(
+        master = HBaseRPC.waitForProxy(this.rpcEngine,
             HMasterRegionInterface.class, HMasterRegionInterface.VERSION,
             masterIsa, this.conf, -1,
             this.rpcTimeout, this.rpcTimeout);

@@ -145,7 +145,7 @@ public class TestCatalogJanitor {
         this.ct.stop();
       }
       if (this.connection != null) {
-        HConnectionManager.deleteConnection(this.connection.getConfiguration(), true);
+        HConnectionManager.deleteConnection(this.connection.getConfiguration());
       }
     }
   }

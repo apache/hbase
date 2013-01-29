@@ -57,85 +57,21 @@ class WritableRpcEngine implements RpcEngine {
   // DEBUG log level does NOT emit RPC-level logging. 
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.RPCEngine");
 
-  /* Cache a client using its socket factory as the hash key */
-  static private class ClientCache {
-    private Map<SocketFactory, HBaseClient> clients =
-      new HashMap<SocketFactory, HBaseClient>();
-
-    protected ClientCache() {}
-
-    /**
-     * Construct & cache an IPC client with the user-provided SocketFactory
-     * if no cached client exists.
-     *
-     * @param conf Configuration
-     * @param factory socket factory
-     * @return an IPC client
-     */
-    protected synchronized HBaseClient getClient(Configuration conf,
-        SocketFactory factory) {
-      // Construct & cache client.  The configuration is only used for timeout,
-      // and Clients have connection pools.  So we can either (a) lose some
-      // connection pooling and leak sockets, or (b) use the same timeout for
-      // all configurations.  Since the IPC is usually intended globally, not
-      // per-job, we choose (a).
-      HBaseClient client = clients.get(factory);
-      if (client == null) {
-        // Make an hbase client instead of hadoop Client.
-        client = new HBaseClient(HbaseObjectWritable.class, conf, factory);
-        clients.put(factory, client);
-      } else {
-        client.incCount();
-      }
-      return client;
-    }
-
-    /**
-     * Construct & cache an IPC client with the default SocketFactory
-     * if no cached client exists.
-     *
-     * @param conf Configuration
-     * @return an IPC client
-     */
-    protected synchronized HBaseClient getClient(Configuration conf) {
-      return getClient(conf, SocketFactory.getDefault());
-    }
-
-    /**
-     * Stop a RPC client connection
-     * A RPC client is closed only when its reference count becomes zero.
-     * @param client client to stop
-     */
-    protected void stopClient(HBaseClient client) {
-      synchronized (this) {
-        client.decCount();
-        if (client.isZeroReference()) {
-          clients.remove(client.getSocketFactory());
-        }
-      }
-      if (client.isZeroReference()) {
-        client.stop();
-      }
-    }
-  }
-
-  protected final static ClientCache CLIENTS = new ClientCache();
-
   private static class Invoker implements InvocationHandler {
     private Class<? extends VersionedProtocol> protocol;
     private InetSocketAddress address;
     private User ticket;
     private HBaseClient client;
-    private boolean isClosed = false;
     final private int rpcTimeout;
 
-    public Invoker(Class<? extends VersionedProtocol> protocol,
+    public Invoker(HBaseClient client,
+                   Class<? extends VersionedProtocol> protocol,
                    InetSocketAddress address, User ticket,
-                   Configuration conf, SocketFactory factory, int rpcTimeout) {
+                   Configuration conf, int rpcTimeout) {
       this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
-      this.client = CLIENTS.getClient(conf, factory);
+      this.client = client;
       this.rpcTimeout = rpcTimeout;
     }
 
@@ -157,78 +93,98 @@ class WritableRpcEngine implements RpcEngine {
       }
       return value.get();
     }
+  }
 
-    /* close the IPC client that's responsible for this invoker's RPCs */
-    synchronized protected void close() {
-      if (!isClosed) {
-        isClosed = true;
-        CLIENTS.stopClient(client);
-      }
+  private Configuration conf;
+  private HBaseClient client;
+
+  @Override
+  public void setConf(Configuration config) {
+    this.conf = config;
+    // check for an already created client
+    if (this.client != null) {
+      this.client.stop();
     }
+    this.client = new HBaseClient(HbaseObjectWritable.class, conf);
+  }
+
+  @Override
+  public Configuration getConf() {
+    return conf;
   }
 
   /** Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. */
-  public VersionedProtocol getProxy(
-      Class<? extends VersionedProtocol> protocol, long clientVersion,
-      InetSocketAddress addr, User ticket,
-      Configuration conf, SocketFactory factory, int rpcTimeout)
+  @Override
+  public <T extends VersionedProtocol> T getProxy(
+      Class<T> protocol, long clientVersion,
+      InetSocketAddress addr, Configuration conf, int rpcTimeout)
     throws IOException {
-
-      VersionedProtocol proxy =
-          (VersionedProtocol) Proxy.newProxyInstance(
-              protocol.getClassLoader(), new Class[] { protocol },
-              new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
-    if (proxy instanceof VersionedProtocol) {
-      long serverVersion = ((VersionedProtocol)proxy)
-        .getProtocolVersion(protocol.getName(), clientVersion);
-      if (serverVersion != clientVersion) {
-        throw new HBaseRPC.VersionMismatch(protocol.getName(), clientVersion,
-                                      serverVersion);
-      }
+    if (this.client == null) {
+      throw new IOException("Client must be initialized by calling setConf(Configuration)");
     }
+
+    T proxy =
+          (T) Proxy.newProxyInstance(
+              protocol.getClassLoader(), new Class[] { protocol },
+              new Invoker(client, protocol, addr, User.getCurrent(), conf,
+                  HBaseRPC.getRpcTimeout(rpcTimeout)));
+
+    /*
+     * TODO: checking protocol version only needs to be done once when we setup a new
+     * HBaseClient.Connection.  Doing it every time we retrieve a proxy instance is resulting
+     * in unnecessary RPC traffic.
+     */
+    long serverVersion = ((VersionedProtocol)proxy)
+      .getProtocolVersion(protocol.getName(), clientVersion);
+    if (serverVersion != clientVersion) {
+      throw new HBaseRPC.VersionMismatch(protocol.getName(), clientVersion,
+                                    serverVersion);
+    }
+
     return proxy;
   }
 
-  /**
-   * Stop this proxy and release its invoker's resource
-   * @param proxy the proxy to be stopped
-   */
-  public void stopProxy(VersionedProtocol proxy) {
-    if (proxy!=null) {
-      ((Invoker)Proxy.getInvocationHandler(proxy)).close();
-    }
-  }
 
 
   /** Expert: Make multiple, parallel calls to a set of servers. */
+  @Override
   public Object[] call(Method method, Object[][] params,
                        InetSocketAddress[] addrs,
                        Class<? extends VersionedProtocol> protocol,
                        User ticket, Configuration conf)
     throws IOException, InterruptedException {
+    if (this.client == null) {
+      throw new IOException("Client must be initialized by calling setConf(Configuration)");
+    }
 
     Invocation[] invocations = new Invocation[params.length];
-    for (int i = 0; i < params.length; i++)
+    for (int i = 0; i < params.length; i++) {
       invocations[i] = new Invocation(method, protocol, params[i]);
-    HBaseClient client = CLIENTS.getClient(conf);
-    try {
+    }
+
     Writable[] wrappedValues =
-      client.call(invocations, addrs, protocol, ticket);
+        client.call(invocations, addrs, protocol, ticket);
 
     if (method.getReturnType() == Void.TYPE) {
       return null;
     }
 
     Object[] values =
-      (Object[])Array.newInstance(method.getReturnType(), wrappedValues.length);
-    for (int i = 0; i < values.length; i++)
-      if (wrappedValues[i] != null)
+        (Object[])Array.newInstance(method.getReturnType(), wrappedValues.length);
+    for (int i = 0; i < values.length; i++) {
+      if (wrappedValues[i] != null) {
         values[i] = ((HbaseObjectWritable)wrappedValues[i]).get();
+      }
+    }
 
     return values;
-    } finally {
-      CLIENTS.stopClient(client);
+  }
+
+  @Override
+  public void close() {
+    if (this.client != null) {
+      this.client.stop();
     }
   }
 
@@ -428,7 +384,7 @@ class WritableRpcEngine implements RpcEngine {
      * client Operations.
      * @param call The call to log.
      * @param tag  The tag that will be used to indicate this event in the log.
-     * @param client          The address of the client who made this call.
+     * @param clientAddress   The address of the client who made this call.
      * @param startTime       The time that the call was initiated, in ms.
      * @param processingTime  The duration that the call took to run, in ms.
      * @param qTime           The duration that the call spent on the queue 

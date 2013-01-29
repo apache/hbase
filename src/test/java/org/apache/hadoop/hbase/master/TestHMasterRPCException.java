@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -29,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.RpcEngine;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -47,9 +49,11 @@ public class TestHMasterRPCException {
 
     ServerName sm = hm.getServerName();
     InetSocketAddress isa = new InetSocketAddress(sm.getHostname(), sm.getPort());
+    RpcEngine rpcEngine = null;
     try {
-      HMasterInterface inf = (HMasterInterface) HBaseRPC.getProxy(
-        HMasterInterface.class,  HMasterInterface.VERSION, isa, conf, 100 * 10);
+      rpcEngine = HBaseRPC.getProtocolEngine(conf);
+      HMasterInterface inf = rpcEngine.getProxy(
+          HMasterInterface.class,  HMasterInterface.VERSION, isa, conf, 100 * 10);
       inf.isMasterRunning();
       fail();
     } catch (RemoteException ex) {
@@ -57,6 +61,10 @@ public class TestHMasterRPCException {
           "org.apache.hadoop.hbase.ipc.ServerNotRunningYetException: Server is not running yet"));
     } catch (Throwable t) {
       fail("Unexpected throwable: " + t);
+    } finally {
+      if (rpcEngine != null) {
+        rpcEngine.close();
+      }
     }
   }
 
