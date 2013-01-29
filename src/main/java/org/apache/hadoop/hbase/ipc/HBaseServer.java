@@ -235,7 +235,7 @@ public abstract class HBaseServer implements RpcServer {
   private Handler[] handlers = null;
   private Handler[] priorityHandlers = null;
   /** replication related queue; */
-  private BlockingQueue<Call> replicationQueue;
+  protected BlockingQueue<Call> replicationQueue;
   private int numOfReplicationHandlers = 0;
   private Handler[] replicationHandlers = null;
   protected HBaseRPCErrorHandler errorHandler = null;
@@ -1355,7 +1355,7 @@ public abstract class HBaseServer implements RpcServer {
    * Reports length of the call queue to HBaseRpcMetrics.
    * @param queue Which queue to report
    */
-  private void updateCallQueueLenMetrics(BlockingQueue<Call> queue) {
+  protected void updateCallQueueLenMetrics(BlockingQueue<Call> queue) {
     if (queue == callQueue) {
       rpcMetrics.callQueueLen.set(callQueue.size());
     } else if (queue == priorityCallQueue) {
