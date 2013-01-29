@@ -231,7 +231,7 @@ public abstract class FSUtils {
     try {
       fs.close();
     } catch (Exception e) {
-        LOG.error("file system close failed: ", e);
+      LOG.error("file system close failed: ", e);
     }
     IOException io = new IOException("File system is not available");
     io.initCause(exception);
@@ -1241,7 +1241,7 @@ public abstract class FSUtils {
       status = filter == null ? fs.listStatus(dir) : fs.listStatus(dir, filter);
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
-      LOG.info(dir + " doesn't exist");
+      LOG.debug(dir + " doesn't exist");
     }
     if (status == null || status.length < 1) return null;
     return status;
