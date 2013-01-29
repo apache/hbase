@@ -83,18 +83,18 @@ public class TestPBOnWritableRpc {
     RpcServer rpcServer = HBaseRPC.getServer(new TestImpl(),
       new Class<?>[] {TestProtocol.class},
         "localhost", // BindAddress is IP we got for this server.
-        9999, // port number
+        0, // port number
         2, // number of handlers
         0, // we dont use high priority handlers in master
         conf.getBoolean("hbase.rpc.verbose", false), conf,
         0);
-    TestProtocol proxy = null;
+    RpcEngine rpcEngine = null;
     try {
       rpcServer.start();
+      rpcEngine = HBaseRPC.getProtocolEngine(conf);
 
-      InetSocketAddress isa =
-        new InetSocketAddress("localhost", 9999);
-      proxy = (TestProtocol) HBaseRPC.waitForProxy(
+      InetSocketAddress isa = rpcServer.getListenerAddress();
+      TestProtocol proxy = HBaseRPC.waitForProxy(rpcEngine,
         TestProtocol.class, TestProtocol.VERSION,
         isa, conf, -1, 8000, 8000);
 
@@ -118,8 +118,8 @@ public class TestPBOnWritableRpc {
       assertNotSame(sendProto, retProto);
     } finally {
       rpcServer.stop();
-      if(proxy != null) {
-        HBaseRPC.stopProxy(proxy);
+      if (rpcEngine != null) {
+        rpcEngine.close();
       }
     }
   }

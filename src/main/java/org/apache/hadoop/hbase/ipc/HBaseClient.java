@@ -90,7 +90,6 @@ public class HBaseClient {
   protected FailedServers failedServers;
 
   protected final SocketFactory socketFactory;           // how to create sockets
-  private int refCount = 1;
   protected String clusterId;
 
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
@@ -196,31 +195,6 @@ public class HBaseClient {
    */
   static int getSocketTimeout(Configuration conf) {
     return conf.getInt(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT);
-  }
-
-  /**
-   * Increment this client's reference count
-   *
-   */
-  synchronized void incCount() {
-    refCount++;
-  }
-
-  /**
-   * Decrement this client's reference count
-   *
-   */
-  synchronized void decCount() {
-    refCount--;
-  }
-
-  /**
-   * Return if this client has no reference
-   *
-   * @return true if this client has no reference; false otherwise
-   */
-  synchronized boolean isZeroReference() {
-    return refCount==0;
   }
 
   /** A call waiting for a value. */

@@ -80,12 +80,13 @@ public class TestProtocolExtension {
                                   6016,
                                   10, 10, false,
                                   conf, 10);
-    TestProtocol proxy = null;
+    RpcEngine rpcEngine = null;
     try {
       server.start();
+      rpcEngine = HBaseRPC.getProtocolEngine(conf);
 
       InetSocketAddress addr = server.getListenerAddress();
-      proxy = (TestProtocol)HBaseRPC.getProxy(
+      TestProtocol proxy = rpcEngine.getProxy(
           TestProtocol.class, TestProtocol.VERSION, addr, conf, 10000);
 
       proxy.ping();
@@ -93,7 +94,9 @@ public class TestProtocolExtension {
       proxy.logClassName();
     } finally {
       server.stop();
-      if(proxy!=null) HBaseRPC.stopProxy(proxy);
+      if (rpcEngine != null) {
+        rpcEngine.close();
+      }
     }
   }
   

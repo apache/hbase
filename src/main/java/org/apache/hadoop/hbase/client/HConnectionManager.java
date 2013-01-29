@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.RpcEngine;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -102,7 +103,7 @@ import org.apache.zookeeper.KeeperException;
  * <p>But sharing connections
  * makes clean up of {@link HConnection} instances a little awkward.  Currently,
  * clients cleanup by calling
- * {@link #deleteConnection(Configuration, boolean)}.  This will shutdown the
+ * {@link #deleteConnection(Configuration)}.  This will shutdown the
  * zookeeper connection the HConnection was using and clean up all
  * HConnection resources as well as stopping proxies to servers out on the
  * cluster. Not running the cleanup will not end the world; it'll
@@ -123,7 +124,7 @@ import org.apache.zookeeper.KeeperException;
  * }
  * </pre>
  * <p>Cleanup used to be done inside in a shutdown hook.  On startup we'd
- * register a shutdown hook that called {@link #deleteAllConnections(boolean)}
+ * register a shutdown hook that called {@link #deleteAllConnections()}
  * on its way out but the order in which shutdown hooks run is not defined so
  * were problematic for clients of HConnection that wanted to register their
  * own shutdown hooks so we removed ours though this shifts the onus for
@@ -183,7 +184,7 @@ public class HConnectionManager {
         connection = new HConnectionImplementation(conf, true);
         HBASE_INSTANCES.put(connectionKey, connection);
       } else if (connection.isClosed()) {
-        HConnectionManager.deleteConnection(connectionKey, true, true);
+        HConnectionManager.deleteConnection(connectionKey, true);
         connection = new HConnectionImplementation(conf, true);
         HBASE_INSTANCES.put(connectionKey, connection);
       }
@@ -216,13 +217,25 @@ public class HConnectionManager {
    *          configuration whose identity is used to find {@link HConnection}
    *          instance.
    * @param stopProxy
-   *          Shuts down all the proxy's put up to cluster members including to
-   *          cluster HMaster. Calls
-   *          {@link HBaseRPC#stopProxy(org.apache.hadoop.hbase.ipc.VersionedProtocol)}
-   *          .
+   *          No longer used.  This parameter is ignored.
+   * @deprecated use {@link #createConnection(org.apache.hadoop.conf.Configuration)} instead
    */
+  @Deprecated
   public static void deleteConnection(Configuration conf, boolean stopProxy) {
-    deleteConnection(new HConnectionKey(conf), stopProxy, false);
+    deleteConnection(conf);
+  }
+
+  /**
+   * Delete connection information for the instance specified by configuration.
+   * If there are no more references to it, this will then close connection to
+   * the zookeeper ensemble and let go of all resources.
+   *
+   * @param conf
+   *          configuration whose identity is used to find {@link HConnection}
+   *          instance.
+   */
+  public static void deleteConnection(Configuration conf) {
+    deleteConnection(new HConnectionKey(conf), false);
   }
 
   /**
@@ -233,32 +246,40 @@ public class HConnectionManager {
    * @param connection
    */
   public static void deleteStaleConnection(HConnection connection) {
-    deleteConnection(connection, true, true);
+    deleteConnection(connection, true);
   }
 
   /**
    * Delete information for all connections.
-   * @param stopProxy stop the proxy as well
+   * @param stopProxy No longer used.  This parameter is ignored.
+   * @deprecated use {@link #deleteAllConnections()} instead
+   */
+  @Deprecated
+  public static void deleteAllConnections(boolean stopProxy) {
+    deleteAllConnections();
+  }
+
+  /**
+   * Delete information for all connections.
    * @throws IOException
    */
-  public static void deleteAllConnections(boolean stopProxy) {
+  public static void deleteAllConnections() {
     synchronized (HBASE_INSTANCES) {
       Set<HConnectionKey> connectionKeys = new HashSet<HConnectionKey>();
       connectionKeys.addAll(HBASE_INSTANCES.keySet());
       for (HConnectionKey connectionKey : connectionKeys) {
-        deleteConnection(connectionKey, stopProxy, false);
+        deleteConnection(connectionKey, false);
       }
       HBASE_INSTANCES.clear();
     }
   }
 
-  private static void deleteConnection(HConnection connection, boolean stopProxy,
-      boolean staleConnection) {
+  private static void deleteConnection(HConnection connection, boolean staleConnection) {
     synchronized (HBASE_INSTANCES) {
       for (Entry<HConnectionKey, HConnectionImplementation> connectionEntry : HBASE_INSTANCES
           .entrySet()) {
         if (connectionEntry.getValue() == connection) {
-          deleteConnection(connectionEntry.getKey(), stopProxy, staleConnection);
+          deleteConnection(connectionEntry.getKey(), staleConnection);
           break;
         }
       }
@@ -266,7 +287,7 @@ public class HConnectionManager {
   }
 
   private static void deleteConnection(HConnectionKey connectionKey,
-      boolean stopProxy, boolean staleConnection) {
+      boolean staleConnection) {
     synchronized (HBASE_INSTANCES) {
       HConnectionImplementation connection = HBASE_INSTANCES
           .get(connectionKey);
@@ -274,9 +295,7 @@ public class HConnectionManager {
         connection.decCount();
         if (connection.isZeroReference() || staleConnection) {
           HBASE_INSTANCES.remove(connectionKey);
-          connection.close(stopProxy);
-        } else if (stopProxy) {
-          connection.stopProxyOnClose(stopProxy);
+          connection.internalClose();
         }
       }else {
         LOG.error("Connection not found in the list, can't delete it "+
@@ -514,6 +533,9 @@ public class HConnectionManager {
     private final Object resetLock = new Object();
 
     private final Configuration conf;
+
+    private RpcEngine rpcEngine;
+
     // Known region HServerAddress.toString() -> HRegionInterface
 
     private final Map<String, HRegionInterface> servers =
@@ -541,7 +563,6 @@ public class HConnectionManager {
     private final Set<Integer> regionCachePrefetchDisabledTables =
       new CopyOnWriteArraySet<Integer>();
 
-    private boolean stopProxy;
     private int refCount;
 
     // indicates whether this connection's life cycle is managed
@@ -579,6 +600,7 @@ public class HConnectionManager {
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
+      this.rpcEngine = HBaseRPC.getProtocolEngine(conf);
       this.master = null;
       this.resetting = false;
     }
@@ -683,7 +705,7 @@ public class HConnectionManager {
             }
             InetSocketAddress isa =
               new InetSocketAddress(sn.getHostname(), sn.getPort());
-            HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
+            HMasterInterface tryMaster = rpcEngine.getProxy(
                 HMasterInterface.class, HMasterInterface.VERSION, isa, this.conf,
                 this.rpcTimeout);
 
@@ -1310,7 +1332,7 @@ public class HConnectionManager {
               InetSocketAddress address = isa != null? isa:
                 new InetSocketAddress(hostname, port);
               // definitely a cache miss. establish an RPC for this RS
-              server = (HRegionInterface) HBaseRPC.waitForProxy(
+              server = HBaseRPC.waitForProxy(this.rpcEngine,
                   serverInterfaceClass, HRegionInterface.VERSION,
                   address, this.conf,
                   this.maxRPCAttempts, this.rpcTimeout, this.rpcTimeout);
@@ -1723,10 +1745,6 @@ public class HConnectionManager {
       }
     }
 
-    public void stopProxyOnClose(boolean stopProxy) {
-      this.stopProxy = stopProxy;
-    }
-
     /**
      * Increment this client's reference count.
      */
@@ -1752,22 +1770,17 @@ public class HConnectionManager {
       return refCount == 0;
     }
 
-    void close(boolean stopProxy) {
+    void internalClose() {
       if (this.closed) {
         return;
       }
-      if (master != null) {
-        if (stopProxy) {
-          HBaseRPC.stopProxy(master);
-        }
-        master = null;
-      }
-      if (stopProxy) {
-        for (HRegionInterface i : servers.values()) {
-          HBaseRPC.stopProxy(i);
-        }
-      }
+      master = null;
+
       this.servers.clear();
+      if (this.rpcEngine != null) {
+        this.rpcEngine.close();
+      }
+
       if (this.zooKeeper != null) {
         LOG.info("Closed zookeeper sessionid=0x" +
           Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
@@ -1782,21 +1795,21 @@ public class HConnectionManager {
         if (aborted) {
           HConnectionManager.deleteStaleConnection(this);
         } else {
-          HConnectionManager.deleteConnection(this, stopProxy, false);
+          HConnectionManager.deleteConnection(this, false);
         }
       } else {
-        close(true);
+        internalClose();
       }
       if (LOG.isTraceEnabled()) LOG.debug("" + this.zooKeeper + " closed.");
     }
 
     /**
      * Close the connection for good, regardless of what the current value of
-     * {@link #refCount} is. Ideally, {@link refCount} should be zero at this
+     * {@link #refCount} is. Ideally, {@link #refCount} should be zero at this
      * point, which would be the case if all of its consumers close the
      * connection. However, on the off chance that someone is unable to close
      * the connection, perhaps because it bailed out prematurely, the method
-     * below will ensure that this {@link Connection} instance is cleaned up.
+     * below will ensure that this {@link HConnection} instance is cleaned up.
      * Caveat: The JVM may take an unknown amount of time to call finalize on an
      * unreachable object, so our hope is that every consumer cleans up after
      * itself, like any good citizen.

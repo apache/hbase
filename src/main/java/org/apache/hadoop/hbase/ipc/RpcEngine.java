@@ -22,23 +22,24 @@ package org.apache.hadoop.hbase.ipc;
 import java.lang.reflect.Method;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import javax.net.SocketFactory;
 
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.conf.Configuration;
 
 /** An RPC implementation. */
-interface RpcEngine {
+@InterfaceAudience.Private
+public interface RpcEngine extends Configurable {
 
+  /* Client-related methods */
   /** Construct a client-side proxy object. */
-  VersionedProtocol getProxy(Class<? extends VersionedProtocol> protocol,
-                  long clientVersion, InetSocketAddress addr,
-                  User ticket, Configuration conf,
-                  SocketFactory factory, int rpcTimeout) throws IOException;
+  <T extends VersionedProtocol> T getProxy(Class<T> protocol,
+                                           long clientVersion, InetSocketAddress addr,
+                                           Configuration conf, int rpcTimeout) throws IOException;
 
-  /** Stop this proxy. */
-  void stopProxy(VersionedProtocol proxy);
+  /** Shutdown this instance */
+  void close();
 
   /** Expert: Make multiple, parallel calls to a set of servers. */
   Object[] call(Method method, Object[][] params, InetSocketAddress[] addrs,
@@ -46,6 +47,7 @@ interface RpcEngine {
                 User ticket, Configuration conf)
     throws IOException, InterruptedException;
 
+  /* Server-related methods */
   /** Construct a server for a protocol implementation instance. */
   RpcServer getServer(Class<? extends VersionedProtocol> protocol, Object instance,
                        Class<?>[] ifaces, String bindAddress,
