@@ -287,9 +287,6 @@ public final class HConstants {
   public static final boolean DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS =
       false;
 
-  /** Default size of a reservation block   */
-  public static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
-
   /** Maximum value length, enforced on KeyValue construction */
   public static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE - 1;
 

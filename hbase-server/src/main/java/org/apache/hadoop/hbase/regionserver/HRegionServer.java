@@ -342,13 +342,6 @@ public class  HRegionServer implements ClientProtocol,
   /** region server configuration name */
   public static final String REGIONSERVER_CONF = "regionserver_conf";
 
-  /*
-   * Space is reserved in HRS constructor and then released when aborting to
-   * recover from an OOME. See HBASE-706. TODO: Make this percentage of the heap
-   * or a minimum.
-   */
-  private final LinkedList<byte[]> reservedSpace = new LinkedList<byte[]>();
-
   private MetricsRegionServer metricsRegionServer;
 
   /*
@@ -728,10 +721,6 @@ public class  HRegionServer implements ClientProtocol,
     try {
       initializeZooKeeper();
       initializeThreads();
-      int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
-      for (int i = 0; i < nbBlocks; i++) {
-        reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
-      }
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.
@@ -1735,7 +1724,6 @@ public class  HRegionServer implements ClientProtocol,
       LOG.fatal(msg);
     }
     this.abortRequested = true;
-    this.reservedSpace.clear();
     // HBASE-4014: show list of coprocessors that were loaded to help debug
     // regionserver crashes.Note that we're implicitly using
     // java.util.HashSet's toString() method to print the coprocessor names.
