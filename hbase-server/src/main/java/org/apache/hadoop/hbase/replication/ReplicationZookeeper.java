@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -788,6 +789,58 @@ public class ReplicationZookeeper implements Closeable {
       return false;
     }
     return true;
+  }
+
+  /**
+   * It "atomically" copies all the hlogs queues from another region server and returns them all
+   * sorted per peer cluster (appended with the dead server's znode).
+   * @param znode
+   * @return HLog queues sorted per peer cluster
+   */
+  public SortedMap<String, SortedSet<String>> copyQueuesFromRSUsingMulti(String znode) {
+    SortedMap<String, SortedSet<String>> queues = new TreeMap<String, SortedSet<String>>();
+    String deadRSZnodePath = ZKUtil.joinZNode(rsZNode, znode);// hbase/replication/rs/deadrs
+    List<String> peerIdsToProcess = null;
+    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+    try {
+      peerIdsToProcess = ZKUtil.listChildrenNoWatch(this.zookeeper, deadRSZnodePath);
+      if (peerIdsToProcess == null) return null; // node already processed
+      for (String peerId : peerIdsToProcess) {
+        String newPeerId = peerId + "-" + znode;
+        String newPeerZnode = ZKUtil.joinZNode(this.rsServerNameZnode, newPeerId);
+        // check the logs queue for the old peer cluster
+        String oldClusterZnode = ZKUtil.joinZNode(deadRSZnodePath, peerId);
+        List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
+        if (hlogs == null || hlogs.size() == 0) continue; // empty log queue.
+        // create the new cluster znode
+        SortedSet<String> logQueue = new TreeSet<String>();
+        queues.put(newPeerId, logQueue);
+        ZKUtilOp op = ZKUtilOp.createAndFailSilent(newPeerZnode, HConstants.EMPTY_BYTE_ARRAY);
+        listOfOps.add(op);
+        // get the offset of the logs and set it to new znodes
+        for (String hlog : hlogs) {
+          String oldHlogZnode = ZKUtil.joinZNode(oldClusterZnode, hlog);
+          byte[] logOffset = ZKUtil.getData(this.zookeeper, oldHlogZnode);
+          LOG.debug("Creating " + hlog + " with data " + Bytes.toString(logOffset));
+          String newLogZnode = ZKUtil.joinZNode(newPeerZnode, hlog);
+          listOfOps.add(ZKUtilOp.createAndFailSilent(newLogZnode, logOffset));
+          // add ops for deleting
+          listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldHlogZnode));
+          logQueue.add(hlog);
+        }
+        // add delete op for peer
+        listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
+      }
+      // add delete op for dead rs
+      listOfOps.add(ZKUtilOp.deleteNodeFailSilent(deadRSZnodePath));
+      LOG.debug(" The multi list size is: " + listOfOps.size());
+      ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
+      LOG.info("Atomically moved the dead regionserver logs. ");
+    } catch (KeeperException e) {
+      // Multi call failed; it looks like some other regionserver took away the logs.
+      LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);
+    }
+    return queues;
   }
 
   /**

@@ -40,6 +40,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -581,14 +582,22 @@ public class ReplicationSourceManager {
         LOG.info("Not transferring queue since we are shutting down");
         return;
       }
-      if (!zkHelper.lockOtherRS(rsZnode)) {
-        return;
+      SortedMap<String, SortedSet<String>> newQueues = null;
+
+      // check whether there is multi support. If yes, use it.
+      if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
+        LOG.info("Atomically moving " + rsZnode + "'s hlogs to my queue");
+        newQueues = zkHelper.copyQueuesFromRSUsingMulti(rsZnode);
+      } else {
+        LOG.info("Moving " + rsZnode + "'s hlogs to my queue");
+        if (!zkHelper.lockOtherRS(rsZnode)) {
+          return;
+        }
+        newQueues = zkHelper.copyQueuesFromRS(rsZnode);
+        zkHelper.deleteRsQueues(rsZnode);
       }
-      LOG.info("Moving " + rsZnode + "'s hlogs to my queue");
-      SortedMap<String, SortedSet<String>> newQueues =
-          zkHelper.copyQueuesFromRS(rsZnode);
-      zkHelper.deleteRsQueues(rsZnode);
-      if (newQueues == null || newQueues.size() == 0) {
+      // process of copying over the failed queue is completed.
+      if (newQueues.size() == 0) {
         return;
       }
 
