@@ -27,7 +27,7 @@ import org.junit.experimental.categories.Category;
  * Run the same test as TestReplication but with HLog compression enabled
  */
 @Category(LargeTests.class)
-public class TestReplicationQueueFailoverCompressed extends TestReplicationBase {
+public class TestReplicationQueueFailoverCompressed extends TestReplicationQueueFailover {
 
   /**
    * @throws java.lang.Exception
