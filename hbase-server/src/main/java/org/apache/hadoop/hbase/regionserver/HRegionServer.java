@@ -414,11 +414,6 @@ public class  HRegionServer implements ClientProtocol,
   private MovedRegionsCleaner movedRegionsCleaner;
 
   /**
-   * The lease timeout period for row locks (milliseconds).
-   */
-  private final int rowLockLeaseTimeoutPeriod;
-
-  /**
    * The lease timeout period for client scanners (milliseconds).
    */
   private final int scannerLeaseTimeoutPeriod;
@@ -472,10 +467,6 @@ public class  HRegionServer implements ClientProtocol,
 
     this.abortRequested = false;
     this.stopped = false;
-
-    this.rowLockLeaseTimeoutPeriod = conf.getInt(
-      HConstants.HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD,
-      HConstants.DEFAULT_HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD);
 
     this.scannerLeaseTimeoutPeriod = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
@@ -2755,7 +2746,6 @@ public class  HRegionServer implements ClientProtocol,
       if (!region.getRegionInfo().isMetaTable()) {
         cacheFlusher.reclaimMemStoreMemory();
       }
-      Integer lock;
       Result r = null;
       Boolean processed = null;
       MutateType type = mutate.getMutateType();

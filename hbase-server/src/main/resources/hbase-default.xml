@@ -167,12 +167,6 @@
     60 seconds. </description>
   </property>
   <property>
-    <name>hbase.regionserver.rowlock.timeout.period</name>
-    <value>60000</value>
-    <description>Row lock time out period in milliseconds. Default is
-    60 seconds. </description>
-  </property>
-  <property>
     <name>hbase.regionserver.handler.count</name>
     <value>10</value>
     <description>Count of RPC Listener instances spun up on RegionServers.

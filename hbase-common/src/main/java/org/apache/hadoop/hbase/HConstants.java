@@ -595,17 +595,6 @@ public final class HConstants {
   public static String HBASE_CLIENT_INSTANCE_ID = "hbase.client.instance.id";
 
   /**
-   * The row lock timeout period in milliseconds.
-   */
-  public static String HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD =
-	  "hbase.regionserver.rowlock.timeout.period";
-
-  /**
-   * Default value of {@link #HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD}.
-   */
-  public static int DEFAULT_HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD = 60000;
-
-  /**
    * The client scanner timeout period in milliseconds.
    */
   public static String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = "hbase.client.scanner.timeout.period";
