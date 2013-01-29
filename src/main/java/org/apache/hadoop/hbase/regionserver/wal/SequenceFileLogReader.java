@@ -265,7 +265,7 @@ public class SequenceFileLogReader implements HLog.Reader {
 
   @Override
   public long getPosition() throws IOException {
-    return reader.getPosition();
+    return reader != null ? reader.getPosition() : 0;
   }
 
   protected IOException addFileInfoToException(final IOException ioe)

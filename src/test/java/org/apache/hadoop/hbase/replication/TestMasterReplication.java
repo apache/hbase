@@ -53,7 +53,7 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestMasterReplication {
 
-  private static final Log LOG = LogFactory.getLog(TestReplication.class);
+  private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
 
   private Configuration conf1;
   private Configuration conf2;

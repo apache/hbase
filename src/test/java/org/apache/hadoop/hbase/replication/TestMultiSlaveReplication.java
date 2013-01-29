@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestMultiSlaveReplication {
 
-  private static final Log LOG = LogFactory.getLog(TestReplication.class);
+  private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
 
   private static Configuration conf1;
   private static Configuration conf2;
