@@ -24,6 +24,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -239,6 +240,31 @@ public abstract class FSUtils {
   }
 
   /**
+   * We use reflection because {@link DistributedFileSystem#setSafeMode(
+   * FSConstants.SafeModeAction action, boolean isChecked)} is not in hadoop 1.1
+   * 
+   * @param dfs
+   * @return whether we're in safe mode
+   * @throws IOException
+   */
+  private static boolean isInSafeMode(DistributedFileSystem dfs) throws IOException {
+    boolean inSafeMode = false;
+    try {
+      Method m = DistributedFileSystem.class.getMethod("setSafeMode", new Class<?> []{
+          org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.class, boolean.class});
+      inSafeMode = (Boolean) m.invoke(dfs,
+        org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET, true);
+    } catch (Exception e) {
+      if (e instanceof IOException) throw (IOException) e;
+      
+      // Check whether dfs is on safemode.
+      inSafeMode = dfs.setSafeMode(
+        org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET);      
+    }
+    return inSafeMode;    
+  }
+  
+  /**
    * Check whether dfs is in safemode. 
    * @param conf
    * @throws IOException
@@ -249,8 +275,7 @@ public abstract class FSUtils {
     FileSystem fs = FileSystem.get(conf);
     if (fs instanceof DistributedFileSystem) {
       DistributedFileSystem dfs = (DistributedFileSystem)fs;
-      // Check whether dfs is on safemode.
-      isInSafeMode = dfs.setSafeMode(org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET);
+      isInSafeMode = isInSafeMode(dfs);
     }
     if (isInSafeMode) {
       throw new IOException("File system is in safemode, it can't be written now");
@@ -622,7 +647,7 @@ public abstract class FSUtils {
     if (!(fs instanceof DistributedFileSystem)) return;
     DistributedFileSystem dfs = (DistributedFileSystem)fs;
     // Make sure dfs is not in safe mode
-    while (dfs.setSafeMode(org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET)) {
+    while (isInSafeMode(dfs)) {
       LOG.info("Waiting for dfs to exit safe mode...");
       try {
         Thread.sleep(wait);
