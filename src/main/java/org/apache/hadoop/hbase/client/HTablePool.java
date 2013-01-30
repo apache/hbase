@@ -308,7 +308,7 @@ public class HTablePool implements Closeable {
     this.tables.clear();
   }
 
-  int getCurrentPoolSize(String tableName) {
+  public int getCurrentPoolSize(String tableName) {
     return tables.size(tableName);
   }
 
