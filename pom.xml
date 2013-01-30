@@ -1326,6 +1326,37 @@
         <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
       </properties>
     </profile>
+    <profile>
+      <id>os.windows</id>
+      <activation>
+        <os>
+          <family>Windows</family>
+        </os>
+      </activation>
+      <properties>
+        <build.platform>cygwin</build.platform>
+      </properties>
+      <build>
+        <pluginManagement>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
+              <systemProperties>
+                <property>
+                  <name>java.net.preferIPv4Stack</name>
+                  <value>true</value>
+		</property>
+              </systemProperties>
+            </configuration>
+          </plugin>
+        </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+
     <!-- this profile should be activated for release builds -->
     <profile>
       <id>release</id>
