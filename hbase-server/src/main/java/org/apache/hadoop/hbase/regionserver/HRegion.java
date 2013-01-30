@@ -915,7 +915,7 @@ public class HRegion implements HeapSize { // , Writable{
     return isAvailable() && !hasReferences();
   }
 
-  boolean areWritesEnabled() {
+  public boolean areWritesEnabled() {
     synchronized(this.writestate) {
       return this.writestate.writesEnabled;
     }

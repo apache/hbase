@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -26,47 +26,52 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
+import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
 /**
  * Compact passed set of files.
- * Create an instance and then call {@ink #compact(Store, Collection, boolean, long)}.
+ * Create an instance and then call {@ink #compact(Collection, boolean, long)}.
  */
 @InterfaceAudience.Private
-class Compactor extends Configured {
-  private static final Log LOG = LogFactory.getLog(Compactor.class);
-  private CompactionProgress progress;
+class DefaultCompactor extends Compactor {
+  private static final Log LOG = LogFactory.getLog(DefaultCompactor.class);
 
-  Compactor(final Configuration c) {
-    super(c);
+  DefaultCompactor(final CompactionPolicy policy) {
+    super(policy);
   }
 
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
    *
-   * @param store Store the files belong to
    * @param filesToCompact which files to compact
    * @param majorCompaction true to major compact (prune all deletes, max versions, etc)
-   * @param maxId Readers maximum sequence id.
-   * @return Product of compaction or null if all cells expired or deleted and
+   * @return Product of compaction or an empty list if all cells expired or deleted and
    * nothing made it through the compaction.
    * @throws IOException
    */
-  StoreFile.Writer compact(final HStore store,
-      final Collection<StoreFile> filesToCompact,
-      final boolean majorCompaction, final long maxId)
-  throws IOException {
+  @SuppressWarnings("deprecation")
+  public List<Path> compact(final Collection<StoreFile> filesToCompact,
+      final boolean majorCompaction) throws IOException {
+    // Max-sequenceID is the last key in the files we're compacting
+    long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
+
     // Calculate maximum key count after compaction (for blooms)
     // Also calculate earliest put timestamp if major compaction
     int maxKeyCount = 0;
+    HStore store = policy.store;
     long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     for (StoreFile file: filesToCompact) {
       StoreFile.Reader r = file.getReader();
@@ -120,6 +125,7 @@ class Compactor extends Configured {
     // Make the instantiation lazy in case compaction produces no product; i.e.
     // where all source cells are expired or deleted.
     StoreFile.Writer writer = null;
+    List<Path> newFiles = new ArrayList<Path>();
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = store.getHRegion().getSmallestReadPoint();
     MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);
@@ -138,7 +144,7 @@ class Compactor extends Configured {
           Scan scan = new Scan();
           scan.setMaxVersions(store.getFamily().getMaxVersions());
           /* Include deletes, unless we are doing a major compaction */
-          scanner = new StoreScanner(store, store.scanInfo, scan, scanners,
+          scanner = new StoreScanner(store, store.getScanInfo(), scan, scanners,
             scanType, smallestReadPoint, earliestPutTs);
         }
         if (store.getHRegion().getCoprocessorHost() != null) {
@@ -146,7 +152,7 @@ class Compactor extends Configured {
             store.getHRegion().getCoprocessorHost().preCompact(store, scanner, scanType);
           // NULL scanner returned from coprocessor hooks means skip normal processing
           if (cpScanner == null) {
-            return null;
+            return newFiles;  // an empty list
           }
           scanner = cpScanner;
         }
@@ -156,6 +162,7 @@ class Compactor extends Configured {
         // we have to use a do/while loop.
         List<KeyValue> kvs = new ArrayList<KeyValue>();
         // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
+        int closeCheckInterval = HStore.getCloseCheckInterval();
         boolean hasMore;
         do {
           hasMore = scanner.next(kvs, compactionKVMax);
@@ -176,9 +183,9 @@ class Compactor extends Configured {
               ++progress.currentCompactedKVs;
 
               // check periodically to see if a system stop is requested
-              if (HStore.closeCheckInterval > 0) {
+              if (closeCheckInterval > 0) {
                 bytesWritten += kv.getLength();
-                if (bytesWritten > HStore.closeCheckInterval) {
+                if (bytesWritten > closeCheckInterval) {
                   bytesWritten = 0;
                   isInterrupted(store, writer);
                 }
@@ -196,9 +203,10 @@ class Compactor extends Configured {
       if (writer != null) {
         writer.appendMetadata(maxId, majorCompaction);
         writer.close();
+        newFiles.add(writer.getPath());
       }
     }
-    return writer;
+    return newFiles;
   }
 
   void isInterrupted(final HStore store, final StoreFile.Writer writer)
@@ -209,9 +217,5 @@ class Compactor extends Configured {
     store.getFileSystem().delete(writer.getPath(), false);
     throw new InterruptedIOException( "Aborting compaction of store " + store +
       " in region " + store.getHRegion() + " because it was interrupted.");
-  }
-
-  CompactionProgress getProgress() {
-    return this.progress;
   }
 }

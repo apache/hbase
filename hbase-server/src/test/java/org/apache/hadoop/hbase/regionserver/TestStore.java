@@ -45,7 +45,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -203,7 +202,7 @@ public class TestStore extends TestCase {
     hcd.setTimeToLive(ttl);
     init(getName(), conf, hcd);
 
-    long sleepTime = this.store.scanInfo.getTtl() / storeFileNum;
+    long sleepTime = this.store.getScanInfo().getTtl() / storeFileNum;
     long timeStamp;
     // There are 4 store files and the max time stamp difference among these
     // store files will be (this.store.ttl / storeFileNum)
@@ -229,11 +228,12 @@ public class TestStore extends TestCase {
       // If not the first compaction, there is another empty store file,
       assertEquals(Math.min(i, 2), cr.getFiles().size());
       for (int j = 0; i < cr.getFiles().size(); j++) {
-        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() <
-            (EnvironmentEdgeManager.currentTimeMillis() - this.store.scanInfo.getTtl()));
+        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() < (System
+            .currentTimeMillis() - this.store.getScanInfo().getTtl()));
       }
       // Verify that the expired store file is compacted to an empty store file.
-      StoreFile compactedFile = this.store.compact(cr);
+      // Default compaction policy creates just one and only one compacted file.
+      StoreFile compactedFile = this.store.compact(cr).get(0);
       // It is an empty store file.
       assertEquals(0, compactedFile.getReader().getEntries());
 

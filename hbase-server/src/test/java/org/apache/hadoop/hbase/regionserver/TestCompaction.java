@@ -280,11 +280,11 @@ public class TestCompaction extends HBaseTestCase {
     final int ttl = 1000;
     for (Store hstore : this.r.stores.values()) {
       HStore store = ((HStore) hstore);
-      HStore.ScanInfo old = store.scanInfo;
+      HStore.ScanInfo old = store.getScanInfo();
       HStore.ScanInfo si = new HStore.ScanInfo(old.getFamily(),
           old.getMinVersions(), old.getMaxVersions(), ttl,
           old.getKeepDeletedCells(), 0, old.getComparator());
-      store.scanInfo = si;
+      store.setScanInfo(si);
     }
     Thread.sleep(1000);
 
@@ -301,7 +301,7 @@ public class TestCompaction extends HBaseTestCase {
     conf.setFloat("hbase.hregion.majorcompaction.jitter", jitterPct);
 
     HStore s = ((HStore) r.getStore(COLUMN_FAMILY));
-    s.compactionPolicy.updateConfiguration(conf, s);
+    s.compactionPolicy.setConf(conf);
     try {
       createStoreFile(r);
       createStoreFile(r);
@@ -313,7 +313,7 @@ public class TestCompaction extends HBaseTestCase {
       assertEquals(2, s.getStorefilesCount());
 
       // ensure that major compaction time is deterministic
-      CompactionPolicy c = s.compactionPolicy;
+      DefaultCompactionPolicy c = (DefaultCompactionPolicy)s.compactionPolicy;
       List<StoreFile> storeFiles = s.getStorefiles();
       long mcTime = c.getNextMajorCompactTime(storeFiles);
       for (int i = 0; i < 10; ++i) {
@@ -539,11 +539,11 @@ public class TestCompaction extends HBaseTestCase {
       final int ttl = 1000;
       for (Store hstore: this.r.stores.values()) {
         HStore store = (HStore)hstore;
-        HStore.ScanInfo old = store.scanInfo;
+        HStore.ScanInfo old = store.getScanInfo();
         HStore.ScanInfo si = new HStore.ScanInfo(old.getFamily(),
             old.getMinVersions(), old.getMaxVersions(), ttl,
             old.getKeepDeletedCells(), 0, old.getComparator());
-        store.scanInfo = si;
+        store.setScanInfo(si);
       }
       Thread.sleep(ttl);
 
@@ -588,15 +588,15 @@ public class TestCompaction extends HBaseTestCase {
     HStore store = (HStore) r.getStore(COLUMN_FAMILY);
 
     List<StoreFile> storeFiles = store.getStorefiles();
-    long maxId = StoreFile.getMaxSequenceIdInList(storeFiles, true);
-    Compactor tool = new Compactor(this.conf);
+    Compactor tool = store.compactionPolicy.getCompactor();
 
-    StoreFile.Writer compactedFile =
-      tool.compact(store, storeFiles, false, maxId);
+    List<Path> newFiles =
+      tool.compact(storeFiles, false);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = FileSystem.get(conf);
-    Path origPath = compactedFile.getPath();
+    // default compaction policy created one and only one new compacted file
+    Path origPath = newFiles.get(0);
     Path homedir = store.getHomedir();
     Path dstPath = new Path(homedir, origPath.getName());
     FSDataOutputStream stream = fs.create(origPath, null, true, 512, (short) 3,
@@ -606,7 +606,7 @@ public class TestCompaction extends HBaseTestCase {
     stream.close();
 
     try {
-      store.completeCompaction(storeFiles, compactedFile);
+      store.completeCompaction(storeFiles, origPath);
     } catch (Exception e) {
       // The complete compaction should fail and the corrupt file should remain
       // in the 'tmp' directory;

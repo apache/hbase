@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -130,8 +131,8 @@ public class HStore implements Store, StoreConfiguration {
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final boolean verifyBulkLoads;
 
-  // not private for testing
-  /* package */ScanInfo scanInfo;
+  private ScanInfo scanInfo;
+
   /*
    * List of store files inside this store. This is an immutable list that
    * is atomically replaced when its contents change.
@@ -154,7 +155,7 @@ public class HStore implements Store, StoreConfiguration {
   // Comparing KeyValues
   final KeyValue.KVComparator comparator;
 
-  private final Compactor compactor;
+  private Compactor compactor;
 
   private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
   private static int flush_retries_number;
@@ -227,10 +228,7 @@ public class HStore implements Store, StoreConfiguration {
     this.checksumType = getChecksumType(conf);
     // initilize bytes per checksum
     this.bytesPerChecksum = getBytesPerChecksum(conf);
-    // Create a compaction tool instance
-    this.compactor = new Compactor(conf);
     // Create a compaction manager.
-    this.compactionPolicy = new CompactionPolicy(conf, this);
     if (HStore.flush_retries_number == 0) {
       HStore.flush_retries_number = conf.getInt(
           "hbase.hstore.flush.retries.number", DEFAULT_FLUSH_RETRIES_NUMBER);
@@ -242,6 +240,9 @@ public class HStore implements Store, StoreConfiguration {
                 + HStore.flush_retries_number);
       }
     }
+    this.compactionPolicy = CompactionPolicy.create(this, conf);
+    // Get the compaction tool instance for this policy
+    this.compactor = compactionPolicy.getCompactor();
   }
 
   /**
@@ -288,7 +289,7 @@ public class HStore implements Store, StoreConfiguration {
     return homedir;
   }
 
-  FileSystem getFileSystem() {
+  public FileSystem getFileSystem() {
     return this.fs;
   }
 
@@ -330,6 +331,13 @@ public class HStore implements Store, StoreConfiguration {
     } else {
       return ChecksumType.nameToType(checksumName);
     }
+  }
+
+  /**
+   * @return how many bytes to write between status checks
+   */
+  public static int getCloseCheckInterval() {
+    return closeCheckInterval;
   }
 
   public HColumnDescriptor getFamily() {
@@ -933,7 +941,7 @@ public class HStore implements Store, StoreConfiguration {
    * @param isCompaction whether we are creating a new file in a compaction
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  StoreFile.Writer createWriterInTmp(int maxKeyCount,
+  public StoreFile.Writer createWriterInTmp(int maxKeyCount,
     Compression.Algorithm compression, boolean isCompaction)
   throws IOException {
     final CacheConfig writerCacheConf;
@@ -1074,7 +1082,7 @@ public class HStore implements Store, StoreConfiguration {
    * @throws IOException
    * @return Storefile we compacted into or null if we failed or opted out early.
    */
-  StoreFile compact(CompactionRequest cr) throws IOException {
+  List<StoreFile> compact(CompactionRequest cr) throws IOException {
     if (cr == null || cr.getFiles().isEmpty()) return null;
     Preconditions.checkArgument(cr.getStore().toString().equals(this.toString()));
     List<StoreFile> filesToCompact = cr.getFiles();
@@ -1084,31 +1092,34 @@ public class HStore implements Store, StoreConfiguration {
       Preconditions.checkArgument(filesCompacting.containsAll(filesToCompact));
     }
 
-    // Max-sequenceID is the last key in the files we're compacting
-    long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
-
     // Ready to go. Have list of files to compact.
     LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
         + this + " of " + this.region.getRegionInfo().getRegionNameAsString()
-        + " into tmpdir=" + region.getTmpDir() + ", seqid=" + maxId + ", totalSize="
+        + " into tmpdir=" + region.getTmpDir() + ", totalSize="
         + StringUtils.humanReadableInt(cr.getSize()));
 
-    StoreFile sf = null;
+    List<StoreFile> sfs = new ArrayList<StoreFile>();
     long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
-      StoreFile.Writer writer =
-        this.compactor.compact(this, filesToCompact, cr.isMajor(), maxId);
+      List<Path> newFiles =
+        this.compactor.compact(filesToCompact, cr.isMajor());
       // Move the compaction into place.
       if (this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
-        sf = completeCompaction(filesToCompact, writer);
-        if (region.getCoprocessorHost() != null) {
-          region.getCoprocessorHost().postCompact(this, sf);
+        for (Path newFile: newFiles) {
+          StoreFile sf = completeCompaction(filesToCompact, newFile);
+          if (region.getCoprocessorHost() != null) {
+            region.getCoprocessorHost().postCompact(this, sf);
+          }
+          sfs.add(sf);
         }
       } else {
-        // Create storefile around what we wrote with a reader on it.
-        sf = new StoreFile(this.fs, writer.getPath(), this.conf, this.cacheConf,
-          this.family.getBloomFilterType(), this.dataBlockEncoder);
-        sf.createReader();
+        for (Path newFile: newFiles) {
+          // Create storefile around what we wrote with a reader on it.
+          StoreFile sf = new StoreFile(this.fs, newFile, this.conf, this.cacheConf,
+            this.family.getBloomFilterType(), this.dataBlockEncoder);
+          sf.createReader();
+          sfs.add(sf);
+        }
       }
     } finally {
       synchronized (filesCompacting) {
@@ -1117,25 +1128,34 @@ public class HStore implements Store, StoreConfiguration {
     }
 
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    LOG.info("Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
-        + filesToCompact.size() + " file(s) in " + this + " of "
-        + this.region.getRegionInfo().getRegionNameAsString()
-        + " into " +
-        (sf == null ? "none" : sf.getPath().getName()) +
-        ", size=" + (sf == null ? "none" :
-          StringUtils.humanReadableInt(sf.getReader().length()))
-        + "; total size for store is " + StringUtils.humanReadableInt(storeSize)
-        + ". This selection was in queue for "
-        + StringUtils.formatTimeDiff(compactionStartTime, cr.getSelectionTime())
-        + ", and took " + StringUtils.formatTimeDiff(now, compactionStartTime)
-        + " to execute.");
-    return sf;
+    StringBuilder message = new StringBuilder(
+      "Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
+      + filesToCompact.size() + " file(s) in " + this + " of "
+      + this.region.getRegionInfo().getRegionNameAsString()
+      + " into ");
+    if (sfs.isEmpty()) {
+      message.append("none, ");
+    } else {
+      for (StoreFile sf: sfs) {
+        message.append(sf.getPath().getName());
+        message.append("(size=");
+        message.append(StringUtils.humanReadableInt(sf.getReader().length()));
+        message.append("), ");
+      }
+    }
+    message.append("total size for store is ")
+      .append(StringUtils.humanReadableInt(storeSize))
+      .append(". This selection was in queue for ")
+      .append(StringUtils.formatTimeDiff(compactionStartTime, cr.getSelectionTime()))
+      .append(", and took ").append(StringUtils.formatTimeDiff(now, compactionStartTime))
+      .append(" to execute.");
+    LOG.info(message.toString());
+    return sfs;
   }
 
   @Override
   public void compactRecentForTesting(int N) throws IOException {
     List<StoreFile> filesToCompact;
-    long maxId;
     boolean isMajor;
 
     this.lock.readLock().lock();
@@ -1156,7 +1176,6 @@ public class HStore implements Store, StoreConfiguration {
         }
 
         filesToCompact = filesToCompact.subList(count - N, count);
-        maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
         isMajor = (filesToCompact.size() == storefiles.size());
         filesCompacting.addAll(filesToCompact);
         Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
@@ -1167,12 +1186,14 @@ public class HStore implements Store, StoreConfiguration {
 
     try {
       // Ready to go. Have list of files to compact.
-      StoreFile.Writer writer =
-        this.compactor.compact(this, filesToCompact, isMajor, maxId);
-      // Move the compaction into place.
-      StoreFile sf = completeCompaction(filesToCompact, writer);
-      if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().postCompact(this, sf);
+      List<Path> newFiles =
+        this.compactor.compact(filesToCompact, isMajor);
+      for (Path newFile: newFiles) {
+        // Move the compaction into place.
+        StoreFile sf = completeCompaction(filesToCompact, newFile);
+        if (region.getCoprocessorHost() != null) {
+          region.getCoprocessorHost().postCompact(this, sf);
+        }
       }
     } finally {
       synchronized (filesCompacting) {
@@ -1336,26 +1357,25 @@ public class HStore implements Store, StoreConfiguration {
    * </pre>
    *
    * @param compactedFiles list of files that were compacted
-   * @param compactedFile StoreFile that is the result of the compaction
+   * @param newFile StoreFile that is the result of the compaction
    * @return StoreFile created. May be null.
    * @throws IOException
    */
   StoreFile completeCompaction(final Collection<StoreFile> compactedFiles,
-                                       final StoreFile.Writer compactedFile)
+                                       final Path newFile)
       throws IOException {
     // 1. Moving the new files into place -- if there is a new file (may not
     // be if all cells were expired or deleted).
     StoreFile result = null;
-    if (compactedFile != null) {
-      validateStoreFile(compactedFile.getPath());
+    if (newFile != null) {
+      validateStoreFile(newFile);
       // Move the file into the right spot
-      Path origPath = compactedFile.getPath();
-      Path destPath = new Path(homedir, origPath.getName());
-      LOG.info("Renaming compacted file at " + origPath + " to " + destPath);
-      if (!fs.rename(origPath, destPath)) {
-        LOG.error("Failed move of compacted file " + origPath + " to " +
+      Path destPath = new Path(homedir, newFile.getName());
+      LOG.info("Renaming compacted file at " + newFile + " to " + destPath);
+      if (!fs.rename(newFile, destPath)) {
+        LOG.error("Failed move of compacted file " + newFile + " to " +
             destPath);
-        throw new IOException("Failed move of compacted file " + origPath +
+        throw new IOException("Failed move of compacted file " + newFile +
             " to " + destPath);
       }
       result = new StoreFile(this.fs, destPath, this.conf, this.cacheConf,
@@ -1936,6 +1956,14 @@ public class HStore implements Store, StoreConfiguration {
 
   public ScanInfo getScanInfo() {
     return scanInfo;
+  }
+
+  /**
+   * Set scan info, used by test
+   * @param scanInfo new scan info to use for test
+   */
+  void setScanInfo(ScanInfo scanInfo) {
+    this.scanInfo = scanInfo;
   }
 
   /**

@@ -407,7 +407,7 @@ public class HFileReadWriteTest {
       Scan scan = new Scan();
 
       // Include deletes
-      scanner = new StoreScanner(store, store.scanInfo, scan, scanners,
+      scanner = new StoreScanner(store, store.getScanInfo(), scan, scanners,
           ScanType.MAJOR_COMPACT, Long.MIN_VALUE, Long.MIN_VALUE);
 
       ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();

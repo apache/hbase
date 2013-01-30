@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,7 +57,6 @@ public class TestDefaultCompactSelection extends TestCase {
   private static final String DIR=
     TEST_UTIL.getDataTestDir(TestDefaultCompactSelection.class.getSimpleName()).toString();
   private static Path TEST_FILE;
-  private CompactionPolicy manager;
 
   protected static final int minFiles = 3;
   protected static final int maxFiles = 5;
@@ -84,7 +82,6 @@ public class TestDefaultCompactSelection extends TestCase {
     Path basedir = new Path(DIR);
     String logName = "logs";
     Path logdir = new Path(DIR, logName);
-    Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("family"));
     FileSystem fs = FileSystem.get(conf);
 
@@ -102,7 +99,6 @@ public class TestDefaultCompactSelection extends TestCase {
     region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
 
     store = new HStore(basedir, region, hcd, fs, conf);
-    manager = store.compactionPolicy;
 
     TEST_FILE = StoreFile.getRandomFilename(fs, store.getHomedir());
     fs.create(TEST_FILE);
@@ -282,7 +278,7 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(100,50,23,12,12), true, 23, 12, 12);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1);
     conf.setFloat("hbase.hregion.majorcompaction.jitter", 0);
-    store.compactionPolicy.updateConfiguration(conf, store);
+    store.compactionPolicy.updateConfiguration();
     try {
       // trigger an aged major compaction
       compactEquals(sfCreate(50,25,12,12), 50, 25, 12, 12);
@@ -313,7 +309,7 @@ public class TestDefaultCompactSelection extends TestCase {
      * current compaction algorithm.  Developed to ensure that refactoring
      * doesn't implicitly alter this.
      */
-    long tooBig = maxSize + 1;
+    //long tooBig = maxSize + 1;
 
     Calendar calendar = new GregorianCalendar();
     int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
@@ -334,13 +330,13 @@ public class TestDefaultCompactSelection extends TestCase {
     this.conf.setLong("hbase.offpeak.end.hour", hourPlusOne);
     LOG.debug("Testing compact selection with off-peak settings (" +
         hourMinusOne + ", " + hourPlusOne + ")");
-    store.compactionPolicy.updateConfiguration(this.conf, store);
+    store.compactionPolicy.updateConfiguration();
     compactEquals(sfCreate(999, 50, 12, 12, 1), 50, 12, 12, 1);
 
     // set peak hour outside current selection and check compact selection
     this.conf.setLong("hbase.offpeak.start.hour", hourMinusTwo);
     this.conf.setLong("hbase.offpeak.end.hour", hourMinusOne);
-    store.compactionPolicy.updateConfiguration(this.conf, store);
+    store.compactionPolicy.updateConfiguration();
     LOG.debug("Testing compact selection with off-peak settings (" +
         hourMinusTwo + ", " + hourMinusOne + ")");
     compactEquals(sfCreate(999,50,12,12, 1), 12, 12, 1);

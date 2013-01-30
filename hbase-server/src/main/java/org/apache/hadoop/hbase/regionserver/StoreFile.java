@@ -1744,7 +1744,7 @@ public class StoreFile {
       return reader.getTrailer().getMajorVersion();
     }
 
-    HFile.Reader getHFileReader() {
+    public HFile.Reader getHFileReader() {
       return reader;
     }
 
