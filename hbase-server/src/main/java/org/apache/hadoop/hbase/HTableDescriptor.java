@@ -607,7 +607,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * 
    * @param isDeferredLogFlush
    */
-  public void setDeferredLogFlush(final boolean isDeferredLogFlush) {
+  public synchronized void setDeferredLogFlush(final boolean isDeferredLogFlush) {
     setValue(DEFERRED_LOG_FLUSH_KEY, isDeferredLogFlush? TRUE: FALSE);
     this.deferredLog = isDeferredLogFlush;
   }
