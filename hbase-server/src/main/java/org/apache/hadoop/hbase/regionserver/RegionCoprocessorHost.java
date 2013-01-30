@@ -425,9 +425,11 @@ public class RegionCoprocessorHost
    * Called prior to rewriting the store files selected for compaction
    * @param store the store being compacted
    * @param scanner the scanner used to read store data during compaction
+   * @param scanType type of Scan
    * @throws IOException
    */
-  public InternalScanner preCompact(HStore store, InternalScanner scanner) throws IOException {
+  public InternalScanner preCompact(HStore store, InternalScanner scanner,
+      ScanType scanType) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
@@ -435,7 +437,7 @@ public class RegionCoprocessorHost
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
           scanner = ((RegionObserver)env.getInstance()).preCompact(
-              ctx, store, scanner);
+              ctx, store, scanner, scanType);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env,e);
         }

@@ -133,17 +133,17 @@ class Compactor extends Configured {
               .preCompactScannerOpen(store, scanners,
                   majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT, earliestPutTs);
         }
+        ScanType scanType = majorCompaction? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT;
         if (scanner == null) {
           Scan scan = new Scan();
           scan.setMaxVersions(store.getFamily().getMaxVersions());
           /* Include deletes, unless we are doing a major compaction */
           scanner = new StoreScanner(store, store.scanInfo, scan, scanners,
-            majorCompaction? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT,
-            smallestReadPoint, earliestPutTs);
+            scanType, smallestReadPoint, earliestPutTs);
         }
         if (store.getHRegion().getCoprocessorHost() != null) {
           InternalScanner cpScanner =
-            store.getHRegion().getCoprocessorHost().preCompact(store, scanner);
+            store.getHRegion().getCoprocessorHost().preCompact(store, scanner, scanType);
           // NULL scanner returned from coprocessor hooks means skip normal processing
           if (cpScanner == null) {
             return null;

@@ -186,7 +186,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      HStore store, InternalScanner scanner) {
+      HStore store, InternalScanner scanner, ScanType scanType) {
     hadPreCompact = true;
     return scanner;
   }

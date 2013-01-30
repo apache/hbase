@@ -140,7 +140,8 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      final HStore store, final InternalScanner scanner) throws IOException {
+      final HStore store, final InternalScanner scanner, final ScanType scanType)
+          throws IOException {
     return scanner;
   }
 

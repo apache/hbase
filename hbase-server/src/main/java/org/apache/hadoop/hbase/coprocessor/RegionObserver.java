@@ -167,12 +167,14 @@ public interface RegionObserver extends Coprocessor {
    * @param store the store being compacted
    * @param scanner the scanner over existing data used in the store file
    * rewriting
+   * @param scanType type of Scan
    * @return the scanner to use during compaction.  Should not be {@code null}
    * unless the implementation is writing new store files on its own.
    * @throws IOException if an error occurred on the coprocessor
    */
   InternalScanner preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final HStore store, final InternalScanner scanner) throws IOException;
+      final HStore store, final InternalScanner scanner,
+      final ScanType scanType) throws IOException;
 
   /**
    * Called prior to writing the {@link StoreFile}s selected for compaction into
