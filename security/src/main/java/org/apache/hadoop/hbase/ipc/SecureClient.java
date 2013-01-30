@@ -375,10 +375,16 @@ public class SecureClient extends HBaseClient {
           if (LOG.isDebugEnabled()) {
             LOG.debug("call #"+id+", response is:\n"+value.toString());
           }
-          call.setValue(value);
+          // it's possible that this call may have been cleaned up due to a RPC
+          // timeout, so check if it still exists before setting the value.
+          if (call != null) {
+            call.setValue(value);
+          }
         } else if (state == Status.ERROR.state) {
-          call.setException(new RemoteException(WritableUtils.readString(in),
-                                                WritableUtils.readString(in)));
+          if (call != null) {
+            call.setException(new RemoteException(WritableUtils.readString(in), WritableUtils
+                .readString(in)));
+          }
         } else if (state == Status.FATAL.state) {
           // Close the connection
           markClosed(new RemoteException(WritableUtils.readString(in),
