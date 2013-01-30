@@ -432,13 +432,13 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     scan = new Scan();
 
-    for (int i = 0; i < NB_RETRIES; i++) {
+    for (int i = 0; i < NB_RETRIES_FOR_BIG_BATCH; i++) {
 
       scanner = htable2.getScanner(scan);
       res = scanner.next(NB_ROWS_IN_BIG_BATCH);
       scanner.close();
       if (res.length != NB_ROWS_IN_BIG_BATCH) {
-        if (i == NB_RETRIES-1) {
+        if (i == NB_RETRIES_FOR_BIG_BATCH-1) {
           int lastRow = -1;
           for (Result result : res) {
             int currentRow = Bytes.toInt(result.getRow());
