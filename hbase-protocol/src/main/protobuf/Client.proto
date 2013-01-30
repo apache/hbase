@@ -71,8 +71,22 @@ message GetRequest {
   optional bool closestRowBefore = 3;
 
   // The result isn't asked for, just check for
-  // the existence. If specified, closestRowBefore
-  // will be ignored
+  // the existence. If closestRowBefore specified,
+  // this will be ignored
+  optional bool existenceOnly = 4;
+}
+
+message MultiGetRequest {
+  required RegionSpecifier region = 1;
+  repeated Get get = 2;
+
+  // If the row to get doesn't exist, return the
+  // closest row before.
+  optional bool closestRowBefore = 3;
+
+  // The result isn't asked for, just check for
+  // the existence. If closestRowBefore specified,
+  // this will be ignored
   optional bool existenceOnly = 4;
 }
 
@@ -81,6 +95,13 @@ message GetResponse {
 
   // used for Get to check existence only
   optional bool exists = 2;
+}
+
+message MultiGetResponse {
+  repeated Result result = 1;
+
+  // used for Get to check existence only
+  repeated bool exists = 2;
 }
 
 /**
@@ -298,6 +319,9 @@ message MultiResponse {
 service ClientService {
   rpc get(GetRequest)
     returns(GetResponse);
+
+  rpc multiGet(MultiGetRequest)
+    returns(MultiGetResponse);
 
   rpc mutate(MutateRequest)
     returns(MutateResponse);

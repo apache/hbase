@@ -47,6 +47,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.jar.JarEntry;
@@ -232,7 +234,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       // NOTE: Path.toURL is deprecated (toURI instead) but the URLClassLoader
       // unsurprisingly wants URLs, not URIs; so we will use the deprecated
       // method which returns URLs for as long as it is available
-      List<URL> paths = new ArrayList<URL>();
+      final List<URL> paths = new ArrayList<URL>();
       URL url = dst.getCanonicalFile().toURL();
       paths.add(url);
 
@@ -250,7 +252,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
       jarFile.close();
 
-      cl = new CoprocessorClassLoader(paths, this.getClass().getClassLoader());
+      cl = AccessController.doPrivileged(new PrivilegedAction<CoprocessorClassLoader>() {
+              @Override
+              public CoprocessorClassLoader run() {
+                return new CoprocessorClassLoader(paths, this.getClass().getClassLoader());
+              }
+            });
+
       // cache cp classloader as a weak value, will be GC'ed when no reference left
       ClassLoader prev = classLoadersCache.putIfAbsent(path, cl);
       if (prev != null) {
@@ -470,6 +478,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
 
       public boolean exists(Get get) throws IOException {
         return table.exists(get);
+      }
+
+      public Boolean[] exists(List<Get> gets) throws IOException{
+        return table.exists(gets);
       }
 
       public void put(Put put) throws IOException {

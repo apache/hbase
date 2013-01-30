@@ -64,7 +64,7 @@ public interface HTableInterface extends Closeable {
   HTableDescriptor getTableDescriptor() throws IOException;
 
   /**
-   * Test for the existence of columns in the table, as specified in the Get.
+   * Test for the existence of columns in the table, as specified by the Get.
    * <p>
    *
    * This will return true if the Get matches one or more keys, false if not.
@@ -78,6 +78,23 @@ public interface HTableInterface extends Closeable {
    * @throws IOException e
    */
   boolean exists(Get get) throws IOException;
+
+  /**
+   * Test for the existence of columns in the table, as specified by the Gets.
+   * <p>
+   *
+   * This will return an array of booleans. Each value will be true if the related Get matches
+   * one or more keys, false if not.
+   * <p>
+   *
+   * This is a server-side call so it prevents any data from being transfered to
+   * the client.
+   *
+   * @param gets the Gets
+   * @return Array of Boolean true if the specified Get matches one or more keys, false if not
+   * @throws IOException e
+   */
+  Boolean[] exists(List<Get> gets) throws IOException;
 
   /**
    * Method that does a batch call on Deletes, Gets, Puts, Increments, Appends and RowMutations.

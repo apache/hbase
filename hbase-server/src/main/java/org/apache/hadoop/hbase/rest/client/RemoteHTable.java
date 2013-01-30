@@ -344,6 +344,19 @@ public class RemoteHTable implements HTableInterface {
     return (result != null && !(result.isEmpty()));
   }
 
+  /**
+   * exists(List) is really a list of get() calls. Just use get().
+   * @param gets list of Get to test for the existence
+   */
+  public Boolean[] exists(List<Get> gets) throws IOException {
+    LOG.warn("exists(List<Get>) is really list of get() calls, just use get()");
+    Boolean[] results = new Boolean[gets.size()];
+    for (int i = 0; i < results.length; i++) {
+      results[i] = exists(gets.get(i));
+    }
+    return results;
+  }
+
   public void put(Put put) throws IOException {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();

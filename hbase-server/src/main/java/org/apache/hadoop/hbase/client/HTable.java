@@ -24,6 +24,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -57,6 +58,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
@@ -869,6 +872,147 @@ public class HTable implements HTableInterface {
             }
           }
         }.withRetries();
+  }
+
+  /**
+   * Goal of this inner class is to keep track of the initial position of a get in a list before
+   * sorting it. This is used to send back results in the same orders we got the Gets before we sort
+   * them.
+   */
+  private static class SortedGet implements Comparable<SortedGet> {
+    protected int initialIndex = -1; // Used to store the get initial index in a list.
+    protected Get get; // Encapsulated Get instance.
+
+    public SortedGet (Get get, int initialIndex) {
+      this.get = get;
+      this.initialIndex = initialIndex;
+    }
+
+    public int getInitialIndex() {
+      return initialIndex;
+    }
+
+    @Override
+    public int compareTo(SortedGet o) {
+      return get.compareTo(o.get);
+    }
+
+    public Get getGet() {
+      return get;
+    }
+
+    @Override
+    public int hashCode() {
+      return get.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (obj instanceof SortedGet)
+        return get.equals(((SortedGet)obj).get);
+      else
+        return false;
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public Boolean[] exists(final List<Get> gets) throws IOException {
+    // Prepare the sorted list of gets. Take the list of gets received, and encapsulate them into
+    // a list of SortedGet instances. Simple list parsing, so complexity here is O(n)
+    // The list is later used to recreate the response order based on the order the Gets
+    // got received.
+    ArrayList<SortedGet> sortedGetsList = new ArrayList<HTable.SortedGet>();
+    for (int indexGet = 0; indexGet < gets.size(); indexGet++) {
+      sortedGetsList.add(new SortedGet (gets.get(indexGet), indexGet));
+    }
+
+    // Sorting the list to get the Gets ordered based on the key.
+    Collections.sort(sortedGetsList); // O(n log n)
+
+    // step 1: sort the requests by regions to send them bundled.
+    // Map key is startKey index. Map value is the list of Gets related to the region starting
+    // with the startKey.
+    Map<Integer, List<Get>> getsByRegion = new HashMap<Integer, List<Get>>();
+
+    // Reference map to quickly find back in which region a get belongs.
+    Map<Get, Integer> getToRegionIndexMap = new HashMap<Get, Integer>();
+    Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys();
+
+    int regionIndex = 0;
+    for (final SortedGet get : sortedGetsList) {
+      // Progress on the regions until we find the one the current get resides in.
+      while ((regionIndex < startEndKeys.getSecond().length) && ((Bytes.compareTo(startEndKeys.getSecond()[regionIndex], get.getGet().getRow()) <= 0))) {
+        regionIndex++;
+      }
+      List<Get> regionGets = getsByRegion.get(regionIndex);
+      if (regionGets == null) {
+        regionGets = new ArrayList<Get>();
+        getsByRegion.put(regionIndex, regionGets);
+      }
+      regionGets.add(get.getGet());
+      getToRegionIndexMap.put(get.getGet(), regionIndex);
+    }
+
+    // step 2: make the requests
+    Map<Integer, Future<List<Boolean>>> futures =
+        new HashMap<Integer, Future<List<Boolean>>>(sortedGetsList.size());
+    for (final Map.Entry<Integer, List<Get>> getsByRegionEntry : getsByRegion.entrySet()) {
+      Callable<List<Boolean>> callable = new Callable<List<Boolean>>() {
+        public List<Boolean> call() throws Exception {
+          return new ServerCallable<List<Boolean>>(connection, tableName, getsByRegionEntry.getValue()
+              .get(0).getRow(), operationTimeout) {
+            public List<Boolean> call() throws IOException {
+              try {
+                MultiGetRequest requests = RequestConverter.buildMultiGetRequest(location
+                    .getRegionInfo().getRegionName(), getsByRegionEntry.getValue(), true, false);
+                MultiGetResponse responses = server.multiGet(null, requests);
+                return responses.getExistsList();
+              } catch (ServiceException se) {
+                throw ProtobufUtil.getRemoteException(se);
+              }
+            }
+          }.withRetries();
+        }
+      };
+      futures.put(getsByRegionEntry.getKey(), pool.submit(callable));
+    }
+
+    // step 3: collect the failures and successes
+    Map<Integer, List<Boolean>> responses = new HashMap<Integer, List<Boolean>>();
+    for (final Map.Entry<Integer, List<Get>> sortedGetEntry : getsByRegion.entrySet()) {
+      try {
+        Future<List<Boolean>> future = futures.get(sortedGetEntry.getKey());
+        List<Boolean> resp = future.get();
+
+        if (resp == null) {
+          LOG.warn("Failed for gets on region: " + sortedGetEntry.getKey());
+        }
+        responses.put(sortedGetEntry.getKey(), resp);
+      } catch (ExecutionException e) {
+        LOG.warn("Failed for gets on region: " + sortedGetEntry.getKey());
+      } catch (InterruptedException e) {
+        LOG.warn("Failed for gets on region: " + sortedGetEntry.getKey());
+        Thread.currentThread().interrupt();
+      }
+    }
+    Boolean[] results = new Boolean[sortedGetsList.size()];
+
+    // step 4: build the response.
+    Map<Integer, Integer> indexes = new HashMap<Integer, Integer>();
+    for (int i = 0; i < sortedGetsList.size(); i++) {
+      Integer regionInfoIndex = getToRegionIndexMap.get(sortedGetsList.get(i).getGet());
+      Integer index = indexes.get(regionInfoIndex);
+      if (index == null) {
+        index = 0;
+      }
+      results[sortedGetsList.get(i).getInitialIndex()] = responses.get(regionInfoIndex).get(index);
+      indexes.put(regionInfoIndex, index + 1);
+    }
+
+    return results;
   }
 
   /**

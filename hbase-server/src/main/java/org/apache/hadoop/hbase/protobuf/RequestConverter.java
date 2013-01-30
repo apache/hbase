@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue;
@@ -166,7 +167,7 @@ public final class RequestConverter {
    * @param regionName the name of the region to get
    * @param get the client Get
    * @param existenceOnly indicate if check row existence only
-   * @return a protocol buffer GetReuqest
+   * @return a protocol buffer GetRequest
    */
   public static GetRequest buildGetRequest(final byte[] regionName,
       final Get get, final boolean existenceOnly) throws IOException {
@@ -176,6 +177,27 @@ public final class RequestConverter {
     builder.setExistenceOnly(existenceOnly);
     builder.setRegion(region);
     builder.setGet(ProtobufUtil.toGet(get));
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer MultiGetRequest for client Gets All gets are going to be run against
+   * the same region.
+   * @param regionName the name of the region to get from
+   * @param gets the client Gets
+   * @param existenceOnly indicate if check rows existence only
+   * @return a protocol buffer MultiGetRequest
+   */
+  public static MultiGetRequest buildMultiGetRequest(final byte[] regionName, final List<Get> gets,
+      final boolean existenceOnly, final boolean closestRowBefore) throws IOException {
+    MultiGetRequest.Builder builder = MultiGetRequest.newBuilder();
+    RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
+    builder.setExistenceOnly(existenceOnly);
+    builder.setClosestRowBefore(closestRowBefore);
+    builder.setRegion(region);
+    for (Get get : gets) {
+      builder.addGet(ProtobufUtil.toGet(get));
+    }
     return builder.build();
   }
 

@@ -19,9 +19,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -52,9 +54,14 @@ public class TestFromClientSide3 {
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static Random random = new Random();
   private static int SLAVES = 3;
+  private static byte [] ROW = Bytes.toBytes("testRow");
+  private static final byte[] ANOTHERROW = Bytes.toBytes("anotherrow");
+  private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
+  private static byte [] VALUE = Bytes.toBytes("testValue");
   private final static byte[] COL_QUAL = Bytes.toBytes("f1");
   private final static byte[] VAL_BYTES = Bytes.toBytes("v1");
   private final static byte[] ROW_BYTES = Bytes.toBytes("r1");
+
 
   /**
    * @throws java.lang.Exception
@@ -258,6 +265,116 @@ public class TestFromClientSide3 {
     LOG.info("alter status finished");
     assertNull(hTable.getTableDescriptor().getFamily(FAMILY).getValue(
         "hbase.hstore.compaction.min"));
+  }
+
+  @Test
+  public void testHTableExistsMethodSingleRegionSingleGet() throws Exception {
+
+    // Test with a single region table.
+
+    HTable table = TEST_UTIL.createTable(
+      Bytes.toBytes("testHTableExistsMethodSingleRegionSingleGet"), new byte[][] { FAMILY });
+
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, VALUE);
+
+    Get get = new Get(ROW);
+
+    boolean exist = table.exists(get);
+    assertEquals(exist, false);
+
+    table.put(put);
+
+    exist = table.exists(get);
+    assertEquals(exist, true);
+  }
+
+  public void testHTableExistsMethodSingleRegionMultipleGets() throws Exception {
+
+    HTable table = TEST_UTIL.createTable(
+      Bytes.toBytes("testHTableExistsMethodSingleRegionMultipleGets"), new byte[][] { FAMILY });
+
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
+
+    List<Get> gets = new ArrayList<Get>();
+    gets.add(new Get(ROW));
+    gets.add(null);
+    gets.add(new Get(ANOTHERROW));
+
+    Boolean[] results = table.exists(gets);
+    assertEquals(results[0], true);
+    assertEquals(results[1], false);
+    assertEquals(results[2], false);
+  }
+
+  @Test
+  public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
+
+    HTable table = TEST_UTIL.createTable(
+      Bytes.toBytes("testHTableExistsMethodMultipleRegionsSingleGet"), new byte[][] { FAMILY }, 1,
+      new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, VALUE);
+
+    Get get = new Get(ROW);
+
+    boolean exist = table.exists(get);
+    assertEquals(exist, false);
+
+    table.put(put);
+
+    exist = table.exists(get);
+    assertEquals(exist, true);
+  }
+
+  @Test
+  public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
+    HTable table = TEST_UTIL.createTable(
+      Bytes.toBytes("testHTableExistsMethodMultipleRegionsMultipleGets"), new byte[][] { FAMILY },
+      1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, VALUE);
+    table.put (put);
+
+    List<Get> gets = new ArrayList<Get>();
+    gets.add(new Get(ANOTHERROW));
+    gets.add(new Get(Bytes.add(ROW, new byte[] { 0x00 })));
+    gets.add(new Get(ROW));
+    gets.add(new Get(Bytes.add(ANOTHERROW, new byte[] { 0x00 })));
+
+    Boolean[] results = table.exists(gets);
+    assertEquals(results[0], false);
+    assertEquals(results[1], false);
+    assertEquals(results[2], true);
+    assertEquals(results[3], false);
+
+    // Test with the first region.
+    put = new Put(new byte[] { 0x00 });
+    put.add(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
+
+    gets = new ArrayList<Get>();
+    gets.add(new Get(new byte[] { 0x00 }));
+    gets.add(new Get(new byte[] { 0x00, 0x00 }));
+    results = table.exists(gets);
+    assertEquals(results[0], true);
+    assertEquals(results[1], false);
+
+    // Test with the last region
+    put = new Put(new byte[] { (byte) 0xff, (byte) 0xff });
+    put.add(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
+
+    gets = new ArrayList<Get>();
+    gets.add(new Get(new byte[] { (byte) 0xff }));
+    gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff }));
+    gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff }));
+    results = table.exists(gets);
+    assertEquals(results[0], false);
+    assertEquals(results[1], true);
+    assertEquals(results[2], false);
   }
 
   @Test

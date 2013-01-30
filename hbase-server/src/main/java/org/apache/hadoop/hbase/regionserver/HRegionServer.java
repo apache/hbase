@@ -150,6 +150,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
@@ -221,7 +223,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class  HRegionServer implements ClientProtocol,
+public class HRegionServer implements ClientProtocol,
     AdminProtocol, Runnable, RegionServerServices, HBaseRPCErrorHandler, LastSequenceId {
 
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
@@ -2719,6 +2721,64 @@ public class  HRegionServer implements ClientProtocol,
         builder.setExists(existence.booleanValue());
       } else if (r != null) {
         builder.setResult(ProtobufUtil.toResult(r));
+      }
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    } finally {
+      metricsRegionServer.updateGet(EnvironmentEdgeManager.currentTimeMillis() - before);
+    }
+  }
+
+  /**
+   * Get multi data from a table.
+   *
+   * @param controller the RPC controller
+   * @param request multi-the get request
+   * @throws ServiceException
+   */
+  @Override
+  public MultiGetResponse multiGet(final RpcController controller, final MultiGetRequest request)
+      throws ServiceException {
+    long before = EnvironmentEdgeManager.currentTimeMillis();
+    try {
+      requestCount.add(request.getGetCount());
+      HRegion region = getRegion(request.getRegion());
+      MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();
+      for (ClientProtos.Get get: request.getGetList())
+      {
+        Boolean existence = null;
+        Result r = null;
+        if (request.getClosestRowBefore()) {
+          if (get.getColumnCount() != 1) {
+            throw new DoNotRetryIOException(
+              "get ClosestRowBefore supports one and only one family now, not "
+                + get.getColumnCount() + " families");
+          }
+          byte[] row = get.getRow().toByteArray();
+          byte[] family = get.getColumn(0).getFamily().toByteArray();
+          r = region.getClosestRowBefore(row, family);
+        } else {
+          Get clientGet = ProtobufUtil.toGet(get);
+          if (request.getExistenceOnly() && region.getCoprocessorHost() != null) {
+            existence = region.getCoprocessorHost().preExists(clientGet);
+          }
+          if (existence == null) {
+            r = region.get(clientGet);
+            if (request.getExistenceOnly()) {
+              boolean exists = r != null && !r.isEmpty();
+              if (region.getCoprocessorHost() != null) {
+                exists = region.getCoprocessorHost().postExists(clientGet, exists);
+              }
+              existence = exists;
+            }
+          }
+        }
+        if (existence != null) {
+          builder.addExists(existence.booleanValue());
+        } else if (r != null) {
+          builder.addResult(ProtobufUtil.toResult(r));
+        }
       }
       return builder.build();
     } catch (IOException ie) {

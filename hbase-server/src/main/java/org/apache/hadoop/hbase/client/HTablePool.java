@@ -351,6 +351,11 @@ public class HTablePool implements Closeable {
     }
 
     @Override
+    public Boolean[] exists(List<Get> gets) throws IOException {
+      return table.exists(gets);
+    }
+
+    @Override
     public void batch(List<? extends Row> actions, Object[] results) throws IOException,
         InterruptedException {
       table.batch(actions, results);
