@@ -18,7 +18,10 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,11 +39,14 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -321,5 +327,100 @@ public class TestImportExport {
     assertEquals(now+1, res[5].getTimestamp());
     assertEquals(now, res[6].getTimestamp());
     t.close();
+  }
+
+  @Test
+  public void testWithFilter() throws Exception {
+    String EXPORT_TABLE = "exportSimpleCase_ImportWithFilter";
+    HTableDescriptor desc = new HTableDescriptor(EXPORT_TABLE);
+    desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
+    UTIL.getHBaseAdmin().createTable(desc);
+    HTable exportTable = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
+
+    Put p = new Put(ROW1);
+    p.add(FAMILYA, QUAL, now, QUAL);
+    p.add(FAMILYA, QUAL, now + 1, QUAL);
+    p.add(FAMILYA, QUAL, now + 2, QUAL);
+    p.add(FAMILYA, QUAL, now + 3, QUAL);
+    p.add(FAMILYA, QUAL, now + 4, QUAL);
+    exportTable.put(p);
+
+    String[] args = new String[] { EXPORT_TABLE, OUTPUT_DIR, "1000" };
+
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
+        cluster.getConfiguration()), args);
+    Configuration conf = opts.getConfiguration();
+    args = opts.getRemainingArgs();
+
+    Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
+    job.waitForCompletion(false);
+    assertTrue(job.isSuccessful());
+
+    String IMPORT_TABLE = "importWithFilter";
+    desc = new HTableDescriptor(IMPORT_TABLE);
+    desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
+    UTIL.getHBaseAdmin().createTable(desc);
+
+    HTable importTable = new HTable(UTIL.getConfiguration(), IMPORT_TABLE);
+    args = new String[] { "-D" + Import.FILTER_CLASS_CONF_KEY + "=" + PrefixFilter.class.getName(),
+        "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1), IMPORT_TABLE, OUTPUT_DIR,
+        "1000" };
+
+    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    conf = opts.getConfiguration();
+    args = opts.getRemainingArgs();
+
+    job = Import.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
+    job.waitForCompletion(false);
+    assertTrue(job.isSuccessful());
+
+    // get the count of the source table for that time range
+    PrefixFilter filter = new PrefixFilter(ROW1);
+    int count = getCount(exportTable, filter);
+
+    Assert.assertEquals("Unexpected row count between export and import tables", count,
+      getCount(importTable, null));
+
+    // and then test that a broken command doesn't bork everything - easier here because we don't
+    // need to re-run the export job
+
+    args = new String[] { "-D" + Import.FILTER_CLASS_CONF_KEY + "=" + Filter.class.getName(),
+        "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1) + "", EXPORT_TABLE,
+        OUTPUT_DIR, "1000" };
+
+    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    conf = opts.getConfiguration();
+    args = opts.getRemainingArgs();
+
+    job = Import.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
+    job.waitForCompletion(false);
+    assertFalse("Job succeeedd, but it had a non-instantiable filter!", job.isSuccessful());
+
+    // cleanup
+    exportTable.close();
+    importTable.close();
+  }
+
+  /**
+   * Count the number of keyvalues in the specified table for the given timerange
+   * @param start
+   * @param end
+   * @param table
+   * @return
+   * @throws IOException
+   */
+  private int getCount(HTable table, Filter filter) throws IOException {
+    Scan scan = new Scan();
+    scan.setFilter(filter);
+    ResultScanner results = table.getScanner(scan);
+    int count = 0;
+    for (Result res : results) {
+      count += res.size();
+    }
+    results.close();
+    return count;
   }
 }
