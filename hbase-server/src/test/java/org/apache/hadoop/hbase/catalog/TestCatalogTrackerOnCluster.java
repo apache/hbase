@@ -46,6 +46,9 @@ public class TestCatalogTrackerOnCluster {
     UTIL.startMiniCluster();
     // Shutdown hbase.
     UTIL.shutdownMiniHBaseCluster();
+    // Give the various ZKWatchers some time to settle their affairs.
+    Thread.sleep(1000);
+
     // Mess with the root location in the running zk.  Set it to be nonsense.
     ZooKeeperWatcher zookeeper = new ZooKeeperWatcher(UTIL.getConfiguration(),
       "Bad Root Location Writer", new Abortable() {
