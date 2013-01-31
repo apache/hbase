@@ -3131,7 +3131,10 @@ public class HRegion implements HeapSize { // , Writable{
                   + Bytes.toStringBinary(row));
             }
           } catch (InterruptedException ie) {
-            // Empty
+            LOG.warn("internalObtainRowLock interrupted for row=" + Bytes.toStringBinary(row));
+            InterruptedIOException iie = new InterruptedIOException();
+            iie.initCause(ie);
+            throw iie;
           }
         }
       }
