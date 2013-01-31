@@ -77,9 +77,9 @@ public class TestSplitTransactionOnCluster {
   private MiniHBaseCluster cluster = null;
   private static final int NB_SERVERS = 2;
   private static CountDownLatch latch = new CountDownLatch(1);
-  private static boolean secondSplit = false;
-  private static boolean callRollBack = false;
-  private static boolean firstSplitCompleted = false;
+  private static volatile boolean secondSplit = false;
+  private static volatile boolean callRollBack = false;
+  private static volatile boolean firstSplitCompleted = false;
   
   private static final HBaseTestingUtility TESTING_UTIL =
     new HBaseTestingUtility();
@@ -106,6 +106,82 @@ public class TestSplitTransactionOnCluster {
   private HRegionInfo getAndCheckSingleTableRegion(final List<HRegion> regions) {
     assertEquals(1, regions.size());
     return regions.get(0).getRegionInfo();
+  }
+
+  @Test(timeout = 2000000)
+  public void testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack() throws Exception {
+    final byte[] tableName = Bytes
+        .toBytes("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack");
+    HBaseAdmin admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
+    try {
+      // Create table then get the single region for our new table.
+      HTable t = TESTING_UTIL.createTable(tableName, Bytes.toBytes("cf"));
+
+      final List<HRegion> regions = cluster.getRegions(tableName);
+      HRegionInfo hri = getAndCheckSingleTableRegion(regions);
+      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+      final HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+      insertData(tableName, admin, t);
+      // Turn off balancer so it doesn't cut in and mess up our placements.
+      this.admin.setBalancerRunning(false, false);
+      // Turn off the meta scanner so it don't remove parent on us.
+      cluster.getMaster().setCatalogJanitorEnabled(false);
+
+      new Thread() {
+        public void run() {
+          SplitTransaction st = null;
+          st = new MockedSplitTransaction(regions.get(0), Bytes.toBytes("row2"));
+          try {
+            st.prepare();
+            st.execute(regionServer, regionServer);
+          } catch (IOException e) {
+
+          }
+        }
+      }.start();
+      for (int i = 0; !callRollBack && i < 100; i++) {
+        Thread.sleep(100);
+      }
+      assertTrue("Waited too long for rollback", callRollBack);
+      SplitTransaction st = null;
+      st = new MockedSplitTransaction(regions.get(0), Bytes.toBytes("row2"));
+      try {
+        secondSplit = true;
+        st.prepare();
+        st.execute(regionServer, regionServer);
+      } catch (IOException e) {
+        LOG.debug("Rollback started :"+ e.getMessage());
+        st.rollback(regionServer, regionServer);
+      }
+      for (int i=0; !firstSplitCompleted && i<100; i++) {
+        Thread.sleep(100);
+      }
+      assertTrue("fist split did not complete", firstSplitCompleted);
+      NavigableMap<String, RegionState> rit = cluster.getMaster().getAssignmentManager()
+          .getRegionsInTransition();
+      for (int i=0; rit.containsKey(hri.getTableNameAsString()) && i<100; i++) {
+        Thread.sleep(100);
+      }
+      assertFalse("region still in transition", rit.containsKey(hri.getTableNameAsString()));
+      List<HRegion> onlineRegions = regionServer.getOnlineRegions(tableName);
+      // Region server side split is successful.
+      assertEquals("The parent region should be splitted", 2, onlineRegions.size());
+      //Should be present in RIT
+      List<HRegionInfo> regionsOfTable = cluster.getMaster().getAssignmentManager().getRegionsOfTable(tableName);
+      // Master side should also reflect the same
+      assertEquals("No of regions in master", 2, regionsOfTable.size());
+    } finally {
+      admin.setBalancerRunning(true, false);
+      secondSplit = false;
+      firstSplitCompleted = false;
+      callRollBack = false;
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+    }
+    if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+      admin.close();
+    }
   }
 
   /**
@@ -185,6 +261,7 @@ public class TestSplitTransactionOnCluster {
       SplitRegionHandler.TEST_SKIP = false;
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
+      t.close();
     }
   }
 
@@ -236,6 +313,7 @@ public class TestSplitTransactionOnCluster {
     } finally {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
+      t.close();
     }
   }
 
@@ -289,6 +367,7 @@ public class TestSplitTransactionOnCluster {
     } finally {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
+      t.close();
     }
   }
 
@@ -360,6 +439,7 @@ public class TestSplitTransactionOnCluster {
     } finally {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
+      t.close();
     }
   }
   
@@ -436,6 +516,7 @@ public class TestSplitTransactionOnCluster {
       SplitRegionHandler.TEST_SKIP = false;
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
+      t.close();
     }
   }
 
@@ -456,11 +537,7 @@ public class TestSplitTransactionOnCluster {
 
     // Create table then get the single region for our new table.
     this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor(HConstants.CATALOG_FAMILY);
-    htd.addFamily(hcd);
-    this.admin.createTable(htd);
-    HTable t = new HTable(TESTING_UTIL.getConfiguration(), tableName);
+    HTable t = TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
 
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
@@ -517,6 +594,7 @@ public class TestSplitTransactionOnCluster {
       SplitRegionHandler.TEST_SKIP = false;
       this.admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
+      t.close();
     }
   }
 
@@ -601,6 +679,10 @@ public class TestSplitTransactionOnCluster {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("cf"));
     admin.createTable(htd);
+    for (int i = 0; cluster.getRegions(tableName).size() == 0 && i < 100; i++) {
+      Thread.sleep(100);
+    }
+    assertTrue("Table not online", cluster.getRegions(tableName).size() != 0);
 
     HRegion region = cluster.getRegions(tableName).get(0);
     int regionServerIndex = cluster.getServerWith(region.getRegionName());
@@ -648,90 +730,6 @@ public class TestSplitTransactionOnCluster {
     }
   }
   
-  @Test(timeout = 2000000)
-  public void testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack() throws Exception {
-    final byte[] tableName = Bytes
-        .toBytes("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack");
-    HBaseAdmin admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
-    try {
-      // Create table then get the single region for our new table.
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      htd.addFamily(new HColumnDescriptor("cf"));
-      admin.createTable(htd);
-      HTable t = new HTable(cluster.getConfiguration(), tableName);
-      // wait for up to 10s
-      for (int i=0; cluster.getRegions(tableName).size() != 1 && i<100; i++) {
-        Thread.sleep(100);
-      }
-      assertTrue("waited too long for table to get online",
-          cluster.getRegions(tableName).size() == 1);
-      final List<HRegion> regions = cluster.getRegions(tableName);
-      HRegionInfo hri = getAndCheckSingleTableRegion(regions);
-      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
-      final HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
-      insertData(tableName, admin, t);
-      // Turn off balancer so it doesn't cut in and mess up our placements.
-      this.admin.setBalancerRunning(false, false);
-      // Turn off the meta scanner so it don't remove parent on us.
-      cluster.getMaster().setCatalogJanitorEnabled(false);
-
-      new Thread() {
-        public void run() {
-          SplitTransaction st = null;
-          st = new MockedSplitTransaction(regions.get(0), Bytes.toBytes("row2"));
-          try {
-            st.prepare();
-            st.execute(regionServer, regionServer);
-          } catch (IOException e) {
-
-          }
-        }
-      }.start();
-      for (int i=0; !callRollBack && i<100; i++) {
-        Thread.sleep(100);
-      }
-      assertTrue("Waited too long for rollback", callRollBack);
-      SplitTransaction st = null;
-      st = new MockedSplitTransaction(regions.get(0), Bytes.toBytes("row2"));
-      try {
-        secondSplit = true;
-        st.prepare();
-        st.execute(regionServer, regionServer);
-      } catch (IOException e) {
-        LOG.debug("Rollback started :"+ e.getMessage());
-        st.rollback(regionServer, regionServer);
-      }
-      for (int i=0; !firstSplitCompleted && i<100; i++) {
-        Thread.sleep(100);
-      }
-      assertTrue("fist split did not complete", firstSplitCompleted);
-      NavigableMap<String, RegionState> rit = cluster.getMaster().getAssignmentManager()
-          .getRegionsInTransition();
-      for (int i=0; rit.containsKey(hri.getTableNameAsString()) && i<100; i++) {
-        Thread.sleep(100);
-      }
-      assertFalse("region still in transition", rit.containsKey(hri.getTableNameAsString()));
-      List<HRegion> onlineRegions = regionServer.getOnlineRegions(tableName);
-      // Region server side split is successful.
-      assertEquals("The parent region should be splitted", 2, onlineRegions.size());
-      //Should be present in RIT
-      List<HRegionInfo> regionsOfTable = cluster.getMaster().getAssignmentManager().getRegionsOfTable(tableName);
-      // Master side should also reflect the same
-      assertEquals("No of regions in master", 2, regionsOfTable.size());
-    } finally {
-      admin.setBalancerRunning(true, false);
-      secondSplit = false;
-      firstSplitCompleted = false;
-      callRollBack = false;
-      cluster.getMaster().setCatalogJanitorEnabled(true);
-    }
-    if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-      admin.close();
-    }
-  }
-
   @Test(timeout = 20000)
   public void testTableExistsIfTheSpecifiedTableRegionIsSplitParent() throws Exception {
     final byte[] tableName = 
@@ -741,10 +739,8 @@ public class TestSplitTransactionOnCluster {
     HBaseAdmin admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
     try {
       // Create table then get the single region for our new table.
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      htd.addFamily(new HColumnDescriptor("cf"));
-      admin.createTable(htd);
-      HTable t = new HTable(cluster.getConfiguration(), tableName);
+      HTable t = TESTING_UTIL.createTable(tableName, Bytes.toBytes("cf"));
+
       regions = cluster.getRegions(tableName);
       int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
       regionServer = cluster.getRegionServer(regionServerIndex);
@@ -797,10 +793,10 @@ public class TestSplitTransactionOnCluster {
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor("cf"));
       admin.createTable(htd);
-      for (int i=0; cluster.getRegions(tableName).size() != 1 && i<100; i++) {
+      for (int i = 0; cluster.getRegions(tableName).size() == 0 && i < 100; i++) {
         Thread.sleep(100);
       }
-      assertTrue("Table not online", cluster.getRegions(tableName).size() == 1);
+      assertTrue("Table not online", cluster.getRegions(tableName).size() != 0);
       List<HRegion> regions = cluster.getRegions(tableName);
       HRegionInfo hri = getAndCheckSingleTableRegion(regions);
       int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
