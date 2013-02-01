@@ -4809,6 +4809,7 @@ public class HRegion implements HeapSize { // , Writable{
     long size = 0;
     long txid = 0;
 
+    checkReadOnly();
     // Lock row
     startRegionOperation();
     this.writeRequestsCount.increment();
@@ -4978,6 +4979,7 @@ public class HRegion implements HeapSize { // , Writable{
     long size = 0;
     long txid = 0;
 
+    checkReadOnly();
     // Lock row
     startRegionOperation();
     this.writeRequestsCount.increment();
