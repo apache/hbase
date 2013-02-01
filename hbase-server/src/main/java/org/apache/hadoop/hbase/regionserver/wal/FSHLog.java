@@ -827,6 +827,7 @@ class FSHLog implements HLog, Syncable {
       }
       if (this.writer != null) {
         this.writer.close();
+        this.writer = null;
       }
     }
   }
@@ -1081,35 +1082,43 @@ class FSHLog implements HLog, Syncable {
       // issue the sync to HDFS. If sync is successful, then update
       // syncedTillHere to indicate that transactions till this
       // number has been successfully synced.
+      IOException ioe = null;
+      List<Entry> pending = null;
       synchronized (flushLock) {
         if (txid <= this.syncedTillHere) {
           return;
         }
         doneUpto = this.unflushedEntries.get();
-        List<Entry> pending = logSyncerThread.getPendingWrites();
+        pending = logSyncerThread.getPendingWrites();
         try {
           logSyncerThread.hlogFlush(tempWriter, pending);
         } catch(IOException io) {
-          synchronized (this.updateLock) {
+          ioe = io;
+          LOG.error("syncer encountered error, will retry. txid=" + txid, ioe);
+        }
+      }
+      if (ioe != null && pending != null) {
+        synchronized (this.updateLock) {
+          synchronized (flushLock) {
             // HBASE-4387, HBASE-5623, retry with updateLock held
             tempWriter = this.writer;
             logSyncerThread.hlogFlush(tempWriter, pending);
           }
-        }
+        }          
       }
       // another thread might have sync'ed avoid double-sync'ing
       if (txid <= this.syncedTillHere) {
         return;
       }
       try {
-        tempWriter.sync();
+        if (tempWriter != null) tempWriter.sync();
       } catch(IOException ex) {
         synchronized (this.updateLock) {
           // HBASE-4387, HBASE-5623, retry with updateLock held
           // TODO: we don't actually need to do it for concurrent close - what is the point
           //       of syncing new unrelated writer? Keep behavior for now.
           tempWriter = this.writer;
-          tempWriter.sync();
+          if (tempWriter != null) tempWriter.sync();
         }
       }
       this.syncedTillHere = Math.max(this.syncedTillHere, doneUpto);
