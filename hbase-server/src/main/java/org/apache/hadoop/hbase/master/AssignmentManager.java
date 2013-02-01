@@ -2705,7 +2705,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param sn Server that went down.
    * @return list of regions in transition on this server
    */
-  public List<RegionState> processServerShutdown(final ServerName sn) {
+  public List<HRegionInfo> processServerShutdown(final ServerName sn) {
     // Clean out any existing assignment plans for this server
     synchronized (this.regionPlans) {
       for (Iterator <Map.Entry<String, RegionPlan>> i =
@@ -2719,7 +2719,30 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
-    return regionStates.serverOffline(sn);
+    List<HRegionInfo> regions = regionStates.serverOffline(sn);
+    for (Iterator<HRegionInfo> it = regions.iterator(); it.hasNext(); ) {
+      HRegionInfo hri = it.next();
+      String encodedName = hri.getEncodedName();
+
+      // We need a lock on the region as we could update it
+      Lock lock = locker.acquireLock(encodedName);
+      try {
+        RegionState regionState =
+          regionStates.getRegionTransitionState(encodedName);
+        if (regionState == null
+            || !regionState.isPendingOpenOrOpeningOnServer(sn)) {
+          LOG.info("Skip region " + hri
+            + " since it is not opening on the dead server any more: " + sn);
+          it.remove();
+        } else {
+          // Mark the region closed and assign it again by SSH
+          regionStates.updateRegionState(hri, RegionState.State.CLOSED);
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+    return regions;
   }
 
   /**

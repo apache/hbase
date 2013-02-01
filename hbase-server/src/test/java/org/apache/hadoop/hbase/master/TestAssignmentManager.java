@@ -912,7 +912,7 @@ public class TestAssignmentManager {
   /**
    * When a region is in transition, if the region server opening the region goes down,
    * the region assignment takes a long time normally (waiting for timeout monitor to trigger assign).
-   * This test is to make sure SSH times out the transition right away.
+   * This test is to make sure SSH reassigns it right away.
    */
   @Test
   public void testSSHTimesOutOpeningRegionTransition()
@@ -925,6 +925,7 @@ public class TestAssignmentManager {
     // adding region in pending open.
     RegionState state = new RegionState(REGIONINFO,
       State.OPENING, System.currentTimeMillis(), SERVERNAME_A);
+    am.getRegionStates().regionOnline(REGIONINFO, SERVERNAME_B);
     am.getRegionStates().regionsInTransition.put(REGIONINFO.getEncodedName(), state);
     // adding region plan
     am.regionPlans.put(REGIONINFO.getEncodedName(),
@@ -932,8 +933,9 @@ public class TestAssignmentManager {
     am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
 
     try {
+      am.assignInvoked = false;
       processServerShutdownHandler(ct, am, false);
-      assertTrue("Transtion is timed out", state.getStamp() == 0);
+      assertTrue(am.assignInvoked);
     } finally {
       am.getRegionStates().regionsInTransition.remove(REGIONINFO.getEncodedName());
       am.regionPlans.remove(REGIONINFO.getEncodedName());
@@ -1084,7 +1086,7 @@ public class TestAssignmentManager {
     @Override
     public void assign(List<HRegionInfo> regions)
         throws IOException, InterruptedException {
-      assignInvoked = true;
+      assignInvoked = (regions != null && regions.size() > 0);
     }
 
     /** reset the watcher */

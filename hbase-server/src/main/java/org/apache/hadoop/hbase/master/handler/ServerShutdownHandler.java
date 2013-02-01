@@ -198,25 +198,30 @@ public class ServerShutdownHandler extends EventHandler {
       // OFFLINE? -- and then others after like CLOSING that depend on log
       // splitting.
       AssignmentManager am = services.getAssignmentManager();
-      List<RegionState> regionsInTransition = am.processServerShutdown(serverName);
+      List<HRegionInfo> regionsInTransition = am.processServerShutdown(serverName);
       LOG.info("Reassigning " + ((hris == null)? 0: hris.size()) +
         " region(s) that " + (serverName == null? "null": serverName)  +
-        " was carrying (skipping " + regionsInTransition.size() +
-        " regions(s) that are already in transition)");
+        " was carrying (and " + regionsInTransition.size() +
+        " regions(s) that were opening on this server)");
+
+      List<HRegionInfo> toAssignRegions = new ArrayList<HRegionInfo>();
+      toAssignRegions.addAll(regionsInTransition);
 
       // Iterate regions that were on this server and assign them
       if (hris != null) {
         RegionStates regionStates = am.getRegionStates();
-        List<HRegionInfo> toAssignRegions = new ArrayList<HRegionInfo>();
         for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
           HRegionInfo hri = e.getKey();
+          if (regionsInTransition.contains(hri)) {
+            continue;
+          }
           RegionState rit = regionStates.getRegionTransitionState(hri);
           if (processDeadRegion(hri, e.getValue(), am, server.getCatalogTracker())) {
             ServerName addressFromAM = regionStates.getRegionServerOfRegion(hri);
             if (addressFromAM != null && !addressFromAM.equals(this.serverName)) {
               // If this region is in transition on the dead server, it must be
-              // opening or pending_open, which is covered by AM#processServerShutdown
-              LOG.debug("Skip assigning region " + hri.getRegionNameAsString()
+              // opening or pending_open, which should have been covered by AM#processServerShutdown
+              LOG.info("Skip assigning region " + hri.getRegionNameAsString()
                 + " because it has been opened in " + addressFromAM.getServerName());
               continue;
             }
@@ -262,12 +267,12 @@ public class ServerShutdownHandler extends EventHandler {
             }
           }
         }
-        try {
-          am.assign(toAssignRegions);
-        } catch (InterruptedException ie) {
-          LOG.error("Caught " + ie + " during round-robin assignment");
-          throw new IOException(ie);
-        }
+      }
+      try {
+        am.assign(toAssignRegions);
+      } catch (InterruptedException ie) {
+        LOG.error("Caught " + ie + " during round-robin assignment");
+        throw new IOException(ie);
       }
     } finally {
       this.deadServers.finish(serverName);
