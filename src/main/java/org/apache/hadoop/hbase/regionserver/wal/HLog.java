@@ -1303,16 +1303,24 @@ public class HLog implements Syncable {
       // issue the sync to HDFS. If sync is successful, then update
       // syncedTillHere to indicate that transactions till this
       // number has been successfully synced.
+      IOException ioe = null;
+      List<Entry> pending = null;
       synchronized (flushLock) {
         if (txid <= this.syncedTillHere) {
           return;
         }
         doneUpto = this.unflushedEntries.get();
-        List<Entry> pending = logSyncerThread.getPendingWrites();
+        pending = logSyncerThread.getPendingWrites();
         try {
           logSyncerThread.hlogFlush(tempWriter, pending);
         } catch(IOException io) {
-          synchronized (this.updateLock) {
+          ioe = io;
+          LOG.error("syncer encountered error, will retry. txid=" + txid, ioe);
+        }
+      }
+      if (ioe != null && pending != null) {
+        synchronized (this.updateLock) {
+          synchronized (flushLock) {
             // HBASE-4387, HBASE-5623, retry with updateLock held
             tempWriter = this.writer;
             logSyncerThread.hlogFlush(tempWriter, pending);
@@ -1325,7 +1333,7 @@ public class HLog implements Syncable {
       }
       try {
         tempWriter.sync();
-      } catch(IOException io) {
+      } catch (IOException io) {
         synchronized (this.updateLock) {
           // HBASE-4387, HBASE-5623, retry with updateLock held
           tempWriter = this.writer;
