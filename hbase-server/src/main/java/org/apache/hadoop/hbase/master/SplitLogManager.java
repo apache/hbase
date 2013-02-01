@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -885,7 +884,7 @@ public class SplitLogManager extends ZooKeeperListener {
     volatile long last_update;
     volatile int last_version;
     volatile ServerName cur_worker_name;
-    TaskBatch batch;
+    volatile TaskBatch batch;
     volatile TerminationStatus status;
     volatile int incarnation;
     volatile int unforcedResubmits;
@@ -1182,7 +1181,7 @@ public class SplitLogManager extends ZooKeeperListener {
           }
           return;
         } else {
-        LOG.debug(path +
+          LOG.info(path +
             " does not exist. Either was created but deleted behind our" +
             " back by another pending delete OR was deleted" +
             " in earlier retry rounds. zkretries = " + (Long) ctx);
