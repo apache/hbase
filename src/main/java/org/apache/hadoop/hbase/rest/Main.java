@@ -158,24 +158,31 @@ public class Main implements Constants {
     server.setSendDateHeader(false);
     server.setStopAtShutdown(true);
 
-    // set up the JMX servlet container for Jetty
-    ServletHolder jmx = new ServletHolder(JMXJsonServlet.class);
-    // set up the metrics servlet container for Jetty
-    ServletHolder metrics = new ServletHolder(MetricsServlet.class);
-
-    String metricsPath =
-      servlet.getConfiguration().get("hbase.rest.path.metrics", "/metrics");
-    String jmxPath =
-      servlet.getConfiguration().get("hbase.rest.path.jmx", "/jmx");
-
       // set up context
     Context context = new Context(server, "/", Context.SESSIONS);
-    context.addServlet(metrics, metricsPath);
-    context.addServlet(jmx, jmxPath);
     context.addServlet(sh, "/*");
     context.addFilter(GzipFilter.class, "/*", 0);
 
-    context.getServletContext().setAttribute("hadoop.conf", conf);
+    // Disable the JMX and metrics servlet by default so that
+    // not to confuse existing applications use jmx/metrics as table name
+    if (servlet.getConfiguration().getBoolean(
+        "hbase.rest.enable.jmx_metrics", false)) {
+
+      // set up the JMX servlet container for Jetty
+      ServletHolder jmx = new ServletHolder(JMXJsonServlet.class);
+      // set up the metrics servlet container for Jetty
+      ServletHolder metrics = new ServletHolder(MetricsServlet.class);
+
+      String metricsPath =
+        servlet.getConfiguration().get("hbase.rest.path.metrics", "/metrics");
+      String jmxPath =
+        servlet.getConfiguration().get("hbase.rest.path.jmx", "/jmx");
+
+      context.addServlet(metrics, metricsPath);
+      context.addServlet(jmx, jmxPath);
+
+      context.getServletContext().setAttribute("hadoop.conf", conf);
+    }
 
     // login the server principal (if using secure Hadoop)
     if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
