@@ -3793,10 +3793,11 @@ public class HRegion implements HeapSize { // , Writable{
           if (this.joinedHeap != null) {
             KeyValue nextJoinedKv = joinedHeap.peek();
             // If joinedHeap is pointing to some other row, try to seek to a correct one.
-            // We don't need to recheck that row here - populateResult will take care of that.
             boolean mayHaveData =
               (nextJoinedKv != null && nextJoinedKv.matchingRow(currentRow, offset, length))
-              || this.joinedHeap.seek(KeyValue.createFirstOnRow(currentRow, offset, length));
+              || (this.joinedHeap.seek(KeyValue.createFirstOnRow(currentRow, offset, length))
+                  && joinedHeap.peek() != null
+                  && joinedHeap.peek().matchingRow(currentRow, offset, length));
             if (mayHaveData) {
               joinedContinuationRow = current;
               populateFromJoinedHeap(limit, metric);
