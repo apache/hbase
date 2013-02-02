@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.jmx.JMXJsonServlet;
+import org.apache.hadoop.metrics.MetricsServlet;
 import org.apache.hadoop.net.DNS;
 
 import java.util.List;
@@ -57,6 +59,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * <li>-ro --readonly : server mode</li>
  * </ul>
  */
+@SuppressWarnings("deprecation")
 public class Main implements Constants {
 
   private static void printUsageAndExit(Options options, int exitCode) {
@@ -154,12 +157,27 @@ public class Main implements Constants {
     server.setSendServerVersion(false);
     server.setSendDateHeader(false);
     server.setStopAtShutdown(true);
+
+    // set up the JMX servlet container for Jetty
+    ServletHolder jmx = new ServletHolder(JMXJsonServlet.class);
+    // set up the metrics servlet container for Jetty
+    ServletHolder metrics = new ServletHolder(MetricsServlet.class);
+
+    String metricsPath =
+      servlet.getConfiguration().get("hbase.rest.path.metrics", "/metrics");
+    String jmxPath =
+      servlet.getConfiguration().get("hbase.rest.path.jmx", "/jmx");
+
       // set up context
     Context context = new Context(server, "/", Context.SESSIONS);
+    context.addServlet(metrics, metricsPath);
+    context.addServlet(jmx, jmxPath);
     context.addServlet(sh, "/*");
     context.addFilter(GzipFilter.class, "/*", 0);
 
-    // login the server principal (if using secure Hadoop)   
+    context.getServletContext().setAttribute("hadoop.conf", conf);
+
+    // login the server principal (if using secure Hadoop)
     if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
       String machineName = Strings.domainNamePointerToHostName(
         DNS.getDefaultHost(conf.get("hbase.rest.dns.interface", "default"),
