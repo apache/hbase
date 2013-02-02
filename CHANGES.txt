@@ -1,5 +1,88 @@
 HBase Change Log
 
+Release 0.94.5 - 2/2/2012
+Sub-task
+
+    [HBASE-2611] - Handle RS that fails while processing the failure of another one
+    [HBASE-7626] - Backport portions of HBASE-7460 to 0.94
+    [HBASE-7687] - TestCatalogTracker.testServerNotRunningIOException fails occasionally
+    [HBASE-7738] - REST server should publish metrics that are available via HTTP
+
+Bug
+
+    [HBASE-5458] - Thread safety issues with Compression.Algorithm.GZ and CompressionTest
+    [HBASE-6824] - Introduce ${hbase.local.dir} and save coprocessor jars there
+    [HBASE-7034] - Bad version, failed OPENING to OPENED but master thinks it is open anyways
+    [HBASE-7293] - [replication] Remove dead sinks from ReplicationSource.currentPeers and pick new ones
+    [HBASE-7423] - HFileArchiver should not use the configuration from the Filesystem
+    [HBASE-7468] - TestSplitTransactionOnCluster hangs frequently
+    [HBASE-7476] - HBase shell count command doesn't escape binary output
+    [HBASE-7497] - TestDistributedLogSplitting.testDelayedDeleteOnFailure times out occasionally
+    [HBASE-7498] - Make REST server thread pool size configurable
+    [HBASE-7499] - TestScannerTimeout timeout is too aggressive.
+    [HBASE-7502] - TestScannerTimeout fails on snapshot branch
+    [HBASE-7504] - -ROOT- may be offline forever after FullGC of RS
+    [HBASE-7505] - Server will hang when stopping cluster, caused by waiting for split threads
+    [HBASE-7506] - Judgment of carrying ROOT/META will become wrong when expiring server
+    [HBASE-7513] - HDFSBlocksDistribution shouldn't send NPEs when something goes wrong
+    [HBASE-7515] - Store.loadStoreFiles should close opened files if there's an exception
+    [HBASE-7524] - hbase-policy.xml is improperly set thus all rules in it can be by-passed
+    [HBASE-7530] - [replication] Work around HDFS-4380 else we get NPEs
+    [HBASE-7531] - [replication] NPE in SequenceFileLogReader because ReplicationSource doesn't nullify the reader
+    [HBASE-7534] - [replication] TestReplication.queueFailover can fail because HBaseTestingUtility.createMultiRegions is dangerous
+    [HBASE-7545] - [replication] Break out TestReplication into manageable classes
+    [HBASE-7549] - Make HTableInterface#batch() javadoc proper
+    [HBASE-7550] - Synchronization problem in AssignmentManager
+    [HBASE-7551] - nodeChildrenChange event may happen after the transition to RS_ZK_REGION_SPLITTING in SplitTransaction causing the SPLIT event to be missed in the master side.
+    [HBASE-7562] - ZKUtil: missing "else condition" in multi processing
+    [HBASE-7575] - FSUtils#getTableStoreFilePathMap should all ignore non-table folders
+    [HBASE-7578] - TestCatalogTracker hangs occasionally
+    [HBASE-7581] - TestAccessController depends on the execution order
+    [HBASE-7584] - Improve TestAccessController.testAppend
+    [HBASE-7587] - Fix two findbugs warning in RowResource
+    [HBASE-7592] - HConnectionManager.getHTableDescriptor() compares too much
+    [HBASE-7602] - TestFromClientSide.testPoolBehavior is incorrect
+    [HBASE-7617] - TestHRegionOnCluster.testDataCorrectnessReplayingRecoveredEdits still fails occasionally.
+    [HBASE-7628] - Port HBASE-6509 fast-forwarding FuzzyRowFilter to 0.94
+    [HBASE-7643] - HFileArchiver.resolveAndArchive() race condition may lead to snapshot data loss
+    [HBASE-7644] - Port HBASE-4802 'Disable show table metrics in bulk loader' to 0.94
+    [HBASE-7646] - Make forkedProcessTimeoutInSeconds configurable
+    [HBASE-7647] - 0.94 hfiles v2.1 are not backwards compatible with HFilev2.0
+    [HBASE-7648] - TestAcidGuarantees.testMixedAtomicity hangs sometimes
+    [HBASE-7654] - Add List<String> getCoprocessors() to HTableDescriptor
+    [HBASE-7669] - ROOT region wouldn't be handled by PRI-IPC-Handler
+    [HBASE-7681] - Address some recent random test failures
+    [HBASE-7684] - NullPointerException in SecureClient when Call is cleaned up due to RPC timeout
+    [HBASE-7685] - Closing socket connection can't be removed from SecureClient
+    [HBASE-7693] - Hostname returned by TableInputFormatBase.reverseDNS contains trailing period
+    [HBASE-7694] - Secure HBase should use replication call queue
+    [HBASE-7702] - Adding filtering to Import jobs
+    [HBASE-7715] - FSUtils#waitOnSafeMode can incorrectly loop on standby NN
+    [HBASE-7717] - Wait until regions are assigned in TestSplitTransactionOnCluster
+    [HBASE-7728] - deadlock occurs between hlog roller and hlog syncer
+    [HBASE-7729] - TestCatalogTrackerOnCluster.testbadOriginalRootLocation fails occasionally
+    [HBASE-7730] - HBaseAdmin#synchronousBalanceSwitch is not compatible with 0.92
+    [HBASE-7731] - Append/Increment methods in HRegion don't check whether the table is readonly or not
+    [HBASE-7740] - Recheck matching row for joined scanners
+
+Improvement
+
+    [HBASE-3996] - Support multiple tables and scanners as input to the mapper in map/reduce jobs
+    [HBASE-5416] - Improve performance of scans with some kind of filters.
+    [HBASE-5498] - Secure Bulk Load
+    [HBASE-5664] - CP hooks in Scan flow for fast forward when filter filters out a row
+    [HBASE-7441] - Make ClusterManager in IntegrationTestingUtility pluggable
+    [HBASE-7540] - Make znode dump to print a dump of replication znodes
+
+New Feature
+
+    [HBASE-6669] - Add BigDecimalColumnInterpreter for doing aggregations using AggregationClient
+
+Wish
+
+    [HBASE-7705] - Make the method getCurrentPoolSize of HTablePool public
+
+
 Release 0.94.4 - 1/2/2012
 Sub-task
 
