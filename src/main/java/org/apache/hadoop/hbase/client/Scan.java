@@ -92,10 +92,13 @@ public class Scan extends OperationWithAttributes implements Writable {
   private int batch = -1;
   // If application wants to collect scan metrics, it needs to
   // call scan.setAttribute(SCAN_ATTRIBUTES_ENABLE, Bytes.toBytes(Boolean.TRUE))
-  static public String SCAN_ATTRIBUTES_METRICS_ENABLE =
-    "scan.attributes.metrics.enable";
-  static public String SCAN_ATTRIBUTES_METRICS_DATA =
-    "scan.attributes.metrics.data";
+  static public String SCAN_ATTRIBUTES_METRICS_ENABLE = "scan.attributes.metrics.enable";
+  static public String SCAN_ATTRIBUTES_METRICS_DATA = "scan.attributes.metrics.data";
+  
+  // If an application wants to use multiple scans over different tables each scan must
+  // define this attribute with the appropriate table name by calling
+  // scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(tableName))
+  static public final String SCAN_ATTRIBUTES_TABLE_NAME = "scan.attributes.table.name";
 
   /*
    * -1 means no caching
