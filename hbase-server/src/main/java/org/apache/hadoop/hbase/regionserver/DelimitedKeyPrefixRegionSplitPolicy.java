@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
@@ -22,63 +23,64 @@ import java.util.Arrays;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A custom RegionSplitPolicy implementing a SplitPolicy that groups
- * rows by a prefix of the row-key
+ * rows by a prefix of the row-key with a delimiter. Only the first delimiter
+ * for the row key will define the prefix of the row key that is used for grouping.
  *
  * This ensures that a region is not split "inside" a prefix of a row key.
  * I.e. rows can be co-located in a region by their prefix.
+ *
+ * As an example, if you have row keys delimited with <code>_</code>, like
+ * <code>userid_eventtype_eventid</code>, and use prefix delimiter _, this split policy
+ * ensures that all rows starting with the same userid, belongs to the same region.
+ * @see KeyPrefixRegionSplitPolicy
  */
 @InterfaceAudience.Private
-public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
-  private static final Log LOG = LogFactory
-      .getLog(KeyPrefixRegionSplitPolicy.class);
-  @Deprecated
-  public static final String PREFIX_LENGTH_KEY_DEPRECATED = "prefix_split_key_policy.prefix_length";
-  public static final String PREFIX_LENGTH_KEY = "KeyPrefixRegionSplitPolicy.prefix_length";
+public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
 
-  private int prefixLength = 0;
+  private static final Log LOG = LogFactory
+      .getLog(DelimitedKeyPrefixRegionSplitPolicy.class);
+  public static final String DELIMITER_KEY = "DelimitedKeyPrefixRegionSplitPolicy.delimiter";
+
+  private byte[] delimiter = null;
 
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     if (region != null) {
-      prefixLength = 0;
 
       // read the prefix length from the table descriptor
-      String prefixLengthString = region.getTableDesc().getValue(
-          PREFIX_LENGTH_KEY);
-      if (prefixLengthString == null) {
-        //read the deprecated value
-        prefixLengthString = region.getTableDesc().getValue(PREFIX_LENGTH_KEY_DEPRECATED);
-        if (prefixLengthString == null) {
-          LOG.error(PREFIX_LENGTH_KEY + " not specified for table "
-              + region.getTableDesc().getNameAsString()
-              + ". Using default RegionSplitPolicy");
-          return;
-        }
+      String delimiterString = region.getTableDesc().getValue(
+          DELIMITER_KEY);
+      if (delimiterString == null || delimiterString.length() == 0) {
+        LOG.error(DELIMITER_KEY + " not specified for table "
+            + region.getTableDesc().getNameAsString()
+            + ". Using default RegionSplitPolicy");
+        return;
       }
-      try {
-        prefixLength = Integer.parseInt(prefixLengthString);
-      } catch (NumberFormatException nfe) {
-        // ignore
-      }
-      if (prefixLength <= 0) {
-        LOG.error("Invalid value for " + PREFIX_LENGTH_KEY + " for table "
-            + region.getTableDesc().getNameAsString() + ":"
-            + prefixLengthString + ". Using default RegionSplitPolicy");
-      }
+
+      delimiter = Bytes.toBytes(delimiterString);
     }
   }
 
   @Override
   protected byte[] getSplitPoint() {
     byte[] splitPoint = super.getSplitPoint();
-    if (prefixLength > 0 && splitPoint != null && splitPoint.length > 0) {
+    if (delimiter != null) {
+
+      //find the first occurrence of delimiter in split point
+      int index = com.google.common.primitives.Bytes.indexOf(splitPoint, delimiter);
+      if (index < 0) {
+        LOG.warn("Delimiter " + Bytes.toString(delimiter) + "  not found for split key "
+            + Bytes.toString(splitPoint));
+        return splitPoint;
+      }
+
       // group split keys by a prefix
-      return Arrays.copyOf(splitPoint,
-          Math.min(prefixLength, splitPoint.length));
+      return Arrays.copyOf(splitPoint, Math.min(index, splitPoint.length));
     } else {
       return splitPoint;
     }
