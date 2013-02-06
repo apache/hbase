@@ -600,7 +600,6 @@ public class HConnectionManager {
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
-      this.rpcEngine = HBaseRPC.getProtocolEngine(conf);
       this.master = null;
       this.resetting = false;
     }
@@ -613,6 +612,9 @@ public class HConnectionManager {
       }
       if (clusterId == null) {
         clusterId = new ClusterId(zooKeeper, this);
+        if (clusterId.hasId()) {
+          conf.set(HConstants.CLUSTER_ID, clusterId.getId());
+        }
       }
       if (masterAddressTracker == null) {
         masterAddressTracker = new MasterAddressTracker(zooKeeper, this);
@@ -621,6 +623,10 @@ public class HConnectionManager {
       if (rootRegionTracker == null) {
         rootRegionTracker = new RootRegionTracker(zooKeeper, this);
         rootRegionTracker.start();
+      }
+      // RpcEngine needs access to zookeeper data, like cluster ID
+      if (rpcEngine == null) {
+        this.rpcEngine = HBaseRPC.getProtocolEngine(conf);
       }
     }
 
@@ -700,9 +706,6 @@ public class HConnectionManager {
               throw new MasterNotRunningException();
             }
 
-            if (clusterId.hasId()) {
-              conf.set(HConstants.CLUSTER_ID, clusterId.getId());
-            }
             InetSocketAddress isa =
               new InetSocketAddress(sn.getHostname(), sn.getPort());
             HMasterInterface tryMaster = rpcEngine.getProxy(
@@ -1325,9 +1328,6 @@ public class HConnectionManager {
           server = this.servers.get(rsName);
           if (server == null) {
             try {
-              if (clusterId.hasId()) {
-                conf.set(HConstants.CLUSTER_ID, clusterId.getId());
-              }
               // Only create isa when we need to.
               InetSocketAddress address = isa != null? isa:
                 new InetSocketAddress(hostname, port);
