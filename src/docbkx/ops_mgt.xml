@@ -251,9 +251,12 @@ row10	c1	c2
        <title>WALPlayer</title>
        <para>WALPlayer is a utility to replay WAL files into HBase.
        </para>
-       <para>The WAL can be replayed for a set of tables or all tables, and a timerange can be provided (in milliseconds). The WAL is filtered to this set of tables. The output can optionally be mapped to another set of tables.
+       <para>The WAL can be replayed for a set of tables or all tables, and a
+           timerange can be provided (in milliseconds). The WAL is filtered to
+           this set of tables. The output can optionally be mapped to another set of tables.
        </para>
-       <para>WALPlayer can also generate HFiles for later bulk importing, in that case only a single table and no mapping can be specified.
+       <para>WALPlayer can also generate HFiles for later bulk importing, in that case
+           only a single table and no mapping can be specified.
        </para>
        <para>Invoke via:
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer [options] &lt;wal inputdir&gt; &lt;tables&gt; [&lt;tableMappings>]&gt;
@@ -262,6 +265,10 @@ row10	c1	c2
        <para>For example:
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer /backuplogdir oldTable1,oldTable2 newTable1,newTable2
 </programlisting>
+       </para>
+       <para>
+           WALPlayer, by default, runs as a mapreduce job.  To NOT run WALPlayer as a mapreduce job on your cluster,
+           force it to run all in the local process by adding the flags <code>-Dmapred.job.tracker=local</code> on the command line.
        </para>
     </section>
     <section xml:id="rowcounter">
