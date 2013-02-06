@@ -104,9 +104,8 @@ import com.google.common.collect.Lists;
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
-//TODO: move StoreConfiguration implementation into a separate class.
 @InterfaceAudience.Private
-public class HStore implements Store, StoreConfiguration {
+public class HStore implements Store {
   static final Log LOG = LogFactory.getLog(HStore.class);
 
   protected final MemStore memstore;
@@ -293,21 +292,18 @@ public class HStore implements Store, StoreConfiguration {
     return this.fs;
   }
 
-  /* Implementation of StoreConfiguration */
+  /* Implementation of StoreConfigInformation */
+  @Override
   public long getStoreFileTtl() {
     // TTL only applies if there's no MIN_VERSIONs setting on the column.
     return (this.scanInfo.getMinVersions() == 0) ? this.ttl : Long.MAX_VALUE;
   }
 
-  public Long getMajorCompactionPeriod() {
-    String strCompactionTime = this.family.getValue(HConstants.MAJOR_COMPACTION_PERIOD);
-    return (strCompactionTime != null) ? new Long(strCompactionTime) : null;
-  }
-
+  @Override
   public long getMemstoreFlushSize() {
     return this.region.memstoreFlushSize;
   }
-  /* End implementation of StoreConfiguration */
+  /* End implementation of StoreConfigInformation */
 
   /**
    * Returns the configured bytesPerChecksum value.

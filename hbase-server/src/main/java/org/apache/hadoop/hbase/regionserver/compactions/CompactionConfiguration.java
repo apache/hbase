@@ -24,7 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.StoreConfiguration;
+import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 
 /**
  * Compaction configuration for a particular instance of HStore.
@@ -49,7 +49,7 @@ public class CompactionConfiguration {
   private static final String CONFIG_PREFIX = "hbase.hstore.compaction.";
 
   Configuration conf;
-  StoreConfiguration storeConfig;
+  StoreConfigInformation storeConfigInfo;
 
   long maxCompactSize;
   long minCompactSize;
@@ -64,13 +64,13 @@ public class CompactionConfiguration {
   long majorCompactionPeriod;
   float majorCompactionJitter;
 
-  CompactionConfiguration(Configuration conf, StoreConfiguration storeConfig) {
+  CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
-    this.storeConfig = storeConfig;
+    this.storeConfigInfo = storeConfigInfo;
 
     maxCompactSize = conf.getLong(CONFIG_PREFIX + "max.size", Long.MAX_VALUE);
     minCompactSize = conf.getLong(CONFIG_PREFIX + "min.size",
-        storeConfig.getMemstoreFlushSize());
+        storeConfigInfo.getMemstoreFlushSize());
     minFilesToCompact = Math.max(2, conf.getInt(CONFIG_PREFIX + "min",
           /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
     maxFilesToCompact = conf.getInt(CONFIG_PREFIX + "max", 10);
@@ -89,7 +89,7 @@ public class CompactionConfiguration {
     }
 
     throttlePoint =  conf.getLong("hbase.regionserver.thread.compaction.throttle",
-          2 * maxFilesToCompact * storeConfig.getMemstoreFlushSize());
+          2 * maxFilesToCompact * storeConfigInfo.getMemstoreFlushSize());
     shouldDeleteExpired = conf.getBoolean("hbase.store.delete.expired.storefile", true);
     majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.20F);
@@ -184,12 +184,6 @@ public class CompactionConfiguration {
    * Major compactions are selected periodically according to this parameter plus jitter
    */
   long getMajorCompactionPeriod() {
-    if (storeConfig != null) {
-      Long storeSpecificPeriod = storeConfig.getMajorCompactionPeriod();
-      if (storeSpecificPeriod != null) {
-        return storeSpecificPeriod;
-      }
-    }
     return majorCompactionPeriod;
   }
 

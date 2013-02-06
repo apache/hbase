@@ -41,7 +41,7 @@ import com.google.common.collect.ImmutableList;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface Store extends  HeapSize {
+public interface Store extends HeapSize, StoreConfigInformation {
 
   /* The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)
