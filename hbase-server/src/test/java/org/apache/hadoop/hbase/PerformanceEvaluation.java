@@ -1518,7 +1518,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     Configuration conf = getConf();
     if (this.miniCluster) {
       dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-      zooKeeperCluster = new MiniZooKeeperCluster();
+      zooKeeperCluster = new MiniZooKeeperCluster(conf);
       int zooKeeperPort = zooKeeperCluster.startup(new File(System.getProperty("java.io.tmpdir")));
 
       // mangle the conf so that the fs parameter points to the minidfs we
