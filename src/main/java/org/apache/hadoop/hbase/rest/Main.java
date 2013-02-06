@@ -32,10 +32,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.jmx.JMXJsonServlet;
-import org.apache.hadoop.metrics.MetricsServlet;
 import org.apache.hadoop.net.DNS;
 
 import java.util.List;
@@ -59,14 +58,13 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * <li>-ro --readonly : server mode</li>
  * </ul>
  */
-@SuppressWarnings("deprecation")
 public class Main implements Constants {
 
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("bin/hbase rest start", "", options,
       "\nTo run the REST server as a daemon, execute " +
-      "bin/hbase-daemon.sh start|stop rest [-p <port>] [-ro]\n", true);
+      "bin/hbase-daemon.sh start|stop rest [--infoport <port>] [-p <port>] [-ro]\n", true);
     System.exit(exitCode);
   }
 
@@ -86,6 +84,7 @@ public class Main implements Constants {
     options.addOption("p", "port", true, "Port to bind to [default: 8080]");
     options.addOption("ro", "readonly", false, "Respond only to GET HTTP " +
       "method requests [default: false]");
+    options.addOption(null, "infoport", true, "Port for web UI");
 
     CommandLine commandLine = null;
     try {
@@ -107,6 +106,14 @@ public class Main implements Constants {
     if (commandLine != null && commandLine.hasOption("readonly")) {
       servlet.getConfiguration().setBoolean("hbase.rest.readonly", true);
       LOG.debug("readonly set to true");
+    }
+
+    // check for user-defined info server port setting, if so override the conf
+    if (commandLine != null && commandLine.hasOption("infoport")) {
+      String val = commandLine.getOptionValue("infoport");
+      servlet.getConfiguration()
+          .setInt("hbase.rest.info.port", Integer.valueOf(val));
+      LOG.debug("Web UI port set to " + val);
     }
 
     @SuppressWarnings("unchecked")
@@ -158,31 +165,10 @@ public class Main implements Constants {
     server.setSendDateHeader(false);
     server.setStopAtShutdown(true);
 
-      // set up context
+    // set up context
     Context context = new Context(server, "/", Context.SESSIONS);
     context.addServlet(sh, "/*");
     context.addFilter(GzipFilter.class, "/*", 0);
-
-    // Disable the JMX and metrics servlet by default so that
-    // not to confuse existing applications use jmx/metrics as table name
-    if (servlet.getConfiguration().getBoolean(
-        "hbase.rest.enable.jmx_metrics", false)) {
-
-      // set up the JMX servlet container for Jetty
-      ServletHolder jmx = new ServletHolder(JMXJsonServlet.class);
-      // set up the metrics servlet container for Jetty
-      ServletHolder metrics = new ServletHolder(MetricsServlet.class);
-
-      String metricsPath =
-        servlet.getConfiguration().get("hbase.rest.path.metrics", "/metrics");
-      String jmxPath =
-        servlet.getConfiguration().get("hbase.rest.path.jmx", "/jmx");
-
-      context.addServlet(metrics, metricsPath);
-      context.addServlet(jmx, jmxPath);
-
-      context.getServletContext().setAttribute("hadoop.conf", conf);
-    }
 
     // login the server principal (if using secure Hadoop)
     if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
@@ -191,6 +177,16 @@ public class Main implements Constants {
           conf.get("hbase.rest.dns.nameserver", "default")));
       User.login(conf, "hbase.rest.keytab.file", "hbase.rest.kerberos.principal",
         machineName);
+    }
+
+    // Put up info server.
+    int port = conf.getInt("hbase.rest.info.port", 8085);
+    if (port >= 0) {
+      conf.setLong("startcode", System.currentTimeMillis());
+      String a = conf.get("hbase.rest.info.bindAddress", "0.0.0.0");
+      InfoServer infoServer = new InfoServer("rest", a, port, false, conf);
+      infoServer.setAttribute("hbase.conf", conf);
+      infoServer.start();
     }
 
     // start server
