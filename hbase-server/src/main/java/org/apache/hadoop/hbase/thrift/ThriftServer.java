@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
+import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 
@@ -60,6 +61,8 @@ public class ThriftServer {
   private Configuration conf;
   ThriftServerRunner serverRunner;
 
+  private InfoServer infoServer;
+
   //
   // Main program and support routines
   //
@@ -86,6 +89,16 @@ public class ThriftServer {
    void doMain(final String[] args) throws Exception {
      processOptions(args);
      serverRunner = new ThriftServerRunner(conf);
+
+     // Put up info server.
+     int port = conf.getInt("hbase.thrift.info.port", 9095);
+     if (port >= 0) {
+       conf.setLong("startcode", System.currentTimeMillis());
+       String a = conf.get("hbase.thrift.info.bindAddress", "0.0.0.0");
+       infoServer = new InfoServer("thrift", a, port, false, conf);
+       infoServer.setAttribute("hbase.conf", conf);
+       infoServer.start();
+     }
      serverRunner.run();
   }
 
@@ -101,6 +114,7 @@ public class ThriftServer {
     options.addOption("f", FRAMED_OPTION, false, "Use framed transport");
     options.addOption("c", COMPACT_OPTION, false, "Use the compact protocol");
     options.addOption("h", "help", false, "Print help information");
+    options.addOption(null, "infoport", true, "Port for web UI");
 
     options.addOption("m", MIN_WORKERS_OPTION, true,
         "The minimum number of worker threads for " +
@@ -147,6 +161,18 @@ public class ThriftServer {
       printUsageAndExit(options, -1);
     }
 
+    // check for user-defined info server port setting, if so override the conf
+    try {
+      if (cmd.hasOption("infoport")) {
+        String val = cmd.getOptionValue("infoport");
+        conf.setInt("hbase.thrift.info.port", Integer.valueOf(val));
+        LOG.debug("Web UI port set to " + val);
+      }
+    } catch (NumberFormatException e) {
+      LOG.error("Could not parse the value provided for the infoport option", e);
+      printUsageAndExit(options, -1);
+    }
+
     // Make optional changes to the configuration based on command-line options
     optionToConf(cmd, MIN_WORKERS_OPTION,
         conf, TBoundedThreadPoolServer.MIN_WORKER_THREADS_CONF_KEY);
@@ -171,6 +197,14 @@ public class ThriftServer {
   }
 
   public void stop() {
+    if (this.infoServer != null) {
+      LOG.info("Stopping infoServer");
+      try {
+        this.infoServer.stop();
+      } catch (Exception ex) {
+        ex.printStackTrace();
+      }
+    }
     serverRunner.shutdown();
   }
 

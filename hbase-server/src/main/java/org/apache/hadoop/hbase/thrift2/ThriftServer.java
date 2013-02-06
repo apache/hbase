@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.thrift.CallQueue;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
+import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
@@ -66,6 +67,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * HbaseClient.thrift IDL file.
  */
 @InterfaceAudience.Private
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public class ThriftServer {
   private static final Log log = LogFactory.getLog(ThriftServer.class);
 
@@ -91,6 +93,7 @@ public class ThriftServer {
     options.addOption("f", "framed", false, "Use framed transport");
     options.addOption("c", "compact", false, "Use the compact protocol");
     options.addOption("h", "help", false, "Print help information");
+    options.addOption(null, "infoport", true, "Port for web UI");
 
     OptionGroup servers = new OptionGroup();
     servers.addOption(
@@ -225,15 +228,51 @@ public class ThriftServer {
       Configuration conf = HBaseConfiguration.create();
       ThriftMetrics metrics = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.TWO);
 
+      String implType = "threadpool";
+      if (nonblocking) {
+        implType = "nonblocking";
+      } else if (hsha) {
+        implType = "hsha";
+      }
+
+      conf.set("hbase.regionserver.thrift.server.type", implType);
+      conf.setInt("hbase.regionserver.thrift.port", listenPort);
+
       // Construct correct ProtocolFactory
-      TProtocolFactory protocolFactory = getTProtocolFactory(cmd.hasOption("compact"));
+      boolean compact = cmd.hasOption("compact");
+      TProtocolFactory protocolFactory = getTProtocolFactory(compact);
       THBaseService.Iface handler =
           ThriftHBaseServiceHandler.newInstance(conf, metrics);
       THBaseService.Processor processor = new THBaseService.Processor(handler);
+      conf.setBoolean("hbase.regionserver.thrift.compact", compact);
 
       boolean framed = cmd.hasOption("framed") || nonblocking || hsha;
       TTransportFactory transportFactory = getTTransportFactory(framed);
       InetSocketAddress inetSocketAddress = bindToPort(cmd.getOptionValue("bind"), listenPort);
+      conf.setBoolean("hbase.regionserver.thrift.framed", framed);
+
+      // check for user-defined info server port setting, if so override the conf
+      try {
+        if (cmd.hasOption("infoport")) {
+          String val = cmd.getOptionValue("infoport");
+          conf.setInt("hbase.thrift.info.port", Integer.valueOf(val));
+          log.debug("Web UI port set to " + val);
+        }
+      } catch (NumberFormatException e) {
+        log.error("Could not parse the value provided for the infoport option", e);
+        printUsage();
+        System.exit(1);
+      }
+
+      // Put up info server.
+      int port = conf.getInt("hbase.thrift.info.port", 9095);
+      if (port >= 0) {
+        conf.setLong("startcode", System.currentTimeMillis());
+        String a = conf.get("hbase.thrift.info.bindAddress", "0.0.0.0");
+        InfoServer infoServer = new InfoServer("thrift", a, port, false, conf);
+        infoServer.setAttribute("hbase.conf", conf);
+        infoServer.start();
+      }
 
       if (nonblocking) {
         server = getTNonBlockingServer(protocolFactory, processor, transportFactory, inetSocketAddress);
