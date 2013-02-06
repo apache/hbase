@@ -342,34 +342,12 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         LOG.debug(this.identifier + " connected");
         break;
 
-      case SaslAuthenticated:
-        if (ZKUtil.isSecureZooKeeper(this.conf)) {
-          // We are authenticated, clients can proceed.
-          saslLatch.countDown();
-        }
-        break;
-
-      case AuthFailed:
-        if (ZKUtil.isSecureZooKeeper(this.conf)) {
-          // We could not be authenticated, but clients should proceed anyway.
-          // Only access to znodes that require SASL authentication will be
-          // denied. The client may never need to access them.
-          saslLatch.countDown();
-        }
-        break;
-
       // Abort the server if Disconnected or Expired
       case Disconnected:
         LOG.debug(prefix("Received Disconnected from ZooKeeper, ignoring"));
         break;
 
       case Expired:
-        if (ZKUtil.isSecureZooKeeper(this.conf)) {
-          // We consider Expired equivalent to AuthFailed for this
-          // connection. Authentication is never going to complete. The
-          // client should proceed to do cleanup.
-          saslLatch.countDown();
-        }
         String msg = prefix(this.identifier + " received expired from " +
           "ZooKeeper, aborting");
         // TODO: One thought is to add call to ZooKeeperListener so say,
