@@ -1488,8 +1488,9 @@ if (!b) {
 	   <section xml:id="client.connections"><title>Connections</title>
            <para>For connection configuration information, see <xref linkend="client_dependencies" />.
          </para>
-         <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
-instances are not thread-safe.  When creating HTable instances, it is advisable to use the same <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
+         <para><emphasis><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
+                 instances are not thread-safe</emphasis>.  Only one thread use an instance of HTable at any given
+             time.  When creating HTable instances, it is advisable to use the same <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
 instance.  This will ensure sharing of ZooKeeper and socket instances to the RegionServers
 which is usually what you want.  For example, this is preferred:
 		<programlisting>HBaseConfiguration conf = HBaseConfiguration.create();
@@ -1505,7 +1506,16 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
           </para>
           <section xml:id="client.connection.pooling"><title>Connection Pooling</title>
             <para>For applications which require high-end multithreaded access (e.g., web-servers or application servers that may serve many application threads
-            in a single JVM), see <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTablePool.html">HTablePool</link>.
+            in a single JVM), one solution is <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTablePool.html">HTablePool</link>.
+            But as written currently, it is difficult to control client resource consumption when using HTablePool.
+            </para>
+            <para>
+                Another solution is to precreate an <classname>HConnection</classname> using
+                <programlisting>HConnectionManager.createConnection(Configuration)</programlisting> as
+                well as an <classname>ExecutorService</classname>; then use the
+                <programlisting>HTable(byte[], HConnection, ExecutorService)</programlisting>
+                constructor to create <classname>HTable</classname> instances on demand.
+                This construction is very lightweight and resources are controlled/shared if you go this route.
             </para>
           </section>
    	  </section>
