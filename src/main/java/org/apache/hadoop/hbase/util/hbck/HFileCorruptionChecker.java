@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.util.hbck;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -45,6 +44,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.FSUtils.FamilyDirFilter;
 import org.apache.hadoop.hbase.util.FSUtils.HFileFilter;
 import org.apache.hadoop.hbase.util.FSUtils.RegionDirFilter;
+import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 
 /**
  * This class marches through all of the region's hfiles and verifies that
@@ -338,22 +338,22 @@ public class HFileCorruptionChecker {
    * Print a human readable summary of hfile quarantining operations.
    * @param out
    */
-  public void report(PrintWriter out) {
-    out.println("Checked " + hfilesChecked.get() + " hfile for corruption");
-    out.println("  HFiles corrupted:                  " + corrupted.size());
+  public void report(ErrorReporter out) {
+    out.print("Checked " + hfilesChecked.get() + " hfile for corruption");
+    out.print("  HFiles corrupted:                  " + corrupted.size());
     if (inQuarantineMode) {
-      out.println("    HFiles successfully quarantined: " + quarantined.size());
+      out.print("    HFiles successfully quarantined: " + quarantined.size());
       for (Path sq : quarantined) {
-        out.println("      " + sq);
+        out.print("      " + sq);
       }
-      out.println("    HFiles failed quarantine:        " + failures.size());
+      out.print("    HFiles failed quarantine:        " + failures.size());
       for (Path fq : failures) {
-        out.println("      " + fq);
+        out.print("      " + fq);
       }
     }
-    out.println("    HFiles moved while checking:     " + missing.size());
+    out.print("    HFiles moved while checking:     " + missing.size());
     for (Path mq : missing) {
-      out.println("      " + mq);
+      out.print("      " + mq);
     }
 
     String initialState = (corrupted.size() == 0) ? "OK" : "CORRUPTED";
@@ -361,9 +361,9 @@ public class HFileCorruptionChecker {
         : "CORRUPTED";
 
     if (inQuarantineMode) {
-      out.println("Summary: " + initialState + " => " + fixedState);
+      out.print("Summary: " + initialState + " => " + fixedState);
     } else {
-      out.println("Summary: " + initialState);
+      out.print("Summary: " + initialState);
     }
   }
 }
