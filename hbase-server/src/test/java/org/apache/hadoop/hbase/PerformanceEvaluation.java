@@ -112,9 +112,10 @@ import org.hbase.async.Scanner;
 public class PerformanceEvaluation extends Configured implements Tool {
   protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
 
-  private static final int ROW_LENGTH = 1000;
+  private static final int DEFAULT_ROW_PREFIX_LENGTH = 16;
+  private static final int VALUE_LENGTH = 1000;
   private static final int ONE_GB = 1024 * 1024 * 1000;
-  private static final int ROWS_PER_GB = ONE_GB / ROW_LENGTH;
+  private static final int ROWS_PER_GB = ONE_GB / VALUE_LENGTH;
 
   public static final byte[] COMPRESSION = Bytes.toBytes("NONE");
   public static final byte[] TABLE_NAME = Bytes.toBytes("TestTable");
@@ -127,6 +128,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   private boolean miniCluster = false;
   private boolean nomapred = false;
+  private int rowPrefixLength = DEFAULT_ROW_PREFIX_LENGTH;
   private int N = 1;
   private int R = ROWS_PER_GB;
   private byte[] tableName = TABLE_NAME;
@@ -537,10 +539,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     if (this.presplitRegions == 0)
       return new byte [0][];
 
-    byte[][] splits = new byte[this.presplitRegions][];
+    int numSplitPoints = presplitRegions - 1;
+    byte[][] splits = new byte[numSplitPoints][];
     int jump = this.R  / this.presplitRegions;
-    for (int i=0; i <this.presplitRegions; i++) {
-      int rowkey = jump * i;
+    for (int i=0; i < numSplitPoints; i++) {
+      int rowkey = jump * (1 + i);
       splits[i] = format(rowkey);
     }
     return splits;
@@ -931,9 +934,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (row.size() != 1) {
         throw new IOException((row.isEmpty() ? "No" : "Multiple (" + row.size() + ')')
                               + " KeyValue found in row");
-      } else if (row.get(0).value().length != ROW_LENGTH) {
+      } else if (row.get(0).value().length != VALUE_LENGTH) {
         throw new IOException("Invalid value length (found: " + row.get(0).value().length
-                              + ", expected: " + ROW_LENGTH + ") in row \""
+                              + ", expected: " + VALUE_LENGTH + ") in row \""
                               + new String(row.get(0).key()) + '"');
       }
     }
@@ -1420,7 +1423,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * number (Does absolute in case number is negative).
    */
   public static byte [] format(final int number) {
-    byte [] b = new byte[10];
+    byte [] b = new byte[DEFAULT_ROW_PREFIX_LENGTH + 10];
     int d = Math.abs(number);
     for (int i = b.length - 1; i >= 0; i--) {
       b[i] = (byte)((d % 10) + '0');
@@ -1436,10 +1439,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * @return Generated random value to insert into a table cell.
    */
   public static byte[] generateValue(final Random r) {
-    byte [] b = new byte [ROW_LENGTH];
+    byte [] b = new byte [VALUE_LENGTH];
     int i = 0;
 
-    for(i = 0; i < (ROW_LENGTH-8); i += 8) {
+    for(i = 0; i < (VALUE_LENGTH-8); i += 8) {
       b[i] = (byte) (65 + r.nextInt(26));
       b[i+1] = b[i];
       b[i+2] = b[i];
@@ -1451,7 +1454,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     byte a = (byte) (65 + r.nextInt(26));
-    for(; i < ROW_LENGTH; i++) {
+    for(; i < VALUE_LENGTH; i++) {
       b[i] = a;
     }
     return b;

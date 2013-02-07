@@ -18,6 +18,8 @@
 
 package org.apache.hbase.cell;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hbase.Cell;
@@ -45,6 +47,6 @@ public interface CellOutputStream {
    * that can then be read from the implementation to be sent to disk, put in the block cache, or
    * sent over the network.
    */
-  void flush();
+  void flush() throws IOException;
 
 }

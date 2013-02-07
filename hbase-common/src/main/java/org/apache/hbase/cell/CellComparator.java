@@ -79,20 +79,37 @@ public class CellComparator implements Comparator<Cell>, Serializable{
   /**************** equals ****************************/
 
   public static boolean equals(Cell a, Cell b){
-    if (!areKeyLengthsEqual(a, b)) {
-      return false;
-    }
-    //TODO compare byte[]'s in reverse since later bytes more likely to differ
-    return 0 == compareStatic(a, b);
+    return equalsRow(a, b)
+        && equalsFamily(a, b)
+        && equalsQualifier(a, b)
+        && equalsTimestamp(a, b)
+        && equalsType(a, b);
   }
 
   public static boolean equalsRow(Cell a, Cell b){
-    if(!areRowLengthsEqual(a, b)){
-      return false;
-    }
-    return 0 == Bytes.compareTo(
+    return Bytes.equals(
       a.getRowArray(), a.getRowOffset(), a.getRowLength(),
       b.getRowArray(), b.getRowOffset(), b.getRowLength());
+  }
+
+  public static boolean equalsFamily(Cell a, Cell b){
+    return Bytes.equals(
+      a.getFamilyArray(), a.getFamilyOffset(), a.getFamilyLength(),
+      b.getFamilyArray(), b.getFamilyOffset(), b.getFamilyLength());
+  }
+
+  public static boolean equalsQualifier(Cell a, Cell b){
+    return Bytes.equals(
+      a.getQualifierArray(), a.getQualifierOffset(), a.getQualifierLength(),
+      b.getQualifierArray(), b.getQualifierOffset(), b.getQualifierLength());
+  }
+
+  public static boolean equalsTimestamp(Cell a, Cell b){
+    return a.getTimestamp() == b.getTimestamp();
+  }
+
+  public static boolean equalsType(Cell a, Cell b){
+    return a.getTypeByte() == b.getTypeByte();
   }
 
 

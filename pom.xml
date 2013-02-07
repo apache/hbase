@@ -42,7 +42,7 @@
   <version>0.95-SNAPSHOT</version>
   <name>HBase</name>
   <description>
-    Apache HBase&#153; is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
+    Apache HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
     random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.
@@ -56,6 +56,7 @@
     <module>hbase-common</module>
     <module>hbase-it</module>
     <module>hbase-examples</module>
+    <module>hbase-prefix-tree</module>
   </modules>
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
@@ -977,6 +978,14 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-prefix-tree</artifactId>
+        <version>${project.version}</version>
+        <!-- unfortunately, runtime scope causes Eclipse to give compile time access which isn't
+          needed, however it is apparently needed to run things within Eclipse -->
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <artifactId>hbase-examples</artifactId>
