@@ -83,13 +83,6 @@ import com.google.common.collect.Lists;
 public class HLogSplitter {
   private static final String LOG_SPLITTER_IMPL = "hbase.hlog.splitter.impl";
 
-  /**
-   * Name of file that holds recovered edits written by the wal log splitting
-   * code, one per region
-   */
-  public static final String RECOVERED_EDITS = "recovered.edits";
-
-
   static final Log LOG = LogFactory.getLog(HLogSplitter.class);
 
   private boolean hasSplit = false;
