@@ -523,7 +523,7 @@ module Hbase
             [ server.getHostname(), server.getPort(), server.getStartcode() ])
           puts("        %s" % [ status.getLoad(server).toString() ])
           for name, region in status.getLoad(server).getRegionsLoad()
-            puts("        %s" % [ region.getNameAsString() ])
+            puts("        %s" % [ region.getNameAsString().dump ])
             puts("            %s" % [ region.toString() ])
           end
         end
