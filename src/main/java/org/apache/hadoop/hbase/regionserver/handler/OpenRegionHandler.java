@@ -84,6 +84,8 @@ public class OpenRegionHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
+    boolean transitionToFailedOpen = false;
+    boolean openSuccessful = false;
     try {
       final String name = regionInfo.getRegionNameAsString();
       if (this.server.isStopped() || this.rsServices.isStopping()) {
@@ -120,6 +122,7 @@ public class OpenRegionHandler extends EventHandler {
           this.rsServices.isStopping()) {
         cleanupFailedOpen(region);
         tryTransitionToFailedOpen(regionInfo);
+        transitionToFailedOpen = true;
         return;
       }
 
@@ -131,17 +134,21 @@ public class OpenRegionHandler extends EventHandler {
         // In case (a), the Master will process us as a dead server. In case
         // (b) the region is already being handled elsewhere anyway.
         cleanupFailedOpen(region);
+        transitionToFailedOpen = true;
         return;
       }
       // Successful region open, and add it to OnlineRegions
       this.rsServices.addToOnlineRegions(region);
-
+      openSuccessful = true;
       // Done!  Successful region open
       LOG.debug("Opened " + name + " on server:" +
         this.server.getServerName());
     } finally {
       this.rsServices.getRegionsInTransitionInRS().
           remove(this.regionInfo.getEncodedNameAsBytes());
+      if (!openSuccessful && !transitionToFailedOpen) {
+        tryTransitionToFailedOpen(regionInfo);
+      }
     }
   }
 
@@ -359,7 +366,7 @@ public class OpenRegionHandler extends EventHandler {
     return region;
   }
 
-  private void cleanupFailedOpen(final HRegion region) throws IOException {
+  void cleanupFailedOpen(final HRegion region) throws IOException {
     if (region != null) region.close();
   }
 
