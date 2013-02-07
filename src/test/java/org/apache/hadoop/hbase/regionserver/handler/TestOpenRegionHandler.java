@@ -178,6 +178,35 @@ public class TestOpenRegionHandler {
     assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, data.getEventType());
   }
   
+  @Test
+  public void testTransitionToFailedOpenEvenIfCleanupFails() throws Exception {
+    Server server = new MockServer(HTU);
+    RegionServerServices rsServices = new MockRegionServerServices();
+    // Create it OFFLINE, which is what it expects
+    ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
+    // Create the handler
+    OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
+      @Override
+      boolean updateMeta(HRegion r) {
+        return false;
+      };
+
+      @Override
+      void cleanupFailedOpen(HRegion region) throws IOException {
+        throw new IOException("FileSystem got closed.");
+      }
+    };
+    rsServices.getRegionsInTransitionInRS().put(TEST_HRI.getEncodedNameAsBytes(), Boolean.TRUE);
+    try {
+      handler.process();
+    } catch (Exception e) {
+      // Ignore the IOException that we have thrown from cleanupFailedOpen
+    }
+    RegionTransitionData data =
+        ZKAssign.getData(server.getZooKeeper(), TEST_HRI.getEncodedName());
+    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, data.getEventType());
+  }
+  
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
