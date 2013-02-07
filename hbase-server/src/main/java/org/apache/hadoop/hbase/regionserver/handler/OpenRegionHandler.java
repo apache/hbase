@@ -87,6 +87,7 @@ public class OpenRegionHandler extends EventHandler {
   @Override
   public void process() throws IOException {
     boolean openSuccessful = false;
+    boolean transitionToFailedOpen = false;
     final String regionName = regionInfo.getRegionNameAsString();
 
     try {
@@ -130,6 +131,7 @@ public class OpenRegionHandler extends EventHandler {
       HRegion region = openRegion();
       if (region == null) {
         tryTransitionFromOpeningToFailedOpen(regionInfo);
+        transitionToFailedOpen = true;
         return;
       }
       boolean failed = true;
@@ -142,6 +144,7 @@ public class OpenRegionHandler extends EventHandler {
           this.rsServices.isStopping()) {
         cleanupFailedOpen(region);
         tryTransitionFromOpeningToFailedOpen(regionInfo);
+        transitionToFailedOpen = true;
         return;
       }
 
@@ -154,6 +157,7 @@ public class OpenRegionHandler extends EventHandler {
         // In all cases, we try to transition to failed_open to be safe.
         cleanupFailedOpen(region);
         tryTransitionFromOpeningToFailedOpen(regionInfo);
+        transitionToFailedOpen = true;
         return;
       }
 
@@ -197,6 +201,8 @@ public class OpenRegionHandler extends EventHandler {
               " should be closed is now opened."
           );
         }
+      } else if (transitionToFailedOpen == false) {
+        tryTransitionFromOpeningToFailedOpen(regionInfo);
       }
     }
   }
@@ -455,7 +461,7 @@ public class OpenRegionHandler extends EventHandler {
     return region;
   }
 
-  private void cleanupFailedOpen(final HRegion region) throws IOException {
+  void cleanupFailedOpen(final HRegion region) throws IOException {
     if (region != null) region.close();
   }
 
