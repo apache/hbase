@@ -125,6 +125,14 @@
       <organizationUrl>http://www.intel.com</organizationUrl>
     </developer>
     <developer>
+      <id>ddas</id>
+      <name>Devaraj Das</name>
+      <email>ddas@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Hortonworks</organization>
+      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+    </developer>
+    <developer>
       <id>dmeil</id>
       <name>Doug Meil</name>
       <email>dmeil@apache.org</email>
