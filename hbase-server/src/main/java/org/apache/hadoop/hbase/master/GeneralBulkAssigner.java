@@ -50,13 +50,15 @@ public class GeneralBulkAssigner extends BulkAssigner {
 
   final Map<ServerName, List<HRegionInfo>> bulkPlan;
   final AssignmentManager assignmentManager;
+  final boolean waitTillAllAssigned;
 
   GeneralBulkAssigner(final Server server,
       final Map<ServerName, List<HRegionInfo>> bulkPlan,
-      final AssignmentManager am) {
+      final AssignmentManager am, final boolean waitTillAllAssigned) {
     super(server);
     this.bulkPlan = bulkPlan;
     this.assignmentManager = am;
+    this.waitTillAllAssigned = waitTillAllAssigned;
   }
 
   @Override
@@ -133,6 +135,10 @@ public class GeneralBulkAssigner extends BulkAssigner {
           regionInfoIterator.remove();
         }
       }
+      if (!waitTillAllAssigned) {
+        // No need to wait, let assignment going on asynchronously
+        break;
+      }
       if (!regionSet.isEmpty()) {
         regionStates.waitForUpdate(100);
       }
@@ -142,7 +148,7 @@ public class GeneralBulkAssigner extends BulkAssigner {
       long elapsedTime = System.currentTimeMillis() - startTime;
       String status = "successfully";
       if (!regionSet.isEmpty()) {
-        status = "with " + regionSet.size() + " regions still not assigned yet";
+        status = "with " + regionSet.size() + " regions still in transition";
       }
       LOG.debug("bulk assigning total " + regionCount + " regions to "
         + serverCount + " servers, took " + elapsedTime + "ms, " + status);

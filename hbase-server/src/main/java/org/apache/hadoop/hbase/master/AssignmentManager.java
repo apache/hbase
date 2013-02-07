@@ -157,6 +157,18 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private final RegionStates regionStates;
 
+  // The threshold to use bulk assigning. Using bulk assignment
+  // only if assigning at least this many regions to at least this
+  // many servers. If assigning fewer regions to fewer servers,
+  // bulk assigning may be not as efficient.
+  private final int bulkAssignThresholdRegions;
+  private final int bulkAssignThresholdServers;
+
+  // Should bulk assignment wait till all regions are assigned,
+  // or it is timed out?  This is useful to measure bulk assignment
+  // performance, but not needed in most use cases.
+  private final boolean bulkAssignWaitTillAllAssigned;
+
   /**
    * Indicator that AssignmentManager has recovered the region states so
    * that ServerShutdownHandler can be fully enabled and re-assign regions
@@ -205,6 +217,11 @@ public class AssignmentManager extends ZooKeeperListener {
       maxThreads, 60L, TimeUnit.SECONDS, Threads.newDaemonThreadFactory("hbase-am"));
     this.metricsMaster = metricsMaster;// can be null only with tests.
     this.regionStates = new RegionStates(server, serverManager);
+
+    this.bulkAssignWaitTillAllAssigned =
+      conf.getBoolean("hbase.bulk.assignment.waittillallassigned", false);
+    this.bulkAssignThresholdRegions = conf.getInt("hbase.bulk.assignment.threshold.regions", 7);
+    this.bulkAssignThresholdServers = conf.getInt("hbase.bulk.assignment.threshold.servers", 3);
 
     int workers = conf.getInt("hbase.assignment.zkevent.workers", 20);
     ThreadFactory threadFactory = Threads.newDaemonThreadFactory("hbase-am-zkevent-worker");
@@ -2115,11 +2132,8 @@ public class AssignmentManager extends ZooKeeperListener {
     Map<ServerName, List<HRegionInfo>> bulkPlan =
       balancer.retainAssignment(regions, servers);
 
-    LOG.info("Bulk assigning " + regions.size() + " region(s) across " +
-      servers.size() + " server(s), retainAssignment=true");
-    BulkAssigner ba = new GeneralBulkAssigner(this.server, bulkPlan, this);
-    ba.bulkAssign();
-    LOG.info("Bulk assigning done");
+    assign(regions.size(), servers.size(),
+      "retainAssignment=true", bulkPlan);
   }
 
   /**
@@ -2135,6 +2149,7 @@ public class AssignmentManager extends ZooKeeperListener {
     if (regions == null || regions.isEmpty()) {
       return;
     }
+
     List<ServerName> servers = serverManager.createDestinationServersList();
     if (servers == null || servers.isEmpty()) {
       throw new IOException("Found no destination server to assign region(s)");
@@ -2144,13 +2159,36 @@ public class AssignmentManager extends ZooKeeperListener {
     Map<ServerName, List<HRegionInfo>> bulkPlan
       = balancer.roundRobinAssignment(regions, servers);
 
-    LOG.info("Bulk assigning " + regions.size() + " region(s) round-robin across "
-      + servers.size() + " server(s)");
+    assign(regions.size(), servers.size(),
+      "round-robin=true", bulkPlan);
+  }
 
-    // Use fixed count thread pool assigning.
-    BulkAssigner ba = new GeneralBulkAssigner(this.server, bulkPlan, this);
-    ba.bulkAssign();
-    LOG.info("Bulk assigning done");
+  private void assign(int regions, int totalServers,
+      String message, Map<ServerName, List<HRegionInfo>> bulkPlan)
+          throws InterruptedException, IOException {
+
+    int servers = bulkPlan.size();
+    if (servers == 1 || (regions < bulkAssignThresholdRegions
+        && servers < bulkAssignThresholdServers)) {
+
+      // Not use bulk assignment.  This could be more efficient in small
+      // cluster, especially mini cluster for testing, so that tests won't time out
+      LOG.info("Not use bulk assigning since we are assigning only "
+        + regions + " region(s) to " + servers + " server(s)");
+
+      for (Map.Entry<ServerName, List<HRegionInfo>> plan: bulkPlan.entrySet()) {
+        assign(plan.getKey(), plan.getValue());
+      }
+    } else {
+      LOG.info("Bulk assigning " + regions + " region(s) across "
+        + totalServers + " server(s), " + message);
+
+      // Use fixed count thread pool assigning.
+      BulkAssigner ba = new GeneralBulkAssigner(
+        this.server, bulkPlan, this, bulkAssignWaitTillAllAssigned);
+      ba.bulkAssign();
+      LOG.info("Bulk assigning done");
+    }
   }
 
   /**
