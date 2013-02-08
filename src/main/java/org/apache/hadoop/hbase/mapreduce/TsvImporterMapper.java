@@ -101,7 +101,9 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
       separator = new String(Base64.decode(separator));
     }
 
-    ts = conf.getLong(ImportTsv.TIMESTAMP_CONF_KEY, System.currentTimeMillis());
+    // Should never get 0 as we are setting this to a valid value in job
+    // configuration.
+    ts = conf.getLong(ImportTsv.TIMESTAMP_CONF_KEY, 0);
 
     skipBadLines = context.getConfiguration().getBoolean(
         ImportTsv.SKIP_LINES_CONF_KEY, true);
@@ -124,10 +126,15 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
         new ImmutableBytesWritable(lineBytes,
             parsed.getRowKeyOffset(),
             parsed.getRowKeyLength());
+      // Retrieve timestamp if exists
+      ts = parsed.getTimestamp(ts);
 
       Put put = new Put(rowKey.copyBytes());
       for (int i = 0; i < parsed.getColumnCount(); i++) {
-        if (i == parser.getRowKeyColumnIndex()) continue;
+        if (i == parser.getRowKeyColumnIndex()
+            || i == parser.getTimestampKeyColumnIndex()) {
+          continue;
+        }
         KeyValue kv = new KeyValue(
             lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
             parser.getFamily(i), 0, parser.getFamily(i).length,
