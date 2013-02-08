@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.5 - 2/2/2012
+Release 0.94.5 - 2/7/2012
 Sub-task
 
     [HBASE-2611] - Handle RS that fails while processing the failure of another one
@@ -11,6 +11,7 @@ Sub-task
 Bug
 
     [HBASE-5458] - Thread safety issues with Compression.Algorithm.GZ and CompressionTest
+    [HBASE-6513] - Test errors when building on MacOS
     [HBASE-6824] - Introduce ${hbase.local.dir} and save coprocessor jars there
     [HBASE-7034] - Bad version, failed OPENING to OPENED but master thinks it is open anyways
     [HBASE-7293] - [replication] Remove dead sinks from ReplicationSource.currentPeers and pick new ones
@@ -56,6 +57,7 @@ Bug
     [HBASE-7685] - Closing socket connection can't be removed from SecureClient
     [HBASE-7693] - Hostname returned by TableInputFormatBase.reverseDNS contains trailing period
     [HBASE-7694] - Secure HBase should use replication call queue
+    [HBASE-7698] - race between RS shutdown thread and openregionhandler causes region to get stuck
     [HBASE-7702] - Adding filtering to Import jobs
     [HBASE-7715] - FSUtils#waitOnSafeMode can incorrectly loop on standby NN
     [HBASE-7717] - Wait until regions are assigned in TestSplitTransactionOnCluster
@@ -64,6 +66,11 @@ Bug
     [HBASE-7730] - HBaseAdmin#synchronousBalanceSwitch is not compatible with 0.92
     [HBASE-7731] - Append/Increment methods in HRegion don't check whether the table is readonly or not
     [HBASE-7740] - Recheck matching row for joined scanners
+    [HBASE-7771] - Secure HBase Client in MR job causes tasks to wait forever
+    [HBASE-7772] - clusterId is not set in conf properly if only TableMapReduceUtil.initCredentials() is called
+    [HBASE-7776] - Use ErrorReporter/Log instead of System.out in hbck
+    [HBASE-7785] - rolling-restart.sh script unable to check expiration of master znode
+    [HBASE-7793] - Port HBASE-5564 Bulkload is discarding duplicate records to 0.94
 
 Improvement
 
@@ -73,10 +80,13 @@ Improvement
     [HBASE-5664] - CP hooks in Scan flow for fast forward when filter filters out a row
     [HBASE-7441] - Make ClusterManager in IntegrationTestingUtility pluggable
     [HBASE-7540] - Make znode dump to print a dump of replication znodes
+    [HBASE-7561] - Display the total number of regions for a given table on the master webUI
+    [HBASE-7757] - Add web UI to REST server and Thrift server
 
 New Feature
 
     [HBASE-6669] - Add BigDecimalColumnInterpreter for doing aggregations using AggregationClient
+    [HBASE-7748] - Add DelimitedKeyPrefixRegionSplitPolicy
 
 Wish
 
