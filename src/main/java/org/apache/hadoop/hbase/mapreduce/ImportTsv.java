@@ -79,7 +79,16 @@ public class ImportTsv {
 
     private int rowKeyColumnIndex;
 
-    public static String ROWKEY_COLUMN_SPEC="HBASE_ROW_KEY";
+    private int maxColumnCount;
+
+    // Default value must be negative
+    public static final int DEFAULT_TIMESTAMP_COLUMN_INDEX = -1;
+
+    private int timestampKeyColumnIndex = DEFAULT_TIMESTAMP_COLUMN_INDEX;
+
+    public static String ROWKEY_COLUMN_SPEC = "HBASE_ROW_KEY";
+
+    public static String TIMESTAMPKEY_COLUMN_SPEC = "HBASE_TS_KEY";
 
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated.
@@ -96,8 +105,9 @@ public class ImportTsv {
       ArrayList<String> columnStrings = Lists.newArrayList(
         Splitter.on(',').trimResults().split(columnsSpecification));
 
-      families = new byte[columnStrings.size()][];
-      qualifiers = new byte[columnStrings.size()][];
+      maxColumnCount = columnStrings.size();
+      families = new byte[maxColumnCount][];
+      qualifiers = new byte[maxColumnCount][];
 
       for (int i = 0; i < columnStrings.size(); i++) {
         String str = columnStrings.get(i);
@@ -105,6 +115,12 @@ public class ImportTsv {
           rowKeyColumnIndex = i;
           continue;
         }
+        
+        if (TIMESTAMPKEY_COLUMN_SPEC.equals(str)) {
+          timestampKeyColumnIndex = i;
+          continue;
+        }
+        
         String[] parts = str.split(":", 2);
         if (parts.length == 1) {
           families[i] = str.getBytes();
@@ -114,6 +130,14 @@ public class ImportTsv {
           qualifiers[i] = parts[1].getBytes();
         }
       }
+    }
+
+    public boolean hasTimestamp() {
+      return timestampKeyColumnIndex != DEFAULT_TIMESTAMP_COLUMN_INDEX;
+    }
+
+    public int getTimestampKeyColumnIndex() {
+      return timestampKeyColumnIndex;
     }
 
     public int getRowKeyColumnIndex() {
@@ -129,7 +153,7 @@ public class ImportTsv {
     public ParsedLine parse(byte[] lineBytes, int length)
     throws BadTsvLineException {
       // Enumerate separator offsets
-      ArrayList<Integer> tabOffsets = new ArrayList<Integer>(families.length);
+      ArrayList<Integer> tabOffsets = new ArrayList<Integer>(maxColumnCount);
       for (int i = 0; i < length; i++) {
         if (lineBytes[i] == separatorByte) {
           tabOffsets.add(i);
@@ -141,10 +165,13 @@ public class ImportTsv {
 
       tabOffsets.add(length);
 
-      if (tabOffsets.size() > families.length) {
+      if (tabOffsets.size() > maxColumnCount) {
         throw new BadTsvLineException("Excessive columns");
       } else if (tabOffsets.size() <= getRowKeyColumnIndex()) {
         throw new BadTsvLineException("No row key");
+      } else if (hasTimestamp()
+          && tabOffsets.size() <= getTimestampKeyColumnIndex()) {
+        throw new BadTsvLineException("No timestamp");
       }
       return new ParsedLine(tabOffsets, lineBytes);
     }
@@ -164,6 +191,24 @@ public class ImportTsv {
       public int getRowKeyLength() {
         return getColumnLength(rowKeyColumnIndex);
       }
+      
+      public long getTimestamp(long ts) throws BadTsvLineException {
+        // Return ts if HBASE_TS_KEY is not configured in column spec
+        if (!hasTimestamp()) {
+          return ts;
+        }
+
+        String timeStampStr = Bytes.toString(lineBytes,
+            getColumnOffset(timestampKeyColumnIndex),
+            getColumnLength(timestampKeyColumnIndex));
+        try {
+          return Long.parseLong(timeStampStr);
+        } catch (NumberFormatException nfe) {
+          // treat this record as bad record
+          throw new BadTsvLineException("Invalid timestamp " + timeStampStr);
+        }
+      }
+      
       public int getColumnOffset(int idx) {
         if (idx > 0)
           return tabOffsets.get(idx - 1) + 1;
@@ -285,7 +330,11 @@ public class ImportTsv {
       "column name HBASE_ROW_KEY is used to designate that this column should be used\n" +
       "as the row key for each imported record. You must specify exactly one column\n" +
       "to be the row key, and you must specify a column name for every column that exists in the\n" +
-      "input data.\n" +
+      "input data. Another special column HBASE_TS_KEY designates that this column should be\n" +
+      "used as timestamp for each record. Unlike HBASE_ROW_KEY, HBASE_TS_KEY is optional.\n" +
+      "You must specify atmost one column as timestamp key for each imported record.\n" +
+      "Record with invalid timestamps (blank, non-numeric) will be treated as bad record.\n" +
+      "Note: if you use this option, then 'importtsv.timestamp' option will be ignored.\n" +
       "\n" +
       "By default importtsv will load data directly into HBase. To instead generate\n" +
       "HFiles of data to prepare for a bulk data load, pass the option:\n" +
@@ -344,11 +393,33 @@ public class ImportTsv {
       System.exit(-1);
     }
 
-    // Make sure one or more columns are specified
-    if (columns.length < 2) {
-      usage("One or more columns in addition to the row key are required");
+    // Make sure we have at most one column as the timestamp key
+    int tskeysFound = 0;
+    for (String col : columns) {
+      if (col.equals(TsvParser.TIMESTAMPKEY_COLUMN_SPEC))
+        tskeysFound++;
+    }
+    if (tskeysFound > 1) {
+      usage("Must specify at most one column as "
+          + TsvParser.TIMESTAMPKEY_COLUMN_SPEC);
       System.exit(-1);
     }
+    
+    // Make sure one or more columns are specified excluding rowkey and
+    // timestamp key
+    if (columns.length - (rowkeysFound + tskeysFound) < 1) {
+      usage("One or more columns in addition to the row key and timestamp(optional) are required");
+      System.exit(-1);
+    }
+
+    // If timestamp option is not specified, use current system time.
+    long timstamp = conf
+        .getLong(TIMESTAMP_CONF_KEY, System.currentTimeMillis());
+
+    // Set it back to replace invalid timestamp (non-numeric) with current
+    // system time
+    conf.setLong(TIMESTAMP_CONF_KEY, timstamp); 
+    
     hbaseAdmin = new HBaseAdmin(conf);
     Job job = createSubmittableJob(conf, otherArgs);
     System.exit(job.waitForCompletion(true) ? 0 : 1);

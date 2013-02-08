@@ -64,6 +64,7 @@ public class TestImportTsv {
     assertNull(parser.getFamily(0));
     assertNull(parser.getQualifier(0));
     assertEquals(0, parser.getRowKeyColumnIndex());
+    assertFalse(parser.hasTimestamp());
 
     parser = new TsvParser("HBASE_ROW_KEY,col1:scol1", "\t");
     assertNull(parser.getFamily(0));
@@ -71,6 +72,7 @@ public class TestImportTsv {
     assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(1));
     assertBytesEquals(Bytes.toBytes("scol1"), parser.getQualifier(1));
     assertEquals(0, parser.getRowKeyColumnIndex());
+    assertFalse(parser.hasTimestamp());
 
     parser = new TsvParser("HBASE_ROW_KEY,col1:scol1,col1:scol2", "\t");
     assertNull(parser.getFamily(0));
@@ -80,6 +82,19 @@ public class TestImportTsv {
     assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(2));
     assertBytesEquals(Bytes.toBytes("scol2"), parser.getQualifier(2));
     assertEquals(0, parser.getRowKeyColumnIndex());
+    assertFalse(parser.hasTimestamp());
+    
+    parser = new TsvParser("HBASE_ROW_KEY,col1:scol1,HBASE_TS_KEY,col1:scol2",
+        "\t");
+    assertNull(parser.getFamily(0));
+    assertNull(parser.getQualifier(0));
+    assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(1));
+    assertBytesEquals(Bytes.toBytes("scol1"), parser.getQualifier(1));
+    assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(3));
+    assertBytesEquals(Bytes.toBytes("scol2"), parser.getQualifier(3));
+    assertEquals(0, parser.getRowKeyColumnIndex());
+    assertTrue(parser.hasTimestamp());
+    assertEquals(2, parser.getTimestampKeyColumnIndex());
   }
 
   @Test
@@ -93,8 +108,30 @@ public class TestImportTsv {
     assertNull(parser.getQualifier(2));
     assertEquals(2, parser.getRowKeyColumnIndex());
     
+    assertEquals(TsvParser.DEFAULT_TIMESTAMP_COLUMN_INDEX, parser
+        .getTimestampKeyColumnIndex());
+    
     byte[] line = Bytes.toBytes("val_a\tval_b\tval_c\tval_d");
     ParsedLine parsed = parser.parse(line, line.length);
+    checkParsing(parsed, Splitter.on("\t").split(Bytes.toString(line)));
+  }
+  
+  
+  @Test
+  public void testTsvParserWithTimestamp() throws BadTsvLineException {
+    TsvParser parser = new TsvParser("HBASE_ROW_KEY,HBASE_TS_KEY,col_a,", "\t");
+    assertNull(parser.getFamily(0));
+    assertNull(parser.getQualifier(0));
+    assertNull(parser.getFamily(1));
+    assertNull(parser.getQualifier(1));
+    assertBytesEquals(Bytes.toBytes("col_a"), parser.getFamily(2));
+    assertBytesEquals(HConstants.EMPTY_BYTE_ARRAY, parser.getQualifier(2));
+    assertEquals(0, parser.getRowKeyColumnIndex());
+    assertEquals(1, parser.getTimestampKeyColumnIndex());
+
+    byte[] line = Bytes.toBytes("rowkey\t1234\tval_a");
+    ParsedLine parsed = parser.parse(line, line.length);
+    assertEquals(1234l, parsed.getTimestamp(-1));
     checkParsing(parsed, Splitter.on("\t").split(Bytes.toString(line)));
   }
 
@@ -123,29 +160,48 @@ public class TestImportTsv {
   public void testTsvParserBadTsvLineExcessiveColumns() throws BadTsvLineException {
     TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a", "\t");
     byte[] line = Bytes.toBytes("val_a\tval_b\tval_c");
-    ParsedLine parsed = parser.parse(line, line.length);
+    parser.parse(line, line.length);
   }
 
   @Test(expected=BadTsvLineException.class)
   public void testTsvParserBadTsvLineZeroColumn() throws BadTsvLineException {
     TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a", "\t");
     byte[] line = Bytes.toBytes("");
-    ParsedLine parsed = parser.parse(line, line.length);
+    parser.parse(line, line.length);
   }
 
   @Test(expected=BadTsvLineException.class)
   public void testTsvParserBadTsvLineOnlyKey() throws BadTsvLineException {
     TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a", "\t");
     byte[] line = Bytes.toBytes("key_only");
-    ParsedLine parsed = parser.parse(line, line.length);
+    parser.parse(line, line.length);
   }
 
   @Test(expected=BadTsvLineException.class)
   public void testTsvParserBadTsvLineNoRowKey() throws BadTsvLineException {
     TsvParser parser = new TsvParser("col_a,HBASE_ROW_KEY", "\t");
     byte[] line = Bytes.toBytes("only_cola_data_and_no_row_key");
-    ParsedLine parsed = parser.parse(line, line.length);
+    parser.parse(line, line.length);
   }
+  
+  @Test(expected = BadTsvLineException.class)
+  public void testTsvParserInvalidTimestamp() throws BadTsvLineException {
+    TsvParser parser = new TsvParser("HBASE_ROW_KEY,HBASE_TS_KEY,col_a,", "\t");
+    assertEquals(1, parser.getTimestampKeyColumnIndex());
+    byte[] line = Bytes.toBytes("rowkey\ttimestamp\tval_a");
+    ParsedLine parsed = parser.parse(line, line.length);
+    assertEquals(-1, parsed.getTimestamp(-1));
+    checkParsing(parsed, Splitter.on("\t").split(Bytes.toString(line)));
+  }
+  
+  @Test(expected = BadTsvLineException.class)
+  public void testTsvParserNoTimestampValue() throws BadTsvLineException {
+    TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a,HBASE_TS_KEY", "\t");
+    assertEquals(2, parser.getTimestampKeyColumnIndex());
+    byte[] line = Bytes.toBytes("rowkey\tval_a");
+    parser.parse(line, line.length);
+  }
+  
 
   @Test
   public void testMROnTable()
@@ -162,8 +218,25 @@ public class TestImportTsv {
         INPUT_FILE
     };
 
-    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, args, 1);
+    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, null, args, 1);
   }
+  
+  @Test
+  public void testMROnTableWithTimestamp() throws Exception {
+    String TABLE_NAME = "TestTable";
+    String FAMILY = "FAM";
+    String INPUT_FILE = "InputFile1.csv";
+
+    // Prepare the arguments required for the test.
+    String[] args = new String[] {
+        "-D" + ImportTsv.COLUMNS_CONF_KEY
+            + "=HBASE_ROW_KEY,HBASE_TS_KEY,FAM:A,FAM:B",
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,", TABLE_NAME, INPUT_FILE };
+
+    String data = "KEY,1234,VALUE1,VALUE2\n";
+    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, data, args, 1);
+  }
+  
 
   @Test
   public void testMROnTableWithCustomMapper()
@@ -179,11 +252,11 @@ public class TestImportTsv {
         INPUT_FILE
     };
 
-    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, args, 3);
+    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, null, args, 3);
   }
 
   private void doMROnTableTest(String inputFile, String family, String tableName,
-                               String[] args, int valueMultiplier) throws Exception {
+                               String data, String[] args, int valueMultiplier) throws Exception {
 
     // Cluster
     HBaseTestingUtility htu1 = new HBaseTestingUtility();
@@ -198,8 +271,10 @@ public class TestImportTsv {
     try {
       FileSystem fs = FileSystem.get(conf);
       FSDataOutputStream op = fs.create(new Path(inputFile), true);
-      String line = "KEY\u001bVALUE1\u001bVALUE2\n";
-      op.write(line.getBytes(HConstants.UTF8_ENCODING));
+      if (data == null) {
+        data = "KEY\u001bVALUE1\u001bVALUE2\n";
+      }
+      op.write(Bytes.toBytes(data));
       op.close();
 
       final byte[] FAM = Bytes.toBytes(family);
@@ -273,11 +348,11 @@ public class TestImportTsv {
         "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
         "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=output", TABLE_NAME,
         INPUT_FILE };
-    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, args, 3);
+    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, null, args, 3);
   }
 
   public static String toU8Str(byte[] bytes) throws UnsupportedEncodingException {
-    return new String(bytes, HConstants.UTF8_ENCODING);
+    return new String(bytes);
   }
 
   @org.junit.Rule
