@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+
+
+<project xmlns="http://maven.apache.org/DECORATION/1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd">
+  <bannerLeft>
+    <name>HBase</name>
+    <src>images/hbase_logo.png</src>
+    <href>http://hbase.apache.org/</href>
+  </bannerLeft>
+  <bannerRight />
+  <version position="right" />
+  <publishDate position="right" />
+  <body>
+    <menu name="HBase Project">
+      <item name="Overview" href="index.html"/>
+      <item name="License" href="license.html" />
+      <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hbase/" />
+      <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel#selectedTab=com.atlassian.jira.plugin.system.project%3Achangelog-panel" />
+      <item name="Issue Tracking" href="issue-tracking.html" />
+      <item name="Mailing Lists" href="mail-lists.html" />
+      <item name="Source Repository" href="source-repository.html" />
+      <item name="Team" href="team-list.html" />
+      <item name="Sponsors" href="sponsors.html" />
+    </menu>
+    <menu name="Documentation">
+        <item name="Getting Started" href="book/quickstart.html" />
+      <item name="API" href="apidocs/index.html" />
+      <item name="X-Ref" href="xref/index.html" />
+      <item name="Ref Guide (multi-page)"      href="book/book.html" />
+      <item name="Ref Guide (single-page)"      href="book.html" />
+      <item name="FAQ" href="book/faq.html" />
+      <item name="Videos/Presentations" href="book.html#other.info" />
+      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
+      <item name="ACID Semantics" href="acid-semantics.html" />
+      <item name="Bulk Loads" href="bulk-loads.html" />
+      <item name="Metrics"      href="metrics.html" />
+      <item name="HBase on Windows"      href="cygwin.html" />
+      <item name="Cluster replication"      href="replication.html" />
+      <item name="Pseudo-Dist. Extras"      href="pseudo-distributed.html" />
+    </menu>
+  </body>
+    <skin>
+        <groupId>org.apache.maven.skins</groupId>
+      <artifactId>maven-stylus-skin</artifactId>
+    </skin>
+</project>
