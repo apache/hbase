@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Random;
@@ -293,7 +294,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
    */
-  public boolean isMajorCompaction(final List<StoreFile> filesToCompact)
+  public boolean isMajorCompaction(final Collection<StoreFile> filesToCompact)
       throws IOException {
     boolean result = false;
     long mcTime = getNextMajorCompactTime(filesToCompact);
@@ -308,7 +309,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
       long cfTtl = this.store.getStoreFileTtl();
       if (filesToCompact.size() == 1) {
         // Single file
-        StoreFile sf = filesToCompact.get(0);
+        StoreFile sf = filesToCompact.iterator().next();
         Long minTimestamp = sf.getMinimumTimestamp();
         long oldest = (minTimestamp == null)
             ? Long.MIN_VALUE
@@ -337,7 +338,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     return result;
   }
 
-  public long getNextMajorCompactTime(final List<StoreFile> filesToCompact) {
+  public long getNextMajorCompactTime(final Collection<StoreFile> filesToCompact) {
     // default = 24hrs
     long ret = comConf.getMajorCompactionPeriod();
     if (ret > 0) {

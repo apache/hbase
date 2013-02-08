@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -3256,7 +3257,7 @@ public class TestHRegion extends HBaseTestCase {
       }
       //before compaction
       HStore store = (HStore) region.getStore(fam1);
-      List<StoreFile> storeFiles = store.getStorefiles();
+      Collection<StoreFile> storeFiles = store.getStorefiles();
       for (StoreFile storefile : storeFiles) {
         StoreFile.Reader reader = storefile.getReader();
         reader.loadFileInfo();

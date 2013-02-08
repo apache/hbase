@@ -943,6 +943,38 @@ public class StoreFile {
   }
 
   /**
+   * Gets the approximate mid-point of this file that is optimal for use in splitting it.
+   * @param comparator Comparator used to compare KVs.
+   * @return The split point row, or null if splitting is not possible, or reader is null.
+   */
+  byte[] getFileSplitPoint(KVComparator comparator) throws IOException {
+    if (this.reader == null) {
+      LOG.warn("Storefile " + this + " Reader is null; cannot get split point");
+      return null;
+    }
+    // Get first, last, and mid keys.  Midkey is the key that starts block
+    // in middle of hfile.  Has column and timestamp.  Need to return just
+    // the row we want to split on as midkey.
+    byte [] midkey = this.reader.midkey();
+    if (midkey != null) {
+      KeyValue mk = KeyValue.createKeyValueFromKey(midkey, 0, midkey.length);
+      byte [] fk = this.reader.getFirstKey();
+      KeyValue firstKey = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
+      byte [] lk = this.reader.getLastKey();
+      KeyValue lastKey = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
+      // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
+      if (comparator.compareRows(mk, firstKey) == 0 || comparator.compareRows(mk, lastKey) == 0) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("cannot split because midkey is the same as first or last row");
+        }
+        return null;
+      }
+      return mk.getRow();
+    }
+    return null;
+  }
+
+  /**
    * A StoreFile writer.  Use this to read/write HBase Store Files. It is package
    * local because it is an implementation detail of the HBase regionserver.
    */

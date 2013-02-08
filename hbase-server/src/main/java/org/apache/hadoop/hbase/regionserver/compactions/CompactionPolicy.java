@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -66,7 +67,7 @@ public abstract class CompactionPolicy extends Configured {
    * @return True if we should run a major compaction.
    */
   public abstract boolean isMajorCompaction(
-    final List<StoreFile> filesToCompact) throws IOException;
+    final Collection<StoreFile> filesToCompact) throws IOException;
 
   /**
    * @param compactionSize Total size of some compaction

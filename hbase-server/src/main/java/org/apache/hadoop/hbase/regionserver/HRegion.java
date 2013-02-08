@@ -671,10 +671,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public boolean hasReferences() {
     for (Store store : this.stores.values()) {
-      for (StoreFile sf : store.getStorefiles()) {
-        // Found a reference, return.
-        if (sf.isReference()) return true;
-      }
+      if (store.hasReferences()) return true;
     }
     return false;
   }
@@ -1026,24 +1023,22 @@ public class HRegion implements HeapSize { // , Writable{
         ThreadPoolExecutor storeCloserThreadPool =
           getStoreOpenAndCloseThreadPool("StoreCloserThread-"
             + this.regionInfo.getRegionNameAsString());
-        CompletionService<ImmutableList<StoreFile>> completionService =
-          new ExecutorCompletionService<ImmutableList<StoreFile>>(
-            storeCloserThreadPool);
+        CompletionService<Collection<StoreFile>> completionService =
+          new ExecutorCompletionService<Collection<StoreFile>>(storeCloserThreadPool);
 
         // close each store in parallel
         for (final Store store : stores.values()) {
           completionService
-              .submit(new Callable<ImmutableList<StoreFile>>() {
-                public ImmutableList<StoreFile> call() throws IOException {
+              .submit(new Callable<Collection<StoreFile>>() {
+                public Collection<StoreFile> call() throws IOException {
                   return store.close();
                 }
               });
         }
         try {
           for (int i = 0; i < stores.size(); i++) {
-            Future<ImmutableList<StoreFile>> future = completionService
-                .take();
-            ImmutableList<StoreFile> storeFileList = future.get();
+            Future<Collection<StoreFile>> future = completionService.take();
+            Collection<StoreFile> storeFileList = future.get();
             result.addAll(storeFileList);
           }
         } catch (InterruptedException e) {
@@ -3042,8 +3037,7 @@ public class HRegion implements HeapSize { // , Writable{
           throw new IllegalArgumentException("No column family : " +
               new String(column) + " available");
         }
-        List<StoreFile> storeFiles = store.getStorefiles();
-        for (StoreFile storeFile: storeFiles) {
+        for (StoreFile storeFile: store.getStorefiles()) {
           storeFileNames.add(storeFile.getPath().toString());
         }
       }

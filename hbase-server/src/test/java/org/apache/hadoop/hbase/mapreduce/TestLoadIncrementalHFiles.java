@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.TreeMap;
 import java.util.List;
 
@@ -195,7 +196,7 @@ public class TestLoadIncrementalHFiles {
     loader.doBulkLoad(dir, table);
 
     // Get the store files
-    List<StoreFile> files = util.getHBaseCluster().
+    Collection<StoreFile> files = util.getHBaseCluster().
         getRegions(TABLE).get(0).getStore(FAMILY).getStorefiles();
     for (StoreFile file: files) {
       // the sequenceId gets initialized during createReader

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 
@@ -52,7 +53,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
   // General Accessors
   public KeyValue.KVComparator getComparator();
 
-  public List<StoreFile> getStorefiles();
+  public Collection<StoreFile> getStorefiles();
 
   /**
    * Close all the readers We don't need to worry about subsequent requests because the HRegion
@@ -60,7 +61,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @return the {@link StoreFile StoreFiles} that were previously being used.
    * @throws IOException on failure
    */
-  public ImmutableList<StoreFile> close() throws IOException;
+  public Collection<StoreFile> close() throws IOException;
 
   /**
    * Return a scanner for both the memstore and the HStore files. Assumes we are not in a
@@ -208,11 +209,6 @@ public interface Store extends HeapSize, StoreConfigInformation {
    */
   public HFileDataBlockEncoder getDataBlockEncoder();
 
-  /**
-   * @return the number of files in this store
-   */
-  public int getNumberOfStoreFiles();
-
   /** @return aggregate size of all HStores used in the last compaction */
   public long getLastCompactSize();
 
@@ -255,13 +251,6 @@ public interface Store extends HeapSize, StoreConfigInformation {
   public long getTotalStaticBloomSize();
 
   // Test-helper methods
-
-  /**
-   * Compact the most recent N files. Used in testing.
-   * @param N number of files to compact. Must be less than or equal to current number of files.
-   * @throws IOException on failure
-   */
-  public void compactRecentForTesting(int N) throws IOException;
 
   /**
    * Used for tests.

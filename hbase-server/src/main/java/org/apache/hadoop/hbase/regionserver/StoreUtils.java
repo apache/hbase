@@ -29,18 +29,19 @@ public class StoreUtils {
   /**
    * Creates a deterministic hash code for store file collection.
    */
-  public static Integer getDeterministicRandomSeed(final List<StoreFile> files) {
+  public static Integer getDeterministicRandomSeed(final Collection<StoreFile> files) {
     if (files != null && !files.isEmpty()) {
-      return files.get(0).getPath().getName().hashCode();
+      return files.iterator().next().getPath().getName().hashCode();
     }
     return null;
   }
 
   /**
    * Determines whether any files in the collection are references.
+   * @param files The files.
    */
   public static boolean hasReferences(final Collection<StoreFile> files) {
-    if (files != null && files.size() > 0) {
+    if (files != null) {
       for (StoreFile hsf: files) {
         if (hsf.isReference()) {
           return true;
@@ -53,12 +54,32 @@ public class StoreUtils {
   /**
    * Gets lowest timestamp from candidate StoreFiles
    */
-  public static long getLowestTimestamp(final List<StoreFile> candidates)
+  public static long getLowestTimestamp(final Collection<StoreFile> candidates)
     throws IOException {
     long minTs = Long.MAX_VALUE;
     for (StoreFile storeFile : candidates) {
       minTs = Math.min(minTs, storeFile.getModificationTimeStamp());
     }
     return minTs;
+  }
+
+  /**
+   * Gets the largest file (with reader) out of the list of files.
+   * @param candidates The files to choose from.
+   * @return The largest file; null if no file has a reader.
+   */
+  static StoreFile getLargestFile(final Collection<StoreFile> candidates) {
+    long maxSize = -1L;
+    StoreFile largestSf = null;
+    for (StoreFile sf : candidates) {
+      StoreFile.Reader r = sf.getReader();
+      if (r == null) continue;
+      long size = r.length();
+      if (size > maxSize) {
+        maxSize = size;
+        largestSf = sf;
+      }
+    }
+    return largestSf;
   }
 }
