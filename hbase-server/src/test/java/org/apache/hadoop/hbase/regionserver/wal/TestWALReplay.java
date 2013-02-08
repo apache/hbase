@@ -268,10 +268,10 @@ public class TestWALReplay {
     HLog wal3 = createWAL(this.conf);
     wal3.setSequenceNumber(wal2.getSequenceNumber());
     try {
-      final HRegion region = new HRegion(basedir, wal3, this.fs, this.conf, hri,
-        htd, null);
-      long seqid = region.initialize();
-      assertTrue(seqid > wal3.getSequenceNumber());
+      long wal3SeqId = wal3.getSequenceNumber();
+      HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal3);
+      long seqid = region.getOpenSeqNum();
+      assertTrue(seqid > wal3SeqId);
 
       // TODO: Scan all.
       region.close();
@@ -325,9 +325,10 @@ public class TestWALReplay {
       public Object run() throws Exception {
         runWALSplit(newConf);
         HLog wal2 = createWAL(newConf);
-        HRegion region2 = new HRegion(basedir, wal2, FileSystem.get(newConf),
-          newConf, hri, htd, null);
-        long seqid2 = region2.initialize();
+
+        HRegion region2 = HRegion.openHRegion(newConf, FileSystem.get(newConf),
+          hbaseRootDir, hri, htd, wal2);
+        long seqid2 = region2.getOpenSeqNum();
         assertTrue(seqid2 > -1);
 
         // I can't close wal1.  Its been appropriated when we split.
@@ -365,8 +366,8 @@ public class TestWALReplay {
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
     HLog wal = createWAL(this.conf);
-    HRegion region = new HRegion(basedir, wal, this.fs, this.conf, hri, htd, null);
-    long seqid = region.initialize();
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal);
+    long seqid = region.getOpenSeqNum();
     // HRegionServer usually does this. It knows the largest seqid across all regions.
     wal.setSequenceNumber(seqid);
     boolean first = true;
@@ -390,8 +391,8 @@ public class TestWALReplay {
     wal.close();
     runWALSplit(this.conf);
     HLog wal2 = createWAL(this.conf);
-    HRegion region2 = new HRegion(basedir, wal2, this.fs, this.conf, hri, htd, null);
-    long seqid2 = region2.initialize();
+    HRegion region2 = HRegion.openHRegion(conf, this.fs, hbaseRootDir, hri, htd, wal2);
+    long seqid2 = region2.getOpenSeqNum();
     // HRegionServer usually does this. It knows the largest seqid across all regions.
     wal2.setSequenceNumber(seqid2);
     assertTrue(seqid + result.size() < seqid2);
@@ -482,8 +483,8 @@ public class TestWALReplay {
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
     HLog wal = createWAL(this.conf);
-    HRegion region = new HRegion(basedir, wal, this.fs, this.conf, hri, htd, null);
-    long seqid = region.initialize();
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal);
+    long seqid = region.getOpenSeqNum();
     // HRegionServer usually does this. It knows the largest seqid across all regions.
     wal.setSequenceNumber(seqid);
     for (HColumnDescriptor hcd: htd.getFamilies()) {
@@ -518,8 +519,8 @@ public class TestWALReplay {
     // Let us try to split and recover
     runWALSplit(this.conf);
     HLog wal2 = createWAL(this.conf);
-    HRegion region2 = new HRegion(basedir, wal2, this.fs, this.conf, hri, htd, null);
-    long seqid2 = region2.initialize();
+    HRegion region2 = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal2);
+    long seqid2 = region2.getOpenSeqNum();
     // HRegionServer usually does this. It knows the largest seqid across all regions.
     wal2.setSequenceNumber(seqid2);
     assertTrue(seqid + result.size() < seqid2);
@@ -638,9 +639,9 @@ public class TestWALReplay {
 
     // Mock the HLog
     MockHLog wal = createMockWAL(this.conf);
-    
-    HRegion region = new HRegion(basedir, wal, this.fs, this.conf, hri, htd, null);
-    long seqid = region.initialize();
+
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal);
+    long seqid = region.getOpenSeqNum();
     // HRegionServer usually does this. It knows the largest seqid across all
     // regions.
     wal.setSequenceNumber(seqid);

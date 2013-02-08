@@ -262,12 +262,10 @@ public class TestWALObserver {
         FileSystem newFS = FileSystem.get(newConf);
         // Make a new wal for new region open.
         HLog wal2 = createWAL(newConf);
-        Path tableDir =
-          HTableDescriptor.getTableDir(hbaseRootDir, hri.getTableName());
-        HRegion region = new HRegion(tableDir, wal2, FileSystem.get(newConf),
-          newConf, hri, htd, TEST_UTIL.getHBaseCluster().getRegionServer(0));
+        HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir,
+            hri, htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
+        long seqid2 = region.getOpenSeqNum();
 
-        long seqid2 = region.initialize();
         SampleRegionWALObserver cp2 =
           (SampleRegionWALObserver)region.getCoprocessorHost().findCoprocessor(
               SampleRegionWALObserver.class.getName());

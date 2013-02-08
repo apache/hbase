@@ -313,11 +313,11 @@ public class SplitTransaction {
     // stuff in fs that needs cleanup -- a storefile or two.  Thats why we
     // add entry to journal BEFORE rather than AFTER the change.
     this.journal.add(JournalEntry.STARTED_REGION_A_CREATION);
-    HRegion a = createDaughterRegion(this.hri_a, this.parent.rsServices);
+    HRegion a = createDaughterRegion(this.hri_a);
 
     // Ditto
     this.journal.add(JournalEntry.STARTED_REGION_B_CREATION);
-    HRegion b = createDaughterRegion(this.hri_b, this.parent.rsServices);
+    HRegion b = createDaughterRegion(this.hri_b);
 
     // This is the point of no return.  Adding subsequent edits to .META. as we
     // do below when we do the daughter opens adding each to .META. can fail in
@@ -696,20 +696,10 @@ public class SplitTransaction {
    * @throws IOException
    * @see #cleanupDaughterRegion(FileSystem, Path, String)
    */
-  HRegion createDaughterRegion(final HRegionInfo hri,
-      final RegionServerServices rsServices)
-  throws IOException {
+  HRegion createDaughterRegion(final HRegionInfo hri) throws IOException {
     // Package private so unit tests have access.
-    FileSystem fs = this.parent.getFilesystem();
-    Path regionDir = getSplitDirForDaughter(this.parent.getFilesystem(),
-      this.splitdir, hri);
-    HRegion r = HRegion.newHRegion(this.parent.getTableDir(),
-      this.parent.getLog(), fs, this.parent.getBaseConf(),
-      hri, this.parent.getTableDesc(), rsServices);
-    r.readRequestsCount.set(this.parent.getReadRequestsCount() / 2);
-    r.writeRequestsCount.set(this.parent.getWriteRequestsCount() / 2);
-    HRegion.moveInitialFilesIntoPlace(fs, regionDir, r.getRegionDir());
-    return r;
+    Path regionDir = getSplitDirForDaughter(this.splitdir, hri);
+    return this.parent.createDaughterRegion(hri, regionDir);
   }
 
   private static void cleanupDaughterRegion(final FileSystem fs,
@@ -723,15 +713,13 @@ public class SplitTransaction {
   /*
    * Get the daughter directories in the splits dir.  The splits dir is under
    * the parent regions' directory.
-   * @param fs
    * @param splitdir
    * @param hri
    * @return Path to daughter split dir.
    * @throws IOException
    */
-  private static Path getSplitDirForDaughter(final FileSystem fs,
-      final Path splitdir, final HRegionInfo hri)
-  throws IOException {
+  private static Path getSplitDirForDaughter(final Path splitdir, final HRegionInfo hri)
+      throws IOException {
     return new Path(splitdir, hri.getEncodedName());
   }
 

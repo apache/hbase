@@ -138,7 +138,7 @@ class HMerge {
   private static abstract class Merger {
     protected final Configuration conf;
     protected final FileSystem fs;
-    protected final Path tabledir;
+    protected final Path rootDir;
     protected final HTableDescriptor htd;
     protected final HLog hlog;
     private final long maxFilesize;
@@ -151,11 +151,9 @@ class HMerge {
       this.maxFilesize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
           HConstants.DEFAULT_MAX_FILE_SIZE);
 
-      this.tabledir = new Path(
-          fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR))),
-          Bytes.toString(tableName)
-      );
-      this.htd = FSTableDescriptors.getTableDescriptor(this.fs, this.tabledir);
+      this.rootDir = FSUtils.getRootDir(conf);
+      Path tabledir = HTableDescriptor.getTableDir(this.rootDir, tableName);
+      this.htd = FSTableDescriptors.getTableDescriptor(this.fs, tabledir);
       String logname = "merge_" + System.currentTimeMillis() + HConstants.HREGION_LOGDIR_NAME;
 
       this.hlog = HLogFactory.createHLog(fs, tabledir, logname, conf);
@@ -192,14 +190,10 @@ class HMerge {
       long nextSize = 0;
       for (int i = 0; i < info.length - 1; i++) {
         if (currentRegion == null) {
-          currentRegion = HRegion.newHRegion(tabledir, hlog, fs, conf, info[i],
-            this.htd, null);
-          currentRegion.initialize();
+          currentRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i], this.htd, hlog);
           currentSize = currentRegion.getLargestHStoreSize();
         }
-        nextRegion = HRegion.newHRegion(tabledir, hlog, fs, conf, info[i + 1],
-          this.htd, null);
-        nextRegion.initialize();
+        nextRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i + 1], this.htd, hlog);
         nextSize = nextRegion.getLargestHStoreSize();
 
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {
@@ -349,21 +343,15 @@ class HMerge {
         throws IOException {
       super(conf, fs, HConstants.META_TABLE_NAME);
 
-      Path rootTableDir = HTableDescriptor.getTableDir(
-          fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR))),
-          HConstants.ROOT_TABLE_NAME);
+      Path rootDir = FSUtils.getRootDir(conf);
 
       // Scan root region to find all the meta regions
-
-      root = HRegion.newHRegion(rootTableDir, hlog, fs, conf,
-          HRegionInfo.ROOT_REGIONINFO, HTableDescriptor.ROOT_TABLEDESC, null);
-      root.initialize();
+      root = HRegion.openHRegion(conf, fs, rootDir, HRegionInfo.ROOT_REGIONINFO,
+          HTableDescriptor.ROOT_TABLEDESC, hlog);
 
       Scan scan = new Scan();
-      scan.addColumn(HConstants.CATALOG_FAMILY,
-          HConstants.REGIONINFO_QUALIFIER);
-      InternalScanner rootScanner =
-        root.getScanner(scan);
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      InternalScanner rootScanner = root.getScanner(scan);
 
       try {
         List<KeyValue> results = new ArrayList<KeyValue>();

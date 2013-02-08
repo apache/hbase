@@ -391,16 +391,6 @@ public class HRegion implements HeapSize { // , Writable{
   private final MetricsRegionWrapperImpl metricsRegionWrapper;
 
   /**
-   * HRegion copy constructor. Useful when reopening a closed region (normally
-   * for unit tests)
-   * @param other original object
-   */
-  public HRegion(HRegion other) {
-    this(other.getTableDir(), other.getLog(), other.getFilesystem(),
-        other.baseConf, other.getRegionInfo(), other.getTableDesc(), null);
-  }
-
-  /**
    * HRegion constructor.  his constructor should only be used for testing and
    * extensions.  Instances of HRegion should be instantiated with the
    * {@link HRegion#newHRegion(Path, HLog, FileSystem, Configuration, HRegionInfo, HTableDescriptor, RegionServerServices)} method.
@@ -516,9 +506,13 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Initialize this region.
+   * Used only by tests and SplitTransaction to reopen the region.
+   * You should use createHRegion() or openHRegion()
    * @return What the next sequence (edit) id should be.
    * @throws IOException e
+   * @deprecated use HRegion.createHRegion() or HRegion.openHRegion()
    */
+  @Deprecated
   public long initialize() throws IOException {
     return initialize(null);
   }
@@ -530,8 +524,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return What the next sequence (edit) id should be.
    * @throws IOException e
    */
-  public long initialize(final CancelableProgressable reporter)
-  throws IOException {
+  private long initialize(final CancelableProgressable reporter) throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus("Initializing region " + this);
     long nextSeqId = -1;
     try {
@@ -3800,7 +3793,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param rsServices
    * @return the new instance
    */
-  public static HRegion newHRegion(Path tableDir, HLog log, FileSystem fs,
+  static HRegion newHRegion(Path tableDir, HLog log, FileSystem fs,
       Configuration conf, HRegionInfo regionInfo, final HTableDescriptor htd,
       RegionServerServices rsServices) {
     try {
@@ -3967,7 +3960,7 @@ public class HRegion implements HeapSize { // , Writable{
    * HLog#setSequenceNumber(long) passing the result of the call to
    * HRegion#getMinSequenceId() to ensure the log id is properly kept
    * up.  HRegionStore does this every time it opens a new region.
-   * @param conf
+   * @param conf The Configuration object to use.
    * @param rsServices An interface we can request flushes against.
    * @param reporter An interface we can report progress against.
    * @return new HRegion
@@ -3979,26 +3972,22 @@ public class HRegion implements HeapSize { // , Writable{
     final RegionServerServices rsServices,
     final CancelableProgressable reporter)
   throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Opening region: " + info);
-    }
-    if (info == null) {
-      throw new NullPointerException("Passed region info is null");
-    }
-    Path dir = HTableDescriptor.getTableDir(FSUtils.getRootDir(conf),
-      info.getTableName());
-    FileSystem fs = null;
-    if (rsServices != null) {
-      fs = rsServices.getFileSystem();
-    }
-    if (fs == null) {
-      fs = FileSystem.get(conf);
-    }
-    HRegion r = HRegion.newHRegion(dir, wal, fs, conf, info,
-      htd, rsServices);
-    return r.openHRegion(reporter);
+    return openHRegion(FSUtils.getRootDir(conf), info, htd, wal, conf, rsServices, reporter);
   }
 
+  /**
+   * Open a Region.
+   * @param rootDir Root directory for HBase instance
+   * @param info Info for region to be opened.
+   * @param htd the table descriptor
+   * @param wal HLog for region to use. This method will call
+   * HLog#setSequenceNumber(long) passing the result of the call to
+   * HRegion#getMinSequenceId() to ensure the log id is properly kept
+   * up.  HRegionStore does this every time it opens a new region.
+   * @param conf The Configuration object to use.
+   * @return new HRegion
+   * @throws IOException
+   */
   public static HRegion openHRegion(Path rootDir, final HRegionInfo info,
       final HTableDescriptor htd, final HLog wal, final Configuration conf)
   throws IOException {
@@ -4009,14 +3998,15 @@ public class HRegion implements HeapSize { // , Writable{
    * Open a Region.
    * @param rootDir Root directory for HBase instance
    * @param info Info for region to be opened.
+   * @param htd the table descriptor
    * @param wal HLog for region to use. This method will call
    * HLog#setSequenceNumber(long) passing the result of the call to
    * HRegion#getMinSequenceId() to ensure the log id is properly kept
    * up.  HRegionStore does this every time it opens a new region.
-   * @param conf
+   * @param conf The Configuration object to use.
+   * @param rsServices An interface we can request flushes against.
    * @param reporter An interface we can report progress against.
    * @return new HRegion
-   *
    * @throws IOException
    */
   public static HRegion openHRegion(final Path rootDir, final HRegionInfo info,
@@ -4024,16 +4014,79 @@ public class HRegion implements HeapSize { // , Writable{
       final RegionServerServices rsServices,
       final CancelableProgressable reporter)
   throws IOException {
+    FileSystem fs = null;
+    if (rsServices != null) {
+      fs = rsServices.getFileSystem();
+    }
+    if (fs == null) {
+      fs = FileSystem.get(conf);
+    }
+    return openHRegion(conf, fs, rootDir, info, htd, wal, rsServices, reporter);
+  }
+
+  /**
+   * Open a Region.
+   * @param conf The Configuration object to use.
+   * @param fs Filesystem to use
+   * @param rootDir Root directory for HBase instance
+   * @param info Info for region to be opened.
+   * @param htd the table descriptor
+   * @param wal HLog for region to use. This method will call
+   * HLog#setSequenceNumber(long) passing the result of the call to
+   * HRegion#getMinSequenceId() to ensure the log id is properly kept
+   * up.  HRegionStore does this every time it opens a new region.
+   * @return new HRegion
+   * @throws IOException
+   */
+  public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
+      final Path rootDir, final HRegionInfo info, final HTableDescriptor htd, final HLog wal)
+      throws IOException {
+    return openHRegion(conf, fs, rootDir, info, htd, wal, null, null);
+  }
+
+  /**
+   * Open a Region.
+   * @param conf The Configuration object to use.
+   * @param fs Filesystem to use
+   * @param rootDir Root directory for HBase instance
+   * @param info Info for region to be opened.
+   * @param htd the table descriptor
+   * @param wal HLog for region to use. This method will call
+   * HLog#setSequenceNumber(long) passing the result of the call to
+   * HRegion#getMinSequenceId() to ensure the log id is properly kept
+   * up.  HRegionStore does this every time it opens a new region.
+   * @param rsServices An interface we can request flushes against.
+   * @param reporter An interface we can report progress against.
+   * @return new HRegion
+   * @throws IOException
+   */
+  public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
+      final Path rootDir, final HRegionInfo info, final HTableDescriptor htd, final HLog wal,
+      final RegionServerServices rsServices, final CancelableProgressable reporter)
+      throws IOException {
     if (info == null) throw new NullPointerException("Passed region info is null");
     LOG.info("HRegion.openHRegion Region name ==" + info.getRegionNameAsString());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
     Path dir = HTableDescriptor.getTableDir(rootDir, info.getTableName());
-    HRegion r = HRegion.newHRegion(dir, wal, FileSystem.get(conf), conf, info, htd, rsServices);
+    HRegion r = HRegion.newHRegion(dir, wal, fs, conf, info, htd, rsServices);
     return r.openHRegion(reporter);
   }
 
+  /**
+   * Useful when reopening a closed region (normally for unit tests)
+   * @param other original object
+   * @param reporter An interface we can report progress against.
+   * @return new HRegion
+   * @throws IOException
+   */
+  public static HRegion openHRegion(final HRegion other, final CancelableProgressable reporter)
+      throws IOException {
+    HRegion r = newHRegion(other.getTableDir(), other.getLog(), other.getFilesystem(),
+        other.baseConf, other.getRegionInfo(), other.getTableDesc(), null);
+    return r.openHRegion(reporter);
+  }
 
   /**
    * Open HRegion.
@@ -4059,6 +4112,22 @@ public class HRegion implements HeapSize { // , Writable{
       CompressionTest.testCompression(fam.getCompression());
       CompressionTest.testCompression(fam.getCompactionCompression());
     }
+  }
+
+  /**
+   * Create a daughter region from given a temp directory with the region data.
+   * @param hri Spec. for daughter region to open.
+   * @param daughterTmpDir Directory that contains region files.
+   * @throws IOException
+   */
+  HRegion createDaughterRegion(final HRegionInfo hri, final Path daughterTmpDir)
+      throws IOException {
+    HRegion r = HRegion.newHRegion(this.getTableDir(), this.getLog(), fs,
+        this.getBaseConf(), hri, this.getTableDesc(), rsServices);
+    r.readRequestsCount.set(this.getReadRequestsCount() / 2);
+    r.writeRequestsCount.set(this.getWriteRequestsCount() / 2);
+    moveInitialFilesIntoPlace(fs, daughterTmpDir, r.getRegionDir());
+    return r;
   }
 
   /**
