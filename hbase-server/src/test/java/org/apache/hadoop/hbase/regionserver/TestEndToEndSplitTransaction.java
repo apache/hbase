@@ -207,7 +207,6 @@ public class TestEndToEndSplitTransaction {
     HTable table;
     byte[] tableName, family;
     HBaseAdmin admin;
-    HTable metaTable;
     HRegionServer rs;
 
     RegionSplitter(HTable table) throws IOException {
@@ -216,7 +215,6 @@ public class TestEndToEndSplitTransaction {
       this.family = table.getTableDescriptor().getFamiliesKeys().iterator().next();
       admin = TEST_UTIL.getHBaseAdmin();
       rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-      metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
     }
 
     public void run() {
@@ -247,14 +245,14 @@ public class TestEndToEndSplitTransaction {
           addData(start);
           addData(mid);
 
-          flushAndBlockUntilDone(region.getRegionName());
-          compactAndBlockUntilDone(region.getRegionName());
+          flushAndBlockUntilDone(admin, rs, region.getRegionName());
+          compactAndBlockUntilDone(admin, rs, region.getRegionName());
 
           log("Initiating region split for:" + region.getRegionNameAsString());
           try {
             admin.split(region.getRegionName(), splitPoint);
             //wait until the split is complete
-            blockUntilRegionSplit(50000, region.getRegionName(), true);
+            blockUntilRegionSplit(conf, 50000, region.getRegionName(), true);
 
           } catch (NotServingRegionException ex) {
             //ignore
@@ -262,10 +260,6 @@ public class TestEndToEndSplitTransaction {
         }
       } catch (Throwable ex) {
         this.ex = ex;
-      } finally {
-        if (metaTable != null) {
-          IOUtils.closeQuietly(metaTable);
-        }
       }
     }
 
@@ -278,106 +272,6 @@ public class TestEndToEndSplitTransaction {
       }
       table.flushCommits();
     }
-
-    void flushAndBlockUntilDone(byte[] regionName) throws IOException, InterruptedException {
-      log("flushing region: " + Bytes.toStringBinary(regionName));
-      admin.flush(regionName);
-      log("blocking until flush is complete: " + Bytes.toStringBinary(regionName));
-      Threads.sleepWithoutInterrupt(500);
-      while (rs.cacheFlusher.getFlushQueueSize() > 0) {
-        Threads.sleep(50);
-      }
-    }
-
-    void compactAndBlockUntilDone(byte[] regionName) throws IOException,
-      InterruptedException {
-      log("Compacting region: " + Bytes.toStringBinary(regionName));
-      admin.majorCompact(regionName);
-      log("blocking until compaction is complete: " + Bytes.toStringBinary(regionName));
-      Threads.sleepWithoutInterrupt(500);
-      while (rs.compactSplitThread.getCompactionQueueSize() > 0) {
-        Threads.sleep(50);
-      }
-    }
-
-    /** bloks until the region split is complete in META and region server opens the daughters */
-    void blockUntilRegionSplit(long timeout, final byte[] regionName, boolean waitForDaughters)
-        throws IOException, InterruptedException {
-      long start = System.currentTimeMillis();
-      log("blocking until region is split:" +  Bytes.toStringBinary(regionName));
-      HRegionInfo daughterA = null, daughterB = null;
-
-      while (System.currentTimeMillis() - start < timeout) {
-        Result result = getRegionRow(regionName);
-        if (result == null) {
-          break;
-        }
-
-        HRegionInfo region = HRegionInfo.getHRegionInfo(result);
-        if(region.isSplitParent()) {
-          log("found parent region: " + region.toString());
-          PairOfSameType<HRegionInfo> pair = HRegionInfo.getDaughterRegions(result);
-          daughterA = pair.getFirst();
-          daughterB = pair.getSecond();
-          break;
-        }
-        sleep(100);
-      }
-
-      //if we are here, this means the region split is complete or timed out
-      if (waitForDaughters) {
-        long rem = timeout - (System.currentTimeMillis() - start);
-        blockUntilRegionIsInMeta(rem, daughterA.getRegionName());
-
-        rem = timeout - (System.currentTimeMillis() - start);
-        blockUntilRegionIsInMeta(rem, daughterB.getRegionName());
-
-        rem = timeout - (System.currentTimeMillis() - start);
-        blockUntilRegionIsOpenedByRS(rem, daughterA.getRegionName());
-
-        rem = timeout - (System.currentTimeMillis() - start);
-        blockUntilRegionIsOpenedByRS(rem, daughterB.getRegionName());
-      }
-    }
-
-    Result getRegionRow(byte[] regionName) throws IOException {
-      Get get = new Get(regionName);
-      return metaTable.get(get);
-    }
-
-    void blockUntilRegionIsInMeta(long timeout, byte[] regionName)
-        throws IOException, InterruptedException {
-      log("blocking until region is in META: " + Bytes.toStringBinary(regionName));
-      long start = System.currentTimeMillis();
-      while (System.currentTimeMillis() - start < timeout) {
-        Result result = getRegionRow(regionName);
-        if (result != null) {
-          HRegionInfo info = HRegionInfo.getHRegionInfo(result);
-          if (info != null && !info.isOffline()) {
-            log("found region in META: " + Bytes.toStringBinary(regionName));
-            break;
-          }
-        }
-        sleep(10);
-      }
-    }
-
-    void blockUntilRegionIsOpenedByRS(long timeout, byte[] regionName)
-      throws IOException, InterruptedException {
-      log("blocking until region is opened by region server: " + Bytes.toStringBinary(regionName));
-      long start = System.currentTimeMillis();
-      while (System.currentTimeMillis() - start < timeout) {
-        List<HRegion> regions = rs.getOnlineRegions(tableName);
-        for (HRegion region : regions) {
-          if (Bytes.compareTo(region.getRegionName(), regionName) == 0) {
-            log("found region open in RS: " + Bytes.toStringBinary(regionName));
-            return;
-          }
-        }
-        sleep(10);
-      }
-    }
-
   }
 
   /**
@@ -484,5 +378,118 @@ public class TestEndToEndSplitTransaction {
     LOG.info(msg);
   }
 
+  /* some utility methods for split tests */
+
+  public static void flushAndBlockUntilDone(HBaseAdmin admin, HRegionServer rs, byte[] regionName)
+      throws IOException, InterruptedException {
+    log("flushing region: " + Bytes.toStringBinary(regionName));
+    admin.flush(regionName);
+    log("blocking until flush is complete: " + Bytes.toStringBinary(regionName));
+    Threads.sleepWithoutInterrupt(500);
+    while (rs.cacheFlusher.getFlushQueueSize() > 0) {
+      Threads.sleep(50);
+    }
+  }
+
+  public static void compactAndBlockUntilDone(HBaseAdmin admin, HRegionServer rs, byte[] regionName)
+      throws IOException, InterruptedException {
+    log("Compacting region: " + Bytes.toStringBinary(regionName));
+    admin.majorCompact(regionName);
+    log("blocking until compaction is complete: " + Bytes.toStringBinary(regionName));
+    Threads.sleepWithoutInterrupt(500);
+    while (rs.compactSplitThread.getCompactionQueueSize() > 0) {
+      Threads.sleep(50);
+    }
+  }
+
+  /** Blocks until the region split is complete in META and region server opens the daughters */
+  public static void blockUntilRegionSplit(Configuration conf, long timeout,
+      final byte[] regionName, boolean waitForDaughters)
+      throws IOException, InterruptedException {
+    long start = System.currentTimeMillis();
+    log("blocking until region is split:" +  Bytes.toStringBinary(regionName));
+    HRegionInfo daughterA = null, daughterB = null;
+    HTable metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
+
+    try {
+      while (System.currentTimeMillis() - start < timeout) {
+        Result result = getRegionRow(metaTable, regionName);
+        if (result == null) {
+          break;
+        }
+
+        HRegionInfo region = HRegionInfo.getHRegionInfo(result);
+        if(region.isSplitParent()) {
+          log("found parent region: " + region.toString());
+          PairOfSameType<HRegionInfo> pair = HRegionInfo.getDaughterRegions(result);
+          daughterA = pair.getFirst();
+          daughterB = pair.getSecond();
+          break;
+        }
+        Threads.sleep(100);
+      }
+
+      //if we are here, this means the region split is complete or timed out
+      if (waitForDaughters) {
+        long rem = timeout - (System.currentTimeMillis() - start);
+        blockUntilRegionIsInMeta(metaTable, rem, daughterA);
+
+        rem = timeout - (System.currentTimeMillis() - start);
+        blockUntilRegionIsInMeta(metaTable, rem, daughterB);
+
+        rem = timeout - (System.currentTimeMillis() - start);
+        blockUntilRegionIsOpened(conf, rem, daughterA);
+
+        rem = timeout - (System.currentTimeMillis() - start);
+        blockUntilRegionIsOpened(conf, rem, daughterB);
+      }
+    } finally {
+      IOUtils.closeQuietly(metaTable);
+    }
+  }
+
+  public static Result getRegionRow(HTable metaTable, byte[] regionName) throws IOException {
+    Get get = new Get(regionName);
+    return metaTable.get(get);
+  }
+
+  public static void blockUntilRegionIsInMeta(HTable metaTable, long timeout, HRegionInfo hri)
+      throws IOException, InterruptedException {
+    log("blocking until region is in META: " + hri.getRegionNameAsString());
+    long start = System.currentTimeMillis();
+    while (System.currentTimeMillis() - start < timeout) {
+      Result result = getRegionRow(metaTable, hri.getRegionName());
+      if (result != null) {
+        HRegionInfo info = HRegionInfo.getHRegionInfo(result);
+        if (info != null && !info.isOffline()) {
+          log("found region in META: " + hri.getRegionNameAsString());
+          break;
+        }
+      }
+      Threads.sleep(10);
+    }
+  }
+
+  public static void blockUntilRegionIsOpened(Configuration conf, long timeout, HRegionInfo hri)
+      throws IOException, InterruptedException {
+    log("blocking until region is opened for reading:" + hri.getRegionNameAsString());
+    long start = System.currentTimeMillis();
+    HTable table = new HTable(conf, hri.getTableName());
+
+    try {
+      Get get = new Get(hri.getStartKey());
+      while (System.currentTimeMillis() - start < timeout) {
+        try {
+          table.get(get);
+          break;
+        } catch(IOException ex) {
+          //wait some more
+        }
+        Threads.sleep(10);
+      }
+    } finally {
+      IOUtils.closeQuietly(table);
+    }
+  }
 }
 
