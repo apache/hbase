@@ -108,6 +108,8 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class HStore implements Store {
+  public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 7;
+
   static final Log LOG = LogFactory.getLog(HStore.class);
 
   protected final MemStore memstore;
@@ -125,7 +127,6 @@ public class HStore implements Store {
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
   static int closeCheckInterval = 0;
-  private final int blockingStoreFileCount;
   private volatile long storeSize = 0L;
   private volatile long totalUncompressedBytes = 0L;
   private final Object flushLock = new Object();
@@ -209,8 +210,7 @@ public class HStore implements Store {
 
     // Setting up cache configuration for this family
     this.cacheConf = new CacheConfig(conf, family);
-    this.blockingStoreFileCount =
-      conf.getInt("hbase.hstore.blockingStoreFiles", 7);
+
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify", false);
 
@@ -1230,22 +1230,13 @@ public class HStore implements Store {
     CompactionRequest ret = null;
     this.lock.readLock().lock();
     try {
+      List<StoreFile> candidates = Lists.newArrayList(storeFileManager.getStorefiles());
       synchronized (filesCompacting) {
-        // candidates = all StoreFiles not already in compaction queue
-        List<StoreFile> candidates = Lists.newArrayList(storeFileManager.getStorefiles());
-        if (!filesCompacting.isEmpty()) {
-          // exclude all files older than the newest file we're currently
-          // compacting. this allows us to preserve contiguity (HBASE-2856)
-          StoreFile last = filesCompacting.get(filesCompacting.size() - 1);
-          int idx = candidates.indexOf(last);
-          Preconditions.checkArgument(idx != -1);
-          candidates.subList(0, idx + 1).clear();
-        }
-
+        // First we need to pre-select compaction, and then pre-compact selection!
+        candidates = compactionPolicy.preSelectCompaction(candidates, filesCompacting);
         boolean override = false;
         if (region.getCoprocessorHost() != null) {
-          override = region.getCoprocessorHost().preCompactSelection(
-              this, candidates);
+          override = region.getCoprocessorHost().preCompactSelection(this, candidates);
         }
         CompactSelection filesToCompact;
         if (override) {
@@ -1739,12 +1730,12 @@ public class HStore implements Store {
 
   @Override
   public int getCompactPriority(int priority) {
-    // If this is a user-requested compaction, leave this at the highest priority
-    if(priority == Store.PRIORITY_USER) {
-      return Store.PRIORITY_USER;
-    } else {
-      return this.blockingStoreFileCount - this.storeFileManager.getStorefileCount();
+    // If this is a user-requested compaction, leave this at the user priority
+    if (priority != Store.PRIORITY_USER) {
+      priority = this.compactionPolicy.getSystemCompactionPriority(
+        this.storeFileManager.getStorefiles());
     }
+    return priority;
   }
 
   @Override
@@ -1855,8 +1846,7 @@ public class HStore implements Store {
 
   @Override
   public boolean needsCompaction() {
-    return compactionPolicy.needsCompaction(
-      this.storeFileManager.getStorefileCount() - filesCompacting.size());
+    return compactionPolicy.needsCompaction(this.storeFileManager.getStorefiles(), filesCompacting);
   }
 
   @Override
@@ -1866,7 +1856,7 @@ public class HStore implements Store {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align((20 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
-              + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
+              + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK

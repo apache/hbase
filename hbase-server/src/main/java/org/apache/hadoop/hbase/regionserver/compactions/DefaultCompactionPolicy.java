@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 
@@ -51,6 +52,26 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
 
   public DefaultCompactionPolicy() {
     compactor = new DefaultCompactor(this);
+  }
+
+  @Override
+  public List<StoreFile> preSelectCompaction(
+      List<StoreFile> candidateFiles, final List<StoreFile> filesCompacting) {
+    // candidates = all storefiles not already in compaction queue
+    if (!filesCompacting.isEmpty()) {
+      // exclude all files older than the newest file we're currently
+      // compacting. this allows us to preserve contiguity (HBASE-2856)
+      StoreFile last = filesCompacting.get(filesCompacting.size() - 1);
+      int idx = candidateFiles.indexOf(last);
+      Preconditions.checkArgument(idx != -1);
+      candidateFiles.subList(0, idx + 1).clear();
+    }
+    return candidateFiles;
+  }
+
+  @Override
+  public int getSystemCompactionPriority(final Collection<StoreFile> storeFiles) {
+    return this.comConf.getBlockingStorefileCount() - storeFiles.size();
   }
 
   /**
@@ -367,11 +388,10 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     return compactionSize > comConf.getThrottlePoint();
   }
 
-  /**
-   * @param numCandidates Number of candidate store files
-   * @return whether a compactionSelection is possible
-   */
-  public boolean needsCompaction(int numCandidates) {
+  @Override
+  public boolean needsCompaction(final Collection<StoreFile> storeFiles,
+      final List<StoreFile> filesCompacting) {
+    int numCandidates = storeFiles.size() - filesCompacting.size();
     return numCandidates > comConf.getMinFilesToCompact();
   }
 
