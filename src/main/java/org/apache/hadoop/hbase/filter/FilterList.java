@@ -253,12 +253,11 @@ public class FilterList implements Filter {
   public boolean filterRow() {
     for (Filter filter : filters) {
       if (operator == Operator.MUST_PASS_ALL) {
-        if (filter.filterAllRemaining() || filter.filterRow()) {
+        if (filter.filterRow()) {
           return true;
         }
       } else if (operator == Operator.MUST_PASS_ONE) {
-        if (!filter.filterAllRemaining()
-            && !filter.filterRow()) {
+        if (!filter.filterRow()) {
           return false;
         }
       }
