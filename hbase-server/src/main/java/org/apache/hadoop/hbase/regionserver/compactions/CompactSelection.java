@@ -58,43 +58,6 @@ public class CompactSelection {
   }
 
   /**
-   * Select the expired store files to compact
-   * 
-   * @param maxExpiredTimeStamp
-   *          The store file will be marked as expired if its max time stamp is
-   *          less than this maxExpiredTimeStamp.
-   * @return A CompactSelection contains the expired store files as
-   *         filesToCompact
-   */
-  public CompactSelection selectExpiredStoreFilesToCompact(
-      long maxExpiredTimeStamp) {
-    if (filesToCompact == null || filesToCompact.size() == 0)
-      return null;
-    ArrayList<StoreFile> expiredStoreFiles = null;
-    boolean hasExpiredStoreFiles = false;
-    CompactSelection expiredSFSelection = null;
-
-    for (StoreFile storeFile : this.filesToCompact) {
-      if (storeFile.getReader().getMaxTimestamp() < maxExpiredTimeStamp) {
-        LOG.info("Deleting the expired store file by compaction: "
-            + storeFile.getPath() + " whose maxTimeStamp is "
-            + storeFile.getReader().getMaxTimestamp()
-            + " while the max expired timestamp is " + maxExpiredTimeStamp);
-        if (!hasExpiredStoreFiles) {
-          expiredStoreFiles = new ArrayList<StoreFile>();
-          hasExpiredStoreFiles = true;
-        }
-        expiredStoreFiles.add(storeFile);
-      }
-    }
-
-    if (hasExpiredStoreFiles) {
-      expiredSFSelection = new CompactSelection(expiredStoreFiles);
-    }
-    return expiredSFSelection;
-  }
-
-  /**
    * The current compaction finished, so reset the off peak compactions count
    * if this was an off peak compaction.
    */
@@ -163,10 +126,6 @@ public class CompactSelection {
     return selectionTime;
   }
 
-  public CompactSelection subList(int start, int end) {
-    throw new UnsupportedOperationException();
-  }
-
   public CompactSelection getSubList(int start, int end) {
     filesToCompact = filesToCompact.subList(start, end);
     return this;
@@ -174,9 +133,5 @@ public class CompactSelection {
 
   public void clearSubList(int start, int end) {
     filesToCompact.subList(start, end).clear();
-  }
-
-  private boolean isValidHour(int hour) {
-    return (hour >= 0 && hour <= 23);
   }
 }
