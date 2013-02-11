@@ -589,13 +589,14 @@ public class TestStoreFile extends HBaseTestCase {
 
   public void testSeqIdComparator() {
     assertOrdering(StoreFile.Comparators.SEQ_ID,
-        mockStoreFile(true, 1000, -1, "/foo/123"),
-        mockStoreFile(true, 1000, -1, "/foo/126"),
-        mockStoreFile(true, 2000, -1, "/foo/126"),
-        mockStoreFile(false, -1, 1, "/foo/1"),
-        mockStoreFile(false, -1, 3, "/foo/2"),
-        mockStoreFile(false, -1, 5, "/foo/2"),
-        mockStoreFile(false, -1, 5, "/foo/3"));
+        mockStoreFile(true,  100,   1000, -1, "/foo/123"),
+        mockStoreFile(true,  100,   1000, -1, "/foo/124"),
+        mockStoreFile(true,  99,    1000, -1, "/foo/126"),
+        mockStoreFile(true,  98,    2000, -1, "/foo/126"),
+        mockStoreFile(false, 3453, -1,     1, "/foo/1"),
+        mockStoreFile(false, 2,    -1,     3, "/foo/2"),
+        mockStoreFile(false, 1000, -1,     5, "/foo/2"),
+        mockStoreFile(false, 76,   -1,     5, "/foo/3"));
   }
 
   /**
@@ -614,9 +615,17 @@ public class TestStoreFile extends HBaseTestCase {
   /**
    * Create a mock StoreFile with the given attributes.
    */
-  private StoreFile mockStoreFile(boolean bulkLoad, long bulkTimestamp,
-      long seqId, String path) {
+  private StoreFile mockStoreFile(boolean bulkLoad,
+                                  long size,
+                                  long bulkTimestamp,
+                                  long seqId,
+                                  String path) {
     StoreFile mock = Mockito.mock(StoreFile.class);
+    StoreFile.Reader reader = Mockito.mock(StoreFile.Reader.class);
+
+    Mockito.doReturn(size).when(reader).length();
+
+    Mockito.doReturn(reader).when(mock).getReader();
     Mockito.doReturn(bulkLoad).when(mock).isBulkLoadResult();
     Mockito.doReturn(bulkTimestamp).when(mock).getBulkLoadTimestamp();
     Mockito.doReturn(seqId).when(mock).getMaxSequenceId();

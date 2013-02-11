@@ -1793,18 +1793,19 @@ public class StoreFile {
   /**
    * Useful comparators for comparing StoreFiles.
    */
-  abstract static class Comparators {
+  public abstract static class Comparators {
     /**
      * Comparator that compares based on the Sequence Ids of the
      * the StoreFiles. Bulk loads that did not request a seq ID
      * are given a seq id of -1; thus, they are placed before all non-
      * bulk loads, and bulk loads with sequence Id. Among these files,
-     * the bulkLoadTime is used to determine the ordering.
+     * the size is used to determine the ordering, then bulkLoadTime.
      * If there are ties, the path name is used as a tie-breaker.
      */
-    static final Comparator<StoreFile> SEQ_ID =
+    public static final Comparator<StoreFile> SEQ_ID =
       Ordering.compound(ImmutableList.of(
           Ordering.natural().onResultOf(new GetSeqId()),
+          Ordering.natural().onResultOf(new GetFileSize()).reverse(),
           Ordering.natural().onResultOf(new GetBulkTime()),
           Ordering.natural().onResultOf(new GetPathName())
       ));
@@ -1813,6 +1814,13 @@ public class StoreFile {
       @Override
       public Long apply(StoreFile sf) {
         return sf.getMaxSequenceId();
+      }
+    }
+
+    private static class GetFileSize implements Function<StoreFile, Long> {
+      @Override
+      public Long apply(StoreFile sf) {
+        return sf.getReader().length();
       }
     }
 
@@ -1830,19 +1838,5 @@ public class StoreFile {
         return sf.getPath().getName();
       }
     }
-
-    /**
-     * FILE_SIZE = descending sort StoreFiles (largest --> smallest in size)
-     */
-    static final Comparator<StoreFile> FILE_SIZE = Ordering.natural().reverse()
-        .onResultOf(new Function<StoreFile, Long>() {
-          @Override
-          public Long apply(StoreFile sf) {
-            if (sf == null) {
-              throw new IllegalArgumentException("StorFile can not be null");
-            }
-            return sf.getReader().length();
-          }
-        });
   }
 }
