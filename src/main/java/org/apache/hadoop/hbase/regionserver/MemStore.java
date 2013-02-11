@@ -60,7 +60,7 @@ public class MemStore implements HeapSize {
 
   static final String USEMSLAB_KEY =
     "hbase.hregion.memstore.mslab.enabled";
-  private static final boolean USEMSLAB_DEFAULT = false;
+  private static final boolean USEMSLAB_DEFAULT = true;
 
   private Configuration conf;
 
