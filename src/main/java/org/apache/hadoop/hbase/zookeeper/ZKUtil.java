@@ -212,7 +212,7 @@ public class ZKUtil {
     // If keyTab is not specified use the Ticket Cache.
     // and set the zookeeper login context name.
     JaasConfiguration jaasConf = new JaasConfiguration(loginContextName,
-      keytabFilename, principalName);
+        principalName, keytabFilename);
     javax.security.auth.login.Configuration.setConfiguration(jaasConf);
     System.setProperty(loginContextProperty, loginContextName);
   }
