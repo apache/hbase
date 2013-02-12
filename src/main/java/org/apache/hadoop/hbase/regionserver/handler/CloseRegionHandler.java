@@ -148,8 +148,7 @@ public class CloseRegionHandler extends EventHandler {
       // Done!  Region is closed on this RS
       LOG.debug("Closed region " + region.getRegionNameAsString());
     } finally {
-      this.rsServices.getRegionsInTransitionInRS().
-          remove(this.regionInfo.getEncodedNameAsBytes());
+      this.rsServices.removeFromRegionsInTransition(this.regionInfo);
     }
   }
 

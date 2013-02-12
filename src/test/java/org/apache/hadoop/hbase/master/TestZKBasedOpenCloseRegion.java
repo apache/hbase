@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.handler.TotesHRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -69,6 +70,8 @@ public class TestZKBasedOpenCloseRegion {
 
   @BeforeClass public static void beforeAllTests() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
+    c.setClass(HConstants.REGION_SERVER_IMPL, TestZKBasedOpenCloseRegionRegionServer.class,
+              HRegionServer.class);
     c.setBoolean("dfs.support.append", true);
     c.setInt("hbase.regionserver.info.port", 0);
     TEST_UTIL.startMiniCluster(2);
@@ -92,6 +95,22 @@ public class TestZKBasedOpenCloseRegion {
 
     }
     waitUntilAllRegionsAssigned();
+  }
+
+  /**
+   * Special HRegionServer used in these tests that allows access to
+   * {@link #addRegionsInTransition(HRegionInfo, String)}.
+   */
+  public static class TestZKBasedOpenCloseRegionRegionServer extends HRegionServer {
+    public TestZKBasedOpenCloseRegionRegionServer(Configuration conf)
+        throws IOException, InterruptedException {
+      super(conf);
+    }
+    @Override
+    public void addRegionsInTransition(HRegionInfo region,
+        String currentAction) throws RegionAlreadyInTransitionException {
+      super.addRegionsInTransition(region, currentAction);
+    }
   }
 
   /**
@@ -244,8 +263,10 @@ public class TestZKBasedOpenCloseRegion {
         cluster.getLiveRegionServerThreads().get(1).getRegionServer();
     HRegionInfo hri = getNonMetaRegion(hr0.getOnlineRegions());
 
-    // fake that hr1 is processing the region
-    hr1.getRegionsInTransitionInRS().putIfAbsent(hri.getEncodedNameAsBytes(), true);
+    // Fake that hr1 is processing the region. At top of this test we made a
+    // regionserver that gave access addRegionsInTransition. Need to cast as
+    // TestZKBasedOpenCloseRegionRegionServer.
+    ((TestZKBasedOpenCloseRegionRegionServer) hr1).addRegionsInTransition(hri, "OPEN");
 
     AtomicBoolean reopenEventProcessed = new AtomicBoolean(false);
     EventHandlerListener openListener =
@@ -262,7 +283,7 @@ public class TestZKBasedOpenCloseRegion {
     assertEquals(hr1.getOnlineRegion(hri.getEncodedNameAsBytes()), null);
 
     // remove the block and reset the boolean
-    hr1.getRegionsInTransitionInRS().remove(hri.getEncodedNameAsBytes());
+    hr1.removeFromRegionsInTransition(hri);
     reopenEventProcessed.set(false);
     
     // now try moving a region when there is no region in transition.
@@ -333,7 +354,7 @@ public class TestZKBasedOpenCloseRegion {
     }
     Whitebox.setInternalState(regionServer, "tableDescriptors", orizinalState);
     assertFalse("Region should not be in RIT",
-        regionServer.getRegionsInTransitionInRS().containsKey(REGIONINFO.getEncodedNameAsBytes()));
+        regionServer.containsKeyInRegionsInTransition(REGIONINFO));
   }
   
   private static void waitUntilAllRegionsAssigned()

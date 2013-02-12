@@ -104,6 +104,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -157,6 +158,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -2810,7 +2812,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode,
       Map<String, HTableDescriptor> htds) throws IOException {
     checkOpen();
-    checkIfRegionInTransition(region, OPEN);
     HRegion onlineRegion = this.getFromOnlineRegions(region.getEncodedName());
     if (null != onlineRegion) {
       // See HBASE-5094. Cross check with META if still this RS is owning the
@@ -2827,46 +2828,103 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         this.removeFromOnlineRegions(region.getEncodedName());
       }
     }
-    LOG.info("Received request to open region: " +
-      region.getRegionNameAsString());
-    HTableDescriptor htd = null;
-    if (htds == null) {
-      htd = this.tableDescriptors.get(region.getTableName());
-    } else {
-      htd = htds.get(region.getTableNameAsString());
-      if (htd == null) {
+    // Added to in-memory RS RIT that we are trying to open this region.
+    // Clear it if we fail queuing an open executor.
+    addRegionsInTransition(region, OPEN);
+    try {
+      LOG.info("Received request to open region: " +
+        region.getRegionNameAsString());
+      HTableDescriptor htd = null;
+      if (htds == null) {
         htd = this.tableDescriptors.get(region.getTableName());
-        htds.put(region.getTableNameAsString(), htd);
+      } else {
+        htd = htds.get(region.getTableNameAsString());
+        if (htd == null) {
+          htd = this.tableDescriptors.get(region.getTableName());
+          htds.put(region.getTableNameAsString(), htd);
+        }
       }
-    }
-    this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(),
-        true);
-    // Need to pass the expected version in the constructor.
-    if (region.isRootRegion()) {
-      this.service.submit(new OpenRootHandler(this, this, region, htd,
-          versionOfOfflineNode));
-    } else if (region.isMetaRegion()) {
-      this.service.submit(new OpenMetaHandler(this, this, region, htd,
-          versionOfOfflineNode));
-    } else {
-      this.service.submit(new OpenRegionHandler(this, this, region, htd,
-          versionOfOfflineNode));
+
+      // Mark the region as OPENING up in zk.  This is how we tell the master control of the
+      // region has passed to this regionserver.
+      int version = transitionZookeeperOfflineToOpening(region, versionOfOfflineNode);
+      // Need to pass the expected version in the constructor.
+      if (region.isRootRegion()) {
+        this.service.submit(new OpenRootHandler(this, this, region, htd, version));
+      } else if (region.isMetaRegion()) {
+        this.service.submit(new OpenMetaHandler(this, this, region, htd, version));
+      } else {
+        this.service.submit(new OpenRegionHandler(this, this, region, htd, version));
+      }
+    } catch (IOException ie) {
+      // Clear from this server's RIT list else will stick around for ever.
+      removeFromRegionsInTransition(region);
+      throw ie;
     }
     return RegionOpeningState.OPENED;
   }
 
-  private void checkIfRegionInTransition(HRegionInfo region,
-      String currentAction) throws RegionAlreadyInTransitionException {
-    byte[] encodedName = region.getEncodedNameAsBytes();
-    if (this.regionsInTransitionInRS.containsKey(encodedName)) {
-      boolean openAction = this.regionsInTransitionInRS.get(encodedName);
-      // The below exception message will be used in master.
-      throw new RegionAlreadyInTransitionException("Received:" + currentAction +
-        " for the region:" + region.getRegionNameAsString() +
-        " ,which we are already trying to " +
-        (openAction ? OPEN : CLOSE)+ ".");
+  /**
+   * Transition ZK node from OFFLINE to OPENING. The master will get a callback
+   * and will know that the region is now ours.
+   *
+   * @param hri
+   *          HRegionInfo whose znode we are updating
+   * @param versionOfOfflineNode
+   *          Version Of OfflineNode that needs to be compared before changing
+   *          the node's state from OFFLINE
+   * @throws IOException
+   */
+  int transitionZookeeperOfflineToOpening(final HRegionInfo hri, int versionOfOfflineNode)
+      throws IOException {
+    // TODO: should also handle transition from CLOSED?
+    int version = -1;
+    try {
+      // Initialize the znode version.
+      version = ZKAssign.transitionNode(this.zooKeeper, hri, this.getServerName(),
+          EventType.M_ZK_REGION_OFFLINE, EventType.RS_ZK_REGION_OPENING, versionOfOfflineNode);
+    } catch (KeeperException e) {
+      LOG.error("Error transition from OFFLINE to OPENING for region=" + hri.getEncodedName(), e);
     }
+    if (version == -1) {
+      // TODO: Fix this sloppyness. The exception should be coming off zk
+      // directly, not an
+      // intepretation at this high-level (-1 when we call transitionNode can
+      // mean many things).
+      throw new IOException("Failed transition from OFFLINE to OPENING for region="
+          + hri.getEncodedName());
+    }
+    return version;
   }
+
+   /**
+    * String currentAction) throws RegionAlreadyInTransitionException { Add
+    * region to this regionservers list of in transitions regions ONLY if its not
+    * already byte[] encodedName = region.getEncodedNameAsBytes(); in transition.
+    * If a region already in RIT, we throw
+    * {@link RegionAlreadyInTransitionException}. if
+    * (this.regionsInTransitionInRS.containsKey(encodedName)) { Callers need to
+    * call {@link #removeFromRegionsInTransition(HRegionInfo)} when done or if
+    * boolean openAction = this.regionsInTransitionInRS.get(encodedName); error
+    * processing.
+    *
+    * @param region
+    *          Region to add
+    * @param currentAction
+    *          Whether OPEN or CLOSE.
+    * @throws RegionAlreadyInTransitionException
+    */
+   protected void addRegionsInTransition(final HRegionInfo region, final String currentAction)
+       throws RegionAlreadyInTransitionException {
+     Boolean action = this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(),
+         currentAction.equals(OPEN));
+     if (action != null) {
+       // The below exception message will be used in master.
+       throw new RegionAlreadyInTransitionException("Received:" + currentAction + " for the region:"
+           + region.getRegionNameAsString() + " for the region:" + region.getRegionNameAsString()
+           + ", which we are already trying to " + (action ? OPEN : CLOSE) + ".");
+     }
+   }
 
   @Override
   @QosPriority(priority=HConstants.HIGH_QOS)
@@ -2919,7 +2977,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throw new NotServingRegionException("Received close for "
         + region.getRegionNameAsString() + " but we are not serving it");
     }
-    checkIfRegionInTransition(region, CLOSE);
     return closeRegion(region, false, zk, versionOfClosingNode);
   }
 
@@ -2944,7 +3001,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
 
-    /**
+  /**
    * @param region Region to close
    * @param abort True if we are aborting
    * @param zk True if we are to update zk about the region close; if the close
@@ -2967,25 +3024,29 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         return false;
       }
     }
-    
-    if (this.regionsInTransitionInRS.containsKey(region.getEncodedNameAsBytes())) {
-      LOG.warn("Received close for region we are already opening or closing; " +
-          region.getEncodedName());
+    try {
+      addRegionsInTransition(region, CLOSE);
+    } catch (RegionAlreadyInTransitionException rate) {
+      LOG.warn("Received close for region we are already opening or closing; "
+          + region.getEncodedName());
       return false;
     }
-    this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(), false);
-    CloseRegionHandler crh = null;
-    if (region.isRootRegion()) {
-      crh = new CloseRootHandler(this, this, region, abort, zk,
-        versionOfClosingNode);
-    } else if (region.isMetaRegion()) {
-      crh = new CloseMetaHandler(this, this, region, abort, zk,
-        versionOfClosingNode);
-    } else {
-      crh = new CloseRegionHandler(this, this, region, abort, zk,
-        versionOfClosingNode);
+    boolean success = false;
+    try {
+      CloseRegionHandler crh = null;
+      if (region.isRootRegion()) {
+        crh = new CloseRootHandler(this, this, region, abort, zk, versionOfClosingNode);
+      } else if (region.isMetaRegion()) {
+        crh = new CloseMetaHandler(this, this, region, abort, zk, versionOfClosingNode);
+      } else {
+        crh = new CloseRegionHandler(this, this, region, abort, zk, versionOfClosingNode);
+      }
+      this.service.submit(crh);
+      success = true;
+    } finally {
+      // Remove from this server's RIT.
+      if (!success) removeFromRegionsInTransition(region);
     }
-    this.service.submit(crh);
     return true;
   }
 
@@ -3672,9 +3733,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return this.rsHost;
   }
 
+  @Override
+  public boolean removeFromRegionsInTransition(final HRegionInfo hri) {
+    return this.regionsInTransitionInRS.remove(hri.getEncodedNameAsBytes());
+  }
 
-  public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
-    return this.regionsInTransitionInRS;
+  @Override
+  public boolean containsKeyInRegionsInTransition(final HRegionInfo hri) {
+    return this.regionsInTransitionInRS.containsKey(hri.getEncodedNameAsBytes());
   }
 
   public ExecutorService getExecutorService() {

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -75,10 +76,18 @@ public interface RegionServerServices extends OnlineRegions {
   public RpcServer getRpcServer();
 
   /**
-   * Get the regions that are currently being opened or closed in the RS
-   * @return map of regions in transition in this RS
+   * Remove passed <code>hri</code> from the internal list of regions in transition on this
+   * regionserver.
+   * @param hri Region to remove.
+   * @return True if removed
    */
-  public Map<byte[], Boolean> getRegionsInTransitionInRS();
+  public boolean removeFromRegionsInTransition(HRegionInfo hri);
+  /**
+   * @param hri
+   * @return True if the internal list of regions in transition includes the
+   *         passed <code>hri</code>.
+   */
+  public boolean containsKeyInRegionsInTransition(HRegionInfo hri);
 
   /**
    * @return Return the FileSystem object used by the regionserver

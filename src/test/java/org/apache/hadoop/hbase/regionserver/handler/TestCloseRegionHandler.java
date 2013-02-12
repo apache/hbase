@@ -204,18 +204,18 @@ public class TestCloseRegionHandler {
            HTableDescriptor htd, HRegionInfo hri)
            throws IOException, NodeExistsException, KeeperException {
            // Create it OFFLINE node, which is what Master set before sending OPEN RPC
-           ZKAssign.createNodeOffline(server.getZooKeeper(), hri,
-             server.getServerName());
-           OpenRegionHandler openHandler = new OpenRegionHandler(server, rss, hri,
-             htd);
-           openHandler.process();
-           RegionTransitionData data =
-             ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName());
-       
-           // delete the node, which is what Master do after the region is opened
-           ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
-             EventType.RS_ZK_REGION_OPENED);
-         }  
+
+
+       ZKAssign.createNodeOffline(server.getZooKeeper(), hri, server.getServerName());
+       int version = ZKAssign.transitionNodeOpening(server.getZooKeeper(), hri, server.getServerName());
+       OpenRegionHandler openHandler = new OpenRegionHandler(server, rss, hri, htd, version);
+       openHandler.process();
+       RegionTransitionData data = ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName());
+
+       // delete the node, which is what Master do after the region is opened
+       ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
+         EventType.RS_ZK_REGION_OPENED);
+     }
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
