@@ -1408,7 +1408,7 @@ Server {
    * @param b If false, the catalog janitor won't do anything.
    */
   public void setCatalogJanitorEnabled(final boolean b) {
-    ((CatalogJanitor)this.catalogJanitorChore).setEnabled(b);
+    this.catalogJanitorChore.setEnabled(b);
   }
 
   @Override
@@ -1908,7 +1908,7 @@ Server {
   public String[] getCoprocessors() {
     Set<String> masterCoprocessors =
         getCoprocessorHost().getCoprocessors();
-    return masterCoprocessors.toArray(new String[0]);
+    return masterCoprocessors.toArray(new String[masterCoprocessors.size()]);
   }
 
   @Override

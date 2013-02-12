@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
@@ -154,11 +153,6 @@ public class TestMasterFailover {
 
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
-    // Need to drop the timeout much lower
-    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
-    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 4000);
-    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 3);
-    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 3);
 
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
@@ -278,6 +272,8 @@ public class TestMasterFailover {
      */
 
     // Region that should be assigned but is not and is in ZK as OFFLINE
+    // Cause: This can happen if the master crashed after creating the znode but before sending the
+    //  request to the region server
     HRegionInfo region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, serverName);
@@ -285,6 +281,7 @@ public class TestMasterFailover {
     /*
      * ZK = CLOSING
      */
+    // Cause: Same as offline.
     regionsThatShouldBeOnline.add(closingRegion);
     ZKAssign.createNodeClosing(zkw, closingRegion, serverName);
 
@@ -293,6 +290,7 @@ public class TestMasterFailover {
      */
 
     // Region of enabled table closed but not ack
+    //Cause: Master was down while the region server updated the ZK status.
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     int version = ZKAssign.createNodeClosing(zkw, region, serverName);
@@ -305,20 +303,11 @@ public class TestMasterFailover {
     ZKAssign.transitionNodeClosed(zkw, region, serverName, version);
 
     /*
-     * ZK = OPENING
-     */
-
-    // RS was opening a region of enabled table but never finishes
-    region = enabledRegions.remove(0);
-    regionsThatShouldBeOnline.add(region);
-    ZKAssign.createNodeOffline(zkw, region, serverName);
-    ZKAssign.transitionNodeOpening(zkw, region, serverName);
-
-    /*
      * ZK = OPENED
      */
 
     // Region of enabled table was opened on RS
+    // Cause: as offline
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, serverName);
@@ -333,6 +322,7 @@ public class TestMasterFailover {
     }
 
     // Region of disable table was opened on RS
+    // Cause: Master failed while updating the status for this region server.
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, serverName);
@@ -457,9 +447,7 @@ public class TestMasterFailover {
     // Create and start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
-    // Need to drop the timeout much lower
-    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
-    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 4000);
+
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
@@ -771,25 +759,6 @@ public class TestMasterFailover {
     assertTrue(cluster.waitForActiveAndReadyMaster());
     log("Master is ready");
 
-    // Let's add some weird states to master in-memory state
-
-    // After HBASE-3181, we need to have some ZK state if we're PENDING_OPEN
-    // b/c it is impossible for us to get into this state w/o a zk node
-    // this is not true of PENDING_CLOSE
-
-    // PENDING_OPEN and enabled
-    region = enabledRegions.remove(0);
-    regionsThatShouldBeOnline.add(region);
-    master.getAssignmentManager().getRegionStates().updateRegionState(
-      region, RegionState.State.PENDING_OPEN);
-    ZKAssign.createNodeOffline(zkw, region, master.getServerName());
-    // PENDING_OPEN and disabled
-    region = disabledRegions.remove(0);
-    regionsThatShouldBeOffline.add(region);
-    master.getAssignmentManager().getRegionStates().updateRegionState(
-      region, RegionState.State.PENDING_OPEN);
-    ZKAssign.createNodeOffline(zkw, region, master.getServerName());
-
     // Failover should be completed, now wait for no RIT
     log("Waiting for no more RIT");
     ZKAssign.blockUntilNoRIT(zkw);
@@ -863,8 +832,6 @@ public class TestMasterFailover {
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
-    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 8000);
     conf.setInt("hbase.master.info.port", -1);
 
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
@@ -1016,84 +983,5 @@ public class TestMasterFailover {
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();
   }
-
-  /**
-   * return the index of the active master in the cluster
-   * @throws MasterNotRunningException if no active master found
-   */
-  private int getActiveMasterIndex(MiniHBaseCluster cluster) throws MasterNotRunningException {
-    // get all the master threads
-    List<MasterThread> masterThreads = cluster.getMasterThreads();
-
-    for (int i = 0; i < masterThreads.size(); i++) {
-      if (masterThreads.get(i).getMaster().isActiveMaster()) {
-        return i;
-      }
-    }
-    throw new MasterNotRunningException();
-  }
-
-  /**
-   * Kill the master and wait for a new active master to show up
-   * @param cluster
-   * @return the new active master
-   * @throws InterruptedException
-   * @throws IOException
-   */
-  private HMaster killActiveAndWaitForNewActive(MiniHBaseCluster cluster)
-  throws InterruptedException, IOException {
-    int activeIndex = getActiveMasterIndex(cluster);
-    HMaster active = cluster.getMaster();
-    cluster.stopMaster(activeIndex);
-    cluster.waitOnMaster(activeIndex);
-    assertTrue(cluster.waitForActiveAndReadyMaster());
-    // double check this is actually a new master
-    HMaster newActive = cluster.getMaster();
-    assertFalse(active == newActive);
-    return newActive;
-  }
-
-  /**
-   * Test that if the master fails, the load balancer maintains its
-   * state (running or not) when the next master takes over
-   * @throws Exception
-   */
-  @Test (timeout=240000)
-  public void testMasterFailoverBalancerPersistence() throws Exception {
-    final int NUM_MASTERS = 3;
-    final int NUM_RS = 1;
-
-    // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-
-    assertTrue(cluster.waitForActiveAndReadyMaster());
-    HMaster active = cluster.getMaster();
-    // check that the balancer is on by default for the active master
-    ClusterStatus clusterStatus = active.getClusterStatus();
-    assertTrue(clusterStatus.isBalancerOn());
-
-    active = killActiveAndWaitForNewActive(cluster);
-
-    // ensure the load balancer is still running on new master
-    clusterStatus = active.getClusterStatus();
-    assertTrue(clusterStatus.isBalancerOn());
-
-    // turn off the load balancer
-    active.balanceSwitch(false);
-
-    // once more, kill active master and wait for new active master to show up
-    active = killActiveAndWaitForNewActive(cluster);
-
-    // ensure the load balancer is not running on the new master
-    clusterStatus = active.getClusterStatus();
-    assertFalse(clusterStatus.isBalancerOn());
-
-    // Stop the cluster
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
 }
 
