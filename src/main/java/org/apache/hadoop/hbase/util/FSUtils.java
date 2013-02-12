@@ -23,6 +23,7 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -1200,7 +1201,19 @@ public abstract class FSUtils {
    */
   public static void checkAccess(UserGroupInformation ugi, FileStatus file,
       FsAction action) throws AccessControlException {
-    if (ugi.getUserName().equals(file.getOwner())) {
+    // See HBASE-7814. UserGroupInformation from hadoop 0.20.x may not support getShortUserName().
+    String username;
+    try {
+      Method m = UserGroupInformation.class.getMethod("getShortUserName", new Class<?>[]{});
+      username = (String) m.invoke(ugi);
+    } catch (NoSuchMethodException e) {
+      username = ugi.getUserName();
+    } catch (InvocationTargetException e) {
+      username = ugi.getUserName();      
+    } catch (IllegalAccessException iae) {
+      username = ugi.getUserName();      
+    }
+    if (username.equals(file.getOwner())) {
       if (file.getPermission().getUserAction().implies(action)) {
         return;
       }
@@ -1212,7 +1225,7 @@ public abstract class FSUtils {
       return;
     }
     throw new AccessControlException("Permission denied:" + " action=" + action
-        + " path=" + file.getPath() + " user=" + ugi.getUserName());
+        + " path=" + file.getPath() + " user=" + username);
   }
 
   private static boolean contains(String[] groups, String user) {
