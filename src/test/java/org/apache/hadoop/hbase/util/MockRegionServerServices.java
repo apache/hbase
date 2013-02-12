@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -88,11 +89,6 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public RpcServer getRpcServer() {
     return null;
-  }
-
-  @Override
-  public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
-    return rit;
   }
 
   @Override
@@ -161,5 +157,17 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public Leases getLeases() {
     return null;
+  }
+
+  @Override
+  public boolean removeFromRegionsInTransition(HRegionInfo hri) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public boolean containsKeyInRegionsInTransition(HRegionInfo hri) {
+    // TODO Auto-generated method stub
+    return false;
   }
 }

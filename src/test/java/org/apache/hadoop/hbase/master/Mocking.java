@@ -43,4 +43,17 @@ public class Mocking {
       }
     }
   }
+
+  static void waitForRegionOfflineInRIT(AssignmentManager am, String encodedName)
+      throws InterruptedException {
+    boolean wait = true;
+    while (wait) {
+      RegionState state = am.getRegionsInTransition().get(encodedName);
+      if (state != null && state.isOffline()) {
+        wait = false;
+      } else {
+        Thread.sleep(1);
+      }
+    }
+  }
 }

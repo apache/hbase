@@ -19,16 +19,26 @@
  */
 package org.apache.hadoop.hbase.regionserver.handler;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MockRegionServerServices;
@@ -57,13 +67,20 @@ public class TestOpenRegionHandler {
   private int testIndex = 0;
 
   @BeforeClass public static void before() throws Exception {
-    HTU.startMiniZKCluster();
+    Configuration c = HTU.getConfiguration();
+    c.setClass(HConstants.REGION_SERVER_IMPL, TestOpenRegionHandlerRegionServer.class,
+              HRegionServer.class);    
+    HTU.startMiniCluster();
     TEST_HTD = new HTableDescriptor("TestOpenRegionHandler.java");
   }
 
   @AfterClass public static void after() throws IOException {
     TEST_HTD = null;
-    HTU.shutdownMiniZKCluster();
+    try {
+      HTU.shutdownMiniCluster();
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
   }
 
   /**
@@ -135,6 +152,7 @@ public class TestOpenRegionHandler {
 
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
+    ZKAssign.transitionNodeOpening(server.getZooKeeper(), TEST_HRI, server.getServerName());
 
     // Create the handler
     OpenRegionHandler handler =
@@ -160,7 +178,7 @@ public class TestOpenRegionHandler {
 
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
-
+    ZKAssign.transitionNodeOpening(server.getZooKeeper(), TEST_HRI, server.getServerName());
     // Create the handler
     OpenRegionHandler handler =
       new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
@@ -178,14 +196,28 @@ public class TestOpenRegionHandler {
     assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, data.getEventType());
   }
   
+  public static class TestOpenRegionHandlerRegionServer extends HRegionServer {
+    public TestOpenRegionHandlerRegionServer(Configuration conf)
+        throws IOException, InterruptedException {
+      super(conf);
+    }
+    @Override
+    public void addRegionsInTransition(HRegionInfo region,
+        String currentAction) throws RegionAlreadyInTransitionException {
+      super.addRegionsInTransition(region, currentAction);
+    }
+  }
+  
   @Test
   public void testTransitionToFailedOpenEvenIfCleanupFails() throws Exception {
-    Server server = new MockServer(HTU);
-    RegionServerServices rsServices = new MockRegionServerServices();
+    MiniHBaseCluster cluster = HTU.getHBaseCluster();
+    HRegionServer server =
+        cluster.getLiveRegionServerThreads().get(0).getRegionServer();
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
+    ZKAssign.transitionNodeOpening(server.getZooKeeper(), TEST_HRI, server.getServerName());
     // Create the handler
-    OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
+    OpenRegionHandler handler = new OpenRegionHandler(server, server, TEST_HRI, TEST_HTD) {
       @Override
       boolean updateMeta(HRegion r) {
         return false;
@@ -196,7 +228,7 @@ public class TestOpenRegionHandler {
         throw new IOException("FileSystem got closed.");
       }
     };
-    rsServices.getRegionsInTransitionInRS().put(TEST_HRI.getEncodedNameAsBytes(), Boolean.TRUE);
+    ((TestOpenRegionHandlerRegionServer)server).addRegionsInTransition(TEST_HRI, "OPEN");
     try {
       handler.process();
     } catch (Exception e) {

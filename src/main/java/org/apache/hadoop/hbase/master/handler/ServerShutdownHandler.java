@@ -20,9 +20,11 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +43,8 @@ import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -243,13 +247,6 @@ public class ServerShutdownHandler extends EventHandler {
         return;
       }
 
-      // Clean out anything in regions in transition.  Being conservative and
-      // doing after log splitting.  Could do some states before -- OPENING?
-      // OFFLINE? -- and then others after like CLOSING that depend on log
-      // splitting.
-      List<RegionState> regionsInTransition =
-        this.services.getAssignmentManager().
-          processServerShutdown(this.serverName);
 
       // Wait on meta to come online; we need it to progress.
       // TODO: Best way to hold strictly here?  We should build this retry logic
@@ -282,75 +279,132 @@ public class ServerShutdownHandler extends EventHandler {
         }
       }
 
-      // Skip regions that were in transition unless CLOSING or PENDING_CLOSE
-      for (RegionState rit : regionsInTransition) {
-        if (!rit.isClosing() && !rit.isPendingClose() && !rit.isSplitting()) {
-          LOG.debug("Removed " + rit.getRegion().getRegionNameAsString() +
-          " from list of regions to assign because in RIT; region state: " +
-          rit.getState());
-          if (hris != null) hris.remove(rit.getRegion());
-        }
-      }
+      // Returns set of regions that had regionplans against the downed server and a list of
+      // the intersection of regions-in-transition and regions that were on the server that died.
+      Pair<Set<HRegionInfo>, List<RegionState>> p = this.services.getAssignmentManager()
+          .processServerShutdown(this.serverName);
+      Set<HRegionInfo> ritsGoingToServer = p.getFirst();
+      List<RegionState> ritsOnServer = p.getSecond();
 
-      assert regionsInTransition != null;
-      LOG.info("Reassigning " + ((hris == null)? 0: hris.size()) +
-        " region(s) that " + (serverName == null? "null": serverName)  +
-        " was carrying (skipping " +
-        regionsInTransition.size() +
-        " regions(s) that are already in transition)");
-
-      // Iterate regions that were on this server and assign them
-      if (hris != null) {
-        for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
-          RegionState rit = this.services.getAssignmentManager().isRegionInTransition(e.getKey());
-          if (processDeadRegion(e.getKey(), e.getValue(),
-              this.services.getAssignmentManager(),
-              this.server.getCatalogTracker())) {
-            ServerName addressFromAM = this.services.getAssignmentManager()
-                .getRegionServerOfRegion(e.getKey());
-            if (rit != null && !rit.isClosing() && !rit.isPendingClose() && !rit.isSplitting()) {
-              // Skip regions that were in transition unless CLOSING or
-              // PENDING_CLOSE
-              LOG.info("Skip assigning region " + rit.toString());
-            } else if (addressFromAM != null
-                && !addressFromAM.equals(this.serverName)) {
-              LOG.debug("Skip assigning region "
-                    + e.getKey().getRegionNameAsString()
-                    + " because it has been opened in "
-                    + addressFromAM.getServerName());
-              } else {
-                this.services.getAssignmentManager().assign(e.getKey(), true);
-              }
-          } else if (rit != null && (rit.isSplitting() || rit.isSplit())) {
-            // This will happen when the RS went down and the call back for the SPLIITING or SPLIT
-            // has not yet happened for node Deleted event.  In that case if the region was actually split
-            // but the RS had gone down before completing the split process then will not try to
-            // assign the parent region again. In that case we should make the region offline and
-            // also delete the region from RIT.
-            HRegionInfo region = rit.getRegion();
-            AssignmentManager am = this.services.getAssignmentManager();
-            am.regionOffline(region);
-          }
-          // If the table was partially disabled and the RS went down, we should clear the RIT
-          // and remove the node for the region.
-          // The rit that we use may be stale in case the table was in DISABLING state
-          // but though we did assign we will not be clearing the znode in CLOSING state.
-          // Doing this will have no harm. See HBASE-5927
-          if (rit != null
-              && (rit.isClosing() || rit.isPendingClose())
-              && this.services.getAssignmentManager().getZKTable()
-                  .isDisablingOrDisabledTable(rit.getRegion().getTableNameAsString())) {
-            HRegionInfo hri = rit.getRegion();
-            AssignmentManager am = this.services.getAssignmentManager();
-            am.deleteClosingOrClosedNode(hri);
-            am.regionOffline(hri);
+      List<HRegionInfo> regionsToAssign = getRegionsToAssign(hris, ritsOnServer, ritsGoingToServer);
+      for (HRegionInfo hri : ritsGoingToServer) {
+        if (!this.services.getAssignmentManager().isRegionAssigned(hri)) {
+          if (!regionsToAssign.contains(hri)) {
+            regionsToAssign.add(hri);
           }
         }
       }
+      for (HRegionInfo hri : regionsToAssign) {
+        this.services.getAssignmentManager().assign(hri, true);
+      }
+      LOG.info(regionsToAssign.size() + " regions which were planned to open on " + this.serverName
+          + " have been re-assigned.");
     } finally {
       this.deadServers.finish(serverName);
     }
     LOG.info("Finished processing of shutdown of " + serverName);
+  }
+
+  /**
+   * Figure what to assign from the dead server considering state of RIT and whats up in .META.
+   * @param metaHRIs Regions that .META. says were assigned to the dead server
+   * @param ritsOnServer Regions that were in transition, and on the dead server.
+   * @param ritsGoingToServer Regions that were in transition to the dead server.
+   * @return List of regions to assign or null if aborting.
+   * @throws IOException
+   */
+  private List<HRegionInfo> getRegionsToAssign(final NavigableMap<HRegionInfo, Result> metaHRIs,
+      final List<RegionState> ritsOnServer, Set<HRegionInfo> ritsGoingToServer) throws IOException {
+    List<HRegionInfo> toAssign = new ArrayList<HRegionInfo>();
+    // If no regions on the server, then nothing to assign (Regions that were currently being
+    // assigned will be retried over in the AM#assign method).
+    if (metaHRIs == null || metaHRIs.isEmpty()) return toAssign;
+    // Remove regions that we do not want to reassign such as regions that are
+    // OFFLINE. If region is OFFLINE against this server, its probably being assigned over
+    // in the single region assign method in AM; do not assign it here too. TODO: VERIFY!!!
+    // TODO: Currently OFFLINE is too messy. Its done on single assign but bulk done when bulk
+    // assigning and then there is special handling when master joins a cluster.
+    //
+    // If split, the zk callback will have offlined. Daughters will be in the
+    // list of hris we got from scanning the .META. These should be reassigned. Not the parent.
+    for (RegionState rs : ritsOnServer) {
+      if (!rs.isClosing() && !rs.isPendingClose() && !rs.isSplitting()) {
+        LOG.debug("Removed " + rs.getRegion().getRegionNameAsString()
+            + " from list of regions to assign because region state: " + rs.getState());
+        metaHRIs.remove(rs.getRegion());
+      }
+    }
+
+    for (Map.Entry<HRegionInfo, Result> e : metaHRIs.entrySet()) {
+      RegionState rit = services.getAssignmentManager().getRegionsInTransition().get(
+          e.getKey().getEncodedName());
+      AssignmentManager assignmentManager = this.services.getAssignmentManager();
+      if (processDeadRegion(e.getKey(), e.getValue(), assignmentManager,
+          this.server.getCatalogTracker())) {
+        ServerName addressFromAM = assignmentManager.getRegionServerOfRegion(e.getKey());
+        if (rit != null && !rit.isClosing() && !rit.isPendingClose() && !rit.isSplitting()
+            && !ritsGoingToServer.contains(e.getKey())) {
+          // Skip regions that were in transition unless CLOSING or
+          // PENDING_CLOSE
+          LOG.info("Skip assigning region " + rit.toString());
+        } else if (addressFromAM != null && !addressFromAM.equals(this.serverName)) {
+          LOG.debug("Skip assigning region " + e.getKey().getRegionNameAsString()
+              + " because it has been opened in " + addressFromAM.getServerName());
+          ritsGoingToServer.remove(e.getKey());
+        } else {
+          if (rit != null) {
+            // clean zk node
+            try {
+              LOG.info("Reassigning region with rs =" + rit + " and deleting zk node if exists");
+              ZKAssign.deleteNodeFailSilent(services.getZooKeeper(), e.getKey());
+            } catch (KeeperException ke) {
+              this.server.abort("Unexpected ZK exception deleting unassigned node " + e.getKey(),
+                  ke);
+              return null;
+            }
+          }
+          toAssign.add(e.getKey());
+        }
+      } else if (rit != null && (rit.isSplitting() || rit.isSplit())) {
+        // This will happen when the RS went down and the call back for the SPLIITING or SPLIT
+        // has not yet happened for node Deleted event. In that case if the region was actually
+        // split but the RS had gone down before completing the split process then will not try
+        // to assign the parent region again. In that case we should make the region offline
+        // and also delete the region from RIT.
+        HRegionInfo region = rit.getRegion();
+        AssignmentManager am = assignmentManager;
+        am.regionOffline(region);
+        ritsGoingToServer.remove(region);
+      }
+      // If the table was partially disabled and the RS went down, we should clear the RIT
+      // and remove the node for the region. The rit that we use may be stale in case the table
+      // was in DISABLING state but though we did assign we will not be clearing the znode in
+      // CLOSING state. Doing this will have no harm. See HBASE-5927
+      toAssign = checkForDisablingOrDisabledTables(ritsGoingToServer, toAssign, rit, assignmentManager);
+    }
+    return toAssign;
+  }
+
+  private List<HRegionInfo> checkForDisablingOrDisabledTables(Set<HRegionInfo> regionsFromRIT,
+      List<HRegionInfo> toAssign, RegionState rit, AssignmentManager assignmentManager) {
+    if (rit == null) {
+      return toAssign;
+    }
+    if (!rit.isClosing() && !rit.isPendingClose()) {
+      return toAssign;
+    }
+    if (!assignmentManager.getZKTable().isDisablingOrDisabledTable(
+        rit.getRegion().getTableNameAsString())) {
+      return toAssign;
+    }
+    HRegionInfo hri = rit.getRegion();
+    AssignmentManager am = assignmentManager;
+    am.deleteClosingOrClosedNode(hri);
+    am.regionOffline(hri);
+    // To avoid region assignment if table is in disabling or disabled state.
+    toAssign.remove(hri);
+    regionsFromRIT.remove(hri);
+    return toAssign;
   }
 
   /**

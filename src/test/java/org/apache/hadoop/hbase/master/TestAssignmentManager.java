@@ -184,11 +184,17 @@ public class TestAssignmentManager {
       int versionid =
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
-      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+      Mocking.waitForRegionOfflineInRIT(am, REGIONINFO.getEncodedName());
 
-      // Get current versionid else will fail on transition from OFFLINE to
+      // Get the OFFLINE version id.  May have to wait some for it to happen.
       // OPENING below
-      versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+      while (true) {
+        int vid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+        if (vid != versionid) {
+          versionid = vid;
+          break;
+        }
+      }
       assertNotSame(-1, versionid);
       // This uglyness below is what the openregionhandler on RS side does.
       versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
@@ -226,11 +232,17 @@ public class TestAssignmentManager {
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
       am.gate.set(false);
-      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+      Mocking.waitForRegionOfflineInRIT(am, REGIONINFO.getEncodedName());
 
       // Get current versionid else will fail on transition from OFFLINE to
       // OPENING below
-      versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+      while (true) {
+        int vid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+        if (vid != versionid) {
+          versionid = vid;
+          break;
+        }
+      }
       assertNotSame(-1, versionid);
       // This uglyness below is what the openregionhandler on RS side does.
       versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
@@ -267,12 +279,18 @@ public class TestAssignmentManager {
       int versionid =
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
-      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+      Mocking.waitForRegionOfflineInRIT(am, REGIONINFO.getEncodedName());
 
       am.gate.set(false);
       // Get current versionid else will fail on transition from OFFLINE to
       // OPENING below
-      versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+      while (true) {
+        int vid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+        if (vid != versionid) {
+          versionid = vid;
+          break;
+        }
+      }
       assertNotSame(-1, versionid);
       // This uglyness below is what the openregionhandler on RS side does.
       versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
@@ -347,9 +365,15 @@ public class TestAssignmentManager {
       // balancer.  The zk node will be OFFLINE waiting for regionserver to
       // transition it through OPENING, OPENED.  Wait till we see the RIT
       // before we proceed.
-      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+      Mocking.waitForRegionOfflineInRIT(am, REGIONINFO.getEncodedName());
       // Get current versionid else will fail on transition from OFFLINE to OPENING below
-      versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+      while (true) {
+        int vid = ZKAssign.getVersion(this.watcher, REGIONINFO);
+        if (vid != versionid) {
+          versionid = vid;
+          break;
+        }
+      }
       assertNotSame(-1, versionid);
       // This uglyness below is what the openregionhandler on RS side does.
       versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
@@ -389,7 +413,7 @@ public class TestAssignmentManager {
     AssignmentManager am =
       new AssignmentManager(this.server, this.serverManager, ct, balancer, executor);
     try {
-      processServerShutdownHandler(ct, am, false);
+      processServerShutdownHandler(ct, am, false, null);
     } finally {
       executor.shutdown();
       am.shutdown();
@@ -452,8 +476,7 @@ public class TestAssignmentManager {
     ZKUtil.createAndWatch(this.watcher, node, data.getBytes());
 
     try {
-
-      processServerShutdownHandler(ct, am, regionSplitDone);
+      processServerShutdownHandler(ct, am, regionSplitDone, null);
       // check znode deleted or not.
       // In both cases the znode should be deleted.
 
@@ -492,7 +515,7 @@ public class TestAssignmentManager {
     am.regionOnline(REGIONINFO, SERVERNAME_A);
     // adding region in pending close.
     am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
-        State.PENDING_CLOSE));
+        State.PENDING_CLOSE, System.currentTimeMillis(), SERVERNAME_A));
 
     if (state == TableState.DISABLING) {
       am.getZKTable().setDisablingTable(REGIONINFO.getTableNameAsString());
@@ -507,7 +530,7 @@ public class TestAssignmentManager {
     ZKUtil.createAndWatch(this.watcher, node, data.getBytes());
 
     try {
-      processServerShutdownHandler(ct, am, false);
+      processServerShutdownHandler(ct, am, false, null);
       // check znode deleted or not.
       // In both cases the znode should be deleted.
       assertTrue("The znode should be deleted.",ZKUtil.checkExists(this.watcher, node) == -1);
@@ -525,7 +548,8 @@ public class TestAssignmentManager {
     }
   }
 
-  private void processServerShutdownHandler(CatalogTracker ct, AssignmentManager am, boolean splitRegion)
+  private void processServerShutdownHandler(CatalogTracker ct, AssignmentManager am,
+    boolean splitRegion, ServerName sn)
       throws IOException {
     // Make sure our new AM gets callbacks; once registered, can't unregister.
     // Thats ok because we make a new zk watcher for each test.
@@ -534,12 +558,22 @@ public class TestAssignmentManager {
     // Make an RS Interface implementation.  Make it so a scanner can go against it.
     HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
     // Get a meta row result that has region up on SERVERNAME_A
+
     Result r = null;
-    if (splitRegion) {
-      r = getMetaTableRowResultAsSplitRegion(REGIONINFO, SERVERNAME_A);
+    if (sn == null) {
+      if (splitRegion) {
+        r = getMetaTableRowResultAsSplitRegion(REGIONINFO, SERVERNAME_A);
+      } else {
+        r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+      }
     } else {
-      r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+      if (sn.equals(SERVERNAME_A)) {
+        r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+      } else if (sn.equals(SERVERNAME_B)) {
+        r = new Result(new KeyValue[0]);
+      }
     }
+
     Mockito.when(implementation.openScanner((byte [])Mockito.any(), (Scan)Mockito.any())).
       thenReturn(System.currentTimeMillis());
     // Return a good result first and then return null to indicate end of scan
@@ -563,8 +597,13 @@ public class TestAssignmentManager {
     // I need a services instance that will return the AM
     MasterServices services = Mockito.mock(MasterServices.class);
     Mockito.when(services.getAssignmentManager()).thenReturn(am);
-    ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
-      services, deadServers, SERVERNAME_A, false);
+    Mockito.when(services.getZooKeeper()).thenReturn(this.watcher);
+    ServerShutdownHandler handler = null;
+    if (sn != null) {
+      handler = new ServerShutdownHandler(this.server, services, deadServers, sn, false);
+    } else {
+      handler = new ServerShutdownHandler(this.server, services, deadServers, SERVERNAME_A, false);
+    }
     handler.process();
     // The region in r will have been assigned.  It'll be up in zk as unassigned.
   }
@@ -850,7 +889,7 @@ public class TestAssignmentManager {
       assertNotSame("Same region plan should not come", regionPlan, newRegionPlan);
       assertTrue("Destnation servers should be different.", !(regionPlan.getDestination().equals(
         newRegionPlan.getDestination())));
-      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+      Mocking.waitForRegionOfflineInRIT(am, REGIONINFO.getEncodedName());
     } finally {
       this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
         DefaultLoadBalancer.class, LoadBalancer.class);
@@ -947,6 +986,58 @@ public class TestAssignmentManager {
       am.shutdown();
       ZKAssign.deleteAllNodes(this.watcher);
       assignmentCount = 0;
+    }
+  }
+
+
+
+  /**
+   * When region in transition if region server opening the region gone down then region assignment
+   * taking long time(Waiting for timeout monitor to trigger assign). HBASE-5396(HBASE-6060) fixes this
+   * scenario. This test case verifies whether SSH calling assign for the region in transition or not.
+   *
+   * @throws KeeperException
+   * @throws IOException
+   * @throws ServiceException
+   */
+  @Test
+  public void testSSHWhenSourceRSandDestRSInRegionPlanGoneDown() throws KeeperException, IOException,
+      ServiceException {
+    testSSHWhenSourceRSandDestRSInRegionPlanGoneDown(true);
+    testSSHWhenSourceRSandDestRSInRegionPlanGoneDown(false);
+  }
+
+  private void testSSHWhenSourceRSandDestRSInRegionPlanGoneDown(boolean regionInOffline)
+      throws IOException, KeeperException, ServiceException {
+    // We need a mocked catalog tracker.
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    // Create an AM.
+    AssignmentManagerWithExtrasForTesting am =
+        setUpMockedAssignmentManager(this.server, this.serverManager);
+    // adding region in pending open.
+    if (regionInOffline) {
+      ServerName MASTER_SERVERNAME = new ServerName("example.org", 1111, 1111);
+      am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
+          State.OFFLINE, System.currentTimeMillis(), MASTER_SERVERNAME));
+    } else {
+      am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
+          State.OPENING, System.currentTimeMillis(), SERVERNAME_B));
+    }
+    // adding region plan
+    am.regionPlans.put(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, SERVERNAME_A, SERVERNAME_B));
+    am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
+
+    try {
+      processServerShutdownHandler(ct, am, false, SERVERNAME_A);
+      processServerShutdownHandler(ct, am, false, SERVERNAME_B);
+      if(regionInOffline){
+        assertFalse("Assign should not be invoked.", am.assignInvoked);
+      } else {
+        assertTrue("Assign should be invoked.", am.assignInvoked);
+      }
+    } finally {
+      am.regionsInTransition.remove(REGIONINFO.getEncodedName());
+      am.regionPlans.remove(REGIONINFO.getEncodedName());
     }
   }
 
