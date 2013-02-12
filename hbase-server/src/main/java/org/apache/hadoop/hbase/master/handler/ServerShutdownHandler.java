@@ -75,7 +75,7 @@ public class ServerShutdownHandler extends EventHandler {
     this.server = server;
     this.services = services;
     this.deadServers = deadServers;
-    if (!this.deadServers.contains(this.serverName)) {
+    if (!this.deadServers.isDeadServer(this.serverName)) {
       LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
     this.shouldSplitHlog = shouldSplitHlog;

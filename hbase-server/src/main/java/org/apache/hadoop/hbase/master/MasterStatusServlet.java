@@ -63,7 +63,7 @@ public class MasterStatusServlet extends HttpServlet {
     ServerName rootLocation = getRootLocationOrNull(master);
     ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
     List<ServerName> servers = master.getServerManager().getOnlineServersList();
-    Set<ServerName> deadServers = master.getServerManager().getDeadServers();
+    Set<ServerName> deadServers = master.getServerManager().getDeadServers().copyServerNames();
 
     response.setContentType("text/html");
     MasterStatusTmpl tmpl;

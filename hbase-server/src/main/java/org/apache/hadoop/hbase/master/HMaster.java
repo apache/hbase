@@ -579,7 +579,6 @@ Server {
    * @param abortable If fatal exception we'll call abort on this.  May be null.
    * If it is we'll use the Connection associated with the passed
    * {@link Configuration} as our {@link Abortable}.
-   * @param defaultTimeout Timeout to use.  Pass zero for no timeout
    * ({@link Object#wait(long)} when passed a <code>0</code> waits for ever).
    * @throws IOException
    */
@@ -1859,7 +1858,7 @@ Server {
     return new ClusterStatus(VersionInfo.getVersion(),
       this.fileSystemManager.getClusterId().toString(),
       this.serverManager.getOnlineServers(),
-      this.serverManager.getDeadServers(),
+      this.serverManager.getDeadServers().copyServerNames(),
       this.serverName,
       backupMasters,
       this.assignmentManager.getRegionStates().getRegionsInTransition(),

@@ -140,6 +140,7 @@ public class TestAssignmentManager {
     this.serverManager = Mockito.mock(ServerManager.class);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(true);
+    Mockito.when(this.serverManager.getDeadServers()).thenReturn(new DeadServer());
     final Map<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
     onlineServers.put(SERVERNAME_B, ServerLoad.EMPTY_SERVERLOAD);
     onlineServers.put(SERVERNAME_A, ServerLoad.EMPTY_SERVERLOAD);
