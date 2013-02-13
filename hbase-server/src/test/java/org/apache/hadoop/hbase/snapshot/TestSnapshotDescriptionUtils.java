@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -42,7 +42,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test that the {@link SnapshotDescription} helper is helping correctly.
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestSnapshotDescriptionUtils {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static FileSystem fs;
@@ -57,13 +57,14 @@ public class TestSnapshotDescriptionUtils {
   @After
   public void cleanupFS() throws Exception {
     if (fs.exists(root)) {
-    if (!fs.delete(root, true)) {
-      throw new IOException("Failed to delete root test dir: " + root);
+      if (!fs.delete(root, true)) {
+        throw new IOException("Failed to delete root test dir: " + root);
+      }
+      if (!fs.mkdirs(root)) {
+        throw new IOException("Failed to create root test dir: " + root);
+      }
     }
-    if (!fs.mkdirs(root)) {
-      throw new IOException("Failed to create root test dir: " + root);
-    }
-    }
+    EnvironmentEdgeManagerTestHelper.reset();
   }
 
   private static final Log LOG = LogFactory.getLog(TestSnapshotDescriptionUtils.class);
