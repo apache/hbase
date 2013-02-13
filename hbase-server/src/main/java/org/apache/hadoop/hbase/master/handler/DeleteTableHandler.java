@@ -87,22 +87,24 @@ public class DeleteTableHandler extends TableEventHandler {
     MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
     Path tempTableDir = mfs.moveTableToTemp(tableName);
 
-    // 4. Update table descriptor cache
-    this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));
+    try {
+      // 4. Delete regions from FS (temp directory)
+      FileSystem fs = mfs.getFileSystem();
+      for (HRegionInfo hri: regions) {
+        LOG.debug("Deleting region " + hri.getRegionNameAsString() + " from FS");
+        HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
+            tempTableDir, new Path(tempTableDir, hri.getEncodedName()));
+      }
 
-    // 5. If entry for this table in zk, and up in AssignmentManager, remove it.
-    am.getZKTable().setDeletedTable(Bytes.toString(tableName));
+      // 5. Delete table from FS (temp directory)
+      fs.delete(tempTableDir, true);
+    } finally {
+      // 6. Update table descriptor cache
+      this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));
 
-    // 6. Delete regions from FS (temp directory)
-    FileSystem fs = mfs.getFileSystem();
-    for (HRegionInfo hri: regions) {
-      LOG.debug("Deleting region " + hri.getRegionNameAsString() + " from FS");
-      HFileArchiver.archiveRegion(masterServices.getConfiguration(), fs, mfs.getRootDir(),
-          tempTableDir, new Path(tempTableDir, hri.getEncodedName()));
+      // 7. If entry for this table in zk, and up in AssignmentManager, remove it.
+      am.getZKTable().setDeletedTable(Bytes.toString(tableName));
     }
-
-    // 7. Delete table from FS (temp directory)
-    fs.delete(tempTableDir, true);
 
     if (cpHost != null) {
       cpHost.postDeleteTableHandler(this.tableName);
