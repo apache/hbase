@@ -114,6 +114,30 @@ public class TestSnapshotFromClient {
   }
 
   /**
+   * Test snapshotting not allowed .META. and -ROOT-
+   * @throws Exception
+   */
+  @Test
+  public void testMetaTablesSnapshot() throws Exception {
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    byte[] snapshotName = Bytes.toBytes("metaSnapshot");
+
+    try {
+      admin.snapshot(snapshotName, HConstants.META_TABLE_NAME);
+      fail("taking a snapshot of .META. should not be allowed");
+    } catch (IllegalArgumentException e) {
+      // expected
+    }
+
+    try {
+      admin.snapshot(snapshotName, HConstants.ROOT_TABLE_NAME);
+      fail("taking a snapshot of -ROOT- should not be allowed");
+    } catch (IllegalArgumentException e) {
+      // expected
+    }
+  }
+
+  /**
    * Test snapshotting a table that is offline
    * @throws Exception
    */

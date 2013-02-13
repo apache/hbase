@@ -132,6 +132,10 @@ public class SnapshotDescriptionUtils {
   public static void assertSnapshotRequestIsValid(SnapshotDescription snapshot)
       throws IllegalArgumentException {
     // FIXME these method names is really bad - trunk will probably change
+    // .META. and -ROOT- snapshots are not allowed
+    if (HTableDescriptor.isMetaTable(Bytes.toBytes(snapshot.getTable()))) {
+      throw new IllegalArgumentException(".META. and -ROOT- snapshots are not allowed");
+    }
     // make sure the snapshot name is valid
     HTableDescriptor.isLegalTableName(Bytes.toBytes(snapshot.getName()));
     // make sure the table name is valid
