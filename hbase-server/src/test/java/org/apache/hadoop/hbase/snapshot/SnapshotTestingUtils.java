@@ -21,13 +21,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,6 +48,7 @@ import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Assert;
 
 import com.google.protobuf.ServiceException;
@@ -184,5 +191,66 @@ public class SnapshotTestingUtils {
         Assert.fail("Threw an unexpected exception:" + t);
       }
     }
+  }
+
+  /**
+   * List all the HFiles in the given table
+   * @param fs FileSystem where the table lives
+   * @param tableDir directory of the table
+   * @return array of the current HFiles in the table (could be a zero-length array)
+   * @throws IOException on unexecpted error reading the FS
+   */
+  public static FileStatus[] listHFiles(final FileSystem fs, Path tableDir) throws IOException {
+    // setup the filters we will need based on the filesystem
+    PathFilter regionFilter = new FSUtils.RegionDirFilter(fs);
+    PathFilter familyFilter = new FSUtils.FamilyDirFilter(fs);
+    final PathFilter fileFilter = new PathFilter() {
+      @Override
+      public boolean accept(Path file) {
+        try {
+          return fs.isFile(file);
+        } catch (IOException e) {
+          return false;
+        }
+      }
+    };
+
+    FileStatus[] regionDirs = FSUtils.listStatus(fs, tableDir, regionFilter);
+    // if no regions, then we are done
+    if (regionDirs == null || regionDirs.length == 0) return new FileStatus[0];
+
+    // go through each of the regions, and add al the hfiles under each family
+    List<FileStatus> regionFiles = new ArrayList<FileStatus>(regionDirs.length);
+    for (FileStatus regionDir : regionDirs) {
+      FileStatus[] fams = FSUtils.listStatus(fs, regionDir.getPath(), familyFilter);
+      // if no families, then we are done again
+      if (fams == null || fams.length == 0) continue;
+      // add all the hfiles under the family
+      regionFiles.addAll(SnapshotTestingUtils.getHFilesInRegion(fams, fs, fileFilter));
+    }
+    FileStatus[] files = new FileStatus[regionFiles.size()];
+    regionFiles.toArray(files);
+    return files;
+  }
+
+  /**
+   * Get all the hfiles in the region, under the passed set of families
+   * @param families all the family directories under the region
+   * @param fs filesystem where the families live
+   * @param fileFilter filter to only include files
+   * @return collection of all the hfiles under all the passed in families (non-null)
+   * @throws IOException on unexecpted error reading the FS
+   */
+  public static Collection<FileStatus> getHFilesInRegion(FileStatus[] families, FileSystem fs,
+      PathFilter fileFilter) throws IOException {
+    Set<FileStatus> files = new TreeSet<FileStatus>();
+    for (FileStatus family : families) {
+      // get all the hfiles in the family
+      FileStatus[] hfiles = FSUtils.listStatus(fs, family.getPath(), fileFilter);
+      // if no hfiles, then we are done with this family
+      if (hfiles == null || hfiles.length == 0) continue;
+      files.addAll(Arrays.asList(hfiles));
+    }
+    return files;
   }
 }

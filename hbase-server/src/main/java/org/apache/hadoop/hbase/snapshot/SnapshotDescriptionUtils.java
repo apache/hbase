@@ -110,7 +110,9 @@ public class SnapshotDescriptionUtils {
    */
   public static final String SNAPSHOTINFO_FILE = ".snapshotinfo";
 
-  private static final String SNAPSHOT_TMP_DIR_NAME = ".tmp";
+  /** Temporary directory under the snapshot directory to store in-progress snapshots */
+  public static final String SNAPSHOT_TMP_DIR_NAME = ".tmp";
+
   // snapshot operation values
   /** Default value if no start time is specified */
   public static final long NO_SNAPSHOT_START_TIME_SPECIFIED = 0;
@@ -283,7 +285,7 @@ public class SnapshotDescriptionUtils {
         long increment = conf.getLong(
           SnapshotDescriptionUtils.TIMESTAMP_SNAPSHOT_SPLIT_POINT_ADDITION,
           SnapshotDescriptionUtils.DEFAULT_TIMESTAMP_SNAPSHOT_SPLIT_IN_FUTURE);
-        LOG.debug("Setting timestamp snasphot in future by " + increment + " ms.");
+        LOG.debug("Setting timestamp snapshot in future by " + increment + " ms.");
         time += increment;
       }
       LOG.debug("Creation time not specified, setting to:" + time + " (current time:"
