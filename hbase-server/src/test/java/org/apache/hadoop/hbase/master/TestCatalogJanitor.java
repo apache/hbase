@@ -204,6 +204,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public MasterCoprocessorHost getCoprocessorHost() {
+      return null;
+    }
+
+    @Override
     public ServerManager getServerManager() {
       return null;
     }

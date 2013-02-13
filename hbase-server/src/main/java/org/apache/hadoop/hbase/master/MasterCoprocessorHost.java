@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.coprocessor.*;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 import java.io.IOException;
 import java.util.List;
@@ -159,6 +160,7 @@ public class MasterCoprocessorHost
       }
     }
   }
+
   public void preDeleteTable(byte[] tableName) throws IOException {
     ObserverContext<MasterCoprocessorEnvironment> ctx = null;
     for (MasterEnvironment env: coprocessors) {
@@ -925,6 +927,148 @@ public class MasterCoprocessorHost
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
           ((MasterObserver)env.getInstance()).postStartMaster(ctx);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void preSnapshot(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor) throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver)env.getInstance()).preSnapshot(ctx, snapshot, hTableDescriptor);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void postSnapshot(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor) throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver)env.getInstance()).postSnapshot(ctx, snapshot, hTableDescriptor);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void preCloneSnapshot(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor) throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver)env.getInstance()).preCloneSnapshot(ctx, snapshot, hTableDescriptor);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void postCloneSnapshot(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor) throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver)env.getInstance()).postCloneSnapshot(ctx, snapshot, hTableDescriptor);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void preRestoreSnapshot(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor) throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver)env.getInstance()).preRestoreSnapshot(ctx, snapshot, hTableDescriptor);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void postRestoreSnapshot(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor) throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver)env.getInstance()).postRestoreSnapshot(ctx, snapshot, hTableDescriptor);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void preDeleteSnapshot(final SnapshotDescription snapshot) throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver)env.getInstance()).preDeleteSnapshot(ctx, snapshot);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  public void postDeleteSnapshot(final SnapshotDescription snapshot) throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver)env.getInstance()).postDeleteSnapshot(ctx, snapshot);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
