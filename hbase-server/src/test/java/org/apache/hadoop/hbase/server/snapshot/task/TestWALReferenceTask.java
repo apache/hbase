@@ -28,17 +28,20 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 /**
  * Test that the WAL reference task works as expected
  */
+@Category(SmallTests.class)
 public class TestWALReferenceTask {
 
   private static final Log LOG = LogFactory.getLog(TestWALReferenceTask.class);

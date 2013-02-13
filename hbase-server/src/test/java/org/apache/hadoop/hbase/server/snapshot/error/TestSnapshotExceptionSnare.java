@@ -22,6 +22,7 @@ import static org.junit.Assert.fail;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.server.errorhandling.ExceptionListener;
 import org.apache.hadoop.hbase.server.errorhandling.OperationAttemptTimer;
@@ -29,10 +30,12 @@ import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test the exception snare propagates errors as expected
  */
+@Category(SmallTests.class)
 public class TestSnapshotExceptionSnare {
 
   private static final Log LOG = LogFactory.getLog(TestSnapshotExceptionSnare.class);
