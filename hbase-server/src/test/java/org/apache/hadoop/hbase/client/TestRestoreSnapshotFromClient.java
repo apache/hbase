@@ -118,80 +118,89 @@ public class TestRestoreSnapshotFromClient {
     admin.snapshot(emptySnapshot, tableName);
 
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    try {
+      // enable table and insert data
+      admin.enableTable(tableName);
+      loadData(table, 500, FAMILY);
+      snapshot0Rows = TEST_UTIL.countRows(table);
+      admin.disableTable(tableName);
 
-    // enable table and insert data
-    admin.enableTable(tableName);
-    loadData(table, 500, FAMILY);
-    snapshot0Rows = TEST_UTIL.countRows(table);
-    admin.disableTable(tableName);
+      // take a snapshot
+      admin.snapshot(snapshotName0, tableName);
 
-    // take a snapshot
-    admin.snapshot(snapshotName0, tableName);
+      // enable table and insert more data
+      admin.enableTable(tableName);
+      loadData(table, 500, FAMILY);
+      snapshot1Rows = TEST_UTIL.countRows(table);
+      admin.disableTable(tableName);
 
-    // enable table and insert more data
-    admin.enableTable(tableName);
-    loadData(table, 500, FAMILY);
-    snapshot1Rows = TEST_UTIL.countRows(table);
-    admin.disableTable(tableName);
+      // take a snapshot of the updated table
+      admin.snapshot(snapshotName1, tableName);
 
-    // take a snapshot of the updated table
-    admin.snapshot(snapshotName1, tableName);
-
-    // re-enable table
-    admin.enableTable(tableName);
+      // re-enable table
+      admin.enableTable(tableName);
+    } finally {
+      table.close();
+    }
   }
 
   @After
   public void tearDown() throws Exception {
     if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
+      TEST_UTIL.deleteTable(tableName);
     }
     admin.deleteSnapshot(snapshotName0);
     admin.deleteSnapshot(snapshotName1);
-    waitCleanerRun();
+
+    // Ensure the archiver to be empty
+    MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    mfs.getFileSystem().delete(
+      new Path(mfs.getRootDir(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
   }
 
   @Test
   public void testRestoreSnapshot() throws IOException {
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    assertEquals(snapshot1Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(tableName, snapshot1Rows);
 
     // Restore from snapshot-0
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(tableName, snapshot0Rows);
 
     // Restore from emptySnapshot
     admin.disableTable(tableName);
     admin.restoreSnapshot(emptySnapshot);
     admin.enableTable(tableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    assertEquals(0, TEST_UTIL.countRows(table));
+    verifyRowCount(tableName, 0);
 
     // Restore from snapshot-1
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    assertEquals(snapshot1Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(tableName, snapshot1Rows);
   }
 
   @Test
   public void testRestoreSchemaChange() throws IOException {
     byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
 
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+
     // Add one column family and put some data in it
     admin.disableTable(tableName);
     admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
     admin.enableTable(tableName);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    assertEquals(2, table.getTableDescriptor().getFamilies().size());
+    HTableDescriptor htd = admin.getTableDescriptor(tableName);
+    assertEquals(2, htd.getFamilies().size());
     loadData(table, 500, TEST_FAMILY2);
     long snapshot2Rows = snapshot1Rows + 500;
     assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
     assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
+    Set<String> fsFamilies = getFamiliesFromFS(tableName);
+    assertEquals(2, fsFamilies.size());
+    table.close();
 
     // Take a snapshot
     admin.disableTable(tableName);
@@ -200,7 +209,7 @@ public class TestRestoreSnapshotFromClient {
     // Restore the snapshot (without the cf)
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    assertEquals(1, table.getTableDescriptor().getFamilies().size());
     try {
       TEST_UTIL.countRows(table, TEST_FAMILY2);
       fail("family '" + Bytes.toString(TEST_FAMILY2) + "' should not exists");
@@ -208,18 +217,24 @@ public class TestRestoreSnapshotFromClient {
       // expected
     }
     assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
-    Set<String> fsFamilies = getFamiliesFromFS(tableName);
+    htd = admin.getTableDescriptor(tableName);
+    assertEquals(1, htd.getFamilies().size());
+    fsFamilies = getFamiliesFromFS(tableName);
     assertEquals(1, fsFamilies.size());
+    table.close();
 
     // Restore back the snapshot (with the cf)
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName2);
     admin.enableTable(tableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    htd = admin.getTableDescriptor(tableName);
+    assertEquals(2, htd.getFamilies().size());
+    assertEquals(2, table.getTableDescriptor().getFamilies().size());
     assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
     assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
     fsFamilies = getFamiliesFromFS(tableName);
     assertEquals(2, fsFamilies.size());
+    table.close();
   }
 
   @Test(expected=SnapshotDoesNotExistException.class)
@@ -241,8 +256,7 @@ public class TestRestoreSnapshotFromClient {
       int snapshotRows) throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    assertEquals(snapshotRows, TEST_UTIL.countRows(table));
+    verifyRowCount(tableName, snapshotRows);
 
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
@@ -252,16 +266,14 @@ public class TestRestoreSnapshotFromClient {
   public void testRestoreSnapshotOfCloned() throws IOException, InterruptedException {
     byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(clonedTableName, snapshot0Rows);
     admin.disableTable(clonedTableName);
     admin.snapshot(snapshotName2, clonedTableName);
     admin.deleteTable(clonedTableName);
     waitCleanerRun();
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(clonedTableName, snapshot0Rows);
     admin.disableTable(clonedTableName);
     admin.deleteTable(clonedTableName);
   }
@@ -274,8 +286,7 @@ public class TestRestoreSnapshotFromClient {
     // Clone a table from the first snapshot
     byte[] clonedTableName = Bytes.toBytes("clonedtb1-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(clonedTableName, snapshot0Rows);
 
     // Take a snapshot of this cloned table.
     admin.disableTable(clonedTableName);
@@ -284,8 +295,7 @@ public class TestRestoreSnapshotFromClient {
     // Clone the snapshot of the cloned table
     byte[] clonedTableName2 = Bytes.toBytes("clonedtb2-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName2);
-    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName2);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(clonedTableName2, snapshot0Rows);
     admin.disableTable(clonedTableName2);
 
     // Remove the original table
@@ -295,13 +305,11 @@ public class TestRestoreSnapshotFromClient {
 
     // Verify the first cloned table
     admin.enableTable(clonedTableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(clonedTableName, snapshot0Rows);
 
     // Verify the second cloned table
     admin.enableTable(clonedTableName2);
-    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName2);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(clonedTableName2, snapshot0Rows);
     admin.disableTable(clonedTableName2);
 
     // Delete the first cloned table
@@ -311,14 +319,12 @@ public class TestRestoreSnapshotFromClient {
 
     // Verify the second cloned table
     admin.enableTable(clonedTableName2);
-    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName2);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(clonedTableName2, snapshot0Rows);
 
     // Clone a new table from cloned
     byte[] clonedTableName3 = Bytes.toBytes("clonedtb3-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName3);
-    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName3);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(clonedTableName3, snapshot0Rows);
 
     // Delete the cloned tables
     admin.disableTable(clonedTableName2);
@@ -375,5 +381,11 @@ public class TestRestoreSnapshotFromClient {
       }
     }
     return families;
+  }
+
+  private void verifyRowCount(final byte[] tableName, long expectedRows) throws IOException {
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    assertEquals(expectedRows, TEST_UTIL.countRows(table));
+    table.close();
   }
 }

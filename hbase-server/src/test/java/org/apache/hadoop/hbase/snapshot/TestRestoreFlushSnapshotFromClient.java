@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -105,35 +106,45 @@ public class TestRestoreFlushSnapshotFromClient {
     // create Table and disable it
     createTable(tableName, FAMILY);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    loadData(table, 500, FAMILY);
-    snapshot0Rows = TEST_UTIL.countRows(table);
-    LOG.info("=== before snapshot with 500 rows");
-    logFSTree();
+    try {
+      loadData(table, 500, FAMILY);
+      snapshot0Rows = TEST_UTIL.countRows(table);
+      LOG.info("=== before snapshot with 500 rows");
+      logFSTree();
 
-    // take a snapshot
-    admin.snapshot(Bytes.toString(snapshotName0), Bytes.toString(tableName), SnapshotDescription.Type.FLUSH);
+      // take a snapshot
+      admin.snapshot(Bytes.toString(snapshotName0), Bytes.toString(tableName),
+          SnapshotDescription.Type.FLUSH);
 
-    LOG.info("=== after snapshot with 500 rows");
-    logFSTree();
+      LOG.info("=== after snapshot with 500 rows");
+      logFSTree();
 
-    // insert more data
-    loadData(table, 500, FAMILY);
-    snapshot1Rows = TEST_UTIL.countRows(table);
-    LOG.info("=== before snapshot with 1000 rows");
-    logFSTree();
+      // insert more data
+      loadData(table, 500, FAMILY);
+      snapshot1Rows = TEST_UTIL.countRows(table);
+      LOG.info("=== before snapshot with 1000 rows");
+      logFSTree();
 
-    // take a snapshot of the updated table
-    admin.snapshot(Bytes.toString(snapshotName1), Bytes.toString(tableName), SnapshotDescription.Type.FLUSH);
-    LOG.info("=== after snapshot with 1000 rows");
-    logFSTree();
+      // take a snapshot of the updated table
+      admin.snapshot(Bytes.toString(snapshotName1), Bytes.toString(tableName),
+          SnapshotDescription.Type.FLUSH);
+      LOG.info("=== after snapshot with 1000 rows");
+      logFSTree();
+    } finally {
+      table.close();
+    }
   }
 
   @After
   public void tearDown() throws Exception {
-    admin.disableTable(tableName);
-    admin.deleteTable(tableName);
+    TEST_UTIL.deleteTable(tableName);
     admin.deleteSnapshot(snapshotName0);
     admin.deleteSnapshot(snapshotName1);
+
+    // Ensure the archiver to be empty
+    MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    mfs.getFileSystem().delete(
+      new Path(mfs.getRootDir(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
   }
 
   @Test
@@ -143,27 +154,22 @@ public class TestRestoreFlushSnapshotFromClient {
 
   @Test
   public void testRestoreSnapshot() throws IOException {
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    assertEquals(snapshot1Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(tableName, snapshot1Rows);
 
     // Restore from snapshot-0
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName0);
     logFSTree();
     admin.enableTable(tableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-
     LOG.info("=== after restore with 500 row snapshot");
     logFSTree();
-
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(tableName, snapshot0Rows);
 
     // Restore from snapshot-1
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    assertEquals(snapshot1Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(tableName, snapshot1Rows);
   }
 
   @Test(expected=SnapshotDoesNotExistException.class)
@@ -184,28 +190,22 @@ public class TestRestoreFlushSnapshotFromClient {
       int snapshotRows) throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    assertEquals(snapshotRows, TEST_UTIL.countRows(table));
+    verifyRowCount(tableName, snapshotRows);
 
-    admin.disableTable(tableName);
-    admin.deleteTable(tableName);
+    TEST_UTIL.deleteTable(tableName);
   }
 
   @Test
   public void testRestoreSnapshotOfCloned() throws IOException, InterruptedException {
     byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    verifyRowCount(clonedTableName, snapshot0Rows);
     admin.snapshot(Bytes.toString(snapshotName2), Bytes.toString(clonedTableName), SnapshotDescription.Type.FLUSH);
-    admin.disableTable(clonedTableName);
-    admin.deleteTable(clonedTableName);
+    TEST_UTIL.deleteTable(clonedTableName);
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);
-    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName);
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
-    admin.disableTable(clonedTableName);
-    admin.deleteTable(clonedTableName);
+    verifyRowCount(clonedTableName, snapshot0Rows);
+    TEST_UTIL.deleteTable(clonedTableName);
   }
 
   // ==========================================================================
@@ -244,5 +244,11 @@ public class TestRestoreFlushSnapshotFromClient {
   private void logFSTree() throws IOException {
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     FSUtils.logFileSystemState(mfs.getFileSystem(), mfs.getRootDir(), LOG);
+  }
+
+  private void verifyRowCount(final byte[] tableName, long expectedRows) throws IOException {
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    assertEquals(expectedRows, TEST_UTIL.countRows(table));
+    table.close();
   }
 }
