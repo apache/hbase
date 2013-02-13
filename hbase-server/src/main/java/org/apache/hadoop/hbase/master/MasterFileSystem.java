@@ -411,7 +411,7 @@ public class MasterFileSystem {
       // if not the cleaner will take care of them.
       for (Path tabledir: FSUtils.getTableDirs(fs, tmpdir)) {
         for (Path regiondir: FSUtils.getRegionDirs(fs, tabledir)) {
-          HFileArchiver.archiveRegion(c, fs, this.rootdir, tabledir, regiondir);
+          HFileArchiver.archiveRegion(fs, this.rootdir, tabledir, regiondir);
         }
       }
       if (!fs.delete(tmpdir, true)) {

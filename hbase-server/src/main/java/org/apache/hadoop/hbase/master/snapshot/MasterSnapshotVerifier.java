@@ -219,7 +219,7 @@ public final class MasterSnapshotVerifier {
         Path archived = new Path(archivedCfDir, fileName);
         if (!fs.exists(file) && !file.equals(archived)) {
           throw new CorruptedSnapshotException("Can't find hfile: " + hfile.getPath()
-              + " in the real (" + archivedCfDir + ") or archive (" + archivedCfDir
+              + " in the real (" + realCfDir + ") or archive (" + archivedCfDir
               + ") directory for the primary table.", snapshot);
         }
       }

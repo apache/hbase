@@ -98,9 +98,9 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
       RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
 
       // Clone operation should not have stuff to restore or remove
-      Preconditions.checkArgument(metaChanges.getRegionsToRestore() == null,
+      Preconditions.checkArgument(!metaChanges.hasRegionsToRestore(),
           "A clone should not have regions to restore");
-      Preconditions.checkArgument(metaChanges.getRegionsToRemove() == null,
+      Preconditions.checkArgument(!metaChanges.hasRegionsToRemove(),
           "A clone should not have regions to remove");
 
       // At this point the clone is complete. Next step is enabling the table.

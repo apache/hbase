@@ -427,10 +427,11 @@ public class SnapshotManager implements Stoppable {
       try {
         if (this.master.getMasterFileSystem().getFileSystem().delete(workingDir, true)) {
           LOG.warn("Couldn't delete working directory (" + workingDir + " for snapshot:"
-              + snapshot);
+              + SnapshotDescriptionUtils.toString(snapshot));
         }
       } catch (IOException e1) {
-        LOG.warn("Couldn't delete working directory (" + workingDir + " for snapshot:" + snapshot);
+        LOG.warn("Couldn't delete working directory (" + workingDir + " for snapshot:" +
+            SnapshotDescriptionUtils.toString(snapshot));
       }
       // fail the snapshot
       throw new SnapshotCreationException("Could not build snapshot handler", e, snapshot);
@@ -494,7 +495,7 @@ public class SnapshotManager implements Stoppable {
     else if (assignmentMgr.getZKTable().isDisabledTable(snapshot.getTable())) {
       LOG.debug("Table is disabled, running snapshot entirely on master.");
       snapshotDisabledTable(snapshot);
-      LOG.debug("Started snapshot: " + snapshot);
+      LOG.debug("Started snapshot: " + SnapshotDescriptionUtils.toString(snapshot));
     } else {
       LOG.error("Can't snapshot table '" + snapshot.getTable()
           + "', isn't open or closed, we don't know what to do!");
@@ -534,11 +535,12 @@ public class SnapshotManager implements Stoppable {
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
       try {
         if (this.master.getMasterFileSystem().getFileSystem().delete(workingDir, true)) {
-          LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:"
-              + snapshot);
+          LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
+              SnapshotDescriptionUtils.toString(snapshot));
         }
       } catch (IOException e1) {
-        LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" + snapshot);
+        LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
+            SnapshotDescriptionUtils.toString(snapshot));
       }
       // fail the snapshot
       throw new SnapshotCreationException("Could not build snapshot handler", e, snapshot);
@@ -612,7 +614,8 @@ public class SnapshotManager implements Stoppable {
       this.executorService.submit(handler);
       restoreHandlers.put(tableName, handler);
     } catch (Exception e) {
-      String msg = "Couldn't clone the snapshot=" + snapshot + " on table=" + tableName;
+      String msg = "Couldn't clone the snapshot=" + SnapshotDescriptionUtils.toString(snapshot) +
+        " on table=" + tableName;
       LOG.error(msg, e);
       throw new RestoreSnapshotException(msg, e);
     }
@@ -702,7 +705,8 @@ public class SnapshotManager implements Stoppable {
       this.executorService.submit(handler);
       restoreHandlers.put(hTableDescriptor.getNameAsString(), handler);
     } catch (Exception e) {
-      String msg = "Couldn't restore the snapshot=" + snapshot + " on table=" + tableName;
+      String msg = "Couldn't restore the snapshot=" + SnapshotDescriptionUtils.toString(snapshot)  +
+          " on table=" + tableName;
       LOG.error(msg, e);
       throw new RestoreSnapshotException(msg, e);
     }
@@ -751,12 +755,14 @@ public class SnapshotManager implements Stoppable {
 
     // check to see if we are done
     if (sentinel.isFinished()) {
-      LOG.debug("Restore snapshot=" + snapshot + " has completed. Notifying the client.");
+      LOG.debug("Restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot) +
+          " has completed. Notifying the client.");
       return false;
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Sentinel is not yet finished with restoring snapshot=" + snapshot);
+      LOG.debug("Sentinel is not yet finished with restoring snapshot=" +
+          SnapshotDescriptionUtils.toString(snapshot));
     }
     return true;
   }

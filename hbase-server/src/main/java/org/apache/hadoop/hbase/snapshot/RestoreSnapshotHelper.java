@@ -198,6 +198,13 @@ public class RestoreSnapshotHelper {
     private List<HRegionInfo> regionsToAdd = null;
 
     /**
+     * @return true if there're new regions
+     */
+    public boolean hasRegionsToAdd() {
+      return this.regionsToAdd != null && this.regionsToAdd.size() > 0;
+    }
+
+    /**
      * Returns the list of new regions added during the on-disk restore.
      * The caller is responsible to add the regions to META.
      * e.g MetaEditor.addRegionsToMeta(...)
@@ -208,12 +215,26 @@ public class RestoreSnapshotHelper {
     }
 
     /**
+     * @return true if there're regions to restore
+     */
+    public boolean hasRegionsToRestore() {
+      return this.regionsToRestore != null && this.regionsToRestore.size() > 0;
+    }
+
+    /**
      * Returns the list of 'restored regions' during the on-disk restore.
      * The caller is responsible to add the regions to META if not present.
      * @return the list of regions restored
      */
     public List<HRegionInfo> getRegionsToRestore() {
       return this.regionsToRestore;
+    }
+
+    /**
+     * @return true if there're regions to remove
+     */
+    public boolean hasRegionsToRemove() {
+      return this.regionsToRemove != null && this.regionsToRemove.size() > 0;
     }
 
     /**

@@ -105,7 +105,7 @@ public class HFileLink extends FileLink {
     this.tempPath = new Path(new Path(rootDir, HConstants.HBASE_TEMP_DIRECTORY), hfilePath);
     this.originPath = new Path(rootDir, hfilePath);
     this.archivePath = new Path(archiveDir, hfilePath);
-    setLocations(originPath, archivePath, this.tempPath);
+    setLocations(originPath, tempPath, archivePath);
   }
 
   /**

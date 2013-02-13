@@ -108,8 +108,8 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
 
       // 3. Applies changes to .META.
       hris.clear();
-      hris.addAll(metaChanges.getRegionsToAdd());
-      hris.addAll(metaChanges.getRegionsToRestore());
+      if (metaChanges.hasRegionsToAdd()) hris.addAll(metaChanges.getRegionsToAdd());
+      if (metaChanges.hasRegionsToRestore()) hris.addAll(metaChanges.getRegionsToRestore());
       List<HRegionInfo> hrisToRemove = metaChanges.getRegionsToRemove();
       MetaEditor.mutateRegions(catalogTracker, hrisToRemove, hris);
 
