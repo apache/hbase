@@ -68,7 +68,7 @@ public class TestForeignExceptionDispatcher {
       dispatcher.rethrowException();
       fail("Monitor should have thrown an exception after getting error.");
     } catch (ForeignException ex) {
-      assertTrue("Got an unexpected exception:" + ex, ex == EXTEXN);
+      assertTrue("Got an unexpected exception:" + ex, ex.getCause() == EXTEXN.getCause());
       LOG.debug("Got the testing exception!");
     }
 
