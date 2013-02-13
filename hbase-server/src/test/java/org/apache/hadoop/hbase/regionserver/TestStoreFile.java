@@ -225,9 +225,12 @@ public class TestStoreFile extends HBaseTestCase {
       "MyTable_02=abc012-def345_SeqId_1_", "MyTable_02=abc012-def345_SeqId_20_" };
     for (String name: legalHFileLink) {
       assertTrue("should be a valid link: " + name, HFileLink.isHFileLink(name));
+      assertTrue("should be a valid StoreFile" + name, StoreFile.validateStoreFileName(name));
+      assertFalse("should not be a valid reference: " + name, StoreFile.isReference(name));
 
       String refName = name + ".6789";
       assertTrue("should be a valid link reference: " + refName, StoreFile.isReference(refName));
+      assertTrue("should be a valid StoreFile" + refName, StoreFile.validateStoreFileName(refName));
     }
 
     String[] illegalHFileLink = { ".MyTable_02=abc012-def345", "-MyTable_02.300=abc012-def345",

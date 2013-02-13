@@ -73,6 +73,14 @@ public class HFileLink extends FileLink {
     Pattern.compile(String.format("^(%s)=(%s)-(%s)$", HTableDescriptor.VALID_USER_TABLE_REGEX,
       HRegionInfo.ENCODED_REGION_NAME_REGEX, StoreFile.HFILE_NAME_REGEX));
 
+  /**
+   * The link should be used for hfile and reference links
+   * that can be found in /hbase/table/region/family/
+   */
+  private static final Pattern REF_OR_HFILE_LINK_PATTERN =
+    Pattern.compile(String.format("^(%s)=(%s)-(.+)$", HTableDescriptor.VALID_USER_TABLE_REGEX,
+      HRegionInfo.ENCODED_REGION_NAME_REGEX));
+
   private final Path archivePath;
   private final Path originPath;
 
@@ -182,7 +190,7 @@ public class HFileLink extends FileLink {
 
   /**
    * Convert a HFileLink path to a table relative path.
-   * e.g. the link: /hbase/test/0123/cf/abcd-4567-testtb
+   * e.g. the link: /hbase/test/0123/cf/testtb=4567-abcd
    *      becomes: /hbase/testtb/4567/cf/abcd
    *
    * @param path HFileLink path
@@ -190,8 +198,8 @@ public class HFileLink extends FileLink {
    * @throws IOException on unexpected error.
    */
   private static Path getRelativeTablePath(final Path path) {
-    // hfile-region-table
-    Matcher m = LINK_NAME_PATTERN.matcher(path.getName());
+    // table=region-hfile
+    Matcher m = REF_OR_HFILE_LINK_PATTERN.matcher(path.getName());
     if (!m.matches()) {
       throw new IllegalArgumentException(path.getName() + " is not a valid HFileLink name!");
     }
@@ -211,7 +219,7 @@ public class HFileLink extends FileLink {
    * @return the name of the referenced HFile
    */
   public static String getReferencedHFileName(final String fileName) {
-    Matcher m = LINK_NAME_PATTERN.matcher(fileName);
+    Matcher m = REF_OR_HFILE_LINK_PATTERN.matcher(fileName);
     if (!m.matches()) {
       throw new IllegalArgumentException(fileName + " is not a valid HFileLink name!");
     }
@@ -225,7 +233,7 @@ public class HFileLink extends FileLink {
    * @return the name of the referenced Region
    */
   public static String getReferencedRegionName(final String fileName) {
-    Matcher m = LINK_NAME_PATTERN.matcher(fileName);
+    Matcher m = REF_OR_HFILE_LINK_PATTERN.matcher(fileName);
     if (!m.matches()) {
       throw new IllegalArgumentException(fileName + " is not a valid HFileLink name!");
     }
@@ -239,7 +247,7 @@ public class HFileLink extends FileLink {
    * @return the name of the referenced Table
    */
   public static String getReferencedTableName(final String fileName) {
-    Matcher m = LINK_NAME_PATTERN.matcher(fileName);
+    Matcher m = REF_OR_HFILE_LINK_PATTERN.matcher(fileName);
     if (!m.matches()) {
       throw new IllegalArgumentException(fileName + " is not a valid HFileLink name!");
     }

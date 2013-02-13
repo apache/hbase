@@ -354,7 +354,12 @@ public class RestoreSnapshotHelper {
 
   /**
    * Create a new {@link HFileLink} to reference the store file.
-   *
+   * <p>The store file in the snapshot can be a simple hfile, an HFileLink or a reference.
+   * <ul>
+   *   <li>hfile: abc -> table=region-abc
+   *   <li>reference: abc.1234 -> table=region-abc.1234
+   *   <li>hfilelink: table=region-hfile -> table=region-hfile
+   * </ul>
    * @param familyDir destination directory for the store file
    * @param regionInfo destination region info for the table
    * @param hfileName store file name (can be a Reference, HFileLink or simple HFile)
@@ -372,17 +377,46 @@ public class RestoreSnapshotHelper {
 
   /**
    * Create a new {@link Reference} as copy of the source one.
+   * <p><blockquote><pre>
+   * The source table looks like:
+   *    1234/abc      (original file)
+   *    5678/abc.1234 (reference file)
    *
+   * After the clone operation looks like:
+   *   wxyz/table=1234-abc
+   *   stuv/table=1234-abc.wxyz
+   *
+   * NOTE that the region name in the clone change (md5 of regioninfo)
+   * and the reference should reflect that change.
+   * </pre></blockquote>
    * @param familyDir destination directory for the store file
    * @param regionInfo destination region info for the table
    * @param hfileName reference file name
    */
   private void restoreReferenceFile(final Path familyDir, final HRegionInfo regionInfo,
       final String hfileName) throws IOException {
-    Path inPath = new Path(new Path(new Path(snapshotDesc.getTable(),
-        regionInfo.getEncodedName()), familyDir.getName()), hfileName);
-    Path outPath = new Path(familyDir, StoreFile.getReferredToFile(inPath).getName());
-    InputStream in = new HFileLink(conf, inPath).open(fs);
+    // Extract the referred information (hfile name and parent region)
+    String tableName = snapshotDesc.getTable();
+    Path refPath = StoreFile.getReferredToFile(new Path(new Path(new Path(tableName,
+        regionInfo.getEncodedName()), familyDir.getName()), hfileName));
+    String snapshotRegionName = refPath.getParent().getParent().getName();
+    String fileName = refPath.getName();
+
+    // The new reference should have the cloned region name as parent, if it is a clone.
+    String clonedRegionName = Bytes.toString(regionsMap.get(Bytes.toBytes(snapshotRegionName)));
+    if (clonedRegionName == null) clonedRegionName = snapshotRegionName;
+
+    // The output file should be a reference link table=snapshotRegion-fileName.clonedRegionName
+    String refLink = fileName;
+    if (!HFileLink.isHFileLink(fileName)) {
+      refLink = HFileLink.createHFileLinkName(tableName, snapshotRegionName, fileName);
+    }
+    Path outPath = new Path(familyDir, refLink + '.' + clonedRegionName);
+
+    // Create the new reference
+    Path linkPath = new Path(familyDir,
+      HFileLink.createHFileLinkName(tableName, regionInfo.getEncodedName(), hfileName));
+    InputStream in = new HFileLink(conf, linkPath).open(fs);
     OutputStream out = fs.create(outPath);
     IOUtils.copyBytes(in, out, conf);
   }
