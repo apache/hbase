@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager.SnapshotSubprocedurePool;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 
 /**
  * This online snapshot implementation forces uses the distributed procedure framework to force a
@@ -74,6 +75,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
       // snapshots that involve multiple regions and regionservers.  It is still possible to have
       // an interleaving such that globally regions are missing, so we still need the verification
       // step.
+      LOG.debug("Starting region operation on " + region);
       region.startRegionOperation();
       try {
         LOG.debug("Flush Snapshotting region " + region.toString() + " started...");
@@ -81,6 +83,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
         region.addRegionToSnapshot(snapshot, monitor);
         LOG.debug("... Flush Snapshotting region " + region.toString() + " completed.");
       } finally {
+        LOG.debug("Closing region operation on " + region);
         region.closeRegionOperation();
       }
       return null;
@@ -95,6 +98,13 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
 
     monitor.rethrowException();
 
+    // assert that the taskManager is empty.
+    if (taskManager.hasTasks()) {
+      throw new IllegalStateException("Attempting to take snapshot "
+          + SnapshotDescriptionUtils.toString(snapshot)
+          + " but we have currently have outstanding tasks");
+    }
+    
     // Add all hfiles already existing in region.
     for (HRegion region : regions) {
       // submit one task per region for parallelize by region.
@@ -104,7 +114,11 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
 
     // wait for everything to complete.
     LOG.debug("Flush Snapshot Tasks submitted for " + regions.size() + " regions");
-    taskManager.waitForOutstandingTasks();
+    try {
+      taskManager.waitForOutstandingTasks();
+    } catch (InterruptedException e) {
+      throw new ForeignException(getMemberName(), e);
+    }
   }
 
   /**
@@ -128,9 +142,13 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
    */
   @Override
   public void cleanup(Exception e) {
-    LOG.info("Aborting all log roll online snapshot subprocedure task threads for '"
+    LOG.info("Aborting all online FLUSH snapshot subprocedure task threads for '"
         + snapshot.getName() + "' due to error", e);
-    taskManager.cancelTasks();
+    try {
+      taskManager.cancelTasks();
+    } catch (InterruptedException e1) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**
