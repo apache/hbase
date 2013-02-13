@@ -36,13 +36,18 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -312,6 +317,69 @@ public class TestHFileArchiving {
 
     assertTrue("Archived files are missing some of the store files!",
       archivedFiles.containsAll(storeFiles));
+  }
+
+  /**
+   * Test HFileArchiver.resolveAndArchive() race condition HBASE-7643
+   */
+  @Test
+  public void testCleaningRace() throws Exception {
+    final long TEST_TIME = 20 * 1000;
+
+    Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
+    Path rootDir = UTIL.getDataTestDir("testCleaningRace");
+    FileSystem fs = UTIL.getTestFileSystem();
+
+    Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
+    Path regionDir = new Path("table", "abcdef");
+    Path familyDir = new Path(regionDir, "cf");
+
+    Path sourceRegionDir = new Path(rootDir, regionDir);
+    fs.mkdirs(sourceRegionDir);
+
+    Stoppable stoppable = new StoppableImplementation();
+
+    // The cleaner should be looping without long pauses to reproduce the race condition.
+    HFileCleaner cleaner = new HFileCleaner(1, stoppable, conf, fs, archiveDir);
+    try {
+      cleaner.start();
+
+      // Keep creating/archiving new files while the cleaner is running in the other thread
+      long startTime = System.currentTimeMillis();
+      for (long fid = 0; (System.currentTimeMillis() - startTime) < TEST_TIME; ++fid) {
+        Path file = new Path(familyDir,  String.valueOf(fid));
+        Path sourceFile = new Path(rootDir, file);
+        Path archiveFile = new Path(archiveDir, file);
+
+        fs.createNewFile(sourceFile);
+
+        try {
+          // Try to archive the file
+          HFileArchiver.archiveRegion(fs, rootDir,
+              sourceRegionDir.getParent(), sourceRegionDir);
+
+          // The archiver succeded, the file is no longer in the original location
+          // but it's in the archive location.
+          LOG.debug("hfile=" + fid + " should be in the archive");
+          assertTrue(fs.exists(archiveFile));
+          assertFalse(fs.exists(sourceFile));
+        } catch (IOException e) {
+          // The archiver is unable to archive the file. Probably HBASE-7643 race condition.
+          // in this case, the file should not be archived, and we should have the file
+          // in the original location.
+          LOG.debug("hfile=" + fid + " should be in the source location");
+          assertFalse(fs.exists(archiveFile));
+          assertTrue(fs.exists(sourceFile));
+
+          // Avoid to have this file in the next run
+          fs.delete(sourceFile, false);
+        }
+      }
+    } finally {
+      stoppable.stop("test end");
+      cleaner.join();
+      fs.delete(rootDir, true);
+    }
   }
 
   private void clearArchiveDirectory() throws IOException {
