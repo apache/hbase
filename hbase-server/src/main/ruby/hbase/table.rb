@@ -408,14 +408,14 @@ EOF
     # Generally used for admin functions which just have one name and take the table name
     def self.add_admin_utils(*args)
       args.each do |method|
-        define_method method do
-          @shell.command(method, @name)
+        define_method method do |*method_args|
+          @shell.command(method, @name, *method_args)
         end
       end
     end
 
     #Add the following admin utilities to the table
-    add_admin_utils :enable, :disable, :flush, :drop, :describe
+    add_admin_utils :enable, :disable, :flush, :drop, :describe, :snapshot
 
     #----------------------------
     #give the general help for the table
