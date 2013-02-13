@@ -244,6 +244,17 @@ public class SnapshotDescriptionUtils {
   }
 
   /**
+   * Get the directory to build a snapshot, before it is finalized
+   * @param snapshotName name of the snapshot
+   * @param rootDir root directory of the hbase installation
+   * @return {@link Path} where one can build a snapshot
+   */
+  public static Path getWorkingSnapshotDir(String snapshotName, final Path rootDir) {
+    return getCompletedSnapshotDir(new Path(getSnapshotsDir(rootDir), SNAPSHOT_TMP_DIR_NAME),
+      snapshotName);
+  }
+
+  /**
    * Get the directory to store the snapshot instance
    * @param snapshotsDir hbase-global directory for storing all snapshots
    * @param snapshotName name of the snapshot to take
