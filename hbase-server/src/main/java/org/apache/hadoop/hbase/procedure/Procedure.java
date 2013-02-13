@@ -310,7 +310,8 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
     }
     if (removed) {
       LOG.debug("Member: '" + member + "' released barrier for procedure'" + procName
-          + "', counting down latch");
+          + "', counting down latch.  Waiting for " + releasedBarrierLatch.getCount()
+          + " more");
     } else {
       LOG.warn("Member: '" + member + "' released barrier for procedure'" + procName
           + "', but we weren't waiting on it to release!");

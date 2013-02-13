@@ -113,8 +113,15 @@ public class ProcedureCoordinator {
 
     // make sure we aren't already running an procedure of that name
     synchronized (procedures) {
-      if (procedures.get(procName) != null) {
-        return false;
+      Procedure oldProc = procedures.get(procName);
+      if (oldProc != null) {
+        // procedures are always eventually completed on both successful and failed execution
+        if (oldProc.completedLatch.getCount() != 0) {
+          LOG.warn("Procedure " + procName + " currently running.  Rejecting new request");
+          return false;
+        }
+        LOG.debug("Procedure " + procName + " was in running list but was completed.  Accepting new attempt.");
+        procedures.remove(procName);
       }
     }
 
@@ -128,6 +135,8 @@ public class ProcedureCoordinator {
       }
       return true;
     } catch (RejectedExecutionException e) {
+      LOG.warn("Procedure " + procName + " rejected by execution pool.  Propagating error and " +
+          "cancelling operation.", e);
       // the thread pool is full and we can't run the procedure
       proc.receive(new ForeignException(procName, e));
 

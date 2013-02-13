@@ -185,7 +185,6 @@ abstract public class Subprocedure implements Callable<Void> {
 
       // make sure we didn't get an external exception
       rethrowException();
-      LOG.debug("Subprocedure '" + barrierName + "' locally completed");
     } catch (Exception e) {
       String msg = null;
       if (e instanceof InterruptedException) {

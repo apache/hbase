@@ -87,7 +87,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
           String parent = ZKUtil.getParent(path);
           // if its the end barrier, the procedure can be completed
           if (parent.equals(this.reachedZnode)) {
-            recievedReachedGlobalBarrier(path);
+            receivedReachedGlobalBarrier(path);
             return;
           } else if (parent.equals(this.abortZnode)) {
             abort(path);
@@ -104,10 +104,10 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       public void nodeChildrenChanged(String path) {
         LOG.info("Received children changed event:" + path);
         if (path.equals(this.acquiredZnode)) {
-          LOG.info("Recieved start event.");
+          LOG.info("Received start event.");
           waitForNewProcedures();
         } else if (path.equals(this.abortZnode)) {
-          LOG.info("Recieved abort event.");
+          LOG.info("Received abort event.");
           watchForAbortedProcedures();
         }
       }
@@ -134,7 +134,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
    * Pass along the procedure global barrier notification to any listeners
    * @param path full znode path that cause the notification
    */
-  private void recievedReachedGlobalBarrier(String path) {
+  private void receivedReachedGlobalBarrier(String path) {
     LOG.debug("Recieved reached global barrier:" + path);
     String procName = ZKUtil.getNodeName(path);
     this.member.receivedReachedGlobalBarrier(procName);
@@ -244,7 +244,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       String reachedBarrier = zkController.getReachedBarrierNode(procName);
       LOG.debug("Watch for global barrier reached:" + reachedBarrier);
       if (ZKUtil.watchAndCheckExists(zkController.getWatcher(), reachedBarrier)) {
-        recievedReachedGlobalBarrier(reachedBarrier);
+        receivedReachedGlobalBarrier(reachedBarrier);
       }
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to acquire barrier for procedure: "

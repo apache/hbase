@@ -74,7 +74,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
     Procedure proc = coordinator.startProcedure(this.monitor, this.snapshot.getName(),
       this.snapshot.toByteArray(), Lists.newArrayList(regionServers));
     if (proc == null) {
-      String msg = "Failed to submit distribute procedure for snapshot '"
+      String msg = "Failed to submit distributed procedure for snapshot '"
           + snapshot.getName() + "'";
       LOG.error(msg);
       throw new HBaseSnapshotException(msg);
