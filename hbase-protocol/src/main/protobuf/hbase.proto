@@ -268,3 +268,17 @@ message NameInt64Pair {
   optional string name = 1;
   optional int64 value = 2;
 }
+
+/**
+ * Description of the snapshot to take
+ */
+message SnapshotDescription {
+	required string name = 1;
+	optional string table = 2; // not needed for delete, but checked for in taking snapshot
+	optional int64 creationTime = 3 [default = 0];
+	enum Type {
+		TIMESTAMP = 0;
+		GLOBAL = 1;
+	}
+	optional Type type = 4 [default = TIMESTAMP];
+}

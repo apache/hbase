@@ -18,21 +18,25 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
-import org.apache.hadoop.hbase.security.TokenInfo;
-import org.apache.hadoop.hbase.security.KerberosInfo;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
@@ -43,6 +47,11 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
@@ -53,17 +62,19 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegio
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
-
+import org.apache.hadoop.hbase.security.KerberosInfo;
+import org.apache.hadoop.hbase.security.TokenInfo;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -346,4 +357,54 @@ public interface MasterAdminProtocol extends
   @Override
   public IsCatalogJanitorEnabledResponse isCatalogJanitorEnabled(RpcController c,
       IsCatalogJanitorEnabledRequest req) throws ServiceException;
+
+  /**
+   * Create a snapshot for the given table.
+   * @param controller Unused (set to null).
+   * @param snapshot description of the snapshot to take
+   * @return empty response on success
+   * @throws ServiceException if the snapshot cannot be taken
+   */
+  @Override
+  public TakeSnapshotResponse snapshot(RpcController controller, TakeSnapshotRequest snapshot)
+      throws ServiceException;
+
+  /**
+   * List existing snapshots.
+   * @param controller Unused (set to null).
+   * @param request information about the request (can be empty)
+   * @return {@link ListSnapshotResponse} - a list of {@link SnapshotDescription}
+   * @throws ServiceException if we cannot reach the filesystem
+   */
+  @Override
+  public ListSnapshotResponse listSnapshots(RpcController controller, ListSnapshotRequest request)
+      throws ServiceException;
+
+  /**
+   * Delete an existing snapshot. This method can also be used to clean up a aborted snapshot.
+   * @param controller Unused (set to null).
+   * @param snapshotName snapshot to delete
+   * @return <tt>true</tt> if the snapshot was deleted, <tt>false</tt> if the snapshot didn't exist
+   *         originally
+   * @throws ServiceException if the filesystem cannot be reached
+   */
+  @Override
+  public DeleteSnapshotResponse deleteSnapshot(RpcController controller,
+      DeleteSnapshotRequest snapshotName) throws ServiceException;
+
+  /**
+   * Check to see if the snapshot is done.
+   * @param controller Unused (set to null).
+   * @param request name of the snapshot to check.
+   * @throws ServiceException around possible exceptions:
+   *           <ol>
+   *           <li>{@link UnknownSnapshotException} if the passed snapshot name doesn't match the
+   *           current snapshot <i>or</i> there is no previous snapshot.</li>
+   *           <li>{@link SnapshotCreationException} if the snapshot couldn't complete because of
+   *           errors</li>
+   *           </ol>
+   */
+  @Override
+  public IsSnapshotDoneResponse isSnapshotDone(RpcController controller,
+      IsSnapshotDoneRequest request) throws ServiceException;
 }
