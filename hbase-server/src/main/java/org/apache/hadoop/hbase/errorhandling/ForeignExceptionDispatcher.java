@@ -59,29 +59,21 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
     return name;
   }
 
-  public synchronized void receive(String message) {
-    receive(new ForeignException(name, message));
-  }
-
-  public synchronized void receive(ForeignException e) {
-    receive(e);
-  }
-
   @Override
-  public synchronized void receive(String message, ForeignException e) {
+  public synchronized void receive(ForeignException e) {
     // if we already have an exception, then ignore it
     if (exception != null) return;
 
-    LOG.debug(name + " accepting received error:" + message);
+    LOG.debug(name + " accepting received exception" , e);
     // mark that we got the error
     if (e != null) {
       exception = e;
     } else {
-      exception = new ForeignException(name, message);
+      exception = new ForeignException(name, e);
     }
 
     // notify all the listeners
-    dispatch(message, e);
+    dispatch(e);
   }
 
   @Override
@@ -108,11 +100,11 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
    * @param message human readable message passed to the listener
    * @param e {@link ForeignException} containing the cause.  Can be null.
    */
-  private void dispatch(String message, ForeignException e) {
+  private void dispatch(ForeignException e) {
     // update all the listeners with the passed error
     LOG.debug(name + " Recieved error, notifying listeners...");
     for (ForeignExceptionListener l: listeners) {
-      l.receive(message, e);
+      l.receive(e);
     }
   }
 

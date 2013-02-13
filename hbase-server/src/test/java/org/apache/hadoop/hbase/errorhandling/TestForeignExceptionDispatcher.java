@@ -56,12 +56,11 @@ public class TestForeignExceptionDispatcher {
     dispatcher.addListener(listener2);
 
     // create an artificial error
-    String message = "Some error";
-    dispatcher.receive(message, EXTEXN);
+    dispatcher.receive(EXTEXN);
 
     // make sure the listeners got the error
-    Mockito.verify(listener1, Mockito.times(1)).receive(message, EXTEXN);
-    Mockito.verify(listener2, Mockito.times(1)).receive(message, EXTEXN);
+    Mockito.verify(listener1, Mockito.times(1)).receive(EXTEXN);
+    Mockito.verify(listener2, Mockito.times(1)).receive(EXTEXN);
 
     // make sure that we get an exception
     try {
@@ -73,10 +72,9 @@ public class TestForeignExceptionDispatcher {
     }
 
     // push another error, which should be not be passed to listeners
-    message = "another error";
-    dispatcher.receive(message, EXTEXN2);
-    Mockito.verify(listener1, Mockito.never()).receive(message, EXTEXN2);
-    Mockito.verify(listener2, Mockito.never()).receive(message, EXTEXN2);
+    dispatcher.receive(EXTEXN2);
+    Mockito.verify(listener1, Mockito.never()).receive(EXTEXN2);
+    Mockito.verify(listener2, Mockito.never()).receive(EXTEXN2);
   }
 
   @Test
@@ -97,8 +95,8 @@ public class TestForeignExceptionDispatcher {
     assertTrue("Monitor didn't get timeout", monitor.hasException());
 
     // verify that that we propagated the error
-    Mockito.verify(listener1).receive(Mockito.anyString(), Mockito.any(ForeignException.class));
-    Mockito.verify(listener2).receive(Mockito.anyString(), Mockito.any(ForeignException.class));
+    Mockito.verify(listener1).receive(Mockito.any(ForeignException.class));
+    Mockito.verify(listener2).receive(Mockito.any(ForeignException.class));
   }
 
   /**
@@ -119,9 +117,7 @@ public class TestForeignExceptionDispatcher {
     timer.start();
     timer.trigger();
     // make sure that we got the timer error
-    Mockito.verify(listener1, Mockito.times(1)).receive(Mockito.anyString(),
-      Mockito.any(ForeignException.class));
-    Mockito.verify(listener2, Mockito.times(1)).receive(Mockito.anyString(),
-      Mockito.any(ForeignException.class));
+    Mockito.verify(listener1, Mockito.times(1)).receive(Mockito.any(ForeignException.class));
+    Mockito.verify(listener2, Mockito.times(1)).receive(Mockito.any(ForeignException.class));
   }
 }

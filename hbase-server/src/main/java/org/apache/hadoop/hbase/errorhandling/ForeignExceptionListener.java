@@ -37,5 +37,5 @@ public interface ForeignExceptionListener {
    * @param message reason for the error
    * @param e exception causing the error.  Implementations must accept and handle null here.
    */
-  public void receive(String message, ForeignException e);
+  public void receive(ForeignException e);
 }

@@ -69,7 +69,7 @@ public class TimeoutExceptionInjector {
         TimeoutException tee =  new TimeoutException(
             "Timeout caused Foreign Exception", start, end, maxTime);
         String source = "timer-" + timer;
-        listener.receive("Timeout elapsed!", new ForeignException(source, tee));
+        listener.receive(new ForeignException(source, tee));
       }
     };
   }
