@@ -71,7 +71,11 @@ public class TestRestoreSnapshotFromClient {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().set("hbase.master.hfilecleaner.plugins",
+      "org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner," +
+      "org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner");
     TEST_UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
+    TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 10);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
@@ -125,10 +129,13 @@ public class TestRestoreSnapshotFromClient {
 
   @After
   public void tearDown() throws Exception {
-    admin.disableTable(tableName);
-    admin.deleteTable(tableName);
+    if (admin.tableExists(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
     admin.deleteSnapshot(snapshotName0);
     admin.deleteSnapshot(snapshotName1);
+    waitCleanerRun();
   }
 
   @Test
@@ -185,12 +192,75 @@ public class TestRestoreSnapshotFromClient {
     admin.disableTable(clonedTableName);
     admin.snapshot(snapshotName2, clonedTableName);
     admin.deleteTable(clonedTableName);
+    waitCleanerRun();
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);
     table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName);
     assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
     admin.disableTable(clonedTableName);
     admin.deleteTable(clonedTableName);
+  }
+
+  /**
+   * Verify that tables created from the snapshot are still alive after source table deletion.
+   */
+  @Test
+  public void testCloneLinksAfterDelete() throws IOException, InterruptedException {
+    // Clone a table from the first snapshot
+    byte[] clonedTableName = Bytes.toBytes("clonedtb1-" + System.currentTimeMillis());
+    admin.cloneSnapshot(snapshotName0, clonedTableName);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName);
+    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+
+    // Take a snapshot of this cloned table.
+    admin.disableTable(clonedTableName);
+    admin.snapshot(snapshotName2, clonedTableName);
+
+    // Clone the snapshot of the cloned table
+    byte[] clonedTableName2 = Bytes.toBytes("clonedtb2-" + System.currentTimeMillis());
+    admin.cloneSnapshot(snapshotName2, clonedTableName2);
+    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName2);
+    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    admin.disableTable(clonedTableName2);
+
+    // Remove the original table
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
+    waitCleanerRun();
+
+    // Verify the first cloned table
+    admin.enableTable(clonedTableName);
+    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName);
+    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+
+    // Verify the second cloned table
+    admin.enableTable(clonedTableName2);
+    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName2);
+    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    admin.disableTable(clonedTableName2);
+
+    // Delete the first cloned table
+    admin.disableTable(clonedTableName);
+    admin.deleteTable(clonedTableName);
+    waitCleanerRun();
+
+    // Verify the second cloned table
+    admin.enableTable(clonedTableName2);
+    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName2);
+    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+
+    // Clone a new table from cloned
+    byte[] clonedTableName3 = Bytes.toBytes("clonedtb3-" + System.currentTimeMillis());
+    admin.cloneSnapshot(snapshotName2, clonedTableName3);
+    table = new HTable(TEST_UTIL.getConfiguration(), clonedTableName3);
+    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+
+    // Delete the cloned tables
+    admin.disableTable(clonedTableName2);
+    admin.deleteTable(clonedTableName2);
+    admin.disableTable(clonedTableName3);
+    admin.deleteTable(clonedTableName3);
+    admin.deleteSnapshot(snapshotName2);
   }
 
   // ==========================================================================
@@ -224,5 +294,9 @@ public class TestRestoreSnapshotFromClient {
       table.put(put);
     }
     table.flushCommits();
+  }
+
+  private void waitCleanerRun() throws InterruptedException {
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
   }
 }

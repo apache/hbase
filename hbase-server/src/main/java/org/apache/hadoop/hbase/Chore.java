@@ -92,6 +92,14 @@ public abstract class Chore extends HasThread {
     this.sleeper.skipSleepCycle();
   }
 
+  /*
+   * Exposed for TESTING!
+   * calls directly the chore method, from the current thread.
+   */
+  public void choreForTesting() {
+    chore();
+  }
+
   /**
    * Override to run a task before we start looping.
    * @return true if initial chore was successful

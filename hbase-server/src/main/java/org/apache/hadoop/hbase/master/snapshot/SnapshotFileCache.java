@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.snapshot;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -36,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -60,25 +58,10 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * Further, the cache is periodically refreshed ensure that files in snapshots that were deleted are
  * also removed from the cache.
  * <p>
- * A {@link PathFilter} must be passed when creating <tt>this</tt> to allow filtering of children
+ * A {@link SnapshotFileInspector} must be passed when creating <tt>this</tt> to allow extraction of files
  * under the /hbase/.snapshot/[snapshot name] directory, for each snapshot. This allows you to only
  * cache files under, for instance, all the logs in the .logs directory or all the files under all
- * the regions. The filter is only applied the children, not to the children of children. For
- * instance, given the layout:
- *
- * <pre>
- * /hbase/.snapshot/SomeSnapshot/
- *                          .logs/
- *                              server/
- *                                  server.1234567
- *                          .regioninfo
- *                          1234567890/
- *                              family/
- *                                  123456789
- * </pre>
- *
- * would only apply a filter to directories: .logs, .regioninfo and 1234567890, not to their
- * children.
+ * the regions.
  * <p>
  * <tt>this</tt> also considers all running snapshots (those under /hbase/.snapshot/.tmp) as valid
  * snapshots and will attempt to cache files from those snapshots as well.
@@ -88,11 +71,19 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class SnapshotFileCache implements Stoppable {
+  public interface SnapshotFileInspector {
+    /**
+     * Returns a collection of file names needed by the snapshot.
+     * @param snapshotDir {@link Path} to the snapshot directory to scan.
+     * @return the collection of file names needed by the snapshot.
+     */
+    Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException;
+  }
 
   private static final Log LOG = LogFactory.getLog(SnapshotFileCache.class);
   private volatile boolean stop = false;
   private final FileSystem fs;
-  private final PathFilter dirFilter;
+  private final SnapshotFileInspector fileInspector;
   private final Path snapshotDir;
   private final Set<String> cache = new HashSet<String>();
   /**
@@ -113,13 +104,13 @@ public class SnapshotFileCache implements Stoppable {
    *          hbase root directory
    * @param cacheRefreshPeriod frequency (ms) with which the cache should be refreshed
    * @param refreshThreadName name of the cache refresh thread
-   * @param inspectSnapshotDirectory Filter to apply to the directories under each snapshot.
+   * @param inspectSnapshotFiles Filter to apply to each snapshot to extract the files.
    * @throws IOException if the {@link FileSystem} or root directory cannot be loaded
    */
   public SnapshotFileCache(Configuration conf, long cacheRefreshPeriod, String refreshThreadName,
-      PathFilter inspectSnapshotDirectory) throws IOException {
+      SnapshotFileInspector inspectSnapshotFiles) throws IOException {
     this(FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf), 0, cacheRefreshPeriod,
-        refreshThreadName, inspectSnapshotDirectory);
+        refreshThreadName, inspectSnapshotFiles);
   }
 
   /**
@@ -130,12 +121,12 @@ public class SnapshotFileCache implements Stoppable {
    * @param cacheRefreshPeriod frequency (ms) with which the cache should be refreshed
    * @param cacheRefreshDelay amount of time to wait for the cache to be refreshed
    * @param refreshThreadName name of the cache refresh thread
-   * @param inspectSnapshotDirectory Filter to apply to the directories under each snapshot.
+   * @param inspectSnapshotFiles Filter to apply to each snapshot to extract the files.
    */
   public SnapshotFileCache(FileSystem fs, Path rootDir, long cacheRefreshPeriod,
-      long cacheRefreshDelay, String refreshThreadName, PathFilter inspectSnapshotDirectory) {
+      long cacheRefreshDelay, String refreshThreadName, SnapshotFileInspector inspectSnapshotFiles) {
     this.fs = fs;
-    this.dirFilter = inspectSnapshotDirectory;
+    this.fileInspector = inspectSnapshotFiles;
     this.snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
     // periodically refresh the file cache to make sure we aren't superfluously saving files.
     this.refreshTimer = new Timer(refreshThreadName, true);
@@ -229,44 +220,28 @@ public class SnapshotFileCache implements Stoppable {
         FileStatus[] running = FSUtils.listStatus(fs, snapshot.getPath());
         if (running == null) continue;
         for (FileStatus run : running) {
-          this.cache.addAll(getAllFiles(run, dirFilter));
+          this.cache.addAll(fileInspector.filesUnderSnapshot(run.getPath()));
         }
+      } else {
+        SnapshotDirectoryInfo files = this.snapshots.remove(name);
+        // 3.1.1 if we don't know about the snapshot or its been modified, we need to update the files
+        // the latter could occur where I create a snapshot, then delete it, and then make a new
+        // snapshot with the same name. We will need to update the cache the information from that new
+        // snapshot, even though it has the same name as the files referenced have probably changed.
+        if (files == null || files.hasBeenModified(snapshot.getModificationTime())) {
+          // get all files for the snapshot and create a new info
+          Collection<String> storedFiles = fileInspector.filesUnderSnapshot(snapshot.getPath());
+          files = new SnapshotDirectoryInfo(snapshot.getModificationTime(), storedFiles);
+        }
+        // 3.2 add all the files to cache
+        this.cache.addAll(files.getFiles());
+        known.put(name, files);
       }
-
-      SnapshotDirectoryInfo files = this.snapshots.remove(name);
-      // 3.1.1 if we don't know about the snapshot or its been modified, we need to update the files
-      // the latter could occur where I create a snapshot, then delete it, and then make a new
-      // snapshot with the same name. We will need to update the cache the information from that new
-      // snapshot, even though it has the same name as the files referenced have probably changed.
-      if (files == null || files.hasBeenModified(snapshot.getModificationTime())) {
-        // get all files for the snapshot and create a new info
-        Collection<String> storedFiles = getAllFiles(snapshot, dirFilter);
-        files = new SnapshotDirectoryInfo(snapshot.getModificationTime(), storedFiles);
-      }
-      // 3.2 add all the files to cache
-      this.cache.addAll(files.getFiles());
-      known.put(name, files);
     }
 
     // 4. set the snapshots we are tracking
     this.snapshots.clear();
     this.snapshots.putAll(known);
-  }
-
-  private Collection<String> getAllFiles(FileStatus file, PathFilter filter) throws IOException {
-    if (!file.isDir()) return Collections.singleton(file.getPath().getName());
-
-    Set<String> ret = new HashSet<String>();
-    // read all the files/directories below the passed directory
-    FileStatus[] files = FSUtils.listStatus(fs, file.getPath(), filter);
-    if (files == null) return ret;
-
-    // get all the files for the children
-    for (FileStatus child : files) {
-      // children aren't filtered out
-      ret.addAll(getAllFiles(child, null));
-    }
-    return ret;
   }
 
   /**

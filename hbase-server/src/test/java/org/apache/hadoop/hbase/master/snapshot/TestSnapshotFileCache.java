@@ -21,18 +21,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -76,10 +78,10 @@ public class TestSnapshotFileCache {
     long period = Long.MAX_VALUE;
     Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-        "test-snapshot-file-cache-refresh", null);
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
 
     Path snapshot = new Path(snapshotDir, "snapshot");
-    Path region = new Path(snapshot, "region1");
+    Path region = new Path(snapshot, "7e91021");
     Path family = new Path(region, "fam");
     Path file1 = new Path(family, "file1");
     Path file2 = new Path(family, "file2");
@@ -129,19 +131,19 @@ public class TestSnapshotFileCache {
     long period = Long.MAX_VALUE;
     Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-        "test-snapshot-file-cache-refresh", null);
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
 
     // create a file in a 'completed' snapshot
     Path snapshot = new Path(snapshotDir, "snapshot");
-    Path region = new Path(snapshot, "region1");
+    Path region = new Path(snapshot, "7e91021");
     Path family = new Path(region, "fam");
     Path file1 = new Path(family, "file1");
     fs.create(file1);
 
     // create an 'in progress' snapshot
     SnapshotDescription desc = SnapshotDescription.newBuilder().setName("working").build();
-    snapshot = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, snapshotDir);
-    region = new Path(snapshot, "region1");
+    snapshot = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+    region = new Path(snapshot, "7e91021");
     family = new Path(region, "fam");
     Path file2 = new Path(family, "file2");
     fs.create(file2);
@@ -158,19 +160,17 @@ public class TestSnapshotFileCache {
     // don't refresh the cache unless we tell it to
     long period = Long.MAX_VALUE;
     Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
-    PathFilter filter = new PathFilter() {
-
-      @Override
-      public boolean accept(Path path) {
-        return path.getName().equals(HConstants.HREGION_LOGDIR_NAME);
-      }
-    };
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-        "test-snapshot-file-cache-refresh", filter);
+        "test-snapshot-file-cache-refresh", new SnapshotFileCache.SnapshotFileInspector() {
+            public Collection<String> filesUnderSnapshot(final Path snapshotDir)
+                throws IOException {
+              return SnapshotReferenceUtil.getHLogNames(fs, snapshotDir);
+            }
+        });
 
     // create a file in a 'completed' snapshot
     Path snapshot = new Path(snapshotDir, "snapshot");
-    Path region = new Path(snapshot, "region1");
+    Path region = new Path(snapshot, "7e91021");
     Path family = new Path(region, "fam");
     Path file1 = new Path(family, "file1");
     fs.create(file1);
@@ -194,10 +194,10 @@ public class TestSnapshotFileCache {
     long period = Long.MAX_VALUE;
     Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-        "test-snapshot-file-cache-refresh", null);
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
 
     Path snapshot = new Path(snapshotDir, "snapshot");
-    Path region = new Path(snapshot, "region1");
+    Path region = new Path(snapshot, "7e91021");
     Path family = new Path(region, "fam");
     Path file1 = new Path(family, "file1");
     Path file2 = new Path(family, "file2");
@@ -207,7 +207,7 @@ public class TestSnapshotFileCache {
     fs.create(file2);
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
-    
+
     assertTrue("Cache didn't find " + file1, cache.contains(file1.getName()));
 
     // now delete the snapshot and add a file with a different name
@@ -219,4 +219,12 @@ public class TestSnapshotFileCache {
     assertTrue("Cache didn't find new file:" + file3, cache.contains(file3.getName()));
   }
 
+  class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
+    public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
+      Collection<String> files =  new HashSet<String>();
+      files.addAll(SnapshotReferenceUtil.getHLogNames(fs, snapshotDir));
+      files.addAll(SnapshotReferenceUtil.getHFileNames(fs, snapshotDir));
+      return files;
+    }
+  };
 }

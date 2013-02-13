@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -221,7 +222,11 @@ public final class SnapshotReferenceUtil {
     visitTableStoreFiles(fs, snapshotDir, new FSVisitor.StoreFileVisitor() {
       public void storeFile (final String region, final String family, final String hfile)
           throws IOException {
-        names.add(hfile);
+        if (HFileLink.isHFileLink(hfile)) {
+          names.add(HFileLink.getReferencedHFileName(hfile));
+        } else {
+          names.add(hfile);
+        }
       }
     });
     return names;
