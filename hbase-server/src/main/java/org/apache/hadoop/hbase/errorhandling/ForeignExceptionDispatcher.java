@@ -87,7 +87,9 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
   @Override
   public void rethrowException() throws ForeignException {
     if (exception != null) {
-      throw exception;
+      // This gets the stack where this is caused, (instead of where it was deserialized).
+      // This which is much more useful for debugging
+      throw new ForeignException(exception.getSource(), exception.getCause());
     }
   }
 
