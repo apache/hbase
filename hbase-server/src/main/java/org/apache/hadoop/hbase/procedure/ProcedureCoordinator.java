@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -245,5 +247,22 @@ public class ProcedureCoordinator {
    */
   ProcedureCoordinatorRpcs getRpcs() {
     return rpcs;
+  }
+
+  /**
+   * Returns the procedure.  This Procedure is a live instance so should not be modified but can
+   * be inspected.
+   * @param name Name of the procedure
+   * @return Procedure or null if not present any more
+   */
+  public Procedure getProcedure(String name) {
+    return procedures.get(name);
+  }
+
+  /**
+   * @return Return set of all procedure names.
+   */
+  public Set<String> getProcedureNames() {
+    return new HashSet<String>(procedures.keySet());
   }
 }

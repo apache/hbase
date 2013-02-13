@@ -165,6 +165,19 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
+   * Returns a copy of the procedure members still trying to enter the barrier.
+   * @return
+   */
+  public String getStatus() {
+    String waiting, done;
+    synchronized (joinBarrierLock) {
+      waiting = acquiringMembers.toString();
+      done = inBarrierMembers.toString();
+    }
+    return "Procedure " + procName + " { waiting=" + waiting + " done="+ done + " }";
+  }
+  
+  /**
    * Get the ExternalErrorDispatcher
    * @return the Procedure's monitor.
    */

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
+import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
@@ -322,7 +323,15 @@ public class SnapshotManager implements Stoppable {
     try {
       handler.rethrowException();
     } catch (ForeignException e) {
-      throw new HBaseSnapshotException("Snapshot " + ssString +  " had an error from RS", e,
+      // Give some procedure info on an exception.
+      String status;
+      Procedure p = coordinator.getProcedure(expected.getName());
+      if (p != null) {
+        status = p.getStatus();
+      } else {
+        status = expected.getName() + " not found in proclist " + coordinator.getProcedureNames();
+      }
+      throw new HBaseSnapshotException("Snapshot " + ssString +  " had an error.  " + status, e,
           expected);
     }
 
