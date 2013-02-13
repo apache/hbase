@@ -40,6 +40,7 @@ EOF
         end
 
         formatter.footer(now, list.size)
+        return list
       end
     end
   end

@@ -45,6 +45,7 @@ EOF
         end
 
         formatter.footer(now, list.size)
+        return list.map { |s| s.getName() }
       end
     end
   end
