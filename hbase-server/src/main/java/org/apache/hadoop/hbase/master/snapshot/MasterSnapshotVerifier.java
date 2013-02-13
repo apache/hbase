@@ -71,8 +71,6 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
  * <li>All the hfiles are present (either in .archive directory in the region)</li>
  * <li>All recovered.edits files are present (by name) and have the correct file size</li>
  * </ul>
- * <li>HLogs for each server running the snapshot have been referenced.  (In the design for
- * in the {@link Type#GLOBAL} or {@link Type#LOGROLL} online snapshots</li>
  * </ol>
  */
 @InterfaceAudience.Private

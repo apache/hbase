@@ -2166,28 +2166,6 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Snapshot names follow the same naming constraints as tables in HBase. See
    * {@link HTableDescriptor#isLegalTableName(byte[])}.
    * <p>
-   * Generally, you should <b>not</b> use this, but instead just take a {@link Type#TIMESTAMP
-   * Timestamp-consistentSnapshot} with {@link #snapshot(byte[], byte[])} or
-   * {@link #snapshot(String, String)}, which creates a timestamp-based snapshot, causing minimal
-   * interference with running cluster.
-   * <p>
-   * However, this method can be used to launch a {@link Type#GLOBAL GlobalSnapshot}. Note that a
-   * {@link Type#GLOBAL GlobalSnapshot}will <b>block all writes to the table</b> while taking the
-   * snapshot. This occurs so a single stable state can be achieved across all servers hosting the
-   * table - this is beyond the consistency constraints placed on an HBase table. This type of
-   * snapshot has two main implications:
-   * <ul>
-   * <li>all writes to the table will block while taking the snapshot</li>
-   * <li>the probability of success decreases with increasing cluster size and is not recommended
-   * for clusters much greater than 500 nodes</li>
-   * </ul>
-   * Together, the two above considerations mean to get a snapshot with any real load on your
-   * system, you will likely have multiple attempts and will suffer notable performance degradation,
-   * for a large cluster.
-   * <p>
-   * This can be suitable for a smaller cluster, but comes with the above caveats - user beware (you
-   * should really consider if you can get by with just using timestamp-consistent snapshots via
-   * {@link #snapshot(byte[], byte[])}) or {@link #snapshot(String, String)}.
    * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
    *          snapshots stored on the cluster
    * @param tableName name of the table to snapshot

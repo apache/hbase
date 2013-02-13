@@ -50,7 +50,6 @@ public class TimeoutExceptionInjector {
    * @param listener listener to notify if the process times out
    * @param maxTime max allowed running time for the process. Timer starts on calls to
    *          {@link #start()}
-   * @param info information about the process to pass along if the timer expires
    */
   public TimeoutExceptionInjector(final ForeignExceptionListener listener, final long maxTime) {
     this.maxTime = maxTime;

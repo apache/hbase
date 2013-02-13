@@ -66,7 +66,6 @@ public class ProcedureCoordinator {
    * constructor.
    *
    * @param rpcs
-   * @param factory Builder for building Procedures
    * @param pool Used for executing procedures.
    */
   public ProcedureCoordinator(ProcedureCoordinatorRpcs rpcs, ThreadPoolExecutor pool) {

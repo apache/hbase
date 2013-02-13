@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Task builder to build instances of a {@link ProcedureMember}'s {@link Subporocedure}s.
+ * Task builder to build instances of a {@link ProcedureMember}'s {@link Subprocedure}s.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

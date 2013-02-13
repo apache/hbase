@@ -62,7 +62,8 @@ import com.google.common.collect.Lists;
  * amounts of time if one of the participants fails or takes a really long time (e.g. GC pause).
  * <p>
  * Users should generally not directly create or subclass instances of this.  They are created
- * for them implicitly via {@link ProcedureCoordinator#startProcedure(String, byte[], List)}}
+ * for them implicitly via {@link ProcedureCoordinator#startProcedure(ForeignExceptionDispatcher,
+ * String, byte[], List)}}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -142,7 +143,8 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
    * Create a procedure.
    *
    * Users should generally not directly create instances of this.  They are created them
-   * implicitly via {@link ProcedureCoordinator#createProcedure(String, byte[], List)}}
+   * implicitly via {@link ProcedureCoordinator#createProcedure(ForeignExceptionDispatcher,
+   * String, byte[], List)}}
    *
    * @param coord coordinator to call back to for general errors (e.g.
    *          {@link ProcedureCoordinator#rpcConnectionFailure(String, IOException)}).
@@ -257,7 +259,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * Sends a message to members that all {@link Subprocedure#inBarrier} calls have completed.
+   * Sends a message to members that all {@link Subprocedure#insideBarrier} calls have completed.
    * After this executes, the coordinator can assume that any state resources about this barrier
    * procedure state has been released.
    */

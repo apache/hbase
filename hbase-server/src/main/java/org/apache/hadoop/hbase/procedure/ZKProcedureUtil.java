@@ -69,8 +69,8 @@ public abstract class ZKProcedureUtil
   /**
    * Top-level watcher/controller for procedures across the cluster.
    * <p>
-   * On instantiation, this ensures the procedure znodes exists.  This however requires calling
-   * {@link #start} to start monitoring for running procedures.
+   * On instantiation, this ensures the procedure znodes exist.  This however requires the passed in
+   *  watcher has been started.
    * @param watcher watcher for the cluster ZK. Owned by <tt>this</tt> and closed via
    *          {@link #close()}
    * @param procDescription name of the znode describing the procedure to run

@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
  * Latches are use too block its progress and trigger continuations when barrier conditions are
  * met.
  *
- * Exceptions that make it out from calls to {@link #acquireBarrier()} or {@link #insideBarrier()}
- * get converted into {@link ExternalExceptions}, which will get propagated to the
+ * Exception that makes it out of calls to {@link #acquireBarrier()} or {@link #insideBarrier()}
+ * gets converted into {@link ForeignException}, which will get propagated to the
  * {@link ProcedureCoordinator}.
  *
  * There is a category of procedure (ex: online-snapshots), and a user-specified instance-specific
@@ -144,11 +144,13 @@ abstract public class Subprocedure implements Callable<Void> {
    * This would normally be executed by the ProcedureMemeber when a acquire message comes from the
    * coordinator.  Rpcs are used to spend message back to the coordinator after different phases
    * are executed.  Any exceptions caught during the execution (except for InterrupedException) get
-   * converted and propagated to coordinator via {@link ProcedureMemberRpcs#sendAbort(Exception)}.
+   * converted and propagated to coordinator via {@link ProcedureMemberRpcs#sendMemberAborted(
+   * Subprocedure, ForeignException)}.
    */
   @SuppressWarnings("finally")
   final public Void call() {
-    LOG.debug("Starting subprocedure '" + barrierName + "' with timeout " + executionTimeoutTimer.getMaxTime() + "ms");
+    LOG.debug("Starting subprocedure '" + barrierName + "' with timeout " +
+        executionTimeoutTimer.getMaxTime() + "ms");
     // start the execution timeout timer
     executionTimeoutTimer.start();
 

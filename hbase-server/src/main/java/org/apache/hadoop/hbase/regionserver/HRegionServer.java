@@ -3749,7 +3749,8 @@ public class  HRegionServer implements ClientProtocol,
    *
    * @param region
    * @param mutate
-   * @return
+   * @return result to return to client if default operation should be
+   * bypassed as indicated by RegionObserver, null otherwise
    * @throws IOException
    */
   protected Result append(final HRegion region,

@@ -95,7 +95,7 @@ public class ProcedureMember implements Closeable {
    * sent here)
    * @param opName
    * @param data
-   * @return
+   * @return subprocedure
    */
   public Subprocedure createSubprocedure(String opName, byte[] data) {
     return builder.buildSubprocedure(opName, data);
@@ -214,7 +214,7 @@ public class ProcedureMember implements Closeable {
   /**
    * Send abort to the specified procedure
    * @param procName name of the procedure to about
-   * @param reason serialized information about the abort
+   * @param ee exception information about the abort
    */
   public void receiveAbortProcedure(String procName, ForeignException ee) {
     // if we know about the procedure, notify it

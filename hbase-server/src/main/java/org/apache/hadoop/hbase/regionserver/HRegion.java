@@ -2022,7 +2022,6 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Perform a batch put with no pre-specified locks
-   * @see HRegion#put(Pair[])
    */
   public OperationStatus[] put(Put[] puts) throws IOException {
     @SuppressWarnings("unchecked")
@@ -2534,18 +2533,15 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Complete taking the snapshot on the region. Writes the region info and adds references to the
    * working snapshot directory.
-   * @param desc snapshot being completed
-   * @param exnSnare ForeignExceptionSnare that captures external exections in case we need to
-   *   bail out.  This is allowed to be null and will just be ignored in that case.
-   * @throws IOException if there is an external or internal error causing the snapshot to fail
    *
    * TODO for api consistency, consider adding another version with no {@link ForeignExceptionSnare}
    * arg.  (In the future other cancellable HRegion methods could eventually add a
    * {@link ForeignExceptionSnare}, or we could do something fancier).
    *
    * @param desc snasphot description object
-   * @param exnSnaprethe snare that used for reporting and checking for ForeignExceptions
-   * @throws IOException thrown if ther are network or file system exceptions.
+   * @param exnSnare ForeignExceptionSnare that captures external exeptions in case we need to
+   *   bail out.  This is allowed to be null and will just be ignored in that case.
+   * @throws IOException if there is an external or internal error causing the snapshot to fail
    */
   public void addRegionToSnapshot(SnapshotDescription desc,
       ForeignExceptionSnare exnSnare) throws IOException {

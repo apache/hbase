@@ -66,7 +66,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * <p>
  * On startup, requires {@link #start()} to be called.
  * <p>
- * On shutdown, requires {@link #close()} to be called
+ * On shutdown, requires {@link #stop(boolean)} to be called
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -115,8 +115,6 @@ public class RegionServerSnapshotManager {
 
   /**
    * Create a default snapshot handler - uses a zookeeper based cohort controller.
-   * @param conf configuration to use for extracting information like thread pool properties and
-   *          frequency to check for errors (wake frequency).
    * @param rss region server running the handler
    * @throws KeeperException if the zookeeper cluster cannot be reached
    */

@@ -68,7 +68,7 @@ public interface ProcedureCoordinatorRpcs extends Closeable {
    * Notify members that all members have acquired their parts of the barrier and that they can
    * now execute under the global barrier.
    *
-   * Must come after calling {@link #sendGlobalBarrierAcquire(String, byte[], List)}
+   * Must come after calling {@link #sendGlobalBarrierAcquire(Procedure, byte[], List)}
    *
    * @param procName name of the procedure to start
    * @param members members to tell we have reached in-barrier phase

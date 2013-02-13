@@ -551,7 +551,6 @@ public class RestoreSnapshotHelper {
   /**
    * Create a new table descriptor cloning the snapshot table schema.
    *
-   * @param admin
    * @param snapshotTableDescriptor
    * @param tableName
    * @return cloned table descriptor

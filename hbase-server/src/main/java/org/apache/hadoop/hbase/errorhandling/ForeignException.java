@@ -148,7 +148,7 @@ public class ForeignException extends IOException {
   /**
    * Converts an ForeignException to a array of bytes.
    * @param source the name of the external exception source
-   * @param ee the "local" external exception (local)
+   * @param t the "local" external exception (local)
    * @return protobuf serialized version of ForeignThreadException
    */
   public static byte[] serialize(String source, Throwable t) {

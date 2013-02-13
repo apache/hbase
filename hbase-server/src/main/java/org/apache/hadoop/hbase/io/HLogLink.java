@@ -49,7 +49,7 @@ public class HLogLink extends FileLink {
   }
 
   /**
-   * @param rootdir Path to the root directory where hbase files are stored
+   * @param rootDir Path to the root directory where hbase files are stored
    * @param serverName Region Server owner of the log
    * @param logName WAL file name
    */
@@ -61,7 +61,7 @@ public class HLogLink extends FileLink {
 
   /**
    * @param originPath Path to the wal in the log directory
-   * @param archiveDir Path to the wal in the archived log directory
+   * @param archivePath Path to the wal in the archived log directory
    */
   public HLogLink(final Path originPath, final Path archivePath) {
     setLocations(originPath, archivePath);

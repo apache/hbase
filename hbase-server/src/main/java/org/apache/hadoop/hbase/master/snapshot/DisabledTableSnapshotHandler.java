@@ -55,7 +55,6 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
 
   /**
    * @param snapshot descriptor of the snapshot to take
-   * @param server parent server
    * @param masterServices master services provider
    * @throws IOException on unexpected error
    */
