@@ -689,7 +689,21 @@ public class HBaseAdmin implements Abortable, Closeable {
     enableTableAsync(tableName);
 
     // Wait until all regions are enabled
+    waitUntilTableIsEnabled(tableName);
+
+    LOG.info("Enabled table " + Bytes.toString(tableName));
+  }
+
+  /**
+   * Wait for the table to be enabled.
+   * If enabling the table exceeds the retry period, an exception is thrown.
+   * @param tableName name of the table
+   * @throws IOException if a remote or network exception occurs or
+   *    table is not enabled after the retries period.
+   */
+  private void waitUntilTableIsEnabled(final byte[] tableName) throws IOException {
     boolean enabled = false;
+    long start = EnvironmentEdgeManager.currentTimeMillis();
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       enabled = isTableEnabled(tableName);
       if (enabled) {
@@ -710,10 +724,10 @@ public class HBaseAdmin implements Abortable, Closeable {
       }
     }
     if (!enabled) {
-      throw new IOException("Unable to enable table " +
-        Bytes.toString(tableName));
+      long msec = EnvironmentEdgeManager.currentTimeMillis() - start;
+      throw new IOException("Table '" + Bytes.toString(tableName) +
+        "' not yet enabled, after " + msec + "ms.");
     }
-    LOG.info("Enabled table " + Bytes.toString(tableName));
   }
 
   public void enableTableAsync(final String tableName)
@@ -2409,9 +2423,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       throw new TableExistsException("Table '" + tableName + " already exists");
     }
     internalRestoreSnapshot(snapshotName, tableName);
-    for (int tries = 0; !isTableEnabled(tableName); ++tries) {
-      Thread.sleep(this.pause);
-    }
+    waitUntilTableIsEnabled(Bytes.toBytes(tableName));
   }
 
   /**
