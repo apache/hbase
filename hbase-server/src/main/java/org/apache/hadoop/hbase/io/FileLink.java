@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.io;
 
-import java.util.ArrayList;
 import java.util.Collection;
 
 import java.io.IOException;
@@ -27,7 +26,6 @@ import java.io.FileNotFoundException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,8 +33,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * The FileLink is a sort of hardlink, that allows access to a file given a set of locations.
@@ -405,7 +401,7 @@ public class FileLink {
    * @throws IOException on unexpected error.
    */
   public FSDataInputStream open(final FileSystem fs, int bufferSize) throws IOException {
-    return new FSDataInputStream(new FileLinkInputStream(fs, this));
+    return new FSDataInputStream(new FileLinkInputStream(fs, this, bufferSize));
   }
 
   /**
