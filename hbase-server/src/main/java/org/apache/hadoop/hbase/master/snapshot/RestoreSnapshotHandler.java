@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -100,7 +99,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       this.masterServices.getTableDescriptors().add(hTableDescriptor);
 
       // 2. Execute the on-disk Restore
-      LOG.debug("Starting restore snapshot=" + snapshot);
+      LOG.debug("Starting restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot));
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
           masterServices.getConfiguration(), fs,
@@ -115,10 +114,11 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       MetaEditor.mutateRegions(catalogTracker, hrisToRemove, hris);
 
       // At this point the restore is complete. Next step is enabling the table.
-      LOG.info("Restore snapshot=" + snapshot.getName() + " on table=" +
+      LOG.info("Restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot) + " on table=" +
         Bytes.toString(tableName) + " completed!");
     } catch (IOException e) {
-      String msg = "restore snapshot=" + snapshot + " failed. re-run the restore command.";
+      String msg = "restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot)
+          + " failed. Try re-running the restore command.";
       LOG.error(msg, e);
       monitor.receive(new ForeignException(masterServices.getServerName().toString(), e));
       throw new RestoreSnapshotException(msg, e);
@@ -141,7 +141,8 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   public void cancel(String why) {
     if (this.stopped) return;
     this.stopped = true;
-    String msg = "Stopping restore snapshot=" + snapshot + " because: " + why;
+    String msg = "Stopping restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot)
+        + " because: " + why;
     LOG.info(msg);
     CancellationException ce = new CancellationException(why);
     this.monitor.receive(new ForeignException(masterServices.getServerName().toString(), ce));

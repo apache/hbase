@@ -143,14 +143,14 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
       completeSnapshot(this.snapshotDir, this.workingDir, this.fs);
     } catch (Exception e) {
-      LOG.error("Got exception taking snapshot", e);
-      String reason = "Failed due to exception:" + e.getMessage();
-      LOG.error("Got exception taking snapshot", e);
+      String reason = "Failed taking snapshot " + SnapshotDescriptionUtils.toString(snapshot)
+          + " due to exception:" + e.getMessage();
+      LOG.error(reason, e);
       ForeignException ee = new ForeignException(reason, e);
       monitor.receive(ee);
       // need to mark this completed to close off and allow cleanup to happen.
-      cancel("Failed to take snapshot '" + snapshot.getName() + "' due to exception");
-
+      cancel("Failed to take snapshot '" + SnapshotDescriptionUtils.toString(snapshot)
+          + "' due to exception");
     } finally {
       LOG.debug("Launching cleanup of working dir:" + workingDir);
       try {
@@ -188,15 +188,16 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   /**
    * Snapshot the specified regions
    */
-  protected abstract void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regions) throws IOException,
-      KeeperException;
+  protected abstract void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regions)
+      throws IOException, KeeperException;
 
   @Override
   public void cancel(String why) {
     if (finished) return;
 
     this.finished = true;
-    LOG.info("Stop taking snapshot=" + snapshot + " because: " + why);
+    LOG.info("Stop taking snapshot=" + SnapshotDescriptionUtils.toString(snapshot) + " because: "
+        + why);
     CancellationException ce = new CancellationException(why);
     monitor.receive(new ForeignException(master.getServerName().toString(), ce));
   }

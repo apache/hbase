@@ -109,9 +109,9 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
       // 2. let the CreateTableHandler add the regions to meta
       return metaChanges.getRegionsToAdd();
     } catch (Exception e) {
-      String msg = "clone snapshot=" + snapshot + " failed";
+      String msg = "clone snapshot=" + SnapshotDescriptionUtils.toString(snapshot) + " failed";
       LOG.error(msg, e);
-      IOException rse = new RestoreSnapshotException(msg, e);
+      IOException rse = new RestoreSnapshotException(msg, e, snapshot);
 
       // these handlers aren't futures so we need to register the error here.
       this.monitor.receive(new ForeignException(NAME, rse));

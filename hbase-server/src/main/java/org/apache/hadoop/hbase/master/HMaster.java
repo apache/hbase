@@ -2445,7 +2445,8 @@ Server {
       throw new ServiceException(e);
     }
 
-    LOG.debug("Starting snapshot for:" + request);
+    LOG.debug("Submitting snapshot request for:" +
+        SnapshotDescriptionUtils.toString(request.getSnapshot()));
     // get the snapshot information
     SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(request.getSnapshot(),
       this.conf);
@@ -2515,7 +2516,8 @@ Server {
   @Override
   public IsSnapshotDoneResponse isSnapshotDone(RpcController controller,
       IsSnapshotDoneRequest request) throws ServiceException {
-    LOG.debug("Checking to see if snapshot from request:" + request + " is done");
+    LOG.debug("Checking to see if snapshot from request:" +
+        SnapshotDescriptionUtils.toString(request.getSnapshot()) + " is done");
     try {
       IsSnapshotDoneResponse.Builder builder = IsSnapshotDoneResponse.newBuilder();
       boolean done = snapshotManager.isSnapshotDone(request.getSnapshot());

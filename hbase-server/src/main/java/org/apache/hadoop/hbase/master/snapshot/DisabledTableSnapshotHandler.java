@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.CopyRecoveredEditsTask;
 import org.apache.hadoop.hbase.snapshot.ReferenceRegionHFilesTask;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.TableInfoCopyTask;
 import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -86,7 +87,7 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
 
       // 2. for each region, write all the info to disk
       LOG.info("Starting to write region info and WALs for regions for offline snapshot:"
-          + snapshot);
+          + SnapshotDescriptionUtils.toString(snapshot));
       for (HRegionInfo regionInfo : regions) {
         // 2.1 copy the regionInfo files to the snapshot
         Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnapshotDirectory(snapshot, rootDir,
@@ -113,11 +114,13 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
       monitor.rethrowException();
     } catch (Exception e) {
       // make sure we capture the exception to propagate back to the client later
-      String reason = "Failed due to exception:" + e.getMessage();
+      String reason = "Failed snapshot " + SnapshotDescriptionUtils.toString(snapshot)
+          + " due to exception:" + e.getMessage();
       ForeignException ee = new ForeignException(reason, e);
       monitor.receive(ee);
     } finally {
-      LOG.debug("Marking snapshot" + this.snapshot + " as finished.");
+      LOG.debug("Marking snapshot" + SnapshotDescriptionUtils.toString(snapshot)
+          + " as finished.");
 
       // 6. mark the timer as finished - even if we got an exception, we don't need to time the
       // operation any further

@@ -304,12 +304,14 @@ public class SnapshotManager implements Stoppable {
          "No snapshot name passed in request, can't figure out which snapshot you want to check.");
     }
 
+    String ssString = SnapshotDescriptionUtils.toString(expected);
+
     // check to see if the sentinel exists
     TakeSnapshotHandler handler = getTakeSnapshotHandler(expected);
     if (handler == null) {
       // doesn't exist, check if it is already completely done.
       if (!isSnapshotCompleted(expected)) {
-        throw new UnknownSnapshotException("Snapshot:" + expected.getName()
+        throw new UnknownSnapshotException("Snapshot " + ssString
             + " is not currently running or one of the known completed snapshots.");
       }
       // was done, return true;
@@ -320,15 +322,16 @@ public class SnapshotManager implements Stoppable {
     try {
       handler.rethrowException();
     } catch (ForeignException e) {
-      throw new HBaseSnapshotException("Snapshot error from RS", e, expected);
+      throw new HBaseSnapshotException("Snapshot " + ssString +  " had an error from RS", e,
+          expected);
     }
 
     // check to see if we are done
     if (handler.isFinished()) {
-      LOG.debug("Snapshot '" + expected.getName() + "' has completed, notifying client.");
+      LOG.debug("Snapshot '" + ssString + "' has completed, notifying client.");
       return true;
     } else if (LOG.isDebugEnabled()) {
-      LOG.debug("Sentinel isn't finished with snapshot '" + expected.getName() + "'!");
+      LOG.debug("Snapshoting '" + ssString + "' is still in progress!");
     }
     return false;
   }
@@ -370,14 +373,18 @@ public class SnapshotManager implements Stoppable {
 
     // make sure we aren't already running a snapshot
     if (isTakingSnapshot()) {
-      throw new SnapshotCreationException("Already running another snapshot:"
-          + this.handler.getSnapshot(), snapshot);
+      throw new SnapshotCreationException("Rejected taking "
+          + SnapshotDescriptionUtils.toString(snapshot)
+          + " because we are already running another snapshot "
+          + SnapshotDescriptionUtils.toString(this.handler.getSnapshot()), snapshot);
     }
 
     // make sure we aren't running a restore on the same table
     if (isRestoringTable(snapshot.getTable())) {
-      throw new SnapshotCreationException("Restore in progress on the same table snapshot:"
-          + this.handler.getSnapshot(), snapshot);
+      throw new SnapshotCreationException("Rejected taking "
+          + SnapshotDescriptionUtils.toString(snapshot)
+          + " because we are already have a restore in progress on the same snapshot "
+          + SnapshotDescriptionUtils.toString(this.handler.getSnapshot()), snapshot);
     }
 
     try {
@@ -388,7 +395,7 @@ public class SnapshotManager implements Stoppable {
       // recreate the working directory for the snapshot
       if (!fs.mkdirs(workingDir)) {
         throw new SnapshotCreationException("Couldn't create working directory (" + workingDir
-            + ") for snapshot.", snapshot);
+            + ") for snapshot" , snapshot);
       }
     } catch (HBaseSnapshotException e) {
       throw e;
@@ -481,7 +488,7 @@ public class SnapshotManager implements Stoppable {
     if (assignmentMgr.getZKTable().isEnabledTable(snapshot.getTable())) {
       LOG.debug("Table enabled, starting distributed snapshot.");
       snapshotEnabledTable(snapshot);
-      LOG.debug("Started snapshot: " + snapshot);
+      LOG.debug("Started snapshot: " + SnapshotDescriptionUtils.toString(snapshot));
     }
     // For disabled table, snapshot is created by the master
     else if (assignmentMgr.getZKTable().isDisabledTable(snapshot.getTable())) {

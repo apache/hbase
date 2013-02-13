@@ -58,7 +58,8 @@ public class TableInfoCopyTask extends SnapshotTask {
   public Void call() throws Exception {
     LOG.debug("Running table info copy.");
     this.rethrowException();
-    LOG.debug("Attempting to copy table info for snapshot:" + this.snapshot);
+    LOG.debug("Attempting to copy table info for snapshot:"
+        + SnapshotDescriptionUtils.toString(this.snapshot));
     // get the HTable descriptor
     HTableDescriptor orig = FSTableDescriptors.getTableDescriptor(fs, rootDir,
       Bytes.toBytes(this.snapshot.getTable()));
