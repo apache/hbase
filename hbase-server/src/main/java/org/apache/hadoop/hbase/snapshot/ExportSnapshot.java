@@ -128,25 +128,6 @@ public final class ExportSnapshot extends Configured implements Tool {
     }
 
     @Override
-    public void cleanup(Context context) {
-      if (outputFs != null) {
-        try {
-          outputFs.close();
-        } catch (IOException e) {
-          LOG.error("Error closing output FileSystem", e);
-        }
-      }
-
-      if (inputFs != null) {
-        try {
-          inputFs.close();
-        } catch (IOException e) {
-          LOG.error("Error closing input FileSystem", e);
-        }
-      }
-    }
-
-    @Override
     public void map(Text key, NullWritable value, Context context)
         throws InterruptedException, IOException {
       Path inputPath = new Path(key.toString());
@@ -607,7 +588,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     Configuration conf = getConf();
     Path inputRoot = FSUtils.getRootDir(conf);
     FileSystem inputFs = FileSystem.get(conf);
-    FileSystem outputFs = FileSystem.get(outputRoot.toUri(), new Configuration());
+    FileSystem outputFs = FileSystem.get(outputRoot.toUri(), conf);
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
     Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshotName, outputRoot);
