@@ -143,13 +143,15 @@ public class MetaEditor {
    */
   static void deleteFromMetaTable(final CatalogTracker ct, final Delete d)
       throws IOException {
-    deleteFromMetaTable(ct, Arrays.asList(d));
+    List<Delete> dels = new ArrayList<Delete>(1);
+    dels.add(d);
+    deleteFromMetaTable(ct, dels);
   }
 
   /**
    * Delete the passed <code>deletes</code> from the <code>.META.</code> table.
    * @param ct CatalogTracker on whose back we will ride the edit.
-   * @param deletes Deletes to add to .META.
+   * @param deletes Deletes to add to .META.  This list should support #remove.
    * @throws IOException
    */
   static void deleteFromMetaTable(final CatalogTracker ct, final List<Delete> deletes)
