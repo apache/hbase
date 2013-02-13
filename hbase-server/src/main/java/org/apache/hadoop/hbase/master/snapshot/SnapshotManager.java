@@ -20,10 +20,13 @@ package org.apache.hadoop.hbase.master.snapshot;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +37,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -44,6 +48,10 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
@@ -57,6 +65,7 @@ import org.apache.hadoop.hbase.snapshot.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * This class manages the procedure of taking and restoring snapshots. There is only one
@@ -74,6 +83,9 @@ public class SnapshotManager implements Stoppable {
 
   /** By default, check to see if the snapshot is complete every WAKE MILLIS (ms) */
   public static final int SNAPSHOT_WAKE_MILLIS_DEFAULT = 500;
+
+  /** Enable or disable snapshot support */
+  public static final String HBASE_SNAPSHOT_ENABLED = "hbase.snapshot.enabled";
 
   /**
    * Conf key for # of ms elapsed between checks for snapshot errors while waiting for
@@ -102,6 +114,9 @@ public class SnapshotManager implements Stoppable {
   private final long wakeFrequency;
   private final MasterServices master;  // Needed by TableEventHandlers
 
+  // Is snapshot feature enabled?
+  private boolean isSnapshotSupported = false;
+
   // A reference to a handler.  If the handler is non-null, then it is assumed that a snapshot is
   // in progress currently
   // TODO: this is a bad smell;  likely replace with a collection in the future.  Also this gets
@@ -119,7 +134,7 @@ public class SnapshotManager implements Stoppable {
    * @param master
    * @param comms
    */
-  public SnapshotManager(final MasterServices master) throws IOException {
+  public SnapshotManager(final MasterServices master) throws IOException, UnsupportedOperationException {
     this.master = master;
 
     // get the configuration for the coordinator
@@ -127,6 +142,8 @@ public class SnapshotManager implements Stoppable {
     this.wakeFrequency = conf.getInt(SNAPSHOT_WAKE_MILLIS_KEY, SNAPSHOT_WAKE_MILLIS_DEFAULT);
     this.rootDir = master.getMasterFileSystem().getRootDir();
     this.executorService = master.getExecutorService();
+
+    checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
     resetTempDir();
   }
 
@@ -715,5 +732,92 @@ public class SnapshotManager implements Stoppable {
   @Override
   public boolean isStopped() {
     return this.stopped;
+  }
+
+  /**
+   * Throws an exception if snapshot operations (take a snapshot, restore, clone) are not supported.
+   * Called at the beginning of snapshot() and restoreSnapshot() methods.
+   * @throws UnsupportedOperationException if snapshot are not supported
+   */
+  public void checkSnapshotSupport() throws UnsupportedOperationException {
+    if (!this.isSnapshotSupported) {
+      throw new UnsupportedOperationException(
+        "To use snapshots, You must add to the hbase-site.xml of the HBase Master: '" +
+          HBASE_SNAPSHOT_ENABLED + "' property with value 'true'.");
+    }
+  }
+
+  /**
+   * Called at startup, to verify if snapshot operation is supported, and to avoid
+   * starting the master if there're snapshots present but the cleaners needed are missing.
+   * Otherwise we can end up with snapshot data loss.
+   * @param conf The {@link Configuration} object to use
+   * @param mfs The MasterFileSystem to use
+   * @throws IOException in case of file-system operation failure
+   * @throws UnsupportedOperationException in case cleaners are missing and
+   *         there're snapshot in the system
+   */
+  private void checkSnapshotSupport(final Configuration conf, final MasterFileSystem mfs)
+      throws IOException, UnsupportedOperationException {
+    // Verify if snapshot are disabled by the user
+    String enabled = conf.get(HBASE_SNAPSHOT_ENABLED);
+    boolean snapshotEnabled = conf.getBoolean(HBASE_SNAPSHOT_ENABLED, false);
+    boolean userDisabled = (enabled != null && enabled.trim().length() > 0 && !snapshotEnabled);
+
+    // Extract cleaners from conf
+    Set<String> hfileCleaners = new HashSet<String>();
+    String[] cleaners = conf.getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+    if (cleaners != null) Collections.addAll(hfileCleaners, cleaners);
+
+    Set<String> logCleaners = new HashSet<String>();
+    cleaners = conf.getStrings(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS);
+    if (cleaners != null) Collections.addAll(logCleaners, cleaners);
+
+    // If the user has enabled the snapshot, we force the cleaners to be present
+    // otherwise we still need to check if cleaners are enabled or not and verify
+    // that there're no snapshot in the .snapshot folder.
+    if (snapshotEnabled) {
+      // Inject snapshot cleaners, if snapshot.enable is true
+      hfileCleaners.add(SnapshotHFileCleaner.class.getName());
+      hfileCleaners.add(HFileLinkCleaner.class.getName());
+      logCleaners.add(SnapshotLogCleaner.class.getName());
+
+      // Set cleaners conf
+      conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
+        hfileCleaners.toArray(new String[hfileCleaners.size()]));
+      conf.setStrings(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS,
+        logCleaners.toArray(new String[logCleaners.size()]));
+    } else {
+      // Verify if cleaners are present
+      snapshotEnabled = logCleaners.contains(SnapshotLogCleaner.class.getName()) &&
+        hfileCleaners.contains(SnapshotHFileCleaner.class.getName()) &&
+        hfileCleaners.contains(HFileLinkCleaner.class.getName());
+
+      // Warn if the cleaners are enabled but the snapshot.enabled property is false/not set.
+      if (snapshotEnabled) {
+        LOG.warn("Snapshot log and hfile cleaners are present in the configuration, " +
+          "but the '" + HBASE_SNAPSHOT_ENABLED + "' property " +
+          (userDisabled ? "is set to 'false'." : "is not set."));
+      }
+    }
+
+    // Mark snapshot feature as enabled if cleaners are present and user as not disabled it.
+    this.isSnapshotSupported = snapshotEnabled && !userDisabled;
+
+    // If cleaners are not enabled, verify that there're no snapshot in the .snapshot folder
+    // otherwise we end up with snapshot data loss.
+    if (!snapshotEnabled) {
+      LOG.info("Snapshot feature is not enabled, missing log and hfile cleaners.");
+      Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(mfs.getRootDir());
+      FileSystem fs = mfs.getFileSystem();
+      if (fs.exists(snapshotDir)) {
+        FileStatus[] snapshots = FSUtils.listStatus(fs, snapshotDir,
+          new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
+        if (snapshots != null) {
+          LOG.error("Snapshots are present, but cleaners are not enabled.");
+          checkSnapshotSupport();
+        }
+      }
+    }
   }
 }

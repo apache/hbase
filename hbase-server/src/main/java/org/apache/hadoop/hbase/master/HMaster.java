@@ -578,7 +578,7 @@ Server {
         ", cluster-up flag was=" + wasUp);
 
     // create the snapshot manager
-     this.snapshotManager = new SnapshotManager(this);
+    this.snapshotManager = new SnapshotManager(this);
   }
 
   /**
@@ -2439,6 +2439,12 @@ Server {
   @Override
   public TakeSnapshotResponse snapshot(RpcController controller, TakeSnapshotRequest request)
       throws ServiceException {
+    try {
+      this.snapshotManager.checkSnapshotSupport();
+    } catch (UnsupportedOperationException e) {
+      throw new ServiceException(e);
+    }
+
     LOG.debug("Starting snapshot for:" + request);
     // get the snapshot information
     SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(request.getSnapshot(),
@@ -2486,6 +2492,12 @@ Server {
   public DeleteSnapshotResponse deleteSnapshot(RpcController controller,
       DeleteSnapshotRequest request) throws ServiceException {
     try {
+      this.snapshotManager.checkSnapshotSupport();
+    } catch (UnsupportedOperationException e) {
+      throw new ServiceException(e);
+    }
+
+    try {
       snapshotManager.deleteSnapshot(request.getSnapshot());
       return DeleteSnapshotResponse.newBuilder().build();
     } catch (IOException e) {
@@ -2530,6 +2542,12 @@ Server {
   @Override
   public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
       RestoreSnapshotRequest request) throws ServiceException {
+    try {
+      this.snapshotManager.checkSnapshotSupport();
+    } catch (UnsupportedOperationException e) {
+      throw new ServiceException(e);
+    }
+
     try {
       SnapshotDescription reqSnapshot = request.getSnapshot();
       snapshotManager.restoreSnapshot(reqSnapshot);

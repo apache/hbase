@@ -34,12 +34,14 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
@@ -94,10 +96,10 @@ public class TestSnapshotFromMaster {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
     fs = UTIL.getDFSCluster().getFileSystem();
-    rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
-    snapshots = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
-    archiveDir = new Path(rootDir, ".archive");
     master = UTIL.getMiniHBaseCluster().getMaster();
+    rootDir = master.getMasterFileSystem().getRootDir();
+    snapshots = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
+    archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
   }
 
   private static void setupConf(Configuration conf) {
@@ -113,9 +115,11 @@ public class TestSnapshotFromMaster {
     conf.setInt("hbase.hstore.blockingStoreFiles", 12);
     // drop the number of attempts for the hbase admin
     conf.setInt("hbase.client.retries.number", 1);
-    // set the only HFile cleaner as the snapshot cleaner
-    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-        SnapshotHFileCleaner.class.getCanonicalName());
+    // Ensure no extra cleaners on by default (e.g. TimeToLiveHFileCleaner)
+    conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, "");
+    conf.set(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS, "");
+    // Enable snapshot
+    conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.setLong(SnapshotHFileCleaner.HFILE_CACHE_REFRESH_PERIOD_CONF_KEY, cacheRefreshPeriod);
   }
 
@@ -205,9 +209,7 @@ public class TestSnapshotFromMaster {
 
     // then create a snapshot to the fs and make sure that we can find it when checking done
     snapshotName = "completed";
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    Path root = master.getMasterFileSystem().getRootDir();
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, root);
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     desc = desc.toBuilder().setName(snapshotName).build();
     SnapshotDescriptionUtils.writeSnapshotInfo(desc, snapshotDir, fs);
 
@@ -294,10 +296,8 @@ public class TestSnapshotFromMaster {
     byte[] snapshotNameBytes = Bytes.toBytes(snapshotName);
     admin.snapshot(snapshotNameBytes, TABLE_NAME);
 
-    Configuration conf = UTIL.getConfiguration();
-    Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = FSUtils.getCurrentFileSystem(conf);
-
+    Configuration conf = master.getConfiguration();
+    LOG.info("After snapshot File-System state");
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
     // ensure we only have one snapshot
@@ -309,12 +309,17 @@ public class TestSnapshotFromMaster {
     // compact the files so we get some archived files for the table we just snapshotted
     List<HRegion> regions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
     for (HRegion region : regions) {
+      region.waitForFlushesAndCompactions(); // enable can trigger a compaction, wait for it.
       region.compactStores(); // min is 3 so will compact and archive
     }
+    LOG.info("After compaction File-System state");
+    FSUtils.logFileSystemState(fs, rootDir, LOG);
 
     // make sure the cleaner has run
     LOG.debug("Running hfile cleaners");
     ensureHFileCleanersRun();
+    LOG.info("After cleaners File-System state: " + rootDir);
+    FSUtils.logFileSystemState(fs, rootDir, LOG);
 
     // get the snapshot files for the table
     Path snapshotTable = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
@@ -325,7 +330,7 @@ public class TestSnapshotFromMaster {
       LOG.debug(file.getPath());
     }
     // get the archived files for the table
-    Collection<String> files = getArchivedHFiles(conf, rootDir, fs, STRING_TABLE_NAME);
+    Collection<String> files = getArchivedHFiles(archiveDir, rootDir, fs, STRING_TABLE_NAME);
 
     // and make sure that there is a proper subset
     for (FileStatus file : snapshotHFiles) {
@@ -341,13 +346,18 @@ public class TestSnapshotFromMaster {
     // make sure we wait long enough to refresh the snapshot hfile
     List<BaseHFileCleanerDelegate> delegates = UTIL.getMiniHBaseCluster().getMaster()
         .getHFileCleaner().cleanersChain;
-    ((SnapshotHFileCleaner) delegates.get(0)).getFileCacheForTesting()
-        .triggerCacheRefreshForTesting();
+    for (BaseHFileCleanerDelegate delegate: delegates) {
+      if (delegate instanceof SnapshotHFileCleaner) {
+        ((SnapshotHFileCleaner)delegate).getFileCacheForTesting().triggerCacheRefreshForTesting();
+      }
+    }
     // run the cleaner again
     LOG.debug("Running hfile cleaners");
     ensureHFileCleanersRun();
+    LOG.info("After delete snapshot cleaners run File-System state");
+    FSUtils.logFileSystemState(fs, rootDir, LOG);
 
-    files = getArchivedHFiles(conf, rootDir, fs, STRING_TABLE_NAME);
+    files = getArchivedHFiles(archiveDir, rootDir, fs, STRING_TABLE_NAME);
     assertEquals("Still have some hfiles in the archive, when their snapshot has been deleted.", 0,
       files.size());
   }
@@ -356,12 +366,12 @@ public class TestSnapshotFromMaster {
    * @return all the HFiles for a given table that have been archived
    * @throws IOException on expected failure
    */
-  private final Collection<String> getArchivedHFiles(Configuration conf, Path rootDir,
+  private final Collection<String> getArchivedHFiles(Path archiveDir, Path rootDir,
       FileSystem fs, String tableName) throws IOException {
-    Path tableArchive = HFileArchiveUtil.getTableArchivePath(new Path(rootDir, tableName));
+    Path tableArchive = new Path(archiveDir, tableName);
     FileStatus[] archivedHFiles = SnapshotTestingUtils.listHFiles(fs, tableArchive);
     List<String> files = new ArrayList<String>(archivedHFiles.length);
-    LOG.debug("Have archived hfiles:");
+    LOG.debug("Have archived hfiles: " + tableArchive);
     for (FileStatus file : archivedHFiles) {
       LOG.debug(file.getPath());
       files.add(file.getPath().getName());
