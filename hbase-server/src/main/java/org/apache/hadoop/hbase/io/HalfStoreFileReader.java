@@ -59,16 +59,42 @@ public class HalfStoreFileReader extends StoreFile.Reader {
   private boolean firstKeySeeked = false;
 
   /**
-   * @param fs
-   * @param p
+   * Creates a half file reader for a normal hfile.
+   * @param fs fileystem to read from
+   * @param p path to hfile
    * @param cacheConf
-   * @param r
+   * @param r original reference file (contains top or bottom)
+   * @param preferredEncodingInCache
    * @throws IOException
    */
   public HalfStoreFileReader(final FileSystem fs, final Path p,
       final CacheConfig cacheConf, final Reference r,
       DataBlockEncoding preferredEncodingInCache) throws IOException {
     super(fs, p, cacheConf, preferredEncodingInCache);
+    // This is not actual midkey for this half-file; its just border
+    // around which we split top and bottom.  Have to look in files to find
+    // actual last and first keys for bottom and top halves.  Half-files don't
+    // have an actual midkey themselves. No midkey is how we indicate file is
+    // not splittable.
+    this.splitkey = r.getSplitKey();
+    // Is it top or bottom half?
+    this.top = Reference.isTopFileRegion(r.getFileRegion());
+  }
+
+  /**
+   * Creates a half file reader for a hfile referred to by an hfilelink.
+   * @param fs fileystem to read from
+   * @param p path to hfile
+   * @param link
+   * @param cacheConf
+   * @param r original reference file (contains top or bottom)
+   * @param preferredEncodingInCache
+   * @throws IOException
+   */
+  public HalfStoreFileReader(final FileSystem fs, final Path p, final HFileLink link,
+      final CacheConfig cacheConf, final Reference r,
+      DataBlockEncoding preferredEncodingInCache) throws IOException {
+    super(fs, p, link, link.getFileStatus(fs).getLen(), cacheConf, preferredEncodingInCache, true);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't

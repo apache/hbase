@@ -20,10 +20,15 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -32,6 +37,8 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestHTableDescriptor {
+  final static Log LOG = LogFactory.getLog(TestHTableDescriptor.class);
+
   @Test
   public void testPb() throws DeserializationException, IOException {
     HTableDescriptor htd = HTableDescriptor.META_TABLEDESC;
@@ -77,5 +84,43 @@ public class TestHTableDescriptor {
     assertEquals(value, desc.getValue(key));
     desc.remove(key);
     assertEquals(null, desc.getValue(key));
+  }
+
+  String legalTableNames[] = { "foo", "with-dash_under.dot", "_under_start_ok",  };
+  String illegalTableNames[] = { ".dot_start_illegal", "-dash_start_illegal", "spaces not ok" };
+
+  @Test
+  public void testLegalHTableNames() {
+    for (String tn : legalTableNames) {
+      HTableDescriptor.isLegalTableName(Bytes.toBytes(tn));
+    }
+  }
+
+  @Test
+  public void testIllegalHTableNames() {
+    for (String tn : illegalTableNames) {
+      try {
+        HTableDescriptor.isLegalTableName(Bytes.toBytes(tn));
+        fail("invalid tablename " + tn + " should have failed");
+      } catch (Exception e) {
+        // expected
+      }
+    }
+  }
+
+  @Test
+  public void testLegalHTableNamesRegex() {
+    for (String tn : legalTableNames) {
+      LOG.info("Testing: '" + tn + "'");
+      assertTrue(Pattern.matches(HTableDescriptor.VALID_USER_TABLE_REGEX, tn));
+    }
+  }
+
+  @Test
+  public void testIllegalHTableNamesRegex() {
+    for (String tn : illegalTableNames) {
+      LOG.info("Testing: '" + tn + "'");
+      assertFalse(Pattern.matches(HTableDescriptor.VALID_USER_TABLE_REGEX, tn));
+    }
   }
 }

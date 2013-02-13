@@ -43,29 +43,29 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
-import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
@@ -200,13 +200,25 @@ public class StoreFile {
    */
   private Map<byte[], byte[]> metadataMap;
 
-  /*
-   * Regex that will work for straight filenames and for reference names.
-   * If reference, then the regex has more than just one group.  Group 1 is
-   * this files id.  Group 2 the referenced region name, etc.
+  /**
+   * Regex that will work for straight filenames (<hfile>) and for reference names
+   * (<hfile>.<parentEncRegion>).  If reference, then the regex has more than just one group.
+   * Group 1, '([0-9a-f]+(?:_SeqId_[0-9]+_0?)',  is this file's id.  Group 2 '(.+)' is the
+   * reference's parent region name.  The ?: paren expressions are non-capture markers so not
+   * included in the groups count. The _SeqId_ portion comes from bulk loaded files.
    */
-  private static final Pattern REF_NAME_PARSER =
-    Pattern.compile("^([0-9a-f]+(?:_SeqId_[0-9]+_)?)(?:\\.(.+))?$");
+  public static final String REF_NAME_REGEX = "^([0-9a-f]+(?:_SeqId_[0-9]+_)?)(?:\\.(.+))?$";
+  private static final Pattern REF_NAME_PARSER = Pattern.compile(REF_NAME_REGEX);
+
+  /**
+   * Regex strictly for references to hfilelinks.  (<hfile>-<region>-<table>.<parentEncRegion>).
+   * Group 1 is this file's hfilelink name.  Group 2 the referenced parent region name.  The '.'
+   * char is valid in table names but group 2's regex is greedy and interprets the table names
+   * correctly.   The _SeqId_ portion comes from bulk loaded files.
+   */
+  public static final String REF_TO_LINK_REGEX = "^([0-9a-f]+(?:_SeqId_[0-9]+_)?-[0-9a-f]+-"
+      + HTableDescriptor.VALID_USER_TABLE_REGEX + "+)\\.([^.]+)$";
+  private static final Pattern REF_TO_LINK_PARSER = Pattern.compile(REF_TO_LINK_REGEX);
 
   // StoreFile.Reader
   private volatile Reader reader;
@@ -256,7 +268,6 @@ public class StoreFile {
     } else if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
-      LOG.debug("Store file " + p + " is a reference");
     }
 
     if (BloomFilterFactory.isGeneralBloomEnabled(conf)) {
@@ -334,13 +345,38 @@ public class StoreFile {
    * hierarchy of <code>${hbase.rootdir}/tablename/regionname/familyname</code>.
    * @param p Path to a Reference file.
    * @return Calculated path to parent region file.
-   * @throws IOException
+   * @throws IllegalArgumentException when path regex fails to match.
    */
   static Path getReferredToFile(final Path p) {
     Matcher m = REF_NAME_PARSER.matcher(p.getName());
     if (m == null || !m.matches()) {
       LOG.warn("Failed match of store file name " + p.toString());
-      throw new RuntimeException("Failed match of store file name " +
+      throw new IllegalArgumentException("Failed match of store file name " +
+          p.toString());
+    }
+    // Other region name is suffix on the passed Reference file name
+    String otherRegion = m.group(2);
+    // Tabledir is up two directories from where Reference was written.
+    Path tableDir = p.getParent().getParent().getParent();
+    String nameStrippedOfSuffix = m.group(1);
+    // Build up new path with the referenced region in place of our current
+    // region in the reference path.  Also strip regionname suffix from name.
+    return new Path(new Path(new Path(tableDir, otherRegion),
+      p.getParent().getName()), nameStrippedOfSuffix);
+  }
+
+  /*
+   * Return path to an hfilelink referred to by a Reference.  Presumes a directory
+   * hierarchy of <code>${hbase.rootdir}/tablename/regionname/familyname</code>.
+   * @param p Path to a Reference to hfilelink file.
+   * @return Calculated path to parent region file.
+   * @throws IllegalArgumentException when path regex fails to match.
+   */
+  static Path getReferredToLink(final Path p) {
+    Matcher m = REF_TO_LINK_PARSER.matcher(p.getName());
+    if (m == null || !m.matches()) {
+      LOG.warn("Failed match of ref to hfilelink name" + p.toString());
+      throw new IllegalArgumentException("Failed match of ref to hfilelink name " +
           p.toString());
     }
     // Other region name is suffix on the passed Reference file name
@@ -534,9 +570,33 @@ public class StoreFile {
           this.cacheConf, this.reference,
           dataBlockEncoder.getEncodingInCache());
     } else if (isLink()) {
-      long size = link.getFileStatus(fs).getLen();
-      this.reader = new Reader(this.fs, this.path, link, size, this.cacheConf,
-                               dataBlockEncoder.getEncodingInCache(), true);
+      try {
+        long size = link.getFileStatus(fs).getLen();
+        this.reader = new Reader(this.fs, this.path, link, size, this.cacheConf,
+            dataBlockEncoder.getEncodingInCache(), true);
+      } catch (FileNotFoundException fnfe) {
+        // This didn't actually link to another file!
+
+        // Handles the case where a file with the hfilelink pattern is actually a daughter
+        // reference to a hfile link.  This can occur when a cloned table's hfilelinks get split.
+        FileStatus actualRef = fs.getFileStatus(path);
+        long actualLen = actualRef.getLen();
+        if (actualLen == 0) {
+          LOG.error(path + " is a 0-len file, and actually an hfilelink missing target file!", fnfe);
+          throw fnfe;
+        }
+        LOG.debug("Size of link file is " + actualLen + "!= 0; treating as a reference to" +
+            " HFileLink " + path + "!");
+        this.reference = Reference.read(fs, this.path);
+        this.referencePath = getReferredToLink(this.path);
+        LOG.debug("Reference file "+ path + " referred to " + referencePath + "!");
+        link = new HFileLink(fs.getConf(), referencePath);
+        this.reader = new HalfStoreFileReader(this.fs, this.referencePath, link,
+            this.cacheConf, this.reference,
+            dataBlockEncoder.getEncodingInCache());
+        LOG.debug("Store file " + path + " is loaded " + referencePath + " as a half store file" +
+            " reader to an HFileLink!");
+      }
     } else {
       this.reader = new Reader(this.fs, this.path, this.cacheConf,
           dataBlockEncoder.getEncodingInCache());

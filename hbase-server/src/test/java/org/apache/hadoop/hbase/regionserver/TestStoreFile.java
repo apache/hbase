@@ -27,10 +27,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
@@ -40,6 +42,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.HalfStoreFileReader;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -105,6 +109,10 @@ public class TestStoreFile extends HBaseTestCase {
   private void writeStoreFile(final StoreFile.Writer writer) throws IOException {
     writeStoreFile(writer, Bytes.toBytes(getName()), Bytes.toBytes(getName()));
   }
+  
+  // pick an split point (roughly halfway)
+  byte[] SPLITKEY = new byte[] { (LAST_CHAR-FIRST_CHAR)/2, FIRST_CHAR};
+
   /*
    * Writes HStoreKey and ImmutableBytes data to passed writer and
    * then closes it.
@@ -205,6 +213,99 @@ public class TestStoreFile extends HBaseTestCase {
     while (s.next()) {
       count++;
     }
+    assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
+  }
+
+  /**
+   * Validate that we can handle valid tables with '.', '_', and '-' chars.
+   */
+  public void testRefToHFileRegex() {
+    String[] legal = { "aaaa-bbbb-tablename.cccc", "aaaa-bbbb-table.with.dots.cccc",
+          "aaaa-bbbb-table-with-dashes.cccc", "aaaa-bbbb-table_with_unders.cccc",
+          "aaaa-bbbb-_table_starts_unders.cccc"};
+    for (String refToHFile : legal) {
+      LOG.info("Validating regex for '" + refToHFile + "'");
+      assertTrue(Pattern.matches(StoreFile.REF_TO_LINK_REGEX, refToHFile));
+    }
+    
+    String[] illegal = { "aaaa-bbbb--flkaj.cccc", "aaaa-bbbb-.flkaj.cccc" };
+    for (String bad : illegal) {
+      assertFalse(Pattern.matches(StoreFile.REF_TO_LINK_REGEX, bad));
+    }
+  }
+
+  /**
+   * This test creates an hfile and then the dir structures and files to verify that references
+   * to hfilelinks (created by snapshot clones) can be properly interpreted.
+   */
+  public void testReferenceToHFileLink() throws IOException {
+    final String columnFamily = "f";
+    String tablename = "_original-evil-name"; // adding legal table name chars to verify regex handles it.
+    HRegionInfo hri = new HRegionInfo(Bytes.toBytes(tablename));
+    // store dir = <root>/<tablename>/<rgn>/<cf>
+    Path storedir = new Path(new Path(FSUtils.getRootDir(conf),
+      new Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
+
+    // Make a store file and write data to it. <root>/<tablename>/<rgn>/<cf>/<file>
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
+         this.fs, 8 * 1024)
+            .withOutputDir(storedir)
+            .build();
+    Path storeFilePath = writer.getPath();
+    writeStoreFile(writer);
+    writer.close();
+
+    // create link to store file. <root>/clone/region/<cf>/<hfile>-<region>-<table>
+    String target = "clone";
+    Path dstPath = new Path(FSUtils.getRootDir(conf), new Path(new Path(target, "region"), columnFamily));
+    HFileLink.create(conf, this.fs, dstPath, hri, storeFilePath.getName());
+    Path linkFilePath = new Path(dstPath,
+                  HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
+
+    // create splits of the link.
+    // <root>/clone/splitA/<cf>/<reftohfilelink>,
+    // <root>/clone/splitB/<cf>/<reftohfilelink>
+    Path splitDirA = new Path(new Path(FSUtils.getRootDir(conf),
+        new Path(target, "splitA")), columnFamily);
+    Path splitDirB = new Path(new Path(FSUtils.getRootDir(conf),
+        new Path(target, "splitB")), columnFamily);
+    StoreFile f = new StoreFile(fs, linkFilePath, conf, cacheConf, BloomType.NONE,
+        NoOpDataBlockEncoder.INSTANCE);
+    byte[] splitRow = SPLITKEY;
+    Path pathA = StoreFile.split(fs, splitDirA, f, splitRow, true); // top
+    Path pathB = StoreFile.split(fs, splitDirB, f, splitRow, false); // bottom
+
+    // OK test the thing
+    FSUtils.logFileSystemState(fs, FSUtils.getRootDir(conf), LOG);
+
+    // There is a case where a file with the hfilelink pattern is actually a daughter
+    // reference to a hfile link.  This code in StoreFile that handles this case.
+    
+    // Try to open store file from link
+    StoreFile hsfA = new StoreFile(this.fs, pathA,  conf, cacheConf,
+        StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+
+    // Now confirm that I can read from the ref to link
+    int count = 1;
+    HFileScanner s = hsfA.createReader().getScanner(false, false);
+    s.seekTo();
+    while (s.next()) {
+      count++;
+    }
+    assertTrue(count > 0); // read some rows here
+    
+    // Try to open store file from link
+    StoreFile hsfB = new StoreFile(this.fs, pathB,  conf, cacheConf,
+        StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+
+    // Now confirm that I can read from the ref to link
+    HFileScanner sB = hsfB.createReader().getScanner(false, false);
+    sB.seekTo();
+    while (sB.next()) {
+      count++;
+    }
+
+    // read the rest of the rows
     assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
   }
 
