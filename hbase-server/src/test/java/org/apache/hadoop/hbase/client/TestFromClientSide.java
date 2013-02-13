@@ -184,10 +184,10 @@ public class TestFromClientSide {
      p.add(FAMILY, C0, T3);
      h.put(p);
 
-     Delete d = new Delete(T1, ts+3, null);
+     Delete d = new Delete(T1, ts+3);
      h.delete(d);
 
-     d = new Delete(T1, ts+3, null);
+     d = new Delete(T1, ts+3);
      d.deleteColumns(FAMILY, C0, ts+3);
      h.delete(d);
 
@@ -285,7 +285,7 @@ public class TestFromClientSide {
      z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
 
 
-     HConnectionManager.deleteConnection(newConfig, true);
+     HConnectionManager.deleteConnection(newConfig);
      try {
        z2.getRecoverableZooKeeper().getZooKeeper().exists("/z2", false);
        assertTrue("We should not have a valid connection for z2", false);
@@ -296,7 +296,7 @@ public class TestFromClientSide {
      // We expect success here.
 
 
-     HConnectionManager.deleteConnection(newConfig2, true);
+     HConnectionManager.deleteConnection(newConfig2);
      try {
        z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
        assertTrue("We should not have a valid connection for z4", false);
@@ -4420,9 +4420,9 @@ public class TestFromClientSide {
 
     // Build a SynchronousQueue that we use for thread coordination
     final SynchronousQueue<Object> queue = new SynchronousQueue<Object>();
-    List<Thread> threads = new ArrayList<Thread>(5);
+    List<Runnable> tasks = new ArrayList<Runnable>(5);
     for (int i = 0; i < 5; i++) {
-      threads.add(new Thread() {
+      tasks.add(new Runnable() {
         public void run() {
           try {
             // The thread blocks here until we decide to let it go
@@ -4431,29 +4431,27 @@ public class TestFromClientSide {
         }
       });
     }
-    // First, add two threads and make sure the pool size follows
-    pool.submit(threads.get(0));
+    // First, add two tasks and make sure the pool size follows
+    pool.submit(tasks.get(0));
     assertEquals(1, pool.getPoolSize());
-    pool.submit(threads.get(1));
+    pool.submit(tasks.get(1));
     assertEquals(2, pool.getPoolSize());
 
-    // Next, terminate those threads and then make sure the pool is still the
+    // Next, terminate those tasks and then make sure the pool is still the
     // same size
     queue.put(new Object());
-    threads.get(0).join();
     queue.put(new Object());
-    threads.get(1).join();
     assertEquals(2, pool.getPoolSize());
 
-    //ensure that ThreadPoolExecutor knows that threads are finished.
+    //ensure that ThreadPoolExecutor knows that tasks are finished.
     while (pool.getCompletedTaskCount() < 2) {
       Threads.sleep(1);
     }
     // Now let's simulate adding a RS meaning that we'll go up to three
     // concurrent threads. The pool should not grow larger than three.
-    pool.submit(threads.get(2));
-    pool.submit(threads.get(3));
-    pool.submit(threads.get(4));
+    pool.submit(tasks.get(2));
+    pool.submit(tasks.get(3));
+    pool.submit(tasks.get(4));
     assertEquals(3, pool.getPoolSize());
     queue.put(new Object());
     queue.put(new Object());

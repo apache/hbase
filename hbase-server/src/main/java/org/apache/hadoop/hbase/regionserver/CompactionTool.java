@@ -157,10 +157,12 @@ public class CompactionTool extends Configured implements Tool {
       HStore store = getStore(region, familyDir);
       do {
         CompactionRequest cr = store.requestCompaction();
-        StoreFile storeFile = store.compact(cr);
-        if (storeFile != null) {
+        List<StoreFile> storeFiles = store.compact(cr);
+        if (storeFiles != null && !storeFiles.isEmpty()) {
           if (keepCompactedFiles && deleteCompacted) {
-            fs.delete(storeFile.getPath(), false);
+            for (StoreFile storeFile: storeFiles) {
+              fs.delete(storeFile.getPath(), false);
+            }
           }
         }
       } while (store.needsCompaction() && !compactOnce);

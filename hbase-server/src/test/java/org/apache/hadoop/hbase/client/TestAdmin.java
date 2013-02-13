@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -189,7 +190,8 @@ public class TestAdmin {
 
     // Now make it so at least the table exists and then do tests against a
     // nonexistent column family -- see if we get right exceptions.
-    final String tableName = "t";
+    final String tableName =
+        "testDeleteEditUnknownColumnFamilyAndOrTable" + System.currentTimeMillis();
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("cf"));
     this.admin.createTable(htd);
@@ -200,7 +202,8 @@ public class TestAdmin {
       } catch (IOException e) {
         exception = e;
       }
-      assertTrue(exception instanceof InvalidFamilyOperationException);
+      assertTrue("found=" + exception.getClass().getName(),
+          exception instanceof InvalidFamilyOperationException);
 
       exception = null;
       try {
@@ -208,7 +211,8 @@ public class TestAdmin {
       } catch (IOException e) {
         exception = e;
       }
-      assertTrue(exception instanceof InvalidFamilyOperationException);
+      assertTrue("found=" + exception.getClass().getName(),
+          exception instanceof InvalidFamilyOperationException);
     } finally {
       this.admin.disableTable(tableName);
       this.admin.deleteTable(tableName);
@@ -341,7 +345,7 @@ public class TestAdmin {
 
   @Test
   public void testHColumnValidName() {
-       boolean exceptionThrown = false;
+       boolean exceptionThrown;
        try {
          new HColumnDescriptor("\\test\\abc");
        } catch(IllegalArgumentException iae) {
@@ -372,13 +376,16 @@ public class TestAdmin {
     assertTrue(htd.equals(copy));
     // Now amend the copy. Introduce differences.
     long newFlushSize = htd.getMemStoreFlushSize() / 2;
+    if (newFlushSize <=0) {
+      newFlushSize = HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE / 2;
+    }
     copy.setMemStoreFlushSize(newFlushSize);
     final String key = "anyoldkey";
     assertTrue(htd.getValue(key) == null);
     copy.setValue(key, key);
     boolean expectedException = false;
     try {
-      modifyTable(tableName, copy);
+      admin.modifyTable(tableName, copy);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
@@ -390,7 +397,6 @@ public class TestAdmin {
     assertEquals(key, modifiedHtd.getValue(key));
 
     // Now work on column family changes.
-    htd = this.admin.getTableDescriptor(tableName);
     int countOfFamilies = modifiedHtd.getFamilies().size();
     assertTrue(countOfFamilies > 0);
     HColumnDescriptor hcd = modifiedHtd.getFamilies().iterator().next();
@@ -412,7 +418,6 @@ public class TestAdmin {
     // Try adding a column
     assertFalse(this.admin.isTableDisabled(tableName));
     final String xtracolName = "xtracol";
-    htd = this.admin.getTableDescriptor(tableName);
     HColumnDescriptor xtracol = new HColumnDescriptor(xtracolName);
     xtracol.setValue(xtracolName, xtracolName);
     expectedException = false;
@@ -460,42 +465,24 @@ public class TestAdmin {
     assertTrue(htd.equals(copy));
     // Now amend the copy. Introduce differences.
     long newFlushSize = htd.getMemStoreFlushSize() / 2;
+    if (newFlushSize <=0) {
+      newFlushSize = HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE / 2;
+    }
     copy.setMemStoreFlushSize(newFlushSize);
     final String key = "anyoldkey";
     assertTrue(htd.getValue(key) == null);
     copy.setValue(key, key);
     boolean expectedException = false;
     try {
-      modifyTable(tableName, copy);
+      admin.modifyTable(tableName, copy);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
     assertTrue("Online schema update should not happen.", expectedException);
-  }
 
-  /**
-   * Modify table is async so wait on completion of the table operation in master.
-   * @param tableName
-   * @param htd
-   * @throws IOException
-   */
-  private void modifyTable(final byte [] tableName, final HTableDescriptor htd)
-  throws IOException {
-    MasterServices services = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    ExecutorService executor = services.getExecutorService();
-    AtomicBoolean done = new AtomicBoolean(false);
-    executor.registerListener(EventType.C_M_MODIFY_TABLE, new DoneListener(done));
-    this.admin.modifyTable(tableName, htd);
-    while (!done.get()) {
-      synchronized (done) {
-        try {
-          done.wait(100);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-    }
-    executor.unregisterListener(EventType.C_M_MODIFY_TABLE);
+    // Reset the value for the other tests
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
+        "hbase.online.schema.update.enable", true);
   }
 
   /**
@@ -524,6 +511,7 @@ public class TestAdmin {
     }
   }
 
+  @SuppressWarnings("deprecation")
   protected void verifyRoundRobinDistribution(HTable ht, int expectedRegions) throws IOException {
     int numRS = ht.getConnection().getCurrentNrHRS();
     Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
@@ -750,7 +738,7 @@ public class TestAdmin {
   @Test
   public void testTableExist() throws IOException {
     final byte [] table = Bytes.toBytes("testTableExist");
-    boolean exist = false;
+    boolean exist;
     exist = this.admin.tableExists(table);
     assertEquals(false, exist);
     TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
@@ -806,8 +794,7 @@ public class TestAdmin {
         HConstants.META_TABLE_NAME);
     List<HRegionInfo> regionInfos = admin.getTableRegions(tableName);
     Map<String, Integer> serverMap = new HashMap<String, Integer>();
-    for (int i = 0, j = regionInfos.size(); i < j; i++) {
-      HRegionInfo hri = regionInfos.get(i);
+    for (HRegionInfo hri : regionInfos) {
       Get get = new Get(hri.getRegionName());
       Result result = metaTable.get(get);
       String server = Bytes.toString(result.getValue(HConstants.CATALOG_FAMILY,
@@ -872,125 +859,125 @@ public class TestAdmin {
     assertFalse(admin.tableExists(tableName));
     final HTable table = TEST_UTIL.createTable(tableName, familyNames,
       numVersions, blockSize);
-    try {
-      int rowCount = 0;
-      byte[] q = new byte[0];
 
-      // insert rows into column families. The number of rows that have values
-      // in a specific column family is decided by rowCounts[familyIndex]
-      for (int index = 0; index < familyNames.length; index++) {
-        ArrayList<Put> puts = new ArrayList<Put>(rowCounts[index]);
-        for (int i = 0; i < rowCounts[index]; i++) {
-          byte[] k = Bytes.toBytes(i);
-          Put put = new Put(k);
-          put.add(familyNames[index], q, k);
-          puts.add(put);
-        }
-        table.put(puts);
+    int rowCount = 0;
+    byte[] q = new byte[0];
 
-        if ( rowCount < rowCounts[index] ) {
-          rowCount = rowCounts[index];
-        }
+    // insert rows into column families. The number of rows that have values
+    // in a specific column family is decided by rowCounts[familyIndex]
+    for (int index = 0; index < familyNames.length; index++) {
+      ArrayList<Put> puts = new ArrayList<Put>(rowCounts[index]);
+      for (int i = 0; i < rowCounts[index]; i++) {
+        byte[] k = Bytes.toBytes(i);
+        Put put = new Put(k);
+        put.add(familyNames[index], q, k);
+        puts.add(put);
       }
+      table.put(puts);
 
-      // get the initial layout (should just be one region)
-      Map<HRegionInfo, ServerName> m = table.getRegionLocations();
-      System.out.println("Initial regions (" + m.size() + "): " + m);
-      assertTrue(m.size() == 1);
-
-      // Verify row count
-      Scan scan = new Scan();
-      ResultScanner scanner = table.getScanner(scan);
-      int rows = 0;
-      for(@SuppressWarnings("unused") Result result : scanner) {
-        rows++;
+      if ( rowCount < rowCounts[index] ) {
+        rowCount = rowCounts[index];
       }
-      scanner.close();
-      assertEquals(rowCount, rows);
-
-      // Have an outstanding scan going on to make sure we can scan over splits.
-      scan = new Scan();
-      scanner = table.getScanner(scan);
-      // Scan first row so we are into first region before split happens.
-      scanner.next();
-
-      final AtomicInteger count = new AtomicInteger(0);
-      Thread t = new Thread("CheckForSplit") {
-        public void run() {
-          for (int i = 0; i < 20; i++) {
-            try {
-              sleep(1000);
-            } catch (InterruptedException e) {
-              continue;
-            }
-            // check again    table = new HTable(conf, tableName);
-            Map<HRegionInfo, ServerName> regions = null;
-            try {
-              regions = table.getRegionLocations();
-            } catch (IOException e) {
-              e.printStackTrace();
-            }
-            if (regions == null) continue;
-            count.set(regions.size());
-            if (count.get() >= 2) break;
-            LOG.debug("Cycle waiting on split");
-          }
-        }
-      };
-      t.start();
-      // Split the table
-      this.admin.split(tableName, splitPoint);
-      t.join();
-
-      // Verify row count
-      rows = 1; // We counted one row above.
-      for (@SuppressWarnings("unused") Result result : scanner) {
-        rows++;
-        if (rows > rowCount) {
-          scanner.close();
-          assertTrue("Scanned more than expected (" + rowCount + ")", false);
-        }
-      }
-      scanner.close();
-      assertEquals(rowCount, rows);
-
-      Map<HRegionInfo, ServerName> regions = null;
-      try {
-        regions = table.getRegionLocations();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-      assertEquals(2, regions.size());
-      HRegionInfo[] r = regions.keySet().toArray(new HRegionInfo[0]);
-      if (splitPoint != null) {
-        // make sure the split point matches our explicit configuration
-        assertEquals(Bytes.toString(splitPoint),
-            Bytes.toString(r[0].getEndKey()));
-        assertEquals(Bytes.toString(splitPoint),
-            Bytes.toString(r[1].getStartKey()));
-        LOG.debug("Properly split on " + Bytes.toString(splitPoint));
-      } else {
-        if (familyNames.length > 1) {
-          int splitKey = Bytes.toInt(r[0].getEndKey());
-          // check if splitKey is based on the largest column family
-          // in terms of it store size
-          int deltaForLargestFamily = Math.abs(rowCount/2 - splitKey);
-          for (int index = 0; index < familyNames.length; index++) {
-            int delta = Math.abs(rowCounts[index]/2 - splitKey);
-            assertTrue(delta >= deltaForLargestFamily);
-          }
-        }
-      }
-    } finally {
-      TEST_UTIL.deleteTable(tableName);
-      table.close();
     }
+
+    // get the initial layout (should just be one region)
+    Map<HRegionInfo, ServerName> m = table.getRegionLocations();
+    System.out.println("Initial regions (" + m.size() + "): " + m);
+    assertTrue(m.size() == 1);
+
+    // Verify row count
+    Scan scan = new Scan();
+    ResultScanner scanner = table.getScanner(scan);
+    int rows = 0;
+    for(@SuppressWarnings("unused") Result result : scanner) {
+      rows++;
+    }
+    scanner.close();
+    assertEquals(rowCount, rows);
+
+    // Have an outstanding scan going on to make sure we can scan over splits.
+    scan = new Scan();
+    scanner = table.getScanner(scan);
+    // Scan first row so we are into first region before split happens.
+    scanner.next();
+
+    final AtomicInteger count = new AtomicInteger(0);
+    Thread t = new Thread("CheckForSplit") {
+      public void run() {
+        for (int i = 0; i < 20; i++) {
+          try {
+            sleep(1000);
+          } catch (InterruptedException e) {
+            continue;
+          }
+          // check again    table = new HTable(conf, tableName);
+          Map<HRegionInfo, ServerName> regions = null;
+          try {
+            regions = table.getRegionLocations();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+          if (regions == null) continue;
+          count.set(regions.size());
+          if (count.get() >= 2) break;
+          LOG.debug("Cycle waiting on split");
+        }
+      }
+    };
+    t.start();
+    // Split the table
+    this.admin.split(tableName, splitPoint);
+    t.join();
+
+    // Verify row count
+    rows = 1; // We counted one row above.
+    for (@SuppressWarnings("unused") Result result : scanner) {
+      rows++;
+      if (rows > rowCount) {
+        scanner.close();
+        assertTrue("Scanned more than expected (" + rowCount + ")", false);
+      }
+    }
+    scanner.close();
+    assertEquals(rowCount, rows);
+
+    Map<HRegionInfo, ServerName> regions = null;
+    try {
+      regions = table.getRegionLocations();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    assertEquals(2, regions.size());
+    Set<HRegionInfo> hRegionInfos = regions.keySet();
+    HRegionInfo[] r = hRegionInfos.toArray(new HRegionInfo[hRegionInfos.size()]);
+    if (splitPoint != null) {
+      // make sure the split point matches our explicit configuration
+      assertEquals(Bytes.toString(splitPoint),
+          Bytes.toString(r[0].getEndKey()));
+      assertEquals(Bytes.toString(splitPoint),
+          Bytes.toString(r[1].getStartKey()));
+      LOG.debug("Properly split on " + Bytes.toString(splitPoint));
+    } else {
+      if (familyNames.length > 1) {
+        int splitKey = Bytes.toInt(r[0].getEndKey());
+        // check if splitKey is based on the largest column family
+        // in terms of it store size
+        int deltaForLargestFamily = Math.abs(rowCount/2 - splitKey);
+        for (int index = 0; index < familyNames.length; index++) {
+          int delta = Math.abs(rowCounts[index]/2 - splitKey);
+          assertTrue(delta >= deltaForLargestFamily);
+        }
+      }
+    }
+    TEST_UTIL.deleteTable(tableName);
+    table.close();
   }
 
   /**
    * HADOOP-2156
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   @Test (expected=IllegalArgumentException.class)
   public void testEmptyHTableDescriptor() throws IOException {
     this.admin.createTable(new HTableDescriptor());
@@ -1159,11 +1146,11 @@ public class TestAdmin {
         HConstants.ROOT_TABLE_NAME,
         HConstants.META_TABLE_NAME
     };
-    for (int i = 0; i < illegalNames.length; i++) {
+    for (byte[] illegalName : illegalNames) {
       try {
-        new HTableDescriptor(illegalNames[i]);
+        new HTableDescriptor(illegalName);
         throw new IOException("Did not detect '" +
-          Bytes.toString(illegalNames[i]) + "' as an illegal user table name");
+            Bytes.toString(illegalName) + "' as an illegal user table name");
       } catch (IllegalArgumentException e) {
         // expected
       }
@@ -1226,6 +1213,8 @@ public class TestAdmin {
   public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
     new HTable(TEST_UTIL.getConfiguration(),"testTableNotFoundExceptionWithoutAnyTables");
   }
+
+
   @Test
   public void testShouldCloseTheRegionBasedOnTheEncodedRegionName()
       throws Exception {
@@ -1521,8 +1510,6 @@ public class TestAdmin {
     // When the META table can be opened, the region servers are running
     new HTable(
       TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME).close();
-    HRegionServer regionServer = TEST_UTIL.getHBaseCluster()
-        .getRegionServerThreads().get(0).getRegionServer();
 
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -1530,8 +1517,7 @@ public class TestAdmin {
     admin.createTable(desc);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 
-    regionServer = TEST_UTIL.getRSForFirstRegionInTable(Bytes
-        .toBytes(tableName));
+    HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
       put.add(HConstants.CATALOG_FAMILY, null, value);

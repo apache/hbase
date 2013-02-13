@@ -210,6 +210,7 @@ public class TestRowResource {
       String value) throws IOException, JAXBException {
     Response response = getValueXML(table, row, column);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     RowModel rowModel = cellSet.getRows().get(0);
@@ -222,6 +223,7 @@ public class TestRowResource {
       String column, String value) throws IOException, JAXBException {
     Response response = getValueXML(url);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     RowModel rowModel = cellSet.getRows().get(0);
@@ -259,6 +261,7 @@ public class TestRowResource {
       String value) throws IOException {
     Response response = getValuePB(table, row, column);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     CellSetModel cellSet = new CellSetModel();
     cellSet.getObjectFromMessage(response.getBody());
     RowModel rowModel = cellSet.getRows().get(0);
@@ -501,6 +504,7 @@ public class TestRowResource {
 
     response = client.get(path, Constants.MIMETYPE_BINARY);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_BINARY, response.getHeader("content-type"));
     assertTrue(Bytes.equals(response.getBody(), body));
     boolean foundTimestampHeader = false;
     for (Header header: response.getHeaders()) {
@@ -524,6 +528,7 @@ public class TestRowResource {
     Thread.yield();
     response = client.get(path, Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     response = deleteRow(TABLE, ROW_4);
     assertEquals(response.getCode(), 200);
   }
@@ -537,6 +542,7 @@ public class TestRowResource {
     Thread.yield();
     response = client.get(path, Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     response = deleteRow(TABLE, ROW_4);
     assertEquals(response.getCode(), 200);
 

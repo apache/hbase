@@ -145,13 +145,23 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    * @return <tt>true</tt> if the directory was deleted, <tt>false</tt> otherwise.
    * @throws IOException if there is an unexpected filesystem error
    */
-  private boolean checkAndDeleteDirectory(Path toCheck) throws IOException {
+  public boolean checkAndDeleteDirectory(Path toCheck) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Checking directory: " + toCheck);
     }
     FileStatus[] children = FSUtils.listStatus(fs, toCheck);
     // if the directory doesn't exist, then we are done
-    if (children == null) return true;
+    if (children == null) {
+      try {
+        return fs.delete(toCheck, false);
+      } catch (IOException e) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Couldn't delete directory: " + toCheck, e);
+        }
+      }
+      // couldn't delete w/o exception, so we can't return success.
+      return false;
+    }
 
     boolean canDeleteThis = true;
     for (FileStatus child : children) {
@@ -168,9 +178,22 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
       }
     }
 
-    // if all the children have been deleted, then we should try to delete this directory. However,
-    // don't do so recursively so we don't delete files that have been added since we checked.
-    return canDeleteThis ? fs.delete(toCheck, false) : false;
+    // if the directory has children, we can't delete it, so we are done
+    if (!canDeleteThis) return false;
+
+    // otherwise, all the children (that we know about) have been deleted, so we should try to
+    // delete this directory. However, don't do so recursively so we don't delete files that have
+    // been added since we last checked.
+    try {
+      return fs.delete(toCheck, false);
+    } catch (IOException e) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Couldn't delete directory: " + toCheck, e);
+      }
+    }
+
+    // couldn't delete w/o exception, so we can't return success.
+    return false;
   }
 
   /**

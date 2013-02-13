@@ -38,23 +38,23 @@
     </%java>
 
     <div class="tabbable">
-        <ul class="nav nav-tabs">
-            <li class="active"><a href="#regionBaseInfo" data-toggle="tab">Base Info</a> </li>
-            <li><a href="#regionRequestStats" data-toggle="tab">Request metrics</a></li>
-            <li class=""><a href="#regionStoreStats" data-toggle="tab">Storefile Metrics</a></li>
-            <li class=""><a href="#regionCompactStas" data-toggle="tab">Compaction Metrics</a></li>
+        <ul class="nav nav-pills">
+            <li class="active"><a href="#tab_regionBaseInfo" data-toggle="tab">Base Info</a> </li>
+            <li><a href="#tab_regionRequestStats" data-toggle="tab">Request metrics</a></li>
+            <li class=""><a href="#tab_regionStoreStats" data-toggle="tab">Storefile Metrics</a></li>
+            <li class=""><a href="#tab_regionCompactStas" data-toggle="tab">Compaction Metrics</a></li>
         </ul>
         <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-            <div class="tab-pane active" id="regionBaseInfo">
+            <div class="tab-pane active" id="tab_regionBaseInfo">
                 <& baseInfo; onlineRegions = onlineRegions; &>
             </div>
-            <div class="tab-pane" id="regionRequestStats">
+            <div class="tab-pane" id="tab_regionRequestStats">
                 <& requestStats; onlineRegions = onlineRegions; &>
             </div>
-            <div class="tab-pane" id="regionStoreStats">
+            <div class="tab-pane" id="tab_regionStoreStats">
                 <& storeStats; onlineRegions = onlineRegions; &>
             </div>
-            <div class="tab-pane" id="regionCompactStas">
+            <div class="tab-pane" id="tab_regionCompactStas">
                 <& compactStats; onlineRegions = onlineRegions; &>
             </div>
         </div>

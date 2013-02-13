@@ -89,11 +89,9 @@ public class ResourceCheckerJUnitListener extends RunListener {
   static class OpenFileDescriptorResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
+      if (JVM.isUnix() == false) return 0;
       JVM jvm = new JVM();
-      if (jvm != null && jvm.isUnix() == true)
-          return (int)jvm.getOpenFileDescriptorCount();
-      else
-           return 0;
+      return (int)jvm.getOpenFileDescriptorCount();
     }
 
     @Override
@@ -105,11 +103,9 @@ public class ResourceCheckerJUnitListener extends RunListener {
   static class MaxFileDescriptorResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
+      if (JVM.isUnix() == false) return 0;
       JVM jvm = new JVM();
-      if (jvm != null && jvm.isUnix() == true)
-           return (int)jvm.getMaxFileDescriptorCount();
-      else
-           return 0;
+      return (int)jvm.getMaxFileDescriptorCount();
      } 
    }
 

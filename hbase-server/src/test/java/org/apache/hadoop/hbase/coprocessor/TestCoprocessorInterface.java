@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.collections.map.AbstractReferenceMap;
-import org.apache.commons.collections.map.ReferenceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,16 +44,15 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.junit.experimental.categories.Category;
@@ -190,7 +187,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     }
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-        HStore store, InternalScanner scanner) {
+        HStore store, InternalScanner scanner, ScanType scanType) {
       preCompactCalled = true;
       return scanner;
     }
@@ -323,7 +320,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     for (int i = 0; i < regions.length; i++) {
       try {
         Get g = new Get(regions[i].getStartKey());
-        regions[i].get(g, null);
+        regions[i].get(g);
         fail();
       } catch (DoNotRetryIOException xc) {
       }
@@ -462,8 +459,6 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     TEST_UTIL.getConfiguration().setInt(
         "hbase.master.lease.thread.wakefrequency", 5 * 1000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 10 * 1000);
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD,
-      10 * 1000);
     // Increase the amount of time between client retries
     TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 15 * 1000);
     // This size should make it so we always split using the addContent

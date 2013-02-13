@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.ServerName;
 
 /**
  * Run bulk assign.  Does one RCP per regionserver passing a
- * batch of regions using {@link SingleServerBulkAssigner}.
+ * batch of regions using {@link GeneralBulkAssigner.SingleServerBulkAssigner}.
  */
 @InterfaceAudience.Private
 public class GeneralBulkAssigner extends BulkAssigner {

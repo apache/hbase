@@ -128,17 +128,13 @@ public class SingleColumnValueFilter extends FilterBase {
    * @param qualifier
    * @param compareOp
    * @param comparator
-   * @param foundColumn
-   * @param matchedColumn
    * @param filterIfMissing
    * @param latestVersionOnly
    */
-  protected SingleColumnValueFilter(final byte[] family, final byte [] qualifier,
-    final CompareOp compareOp, ByteArrayComparable comparator, final boolean foundColumn,
-    final boolean matchedColumn, final boolean filterIfMissing, final boolean latestVersionOnly) {
-    this(family,qualifier,compareOp,comparator);
-    this.foundColumn = foundColumn;
-    this.matchedColumn = matchedColumn;
+  protected SingleColumnValueFilter(final byte[] family, final byte[] qualifier,
+      final CompareOp compareOp, ByteArrayComparable comparator, final boolean filterIfMissing,
+      final boolean latestVersionOnly) {
+    this(family, qualifier, compareOp, comparator);
     this.filterIfMissing = filterIfMissing;
     this.latestVersionOnly = latestVersionOnly;
   }
@@ -313,8 +309,6 @@ public class SingleColumnValueFilter extends FilterBase {
     HBaseProtos.CompareType compareOp = CompareType.valueOf(this.compareOp.name());
     builder.setCompareOp(compareOp);
     builder.setComparator(ProtobufUtil.toComparator(this.comparator));
-    builder.setFoundColumn(this.foundColumn);
-    builder.setMatchedColumn(this.matchedColumn);
     builder.setFilterIfMissing(this.filterIfMissing);
     builder.setLatestVersionOnly(this.latestVersionOnly);
 
@@ -352,11 +346,10 @@ public class SingleColumnValueFilter extends FilterBase {
       throw new DeserializationException(ioe);
     }
 
-    return new SingleColumnValueFilter(
-      proto.hasColumnFamily()?proto.getColumnFamily().toByteArray():null,
-      proto.hasColumnQualifier()?proto.getColumnQualifier().toByteArray():null,
-      compareOp, comparator, proto.getFoundColumn(),proto.getMatchedColumn(),
-      proto.getFilterIfMissing(),proto.getLatestVersionOnly());
+    return new SingleColumnValueFilter(proto.hasColumnFamily() ? proto.getColumnFamily()
+        .toByteArray() : null, proto.hasColumnQualifier() ? proto.getColumnQualifier()
+        .toByteArray() : null, compareOp, comparator, proto.getFilterIfMissing(), proto
+        .getLatestVersionOnly());
   }
 
   /**
@@ -373,10 +366,17 @@ public class SingleColumnValueFilter extends FilterBase {
       && Bytes.equals(this.getQualifier(), other.getQualifier())
       && this.compareOp.equals(other.compareOp)
       && this.getComparator().areSerializedFieldsEqual(other.getComparator())
-      && this.foundColumn == other.foundColumn
-      && this.matchedColumn == other.matchedColumn
       && this.getFilterIfMissing() == other.getFilterIfMissing()
       && this.getLatestVersionOnly() == other.getLatestVersionOnly();
+  }
+
+  /**
+   * The only CF this filter needs is given column family. So, it's the only essential
+   * column in whole scan. If filterIfMissing == false, all families are essential,
+   * because of possibility of skipping the rows without any data in filtered CF.
+   */
+  public boolean isFamilyEssential(byte[] name) {
+    return !this.filterIfMissing || Bytes.equals(name, this.columnFamily);
   }
 
   @Override

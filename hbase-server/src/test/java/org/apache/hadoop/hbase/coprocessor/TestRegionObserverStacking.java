@@ -125,9 +125,7 @@ public class TestRegionObserverStacking extends TestCase {
 
     Put put = new Put(ROW);
     put.add(A, A, A);
-    int lockid = region.obtainRowLock(ROW);
-    region.put(put, lockid);
-    region.releaseRowLock(lockid);
+    region.put(put);
 
     Coprocessor c = h.findCoprocessor(ObserverA.class.getName());
     long idA = ((ObserverA)c).id;

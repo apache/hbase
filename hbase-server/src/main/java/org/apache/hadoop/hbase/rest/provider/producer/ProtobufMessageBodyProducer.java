@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
  * sent, then writeTo to perform the actual I/O.
  */
 @Provider
-@Produces(Constants.MIMETYPE_PROTOBUF)
+@Produces({Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF})
 @InterfaceAudience.Private
 public class ProtobufMessageBodyProducer
   implements MessageBodyWriter<ProtobufMessageHandler> {

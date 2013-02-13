@@ -27,7 +27,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -37,6 +40,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
+import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionKey;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -55,6 +61,7 @@ public class TestHCM {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TABLE_NAME = Bytes.toBytes("test");
   private static final byte[] TABLE_NAME1 = Bytes.toBytes("test1");
+  private static final byte[] TABLE_NAME2 = Bytes.toBytes("test2");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
 
@@ -65,25 +72,6 @@ public class TestHCM {
 
   @AfterClass public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  /**
-   * @throws InterruptedException 
-   * @throws IllegalAccessException 
-   * @throws NoSuchFieldException 
-   * @throws ZooKeeperConnectionException 
-   * @throws IllegalArgumentException 
-   * @throws SecurityException 
-   * @see https://issues.apache.org/jira/browse/HBASE-2925
-   */
-  // Disabling.  Of course this test will OOME using new Configuration each time
-  // St.Ack 20110428
-  // @Test
-  public void testManyNewConnectionsDoesnotOOME()
-  throws SecurityException, IllegalArgumentException,
-  ZooKeeperConnectionException, NoSuchFieldException, IllegalAccessException,
-  InterruptedException {
-    createNewConfigurations();
   }
 
   private static Random _randy = new Random();
@@ -118,6 +106,28 @@ public class TestHCM {
   private static int getHConnectionManagerCacheSize(){
     return HConnectionTestingUtility.getConnectionCount();
   }
+  
+  @Test
+  public void abortingHConnectionRemovesItselfFromHCM() throws Exception {
+    // Save off current HConnections
+    Map<HConnectionKey, HConnectionImplementation> oldHBaseInstances = 
+        new HashMap<HConnectionKey, HConnectionImplementation>();
+    oldHBaseInstances.putAll(HConnectionManager.HBASE_INSTANCES);
+    
+    HConnectionManager.HBASE_INSTANCES.clear();
+
+    try {
+      HConnection connection = HConnectionManager.getConnection(TEST_UTIL.getConfiguration());
+      connection.abort("test abortingHConnectionRemovesItselfFromHCM", new Exception(
+          "test abortingHConnectionRemovesItselfFromHCM"));
+      Assert.assertNotSame(connection,
+        HConnectionManager.getConnection(TEST_UTIL.getConfiguration()));
+    } finally {
+      // Put original HConnections back
+      HConnectionManager.HBASE_INSTANCES.clear();
+      HConnectionManager.HBASE_INSTANCES.putAll(oldHBaseInstances);
+    }
+  }
 
   /**
    * Test that when we delete a location using the first row of a region
@@ -140,10 +150,12 @@ public class TestHCM {
       Bytes.toString(TABLE_NAME).getBytes() , Bytes.toString(ROW).getBytes()));
 
     final int nextPort = conn.getCachedLocation(TABLE_NAME, ROW).getPort() + 1;
-    conn.updateCachedLocation(conn.getCachedLocation(TABLE_NAME, ROW), "127.0.0.1", nextPort);
+    HRegionLocation loc = conn.getCachedLocation(TABLE_NAME, ROW);
+    conn.updateCachedLocation(loc.getRegionInfo(), loc, "127.0.0.1", nextPort,
+      HConstants.LATEST_TIMESTAMP);
     Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW).getPort(), nextPort);
 
-    conn.deleteCachedLocation(TABLE_NAME.clone(), ROW.clone());
+    conn.forceDeleteCachedLocation(TABLE_NAME.clone(), ROW.clone());
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
 
@@ -156,18 +168,21 @@ public class TestHCM {
     table.put(put2);
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
 
+    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+
     // We can wait for all regions to be online, that makes log reading easier when debugging
-    while (TEST_UTIL.getMiniHBaseCluster().getMaster().
-      getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+    while (master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+      Thread.sleep(1);
     }
 
     // Now moving the region to the second server
-    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
     HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME, ROW);
     byte[] regionName = toMove.getRegionInfo().getRegionName();
+    byte[] encodedRegionNameBytes = toMove.getRegionInfo().getEncodedNameAsBytes();
 
     // Choose the other server.
-    int curServerId = TEST_UTIL.getHBaseCluster().getServerWith( regionName  );
+    int curServerId = TEST_UTIL.getHBaseCluster().getServerWith(regionName);
     int destServerId = (curServerId == 0 ? 1 : 0);
 
     HRegionServer curServer = TEST_UTIL.getHBaseCluster().getRegionServer(curServerId);
@@ -181,6 +196,8 @@ public class TestHCM {
     Assert.assertFalse( toMove.getPort() == destServerName.getPort());
     Assert.assertNotNull(curServer.getOnlineRegion(regionName));
     Assert.assertNull(destServer.getOnlineRegion(regionName));
+    Assert.assertFalse(TEST_UTIL.getMiniHBaseCluster().getMaster().
+        getAssignmentManager().getRegionStates().isRegionsInTransition());
 
     // Moving. It's possible that we don't have all the regions online at this point, so
     //  the test must depends only on the region we're looking at.
@@ -190,18 +207,26 @@ public class TestHCM {
       destServerName.getServerName().getBytes()
     );
 
-    while ( destServer.getOnlineRegion(regionName) == null ){
+    while (destServer.getOnlineRegion(regionName) == null ||
+        destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+        curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+        master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
       // wait for the move to be finished
+      Thread.sleep(1);
     }
 
+    LOG.info("Move finished for region="+toMove.getRegionInfo().getRegionNameAsString());
 
     // Check our new state.
     Assert.assertNull(curServer.getOnlineRegion(regionName));
     Assert.assertNotNull(destServer.getOnlineRegion(regionName));
-    LOG.info("Move finished for region="+toMove.getRegionInfo().getRegionNameAsString());
+    Assert.assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+    Assert.assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+
 
     // Cache was NOT updated and points to the wrong server
-    Assert.assertFalse( conn.getCachedLocation(TABLE_NAME, ROW).getPort() == destServerName.getPort());
+    Assert.assertFalse(
+        conn.getCachedLocation(TABLE_NAME, ROW).getPort() == destServerName.getPort());
 
     // Hijack the number of retry to fail immediately instead of retrying: there will be no new
     //  connection to the master
@@ -233,6 +258,8 @@ public class TestHCM {
       "Previous server was "+curServer.getServerName().getHostAndPort(),
       destServerName.getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
 
+    Assert.assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+    Assert.assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
 
     // We move it back to do another test with a scan
     LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
@@ -241,8 +268,12 @@ public class TestHCM {
       curServer.getServerName().getServerName().getBytes()
     );
 
-    while ( curServer.getOnlineRegion(regionName) == null ){
+    while (curServer.getOnlineRegion(regionName) == null ||
+        destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+        curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+        master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
       // wait for the move to be finished
+      Thread.sleep(1);
     }
 
     // Check our new state.
@@ -260,11 +291,12 @@ public class TestHCM {
     sc.setStopRow(ROW);
 
     try {
-    ResultScanner rs = table.getScanner(sc);
-    while (rs.next() != null){}
+      ResultScanner rs = table.getScanner(sc);
+      while (rs.next() != null) {
+      }
       Assert.assertFalse("Unreachable point", true);
-    }catch (Throwable e){
-      LOG.info("Put done, expected exception caught: "+e.getClass());
+    } catch (Throwable e) {
+      LOG.info("Scan done, expected exception caught: " + e.getClass());
     }
 
     // Cache is updated with the right value.
@@ -302,7 +334,55 @@ public class TestHCM {
   }
 
   /**
-   * Make sure that {@link HConfiguration} instances that are essentially the
+   * Test that stale cache updates don't override newer cached values.
+   */
+  @Test(timeout = 60000)
+  public void testCacheSeqNums() throws Exception{
+    HTable table = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAM);
+    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    Put put = new Put(ROW);
+    put.add(FAM_NAM, ROW, ROW);
+    table.put(put);
+    HConnectionManager.HConnectionImplementation conn =
+      (HConnectionManager.HConnectionImplementation)table.getConnection();
+
+    HRegionLocation location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    assertNotNull(location);
+
+    HRegionLocation anySource = new HRegionLocation(location.getRegionInfo(),
+        location.getHostname(), location.getPort() - 1);
+
+    // Same server as already in cache reporting - overwrites any value despite seqNum.
+    int nextPort = location.getPort() + 1;
+    conn.updateCachedLocation(location.getRegionInfo(), location,
+        "127.0.0.1", nextPort, location.getSeqNum() - 1);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    Assert.assertEquals(nextPort, location.getPort());
+
+    // No source specified - same.
+    nextPort = location.getPort() + 1;
+    conn.updateCachedLocation(location.getRegionInfo(), location,
+        "127.0.0.1", nextPort, location.getSeqNum() - 1);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    Assert.assertEquals(nextPort, location.getPort());
+
+    // Higher seqNum - overwrites lower seqNum.
+    nextPort = location.getPort() + 1;
+    conn.updateCachedLocation(location.getRegionInfo(), anySource,
+        "127.0.0.1", nextPort, location.getSeqNum() + 1);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    Assert.assertEquals(nextPort, location.getPort());
+
+    // Lower seqNum - does not overwrite higher seqNum.
+    nextPort = location.getPort() + 1;
+    conn.updateCachedLocation(location.getRegionInfo(), anySource,
+        "127.0.0.1", nextPort, location.getSeqNum() - 1);
+    location = conn.getCachedLocation(TABLE_NAME2, ROW);
+    Assert.assertEquals(nextPort - 1, location.getPort());
+  }
+
+  /**
+   * Make sure that {@link Configuration} instances that are essentially the
    * same map to the same {@link HConnection} instance.
    */
   @Test
@@ -332,7 +412,7 @@ public class TestHCM {
 
   /**
    * Makes sure that there is no leaking of
-   * {@link HConnectionManager.TableServers} in the {@link HConnectionManager}
+   * {@link HConnectionManager.HConnectionImplementation} in the {@link HConnectionManager}
    * class.
    */
   @Test
@@ -376,7 +456,7 @@ public class TestHCM {
     } finally {
       for (HConnection c: connections) {
         // Clean up connections made so we don't interfere w/ subsequent tests.
-        HConnectionManager.deleteConnection(c.getConfiguration(), true);
+        HConnectionManager.deleteConnection(c.getConfiguration());
       }
     }
   }

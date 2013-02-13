@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.regionserver.TestMasterAddressManager.NodeCreationListener;
@@ -124,7 +125,7 @@ public class TestSplitLogManager {
     Mockito.when(sm.isServerOnline(Mockito.any(ServerName.class))).thenReturn(true);
     Mockito.when(master.getServerManager()).thenReturn(sm);
 
-    to = 4000;
+    to = 6000;
     conf.setInt("hbase.splitlog.manager.timeout", to);
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 2 * to);
     conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 100);
@@ -142,7 +143,8 @@ public class TestSplitLogManager {
     public long eval();
   }
 
-  private void waitForCounter(final AtomicLong ctr, long oldval, long newval, long timems) {
+  private void waitForCounter(final AtomicLong ctr, long oldval, long newval, long timems)
+      throws Exception {
     Expr e = new Expr() {
       public long eval() {
         return ctr.get();
@@ -152,23 +154,17 @@ public class TestSplitLogManager {
     return;
   }
 
-  private void waitForCounter(Expr e, long oldval, long newval,
-      long timems) {
-    long curt = System.currentTimeMillis();
-    long endt = curt + timems;
-    while (curt < endt) {
-      if (e.eval() == oldval) {
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException eintr) {
+  private void waitForCounter(final Expr e, final long oldval, long newval, long timems)
+      throws Exception {
+
+    TEST_UTIL.waitFor(timems, 10, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+            return (e.eval() != oldval);
         }
-        curt = System.currentTimeMillis();
-      } else {
-        assertEquals(newval, e.eval());
-        return;
-      }
-    }
-    assertTrue(false);
+    });
+
+    assertEquals(newval, e.eval());
   }
 
   private String submitTaskAndWait(TaskBatch batch, String name)
@@ -220,7 +216,7 @@ public class TestSplitLogManager {
 
     slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
     slm.finishInitialization();
-    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 100);
+    waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
     Task task = slm.findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
     waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
@@ -508,7 +504,7 @@ public class TestSplitLogManager {
     LOG.info("testVanishingTaskZNode");
 
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 0);
-
+    conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 1000);
     slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
     slm.finishInitialization();
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -537,7 +533,7 @@ public class TestSplitLogManager {
       // remove the task znode, to finish the distributed log splitting
       ZKUtil.deleteNode(zkw, znode);
       waitForCounter(tot_mgr_get_data_nonode, 0, 1, 30000);
-      waitForCounter(tot_mgr_log_split_batch_success, 0, 1, 1000);
+      waitForCounter(tot_mgr_log_split_batch_success, 0, 1, to/2);
       assertTrue(fs.exists(logFile));
     } finally {
       if (thread != null) {
@@ -550,4 +546,3 @@ public class TestSplitLogManager {
   }
 
 }
-

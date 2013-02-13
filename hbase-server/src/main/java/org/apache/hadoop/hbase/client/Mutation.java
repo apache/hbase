@@ -40,7 +40,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
 
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
-  protected long lockId = -1L;
   protected boolean writeToWAL = true;
   protected Map<byte [], List<KeyValue>> familyMap =
       new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
@@ -165,23 +164,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
   }
 
   /**
-   * Method for retrieving the delete's RowLock
-   * @return RowLock
-   */
-  public RowLock getRowLock() {
-    return new RowLock(this.row, this.lockId);
-  }
-
-  /**
-   * Method for retrieving the delete's lock ID.
-   *
-   * @return The lock ID.
-   */
-  public long getLockId() {
-  return this.lockId;
-  }
-
-  /**
    * Method for retrieving the timestamp
    * @return timestamp
    */
@@ -194,6 +176,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
    * @param clusterId
    */
   public void setClusterId(UUID clusterId) {
+    if (clusterId == null) return;
     byte[] val = new byte[2*Bytes.SIZEOF_LONG];
     Bytes.putLong(val, 0, clusterId.getMostSignificantBits());
     Bytes.putLong(val, Bytes.SIZEOF_LONG, clusterId.getLeastSignificantBits());

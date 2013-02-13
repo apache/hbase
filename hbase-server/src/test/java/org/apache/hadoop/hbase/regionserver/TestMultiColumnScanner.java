@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
+import org.apache.hbase.cell.CellComparator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -107,7 +107,7 @@ public class TestMultiColumnScanner {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final Compression.Algorithm comprAlgo;
-  private final StoreFile.BloomType bloomType;
+  private final BloomType bloomType;
   private final DataBlockEncoding dataBlockEncoding;
 
   // Some static sanity-checking.
@@ -133,7 +133,7 @@ public class TestMultiColumnScanner {
   }
 
   public TestMultiColumnScanner(Compression.Algorithm comprAlgo,
-      StoreFile.BloomType bloomType, boolean useDataBlockEncoding) {
+      BloomType bloomType, boolean useDataBlockEncoding) {
     this.comprAlgo = comprAlgo;
     this.bloomType = bloomType;
     this.dataBlockEncoding = useDataBlockEncoding ? DataBlockEncoding.PREFIX :
@@ -214,7 +214,7 @@ public class TestMultiColumnScanner {
               deletedSomething = true;
             }
           if (deletedSomething)
-            region.delete(d, null, true);
+            region.delete(d, true);
         }
       }
       region.flushcache();
@@ -262,8 +262,8 @@ public class TestMultiColumnScanner {
             }
             assertTrue("Scanner returned additional key/value: " + kv + ", "
                 + queryInfo + deleteInfo + ";", kvPos < kvs.size());
-            assertEquals("Scanner returned wrong key/value; " + queryInfo
-                + deleteInfo + ";", kvs.get(kvPos), kv);
+            assertTrue("Scanner returned wrong key/value; " + queryInfo
+                + deleteInfo + ";", CellComparator.equalsIgnoreMvccVersion(kvs.get(kvPos), (kv)));
             ++kvPos;
             ++numResults;
           }

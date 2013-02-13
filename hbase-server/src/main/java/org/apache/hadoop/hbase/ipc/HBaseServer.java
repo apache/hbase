@@ -46,18 +46,17 @@ import java.nio.channels.WritableByteChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -68,28 +67,29 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.IpcProtocol;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.AuthMethod;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslStatus;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -97,20 +97,20 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
+import org.cliffc.high_scale_lib.Counter;
+import org.cloudera.htrace.Sampler;
+import org.cloudera.htrace.Span;
+import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceInfo;
+import org.cloudera.htrace.impl.NullSpan;
 
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.Message;
-
-import org.cliffc.high_scale_lib.Counter;
-import org.cloudera.htrace.Sampler;
-import org.cloudera.htrace.Span;
-import org.cloudera.htrace.TraceInfo;
-import org.cloudera.htrace.impl.NullSpan;
-import org.cloudera.htrace.Trace;
+// Uses Writables doing sasl
 
 /** A client for an IPC service.  IPC calls take a single Protobuf message as a
  * parameter, and return a single Protobuf message as their value.  A service runs on
@@ -169,22 +169,18 @@ public abstract class HBaseServer implements RpcServer {
     new ThreadLocal<RpcServer>();
   private volatile boolean started = false;
 
-  // For generated protocol classes which doesn't have VERSION field
-  private static final Map<Class<?>, Long>
-    PROTOCOL_VERSION = new HashMap<Class<?>, Long>();
+  private static final Map<String, Class<? extends IpcProtocol>> PROTOCOL_CACHE =
+      new ConcurrentHashMap<String, Class<? extends IpcProtocol>>();
 
-  private static final Map<String, Class<? extends VersionedProtocol>>
-      PROTOCOL_CACHE =
-      new ConcurrentHashMap<String, Class<? extends VersionedProtocol>>();
-
-  static Class<? extends VersionedProtocol> getProtocolClass(
+  @SuppressWarnings("unchecked")
+  static Class<? extends IpcProtocol> getProtocolClass(
       String protocolName, Configuration conf)
   throws ClassNotFoundException {
-    Class<? extends VersionedProtocol> protocol =
+    Class<? extends IpcProtocol> protocol =
         PROTOCOL_CACHE.get(protocolName);
 
     if (protocol == null) {
-      protocol = (Class<? extends VersionedProtocol>)
+      protocol = (Class<? extends IpcProtocol>)
           conf.getClassByName(protocolName);
       PROTOCOL_CACHE.put(protocolName, protocol);
     }
@@ -192,7 +188,7 @@ public abstract class HBaseServer implements RpcServer {
   }
 
   /** Returns the server instance called under or null.  May be called under
-   * {@link #call(Class, RpcRequestBody, long, MonitoredRPCHandler)} implementations,
+   * {@code #call(Class, RpcRequestBody, long, MonitoredRPCHandler)} implementations,
    * and under protobuf methods of parameters and return values.
    * Permits applications to access the server context.
    * @return HBaseServer
@@ -263,8 +259,6 @@ public abstract class HBaseServer implements RpcServer {
 
   protected int highPriorityLevel;  // what level a high priority call is at
 
-  private volatile int responseQueueLen; // size of response queue for this server
-
   protected final List<Connection> connectionList =
     Collections.synchronizedList(new LinkedList<Connection>());
   //maintain a list
@@ -278,7 +272,7 @@ public abstract class HBaseServer implements RpcServer {
   protected BlockingQueue<Call> replicationQueue;
   private int numOfReplicationHandlers = 0;
   private Handler[] replicationHandlers = null;
-  
+
   protected HBaseRPCErrorHandler errorHandler = null;
 
   /**
@@ -358,7 +352,7 @@ public abstract class HBaseServer implements RpcServer {
       if (errorClass != null) {
         this.isError = true;
       }
- 
+
       ByteBufferOutputStream buf = null;
       if (value != null) {
         buf = new ByteBufferOutputStream(((Message)value).getSerializedSize());
@@ -460,7 +454,7 @@ public abstract class HBaseServer implements RpcServer {
     public synchronized boolean isReturnValueDelayed() {
       return this.delayReturnValue;
     }
-    
+
     @Override
     public void throwExceptionIfCallerDisconnected() throws CallerDisconnectedException {
       if (!connection.channel.isOpen()) {
@@ -1000,7 +994,6 @@ public abstract class HBaseServer implements RpcServer {
             return true;
           }
           if (!call.response.hasRemaining()) {
-            responseQueueLen--;
             call.connection.decRpcCount();
             //noinspection RedundantIfStatement
             if (numElements == 1) {    // last call fully processes.
@@ -1070,7 +1063,6 @@ public abstract class HBaseServer implements RpcServer {
     void doRespond(Call call) throws IOException {
       // set the serve time when the response has to be sent later
       call.timestamp = System.currentTimeMillis();
-      responseQueueLen++;
 
       boolean doRegister = false;
       synchronized (call.connection.responseQueue) {
@@ -1120,7 +1112,7 @@ public abstract class HBaseServer implements RpcServer {
     protected String hostAddress;
     protected int remotePort;
     ConnectionHeader header;
-    Class<? extends VersionedProtocol> protocol;
+    Class<? extends IpcProtocol> protocol;
     protected UserGroupInformation user = null;
     private AuthMethod authMethod;
     private boolean saslContextEstablished;
@@ -1324,7 +1316,7 @@ public abstract class HBaseServer implements RpcServer {
             LOG.debug("SASL server context established. Authenticated client: "
               + user + ". Negotiated QoP is "
               + saslServer.getNegotiatedProperty(Sasl.QOP));
-          }          
+          }
           metrics.authenticationSuccess();
           AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
           saslContextEstablished = true;
@@ -1437,7 +1429,7 @@ public abstract class HBaseServer implements RpcServer {
             }
           }
           if (dataLength < 0) {
-            throw new IllegalArgumentException("Unexpected data length " 
+            throw new IllegalArgumentException("Unexpected data length "
                 + dataLength + "!! from " + getHostAddress());
           }
           data = ByteBuffer.allocate(dataLength);
@@ -1758,7 +1750,7 @@ public abstract class HBaseServer implements RpcServer {
           status.pause("Waiting for a call");
           Call call = myCallQueue.take(); // pop the queue; maybe blocked here
           status.setStatus("Setting up call");
-          status.setConnection(call.connection.getHostAddress(), 
+          status.setConnection(call.connection.getHostAddress(),
               call.connection.getRemotePort());
 
           if (LOG.isDebugEnabled())
@@ -2019,11 +2011,12 @@ public abstract class HBaseServer implements RpcServer {
     }
     return handlers;
   }
-  
+
   public SecretManager<? extends TokenIdentifier> getSecretManager() {
     return this.secretManager;
   }
 
+  @SuppressWarnings("unchecked")
   public void setSecretManager(SecretManager<? extends TokenIdentifier> secretManager) {
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
   }
@@ -2051,7 +2044,7 @@ public abstract class HBaseServer implements RpcServer {
       }
     }
   }
-  
+
   /** Wait for the server to be stopped.
    * Does not wait for all subthreads to finish.
    *  See {@link #stop()}.
@@ -2110,7 +2103,7 @@ public abstract class HBaseServer implements RpcServer {
                                          connection.getProtocol());
       }
       authManager.authorize(user != null ? user : null,
-          protocol, getConf(), addr);
+        protocol, getConf(), addr);
     }
   }
 

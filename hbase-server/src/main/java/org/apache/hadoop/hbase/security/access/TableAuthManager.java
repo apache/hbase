@@ -244,7 +244,7 @@ public class TableAuthManager {
    * user's groups.
    * @param user
    * @param action
-   * @return
+   * @return true if known and authorized, false otherwise
    */
   public boolean authorize(User user, Permission.Action action) {
     if (user == null) {
@@ -339,7 +339,7 @@ public class TableAuthManager {
    * @param table
    * @param family
    * @param action
-   * @return
+   * @return true if known and authorized, false otherwise
    */
   public boolean authorizeUser(String username, byte[] table, byte[] family,
       Permission.Action action) {
@@ -352,6 +352,7 @@ public class TableAuthManager {
     if (authorizeUser(username, action)) {
       return true;
     }
+    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
     return authorize(getTablePermissions(table).getUser(username), table, family,
         qualifier, action);
   }
@@ -372,7 +373,7 @@ public class TableAuthManager {
    * @param table
    * @param family
    * @param action
-   * @return
+   * @return true if known and authorized, false otherwise
    */
   public boolean authorizeGroup(String groupName, byte[] table, byte[] family,
       Permission.Action action) {
@@ -380,6 +381,7 @@ public class TableAuthManager {
     if (authorizeGroup(groupName, action)) {
       return true;
     }
+    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
     return authorize(getTablePermissions(table).getGroup(groupName), table, family, action);
   }
 

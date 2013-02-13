@@ -4073,7 +4073,7 @@ public final class AccessControlProtos {
   public interface UserPermissionsRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes table = 1;
+    // optional bytes table = 1;
     boolean hasTable();
     com.google.protobuf.ByteString getTable();
   }
@@ -4106,7 +4106,7 @@ public final class AccessControlProtos {
     }
     
     private int bitField0_;
-    // required bytes table = 1;
+    // optional bytes table = 1;
     public static final int TABLE_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString table_;
     public boolean hasTable() {
@@ -4124,10 +4124,6 @@ public final class AccessControlProtos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (!hasTable()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -4376,10 +4372,6 @@ public final class AccessControlProtos {
       }
       
       public final boolean isInitialized() {
-        if (!hasTable()) {
-          
-          return false;
-        }
         return true;
       }
       
@@ -4417,7 +4409,7 @@ public final class AccessControlProtos {
       
       private int bitField0_;
       
-      // required bytes table = 1;
+      // optional bytes table = 1;
       private com.google.protobuf.ByteString table_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTable() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -6425,7 +6417,7 @@ public final class AccessControlProtos {
       "\017.UserPermission\"\017\n\rGrantResponse\"4\n\rRev" +
       "okeRequest\022#\n\npermission\030\001 \002(\0132\017.UserPer" +
       "mission\"\020\n\016RevokeResponse\"\'\n\026UserPermiss" +
-      "ionsRequest\022\r\n\005table\030\001 \002(\014\">\n\027UserPermis" +
+      "ionsRequest\022\r\n\005table\030\001 \001(\014\">\n\027UserPermis" +
       "sionsResponse\022#\n\npermission\030\001 \003(\0132\017.User" +
       "Permission\":\n\027CheckPermissionsRequest\022\037\n" +
       "\npermission\030\001 \003(\0132\013.Permission\"\032\n\030CheckP" +

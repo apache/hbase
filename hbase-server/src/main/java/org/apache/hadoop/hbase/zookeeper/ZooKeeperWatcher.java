@@ -159,7 +159,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private void createBaseZNodes() throws ZooKeeperConnectionException {
     try {
       // Create all the necessary "directories" of znodes
-      ZKUtil.createAndFailSilent(this, baseZNode);
+      ZKUtil.createWithParents(this, baseZNode);
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);
       ZKUtil.createAndFailSilent(this, drainingZNode);
@@ -204,9 +204,9 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     backupMasterAddressesZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.backup.masters", "backup-masters"));
     clusterStateZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.state", "shutdown"));
+        conf.get("zookeeper.znode.state", "running"));
     assignmentZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.unassigned", "unassigned"));
+        conf.get("zookeeper.znode.unassigned", "region-in-transition"));
     tableZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.tableEnableDisable", "table"));
     clusterIdZNode = ZKUtil.joinZNode(baseZNode,

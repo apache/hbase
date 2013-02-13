@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.rest.model.VersionModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.*;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -96,6 +97,7 @@ public class TestVersionResource {
   public void testGetStargateVersionText() throws IOException {
     Response response = client.get("/version", Constants.MIMETYPE_TEXT);
     assertTrue(response.getCode() == 200);
+    assertEquals(Constants.MIMETYPE_TEXT, response.getHeader("content-type"));
     String body = Bytes.toString(response.getBody());
     assertTrue(body.length() > 0);
     assertTrue(body.contains(RESTServlet.VERSION_STRING));
@@ -113,6 +115,7 @@ public class TestVersionResource {
   public void testGetStargateVersionXML() throws IOException, JAXBException {
     Response response = client.get("/version", Constants.MIMETYPE_XML);
     assertTrue(response.getCode() == 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     VersionModel model = (VersionModel)
       context.createUnmarshaller().unmarshal(
         new ByteArrayInputStream(response.getBody()));
@@ -124,23 +127,30 @@ public class TestVersionResource {
   public void testGetStargateVersionJSON() throws IOException {
     Response response = client.get("/version", Constants.MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
   }
 
   @Test
   public void testGetStargateVersionPB() throws IOException {
     Response response = client.get("/version", Constants.MIMETYPE_PROTOBUF);
     assertTrue(response.getCode() == 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     VersionModel model = new VersionModel();
     model.getObjectFromMessage(response.getBody());
     validate(model);
-    LOG.info("success retrieving Stargate version as protobuf");
+    response = client.get("/version", Constants.MIMETYPE_PROTOBUF_IETF);
+    assertTrue(response.getCode() == 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
+    model = new VersionModel();
+    model.getObjectFromMessage(response.getBody());
+    validate(model);
   }
 
   @Test
   public void testGetStorageClusterVersionText() throws IOException {
-    Response response = client.get("/version/cluster", 
-      Constants.MIMETYPE_TEXT);
+    Response response = client.get("/version/cluster", Constants.MIMETYPE_TEXT);
     assertTrue(response.getCode() == 200);
+    assertEquals(Constants.MIMETYPE_TEXT, response.getHeader("content-type"));
   }
 
   @Test
@@ -148,6 +158,7 @@ public class TestVersionResource {
       JAXBException {
     Response response = client.get("/version/cluster",Constants.MIMETYPE_XML);
     assertTrue(response.getCode() == 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     StorageClusterVersionModel clusterVersionModel = 
       (StorageClusterVersionModel)
         context.createUnmarshaller().unmarshal(
@@ -161,6 +172,7 @@ public class TestVersionResource {
   public void doTestGetStorageClusterVersionJSON() throws IOException {
     Response response = client.get("/version/cluster", Constants.MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
   }
 
 }

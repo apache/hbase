@@ -23,7 +23,6 @@ import java.io.IOException;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -56,14 +55,18 @@ public class ExistsResource extends ResourceBase {
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_BINARY})
+    MIMETYPE_PROTOBUF_IETF, MIMETYPE_BINARY})
   public Response get(final @Context UriInfo uriInfo) {
     try {
       if (!tableResource.exists()) {
-        throw new WebApplicationException(Response.Status.NOT_FOUND);
+        return Response.status(Response.Status.NOT_FOUND)
+          .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
+          .build();
       }
     } catch (IOException e) {
-      throw new WebApplicationException(Response.Status.SERVICE_UNAVAILABLE);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
     ResponseBuilder response = Response.ok();
     response.cacheControl(cacheControl);

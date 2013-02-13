@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -28,14 +32,13 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
 
 @Category(MediumTests.class)
 public class TestReplicationZookeeper {
@@ -73,6 +76,24 @@ public class TestReplicationZookeeper {
     repZk.addPeer("1", slaveClusterKey);
     // HBASE-5586 used to get an NPE
     assertEquals(0, repZk.getSlavesAddresses("1").size());
+  }
+  
+  @Test
+  public void testIsPeerPath_PathToParentOfPeerNode() {
+    String peerParentNode = repZk.getPeersZNode();
+    assertFalse(repZk.isPeerPath(peerParentNode));
+  }
+  
+  @Test
+  public void testIsPeerPath_PathToChildOfPeerNode() {
+    String peerChild = ZKUtil.joinZNode(ZKUtil.joinZNode(repZk.getPeersZNode(), "1"), "child");
+    assertFalse(repZk.isPeerPath(peerChild));
+  }
+  
+  @Test
+  public void testIsPeerPath_ActualPeerPath() {
+    String peerPath = ZKUtil.joinZNode(repZk.getPeersZNode(), "1");
+    assertTrue(repZk.isPeerPath(peerPath));
   }
 
   static class DummyServer implements Server {

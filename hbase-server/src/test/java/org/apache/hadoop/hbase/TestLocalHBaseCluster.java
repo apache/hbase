@@ -22,12 +22,7 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.zookeeper.KeeperException;
 
 import org.junit.Test;
@@ -40,46 +35,28 @@ public class TestLocalHBaseCluster {
   /**
    * Check that we can start a local HBase cluster specifying a custom master
    * and regionserver class and then cast back to those classes; also that
-   * the cluster will launch and terminate cleanly. See HBASE-6011.
+   * the cluster will launch and terminate cleanly. See HBASE-6011. Uses the
+   * HBaseTestingUtility facilities for creating a LocalHBaseCluster with
+   * custom master and regionserver classes.
    */
   @Test
   public void testLocalHBaseCluster() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    MiniZooKeeperCluster zkCluster = TEST_UTIL.startMiniZKCluster();
-    conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(zkCluster.getClientPort()));
-    LocalHBaseCluster cluster = new LocalHBaseCluster(conf, 1, 1, MyHMaster.class,
-      MyHRegionServer.class);
+    TEST_UTIL.startMiniCluster(1, 1, null, MyHMaster.class, MyHRegionServer.class);
     // Can we cast back to our master class?
     try {
-      ((MyHMaster)cluster.getMaster(0)).setZKCluster(zkCluster);
+      int val = ((MyHMaster)TEST_UTIL.getHBaseCluster().getMaster(0)).echo(42);
+      assertEquals(42, val);
     } catch (ClassCastException e) {
       fail("Could not cast master to our class");
     }
     // Can we cast back to our regionserver class?
     try {
-      ((MyHRegionServer)cluster.getRegionServer(0)).echo(42);
+      int val = ((MyHRegionServer)TEST_UTIL.getHBaseCluster().getRegionServer(0)).echo(42);
+      assertEquals(42, val);
     } catch (ClassCastException e) {
       fail("Could not cast regionserver to our class");
     }
-    // Does the cluster start successfully?
-    try {
-      cluster.startup();
-      waitForClusterUp(conf);
-    } catch (IOException e) {
-      fail("LocalHBaseCluster did not start successfully");
-    } finally {
-      cluster.shutdown();
-    }
-  }
-
-  private void waitForClusterUp(Configuration conf) throws IOException {
-    HTable t = new HTable(conf, HConstants.META_TABLE_NAME);
-    ResultScanner s = t.getScanner(new Scan());
-    while (s.next() != null) {
-      continue;
-    }
-    s.close();
-    t.close();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   /**
@@ -87,34 +64,20 @@ public class TestLocalHBaseCluster {
    * running in local mode.
    */
   public static class MyHMaster extends HMaster {
-    private MiniZooKeeperCluster zkcluster = null;
-
     public MyHMaster(Configuration conf) throws IOException, KeeperException,
         InterruptedException {
       super(conf);
     }
 
-    @Override
-    public void run() {
-      super.run();
-      if (this.zkcluster != null) {
-        try {
-          this.zkcluster.shutdown();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
-    }
-
-    void setZKCluster(final MiniZooKeeperCluster zkcluster) {
-      this.zkcluster = zkcluster;
+    public int echo(int val) {
+      return val;
     }
   }
 
   /**
    * A private regionserver class with a dummy method for testing casts
    */
-  public static class MyHRegionServer extends HRegionServer {
+  public static class MyHRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
 
     public MyHRegionServer(Configuration conf) throws IOException,
         InterruptedException {

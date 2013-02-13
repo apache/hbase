@@ -119,7 +119,7 @@ public interface RowProcessor<S extends Message, T extends Message> {
   /**
    * This method should return any additional data that is needed on the
    * server side to construct the RowProcessor. The server will pass this to
-   * the {@link #initialize(ByteString)} method. If there is no RowProcessor
+   * the {@link #initialize(Message msg)} method. If there is no RowProcessor
    * specific data then null should be returned.
    * @return the PB message
    * @throws IOException

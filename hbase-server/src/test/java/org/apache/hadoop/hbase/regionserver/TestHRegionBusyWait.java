@@ -70,7 +70,7 @@ public class TestHRegionBusyWait extends TestHRegion {
       while (stopped.get()) {
         Thread.sleep(100);
       }
-      region.get(get, null);
+      region.get(get);
       fail("Should throw RegionTooBusyException");
     } catch (InterruptedException ie) {
       fail("test interrupted");

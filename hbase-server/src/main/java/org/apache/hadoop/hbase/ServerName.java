@@ -71,7 +71,7 @@ public class ServerName implements Comparable<ServerName> {
    */
   public static final String SERVERNAME_SEPARATOR = ",";
 
-  public static Pattern SERVERNAME_PATTERN =
+  public static final Pattern SERVERNAME_PATTERN =
     Pattern.compile("[^" + SERVERNAME_SEPARATOR + "]+" +
       SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX +
       SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX + "$");

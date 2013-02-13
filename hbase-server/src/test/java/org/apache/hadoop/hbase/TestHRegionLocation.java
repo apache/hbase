@@ -46,13 +46,16 @@ public class TestHRegionLocation {
       hsa1.getHostname(), hsa1.getPort());
     assertNotSame(hrl1, hrl3);
     // They are equal because they have same location even though they are
-    // carrying different regions.
+    // carrying different regions or timestamp.
     assertTrue(hrl1.equals(hrl3));
     ServerName hsa2 = new ServerName("localhost", 12345, -1L);
     HRegionLocation hrl4 = new HRegionLocation(HRegionInfo.ROOT_REGIONINFO,
         hsa2.getHostname(), hsa2.getPort());
     // These have same HRI but different locations so should be different.
     assertFalse(hrl3.equals(hrl4));
+    HRegionLocation hrl5 = new HRegionLocation(hrl4.getRegionInfo(),
+        hrl4.getHostname(), hrl4.getPort(), hrl4.getSeqNum() + 1);
+    assertTrue(hrl4.equals(hrl5));
   }
 
   @Test

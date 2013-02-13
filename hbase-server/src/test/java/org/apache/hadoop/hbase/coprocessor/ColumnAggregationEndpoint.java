@@ -22,29 +22,67 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.ColumnAggregationService;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.SumRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationProtos.SumResponse;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 
 /**
  * The aggregation implementation at a region.
  */
-public class ColumnAggregationEndpoint extends BaseEndpointCoprocessor
-implements ColumnAggregationProtocol {
+public class ColumnAggregationEndpoint extends ColumnAggregationService
+implements Coprocessor, CoprocessorService {
+  static final Log LOG = LogFactory.getLog(ColumnAggregationEndpoint.class);
+  private RegionCoprocessorEnvironment env = null;
 
   @Override
-  public long sum(byte[] family, byte[] qualifier)
-  throws IOException {
+  public Service getService() {
+    return this;
+  }
+
+  @Override
+  public void start(CoprocessorEnvironment env) throws IOException {
+    if (env instanceof RegionCoprocessorEnvironment) {
+      this.env = (RegionCoprocessorEnvironment)env;
+      return;
+    }
+    throw new CoprocessorException("Must be loaded on a table region!");
+  }
+
+  @Override
+  public void stop(CoprocessorEnvironment env) throws IOException {
+    // Nothing to do.
+  }
+
+  @Override
+  public void sum(RpcController controller, SumRequest request, RpcCallback<SumResponse> done) {
     // aggregate at each region
     Scan scan = new Scan();
-    scan.addColumn(family, qualifier);
+    // Family is required in pb. Qualifier is not.
+    byte [] family = request.getFamily().toByteArray();
+    byte [] qualifier = request.hasQualifier()? request.getQualifier().toByteArray(): null;
+    if (request.hasQualifier()) {
+      scan.addColumn(family, qualifier);
+    } else {
+      scan.addFamily(family);
+    }
     int sumResult = 0;
-
-    InternalScanner scanner = ((RegionCoprocessorEnvironment)getEnvironment())
-        .getRegion().getScanner(scan);
+    InternalScanner scanner = null;
     try {
+      scanner = this.env.getRegion().getScanner(scan);
       List<KeyValue> curVals = new ArrayList<KeyValue>();
       boolean hasMore = false;
       do {
@@ -56,9 +94,22 @@ implements ColumnAggregationProtocol {
           }
         }
       } while (hasMore);
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
+      // Set result to -1 to indicate error.
+      sumResult = -1;
+      LOG.info("Setting sum result to -1 to indicate error", e);
     } finally {
-      scanner.close();
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          ResponseConverter.setControllerException(controller, e);
+          sumResult = -1;
+          LOG.info("Setting sum result to -1 to indicate error", e);
+        }
+      }
     }
-    return sumResult;
+    done.run(SumResponse.newBuilder().setSum(sumResult).build());
   }
 }

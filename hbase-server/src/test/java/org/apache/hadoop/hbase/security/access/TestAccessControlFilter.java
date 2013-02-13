@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,6 +47,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.protobuf.BlockingRpcChannel;
 
 @Category(LargeTests.class)
 public class TestAccessControlFilter {
@@ -93,14 +97,14 @@ public class TestAccessControlFilter {
       public Object run() throws Exception {
         HTable aclmeta = new HTable(TEST_UTIL.getConfiguration(),
             AccessControlLists.ACL_TABLE_NAME);
-        AccessControllerProtocol acls = aclmeta.coprocessorProxy(
-            AccessControllerProtocol.class, Bytes.toBytes("testtable"));
-        UserPermission perm = new UserPermission(Bytes.toBytes(READER.getShortName()), 
-                                                 TABLE, null, Permission.Action.READ);
-        acls.grant(perm);
-        perm = new UserPermission(Bytes.toBytes(LIMITED.getShortName()), 
-                                  TABLE, FAMILY, PUBLIC_COL, Permission.Action.READ);
-        acls.grant(perm);
+        byte[] table = Bytes.toBytes("testtable");
+        BlockingRpcChannel service = aclmeta.coprocessorService(table);
+        AccessControlService.BlockingInterface protocol =
+          AccessControlService.newBlockingStub(service);
+        ProtobufUtil.grant(protocol, READER.getShortName(),
+          TABLE, null, null, Permission.Action.READ);
+        ProtobufUtil.grant(protocol, LIMITED.getShortName(),
+          TABLE, FAMILY, PUBLIC_COL, Permission.Action.READ);
         return null;
       }
     });

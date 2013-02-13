@@ -27,8 +27,6 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -36,8 +34,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -47,21 +44,21 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.protobuf.ServiceException;
 
 /**
  * Test the draining servers feature.
+ *
+ * This is typically an integration test: a unit test would be to check that the
+ * master does no assign regions to a regionserver marked as drained.
+ *
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-4298">HBASE-4298</a>
  */
 @Category(MediumTests.class)
 public class TestDrainingServer {
   private static final Log LOG = LogFactory.getLog(TestDrainingServer.class);
-  private static final HBaseTestingUtility TEST_UTIL =
-    new HBaseTestingUtility();
-  private static final byte [] TABLENAME = Bytes.toBytes("t");
-  private static final byte [] FAMILY = Bytes.toBytes("f");
-  private static final int COUNT_OF_REGIONS = HBaseTestingUtility.KEYS.length;
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final int NB_SLAVES = 5;
+  private static final int COUNT_OF_REGIONS = NB_SLAVES * 2;
 
   /**
    * Spin up a cluster with a bunch of regions on it.
@@ -69,31 +66,25 @@ public class TestDrainingServer {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(NB_SLAVES);
+    TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
-    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
-    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
-    htd.addFamily(new HColumnDescriptor(FAMILY));
-    TEST_UTIL.createMultiRegionsInMeta(TEST_UTIL.getConfiguration(), htd,
-        HBaseTestingUtility.KEYS);
-    // Make a mark for the table in the filesystem.
-    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
-    FSTableDescriptors.
-      createTableDescriptor(fs, FSUtils.getRootDir(TEST_UTIL.getConfiguration()), htd);
-    // Assign out the regions we just created.
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
-    admin.disableTable(TABLENAME);
-    admin.enableTable(TABLENAME);
+
+    final List<String> families = new ArrayList<String>(1);
+    families.add("family");
+    TEST_UTIL.createRandomTable("table", families, 1, 0, 0, COUNT_OF_REGIONS, 0);
+
+    // Ensure a stable env
+    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
 
     boolean ready = false;
     while (!ready){
-      ZKAssign.blockUntilNoRIT(zkw);
+      waitForAllRegionsOnline();
 
       // Assert that every regionserver has some regions on it.
       int i = 0;
       ready = true;
       while (i < NB_SLAVES && ready){
-        HRegionServer hrs = cluster.getRegionServer(i);
+        HRegionServer hrs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i);
         if (ProtobufUtil.getOnlineRegions(hrs).isEmpty()){
           ready = false;
         }
@@ -101,7 +92,9 @@ public class TestDrainingServer {
       }
 
       if (!ready){
-        admin.balancer();
+        TEST_UTIL.getHBaseAdmin().setBalancerRunning(true, true);
+        Assert.assertTrue("Can't start a balance!", TEST_UTIL.getHBaseAdmin().balancer());
+        TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
         Thread.sleep(100);
       }
     }
@@ -135,12 +128,12 @@ public class TestDrainingServer {
   /**
    * Test adding server to draining servers and then move regions off it.
    * Make sure that no regions are moved back to the draining server.
-   * @throws IOException 
-   * @throws KeeperException 
+   * @throws IOException
+   * @throws KeeperException
    */
   @Test  // (timeout=30000)
   public void testDrainingServerOffloading()
-  throws IOException, KeeperException, ServiceException, DeserializationException {
+  throws Exception {
     // I need master in the below.
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     HRegionInfo hriToMoveBack = null;
@@ -186,8 +179,6 @@ public class TestDrainingServer {
   public void testDrainingServerWithAbort() throws KeeperException, Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
 
-    // Ensure a stable env
-    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
     waitForAllRegionsOnline();
 
     final long regionCount = TEST_UTIL.getMiniHBaseCluster().countServedRegions();
@@ -215,19 +206,21 @@ public class TestDrainingServer {
       setDrainingServer(drainingServer);
 
       //wait for the master to receive and manage the event
-      while  (sm.createDestinationServersList().contains(drainingServer.getServerName())) ;
+      while  (sm.createDestinationServersList().contains(drainingServer.getServerName())) {
+        Thread.sleep(1);
+      }
 
       LOG.info("The available servers are: "+ sm.createDestinationServersList());
 
       Assert.assertEquals("Nothing should have happened here.", regionsOnDrainingServer,
         drainingServer.getNumberOfOnlineRegions());
-      Assert.assertFalse("We should not have regions in transition here. List is: "+
-        master.getAssignmentManager().getRegionStates().getRegionsInTransition(),
-        master.getAssignmentManager().getRegionStates().isRegionsInTransition());
+      Assert.assertFalse("We should not have regions in transition here. List is: " +
+          master.getAssignmentManager().getRegionStates().getRegionsInTransition(),
+          master.getAssignmentManager().getRegionStates().isRegionsInTransition());
 
       // Kill a few regionservers.
       for (int aborted = 0; aborted <= 2; aborted++) {
-        HRegionServer hrs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(aborted+1);
+        HRegionServer hrs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(aborted + 1);
         hrs.abort("Aborting");
       }
 
@@ -235,8 +228,8 @@ public class TestDrainingServer {
       waitForAllRegionsOnline();
 
       Collection<HRegion> regionsAfter =
-        drainingServer.getCopyOfOnlineRegionsSortedBySize().values();
-      LOG.info("Regions of drained server are: "+ regionsAfter );
+          drainingServer.getCopyOfOnlineRegionsSortedBySize().values();
+      LOG.info("Regions of drained server are: " + regionsAfter);
 
       Assert.assertEquals("Test conditions are not met: regions were" +
         " created/deleted during the test. ",
@@ -267,19 +260,37 @@ public class TestDrainingServer {
     }
   }
 
-  private void waitForAllRegionsOnline() {
+  private static void waitForAllRegionsOnline() throws Exception {
     // Wait for regions to come back on line again.
-    while (!isAllRegionsOnline()) {
-    }
 
-    while (TEST_UTIL.getMiniHBaseCluster().getMaster().
-      getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+    boolean done = false;
+    while (!done) {
+      Thread.sleep(1);
+
+      // Nothing in ZK RIT for a start
+      ZKAssign.blockUntilNoRIT(TEST_UTIL.getZooKeeperWatcher());
+
+      // Then we want all the regions to be marked as available...
+      if (!isAllRegionsOnline()) continue;
+
+      // And without any work in progress on the master side
+      if (TEST_UTIL.getMiniHBaseCluster().getMaster().
+          getAssignmentManager().getRegionStates().isRegionsInTransition()) continue;
+
+      // nor on the region server side
+      done = true;
+      for (JVMClusterUtil.RegionServerThread rs :
+          TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
+        if (!rs.getRegionServer().getRegionsInTransitionInRS().isEmpty()) {
+          done = false;
+        }
+      }
     }
   }
 
-  private boolean isAllRegionsOnline() {
+  private static boolean isAllRegionsOnline() {
     return TEST_UTIL.getMiniHBaseCluster().countServedRegions() ==
-      (COUNT_OF_REGIONS + 2 /*catalog regions*/);
+        (COUNT_OF_REGIONS + 2 /*catalog regions*/);
   }
 
 }

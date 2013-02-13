@@ -330,7 +330,7 @@ public class MetaUtils {
     if (LOG.isDebugEnabled()) {
       Get get = new Get(hri.getRegionName());
       get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-      Result res = r.get(get, null);
+      Result res = r.get(get);
       KeyValue [] kvs = res.raw();
       if(kvs.length <= 0) {
         return;
@@ -351,7 +351,7 @@ public class MetaUtils {
     if (LOG.isDebugEnabled()) {
       Get get = new Get(hri.getRegionName());
       get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-      Result res = r.get(get, null);
+      Result res = r.get(get);
       KeyValue [] kvs = res.raw();
       if(kvs.length <= 0) {
         return;

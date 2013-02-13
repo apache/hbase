@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.*;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -94,6 +95,7 @@ public class TestStatusResource {
   public void testGetClusterStatusXML() throws IOException, JAXBException {
     Response response = client.get("/status/cluster", Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     StorageClusterStatusModel model = (StorageClusterStatusModel)
       context.createUnmarshaller().unmarshal(
         new ByteArrayInputStream(response.getBody()));
@@ -102,13 +104,17 @@ public class TestStatusResource {
 
   @Test
   public void testGetClusterStatusPB() throws IOException {
-    Response response = client.get("/status/cluster", 
-      Constants.MIMETYPE_PROTOBUF);
+    Response response = client.get("/status/cluster", Constants.MIMETYPE_PROTOBUF);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     StorageClusterStatusModel model = new StorageClusterStatusModel();
     model.getObjectFromMessage(response.getBody());
     validate(model);
+    response = client.get("/status/cluster", Constants.MIMETYPE_PROTOBUF_IETF);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
+    model = new StorageClusterStatusModel();
+    model.getObjectFromMessage(response.getBody());
+    validate(model);
   }
-
 }
-

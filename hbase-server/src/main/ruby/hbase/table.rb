@@ -141,7 +141,7 @@ EOF
     # Delete a row
     def _deleteall_internal(row, column = nil, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
       raise ArgumentError, "Row Not Found" if _get_internal(row).nil?
-      d = org.apache.hadoop.hbase.client.Delete.new(row.to_s.to_java_bytes, timestamp, nil)
+      d = org.apache.hadoop.hbase.client.Delete.new(row.to_s.to_java_bytes, timestamp)
       if column
         family, qualifier = parse_column_name(column)
         d.deleteColumns(family, qualifier, timestamp)
@@ -180,7 +180,8 @@ EOF
         count += 1
         next unless (block_given? && count % interval == 0)
         # Allow command modules to visualize counting process
-        yield(count, String.from_java_bytes(row.getRow))
+        yield(count, 
+              org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow))
       end
 
       # Return the counter

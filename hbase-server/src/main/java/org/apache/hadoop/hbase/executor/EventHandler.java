@@ -67,7 +67,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   protected Server server;
 
   // sequence id generator for default FIFO ordering of events
-  protected static AtomicLong seqids = new AtomicLong(0);
+  protected static final AtomicLong seqids = new AtomicLong(0);
 
   // sequence id for this event
   private final long seqid;
@@ -120,7 +120,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
 
     // Messages originating from Master to RS
     M_RS_OPEN_REGION          (20, ExecutorType.RS_OPEN_REGION),  // Master asking RS to open a region
-    M_RS_OPEN_ROOT            (21, ExecutorType.RS_OPEN_REGION),  // Master asking RS to open root
+    M_RS_OPEN_ROOT            (21, ExecutorType.RS_OPEN_ROOT),  // Master asking RS to open root
     M_RS_OPEN_META            (22, ExecutorType.RS_OPEN_META),  // Master asking RS to open meta
     M_RS_CLOSE_REGION         (23, ExecutorType.RS_CLOSE_REGION),  // Master asking RS to close a region
     M_RS_CLOSE_ROOT           (24, ExecutorType.RS_CLOSE_ROOT),  // Master asking RS to close root

@@ -46,8 +46,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class HLogUtil {
   static final Log LOG = LogFactory.getLog(HLogUtil.class);
 
-  static final byte[] COMPLETE_CACHE_FLUSH = Bytes.toBytes("HBASE::CACHEFLUSH");
-
   /**
    * @param family
    * @return true if the column is a meta column
@@ -76,7 +74,8 @@ public class HLogUtil {
   /**
    * Pattern used to validate a HLog file name
    */
-  private static final Pattern pattern = Pattern.compile(".*\\.\\d*");
+  private static final Pattern pattern = 
+      Pattern.compile(".*\\.\\d*("+HLog.META_HLOG_FILE_EXTN+")*");
 
   /**
    * @param filename
@@ -243,32 +242,6 @@ public class HLogUtil {
   }
 
   /**
-   * Return regions (memstores) that have edits that are equal or less than the
-   * passed <code>oldestWALseqid</code>.
-   * 
-   * @param oldestWALseqid
-   * @param regionsToSeqids
-   *          Encoded region names to sequence ids
-   * @return All regions whose seqid is < than <code>oldestWALseqid</code> (Not
-   *         necessarily in order). Null if no regions found.
-   */
-  static byte[][] findMemstoresWithEditsEqualOrOlderThan(
-      final long oldestWALseqid, final Map<byte[], Long> regionsToSeqids) {
-    // This method is static so it can be unit tested the easier.
-    List<byte[]> regions = null;
-    for (Map.Entry<byte[], Long> e : regionsToSeqids.entrySet()) {
-      if (e.getValue().longValue() <= oldestWALseqid) {
-        if (regions == null)
-          regions = new ArrayList<byte[]>();
-        // Key is encoded region name.
-        regions.add(e.getKey());
-      }
-    }
-    return regions == null ? null : regions
-        .toArray(new byte[][] { HConstants.EMPTY_BYTE_ARRAY });
-  }
-
-  /**
    * Returns sorted set of edit files made by wal-log splitter, excluding files
    * with '.temp' suffix.
    * 
@@ -311,5 +284,12 @@ public class HLogUtil {
       filesSorted.add(status.getPath());
     }
     return filesSorted;
+  }
+
+  public static boolean isMetaFile(Path p) {
+    if (p.getName().endsWith(HLog.META_HLOG_FILE_EXTN)) {
+      return true;
+    }
+    return false;
   }
 }

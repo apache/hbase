@@ -49,8 +49,8 @@ public class Permission extends VersionedWritable {
     public byte code() { return code; }
   }
 
-  private static Log LOG = LogFactory.getLog(Permission.class);
-  protected static Map<Byte,Action> ACTION_BY_CODE = Maps.newHashMap();
+  private static final Log LOG = LogFactory.getLog(Permission.class);
+  protected static final Map<Byte,Action> ACTION_BY_CODE = Maps.newHashMap();
 
   protected Action[] actions;
 

@@ -40,7 +40,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 
 /**
- * Implementation of {@link FSHLog.Writer} that delegates to
+ * Implementation of {@link HLog.Writer} that delegates to
  * SequenceFile.Writer.
  */
 @InterfaceAudience.Private
@@ -244,7 +244,12 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   @Override
   public void sync() throws IOException {
-    this.writer.syncFs();
+    try {
+      this.writer.syncFs();
+    } catch (NullPointerException npe) {
+      // Concurrent close...
+      throw new IOException(npe);
+    }
   }
 
   @Override

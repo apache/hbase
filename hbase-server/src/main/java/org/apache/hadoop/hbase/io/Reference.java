@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.io;
 import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -33,7 +32,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
 import com.google.protobuf.ByteString;
 
@@ -56,7 +54,7 @@ import com.google.protobuf.ByteString;
  * references.  References are cleaned up by compactions.
  */
 @InterfaceAudience.Private
-public class Reference implements Writable {
+public class Reference {
   private byte [] splitkey;
   private Range region;
 
@@ -99,7 +97,6 @@ public class Reference implements Writable {
 
   /**
    * Used by serializations.
-   * @deprecated Use the pb serializations instead.  Writables are going away.
    */
   @Deprecated
   // Make this private when it comes time to let go of this constructor.  Needed by pb serialization.
@@ -130,18 +127,14 @@ public class Reference implements Writable {
     return "" + this.region;
   }
 
-  /**
-   * @deprecated Writables are going away. Use the pb serialization methods instead.
-   */
-  @Deprecated
-  public void write(DataOutput out) throws IOException {
-    // Write true if we're doing top of the file.
-    out.writeBoolean(isTopFileRegion(this.region));
-    Bytes.writeByteArray(out, this.splitkey);
+  public static boolean isTopFileRegion(final Range r) {
+    return r.equals(Range.top);
   }
 
   /**
    * @deprecated Writables are going away. Use the pb serialization methods instead.
+   * Remove in a release after 0.96 goes out.  This is here only to migrate
+   * old Reference files written with Writables before 0.96.
    */
   @Deprecated
   public void readFields(DataInput in) throws IOException {
@@ -149,10 +142,6 @@ public class Reference implements Writable {
     // If true, set region to top.
     this.region = tmp? Range.top: Range.bottom;
     this.splitkey = Bytes.readByteArray(in);
-  }
-
-  public static boolean isTopFileRegion(final Range r) {
-    return r.equals(Range.top);
   }
 
   public Path write(final FileSystem fs, final Path p)

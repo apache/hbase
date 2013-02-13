@@ -200,7 +200,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
     }
     // We just need the rowkey. Get it from 1st KV.
     byte[] row = deleteRow.get(0).getRow();
-    Delete delete = new Delete(row, ts, null);
+    Delete delete = new Delete(row, ts);
     if (deleteType == DeleteType.FAMILY) {
       Set<byte[]> families = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
       for (KeyValue kv : deleteRow) {

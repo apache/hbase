@@ -35,7 +35,7 @@ public abstract class OperationWithAttributes extends Operation implements Attri
   private Map<String, byte[]> attributes;
 
   // used for uniquely identifying an operation
-  static public String ID_ATRIBUTE = "_operation.attributes.id";
+  public static final String ID_ATRIBUTE = "_operation.attributes.id";
 
   public void setAttribute(String name, byte[] value) {
     if (attributes == null && value == null) {

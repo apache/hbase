@@ -27,7 +27,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 @InterfaceAudience.Private
 public class TableResource extends ResourceBase {
@@ -54,12 +53,7 @@ public class TableResource extends ResourceBase {
    * @throws IOException
    */
   boolean exists() throws IOException {
-    HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-    try {
-      return admin.tableExists(table);
-    } finally {
-      admin.close();
-    }
+    return servlet.getAdmin().tableExists(table);
   }
 
   @Path("exists")

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.KerberosInfo;
@@ -33,7 +33,5 @@ import org.apache.hadoop.hbase.security.KerberosInfo;
 @TokenInfo("HBASE_AUTH_TOKEN")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface ClientProtocol extends
-    ClientService.BlockingInterface, VersionedProtocol {
-  public static final long VERSION = 1L;
-}
+public interface ClientProtocol
+extends ClientService.BlockingInterface, IpcProtocol {}

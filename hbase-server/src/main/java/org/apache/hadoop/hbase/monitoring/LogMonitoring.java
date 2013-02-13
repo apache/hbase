@@ -79,17 +79,18 @@ public abstract class LogMonitoring {
   private static void dumpTailOfLog(File f, PrintWriter out, long tailKb)
       throws IOException {
     FileInputStream fis = new FileInputStream(f);
+    BufferedReader r = null;
     try {
       FileChannel channel = fis.getChannel();
       channel.position(Math.max(0, channel.size() - tailKb*1024));
-      BufferedReader r = new BufferedReader(
-          new InputStreamReader(fis));
+      r = new BufferedReader(new InputStreamReader(fis));
       r.readLine(); // skip the first partial line
       String line;
       while ((line = r.readLine()) != null) {
         out.println(line);
       }
     } finally {
+      if (r != null) IOUtils.closeStream(r);
       IOUtils.closeStream(fis);
     }
   }

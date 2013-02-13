@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -88,7 +88,7 @@ public class TestCacheOnWrite {
   private static final int NUM_KV = 25000;
   private static final int INDEX_BLOCK_SIZE = 512;
   private static final int BLOOM_BLOCK_SIZE = 4096;
-  private static final BloomType BLOOM_TYPE = StoreFile.BloomType.ROWCOL;
+  private static final BloomType BLOOM_TYPE = BloomType.ROWCOL;
   private static final ChecksumType CKTYPE = ChecksumType.CRC32;
   private static final int CKBYTES = 512;
 

@@ -18,20 +18,17 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.TreeSet;
-
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.mapreduce.RowCounter;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The filter looks for the given columns in KeyValue. Once there is a match for
@@ -40,7 +37,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * <p>
  * Note : It may emit KVs which do not have the given columns in them, if
  * these KVs happen to occur before a KV which does have a match. Given this
- * caveat, this filter is only useful for special cases like {@link RowCounter}.
+ * caveat, this filter is only useful for special cases
+ * like {@link org.apache.hadoop.hbase.mapreduce.RowCounter}.
  * <p>
  */
 @InterfaceAudience.Public

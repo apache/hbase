@@ -18,13 +18,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.apache.hadoop.hbase.io.hfile.HFile.MAX_FORMAT_VERSION;
-import static org.apache.hadoop.hbase.io.hfile.HFile.MIN_FORMAT_VERSION;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,7 +30,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
 
@@ -56,6 +55,9 @@ import com.google.common.io.NullOutputStream;
 public class FixedFileTrailer {
 
   private static final Log LOG = LogFactory.getLog(FixedFileTrailer.class);
+
+  /** HFile minor version that introduced pbuf filetrailer */
+  private static final int PBUF_TRAILER_MINOR_VERSION = 2;
 
   /**
    * We store the comparator class name as a fixed-length field in the trailer.
@@ -113,7 +115,7 @@ public class FixedFileTrailer {
   private long lastDataBlockOffset;
 
   /** Raw key comparator class name in version 2 */
-  private String comparatorClassName = RawComparator.class.getName();
+  private String comparatorClassName = KeyValue.KEY_COMPARATOR.getClass().getName();
 
   /** The {@link HFile} format major version. */
   private final int majorVersion;
@@ -129,11 +131,10 @@ public class FixedFileTrailer {
 
   private static int[] computeTrailerSizeByVersion() {
     int versionToSize[] = new int[HFile.MAX_FORMAT_VERSION + 1];
-    for (int version = MIN_FORMAT_VERSION;
-         version <= MAX_FORMAT_VERSION;
+    for (int version = HFile.MIN_FORMAT_VERSION;
+         version <= HFile.MAX_FORMAT_VERSION;
          ++version) {
-      FixedFileTrailer fft = new FixedFileTrailer(version, 
-                                   HFileBlock.MINOR_VERSION_NO_CHECKSUM);
+      FixedFileTrailer fft = new FixedFileTrailer(version, HFileBlock.MINOR_VERSION_NO_CHECKSUM);
       DataOutputStream dos = new DataOutputStream(new NullOutputStream());
       try {
         fft.serialize(dos);
@@ -148,8 +149,8 @@ public class FixedFileTrailer {
 
   private static int getMaxTrailerSize() {
     int maxSize = 0;
-    for (int version = MIN_FORMAT_VERSION;
-         version <= MAX_FORMAT_VERSION;
+    for (int version = HFile.MIN_FORMAT_VERSION;
+         version <= HFile.MAX_FORMAT_VERSION;
          ++version)
       maxSize = Math.max(getTrailerSize(version), maxSize);
     return maxSize;
@@ -157,6 +158,8 @@ public class FixedFileTrailer {
 
   private static final int TRAILER_SIZE[] = computeTrailerSizeByVersion();
   private static final int MAX_TRAILER_SIZE = getMaxTrailerSize();
+
+  private static final int NOT_PB_SIZE = BlockType.MAGIC_LENGTH + Bytes.SIZEOF_INT;
 
   static int getTrailerSize(int version) {
     return TRAILER_SIZE[version];
@@ -178,42 +181,89 @@ public class FixedFileTrailer {
     HFile.checkFormatVersion(majorVersion);
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutput baosDos = new DataOutputStream(baos);
+    DataOutputStream baosDos = new DataOutputStream(baos);
 
     BlockType.TRAILER.write(baosDos);
-    baosDos.writeLong(fileInfoOffset);
-    baosDos.writeLong(loadOnOpenDataOffset);
-    baosDos.writeInt(dataIndexCount);
-
-    if (majorVersion == 1) {
-      // This used to be metaIndexOffset, but it was not used in version 1.
-      baosDos.writeLong(0);
+    if (majorVersion > 2 || (majorVersion == 2 && minorVersion >= PBUF_TRAILER_MINOR_VERSION)) {
+      serializeAsPB(baosDos);
     } else {
-      baosDos.writeLong(uncompressedDataIndexSize);
+      serializeAsWritable(baosDos);
     }
 
-    baosDos.writeInt(metaIndexCount);
-    baosDos.writeLong(totalUncompressedBytes);
-    if (majorVersion == 1) {
-      baosDos.writeInt((int) Math.min(Integer.MAX_VALUE, entryCount));
-    } else {
-      // This field is long from version 2 onwards.
-      baosDos.writeLong(entryCount);
-    }
-    baosDos.writeInt(compressionCodec.ordinal());
-
-    if (majorVersion > 1) {
-      baosDos.writeInt(numDataIndexLevels);
-      baosDos.writeLong(firstDataBlockOffset);
-      baosDos.writeLong(lastDataBlockOffset);
-      Bytes.writeStringFixedSize(baosDos, comparatorClassName,
-          MAX_COMPARATOR_NAME_LENGTH);
-    }
-
-    // serialize the major and minor versions
+    // The last 4 bytes of the file encode the major and minor version universally
     baosDos.writeInt(materializeVersion(majorVersion, minorVersion));
 
     outputStream.write(baos.toByteArray());
+  }
+
+  /**
+   * Write trailer data as protobuf
+   * @param outputStream
+   * @throws IOException
+   */
+  void serializeAsPB(DataOutputStream output) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    HFileProtos.FileTrailerProto.newBuilder()
+      .setFileInfoOffset(fileInfoOffset)
+      .setLoadOnOpenDataOffset(loadOnOpenDataOffset)
+      .setUncompressedDataIndexSize(uncompressedDataIndexSize)
+      .setTotalUncompressedBytes(totalUncompressedBytes)
+      .setDataIndexCount(dataIndexCount)
+      .setMetaIndexCount(metaIndexCount)
+      .setEntryCount(entryCount)
+      .setNumDataIndexLevels(numDataIndexLevels)
+      .setFirstDataBlockOffset(firstDataBlockOffset)
+      .setLastDataBlockOffset(lastDataBlockOffset)
+      .setComparatorClassName(comparatorClassName)
+      .setCompressionCodec(compressionCodec.ordinal())
+      .build().writeDelimitedTo(baos);
+    output.write(baos.toByteArray());
+    // Pad to make up the difference between variable PB encoding length and the
+    // length when encoded as writable under earlier V2 formats. Failure to pad
+    // properly or if the PB encoding is too big would mean the trailer wont be read
+    // in properly by HFile.
+    int padding = getTrailerSize() - NOT_PB_SIZE - baos.size();
+    if (padding < 0) {
+      throw new IOException("Pbuf encoding size exceeded fixed trailer size limit");
+    }
+    for (int i = 0; i < padding; i++) {
+      output.write(0);
+    }
+  }
+
+  /**
+   * Write trailer data as writable
+   * @param outputStream
+   * @throws IOException
+   */
+  void serializeAsWritable(DataOutputStream output) throws IOException {
+    output.writeLong(fileInfoOffset);
+    output.writeLong(loadOnOpenDataOffset);
+    output.writeInt(dataIndexCount);
+
+    if (majorVersion == 1) {
+      // This used to be metaIndexOffset, but it was not used in version 1.
+      output.writeLong(0);
+    } else {
+      output.writeLong(uncompressedDataIndexSize);
+    }
+
+    output.writeInt(metaIndexCount);
+    output.writeLong(totalUncompressedBytes);
+    if (majorVersion == 1) {
+      output.writeInt((int) Math.min(Integer.MAX_VALUE, entryCount));
+    } else {
+      // This field is long from version 2 onwards.
+      output.writeLong(entryCount);
+    }
+    output.writeInt(compressionCodec.ordinal());
+
+    if (majorVersion > 1) {
+      output.writeInt(numDataIndexLevels);
+      output.writeLong(firstDataBlockOffset);
+      output.writeLong(lastDataBlockOffset);
+      Bytes.writeStringFixedSize(output, comparatorClassName, MAX_COMPARATOR_NAME_LENGTH);
+    }
   }
 
   /**
@@ -222,7 +272,6 @@ public class FixedFileTrailer {
    * {@link #serialize(DataOutputStream)}.
    *
    * @param inputStream
-   * @param version
    * @throws IOException
    */
   void deserialize(DataInputStream inputStream) throws IOException {
@@ -230,33 +279,100 @@ public class FixedFileTrailer {
 
     BlockType.TRAILER.readAndCheck(inputStream);
 
-    fileInfoOffset = inputStream.readLong();
-    loadOnOpenDataOffset = inputStream.readLong();
-    dataIndexCount = inputStream.readInt();
-
-    if (majorVersion == 1) {
-      inputStream.readLong(); // Read and skip metaIndexOffset.
+    if (majorVersion > 2 || (majorVersion == 2 && minorVersion >= PBUF_TRAILER_MINOR_VERSION)) {
+      deserializeFromPB(inputStream);
     } else {
-      uncompressedDataIndexSize = inputStream.readLong();
-    }
-    metaIndexCount = inputStream.readInt();
-
-    totalUncompressedBytes = inputStream.readLong();
-    entryCount = majorVersion == 1 ? inputStream.readInt() : inputStream.readLong();
-    compressionCodec = Compression.Algorithm.values()[inputStream.readInt()];
-    if (majorVersion > 1) {
-      numDataIndexLevels = inputStream.readInt();
-      firstDataBlockOffset = inputStream.readLong();
-      lastDataBlockOffset = inputStream.readLong();
-      comparatorClassName =
-          Bytes.readStringFixedSize(inputStream, MAX_COMPARATOR_NAME_LENGTH);
+      deserializeFromWritable(inputStream);
     }
 
+    // The last 4 bytes of the file encode the major and minor version universally
     int version = inputStream.readInt();
     expectMajorVersion(extractMajorVersion(version));
     expectMinorVersion(extractMinorVersion(version));
   }
 
+  /**
+   * Deserialize the file trailer as protobuf
+   * @param inputStream
+   * @throws IOException
+   */
+  void deserializeFromPB(DataInputStream inputStream) throws IOException {
+    // read PB and skip padding
+    int start = inputStream.available();
+    HFileProtos.FileTrailerProto.Builder builder = HFileProtos.FileTrailerProto.newBuilder();
+    builder.mergeDelimitedFrom(inputStream);
+    int size = start - inputStream.available();
+    inputStream.skip(getTrailerSize() - NOT_PB_SIZE - size);
+
+    // process the PB
+    if (builder.hasFileInfoOffset()) {
+      fileInfoOffset = builder.getFileInfoOffset();
+    }
+    if (builder.hasLoadOnOpenDataOffset()) {
+      loadOnOpenDataOffset = builder.getLoadOnOpenDataOffset();
+    }
+    if (builder.hasUncompressedDataIndexSize()) {
+      uncompressedDataIndexSize = builder.getUncompressedDataIndexSize();
+    }
+    if (builder.hasTotalUncompressedBytes()) {
+      totalUncompressedBytes = builder.getTotalUncompressedBytes();
+    }
+    if (builder.hasDataIndexCount()) {
+      dataIndexCount = builder.getDataIndexCount();
+    }
+    if (builder.hasMetaIndexCount()) {
+      metaIndexCount = builder.getMetaIndexCount();
+    }
+    if (builder.hasEntryCount()) {
+      entryCount = builder.getEntryCount();
+    }
+    if (builder.hasNumDataIndexLevels()) {
+      numDataIndexLevels = builder.getNumDataIndexLevels();
+    }
+    if (builder.hasFirstDataBlockOffset()) {
+      firstDataBlockOffset = builder.getFirstDataBlockOffset();
+    }
+    if (builder.hasLastDataBlockOffset()) {
+      lastDataBlockOffset = builder.getLastDataBlockOffset();
+    }
+    if (builder.hasComparatorClassName()) {
+      setComparatorClass(getComparatorClass(builder.getComparatorClassName()));
+    }
+    if (builder.hasCompressionCodec()) {
+      compressionCodec = Compression.Algorithm.values()[builder.getCompressionCodec()];
+    } else {
+      compressionCodec = Compression.Algorithm.NONE;
+    }
+  }
+
+  /**
+   * Deserialize the file trailer as writable data
+   * @param input
+   * @throws IOException
+   */
+  void deserializeFromWritable(DataInput input) throws IOException {
+    fileInfoOffset = input.readLong();
+    loadOnOpenDataOffset = input.readLong();
+    dataIndexCount = input.readInt();
+    if (majorVersion == 1) {
+      input.readLong(); // Read and skip metaIndexOffset.
+    } else {
+      uncompressedDataIndexSize = input.readLong();
+    }
+    metaIndexCount = input.readInt();
+
+    totalUncompressedBytes = input.readLong();
+    entryCount = majorVersion == 1 ? input.readInt() : input.readLong();
+    compressionCodec = Compression.Algorithm.values()[input.readInt()];
+    if (majorVersion > 1) {
+      numDataIndexLevels = input.readInt();
+      firstDataBlockOffset = input.readLong();
+      lastDataBlockOffset = input.readLong();
+      setComparatorClass(getComparatorClass(Bytes.readStringFixedSize(input,
+        MAX_COMPARATOR_NAME_LENGTH)));
+    }
+  }
+  
   private void append(StringBuilder sb, String s) {
     if (sb.length() > 0)
       sb.append(", ");
@@ -450,6 +566,10 @@ public class FixedFileTrailer {
     this.firstDataBlockOffset = firstDataBlockOffset;
   }
 
+  public String getComparatorClassName() {
+    return comparatorClassName;
+  }
+
   /**
    * Returns the major version of this HFile format
    */
@@ -466,7 +586,13 @@ public class FixedFileTrailer {
 
   @SuppressWarnings("rawtypes")
   public void setComparatorClass(Class<? extends RawComparator> klass) {
-    expectAtLeastMajorVersion(2);
+    // Is the comparator instantiable
+    try {
+      klass.newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException("Comparator class " + klass.getName() +
+        " is not instantiable", e);
+    }
     comparatorClassName = klass.getName();
   }
 
@@ -486,9 +612,11 @@ public class FixedFileTrailer {
     try {
       return getComparatorClass(comparatorClassName).newInstance();
     } catch (InstantiationException e) {
-      throw new IOException(e);
+      throw new IOException("Comparator class " + comparatorClassName +
+        " is not instantiable", e);
     } catch (IllegalAccessException e) {
-      throw new IOException(e);
+      throw new IOException("Comparator class " + comparatorClassName +
+        " is not instantiable", e);
     }
   }
 

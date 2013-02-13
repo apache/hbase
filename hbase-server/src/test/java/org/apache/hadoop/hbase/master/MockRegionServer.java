@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -65,19 +65,15 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowResponse;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -188,20 +184,6 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
   public boolean isStopped() {
     // TODO Auto-generated method stub
     return false;
@@ -252,7 +234,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public boolean removeFromOnlineRegions(String encodedRegionName, ServerName destination) {
+  public boolean removeFromOnlineRegions(HRegion r, ServerName destination) {
     // TODO Auto-generated method stub
     return false;
   }
@@ -290,12 +272,6 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public HLog getWAL() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
   public CompactionRequestor getCompactionRequester() {
     // TODO Auto-generated method stub
     return null;
@@ -326,7 +302,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public Map<byte[], Boolean> getRegionsInTransitionInRS() {
+  public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
     // TODO Auto-generated method stub
     return null;
   }
@@ -349,6 +325,22 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
     }
     return builder.build();
   }
+
+  @Override
+  public MultiGetResponse multiGet(RpcController controller, MultiGetRequest requests)
+      throws ServiceException {
+    byte[] regionName = requests.getRegion().getValue().toByteArray();
+    Map<byte [], Result> m = this.gets.get(regionName);
+    MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();
+    if (m != null) {
+      for (ClientProtos.Get get: requests.getGetList()) {
+        byte[] row = get.getRow().toByteArray();
+        builder.addResult(ProtobufUtil.toResult(m.get(row)));
+      }
+    }
+    return builder.build();
+  }
+
 
   @Override
   public MutateResponse mutate(RpcController controller, MutateRequest request)
@@ -386,29 +378,8 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public LockRowResponse lockRow(RpcController controller,
-      LockRowRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public UnlockRowResponse unlockRow(RpcController controller,
-      UnlockRowRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
   public BulkLoadHFileResponse bulkLoadHFile(RpcController controller,
       BulkLoadHFileRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public ExecCoprocessorResponse execCoprocessor(RpcController controller,
-      ExecCoprocessorRequest request) throws ServiceException {
     // TODO Auto-generated method stub
     return null;
   }
@@ -519,6 +490,12 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
 
   @Override
   public Leases getLeases() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public HLog getWAL(HRegionInfo regionInfo) throws IOException {
     // TODO Auto-generated method stub
     return null;
   }

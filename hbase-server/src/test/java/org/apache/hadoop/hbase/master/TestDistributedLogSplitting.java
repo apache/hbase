@@ -212,13 +212,13 @@ public class TestDistributedLogSplitting {
     long endt = curt + waitTime;
     while (curt < endt) {
       if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
-          tot_wkr_final_transistion_failed.get() + tot_wkr_task_done.get() +
+          tot_wkr_final_transition_failed.get() + tot_wkr_task_done.get() +
           tot_wkr_preempt_task.get()) == 0) {
         Thread.yield();
         curt = System.currentTimeMillis();
       } else {
         assertEquals(1, (tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
-            tot_wkr_final_transistion_failed.get() + tot_wkr_task_done.get() +
+            tot_wkr_final_transition_failed.get() + tot_wkr_task_done.get() +
             tot_wkr_preempt_task.get()));
         return;
       }
@@ -226,7 +226,7 @@ public class TestDistributedLogSplitting {
     fail("none of the following counters went up in " + waitTime +
         " milliseconds - " +
         "tot_wkr_task_resigned, tot_wkr_task_err, " +
-        "tot_wkr_final_transistion_failed, tot_wkr_task_done, " +
+        "tot_wkr_final_transition_failed, tot_wkr_task_done, " +
         "tot_wkr_preempt_task");
   }
 

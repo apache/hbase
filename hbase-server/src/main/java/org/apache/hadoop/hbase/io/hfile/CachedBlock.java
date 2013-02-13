@@ -96,9 +96,22 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
     return size;
   }
 
+  @Override
   public int compareTo(CachedBlock that) {
     if(this.accessTime == that.accessTime) return 0;
     return this.accessTime < that.accessTime ? 1 : -1;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    CachedBlock other = (CachedBlock) obj;
+    return compareTo(other) == 0;
   }
 
   public Cacheable getBuffer() {

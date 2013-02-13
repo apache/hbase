@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
@@ -66,7 +67,6 @@ public class Get extends OperationWithAttributes
   implements Row, Comparable<Row> {
 
   private byte [] row = null;
-  private long lockId = -1L;
   private int maxVersions = 1;
   private boolean cacheBlocks = true;
   private int storeLimit = -1;
@@ -84,22 +84,7 @@ public class Get extends OperationWithAttributes
    * @param row row key
    */
   public Get(byte [] row) {
-    this(row, null);
-  }
-
-  /**
-   * Create a Get operation for the specified row, using an existing row lock.
-   * <p>
-   * If no further operations are done, this will get the latest version of
-   * all columns in all families of the specified row.
-   * @param row row key
-   * @param rowLock previously acquired row lock, or null
-   */
-  public Get(byte [] row, RowLock rowLock) {
     this.row = row;
-    if(rowLock != null) {
-      this.lockId = rowLock.getLockId();
-    }
   }
 
   /**
@@ -261,22 +246,6 @@ public class Get extends OperationWithAttributes
   }
 
   /**
-   * Method for retrieving the get's RowLock
-   * @return RowLock
-   */
-  public RowLock getRowLock() {
-    return new RowLock(this.row, this.lockId);
-  }
-
-  /**
-   * Method for retrieving the get's lockId
-   * @return lockId
-   */
-  public long getLockId() {
-    return this.lockId;
-  }
-
-  /**
    * Method for retrieving the get's maximum number of version
    * @return the maximum number of version to fetch for this get
    */
@@ -418,8 +387,20 @@ public class Get extends OperationWithAttributes
   }
 
   //Row
+  @Override
   public int compareTo(Row other) {
     return Bytes.compareTo(this.getRow(), other.getRow());
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    Row other = (Row) obj;
+    return compareTo(other) == 0;
+  }
 }

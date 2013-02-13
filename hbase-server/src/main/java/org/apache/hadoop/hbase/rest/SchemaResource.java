@@ -28,7 +28,6 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -87,7 +86,8 @@ public class SchemaResource extends ResourceBase {
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
@@ -101,18 +101,23 @@ public class SchemaResource extends ResourceBase {
       return response.build();
     } catch (TableNotFoundException e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      throw new WebApplicationException(Response.Status.NOT_FOUND);
+      return Response.status(Response.Status.NOT_FOUND)
+        .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
+        .build();
     } catch (IOException e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      throw new WebApplicationException(e,
-                  Response.Status.SERVICE_UNAVAILABLE);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
   }
 
   private Response replace(final byte[] name, final TableSchemaModel model,
       final UriInfo uriInfo, final HBaseAdmin admin) {
     if (servlet.isReadOnly()) {
-      throw new WebApplicationException(Response.Status.FORBIDDEN);
+      return Response.status(Response.Status.FORBIDDEN)
+        .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
+        .build();
     }
     try {
       HTableDescriptor htd = new HTableDescriptor(name);
@@ -136,19 +141,24 @@ public class SchemaResource extends ResourceBase {
         servlet.getMetrics().incrementSucessfulPutRequests(1);
       } catch (TableExistsException e) {
         // race, someone else created a table with the same name
-        throw new WebApplicationException(e, Response.Status.NOT_MODIFIED);
+        return Response.status(Response.Status.NOT_MODIFIED)
+          .type(MIMETYPE_TEXT).entity("Not modified" + CRLF)
+          .build();
       }
       return Response.created(uriInfo.getAbsolutePath()).build();
     } catch (IOException e) {
-      throw new WebApplicationException(e,
-            Response.Status.SERVICE_UNAVAILABLE);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
   }
 
   private Response update(final byte[] name, final TableSchemaModel model,
       final UriInfo uriInfo, final HBaseAdmin admin) {
     if (servlet.isReadOnly()) {
-      throw new WebApplicationException(Response.Status.FORBIDDEN);
+      return Response.status(Response.Status.FORBIDDEN)
+        .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
+        .build();
     }
     try {
       HTableDescriptor htd = admin.getTableDescriptor(name);
@@ -166,16 +176,18 @@ public class SchemaResource extends ResourceBase {
           }
         }
       } catch (IOException e) {
-        throw new WebApplicationException(e,
-            Response.Status.INTERNAL_SERVER_ERROR);
+        return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+          .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+          .build();
       } finally {
         admin.enableTable(tableResource.getName());
       }
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.ok().build();
     } catch (IOException e) {
-      throw new WebApplicationException(e,
-          Response.Status.SERVICE_UNAVAILABLE);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
   }
 
@@ -183,7 +195,7 @@ public class SchemaResource extends ResourceBase {
       final UriInfo uriInfo) {
     try {
       byte[] name = Bytes.toBytes(tableResource.getName());
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
+      HBaseAdmin admin = servlet.getAdmin();
       if (replace || !admin.tableExists(name)) {
         return replace(name, model, uriInfo, admin);
       } else {
@@ -191,13 +203,15 @@ public class SchemaResource extends ResourceBase {
       }
     } catch (IOException e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
-      throw new WebApplicationException(e, 
-            Response.Status.SERVICE_UNAVAILABLE);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
   }
 
   @PUT
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response put(final TableSchemaModel model, 
       final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
@@ -208,7 +222,8 @@ public class SchemaResource extends ResourceBase {
   }
 
   @POST
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response post(final TableSchemaModel model, 
       final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
@@ -225,7 +240,7 @@ public class SchemaResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
+      HBaseAdmin admin = servlet.getAdmin();
       boolean success = false;
       for (int i = 0; i < 10; i++) try {
         admin.disableTable(tableResource.getName());
@@ -241,11 +256,14 @@ public class SchemaResource extends ResourceBase {
       return Response.ok().build();
     } catch (TableNotFoundException e) {
       servlet.getMetrics().incrementFailedDeleteRequests(1);
-      throw new WebApplicationException(Response.Status.NOT_FOUND);
+      return Response.status(Response.Status.NOT_FOUND)
+        .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
+        .build();
     } catch (IOException e) {
       servlet.getMetrics().incrementFailedDeleteRequests(1);
-      throw new WebApplicationException(e, 
-            Response.Status.SERVICE_UNAVAILABLE);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
   }
 }

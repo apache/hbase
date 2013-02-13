@@ -89,7 +89,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
      * Find out if a given region is in compaction now.
      *
      * @param regionId
-     * @return
+     * @return a CompactionState
      */
     public static CompactionState getCompactionState(
         final long regionId) {
@@ -172,6 +172,11 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
 
       // break the tie based on hash code
       return this.hashCode() - request.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return (this == obj);
     }
 
     /** Gets the HRegion for the request */

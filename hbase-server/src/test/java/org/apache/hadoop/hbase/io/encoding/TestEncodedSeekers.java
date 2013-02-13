@@ -129,13 +129,12 @@ public class TestEncodedSeekers {
   private void doPuts(HRegion region) throws IOException{
     LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(MIN_VALUE_SIZE, MAX_VALUE_SIZE);
      for (int i = 0; i < NUM_ROWS; ++i) {
-      byte[] key = MultiThreadedWriter.longToByteArrayKey(i);
+      byte[] key = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         Put put = new Put(key);
-        String colAsStr = String.valueOf(j);
-        byte[] col = Bytes.toBytes(colAsStr);
-        byte[] value = dataGenerator.generateRandomSizeValue(i, colAsStr);
-        put.add(CF_BYTES, Bytes.toBytes(colAsStr), value);
+        byte[] col = Bytes.toBytes(String.valueOf(j));
+        byte[] value = dataGenerator.generateRandomSizeValue(key, col);
+        put.add(CF_BYTES, col, value);
         if(VERBOSE){
           KeyValue kvPut = new KeyValue(key, CF_BYTES, col, value);
           System.err.println(Strings.padFront(i+"", ' ', 4)+" "+kvPut);
@@ -151,7 +150,7 @@ public class TestEncodedSeekers {
   
   private void doGets(HRegion region) throws IOException{
     for (int i = 0; i < NUM_ROWS; ++i) {
-      final byte[] rowKey = MultiThreadedWriter.longToByteArrayKey(i);
+      final byte[] rowKey = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         final String qualStr = String.valueOf(j);
         if (VERBOSE) {
@@ -161,10 +160,10 @@ public class TestEncodedSeekers {
         final byte[] qualBytes = Bytes.toBytes(qualStr);
         Get get = new Get(rowKey);
         get.addColumn(CF_BYTES, qualBytes);
-        Result result = region.get(get, null);
+        Result result = region.get(get);
         assertEquals(1, result.size());
-        assertTrue(LoadTestKVGenerator.verify(Bytes.toString(rowKey), qualStr,
-            result.getValue(CF_BYTES, qualBytes)));
+        byte[] value = result.getValue(CF_BYTES, qualBytes);
+        assertTrue(LoadTestKVGenerator.verify(value, rowKey, qualBytes));
       }
     }
   }

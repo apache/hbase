@@ -29,9 +29,9 @@ import java.net.SocketTimeoutException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import javax.net.SocketFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.security.User;
 
 import com.google.protobuf.ServiceException;
@@ -41,33 +41,29 @@ import com.google.protobuf.ServiceException;
  * Make sure to call setProtocolEngine to have the client actually use the RpcEngine
  * for a specific protocol
  */
-public class RandomTimeoutRpcEngine extends ProtobufRpcEngine {
+public class RandomTimeoutRpcEngine extends ProtobufRpcClientEngine {
 
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   public static double chanceOfTimeout = 0.3;
   private static AtomicInteger invokations = new AtomicInteger();
-  
-  public VersionedProtocol getProxy(
-      Class<? extends VersionedProtocol> protocol, long clientVersion,
-      InetSocketAddress addr, User ticket,
-      Configuration conf, SocketFactory factory, int rpcTimeout) throws IOException {
+
+  public RandomTimeoutRpcEngine(Configuration conf) {
+    super(conf);
+  }
+
+  @Override
+  public <T extends IpcProtocol> T getProxy(
+      Class<T> protocol, InetSocketAddress addr, Configuration conf, int rpcTimeout)
+  throws IOException {
     // Start up the requested-for proxy so we can pass-through calls to the underlying
     // RpcEngine.  Also instantiate and return our own proxy (RandomTimeoutInvocationHandler)
     // that will either throw exceptions or pass through to the underlying proxy.
-    VersionedProtocol actualProxy = super.getProxy(protocol, clientVersion, addr,
-      ticket, conf, factory, rpcTimeout);
+    T actualProxy = super.getProxy(protocol, addr, conf, rpcTimeout);
     RandomTimeoutInvocationHandler invoker =
       new RandomTimeoutInvocationHandler(actualProxy);
-    VersionedProtocol object = (VersionedProtocol)Proxy.newProxyInstance(
+    T wrapperProxy = (T)Proxy.newProxyInstance(
       protocol.getClassLoader(), new Class[]{protocol}, invoker);
-    return object;
-  }
-
-  /**
-   * Call this in order to set this class to run as the RpcEngine for the given protocol
-   */
-  public static void setProtocolEngine(Configuration conf, Class protocol) {
-    HBaseRPC.setProtocolEngine(conf, protocol, RandomTimeoutRpcEngine.class);
+    return wrapperProxy;
   }
 
   /**
@@ -78,9 +74,9 @@ public class RandomTimeoutRpcEngine extends ProtobufRpcEngine {
   }
 
   static class RandomTimeoutInvocationHandler implements InvocationHandler {
-    private VersionedProtocol actual = null;
+    private IpcProtocol actual = null;
 
-    public RandomTimeoutInvocationHandler(VersionedProtocol actual) {
+    public RandomTimeoutInvocationHandler(IpcProtocol actual) {
       this.actual = actual;
     }
 

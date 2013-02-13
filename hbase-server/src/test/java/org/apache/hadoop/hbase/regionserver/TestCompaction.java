@@ -127,7 +127,7 @@ public class TestCompaction extends HBaseTestCase {
     do {
       List<KeyValue> results = new ArrayList<KeyValue>();
       boolean result = s.next(results);
-      r.delete(new Delete(results.get(0).getRow()), null, false);
+      r.delete(new Delete(results.get(0).getRow()), false);
       if (!result) break;
     } while(true);
     s.close();
@@ -199,7 +199,7 @@ public class TestCompaction extends HBaseTestCase {
     // Default is that there only 3 (MAXVERSIONS) versions allowed per column.
     //
     // Assert == 3 when we ask for versions.
-    Result result = r.get(new Get(STARTROW).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null);
+    Result result = r.get(new Get(STARTROW).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
     assertEquals(compactionThreshold, result.size());
 
     // see if CompactionProgress is in place but null
@@ -229,7 +229,7 @@ public class TestCompaction extends HBaseTestCase {
 
     // Always 3 versions if that is what max versions is.
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).
-        setMaxVersions(100), null);
+        setMaxVersions(100));
     LOG.debug("Row " + Bytes.toStringBinary(secondRowBytes) + " after " +
         "initial compaction: " + result);
     assertEquals("Invalid number of versions of row "
@@ -242,32 +242,32 @@ public class TestCompaction extends HBaseTestCase {
     // should result in a compacted store file that has no references to the
     // deleted row.
     LOG.debug("Adding deletes to memstore and flushing");
-    Delete delete = new Delete(secondRowBytes, System.currentTimeMillis(), null);
+    Delete delete = new Delete(secondRowBytes, System.currentTimeMillis());
     byte [][] famAndQf = {COLUMN_FAMILY, null};
     delete.deleteFamily(famAndQf[0]);
-    r.delete(delete, null, true);
+    r.delete(delete, true);
 
     // Assert deleted.
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null );
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
     assertTrue("Second row should have been deleted", result.isEmpty());
 
     r.flushcache();
 
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null );
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
     assertTrue("Second row should have been deleted", result.isEmpty());
 
     // Add a bit of data and flush.  Start adding at 'bbb'.
     createSmallerStoreFile(this.r);
     r.flushcache();
     // Assert that the second row is still deleted.
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null );
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
     assertTrue("Second row should still be deleted", result.isEmpty());
 
     // Force major compaction.
     r.compactStores(true);
     assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
 
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null );
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
     assertTrue("Second row should still be deleted", result.isEmpty());
 
     // Make sure the store files do have some 'aaa' keys in them -- exactly 3.
@@ -280,11 +280,11 @@ public class TestCompaction extends HBaseTestCase {
     final int ttl = 1000;
     for (Store hstore : this.r.stores.values()) {
       HStore store = ((HStore) hstore);
-      HStore.ScanInfo old = store.scanInfo;
+      HStore.ScanInfo old = store.getScanInfo();
       HStore.ScanInfo si = new HStore.ScanInfo(old.getFamily(),
           old.getMinVersions(), old.getMaxVersions(), ttl,
           old.getKeepDeletedCells(), 0, old.getComparator());
-      store.scanInfo = si;
+      store.setScanInfo(si);
     }
     Thread.sleep(1000);
 
@@ -301,7 +301,7 @@ public class TestCompaction extends HBaseTestCase {
     conf.setFloat("hbase.hregion.majorcompaction.jitter", jitterPct);
 
     HStore s = ((HStore) r.getStore(COLUMN_FAMILY));
-    s.compactionPolicy.updateConfiguration(conf, s);
+    s.compactionPolicy.setConf(conf);
     try {
       createStoreFile(r);
       createStoreFile(r);
@@ -313,7 +313,7 @@ public class TestCompaction extends HBaseTestCase {
       assertEquals(2, s.getStorefilesCount());
 
       // ensure that major compaction time is deterministic
-      CompactionPolicy c = s.compactionPolicy;
+      DefaultCompactionPolicy c = (DefaultCompactionPolicy)s.compactionPolicy;
       List<StoreFile> storeFiles = s.getStorefiles();
       long mcTime = c.getNextMajorCompactTime(storeFiles);
       for (int i = 0; i < 10; ++i) {
@@ -406,22 +406,22 @@ public class TestCompaction extends HBaseTestCase {
       r.flushcache();
     }
 
-    Result result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100), null);
+    Result result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
     assertEquals(compactionThreshold, result.size());
-    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100), null);
+    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));
     assertEquals(compactionThreshold, result.size());
 
     // Now add deletes to memstore and then flush it.  That will put us over
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
-    r.delete(delete, null, true);
+    r.delete(delete, true);
 
     // Make sure that we have only deleted family2 from secondRowBytes
-    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100), null);
+    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));
     assertEquals(expectedResultsAfterDelete, result.size());
     // but we still have firstrow
-    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100), null);
+    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
     assertEquals(compactionThreshold, result.size());
 
     r.flushcache();
@@ -429,10 +429,10 @@ public class TestCompaction extends HBaseTestCase {
     // Let us check again
 
     // Make sure that we have only deleted family2 from secondRowBytes
-    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100), null);
+    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));
     assertEquals(expectedResultsAfterDelete, result.size());
     // but we still have firstrow
-    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100), null);
+    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
     assertEquals(compactionThreshold, result.size());
 
     // do a compaction
@@ -447,10 +447,10 @@ public class TestCompaction extends HBaseTestCase {
     assertTrue("Was not supposed to be a major compaction", numFiles2 > 1);
 
     // Make sure that we have only deleted family2 from secondRowBytes
-    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100), null);
+    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));
     assertEquals(expectedResultsAfterDelete, result.size());
     // but we still have firstrow
-    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100), null);
+    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
     assertEquals(compactionThreshold, result.size());
   }
 
@@ -530,7 +530,7 @@ public class TestCompaction extends HBaseTestCase {
         Delete delete = new Delete(Bytes.add(STARTROW, Bytes.toBytes(i)));
         byte [][] famAndQf = {COLUMN_FAMILY, null};
         delete.deleteFamily(famAndQf[0]);
-        r.delete(delete, null, true);
+        r.delete(delete, true);
       }
       r.flushcache();
 
@@ -539,11 +539,11 @@ public class TestCompaction extends HBaseTestCase {
       final int ttl = 1000;
       for (Store hstore: this.r.stores.values()) {
         HStore store = (HStore)hstore;
-        HStore.ScanInfo old = store.scanInfo;
+        HStore.ScanInfo old = store.getScanInfo();
         HStore.ScanInfo si = new HStore.ScanInfo(old.getFamily(),
             old.getMinVersions(), old.getMaxVersions(), ttl,
             old.getKeepDeletedCells(), 0, old.getComparator());
-        store.scanInfo = si;
+        store.setScanInfo(si);
       }
       Thread.sleep(ttl);
 
@@ -588,15 +588,15 @@ public class TestCompaction extends HBaseTestCase {
     HStore store = (HStore) r.getStore(COLUMN_FAMILY);
 
     List<StoreFile> storeFiles = store.getStorefiles();
-    long maxId = StoreFile.getMaxSequenceIdInList(storeFiles, true);
-    Compactor tool = new Compactor(this.conf);
+    Compactor tool = store.compactionPolicy.getCompactor();
 
-    StoreFile.Writer compactedFile =
-      tool.compact(store, storeFiles, false, maxId);
+    List<Path> newFiles =
+      tool.compact(storeFiles, false);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = FileSystem.get(conf);
-    Path origPath = compactedFile.getPath();
+    // default compaction policy created one and only one new compacted file
+    Path origPath = newFiles.get(0);
     Path homedir = store.getHomedir();
     Path dstPath = new Path(homedir, origPath.getName());
     FSDataOutputStream stream = fs.create(origPath, null, true, 512, (short) 3,
@@ -606,7 +606,7 @@ public class TestCompaction extends HBaseTestCase {
     stream.close();
 
     try {
-      store.completeCompaction(storeFiles, compactedFile);
+      store.completeCompaction(storeFiles, origPath);
     } catch (Exception e) {
       // The complete compaction should fail and the corrupt file should remain
       // in the 'tmp' directory;

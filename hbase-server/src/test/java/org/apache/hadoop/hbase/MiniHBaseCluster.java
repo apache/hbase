@@ -500,7 +500,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
     }
-    HConnectionManager.deleteAllConnections(false);
+    HConnectionManager.deleteAllConnections();
   }
 
   @Override

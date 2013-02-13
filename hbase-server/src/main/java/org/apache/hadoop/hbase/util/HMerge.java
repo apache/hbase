@@ -415,7 +415,7 @@ class HMerge {
             HConstants.SPLITA_QUALIFIER);
         delete.deleteColumns(HConstants.CATALOG_FAMILY,
             HConstants.SPLITB_QUALIFIER);
-        root.delete(delete, null, true);
+        root.delete(delete, true);
 
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + Bytes.toStringBinary(regionsToDelete[r]));

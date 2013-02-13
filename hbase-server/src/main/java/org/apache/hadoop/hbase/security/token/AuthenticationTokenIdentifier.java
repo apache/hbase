@@ -22,6 +22,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -31,7 +33,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
  * Represents the identity information stored in an HBase authentication token.
  */
 public class AuthenticationTokenIdentifier extends TokenIdentifier {
-  public static final byte VERSION = 1;
   public static final Text AUTH_TOKEN_TYPE = new Text("HBASE_AUTH_TOKEN");
 
   protected String username;
@@ -108,28 +109,56 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
     this.sequenceNumber = seq;
   }
 
+  public byte[] toBytes() {
+    AuthenticationProtos.TokenIdentifier.Builder builder =
+        AuthenticationProtos.TokenIdentifier.newBuilder();
+    builder.setKind(AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN);
+    if (username != null) {
+      builder.setUsername(ByteString.copyFromUtf8(username));
+    }
+    builder.setIssueDate(issueDate)
+        .setExpirationDate(expirationDate)
+        .setKeyId(keyId)
+        .setSequenceNumber(sequenceNumber);
+    return builder.build().toByteArray();
+  }
+
   @Override
   public void write(DataOutput out) throws IOException {
-    out.writeByte(VERSION);
-    WritableUtils.writeString(out, username);
-    WritableUtils.writeVInt(out, keyId);
-    WritableUtils.writeVLong(out, issueDate);
-    WritableUtils.writeVLong(out, expirationDate);
-    WritableUtils.writeVLong(out, sequenceNumber);
+    byte[] pbBytes = toBytes();
+    out.writeInt(pbBytes.length);
+    out.write(pbBytes);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    byte version = in.readByte();
-    if (version != VERSION) {
-      throw new IOException("Version mismatch in deserialization: " +
-          "expected="+VERSION+", got="+version);
+    int len = in.readInt();
+    byte[] inBytes = new byte[len];
+    in.readFully(inBytes);
+    AuthenticationProtos.TokenIdentifier identifier =
+        AuthenticationProtos.TokenIdentifier.newBuilder().mergeFrom(inBytes).build();
+    // sanity check on type
+    if (!identifier.hasKind() ||
+        identifier.getKind() != AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN) {
+      throw new IOException("Invalid TokenIdentifier kind from input "+identifier.getKind());
     }
-    username = WritableUtils.readString(in);
-    keyId = WritableUtils.readVInt(in);
-    issueDate = WritableUtils.readVLong(in);
-    expirationDate = WritableUtils.readVLong(in);
-    sequenceNumber = WritableUtils.readVLong(in);
+
+    // copy the field values
+    if (identifier.hasUsername()) {
+      username = identifier.getUsername().toStringUtf8();
+    }
+    if (identifier.hasKeyId()) {
+      keyId = identifier.getKeyId();
+    }
+    if (identifier.hasIssueDate()) {
+      issueDate = identifier.getIssueDate();
+    }
+    if (identifier.hasExpirationDate()) {
+      expirationDate = identifier.getExpirationDate();
+    }
+    if (identifier.hasSequenceNumber()) {
+      sequenceNumber = identifier.getSequenceNumber();
+    }
   }
 
   @Override

@@ -117,7 +117,7 @@ public class TestWALActionsListener {
     assertEquals(11, observer.postLogRollCounter);
     assertEquals(5, laterobserver.preLogRollCounter);
     assertEquals(5, laterobserver.postLogRollCounter);
-    assertEquals(2, observer.closedCount);
+    assertEquals(1, observer.closedCount);
   }
 
 

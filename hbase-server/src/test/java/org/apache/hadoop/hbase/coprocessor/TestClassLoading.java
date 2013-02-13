@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.TestServerCustomProtocol;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -64,7 +65,8 @@ public class TestClassLoading {
   static final String cpNameInvalid = "TestCPInvalid";
 
   private static Class<?> regionCoprocessor1 = ColumnAggregationEndpoint.class;
-  private static Class<?> regionCoprocessor2 = GenericEndpoint.class;
+  // TOOD: Fix the import of this handler.  It is coming in from a package that is far away.
+  private static Class<?> regionCoprocessor2 = TestServerCustomProtocol.PingHandler.class;
   private static Class<?> regionServerCoprocessor = SampleRegionWALObserver.class;
   private static Class<?> masterCoprocessor = BaseMasterObserver.class;
 
@@ -167,11 +169,8 @@ public class TestClassLoading {
     // the classpath is {hbaseSrc}/target/classes.
     String currentDir = new File(".").getAbsolutePath();
     String classpath =
-        currentDir + Path.SEPARATOR + "target"+ Path.SEPARATOR + "classes" +
-        System.getProperty("path.separator") +
-        // Note that the below trick only works if mvn is running the test;
-        // doesn't work in eclipse for example.
-        System.getProperty("surefire.test.class.path");
+        currentDir + File.separator + "target"+ File.separator + "classes" +
+        System.getProperty("path.separator") + System.getProperty("java.class.path");
     options.add(classpath);
     LOG.debug("Setting classpath to: "+classpath);
 
@@ -302,6 +301,10 @@ public class TestClassLoading {
     }
   }
 
+  private String getLocalPath(File file) {
+    return new Path(file.toURI()).toString();
+  }
+
   @Test
   // HBASE-3516: Test CP Class loading from local file system
   public void testClassLoadingFromLocalFS() throws Exception {
@@ -310,7 +313,7 @@ public class TestClassLoading {
     // create a table that references the jar
     HTableDescriptor htd = new HTableDescriptor(cpName3);
     htd.addFamily(new HColumnDescriptor("test"));
-    htd.setValue("COPROCESSOR$1", jarFile.toString() + "|" + cpName3 + "|" +
+    htd.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName3 + "|" +
       Coprocessor.PRIORITY_USER);
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
@@ -336,7 +339,7 @@ public class TestClassLoading {
     // create a table that references the jar
     HTableDescriptor htd = new HTableDescriptor(cpName4);
     htd.addFamily(new HColumnDescriptor("test"));
-    htd.setValue("COPROCESSOR$1", jarFile.toString() + "|" + cpName4 + "|" +
+    htd.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName4 + "|" +
       Coprocessor.PRIORITY_USER);
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
@@ -374,9 +377,9 @@ public class TestClassLoading {
     String cpKey2 = " Coprocessor$2 ";
     String cpKey3 = " coprocessor$03 ";
 
-    String cpValue1 = jarFile1.toString() + "|" + cpName1 + "|" +
+    String cpValue1 = getLocalPath(jarFile1) + "|" + cpName1 + "|" +
         Coprocessor.PRIORITY_USER;
-    String cpValue2 = jarFile2.toString() + " | " + cpName2 + " | ";
+    String cpValue2 = getLocalPath(jarFile2) + " | " + cpName2 + " | ";
     // load from default class loader
     String cpValue3 =
         " | org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver | | k=v ";
@@ -391,13 +394,13 @@ public class TestClassLoading {
     htd.setValue(cpKey3, cpValue3);
 
     // add 2 coprocessor by using new htd.addCoprocessor() api
-    htd.addCoprocessor(cpName5, new Path(jarFile5.getPath()),
+    htd.addCoprocessor(cpName5, new Path(getLocalPath(jarFile5)),
         Coprocessor.PRIORITY_USER, null);
     Map<String, String> kvs = new HashMap<String, String>();
     kvs.put("k1", "v1");
     kvs.put("k2", "v2");
     kvs.put("k3", "v3");
-    htd.addCoprocessor(cpName6, new Path(jarFile6.getPath()),
+    htd.addCoprocessor(cpName6, new Path(getLocalPath(jarFile6)),
         Coprocessor.PRIORITY_USER, kvs);
 
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();

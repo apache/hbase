@@ -43,6 +43,7 @@
  </para>
  <para>The API has changed in a few areas; in particular how you use coprocessors (TODO: MapReduce too?)
  </para>
+ <para>TODO: Write about 3.4 zk ensemble and multi support</para>
     </section>
     <section xml:id="upgrade0.94">
       <title>Upgrading from 0.92.x to 0.94.x</title>

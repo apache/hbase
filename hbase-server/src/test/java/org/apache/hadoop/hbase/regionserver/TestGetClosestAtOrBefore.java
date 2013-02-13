@@ -112,7 +112,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     try {
       List<KeyValue> keys = new ArrayList<KeyValue>();
       while (s.next(keys)) {
-        mr.delete(new Delete(keys.get(0).getRow()), null, false);
+        mr.delete(new Delete(keys.get(0).getRow()), false);
         keys.clear();
       }
     } finally {
@@ -207,7 +207,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
 
       Delete d = new Delete(T20);
       d.deleteColumn(c0, c0);
-      region.delete(d, null, false);
+      region.delete(d, false);
 
       r = region.getClosestRowBefore(T20, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
@@ -221,7 +221,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
 
       d = new Delete(T30);
       d.deleteColumn(c0, c0);
-      region.delete(d, null, false);
+      region.delete(d, false);
 
       r = region.getClosestRowBefore(T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
@@ -257,7 +257,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       // in memory; make sure we get back t10 again.
       d = new Delete(T20);
       d.deleteColumn(c1, c1);
-      region.delete(d, null, false);
+      region.delete(d, false);
       r = region.getClosestRowBefore(T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 

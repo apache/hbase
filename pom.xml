@@ -32,7 +32,7 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>8</version>
+    <version>12</version>
     <relativePath/>
     <!-- no parent resolution -->
   </parent>
@@ -52,8 +52,6 @@
     <module>hbase-server</module>
     <module>hbase-protocol</module>
     <module>hbase-client</module>
-    <module>hbase-hadoop2-compat</module>
-    <module>hbase-hadoop1-compat</module>
     <module>hbase-hadoop-compat</module>
     <module>hbase-common</module>
     <module>hbase-it</module>
@@ -266,7 +264,7 @@
       <name>Ted Yu</name>
       <email>yuzhihong@gmail.com</email>
       <timezone>-8</timezone>
-      <organization>EBay</organization>
+      <organization>Hortonworks</organization>
       <organizationUrl>http://www.ebay.com</organizationUrl>
     </developer>
     <developer>
@@ -308,6 +306,22 @@
       <timezone>-8</timezone>
       <organization>Cloudera</organization>
       <organizationUrl>http://www.cloudera.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>mbertozzi</id>
+      <name>Matteo Bertozzi</name>
+      <email>mbertozzi@apache.org</email>
+      <timezone>0</timezone>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>zjushch</id>
+      <name>Chunhui Shen</name>
+      <email>zjushch@apache.org</email>
+      <timezone>+8</timezone>
+      <organization>Taobao</organization>
+      <organizationUrl>http://www.taobao.com</organizationUrl>
     </developer>
   </developers>
   <repositories>
@@ -398,7 +412,6 @@
             <maxmemory>2g</maxmemory>
             <verbose>true</verbose>
             <reportOutputDirectory>target/apidocs</reportOutputDirectory>
-            <detectLinks>true</detectLinks>
           </configuration>
         </plugin>
         <plugin>
@@ -462,7 +475,7 @@
             <!-- surefire hack, if not we're
               using method parallelization class ! -->
             <testFailureIgnore>false</testFailureIgnore>
-            <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
+            <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
             <argLine>-enableassertions -Xmx1900m
               -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
@@ -507,7 +520,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>${findbugs.version}</version>
+          <version>${findbugs-maven-plugin.version}</version>
           <configuration>
             <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
             <findbugsXmlOutput>true</findbugsXmlOutput>
@@ -702,6 +715,7 @@
           <tocMaxDepth>2</tocMaxDepth>
           <insertXrefPageNumber>yes</insertXrefPageNumber>
           <targetDirectory>${basedir}/target/docbkx</targetDirectory>
+          <chunkerOutputEncoding>UTF-8</chunkerOutputEncoding>
         </configuration>
         <executions>
           <execution>
@@ -731,6 +745,7 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <version>${maven.resources.plugin.version}</version>
         <!--$NO-MVN-MAN-VER$ -->
@@ -848,7 +863,7 @@
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.8</jruby.version>
-    <junit.version>4.10-HBASE-1</junit.version>
+    <junit.version>4.11</junit.version>
     <htrace.version>1.49</htrace.version>
     <slf4j.version>1.4.3</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
@@ -866,10 +881,11 @@
     <maven.assembly.version>2.3</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
-    <findbugs.version>2.4.0</findbugs.version>
+    <findbugs-maven-plugin.version>2.5.2</findbugs-maven-plugin.version>
+    <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <maven.site.version>3.1</maven.site.version>
-    <javadoc.version>2.8.1</javadoc.version>
-    <maven.resources.plugin.version>2.5</maven.resources.plugin.version>
+    <javadoc.version>2.9</javadoc.version>
+    <maven.resources.plugin.version>2.6</maven.resources.plugin.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
@@ -881,10 +897,10 @@
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
     <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
+    <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <surefire.version>2.12-TRUNK-HBASE-2</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
-    <compat.module>hbase-hadoop1-compat</compat.module>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
@@ -895,6 +911,7 @@
     <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
     <test.output.tofile>true</test.output.tofile>
+    <surefire.timeout>900</surefire.timeout>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1225,9 +1242,7 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
-        <scope>test</scope>
-        <!-- FIXME: the following needs to go away once HBASE-4955 is fixed -->
-        <optional>true</optional>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>org.cloudera.htrace</groupId>
@@ -1244,6 +1259,14 @@
   </dependencyManagement>
   <!-- Dependencies needed by subprojects -->
   <dependencies>
+
+    <dependency>
+      <groupId>com.github.stephenc.findbugs</groupId>
+      <artifactId>findbugs-annotations</artifactId>
+      <version>${findbugs-annotations}</version>
+      <scope>compile</scope>
+    </dependency>
+
     <!-- Test dependencies -->
     <dependency>
       <groupId>junit</groupId>
@@ -1303,6 +1326,37 @@
         <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
       </properties>
     </profile>
+    <profile>
+      <id>os.windows</id>
+      <activation>
+        <os>
+          <family>Windows</family>
+        </os>
+      </activation>
+      <properties>
+        <build.platform>cygwin</build.platform>
+      </properties>
+      <build>
+        <pluginManagement>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
+              <systemProperties>
+                <property>
+                  <name>java.net.preferIPv4Stack</name>
+                  <value>true</value>
+		</property>
+              </systemProperties>
+            </configuration>
+          </plugin>
+        </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+
     <!-- this profile should be activated for release builds -->
     <profile>
       <id>release</id>
@@ -1336,6 +1390,9 @@
           <name>!hadoop.profile</name>
         </property>
       </activation>
+      <modules>
+        <module>hbase-hadoop1-compat</module>
+      </modules>
       <properties>
         <hadoop.version>${hadoop-one.version}</hadoop.version>
         <slf4j.version>1.4.3</slf4j.version>
@@ -1392,6 +1449,9 @@
           <value>2.0</value>
         </property>
       </activation>
+      <modules>
+        <module>hbase-hadoop2-compat</module>
+      </modules>
       <properties>
         <slf4j.version>1.6.1</slf4j.version>
         <hadoop.version>${hadoop-two.version}</hadoop.version>
@@ -1678,9 +1738,13 @@
     </plugins>
   </reporting>
   <distributionManagement>
-    <site>
-      <id>apache.website</id>
-      <url>scp://people.apache.org/www/hbase.apache.org/</url>
-    </site>
+      <site>
+          <id>hbase.apache.org</id>
+          <name>HBase Website at hbase.apache.org</name>
+          <!-- On why this is the tmp dir and not hbase.apache.org, see
+               https://issues.apache.org/jira/browse/HBASE-7593?focusedCommentId=13555866&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13555866
+               -->
+          <url>file:///tmp</url>
+      </site>
   </distributionManagement>
 </project>

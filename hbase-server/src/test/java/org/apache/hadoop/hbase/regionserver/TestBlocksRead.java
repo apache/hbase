@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.Test;
@@ -89,7 +88,7 @@ public class TestBlocksRead extends HBaseTestCase {
    * @param tableName
    * @param callingMethod
    * @param conf
-   * @param families
+   * @param family
    * @throws IOException
    * @return created and initialized region.
    */
@@ -158,7 +157,7 @@ public class TestBlocksRead extends HBaseTestCase {
         get.addColumn(cf, Bytes.toBytes(column));
       }
 
-      kvs = region.get(get, null).raw();
+      kvs = region.get(get).raw();
       long blocksEnd = getBlkAccessCount(cf);
       if (expBlocks[i] != -1) {
         assertEquals("Blocks Read Check for Bloom: " + bloomType, expBlocks[i],
@@ -189,7 +188,7 @@ public class TestBlocksRead extends HBaseTestCase {
     del.deleteFamily(Bytes.toBytes(family + "_ROWCOL"), version);
     del.deleteFamily(Bytes.toBytes(family + "_ROW"), version);
     del.deleteFamily(Bytes.toBytes(family + "_NONE"), version);
-    region.delete(del, null, true);
+    region.delete(del, true);
   }
 
   private static void verifyData(KeyValue kv, String expectedRow,

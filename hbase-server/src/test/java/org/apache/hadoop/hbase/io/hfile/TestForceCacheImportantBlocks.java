@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -43,7 +43,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-/**W
+/**
  * Make sure we always cache important block types, such as index blocks, as
  * long as we have a block cache, even though block caching might be disabled
  * for the column family.
@@ -80,8 +80,6 @@ public class TestForceCacheImportantBlocks {
   public static Collection<Object[]> parameters() {
     // HFile versions
     return Arrays.asList(new Object[][] {
-        new Object[] { new Integer(1), false },
-        new Object[] { new Integer(1), true },
         new Object[] { new Integer(2), false },
         new Object[] { new Integer(2), true }
     });
@@ -114,7 +112,7 @@ public class TestForceCacheImportantBlocks {
 
     for (int i = 0; i < NUM_ROWS; ++i) {
       Get get = new Get(Bytes.toBytes("row" + i));
-      region.get(get, null);
+      region.get(get);
     }
 
     List<BlockCategory> importantBlockCategories =

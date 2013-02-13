@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -115,7 +116,7 @@ public class TestCatalogTracker {
   private CatalogTracker constructAndStartCatalogTracker(final HConnection c)
   throws IOException, InterruptedException {
     CatalogTracker ct = new CatalogTracker(this.watcher, UTIL.getConfiguration(),
-      c, this.abortable, 0);
+      c, this.abortable);
     ct.start();
     return ct;
   }
@@ -177,7 +178,7 @@ public class TestCatalogTracker {
       // Join the thread... should exit shortly.
       t.join();
     } finally {
-      HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
+      HConnectionManager.deleteConnection(UTIL.getConfiguration());
     }
   }
 
@@ -230,20 +231,20 @@ public class TestCatalogTracker {
         // So, do this in a thread and then reset meta location to break it out
         // of its wait after a bit of time.
         final AtomicBoolean metaSet = new AtomicBoolean(false);
+        final CountDownLatch latch = new CountDownLatch(1);
         Thread t = new Thread() {
           @Override
           public void run() {
             try {
-              metaSet.set(ct.waitForMetaServerConnectionDefault() !=  null);
-            } catch (NotAllMetaRegionsOnlineException e) {
-              throw new RuntimeException(e);
-            } catch (IOException e) {
+              latch.countDown();
+              metaSet.set(ct.waitForMeta(100000) !=  null);
+            } catch (Exception e) {
               throw new RuntimeException(e);
             }
           }
         };
         t.start();
-        while(!t.isAlive()) Threads.sleep(1);
+        latch.await();
         Threads.sleep(1);
         // Now reset the meta as though it were redeployed.
         ct.setMetaLocation(SN);
@@ -257,7 +258,7 @@ public class TestCatalogTracker {
       }
     } finally {
       // Clear out our doctored connection or could mess up subsequent tests.
-      HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
+      HConnectionManager.deleteConnection(UTIL.getConfiguration());
     }
   }
 
@@ -284,7 +285,7 @@ public class TestCatalogTracker {
       }
     } finally {
       // Clear out our doctored connection or could mess up subsequent tests.
-      HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
+      HConnectionManager.deleteConnection(UTIL.getConfiguration());
     }
   }
 
@@ -370,7 +371,7 @@ public class TestCatalogTracker {
       final CatalogTracker ct = constructAndStartCatalogTracker(connection);
       ct.waitForMeta(100);
     } finally {
-      HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
+      HConnectionManager.deleteConnection(UTIL.getConfiguration());
     }
   }
 
@@ -453,7 +454,7 @@ public class TestCatalogTracker {
       // been assigned).
       String node = ct.getMetaNodeTracker().getNode();
       ZKUtil.createAndFailSilent(this.watcher, node);
-      MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, SN);
+      MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, SN, 0);
       ZKUtil.deleteNode(this.watcher, node);
       // Go get the new meta location. waitForMeta gets and verifies meta.
       Assert.assertTrue(ct.waitForMeta(10000).equals(SN));
@@ -462,7 +463,7 @@ public class TestCatalogTracker {
       // Now meta is available.
       Assert.assertTrue(ct.waitForMeta(10000).equals(SN));
     } finally {
-      HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
+      HConnectionManager.deleteConnection(UTIL.getConfiguration());
     }
   }
 
@@ -477,7 +478,7 @@ public class TestCatalogTracker {
    * {@link HConnection#getAdmin(String, int)} is called, returns the passed
    * {@link ClientProtocol} instance when {@link HConnection#getClient(String, int)}
    * is called (Be sure call
-   * {@link HConnectionManager#deleteConnection(org.apache.hadoop.conf.Configuration, boolean)}
+   * {@link HConnectionManager#deleteConnection(org.apache.hadoop.conf.Configuration)}
    * when done with this mocked Connection.
    * @throws IOException
    */

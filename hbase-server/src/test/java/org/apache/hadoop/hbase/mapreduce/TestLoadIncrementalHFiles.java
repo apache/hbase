@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
@@ -62,7 +62,9 @@ public class TestLoadIncrementalHFiles {
   public static String COMPRESSION =
     Compression.Algorithm.NONE.getName();
 
-  private static HBaseTestingUtility util = new HBaseTestingUtility();
+  static HBaseTestingUtility util = new HBaseTestingUtility();
+  //used by secure subclass
+  static boolean useSecure = false;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -151,8 +153,7 @@ public class TestLoadIncrementalHFiles {
 
     HTable table = new HTable(util.getConfiguration(), TABLE);
     util.waitTableAvailable(TABLE, 30000);
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(
-      util.getConfiguration());
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration(), useSecure);
     loader.doBulkLoad(dir, table);
 
     assertEquals(expectedRows, util.countRows(table));

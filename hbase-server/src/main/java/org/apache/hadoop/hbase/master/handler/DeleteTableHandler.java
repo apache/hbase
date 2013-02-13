@@ -97,7 +97,7 @@ public class DeleteTableHandler extends TableEventHandler {
     FileSystem fs = mfs.getFileSystem();
     for (HRegionInfo hri: regions) {
       LOG.debug("Deleting region " + hri.getRegionNameAsString() + " from FS");
-      HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
+      HFileArchiver.archiveRegion(masterServices.getConfiguration(), fs, mfs.getRootDir(),
           tempTableDir, new Path(tempTableDir, hri.getEncodedName()));
     }
 

@@ -74,12 +74,11 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param row row key
    */
   public Delete(byte [] row) {
-    this(row, HConstants.LATEST_TIMESTAMP, null);
+    this(row, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
-   * Create a Delete operation for the specified row and timestamp, using
-   * an optional row lock.<p>
+   * Create a Delete operation for the specified row and timestamp.<p>
    *
    * If no further operations are done, this will delete all columns in all
    * families of the specified row with a timestamp less than or equal to the
@@ -89,14 +88,10 @@ public class Delete extends Mutation implements Comparable<Row> {
    * families or columns, you must specify each timestamp individually.
    * @param row row key
    * @param timestamp maximum version timestamp (only for delete row)
-   * @param rowLock previously acquired row lock, or null
    */
-  public Delete(byte [] row, long timestamp, RowLock rowLock) {
+  public Delete(byte [] row, long timestamp) {
     this.row = row;
     this.ts = timestamp;
-    if (rowLock != null) {
-    	this.lockId = rowLock.getLockId();
-    }
   }
 
   /**
@@ -105,7 +100,6 @@ public class Delete extends Mutation implements Comparable<Row> {
   public Delete(final Delete d) {
     this.row = d.getRow();
     this.ts = d.getTimeStamp();
-    this.lockId = d.getLockId();
     this.familyMap.putAll(d.getFamilyMap());
     this.writeToWAL = d.writeToWAL;
   }

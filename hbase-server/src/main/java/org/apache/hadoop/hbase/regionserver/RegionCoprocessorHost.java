@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -135,6 +134,7 @@ public class RegionCoprocessorHost
    */
   public RegionCoprocessorHost(final HRegion region,
       final RegionServerServices rsServices, final Configuration conf) {
+    this.conf = conf;
     this.rsServices = rsServices;
     this.region = region;
     this.pathPrefix = Integer.toString(this.region.getRegionInfo().hashCode());
@@ -214,11 +214,6 @@ public class RegionCoprocessorHost
     // It uses a visitor pattern to invoke registered Endpoint
     // method.
     for (Class c : implClass.getInterfaces()) {
-      if (CoprocessorProtocol.class.isAssignableFrom(c)) {
-        region.registerProtocol(c, (CoprocessorProtocol)instance);
-      }
-      // we allow endpoints to register as both CoproocessorProtocols and Services
-      // for ease of transition
       if (CoprocessorService.class.isAssignableFrom(c)) {
         region.registerService( ((CoprocessorService)instance).getService() );
       }
@@ -430,9 +425,11 @@ public class RegionCoprocessorHost
    * Called prior to rewriting the store files selected for compaction
    * @param store the store being compacted
    * @param scanner the scanner used to read store data during compaction
-   * @throws IOException 
+   * @param scanType type of Scan
+   * @throws IOException
    */
-  public InternalScanner preCompact(HStore store, InternalScanner scanner) throws IOException {
+  public InternalScanner preCompact(HStore store, InternalScanner scanner,
+      ScanType scanType) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
@@ -440,7 +437,7 @@ public class RegionCoprocessorHost
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
           scanner = ((RegionObserver)env.getInstance()).preCompact(
-              ctx, store, scanner);
+              ctx, store, scanner, scanType);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env,e);
         }
@@ -503,7 +500,7 @@ public class RegionCoprocessorHost
 
   /**
    * Invoked before a memstore flush
-   * @throws IOException 
+   * @throws IOException
    */
   public void preFlush() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -524,7 +521,7 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preFlush(ObserverContext<RegionCoprocessorEnvironment>, HStore, KeyValueScanner)}
+   * {@link RegionObserver#preFlushScannerOpen(ObserverContext, HStore, KeyValueScanner, InternalScanner)}
    */
   public InternalScanner preFlushScannerOpen(HStore store, KeyValueScanner memstoreScanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -607,7 +604,7 @@ public class RegionCoprocessorHost
       }
     }
   }
-  
+
   /**
    * Invoked just before a split
    * @throws IOException
@@ -633,7 +630,7 @@ public class RegionCoprocessorHost
    * Invoked just after a split
    * @param l the new left-hand daughter region
    * @param r the new right-hand daughter region
-   * @throws IOException 
+   * @throws IOException
    */
   public void postSplit(HRegion l, HRegion r) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -651,7 +648,7 @@ public class RegionCoprocessorHost
       }
     }
   }
-  
+
   /**
    * Invoked just before the rollback of a failed split is started
    * @throws IOException
@@ -672,7 +669,7 @@ public class RegionCoprocessorHost
       }
     }
   }
-  
+
   /**
    * Invoked just after the rollback of a failed split is done
    * @throws IOException
@@ -693,7 +690,7 @@ public class RegionCoprocessorHost
       }
     }
   }
-  
+
   /**
    * Invoked after a split is completed irrespective of a failure or success.
    * @throws IOException
@@ -1354,6 +1351,35 @@ public class RegionCoprocessorHost
     return hasMore;
   }
 
+  /**
+   * This will be called by the scan flow when the current scanned row is being filtered out by the
+   * filter.
+   * @param s the scanner
+   * @param currentRow The current rowkey which got filtered out
+   * @return whether more rows are available for the scanner or not
+   * @throws IOException
+   */
+  public boolean postScannerFilterRow(final InternalScanner s, final byte[] currentRow)
+      throws IOException {
+    boolean hasMore = true; // By default assume more rows there.
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          hasMore = ((RegionObserver) env.getInstance()).postScannerFilterRow(ctx, s, currentRow,
+              hasMore);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return hasMore;
+  }
+  
   /**
    * @param s the scanner
    * @return true if default behavior should be bypassed, false otherwise

@@ -31,18 +31,22 @@ import org.apache.hadoop.ipc.RemoteException;
 @InterfaceStability.Evolving
 public class RegionMovedException extends NotServingRegionException {
   private static final Log LOG = LogFactory.getLog(RegionMovedException.class);
-  private static final long serialVersionUID = -7232903522310558397L;
+  private static final long serialVersionUID = -7232903522310558396L;
 
   private final String hostname;
   private final int port;
+  private final long locationSeqNum;
 
   private static final String HOST_FIELD = "hostname=";
   private static final String PORT_FIELD = "port=";
+  private static final String LOCATIONSEQNUM_FIELD = "locationSeqNum=";
 
-  public RegionMovedException(final String hostname, final int port) {
+  public RegionMovedException(final String hostname, final int port,
+    final long locationSeqNum) {
     super();
     this.hostname = hostname;
     this.port = port;
+    this.locationSeqNum = locationSeqNum;
   }
 
   public String getHostname() {
@@ -53,6 +57,10 @@ public class RegionMovedException extends NotServingRegionException {
     return port;
   }
 
+  public long getLocationSeqNum() {
+    return locationSeqNum;
+  }
+
   /**
    * For hadoop.ipc internal call. Do NOT use.
    * We have to parse the hostname to recreate the exception.
@@ -61,24 +69,31 @@ public class RegionMovedException extends NotServingRegionException {
   public RegionMovedException(String s) {
     int posHostname = s.indexOf(HOST_FIELD) + HOST_FIELD.length();
     int posPort = s.indexOf(PORT_FIELD) + PORT_FIELD.length();
+    int posSeqNum = s.indexOf(LOCATIONSEQNUM_FIELD) + LOCATIONSEQNUM_FIELD.length();
 
     String tmpHostname = null;
     int tmpPort = -1;
+    long tmpSeqNum = HConstants.NO_SEQNUM;
     try {
+      // TODO: this whole thing is extremely brittle.
       tmpHostname = s.substring(posHostname, s.indexOf(' ', posHostname));
       tmpPort = Integer.parseInt(s.substring(posPort, s.indexOf('.', posPort)));
+      tmpSeqNum = Long.parseLong(s.substring(posSeqNum, s.indexOf('.', posSeqNum)));
     } catch (Exception ignored) {
-      LOG.warn("Can't parse the hostname and the port from this string: " + s + ", "+
-        "Continuing");
+      LOG.warn("Can't parse the hostname and the port from this string: " + s + ", continuing");
     }
 
     hostname = tmpHostname;
     port = tmpPort;
+    locationSeqNum = tmpSeqNum;
   }
 
   @Override
   public String getMessage() {
-    return "Region moved to: " + HOST_FIELD + hostname + " " + PORT_FIELD + port + ".";
+    // TODO: deserialization above depends on this. That is bad, but also means this
+    // should be modified carefully.
+    return "Region moved to: " + HOST_FIELD + hostname + " " + PORT_FIELD + port + ". As of "
+      + LOCATIONSEQNUM_FIELD + locationSeqNum + ".";
   }
 
   /**

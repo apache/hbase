@@ -108,7 +108,7 @@ public class OfflineMetaRebuildTestCore {
   @After
   public void tearDownAfter() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-    HConnectionManager.deleteConnection(conf, true);
+    HConnectionManager.deleteConnection(conf);
   }
 
   /**

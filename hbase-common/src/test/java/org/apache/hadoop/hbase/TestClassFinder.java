@@ -18,7 +18,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,21 +31,23 @@ import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.jar.*;
-import javax.tools.*;
+import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 
-import org.apache.hadoop.hbase.SmallTests;
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
 
-import org.junit.experimental.categories.Category;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestClassFinder {
@@ -184,12 +189,18 @@ public class TestClassFinder {
     FileAndPath c2 = compileTestClass(counter, "", "c2");
     packageAndLoadJar(c1);
     final String excludedJar = packageAndLoadJar(c2);
+    /* ResourcePathFilter will pass us the resourcePath as a path of a
+     * URL from the classloader. For Windows, the ablosute path and the
+     * one from the URL have different file separators.
+     */
+    final String excludedJarResource =
+      new File(excludedJar).toURI().getRawSchemeSpecificPart();
 
     final ClassFinder.ResourcePathFilter notExcJarFilter =
         new ClassFinder.ResourcePathFilter() {
       @Override
       public boolean isCandidatePath(String resourcePath, boolean isJar) {
-        return !isJar || !resourcePath.equals(excludedJar);
+        return !isJar || !resourcePath.equals(excludedJarResource);
       }
     };
     ClassFinder incClassesFinder = new ClassFinder(notExcJarFilter, null, null);

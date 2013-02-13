@@ -46,7 +46,7 @@ import java.util.TreeMap;
 public class Put extends Mutation implements HeapSize, Comparable<Row> {
   private static final long OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + 2 * ClassSize.REFERENCE +
-      2 * Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN +
+      1 * Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN +
       ClassSize.REFERENCE + ClassSize.TREEMAP);
 
   /**
@@ -54,16 +54,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param row row key
    */
   public Put(byte [] row) {
-    this(row, null);
-  }
-
-  /**
-   * Create a Put operation for the specified row, using an existing row lock.
-   * @param row row key
-   * @param rowLock previously acquired row lock, or null
-   */
-  public Put(byte [] row, RowLock rowLock) {
-      this(row, HConstants.LATEST_TIMESTAMP, rowLock);
+    this(row, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
@@ -73,24 +64,11 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param ts timestamp
    */
   public Put(byte[] row, long ts) {
-    this(row, ts, null);
-  }
-
-  /**
-   * Create a Put operation for the specified row, using a given timestamp, and an existing row lock.
-   * @param row row key
-   * @param ts timestamp
-   * @param rowLock previously acquired row lock, or null
-   */
-  public Put(byte [] row, long ts, RowLock rowLock) {
     if(row == null || row.length > HConstants.MAX_ROW_LENGTH) {
       throw new IllegalArgumentException("Row key is invalid");
     }
     this.row = Arrays.copyOf(row, row.length);
     this.ts = ts;
-    if(rowLock != null) {
-      this.lockId = rowLock.getLockId();
-    }
   }
 
   /**
@@ -98,7 +76,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param putToCopy put to copy
    */
   public Put(Put putToCopy) {
-    this(putToCopy.getRow(), putToCopy.ts, putToCopy.getRowLock());
+    this(putToCopy.getRow(), putToCopy.ts);
     this.familyMap =
       new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
     for(Map.Entry<byte [], List<KeyValue>> entry :

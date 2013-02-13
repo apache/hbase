@@ -33,16 +33,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.hbase.util.Pair;
@@ -171,14 +167,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     return encodedRegionName;
   }
 
-  /** HRegionInfo for root region */
-  public static final HRegionInfo ROOT_REGIONINFO =
-    new HRegionInfo(0L, Bytes.toBytes("-ROOT-"));
-
-  /** HRegionInfo for first meta region */
-  public static final HRegionInfo FIRST_META_REGIONINFO =
-    new HRegionInfo(1L, Bytes.toBytes(".META."));
-
   private byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;
   // This flag is in the parent of a split while the parent is still referenced
   // by daughter regions.  We USED to set this flag when we disabled a table
@@ -197,6 +185,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   // Current TableName
   private byte[] tableName = null;
+
+  /** HRegionInfo for root region */
+  public static final HRegionInfo ROOT_REGIONINFO =
+      new HRegionInfo(0L, Bytes.toBytes("-ROOT-"));
+
+  /** HRegionInfo for first meta region */
+  public static final HRegionInfo FIRST_META_REGIONINFO =
+      new HRegionInfo(1L, Bytes.toBytes(".META."));
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
@@ -420,6 +416,15 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
+   * Gets the start key from the specified region name.
+   * @param regionName
+   * @return Start key.
+   */
+  public static byte[] getStartKey(final byte[] regionName) throws IOException {
+    return parseRegionName(regionName)[1];
+  }
+
+  /**
    * Separate elements of a regionName.
    * @param regionName
    * @return Array of byte[] containing tableName, startKey and id
@@ -561,54 +566,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     return Bytes.compareTo(row, startKey) >= 0 &&
       (Bytes.compareTo(row, endKey) < 0 ||
        Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
-  }
-
-  /**
-   * @return the tableDesc
-   * @deprecated Do not use; expensive call
-   *         use HRegionInfo.getTableNameAsString() in place of
-   *         HRegionInfo.getTableDesc().getNameAsString()
-   */
-   @Deprecated
-  public HTableDescriptor getTableDesc() {
-    Configuration c = HBaseConfiguration.create();
-    c.set("fs.defaultFS", c.get(HConstants.HBASE_DIR));
-    c.set("fs.default.name", c.get(HConstants.HBASE_DIR));
-    FileSystem fs;
-    try {
-      fs = FileSystem.get(c);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    FSTableDescriptors fstd =
-      new FSTableDescriptors(fs, new Path(c.get(HConstants.HBASE_DIR)));
-    try {
-      return fstd.get(this.tableName);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * @param newDesc new table descriptor to use
-   * @deprecated Do not use; expensive call
-   */
-  @Deprecated
-  public void setTableDesc(HTableDescriptor newDesc) {
-    Configuration c = HBaseConfiguration.create();
-    FileSystem fs;
-    try {
-      fs = FileSystem.get(c);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    FSTableDescriptors fstd =
-      new FSTableDescriptors(fs, new Path(c.get(HConstants.HBASE_DIR)));
-    try {
-      fstd.add(newDesc);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   /** @return true if this is the root region */
@@ -1053,6 +1010,20 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       HConstants.STARTCODE_QUALIFIER);
     if (value == null || value.length == 0) return null;
     return new ServerName(hostAndPort, Bytes.toLong(value));
+  }
+
+  /**
+   * The latest seqnum that the server writing to meta observed when opening the region.
+   * E.g. the seqNum when the result of {@link #getServerName(Result)} was written.
+   * @param r Result to pull the seqNum from
+   * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
+   */
+  public static long getSeqNumDuringOpen(final Result r) {
+    byte[] value = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER);
+    if (value == null || value.length == 0) return HConstants.NO_SEQNUM;
+    Long result = Bytes.toLong(value);
+    if (result == null) return HConstants.NO_SEQNUM;
+    return result.longValue();
   }
 
   /**

@@ -169,41 +169,6 @@ public class TestHFileBlockCompatibility {
   }
 
   @Test
-  public void testReaderV1() throws IOException {
-    for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
-      for (boolean pread : new boolean[] { false, true }) {
-        byte[] block = createTestV1Block(algo);
-        Path path = new Path(TEST_UTIL.getDataTestDir(),
-          "blocks_v1_"+ algo);
-        LOG.info("Creating temporary file at " + path);
-        FSDataOutputStream os = fs.create(path);
-        int totalSize = 0;
-        int numBlocks = 50;
-        for (int i = 0; i < numBlocks; ++i) {
-          os.write(block);
-          totalSize += block.length;
-        }
-        os.close();
-
-        FSDataInputStream is = fs.open(path);
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV1(is, algo,
-            totalSize);
-        HFileBlock b;
-        int numBlocksRead = 0;
-        long pos = 0;
-        while (pos < totalSize) {
-          b = hbr.readBlockData(pos, block.length, uncompressedSizeV1, pread);
-          b.sanityCheck();
-          pos += block.length;
-          numBlocksRead++;
-        }
-        assertEquals(numBlocks, numBlocksRead);
-        is.close();
-      }
-    }
-  }
-
-  @Test
   public void testReaderV2() throws IOException {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {

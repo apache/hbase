@@ -116,6 +116,7 @@ public class TestMultiRowResource {
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
 
     client.delete(row_5_url);
     client.delete(row_6_url);
@@ -142,6 +143,7 @@ public class TestMultiRowResource {
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
 
     client.delete(row_5_url);
     client.delete(row_6_url);

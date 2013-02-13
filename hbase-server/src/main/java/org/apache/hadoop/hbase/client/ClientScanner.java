@@ -69,8 +69,8 @@ public class ClientScanner extends AbstractClientScanner {
     /**
      * Create a new ClientScanner for the specified table. An HConnection will be
      * retrieved using the passed Configuration.
-     * Note that the passed {@link Scan}'s start row maybe changed changed. 
-     * 
+     * Note that the passed {@link Scan}'s start row maybe changed changed.
+     *
      * @param conf The {@link Configuration} to use.
      * @param scan {@link Scan} to use in this scanner
      * @param tableName The table that we wish to scan
@@ -80,11 +80,11 @@ public class ClientScanner extends AbstractClientScanner {
         final byte[] tableName) throws IOException {
       this(conf, scan, tableName, HConnectionManager.getConnection(conf));
     }
- 
+
     /**
      * Create a new ClientScanner for the specified table
-     * Note that the passed {@link Scan}'s start row maybe changed changed. 
-     * 
+     * Note that the passed {@link Scan}'s start row maybe changed changed.
+     *
      * @param conf The {@link Configuration} to use.
      * @param scan {@link Scan} to use in this scanner
      * @param tableName The table that we wish to scan
@@ -250,7 +250,6 @@ public class ClientScanner extends AbstractClientScanner {
       if (this.scanMetrics == null) {
         return;
       }
-      final DataOutputBuffer d = new DataOutputBuffer();
       MapReduceProtos.ScanMetrics pScanMetrics = ProtobufUtil.toScanMetrics(scanMetrics);
       scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA, pScanMetrics.toByteArray());
     }

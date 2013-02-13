@@ -126,7 +126,7 @@ public class WALPlayer extends Configured implements Tool {
           Delete del = null;
           KeyValue lastKV = null;
           for (KeyValue kv : value.getKeyValues()) {
-            // filtering HLog meta entries, see HLog.completeCacheFlushLogEdit
+            // filtering HLog meta entries
             if (HLogUtil.isMetaFamily(kv.getFamily())) continue;
 
             // A WALEdit may contain multiple operations (HBASE-3584) and/or

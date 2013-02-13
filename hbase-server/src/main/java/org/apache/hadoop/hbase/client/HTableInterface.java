@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 
 /**
@@ -65,7 +64,7 @@ public interface HTableInterface extends Closeable {
   HTableDescriptor getTableDescriptor() throws IOException;
 
   /**
-   * Test for the existence of columns in the table, as specified in the Get.
+   * Test for the existence of columns in the table, as specified by the Get.
    * <p>
    *
    * This will return true if the Get matches one or more keys, false if not.
@@ -81,12 +80,29 @@ public interface HTableInterface extends Closeable {
   boolean exists(Get get) throws IOException;
 
   /**
-   * Method that does a batch call on Deletes, Gets and Puts. The ordering of
-   * execution of the actions is not defined. Meaning if you do a Put and a
+   * Test for the existence of columns in the table, as specified by the Gets.
+   * <p>
+   *
+   * This will return an array of booleans. Each value will be true if the related Get matches
+   * one or more keys, false if not.
+   * <p>
+   *
+   * This is a server-side call so it prevents any data from being transfered to
+   * the client.
+   *
+   * @param gets the Gets
+   * @return Array of Boolean true if the specified Get matches one or more keys, false if not
+   * @throws IOException e
+   */
+  Boolean[] exists(List<Get> gets) throws IOException;
+
+  /**
+   * Method that does a batch call on Deletes, Gets, Puts, Increments, Appends and RowMutations.
+   * The ordering of execution of the actions is not defined. Meaning if you do a Put and a
    * Get in the same {@link #batch} call, you will not necessarily be
    * guaranteed that the Get returns what the Put had put.
    *
-   * @param actions list of Get, Put, Delete objects
+   * @param actions list of Get, Put, Delete, Increment, Append, RowMutations objects
    * @param results Empty Object[], same size as actions. Provides access to partial
    *                results, in case an exception is thrown. A null in the result array means that
    *                the call for that action failed, even after retries
@@ -99,7 +115,7 @@ public interface HTableInterface extends Closeable {
    * Same as {@link #batch(List, Object[])}, but returns an array of
    * results instead of using a results parameter reference.
    *
-   * @param actions list of Get, Put, Delete objects
+   * @param actions list of Get, Put, Delete, Increment, Append, RowMutations objects
    * @return the results from the actions. A null in the return array means that
    *         the call for that action failed, even after retries
    * @throws IOException
@@ -393,116 +409,6 @@ public interface HTableInterface extends Closeable {
    * @throws IOException if a remote or network exception occurs.
    */
   void close() throws IOException;
-
-  /**
-   * Obtains a lock on a row.
-   *
-   * @param row The row to lock.
-   * @return A {@link RowLock} containing the row and lock id.
-   * @throws IOException if a remote or network exception occurs.
-   * @see RowLock
-   * @see #unlockRow
-   */
-  RowLock lockRow(byte[] row) throws IOException;
-
-  /**
-   * Releases a row lock.
-   *
-   * @param rl The row lock to release.
-   * @throws IOException if a remote or network exception occurs.
-   * @see RowLock
-   * @see #unlockRow
-   */
-  void unlockRow(RowLock rl) throws IOException;
-
-  /**
-   * Creates and returns a proxy to the CoprocessorProtocol instance running in the
-   * region containing the specified row.  The row given does not actually have
-   * to exist.  Whichever region would contain the row based on start and end keys will
-   * be used.  Note that the {@code row} parameter is also not passed to the
-   * coprocessor handler registered for this protocol, unless the {@code row}
-   * is separately passed as an argument in a proxy method call.  The parameter
-   * here is just used to locate the region used to handle the call.
-   *
-   * @param protocol The class or interface defining the remote protocol
-   * @param row The row key used to identify the remote region location
-   * @return A CoprocessorProtocol instance
-   * @deprecated since 0.96.  Use {@link HTableInterface#coprocessorService(byte[])} instead.
-   */
-  @Deprecated
-  <T extends CoprocessorProtocol> T coprocessorProxy(Class<T> protocol, byte[] row);
-
-  /**
-   * Invoke the passed
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call} against
-   * the {@link CoprocessorProtocol} instances running in the selected regions.
-   * All regions beginning with the region containing the <code>startKey</code>
-   * row, through to the region containing the <code>endKey</code> row (inclusive)
-   * will be used.  If <code>startKey</code> or <code>endKey</code> is
-   * <code>null</code>, the first and last regions in the table, respectively,
-   * will be used in the range selection.
-   *
-   * @param protocol the CoprocessorProtocol implementation to call
-   * @param startKey start region selection with region containing this row
-   * @param endKey select regions up to and including the region containing
-   * this row
-   * @param callable wraps the CoprocessorProtocol implementation method calls
-   * made per-region
-   * @param <T> CoprocessorProtocol subclass for the remote invocation
-   * @param <R> Return type for the
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
-   * method
-   * @return a <code>Map</code> of region names to
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)} return values
-   *
-   * @deprecated since 0.96.  Use
-   * {@link HTableInterface#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)} instead.
-   */
-  @Deprecated
-  <T extends CoprocessorProtocol, R> Map<byte[],R> coprocessorExec(
-      Class<T> protocol, byte[] startKey, byte[] endKey, Batch.Call<T,R> callable)
-      throws IOException, Throwable;
-
-  /**
-   * Invoke the passed
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call} against
-   * the {@link CoprocessorProtocol} instances running in the selected regions.
-   * All regions beginning with the region containing the <code>startKey</code>
-   * row, through to the region containing the <code>endKey</code> row
-   * (inclusive)
-   * will be used.  If <code>startKey</code> or <code>endKey</code> is
-   * <code>null</code>, the first and last regions in the table, respectively,
-   * will be used in the range selection.
-   *
-   * <p>
-   * For each result, the given
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
-   * method will be called.
-   *</p>
-   *
-   * @param protocol the CoprocessorProtocol implementation to call
-   * @param startKey start region selection with region containing this row
-   * @param endKey select regions up to and including the region containing
-   * this row
-   * @param callable wraps the CoprocessorProtocol implementation method calls
-   * made per-region
-   * @param callback an instance upon which
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)} with the
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
-   * return value for each region
-   * @param <T> CoprocessorProtocol subclass for the remote invocation
-   * @param <R> Return type for the
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
-   * method
-   *
-   * @deprecated since 0.96.
-   * Use {@link HTableInterface#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)} instead.
-   */
-  @Deprecated
-  <T extends CoprocessorProtocol, R> void coprocessorExec(
-      Class<T> protocol, byte[] startKey, byte[] endKey,
-      Batch.Call<T,R> callable, Batch.Callback<R> callback)
-      throws IOException, Throwable;
 
   /**
    * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the

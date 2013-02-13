@@ -101,7 +101,7 @@ public class HBaseCommonTestingUtility {
    * @return True if we removed the test dirs
    * @throws IOException
    */
-  boolean cleanupTestDir() throws IOException {
+  public boolean cleanupTestDir() throws IOException {
     if (deleteDir(this.dataTestDir)) {
       this.dataTestDir = null;
       return true;

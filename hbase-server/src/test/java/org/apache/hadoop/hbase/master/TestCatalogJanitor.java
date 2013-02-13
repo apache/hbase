@@ -116,7 +116,7 @@ public class TestCatalogJanitor {
       this.ct = Mockito.mock(CatalogTracker.class);
       AdminProtocol hri = Mockito.mock(AdminProtocol.class);
       Mockito.when(this.ct.getConnection()).thenReturn(this.connection);
-      Mockito.when(ct.waitForMetaServerConnectionDefault()).thenReturn(hri);
+      Mockito.when(ct.waitForMetaServerConnection(Mockito.anyLong())).thenReturn(hri);
     }
 
     @Override
@@ -160,7 +160,7 @@ public class TestCatalogJanitor {
         this.ct.stop();
       }
       if (this.connection != null) {
-        HConnectionManager.deleteConnection(this.connection.getConfiguration(), true);
+        HConnectionManager.deleteConnection(this.connection.getConfiguration());
       }
     }
   }
@@ -299,6 +299,27 @@ public class TestCatalogJanitor {
     public boolean registerService(Service instance) {
       return false;
     }
+
+    @Override
+    public void deleteTable(byte[] tableName) throws IOException { }
+
+    @Override
+    public void modifyTable(byte[] tableName, HTableDescriptor descriptor) throws IOException { }
+
+    @Override
+    public void enableTable(byte[] tableName) throws IOException { }
+
+    @Override
+    public void disableTable(byte[] tableName) throws IOException { }
+
+    @Override
+    public void addColumn(byte[] tableName, HColumnDescriptor column) throws IOException { }
+
+    @Override
+    public void modifyColumn(byte[] tableName, HColumnDescriptor descriptor) throws IOException { }
+
+    @Override
+    public void deleteColumn(byte[] tableName, byte[] columnName) throws IOException { }
   }
 
   @Test

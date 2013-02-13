@@ -165,6 +165,9 @@ public class HFile {
   public final static String DEFAULT_COMPRESSION =
     DEFAULT_COMPRESSION_ALGORITHM.getName();
 
+  /** Meta data block name for bloom filter bits. */
+  public static final String BLOOM_FILTER_DATA_KEY = "BLOOM_FILTER_DATA";
+
   /**
    * We assume that HFile path ends with
    * ROOT_DIR/TABLE_NAME/REGION_NAME/CF_NAME/HFILE, so it has at least this
@@ -447,8 +450,6 @@ public class HFile {
       CacheConfig cacheConf) {
     int version = getFormatVersion(conf);
     switch (version) {
-    case 1:
-      return new HFileWriterV1.WriterFactoryV1(conf, cacheConf);
     case 2:
       return new HFileWriterV2.WriterFactoryV2(conf, cacheConf);
     default:
@@ -557,9 +558,6 @@ public class HFile {
       throw new CorruptHFileException("Problem reading HFile Trailer from file " + path, iae);
     }
     switch (trailer.getMajorVersion()) {
-    case 1:
-      return new HFileReaderV1(path, trailer, fsdis, size, closeIStream,
-          cacheConf);
     case 2:
       return new HFileReaderV2(path, trailer, fsdis, fsdisNoFsChecksum,
           size, closeIStream,

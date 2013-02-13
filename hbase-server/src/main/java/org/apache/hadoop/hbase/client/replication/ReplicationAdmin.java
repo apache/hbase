@@ -185,7 +185,7 @@ public class ReplicationAdmin implements Closeable {
     boolean prev = true;
     try {
       prev = getReplicating();
-      this.replicationZk.setReplicating(newState);
+      this.replicationZk.setReplication(newState);
     } catch (KeeperException e) {
       throw new IOException("Unable to set the replication state", e);
     }

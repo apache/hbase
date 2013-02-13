@@ -31,7 +31,8 @@ public class SecureTestUtil {
     conf.set("hadoop.security.authorization", "false");
     conf.set("hadoop.security.authentication", "simple");
     conf.set("hbase.coprocessor.master.classes", AccessController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", AccessController.class.getName());
+    conf.set("hbase.coprocessor.region.classes", AccessController.class.getName()+
+        ","+SecureBulkLoadEndpoint.class.getName());
     // add the process running user to superusers
     String currentUser = User.getCurrent().getName();
     conf.set("hbase.superuser", "admin,"+currentUser);

@@ -109,6 +109,12 @@ public class TestMetaMigrationConvertingToPB {
     }
     doFsCommand(shell,
       new String [] {"-put", untar.toURI().toString(), hbaseRootDir.toString()});
+
+    //windows fix: tgz file has .META. directory renamed as -META- since the original is an illegal
+    //name under windows. So we rename it back. See src/test/data//TestMetaMigrationConvertingToPB.README and
+    //https://issues.apache.org/jira/browse/HBASE-6821
+    doFsCommand(shell, new String [] {"-mv", new Path(hbaseRootDir, "-META-").toString(),
+      new Path(hbaseRootDir, ".META.").toString()});
     // See whats in minihdfs.
     doFsCommand(shell, new String [] {"-lsr", "/"});
     TEST_UTIL.startMiniHBaseCluster(1, 1);

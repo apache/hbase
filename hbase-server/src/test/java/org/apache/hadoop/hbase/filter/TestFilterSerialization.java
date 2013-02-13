@@ -257,7 +257,7 @@ public class TestFilterSerialization {
     // non-null family/column SingleColumnValueFilter
     singleColumnValueExcludeFilter =
       new SingleColumnValueExcludeFilter(Bytes.toBytes("fam"), Bytes.toBytes("qual"),
-      CompareFilter.CompareOp.LESS_OR_EQUAL, new NullComparator(), false, true, false, false);
+      CompareFilter.CompareOp.LESS_OR_EQUAL, new NullComparator(), false, false);
     assertTrue(singleColumnValueExcludeFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(singleColumnValueExcludeFilter))));
   }
@@ -274,7 +274,7 @@ public class TestFilterSerialization {
     // non-null family/column SingleColumnValueFilter
     singleColumnValueFilter =
       new SingleColumnValueFilter(Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
-      CompareFilter.CompareOp.NOT_EQUAL, new NullComparator(), true, false, true, true);
+      CompareFilter.CompareOp.NOT_EQUAL, new NullComparator(), true, true);
     assertTrue(singleColumnValueFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(singleColumnValueFilter))));
   }

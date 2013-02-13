@@ -903,7 +903,7 @@ public class ThriftServerRunner implements Runnable {
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
         HTable table = getTable(tableName);
-        Delete delete  = new Delete(getBytes(row), timestamp, null);
+        Delete delete  = new Delete(getBytes(row), timestamp);
         addAttributes(delete, attributes);
         table.delete(delete);
       } catch (IOException e) {
@@ -969,7 +969,7 @@ public class ThriftServerRunner implements Runnable {
       HTable table = null;
       try {
         table = getTable(tableName);
-        Put put = new Put(getBytes(row), timestamp, null);
+        Put put = new Put(getBytes(row), timestamp);
         addAttributes(put, attributes);
 
         Delete delete = new Delete(getBytes(row));
@@ -1034,7 +1034,7 @@ public class ThriftServerRunner implements Runnable {
         List<Mutation> mutations = batch.mutations;
         Delete delete = new Delete(row);
         addAttributes(delete, attributes);
-        Put put = new Put(row, timestamp, null);
+        Put put = new Put(row, timestamp);
         addAttributes(put, attributes);
         for (Mutation m : mutations) {
           byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));

@@ -56,6 +56,7 @@ while kill -0 `cat $pid` > /dev/null 2>&1; do
   echo -n "."
   sleep 1;
 done
+rm -f $pid
 # Add a CR after we're done w/ dots.
 echo
 

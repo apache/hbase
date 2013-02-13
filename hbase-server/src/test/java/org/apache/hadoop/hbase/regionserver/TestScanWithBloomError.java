@@ -41,8 +41,6 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -74,7 +72,7 @@ public class TestScanWithBloomError {
   private static final byte[] ROW_BYTES = Bytes.toBytes(ROW);
   private static NavigableSet<Integer> allColIds = new TreeSet<Integer>();
   private HRegion region;
-  private StoreFile.BloomType bloomType;
+  private BloomType bloomType;
   private FileSystem fs;
   private Configuration conf;
 
@@ -84,13 +82,13 @@ public class TestScanWithBloomError {
   @Parameters
   public static final Collection<Object[]> parameters() {
     List<Object[]> configurations = new ArrayList<Object[]>();
-    for (StoreFile.BloomType bloomType : StoreFile.BloomType.values()) {
+    for (BloomType bloomType : BloomType.values()) {
       configurations.add(new Object[] { bloomType });
     }
     return configurations;
   }
 
-  public TestScanWithBloomError(StoreFile.BloomType bloomType) {
+  public TestScanWithBloomError(BloomType bloomType) {
     this.bloomType = bloomType;
   }
 

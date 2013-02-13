@@ -135,6 +135,11 @@ public class TestCachedBlockQueue extends TestCase {
               return null;
             }
 
+            @Override
+            public BlockType getBlockType() {
+              return BlockType.DATA;
+            }
+
           }, accessTime, false);
     }
   }

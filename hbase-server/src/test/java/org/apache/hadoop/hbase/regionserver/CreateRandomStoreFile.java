@@ -101,7 +101,7 @@ public class CreateRandomStoreFile {
             + Arrays.toString(Compression.Algorithm.values()));
     options.addOption(BLOOM_FILTER_OPTION, "bloom_filter", true,
         "Bloom filter type, one of "
-            + Arrays.toString(StoreFile.BloomType.values()));
+            + Arrays.toString(BloomType.values()));
     options.addOption(BLOCK_SIZE_OPTION, "block_size", true,
         "HFile block size");
     options.addOption(BLOOM_BLOCK_SIZE_OPTION, "bloom_block_size", true,
@@ -162,9 +162,9 @@ public class CreateRandomStoreFile {
           cmdLine.getOptionValue(COMPRESSION_OPTION));
     }
 
-    StoreFile.BloomType bloomType = StoreFile.BloomType.NONE;
+    BloomType bloomType = BloomType.NONE;
     if (cmdLine.hasOption(BLOOM_FILTER_OPTION)) {
-      bloomType = StoreFile.BloomType.valueOf(cmdLine.getOptionValue(
+      bloomType = BloomType.valueOf(cmdLine.getOptionValue(
           BLOOM_FILTER_OPTION));
     }
 
