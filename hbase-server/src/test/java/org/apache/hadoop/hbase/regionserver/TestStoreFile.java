@@ -171,12 +171,16 @@ public class TestStoreFile extends HBaseTestCase {
 
   public void testHFileLink() throws IOException {
     final String columnFamily = "f";
+
+    Configuration testConf = new Configuration(this.conf);
+    FSUtils.setRootDir(testConf, this.testDir);
+
     HRegionInfo hri = new HRegionInfo(Bytes.toBytes("table-link"));
-    Path storedir = new Path(new Path(FSUtils.getRootDir(conf),
+    Path storedir = new Path(new Path(this.testDir,
       new Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
 
     // Make a store file and write data to it.
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(testConf, cacheConf,
          this.fs, 8 * 1024)
             .withOutputDir(storedir)
             .build();
@@ -184,13 +188,13 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
     writer.close();
 
-    Path dstPath = new Path(FSUtils.getRootDir(conf), new Path("test-region", columnFamily));
-    HFileLink.create(conf, this.fs, dstPath, hri, storeFilePath.getName());
+    Path dstPath = new Path(this.testDir, new Path("test-region", columnFamily));
+    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath = new Path(dstPath,
                   HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
     // Try to open store file from link
-    StoreFile hsf = new StoreFile(this.fs, linkFilePath, conf, cacheConf,
+    StoreFile hsf = new StoreFile(this.fs, linkFilePath, testConf, cacheConf,
         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     assertTrue(hsf.isLink());
 
