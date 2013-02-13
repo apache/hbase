@@ -14840,9 +14840,9 @@ public final class MasterAdminProtos {
   public interface TakeSnapshotResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required int64 expectedTime = 1;
-    boolean hasExpectedTime();
-    long getExpectedTime();
+    // required int64 expectedTimeout = 1;
+    boolean hasExpectedTimeout();
+    long getExpectedTimeout();
   }
   public static final class TakeSnapshotResponse extends
       com.google.protobuf.GeneratedMessage
@@ -14873,25 +14873,25 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required int64 expectedTime = 1;
-    public static final int EXPECTEDTIME_FIELD_NUMBER = 1;
-    private long expectedTime_;
-    public boolean hasExpectedTime() {
+    // required int64 expectedTimeout = 1;
+    public static final int EXPECTEDTIMEOUT_FIELD_NUMBER = 1;
+    private long expectedTimeout_;
+    public boolean hasExpectedTimeout() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public long getExpectedTime() {
-      return expectedTime_;
+    public long getExpectedTimeout() {
+      return expectedTimeout_;
     }
     
     private void initFields() {
-      expectedTime_ = 0L;
+      expectedTimeout_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (!hasExpectedTime()) {
+      if (!hasExpectedTimeout()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -14903,7 +14903,7 @@ public final class MasterAdminProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeInt64(1, expectedTime_);
+        output.writeInt64(1, expectedTimeout_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -14916,7 +14916,7 @@ public final class MasterAdminProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(1, expectedTime_);
+          .computeInt64Size(1, expectedTimeout_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -14941,10 +14941,10 @@ public final class MasterAdminProtos {
       org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse) obj;
       
       boolean result = true;
-      result = result && (hasExpectedTime() == other.hasExpectedTime());
-      if (hasExpectedTime()) {
-        result = result && (getExpectedTime()
-            == other.getExpectedTime());
+      result = result && (hasExpectedTimeout() == other.hasExpectedTimeout());
+      if (hasExpectedTimeout()) {
+        result = result && (getExpectedTimeout()
+            == other.getExpectedTimeout());
       }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
@@ -14955,9 +14955,9 @@ public final class MasterAdminProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasExpectedTime()) {
-        hash = (37 * hash) + EXPECTEDTIME_FIELD_NUMBER;
-        hash = (53 * hash) + hashLong(getExpectedTime());
+      if (hasExpectedTimeout()) {
+        hash = (37 * hash) + EXPECTEDTIMEOUT_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getExpectedTimeout());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -15075,7 +15075,7 @@ public final class MasterAdminProtos {
       
       public Builder clear() {
         super.clear();
-        expectedTime_ = 0L;
+        expectedTimeout_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
@@ -15118,7 +15118,7 @@ public final class MasterAdminProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        result.expectedTime_ = expectedTime_;
+        result.expectedTimeout_ = expectedTimeout_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -15135,15 +15135,15 @@ public final class MasterAdminProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.getDefaultInstance()) return this;
-        if (other.hasExpectedTime()) {
-          setExpectedTime(other.getExpectedTime());
+        if (other.hasExpectedTimeout()) {
+          setExpectedTimeout(other.getExpectedTimeout());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
       
       public final boolean isInitialized() {
-        if (!hasExpectedTime()) {
+        if (!hasExpectedTimeout()) {
           
           return false;
         }
@@ -15175,7 +15175,7 @@ public final class MasterAdminProtos {
             }
             case 8: {
               bitField0_ |= 0x00000001;
-              expectedTime_ = input.readInt64();
+              expectedTimeout_ = input.readInt64();
               break;
             }
           }
@@ -15184,23 +15184,23 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required int64 expectedTime = 1;
-      private long expectedTime_ ;
-      public boolean hasExpectedTime() {
+      // required int64 expectedTimeout = 1;
+      private long expectedTimeout_ ;
+      public boolean hasExpectedTimeout() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public long getExpectedTime() {
-        return expectedTime_;
+      public long getExpectedTimeout() {
+        return expectedTimeout_;
       }
-      public Builder setExpectedTime(long value) {
+      public Builder setExpectedTimeout(long value) {
         bitField0_ |= 0x00000001;
-        expectedTime_ = value;
+        expectedTimeout_ = value;
         onChanged();
         return this;
       }
-      public Builder clearExpectedTime() {
+      public Builder clearExpectedTimeout() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        expectedTime_ = 0L;
+        expectedTimeout_ = 0L;
         onChanged();
         return this;
       }
@@ -19883,56 +19883,57 @@ public final class MasterAdminProtos {
       "anitorEnabledRequest\"0\n\037IsCatalogJanitor",
       "EnabledResponse\022\r\n\005value\030\001 \002(\010\"=\n\023TakeSn" +
       "apshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snapsh" +
-      "otDescription\",\n\024TakeSnapshotResponse\022\024\n" +
-      "\014expectedTime\030\001 \002(\003\"\025\n\023ListSnapshotReque" +
-      "st\"?\n\024ListSnapshotResponse\022\'\n\tsnapshots\030" +
-      "\001 \003(\0132\024.SnapshotDescription\"?\n\025DeleteSna" +
-      "pshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snapsho" +
-      "tDescription\"\030\n\026DeleteSnapshotResponse\"?" +
-      "\n\025IsSnapshotDoneRequest\022&\n\010snapshot\030\001 \001(" +
-      "\0132\024.SnapshotDescription\"U\n\026IsSnapshotDon",
-      "eResponse\022\023\n\004done\030\001 \001(\010:\005false\022&\n\010snapsh" +
-      "ot\030\002 \001(\0132\024.SnapshotDescription2\376\013\n\022Maste" +
-      "rAdminService\0222\n\taddColumn\022\021.AddColumnRe" +
-      "quest\032\022.AddColumnResponse\022;\n\014deleteColum" +
-      "n\022\024.DeleteColumnRequest\032\025.DeleteColumnRe" +
-      "sponse\022;\n\014modifyColumn\022\024.ModifyColumnReq" +
-      "uest\032\025.ModifyColumnResponse\0225\n\nmoveRegio" +
-      "n\022\022.MoveRegionRequest\032\023.MoveRegionRespon" +
-      "se\022;\n\014assignRegion\022\024.AssignRegionRequest" +
-      "\032\025.AssignRegionResponse\022A\n\016unassignRegio",
-      "n\022\026.UnassignRegionRequest\032\027.UnassignRegi" +
-      "onResponse\022>\n\rofflineRegion\022\025.OfflineReg" +
-      "ionRequest\032\026.OfflineRegionResponse\0228\n\013de" +
-      "leteTable\022\023.DeleteTableRequest\032\024.DeleteT" +
-      "ableResponse\0228\n\013enableTable\022\023.EnableTabl" +
-      "eRequest\032\024.EnableTableResponse\022;\n\014disabl" +
-      "eTable\022\024.DisableTableRequest\032\025.DisableTa" +
-      "bleResponse\0228\n\013modifyTable\022\023.ModifyTable" +
-      "Request\032\024.ModifyTableResponse\0228\n\013createT" +
-      "able\022\023.CreateTableRequest\032\024.CreateTableR",
-      "esponse\022/\n\010shutdown\022\020.ShutdownRequest\032\021." +
-      "ShutdownResponse\0225\n\nstopMaster\022\022.StopMas" +
-      "terRequest\032\023.StopMasterResponse\022,\n\007balan" +
-      "ce\022\017.BalanceRequest\032\020.BalanceResponse\022M\n" +
-      "\022setBalancerRunning\022\032.SetBalancerRunning" +
-      "Request\032\033.SetBalancerRunningResponse\022;\n\016" +
-      "runCatalogScan\022\023.CatalogScanRequest\032\024.Ca" +
-      "talogScanResponse\022S\n\024enableCatalogJanito" +
-      "r\022\034.EnableCatalogJanitorRequest\032\035.Enable" +
-      "CatalogJanitorResponse\022\\\n\027isCatalogJanit",
-      "orEnabled\022\037.IsCatalogJanitorEnabledReque" +
-      "st\032 .IsCatalogJanitorEnabledResponse\022L\n\021" +
-      "execMasterService\022\032.CoprocessorServiceRe" +
-      "quest\032\033.CoprocessorServiceResponse\0227\n\010sn" +
-      "apshot\022\024.TakeSnapshotRequest\032\025.TakeSnaps" +
-      "hotResponse\022<\n\rlistSnapshots\022\024.ListSnaps" +
-      "hotRequest\032\025.ListSnapshotResponse\022A\n\016del" +
-      "eteSnapshot\022\026.DeleteSnapshotRequest\032\027.De" +
-      "leteSnapshotResponse\022A\n\016isSnapshotDone\022\026" +
-      ".IsSnapshotDoneRequest\032\027.IsSnapshotDoneR",
-      "esponseBG\n*org.apache.hadoop.hbase.proto" +
-      "buf.generatedB\021MasterAdminProtosH\001\210\001\001\240\001\001"
+      "otDescription\"/\n\024TakeSnapshotResponse\022\027\n" +
+      "\017expectedTimeout\030\001 \002(\003\"\025\n\023ListSnapshotRe" +
+      "quest\"?\n\024ListSnapshotResponse\022\'\n\tsnapsho" +
+      "ts\030\001 \003(\0132\024.SnapshotDescription\"?\n\025Delete" +
+      "SnapshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snap" +
+      "shotDescription\"\030\n\026DeleteSnapshotRespons" +
+      "e\"?\n\025IsSnapshotDoneRequest\022&\n\010snapshot\030\001" +
+      " \001(\0132\024.SnapshotDescription\"U\n\026IsSnapshot",
+      "DoneResponse\022\023\n\004done\030\001 \001(\010:\005false\022&\n\010sna" +
+      "pshot\030\002 \001(\0132\024.SnapshotDescription2\376\013\n\022Ma" +
+      "sterAdminService\0222\n\taddColumn\022\021.AddColum" +
+      "nRequest\032\022.AddColumnResponse\022;\n\014deleteCo" +
+      "lumn\022\024.DeleteColumnRequest\032\025.DeleteColum" +
+      "nResponse\022;\n\014modifyColumn\022\024.ModifyColumn" +
+      "Request\032\025.ModifyColumnResponse\0225\n\nmoveRe" +
+      "gion\022\022.MoveRegionRequest\032\023.MoveRegionRes" +
+      "ponse\022;\n\014assignRegion\022\024.AssignRegionRequ" +
+      "est\032\025.AssignRegionResponse\022A\n\016unassignRe",
+      "gion\022\026.UnassignRegionRequest\032\027.UnassignR" +
+      "egionResponse\022>\n\rofflineRegion\022\025.Offline" +
+      "RegionRequest\032\026.OfflineRegionResponse\0228\n" +
+      "\013deleteTable\022\023.DeleteTableRequest\032\024.Dele" +
+      "teTableResponse\0228\n\013enableTable\022\023.EnableT" +
+      "ableRequest\032\024.EnableTableResponse\022;\n\014dis" +
+      "ableTable\022\024.DisableTableRequest\032\025.Disabl" +
+      "eTableResponse\0228\n\013modifyTable\022\023.ModifyTa" +
+      "bleRequest\032\024.ModifyTableResponse\0228\n\013crea" +
+      "teTable\022\023.CreateTableRequest\032\024.CreateTab",
+      "leResponse\022/\n\010shutdown\022\020.ShutdownRequest" +
+      "\032\021.ShutdownResponse\0225\n\nstopMaster\022\022.Stop" +
+      "MasterRequest\032\023.StopMasterResponse\022,\n\007ba" +
+      "lance\022\017.BalanceRequest\032\020.BalanceResponse" +
+      "\022M\n\022setBalancerRunning\022\032.SetBalancerRunn" +
+      "ingRequest\032\033.SetBalancerRunningResponse\022" +
+      ";\n\016runCatalogScan\022\023.CatalogScanRequest\032\024" +
+      ".CatalogScanResponse\022S\n\024enableCatalogJan" +
+      "itor\022\034.EnableCatalogJanitorRequest\032\035.Ena" +
+      "bleCatalogJanitorResponse\022\\\n\027isCatalogJa",
+      "nitorEnabled\022\037.IsCatalogJanitorEnabledRe" +
+      "quest\032 .IsCatalogJanitorEnabledResponse\022" +
+      "L\n\021execMasterService\022\032.CoprocessorServic" +
+      "eRequest\032\033.CoprocessorServiceResponse\0227\n" +
+      "\010snapshot\022\024.TakeSnapshotRequest\032\025.TakeSn" +
+      "apshotResponse\022<\n\rlistSnapshots\022\024.ListSn" +
+      "apshotRequest\032\025.ListSnapshotResponse\022A\n\016" +
+      "deleteSnapshot\022\026.DeleteSnapshotRequest\032\027" +
+      ".DeleteSnapshotResponse\022A\n\016isSnapshotDon" +
+      "e\022\026.IsSnapshotDoneRequest\032\027.IsSnapshotDo",
+      "neResponseBG\n*org.apache.hadoop.hbase.pr" +
+      "otobuf.generatedB\021MasterAdminProtosH\001\210\001\001" +
+      "\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -20256,7 +20257,7 @@ public final class MasterAdminProtos {
           internal_static_TakeSnapshotResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_TakeSnapshotResponse_descriptor,
-              new java.lang.String[] { "ExpectedTime", },
+              new java.lang.String[] { "ExpectedTimeout", },
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.Builder.class);
           internal_static_ListSnapshotRequest_descriptor =

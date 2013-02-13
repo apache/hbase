@@ -277,8 +277,10 @@ message SnapshotDescription {
 	optional string table = 2; // not needed for delete, but checked for in taking snapshot
 	optional int64 creationTime = 3 [default = 0];
 	enum Type {
-		TIMESTAMP = 0;
-		GLOBAL = 1;
+		DISABLED = 0;
+		TIMESTAMP = 1;
+		GLOBAL = 2;
 	}
 	optional Type type = 4 [default = TIMESTAMP];
+	optional int32 version = 5;
 }

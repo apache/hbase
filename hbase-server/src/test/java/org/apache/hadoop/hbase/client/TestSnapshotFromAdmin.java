@@ -43,9 +43,9 @@ import com.google.protobuf.RpcController;
  * Test snapshot logic from the client
  */
 @Category(SmallTests.class)
-public class TestSnapshotsFromAdmin {
+public class TestSnapshotFromAdmin {
 
-  private static final Log LOG = LogFactory.getLog(TestSnapshotsFromAdmin.class);
+  private static final Log LOG = LogFactory.getLog(TestSnapshotFromAdmin.class);
 
   /**
    * Test that the logic for doing 'correct' back-off based on exponential increase and the max-time
@@ -80,7 +80,8 @@ public class TestSnapshotsFromAdmin {
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
     Mockito.when(mockConnection.getKeepAliveMasterAdmin()).thenReturn(mockMaster);
     // set the max wait time for the snapshot to complete
-    TakeSnapshotResponse response = TakeSnapshotResponse.newBuilder().setExpectedTime(maxWaitTime)
+    TakeSnapshotResponse response = TakeSnapshotResponse.newBuilder()
+        .setExpectedTimeout(maxWaitTime)
         .build();
     Mockito
         .when(
@@ -97,7 +98,7 @@ public class TestSnapshotsFromAdmin {
 
     // setup the admin and run the test
     HBaseAdmin admin = new HBaseAdmin(mockConnection);
-    String snapshot = "snasphot";
+    String snapshot = "snapshot";
     String table = "table";
     // get start time
     long start = System.currentTimeMillis();
@@ -105,15 +106,16 @@ public class TestSnapshotsFromAdmin {
     long finish = System.currentTimeMillis();
     long elapsed = (finish - start);
     assertTrue("Elapsed time:" + elapsed + " is more than expected max:" + time, elapsed <= time);
+    admin.close();
   }
 
   /**
    * Make sure that we validate the snapshot name and the table name before we pass anything across
    * the wire
-   * @throws IOException on failure
+   * @throws Exception on failure
    */
   @Test
-  public void testValidateSnapshotName() throws IOException {
+  public void testValidateSnapshotName() throws Exception {
     HConnectionManager.HConnectionImplementation mockConnection = Mockito
         .mock(HConnectionManager.HConnectionImplementation.class);
     Configuration conf = HBaseConfiguration.create();
@@ -130,6 +132,21 @@ public class TestSnapshotsFromAdmin {
     failSnapshotStart(admin, builder.setName("snapshot").setTable("-table").build());
     failSnapshotStart(admin, builder.setName("snapshot").setTable("table fails").build());
     failSnapshotStart(admin, builder.setName("snapshot").setTable("tab%le").build());
+
+    // mock the master connection
+    MasterAdminKeepAliveConnection master = Mockito.mock(MasterAdminKeepAliveConnection.class);
+    Mockito.when(mockConnection.getKeepAliveMasterAdmin()).thenReturn(master);
+    TakeSnapshotResponse response = TakeSnapshotResponse.newBuilder().setExpectedTimeout(0).build();
+    Mockito.when(
+      master.snapshot((RpcController) Mockito.isNull(), Mockito.any(TakeSnapshotRequest.class)))
+        .thenReturn(response);
+    IsSnapshotDoneResponse doneResponse = IsSnapshotDoneResponse.newBuilder().setDone(true).build();
+    Mockito.when(
+      master.isSnapshotDone((RpcController) Mockito.isNull(),
+        Mockito.any(IsSnapshotDoneRequest.class))).thenReturn(doneResponse);
+
+      // make sure that we can use valid names
+    admin.snapshot(builder.setName("snapshot").setTable("table").build());
   }
 
   private void failSnapshotStart(HBaseAdmin admin, SnapshotDescription snapshot) throws IOException {

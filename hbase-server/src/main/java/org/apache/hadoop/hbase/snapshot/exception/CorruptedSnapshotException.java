@@ -15,37 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.snapshot;
+package org.apache.hadoop.hbase.snapshot.exception;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
+
 /**
- * Thrown when a snapshot could not be created due to a server-side error when taking the snapshot.
+ * Exception thrown when the found snapshot info from the filesystem is not valid
  */
 @SuppressWarnings("serial")
-public class SnapshotCreationException extends HBaseSnapshotException {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class CorruptedSnapshotException extends HBaseSnapshotException {
 
-  public SnapshotCreationException(String msg, SnapshotDescription desc) {
-    super(msg, desc);
+  /**
+   * @param message message describing the exception
+   * @param e cause
+   */
+  public CorruptedSnapshotException(String message, Exception e) {
+    super(message, e);
   }
 
-  public SnapshotCreationException(String msg, Throwable cause, SnapshotDescription desc) {
-    super(msg, cause, desc);
-  }
-
-  public SnapshotCreationException(String msg, Throwable cause) {
-    super(msg, cause);
-  }
-
-  public SnapshotCreationException(String msg) {
-    super(msg);
-  }
-
-  public SnapshotCreationException(Throwable cause, SnapshotDescription desc) {
-    super(cause, desc);
-  }
-
-  public SnapshotCreationException(Throwable cause) {
-    super(cause);
+  /**
+   * Snapshot was corrupt for some reason
+   * @param message full description of the failure
+   * @param snapshot snapshot that was expected
+   */
+  public CorruptedSnapshotException(String message, SnapshotDescription snapshot) {
+    super(message, snapshot);
   }
 }

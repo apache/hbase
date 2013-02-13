@@ -59,7 +59,7 @@ public class ExceptionOrchestrator<E extends Exception> implements ExceptionList
       .create();
 
   /** Error visitor for framework listeners */
-  final ForwardingErrorVisitor genericVisitor = new ForwardingErrorVisitor();
+  public final ForwardingErrorVisitor genericVisitor = new ForwardingErrorVisitor();
 
   public ExceptionOrchestrator() {
     this("generic-error-dispatcher");

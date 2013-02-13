@@ -182,7 +182,7 @@ message TakeSnapshotRequest{
 }
 
 message TakeSnapshotResponse{
-	required int64 expectedTime = 1;
+	required int64 expectedTimeout = 1;
 }
 
 message ListSnapshotRequest{

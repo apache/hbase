@@ -15,44 +15,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.snapshot;
+package org.apache.hadoop.hbase.snapshot.exception;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 /**
- * General exception when a snapshot fails.
+ * General exception base class for when a snapshot fails
  */
 @SuppressWarnings("serial")
-public class HBaseSnapshotException extends HBaseIOException {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public abstract class HBaseSnapshotException extends HBaseIOException {
 
   private SnapshotDescription description;
 
+  /**
+   * Some exception happened for a snapshot and don't even know the snapshot that it was about
+   * @param msg Full description of the failure
+   */
   public HBaseSnapshotException(String msg) {
     super(msg);
   }
 
-  public HBaseSnapshotException(String msg, Throwable cause) {
-    super(msg, cause);
-  }
-
-  public HBaseSnapshotException(Throwable cause) {
-    super(cause);
-  }
-
+  /**
+   * Exception for the given snapshot that has no previous root cause
+   * @param msg reason why the snapshot failed
+   * @param desc description of the snapshot that is being failed
+   */
   public HBaseSnapshotException(String msg, SnapshotDescription desc) {
     super(msg);
     this.description = desc;
   }
 
-  public HBaseSnapshotException(Throwable cause, SnapshotDescription desc) {
-    super(cause);
-    this.description = desc;
-  }
-
+  /**
+   * Exception for the given snapshot due to another exception
+   * @param msg reason why the snapshot failed
+   * @param cause root cause of the failure
+   * @param desc description of the snapshot that is being failed
+   */
   public HBaseSnapshotException(String msg, Throwable cause, SnapshotDescription desc) {
     super(msg, cause);
     this.description = desc;
+  }
+
+  /**
+   * Exception when the description of the snapshot cannot be determined, due to some root other
+   * root cause
+   * @param message description of what caused the failure
+   * @param e root cause
+   */
+  public HBaseSnapshotException(String message, Exception e) {
+    super(message, e);
   }
 
   public SnapshotDescription getSnapshotDescription() {
