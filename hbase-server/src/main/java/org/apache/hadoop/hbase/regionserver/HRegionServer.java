@@ -3303,8 +3303,7 @@ public class HRegionServer implements ClientProtocol,
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
       builder.setRegionInfo(HRegionInfo.convert(info));
       if (request.hasCompactionState() && request.getCompactionState()) {
-        builder.setCompactionState(
-          CompactionRequest.getCompactionState(info.getRegionId()));
+        builder.setCompactionState(region.getCompactionState());
       }
       return builder.build();
     } catch (IOException ie) {

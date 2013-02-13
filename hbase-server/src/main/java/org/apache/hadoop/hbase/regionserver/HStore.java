@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakCompactions;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -153,6 +154,8 @@ public class HStore implements Store {
   private final KeyValue.KVComparator comparator;
 
   private Compactor compactor;
+  
+  private OffPeakCompactions offPeakCompactions;
 
   private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
   private static int flush_retries_number;
@@ -207,10 +210,10 @@ public class HStore implements Store {
     // to clone it?
     scanInfo = new ScanInfo(family, ttl, timeToPurgeDeletes, this.comparator);
     this.memstore = new MemStore(conf, this.comparator);
+    this.offPeakCompactions = new OffPeakCompactions(conf);
 
     // Setting up cache configuration for this family
     this.cacheConf = new CacheConfig(conf, family);
-
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify", false);
 
@@ -1242,8 +1245,13 @@ public class HStore implements Store {
           filesToCompact = new CompactSelection(candidates);
         } else {
           boolean isUserCompaction = priority == Store.PRIORITY_USER;
+          boolean mayUseOffPeak = this.offPeakCompactions.tryStartOffPeakRequest();
           filesToCompact = compactionPolicy.selectCompaction(candidates, isUserCompaction,
-              forceMajor && filesCompacting.isEmpty());
+              mayUseOffPeak, forceMajor && filesCompacting.isEmpty());
+          if (mayUseOffPeak && !filesToCompact.isOffPeakCompaction()) {
+            // Compaction policy doesn't want to do anything with off-peak.
+            this.offPeakCompactions.endOffPeakRequest();
+          }
         }
 
         if (region.getCoprocessorHost() != null) {
@@ -1284,14 +1292,17 @@ public class HStore implements Store {
       this.lock.readLock().unlock();
     }
     if (ret != null) {
-      CompactionRequest.preRequest(ret);
+      this.region.reportCompactionRequestStart(ret.isMajor());
     }
     return ret;
   }
 
   public void finishRequest(CompactionRequest cr) {
-    CompactionRequest.postRequest(cr);
-    cr.finishRequest();
+    this.region.reportCompactionRequestEnd(cr.isMajor());
+    if (cr.getCompactSelection().isOffPeakCompaction()) {
+      this.offPeakCompactions.endOffPeakRequest();
+      cr.getCompactSelection().setOffPeak(false);
+    }
     synchronized (filesCompacting) {
       filesCompacting.removeAll(cr.getFiles());
     }
@@ -1868,7 +1879,7 @@ public class HStore implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align((20 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
+      ClassSize.align((21 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
               + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD

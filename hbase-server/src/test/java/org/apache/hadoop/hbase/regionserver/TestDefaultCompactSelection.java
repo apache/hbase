@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -220,16 +221,25 @@ public class TestDefaultCompactSelection extends TestCase {
 
   void compactEquals(List<StoreFile> candidates, long... expected)
     throws IOException {
-    compactEquals(candidates, false, expected);
+    compactEquals(candidates, false, false, expected);
   }
 
-  void compactEquals(List<StoreFile> candidates, boolean forcemajor,
+  void compactEquals(List<StoreFile> candidates, boolean forcemajor, long... expected)
+    throws IOException {
+    compactEquals(candidates, forcemajor, false, expected);
+  }
+
+  void compactEquals(List<StoreFile> candidates, boolean forcemajor, boolean isOffPeak,
       long ... expected)
   throws IOException {
     store.forceMajor = forcemajor;
     //Test Default compactions
-    List<StoreFile> actual = store.compactionPolicy
-      .selectCompaction(candidates, false, forcemajor).getFilesToCompact();
+    CompactSelection result = store.compactionPolicy
+        .selectCompaction(candidates, false, isOffPeak, forcemajor);
+    List<StoreFile> actual = result.getFilesToCompact();
+    if (isOffPeak && !forcemajor) {
+      assertTrue(result.isOffPeakCompaction());
+    }
     assertEquals(Arrays.toString(expected), Arrays.toString(getSizes(actual)));
     store.forceMajor = false;
   }
@@ -309,36 +319,11 @@ public class TestDefaultCompactSelection extends TestCase {
      * current compaction algorithm.  Developed to ensure that refactoring
      * doesn't implicitly alter this.
      */
-    //long tooBig = maxSize + 1;
-
-    Calendar calendar = new GregorianCalendar();
-    int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
-    LOG.debug("Hour of day = " + hourOfDay);
-    int hourPlusOne = ((hourOfDay+1)%24);
-    int hourMinusOne = ((hourOfDay-1+24)%24);
-    int hourMinusTwo = ((hourOfDay-2+24)%24);
-
-    // check compact selection without peak hour setting
-    LOG.debug("Testing compact selection without off-peak settings...");
-    compactEquals(sfCreate(999,50,12,12,1), 12, 12, 1);
-
     // set an off-peak compaction threshold
     this.conf.setFloat("hbase.hstore.compaction.ratio.offpeak", 5.0F);
-
-    // set peak hour to current time and check compact selection
-    this.conf.setLong("hbase.offpeak.start.hour", hourMinusOne);
-    this.conf.setLong("hbase.offpeak.end.hour", hourPlusOne);
-    LOG.debug("Testing compact selection with off-peak settings (" +
-        hourMinusOne + ", " + hourPlusOne + ")");
     store.compactionPolicy.updateConfiguration();
-    compactEquals(sfCreate(999, 50, 12, 12, 1), 50, 12, 12, 1);
-
-    // set peak hour outside current selection and check compact selection
-    this.conf.setLong("hbase.offpeak.start.hour", hourMinusTwo);
-    this.conf.setLong("hbase.offpeak.end.hour", hourMinusOne);
-    store.compactionPolicy.updateConfiguration();
-    LOG.debug("Testing compact selection with off-peak settings (" +
-        hourMinusTwo + ", " + hourMinusOne + ")");
-    compactEquals(sfCreate(999,50,12,12, 1), 12, 12, 1);
+    // Test with and without the flag.
+    compactEquals(sfCreate(999, 50, 12, 12, 1), false, true, 50, 12, 12, 1);
+    compactEquals(sfCreate(999, 50, 12, 12, 1), 12, 12, 1);
   }
 }

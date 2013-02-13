@@ -111,6 +111,7 @@ import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.UnknownProtocolException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -293,6 +294,9 @@ public class HRegion implements HeapSize { // , Writable{
    * scan requests to this region. Requests can override it.
    */
   private boolean isLoadingCfsOnDemandDefault = false;
+
+  private final AtomicInteger majorInProgress = new AtomicInteger(0);
+  private final AtomicInteger minorInProgress = new AtomicInteger(0);
 
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
@@ -5028,7 +5032,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      39 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      41 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (10 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
@@ -5497,6 +5501,24 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public long getOpenSeqNum() {
     return this.openSeqNum;
+  }
+
+  /**
+   * @return if a given region is in compaction now.
+   */
+  public CompactionState getCompactionState() {
+    boolean hasMajor = majorInProgress.get() > 0, hasMinor = minorInProgress.get() > 0;
+    return (hasMajor ? (hasMinor ? CompactionState.MAJOR_AND_MINOR : CompactionState.MAJOR)
+        : (hasMinor ? CompactionState.MINOR : CompactionState.NONE));
+  }
+
+  public void reportCompactionRequestStart(boolean isMajor){
+    (isMajor ? majorInProgress : minorInProgress).incrementAndGet();
+  }
+
+  public void reportCompactionRequestEnd(boolean isMajor){
+    int newValue = (isMajor ? majorInProgress : minorInProgress).decrementAndGet();
+    assert newValue >= 0;
   }
 
   /**

@@ -50,30 +50,22 @@ import com.google.common.collect.Collections2;
 public class CompactionRequest implements Comparable<CompactionRequest>,
     Runnable {
     static final Log LOG = LogFactory.getLog(CompactionRequest.class);
-    private final HRegion r;
-    private final HStore s;
+    private final HRegion region;
+    private final HStore store;
     private final CompactSelection compactSelection;
     private final long totalSize;
     private final boolean isMajor;
-    private int p;
+    private int priority;
     private final Long timeInNanos;
     private HRegionServer server = null;
 
-    /**
-     * Map to track the number of compactions requested per region (id)
-     */
-    private static final ConcurrentHashMap<Long, AtomicInteger>
-      majorCompactions = new ConcurrentHashMap<Long, AtomicInteger>();
-    private static final ConcurrentHashMap<Long, AtomicInteger>
-      minorCompactions = new ConcurrentHashMap<Long, AtomicInteger>();
-
-    public CompactionRequest(HRegion r, HStore s,
-        CompactSelection files, boolean isMajor, int p) {
-      Preconditions.checkNotNull(r);
+    public CompactionRequest(HRegion region, HStore store,
+        CompactSelection files, boolean isMajor, int priority) {
+      Preconditions.checkNotNull(region);
       Preconditions.checkNotNull(files);
 
-      this.r = r;
-      this.s = s;
+      this.region = region;
+      this.store = store;
       this.compactSelection = files;
       long sz = 0;
       for (StoreFile sf : files.getFilesToCompact()) {
@@ -81,64 +73,8 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       }
       this.totalSize = sz;
       this.isMajor = isMajor;
-      this.p = p;
+      this.priority = priority;
       this.timeInNanos = System.nanoTime();
-    }
-
-    /**
-     * Find out if a given region is in compaction now.
-     *
-     * @param regionId
-     * @return a CompactionState
-     */
-    public static CompactionState getCompactionState(
-        final long regionId) {
-      Long key = Long.valueOf(regionId);
-      AtomicInteger major = majorCompactions.get(key);
-      AtomicInteger minor = minorCompactions.get(key);
-      int state = 0;
-      if (minor != null && minor.get() > 0) {
-        state += 1;  // use 1 to indicate minor here
-      }
-      if (major != null && major.get() > 0) {
-        state += 2;  // use 2 to indicate major here
-      }
-      switch (state) {
-      case 3:  // 3 = 2 + 1, so both major and minor
-        return CompactionState.MAJOR_AND_MINOR;
-      case 2:
-        return CompactionState.MAJOR;
-      case 1:
-        return CompactionState.MINOR;
-      default:
-        return CompactionState.NONE;
-      }
-    }
-
-    public static void preRequest(final CompactionRequest cr){
-      Long key = Long.valueOf(cr.getHRegion().getRegionId());
-      ConcurrentHashMap<Long, AtomicInteger> compactions =
-        cr.isMajor() ? majorCompactions : minorCompactions;
-      AtomicInteger count = compactions.get(key);
-      if (count == null) {
-        compactions.putIfAbsent(key, new AtomicInteger(0));
-        count = compactions.get(key);
-      }
-      count.incrementAndGet();
-    }
-
-    public static void postRequest(final CompactionRequest cr){
-      Long key = Long.valueOf(cr.getHRegion().getRegionId());
-      ConcurrentHashMap<Long, AtomicInteger> compactions =
-        cr.isMajor() ? majorCompactions : minorCompactions;
-      AtomicInteger count = compactions.get(key);
-      if (count != null) {
-        count.decrementAndGet();
-      }
-    }
-
-    public void finishRequest() {
-      this.compactSelection.finishRequest();
     }
 
     /**
@@ -160,7 +96,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       }
       int compareVal;
 
-      compareVal = p - request.p; //compare priority
+      compareVal = priority - request.priority; //compare priority
       if (compareVal != 0) {
         return compareVal;
       }
@@ -181,12 +117,12 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
 
     /** Gets the HRegion for the request */
     public HRegion getHRegion() {
-      return r;
+      return region;
     }
 
     /** Gets the Store for the request */
     public HStore getStore() {
-      return s;
+      return store;
     }
 
     /** Gets the compact selection object for the request */
@@ -210,7 +146,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
 
     /** Gets the priority for the request */
     public int getPriority() {
-      return p;
+      return priority;
     }
 
     public long getSelectionTime() {
@@ -219,7 +155,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
 
     /** Gets the priority for the request */
     public void setPriority(int p) {
-      this.p = p;
+      this.priority = p;
     }
 
     public void setServer(HRegionServer hrs) {
@@ -241,12 +177,12 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
               }
             }));
 
-      return "regionName=" + r.getRegionNameAsString() +
-        ", storeName=" + new String(s.getFamily().getName()) +
+      return "regionName=" + region.getRegionNameAsString() +
+        ", storeName=" + new String(store.getFamily().getName()) +
         ", fileCount=" + compactSelection.getFilesToCompact().size() +
         ", fileSize=" + StringUtils.humanReadableInt(totalSize) +
           ((fsList.isEmpty()) ? "" : " (" + fsList + ")") +
-        ", priority=" + p + ", time=" + timeInNanos;
+        ", priority=" + priority + ", time=" + timeInNanos;
     }
 
     @Override
@@ -257,18 +193,18 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       }
       try {
         long start = EnvironmentEdgeManager.currentTimeMillis();
-        boolean completed = r.compact(this);
+        boolean completed = region.compact(this);
         long now = EnvironmentEdgeManager.currentTimeMillis();
         LOG.info(((completed) ? "completed" : "aborted") + " compaction: " +
               this + "; duration=" + StringUtils.formatTimeDiff(now, start));
         if (completed) {
           // degenerate case: blocked regions require recursive enqueues
-          if (s.getCompactPriority() <= 0) {
+          if (store.getCompactPriority() <= 0) {
             server.compactSplitThread
-              .requestCompaction(r, s, "Recursive enqueue");
+              .requestCompaction(region, store, "Recursive enqueue");
           } else {
             // see if the compaction has caused us to exceed max region size
-            server.compactSplitThread.requestSplit(r);
+            server.compactSplitThread.requestSplit(region);
           }
         }
       } catch (IOException ex) {
@@ -279,7 +215,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         LOG.error("Compaction failed " + this, ex);
         server.checkFileSystem();
       } finally {
-        s.finishRequest(this);
+        store.finishRequest(this);
         LOG.debug("CompactSplitThread Status: " + server.compactSplitThread);
       }
     }
