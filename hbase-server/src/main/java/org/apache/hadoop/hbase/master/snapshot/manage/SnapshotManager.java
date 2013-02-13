@@ -81,6 +81,23 @@ public class SnapshotManager implements Stoppable {
   }
 
   /**
+   * Start running the manager.
+   * <p>
+   * <ol>
+   * <li>Cleans up any snapshots in the snapshot/.tmp directory that were left from failed
+   * snapshot/export attempts</li>
+   * </ol>
+   * @throws IOException if we can't reach the filesystem
+   */
+  public void start() throws IOException {
+    // cleanup any existing snapshots.
+    Path tmpdir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir);
+    if (master.getMasterFileSystem().getFileSystem().delete(tmpdir, true)) {
+      LOG.warn("Couldn't delete working snapshot directory: " + tmpdir);
+    }
+  }
+
+  /**
    * @return <tt>true</tt> if there is a snapshot currently being taken, <tt>false</tt> otherwise
    */
   public boolean isTakingSnapshot() {

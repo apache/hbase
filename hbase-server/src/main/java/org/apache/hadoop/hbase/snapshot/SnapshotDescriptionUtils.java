@@ -233,14 +233,23 @@ public class SnapshotDescriptionUtils {
   }
 
   /**
+   * Get the general working directory for snapshots - where they are built, where they are
+   * temporarily copied on export, etc.
+   * @param rootDir root directory of the HBase installation
+   * @return Path to the snapshot tmp directory, relative to the passed root directory
+   */
+  public static Path getWorkingSnapshotDir(final Path rootDir) {
+    return new Path(getSnapshotsDir(rootDir), SNAPSHOT_TMP_DIR_NAME);
+  }
+
+  /**
    * Get the directory to build a snapshot, before it is finalized
    * @param snapshot snapshot that will be built
    * @param rootDir root directory of the hbase installation
    * @return {@link Path} where one can build a snapshot
    */
   public static Path getWorkingSnapshotDir(SnapshotDescription snapshot, final Path rootDir) {
-    return getCompletedSnapshotDir(new Path(getSnapshotsDir(rootDir), SNAPSHOT_TMP_DIR_NAME),
-      snapshot.getName());
+    return getCompletedSnapshotDir(getWorkingSnapshotDir(rootDir), snapshot.getName());
   }
 
   /**
@@ -250,8 +259,7 @@ public class SnapshotDescriptionUtils {
    * @return {@link Path} where one can build a snapshot
    */
   public static Path getWorkingSnapshotDir(String snapshotName, final Path rootDir) {
-    return getCompletedSnapshotDir(new Path(getSnapshotsDir(rootDir), SNAPSHOT_TMP_DIR_NAME),
-      snapshotName);
+    return getCompletedSnapshotDir(getWorkingSnapshotDir(rootDir), snapshotName);
   }
 
   /**
