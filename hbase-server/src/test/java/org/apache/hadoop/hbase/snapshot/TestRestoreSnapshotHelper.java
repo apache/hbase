@@ -131,7 +131,7 @@ public class TestRestoreSnapshotHelper {
 
     FSTableDescriptors.createTableDescriptor(htdClone, conf);
     RestoreSnapshotHelper helper = getRestoreHelper(rootDir, snapshotDir, sourceTableName, htdClone);
-    helper.restore();
+    helper.restoreHdfsRegions();
 
     LOG.debug("post-restore table=" + htdClone.getNameAsString() + " snapshot=" + snapshotDir);
     FSUtils.logFileSystemState(fs, rootDir, LOG);
@@ -146,13 +146,10 @@ public class TestRestoreSnapshotHelper {
     HTableDescriptor tableDescriptor = Mockito.mock(HTableDescriptor.class);
     ForeignExceptionDispatcher monitor = Mockito.mock(ForeignExceptionDispatcher.class);
 
-    HConnection hconnection = HConnectionTestingUtility.getMockedConnection(conf);
-    Mockito.when(catalogTracker.getConnection()).thenReturn(hconnection);
-
     SnapshotDescription sd = SnapshotDescription.newBuilder()
       .setName("snapshot").setTable(sourceTableName).build();
 
-    return new RestoreSnapshotHelper(conf, fs, catalogTracker, sd, snapshotDir,
+    return new RestoreSnapshotHelper(conf, fs, sd, snapshotDir,
       htdClone, HTableDescriptor.getTableDir(rootDir, htdClone.getName()), monitor);
   }
 

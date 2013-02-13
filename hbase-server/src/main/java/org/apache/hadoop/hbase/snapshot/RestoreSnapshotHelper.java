@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -110,19 +110,16 @@ public class RestoreSnapshotHelper {
   private final HTableDescriptor tableDesc;
   private final Path tableDir;
 
-  private final CatalogTracker catalogTracker;
   private final Configuration conf;
   private final FileSystem fs;
 
   public RestoreSnapshotHelper(final Configuration conf, final FileSystem fs,
-      final CatalogTracker catalogTracker,
       final SnapshotDescription snapshotDescription, final Path snapshotDir,
       final HTableDescriptor tableDescriptor, final Path tableDir,
       final ForeignExceptionDispatcher monitor)
   {
     this.fs = fs;
     this.conf = conf;
-    this.catalogTracker = catalogTracker;
     this.snapshotDesc = snapshotDescription;
     this.snapshotDir = snapshotDir;
     this.tableDesc = tableDescriptor;
@@ -131,45 +128,45 @@ public class RestoreSnapshotHelper {
   }
 
   /**
-   * Restore table to a specified snapshot state.
+   * Restore the on-disk table to a specified snapshot state.
+   * @return the set of regions touched by the restore operation
    */
-  public void restore() throws IOException {
+  public RestoreMetaChanges restoreHdfsRegions() throws IOException {
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     LOG.debug("starting restore");
     Set<String> snapshotRegionNames = SnapshotReferenceUtil.getSnapshotRegionNames(fs, snapshotDir);
     if (snapshotRegionNames == null) {
       LOG.warn("Nothing to restore. Snapshot " + snapshotDesc + " looks empty");
-      return;
+      return null;
     }
+
+    RestoreMetaChanges metaChanges = new RestoreMetaChanges();
 
     // Identify which region are still available and which not.
     // NOTE: we rely upon the region name as: "table name, start key, end key"
     List<HRegionInfo> tableRegions = getTableRegions();
     if (tableRegions != null) {
       monitor.rethrowException();
-      List<HRegionInfo> regionsToRestore = new LinkedList<HRegionInfo>();
-      List<HRegionInfo> regionsToRemove = new LinkedList<HRegionInfo>();
-
       for (HRegionInfo regionInfo: tableRegions) {
         String regionName = regionInfo.getEncodedName();
         if (snapshotRegionNames.contains(regionName)) {
           LOG.info("region to restore: " + regionName);
           snapshotRegionNames.remove(regionInfo);
-          regionsToRestore.add(regionInfo);
+          metaChanges.addRegionToRestore(regionInfo);
         } else {
           LOG.info("region to remove: " + regionName);
-          regionsToRemove.add(regionInfo);
+          metaChanges.addRegionToRemove(regionInfo);
         }
       }
 
       // Restore regions using the snapshot data
       monitor.rethrowException();
-      restoreRegions(regionsToRestore);
+      restoreHdfsRegions(metaChanges.getRegionsToRestore());
 
       // Remove regions from the current table
       monitor.rethrowException();
-      ModifyRegionUtils.deleteRegions(conf, fs, catalogTracker, regionsToRemove);
+      removeHdfsRegions(metaChanges.getRegionsToRemove());
     }
 
     // Regions to Add: present in the snapshot but not in the current table
@@ -185,18 +182,92 @@ public class RestoreSnapshotHelper {
 
       // Create new regions cloning from the snapshot
       monitor.rethrowException();
-      cloneRegions(regionsToAdd);
+      HRegionInfo[] clonedRegions = cloneHdfsRegions(regionsToAdd);
+      metaChanges.setNewRegions(clonedRegions);
     }
 
     // Restore WALs
     monitor.rethrowException();
     restoreWALs();
+
+    return metaChanges;
+  }
+
+  /**
+   * Describe the set of operations needed to update META after restore.
+   */
+  public class RestoreMetaChanges {
+    private List<HRegionInfo> regionsToRestore = null;
+    private List<HRegionInfo> regionsToRemove = null;
+    private List<HRegionInfo> regionsToAdd = null;
+
+    /**
+     * Returns the list of new regions added during the on-disk restore.
+     * The caller is responsible to add the regions to META.
+     * e.g MetaEditor.addRegionsToMeta(...)
+     * @return the list of regions to add to META
+     */
+    public List<HRegionInfo> getRegionsToAdd() {
+      return this.regionsToAdd;
+    }
+
+    /**
+     * Returns the list of 'restored regions' during the on-disk restore.
+     * The caller is responsible to add the regions to META if not present.
+     * @return the list of regions restored
+     */
+    public List<HRegionInfo> getRegionsToRestore() {
+      return this.regionsToRestore;
+    }
+
+    /**
+     * Returns the list of regions removed during the on-disk restore.
+     * The caller is responsible to remove the regions from META.
+     * e.g. MetaEditor.deleteRegions(...)
+     * @return the list of regions to remove from META
+     */
+    public List<HRegionInfo> getRegionsToRemove() {
+      return this.regionsToRemove;
+    }
+
+    void setNewRegions(final HRegionInfo[] hris) {
+      if (hris != null) {
+        regionsToAdd = Arrays.asList(hris);
+      } else {
+        regionsToAdd = null;
+      }
+    }
+
+    void addRegionToRemove(final HRegionInfo hri) {
+      if (regionsToRemove == null) {
+        regionsToRemove = new LinkedList<HRegionInfo>();
+      }
+      regionsToRemove.add(hri);
+    }
+
+    void addRegionToRestore(final HRegionInfo hri) {
+      if (regionsToRestore == null) {
+        regionsToRestore = new LinkedList<HRegionInfo>();
+      }
+      regionsToRestore.add(hri);
+    }
+  }
+
+  /**
+   * Remove specified regions from the file-system, using the archiver.
+   */
+  private void removeHdfsRegions(final List<HRegionInfo> regions) throws IOException {
+    if (regions != null && regions.size() > 0) {
+      for (HRegionInfo hri: regions) {
+        HFileArchiver.archiveRegion(conf, fs, hri);
+      }
+    }
   }
 
   /**
    * Restore specified regions by restoring content to the snapshot state.
    */
-  private void restoreRegions(final List<HRegionInfo> regions) throws IOException {
+  private void restoreHdfsRegions(final List<HRegionInfo> regions) throws IOException {
     if (regions == null || regions.size() == 0) return;
     for (HRegionInfo hri: regions) restoreRegion(hri);
   }
@@ -289,8 +360,8 @@ public class RestoreSnapshotHelper {
    * Clone specified regions. For each region create a new region
    * and create a HFileLink for each hfile.
    */
-  private void cloneRegions(final List<HRegionInfo> regions) throws IOException {
-    if (regions == null || regions.size() == 0) return;
+  private HRegionInfo[] cloneHdfsRegions(final List<HRegionInfo> regions) throws IOException {
+    if (regions == null || regions.size() == 0) return null;
 
     final Map<String, HRegionInfo> snapshotRegions =
       new HashMap<String, HRegionInfo>(regions.size());
@@ -313,16 +384,14 @@ public class RestoreSnapshotHelper {
     }
 
     // create the regions on disk
-    List<HRegionInfo> clonedRegions = ModifyRegionUtils.createRegions(conf, FSUtils.getRootDir(conf),
-      tableDesc, clonedRegionsInfo, catalogTracker, new ModifyRegionUtils.RegionFillTask() {
+    List<HRegionInfo> clonedRegions = ModifyRegionUtils.createRegions(conf, tableDir.getParent(),
+      tableDesc, clonedRegionsInfo, new ModifyRegionUtils.RegionFillTask() {
         public void fillRegion(final HRegion region) throws IOException {
           cloneRegion(region, snapshotRegions.get(region.getRegionInfo().getEncodedName()));
         }
       });
-    if (regions != null && regions.size() > 0) {
-      // add regions to .META.
-      MetaEditor.addRegionsToMeta(catalogTracker, clonedRegions);
-    }
+
+    return clonedRegionsInfo;
   }
 
   /**
@@ -386,7 +455,7 @@ public class RestoreSnapshotHelper {
    *   wxyz/table=1234-abc
    *   stuv/table=1234-abc.wxyz
    *
-   * NOTE that the region name in the clone change (md5 of regioninfo)
+   * NOTE that the region name in the clone changes (md5 of regioninfo)
    * and the reference should reflect that change.
    * </pre></blockquote>
    * @param familyDir destination directory for the store file

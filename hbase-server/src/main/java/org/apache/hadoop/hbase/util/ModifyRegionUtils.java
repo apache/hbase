@@ -70,13 +70,11 @@ public abstract class ModifyRegionUtils {
    * @param rootDir Root directory for HBase instance
    * @param hTableDescriptor description of the table
    * @param newRegions {@link HRegionInfo} that describes the regions to create
-   * @param catalogTracker the catalog tracker
    * @throws IOException
    */
   public static List<HRegionInfo> createRegions(final Configuration conf, final Path rootDir,
-      final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions,
-      final CatalogTracker catalogTracker) throws IOException {
-    return createRegions(conf, rootDir, hTableDescriptor, newRegions, catalogTracker, null);
+      final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions) throws IOException {
+    return createRegions(conf, rootDir, hTableDescriptor, newRegions, null);
   }
 
   /**
@@ -87,13 +85,12 @@ public abstract class ModifyRegionUtils {
    * @param rootDir Root directory for HBase instance
    * @param hTableDescriptor description of the table
    * @param newRegions {@link HRegionInfo} that describes the regions to create
-   * @param catalogTracker the catalog tracker
    * @param task {@link RegionFillTask} custom code to populate region after creation
    * @throws IOException
    */
   public static List<HRegionInfo> createRegions(final Configuration conf, final Path rootDir,
       final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions,
-      final CatalogTracker catalogTracker, final RegionFillTask task) throws IOException {
+      final RegionFillTask task) throws IOException {
     if (newRegions == null) return null;
     int regionNumber = newRegions.length;
     ThreadPoolExecutor regionOpenAndInitThreadPool = getRegionOpenAndInitThreadPool(conf,

@@ -61,9 +61,9 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class CreateTableHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(CreateTableHandler.class);
-  private MasterFileSystem fileSystemManager;
-  private final HTableDescriptor hTableDescriptor;
-  private Configuration conf;
+  protected final MasterFileSystem fileSystemManager;
+  protected final HTableDescriptor hTableDescriptor;
+  protected final Configuration conf;
   private final AssignmentManager assignmentManager;
   private final CatalogTracker catalogTracker;
   private final HRegionInfo [] newRegions;
@@ -205,11 +205,11 @@ public class CreateTableHandler extends EventHandler {
 
   /**
    * Create the on-disk structure for the table, and returns the regions info.
-   * @param rootdir directory where the table is being created
+   * @param tableRootDir directory where the table is being created
    * @param tableName name of the table under construction
    * @return the list of regions created
    */
-  protected List<HRegionInfo> handleCreateHdfsRegions(final Path rootdir, final String tableName)
+  protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir, final String tableName)
       throws IOException {
     int regionNumber = newRegions.length;
     ThreadPoolExecutor regionOpenAndInitThreadPool = getRegionOpenAndInitThreadPool(
@@ -224,7 +224,7 @@ public class CreateTableHandler extends EventHandler {
 
           // 1. Create HRegion
           HRegion region = HRegion.createHRegion(newRegion,
-              rootdir, conf, hTableDescriptor, null,
+              tableRootDir, conf, hTableDescriptor, null,
               false, true);
           // 2. Close the new region to flush to disk. Close log file too.
           region.close();

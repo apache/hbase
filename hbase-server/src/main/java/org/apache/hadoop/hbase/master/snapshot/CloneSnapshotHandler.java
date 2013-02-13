@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Handler to Clone a snapshot.
  *
@@ -76,23 +78,36 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
     this.monitor = new ForeignExceptionDispatcher();
   }
 
+  /**
+   * Create the on-disk regions, using the tableRootDir provided by the CreateTableHandler.
+   * The cloned table will be created in a temp directory, and then the CreateTableHandler
+   * will be responsible to add the regions returned by this method to META and do the assignment.
+   */
   @Override
-  protected List<HRegionInfo> handleCreateRegions(String tableName) throws IOException {
+  protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir, final String tableName)
+      throws IOException {
     FileSystem fs = fileSystemManager.getFileSystem();
     Path rootDir = fileSystemManager.getRootDir();
-    Path tableDir = HTableDescriptor.getTableDir(rootDir, Bytes.toBytes(tableName));
+    Path tableDir = new Path(tableRootDir, tableName);
 
     try {
-      // Execute the Clone
+      // 1. Execute the on-disk Clone
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(conf, fs,
-          catalogTracker, snapshot, snapshotDir, hTableDescriptor, tableDir, monitor);
-      restoreHelper.restore();
+          snapshot, snapshotDir, hTableDescriptor, tableDir, monitor);
+      RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
+
+      // Clone operation should not have stuff to restore or remove
+      Preconditions.checkArgument(metaChanges.getRegionsToRestore() == null,
+          "A clone should not have regions to restore");
+      Preconditions.checkArgument(metaChanges.getRegionsToRemove() == null,
+          "A clone should not have regions to remove");
 
       // At this point the clone is complete. Next step is enabling the table.
       LOG.info("Clone snapshot=" + snapshot.getName() + " on table=" + tableName + " completed!");
 
-      return MetaReader.getTableRegions(catalogTracker, Bytes.toBytes(tableName));
+      // 2. let the CreateTableHandler add the regions to meta
+      return metaChanges.getRegionsToAdd();
     } catch (Exception e) {
       String msg = "clone snapshot=" + snapshot + " failed";
       LOG.error(msg, e);
