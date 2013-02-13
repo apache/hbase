@@ -169,7 +169,7 @@ public class RestoreSnapshotHelper {
 
       // Remove regions from the current table
       monitor.rethrowException();
-      ModifyRegionUtils.deleteRegions(fs, catalogTracker, regionsToRemove);
+      ModifyRegionUtils.deleteRegions(conf, fs, catalogTracker, regionsToRemove);
     }
 
     // Regions to Add: present in the snapshot but not in the current table

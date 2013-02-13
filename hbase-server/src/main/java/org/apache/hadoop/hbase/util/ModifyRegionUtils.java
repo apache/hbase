@@ -185,11 +185,11 @@ public abstract class ModifyRegionUtils {
    * @param catalogTracker the catalog tracker
    * @param regions list of {@link HRegionInfo} to delete.
    */
-  public static void deleteRegions(final FileSystem fs, final CatalogTracker catalogTracker,
-      final List<HRegionInfo> regions) throws IOException {
+  public static void deleteRegions(final Configuration conf, final FileSystem fs,
+      final CatalogTracker catalogTracker, final List<HRegionInfo> regions) throws IOException {
     if (regions != null && regions.size() > 0) {
       for (HRegionInfo hri: regions) {
-        deleteRegion(fs, catalogTracker, hri);
+        deleteRegion(conf, fs, catalogTracker, hri);
       }
     }
   }
@@ -202,12 +202,12 @@ public abstract class ModifyRegionUtils {
    * @param catalogTracker the catalog tracker
    * @param regionInfo {@link HRegionInfo} to delete.
    */
-  public static void deleteRegion(final FileSystem fs, final CatalogTracker catalogTracker,
-      final HRegionInfo regionInfo) throws IOException {
+  public static void deleteRegion(final Configuration conf, final FileSystem fs,
+      final CatalogTracker catalogTracker, final HRegionInfo regionInfo) throws IOException {
     // Remove region from .META.
     MetaEditor.deleteRegion(catalogTracker, regionInfo);
 
     // "Delete" region from FS
-    HFileArchiver.archiveRegion(fs, regionInfo);
+    HFileArchiver.archiveRegion(conf, fs, regionInfo);
   }
 }
