@@ -19,12 +19,24 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
@@ -38,8 +50,9 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -48,11 +61,11 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class CreateTableHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(CreateTableHandler.class);
-  protected final MasterFileSystem fileSystemManager;
-  protected final HTableDescriptor hTableDescriptor;
-  protected final Configuration conf;
-  protected final AssignmentManager assignmentManager;
-  protected final CatalogTracker catalogTracker;
+  private MasterFileSystem fileSystemManager;
+  private final HTableDescriptor hTableDescriptor;
+  private Configuration conf;
+  private final AssignmentManager assignmentManager;
+  private final CatalogTracker catalogTracker;
   private final HRegionInfo [] newRegions;
 
   public CreateTableHandler(Server server, MasterFileSystem fileSystemManager,
@@ -76,7 +89,9 @@ public class CreateTableHandler extends EventHandler {
       }
     } catch (InterruptedException e) {
       LOG.warn("Interrupted waiting for meta availability", e);
-      throw new IOException(e);
+      InterruptedIOException ie = new InterruptedIOException(e.getMessage());
+      ie.initCause(e);
+      throw ie;
     }
 
     String tableName = this.hTableDescriptor.getNameAsString();
@@ -131,40 +146,124 @@ public class CreateTableHandler extends EventHandler {
     }
   }
 
-  private void handleCreateTable(String tableName) throws IOException,
-      KeeperException {
-    // 1. Create table descriptor on disk
-    // TODO: Currently we make the table descriptor and as side-effect the
-    // tableDir is created.  Should we change below method to be createTable
-    // where we create table in tmp dir with its table descriptor file and then
-    // do rename to move it into place?
-    FSTableDescriptors.createTableDescriptor(this.hTableDescriptor, this.conf);
+  /**
+   * Responsible of table creation (on-disk and META) and assignment.
+   * - Create the table directory and descriptor (temp folder)
+   * - Create the on-disk regions (temp folder)
+   *   [If something fails here: we've just some trash in temp]
+   * - Move the table from temp to the root directory
+   *   [If something fails here: we've the table in place but some of the rows required
+   *    present in META. (hbck needed)]
+   * - Add regions to META
+   *   [If something fails here: we don't have regions assigned: table disabled]
+   * - Assign regions to Region Servers
+   *   [If something fails here: we still have the table in disabled state]
+   * - Update ZooKeeper with the enabled state
+   */
+  private void handleCreateTable(String tableName) throws IOException, KeeperException {
+    Path tempdir = fileSystemManager.getTempDir();
+    FileSystem fs = fileSystemManager.getFileSystem();
 
-    // 2. Create regions
-    List<HRegionInfo> regions = handleCreateRegions(tableName);
-    if (regions != null && regions.size() > 0) {
-      // 3. Trigger immediate assignment of the regions in round-robin fashion
-      ModifyRegionUtils.assignRegions(assignmentManager, regions);
+    // 1. Create Table Descriptor
+    FSTableDescriptors.createTableDescriptor(fs, tempdir, this.hTableDescriptor);
+    Path tempTableDir = new Path(tempdir, tableName);
+    Path tableDir = new Path(fileSystemManager.getRootDir(), tableName);
+
+    // 2. Create Regions
+    List<HRegionInfo> regionInfos = handleCreateHdfsRegions(tempdir, tableName);
+
+    // 3. Move Table temp directory to the hbase root location
+    if (!fs.rename(tempTableDir, tableDir)) {
+      throw new IOException("Unable to move table from temp=" + tempTableDir +
+        " to hbase root=" + tableDir);
     }
 
-    // 4. Set table enabled flag up in zk.
+    if (regionInfos != null && regionInfos.size() > 0) {
+      // 4. Add regions to META
+      MetaEditor.addRegionsToMeta(this.catalogTracker, regionInfos);
+
+      // 5. Trigger immediate assignment of the regions in round-robin fashion
+      try {
+        assignmentManager.getRegionStates().createRegionStates(regionInfos);
+        assignmentManager.assign(regionInfos);
+      } catch (InterruptedException e) {
+        LOG.error("Caught " + e + " during round-robin assignment");
+        InterruptedIOException ie = new InterruptedIOException(e.getMessage());
+        ie.initCause(e);
+        throw ie;
+      }
+    }
+
+    // 6. Set table enabled flag up in zk.
     try {
-      assignmentManager.getZKTable().
-        setEnabledTable(this.hTableDescriptor.getNameAsString());
+      assignmentManager.getZKTable().setEnabledTable(tableName);
     } catch (KeeperException e) {
       throw new IOException("Unable to ensure that the table will be" +
         " enabled because of a ZooKeeper issue", e);
     }
   }
 
-  protected List<HRegionInfo> handleCreateRegions(String tableName) throws IOException {
-    // 1. create regions
-    List<HRegionInfo> regions = ModifyRegionUtils.createRegions(conf, fileSystemManager.getRootDir(),
-      hTableDescriptor, newRegions, catalogTracker);
-    if (regions != null && regions.size() > 0) {
-      // 2. add regions to .META.
-      MetaEditor.addRegionsToMeta(catalogTracker, regions);
+  /**
+   * Create the on-disk structure for the table, and returns the regions info.
+   * @param rootdir directory where the table is being created
+   * @param tableName name of the table under construction
+   * @return the list of regions created
+   */
+  protected List<HRegionInfo> handleCreateHdfsRegions(final Path rootdir, final String tableName)
+      throws IOException {
+    int regionNumber = newRegions.length;
+    ThreadPoolExecutor regionOpenAndInitThreadPool = getRegionOpenAndInitThreadPool(
+        "RegionOpenAndInitThread-" + tableName, regionNumber);
+    CompletionService<HRegion> completionService = new ExecutorCompletionService<HRegion>(
+        regionOpenAndInitThreadPool);
+
+    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
+    for (final HRegionInfo newRegion : newRegions) {
+      completionService.submit(new Callable<HRegion>() {
+        public HRegion call() throws IOException {
+
+          // 1. Create HRegion
+          HRegion region = HRegion.createHRegion(newRegion,
+              rootdir, conf, hTableDescriptor, null,
+              false, true);
+          // 2. Close the new region to flush to disk. Close log file too.
+          region.close();
+          return region;
+        }
+      });
     }
-    return regions;
+    try {
+      // 3. wait for all regions to finish creation
+      for (int i = 0; i < regionNumber; i++) {
+        Future<HRegion> future = completionService.take();
+        HRegion region = future.get();
+        regionInfos.add(region.getRegionInfo());
+      }
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException(e.getMessage());
+    } catch (ExecutionException e) {
+      throw new IOException(e.getCause());
+    } finally {
+      regionOpenAndInitThreadPool.shutdownNow();
+    }
+
+    return regionInfos;
+  }
+
+  protected ThreadPoolExecutor getRegionOpenAndInitThreadPool(
+      final String threadNamePrefix, int regionNumber) {
+    int maxThreads = Math.min(regionNumber, conf.getInt(
+        "hbase.hregion.open.and.init.threads.max", 10));
+    ThreadPoolExecutor openAndInitializeThreadPool = Threads
+    .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
+        new ThreadFactory() {
+          private int count = 1;
+
+          public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, threadNamePrefix + "-" + count++);
+            return t;
+          }
+        });
+    return openAndInitializeThreadPool;
   }
 }

@@ -108,6 +108,8 @@ public abstract class ModifyRegionUtils {
           HRegion region = HRegion.createHRegion(newRegion,
               rootDir, conf, hTableDescriptor, null,
               false, true);
+          HRegion.writeRegioninfoOnFilesystem(region.getRegionInfo(), region.getRegionDir(),
+            region.getFilesystem(), conf);
           try {
             // 2. Custom user code to interact with the created region
             if (task != null) {

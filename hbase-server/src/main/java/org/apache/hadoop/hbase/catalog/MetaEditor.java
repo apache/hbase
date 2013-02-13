@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.catalog;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -138,11 +139,22 @@ public class MetaEditor {
    * @param d Delete to add to .META.
    * @throws IOException
    */
-  static void deleteMetaTable(final CatalogTracker ct, final Delete d)
-  throws IOException {
+  static void deleteFromMetaTable(final CatalogTracker ct, final Delete d)
+      throws IOException {
+    deleteFromMetaTable(ct, Arrays.asList(d));
+  }
+
+  /**
+   * Delete the passed <code>deletes</code> from the <code>.META.</code> table.
+   * @param ct CatalogTracker on whose back we will ride the edit.
+   * @param deletes Deletes to add to .META.
+   * @throws IOException
+   */
+  static void deleteFromMetaTable(final CatalogTracker ct, final List<Delete> deletes)
+      throws IOException {
     HTable t = MetaReader.getMetaHTable(ct);
     try {
-      t.delete(d);
+      t.delete(deletes);
     } finally {
       t.close();
     }
@@ -318,8 +330,24 @@ public class MetaEditor {
       HRegionInfo regionInfo)
   throws IOException {
     Delete delete = new Delete(regionInfo.getRegionName());
-    deleteMetaTable(catalogTracker, delete);
+    deleteFromMetaTable(catalogTracker, delete);
     LOG.info("Deleted region " + regionInfo.getRegionNameAsString() + " from META");
+  }
+
+  /**
+   * Deletes the specified regions from META.
+   * @param catalogTracker
+   * @param regionsInfo list of regions to be deleted from META
+   * @throws IOException
+   */
+  public static void deleteRegions(CatalogTracker catalogTracker,
+      List<HRegionInfo> regionsInfo) throws IOException {
+    List<Delete> deletes = new ArrayList<Delete>(regionsInfo.size());
+    for (HRegionInfo hri: regionsInfo) {
+      deletes.add(new Delete(hri.getRegionName()));
+    }
+    deleteFromMetaTable(catalogTracker, deletes);
+    LOG.info("Deleted from META, regions: " + regionsInfo);
   }
 
   /**
@@ -335,7 +363,7 @@ public class MetaEditor {
     Delete delete = new Delete(parent.getRegionName());
     delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
     delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
-    deleteMetaTable(catalogTracker, delete);
+    deleteFromMetaTable(catalogTracker, delete);
     LOG.info("Deleted daughters references, qualifier=" + Bytes.toStringBinary(HConstants.SPLITA_QUALIFIER) +
       " and qualifier=" + Bytes.toStringBinary(HConstants.SPLITB_QUALIFIER) +
       ", from parent " + parent.getRegionNameAsString());

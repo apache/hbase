@@ -748,10 +748,13 @@ public final class HConstants {
    */
   public static final String SNAPSHOT_DIR_NAME = ".snapshot";
 
+  /** Temporary directory used for table creation and deletion */
+  public static final String HBASE_TEMP_DIRECTORY = ".tmp";
+
   public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(
       Arrays.asList(new String[] { HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME,
           toString(META_TABLE_NAME), toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
-          HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME }));
+          HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME, HBASE_TEMP_DIRECTORY }));
   
   private HConstants() {
     // Can't be instantiated with this ctor.
