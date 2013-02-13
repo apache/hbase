@@ -39,7 +39,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
-  public static final Log LOG = LogFactory.getLog(ZKProcedureUtil.class);
+  public static final Log LOG = LogFactory.getLog(ZKProcedureCoordinatorRpcs.class);
   private ZKProcedureUtil zkProc = null;
   protected ProcedureCoordinator coordinator = null;  // if started this should be non-null
 
@@ -165,20 +165,20 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
       this.zkProc = new ZKProcedureUtil(watcher, procedureType, coordName) {
         @Override
         public void nodeCreated(String path) {
-          if (!zkProc.isInProcedurePath(path)) return;
+          if (!isInProcedurePath(path)) return;
           LOG.debug("Node created: " + path);
           logZKTree(this.baseZNode);
-          if (zkProc.isAcquiredPathNode(path)) {
+          if (isAcquiredPathNode(path)) {
             // node wasn't present when we created the watch so zk event triggers acquire
             listener.memberAcquiredBarrier(ZKUtil.getNodeName(ZKUtil.getParent(path)), ZKUtil.getNodeName(path));
           }
-          if (zkProc.isReachedPathNode(path)) {
+          if (isReachedPathNode(path)) {
             // node wasn't present when we created the watch so zk event triggers the finished barrier.
 
             // TODO Nothing enforces that acquire and reached znodes from showing up in the wrong order.
             listener.memberFinishedBarrier(ZKUtil.getNodeName(ZKUtil.getParent(path)), ZKUtil.getNodeName(path));
           }
-          if (zkProc.isAbortPathNode(path)) {
+          if (isAbortPathNode(path)) {
             abort(path);
           }
         }

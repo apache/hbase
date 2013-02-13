@@ -179,28 +179,51 @@ public abstract class ZKProcedureUtil
    *
    * @return true if starts with baseZnode
    */
-  public boolean isInProcedurePath(String path) {
+  boolean isInProcedurePath(String path) {
     return path.startsWith(baseZNode);
   }
 
   /**
+   * Is this the exact procedure barrier acquired znode
+   */
+  boolean isAcquiredNode(String path) {
+    return path.equals(acquiredZnode);
+  }
+
+  
+  /**
    * Is this in the procedure barrier acquired znode path
    */
-  public boolean isAcquiredPathNode(String path) {
+  boolean isAcquiredPathNode(String path) {
     return path.startsWith(this.acquiredZnode) && !path.equals(acquiredZnode);
+  }
+
+  /**
+   * Is this the exact procedure barrier reached znode
+   */
+  boolean isReachedNode(String path) {
+    return path.equals(reachedZnode);
   }
 
   /**
    * Is this in the procedure barrier reached znode path
    */
-  public boolean isReachedPathNode(String path) {
+  boolean isReachedPathNode(String path) {
     return path.startsWith(this.reachedZnode) && !path.equals(reachedZnode);
+  }
+
+
+  /**
+   * Is this in the procedure barrier abort znode path
+   */
+  boolean isAbortNode(String path) {
+    return path.equals(abortZnode);
   }
 
   /**
    * Is this in the procedure barrier abort znode path
    */
-    public boolean isAbortPathNode(String path) {
+  public boolean isAbortPathNode(String path) {
     return path.startsWith(this.abortZnode) && !path.equals(abortZnode);
   }
 

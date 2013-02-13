@@ -74,29 +74,31 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     this.zkController = new ZKProcedureUtil(watcher, procType, memberName) {
       @Override
       public void nodeCreated(String path) {
-        if (path.startsWith(this.baseZNode)) {
-          LOG.info("Received created event:" + path);
-          // if it is a simple start/end/abort then we just rewatch the node
-          if (path.equals(this.acquiredZnode)) {
-            waitForNewProcedures();
-            return;
-          } else if (path.equals(this.abortZnode)) {
-            watchForAbortedProcedures();
-            return;
-          }
-          String parent = ZKUtil.getParent(path);
-          // if its the end barrier, the procedure can be completed
-          if (parent.equals(this.reachedZnode)) {
-            receivedReachedGlobalBarrier(path);
-            return;
-          } else if (parent.equals(this.abortZnode)) {
-            abort(path);
-            return;
-          } else if (parent.equals(this.acquiredZnode)) {
-            startNewSubprocedure(path);
-          } else {
-            LOG.debug("Ignoring created notification for node:" + path);
-          }
+        if (!isInProcedurePath(path)) {
+          return;
+        }
+
+        LOG.info("Received created event:" + path);
+        // if it is a simple start/end/abort then we just rewatch the node
+        if (isAcquiredNode(path)) {
+          waitForNewProcedures();
+          return;
+        } else if (isAbortNode(path)) {
+          watchForAbortedProcedures();
+          return;
+        }
+        String parent = ZKUtil.getParent(path);
+        // if its the end barrier, the procedure can be completed
+        if (isReachedNode(parent)) {
+          receivedReachedGlobalBarrier(path);
+          return;
+        } else if (isAbortNode(parent)) {
+          abort(path);
+          return;
+        } else if (isAcquiredNode(parent)) {
+          startNewSubprocedure(path);
+        } else {
+          LOG.debug("Ignoring created notification for node:" + path);
         }
       }
 
