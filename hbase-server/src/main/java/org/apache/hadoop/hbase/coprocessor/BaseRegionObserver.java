@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -77,7 +77,7 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final HStore store, final KeyValueScanner memstoreScanner, final InternalScanner s)
+      final Store store, final KeyValueScanner memstoreScanner, final InternalScanner s)
       throws IOException {
     return null;
   }
@@ -91,13 +91,13 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
-  public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> e, HStore store,
+  public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
       InternalScanner scanner) throws IOException {
     return scanner;
   }
 
   @Override
-  public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e, HStore store,
+  public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
       StoreFile resultFile) throws IOException {
   }
 
@@ -132,28 +132,28 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final HStore store, final List<StoreFile> candidates) throws IOException { }
+      final Store store, final List<StoreFile> candidates) throws IOException { }
 
   @Override
   public void postCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final HStore store, final ImmutableList<StoreFile> selected) { }
+      final Store store, final ImmutableList<StoreFile> selected) { }
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      final HStore store, final InternalScanner scanner, final ScanType scanType)
+      final Store store, final InternalScanner scanner, final ScanType scanType)
           throws IOException {
     return scanner;
   }
 
   @Override
   public InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final HStore store, List<? extends KeyValueScanner> scanners, final ScanType scanType,
+      final Store store, List<? extends KeyValueScanner> scanners, final ScanType scanType,
       final long earliestPutTs, final InternalScanner s) throws IOException {
     return null;
   }
 
   @Override
-  public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, final HStore store,
+  public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, final Store store,
       final StoreFile resultFile) throws IOException {
   }
 
@@ -290,7 +290,7 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final HStore store, final Scan scan, final NavigableSet<byte[]> targetCols,
+      final Store store, final Scan scan, final NavigableSet<byte[]> targetCols,
       final KeyValueScanner s) throws IOException {
     return null;
   }

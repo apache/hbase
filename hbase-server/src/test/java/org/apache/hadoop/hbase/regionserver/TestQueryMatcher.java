@@ -98,7 +98,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     // 2,4,5
     
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, new HStore.ScanInfo(fam2,
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, ttl, false, 0, rowComparator), get.getFamilyMap().get(fam2),
         EnvironmentEdgeManager.currentTimeMillis() - ttl);
 
@@ -144,7 +144,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.DONE);
 
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, new HStore.ScanInfo(fam2,
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, ttl, false, 0, rowComparator), null,
         EnvironmentEdgeManager.currentTimeMillis() - ttl);
 
@@ -198,7 +198,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     };
 
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, new HStore.ScanInfo(fam2,
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, testTTL, false, 0, rowComparator), get.getFamilyMap().get(fam2),
         now - testTTL);
 
@@ -252,7 +252,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     };
 
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, new HStore.ScanInfo(fam2,
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, testTTL, false, 0, rowComparator), null,
         now - testTTL);
 

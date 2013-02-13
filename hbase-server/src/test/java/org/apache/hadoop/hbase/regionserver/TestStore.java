@@ -324,7 +324,7 @@ public class TestStore extends TestCase {
     this.store = new HStore(storedir.getParent().getParent(),
       this.store.getHRegion(),
       this.store.getFamily(), fs, c);
-    System.out.println(this.store.getHRegionInfo().getEncodedName());
+    System.out.println(this.store.getRegionInfo().getEncodedName());
     assertEquals(2, this.store.getStorefilesCount());
 
     result = HBaseTestingUtility.getFromStoreFile(store,

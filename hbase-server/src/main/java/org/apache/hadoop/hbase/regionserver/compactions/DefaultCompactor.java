@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
@@ -71,7 +72,7 @@ class DefaultCompactor extends Compactor {
     // Calculate maximum key count after compaction (for blooms)
     // Also calculate earliest put timestamp if major compaction
     int maxKeyCount = 0;
-    HStore store = policy.store;
+    Store store = policy.store;
     long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     for (StoreFile file: filesToCompact) {
       StoreFile.Reader r = file.getReader();
@@ -127,14 +128,13 @@ class DefaultCompactor extends Compactor {
     StoreFile.Writer writer = null;
     List<Path> newFiles = new ArrayList<Path>();
     // Find the smallest read point across all the Scanners.
-    long smallestReadPoint = store.getHRegion().getSmallestReadPoint();
+    long smallestReadPoint = store.getSmallestReadPoint();
     MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);
     try {
       InternalScanner scanner = null;
       try {
-        if (store.getHRegion().getCoprocessorHost() != null) {
+        if (store.getCoprocessorHost() != null) {
           scanner = store
-              .getHRegion()
               .getCoprocessorHost()
               .preCompactScannerOpen(store, scanners,
                   majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT, earliestPutTs);
@@ -147,9 +147,9 @@ class DefaultCompactor extends Compactor {
           scanner = new StoreScanner(store, store.getScanInfo(), scan, scanners,
             scanType, smallestReadPoint, earliestPutTs);
         }
-        if (store.getHRegion().getCoprocessorHost() != null) {
+        if (store.getCoprocessorHost() != null) {
           InternalScanner cpScanner =
-            store.getHRegion().getCoprocessorHost().preCompact(store, scanner, scanType);
+            store.getCoprocessorHost().preCompact(store, scanner, scanType);
           // NULL scanner returned from coprocessor hooks means skip normal processing
           if (cpScanner == null) {
             return newFiles;  // an empty list
@@ -209,13 +209,14 @@ class DefaultCompactor extends Compactor {
     return newFiles;
   }
 
-  void isInterrupted(final HStore store, final StoreFile.Writer writer)
+  void isInterrupted(final Store store, final StoreFile.Writer writer)
   throws IOException {
-    if (store.getHRegion().areWritesEnabled()) return;
+    if (store.areWritesEnabled()) return;
     // Else cleanup.
     writer.close();
     store.getFileSystem().delete(writer.getPath(), false);
     throw new InterruptedIOException( "Aborting compaction of store " + store +
-      " in region " + store.getHRegion() + " because it was interrupted.");
+      " in region " + store.getRegionInfo().getRegionNameAsString() +
+      " because it was interrupted.");
   }
 }

@@ -25,15 +25,14 @@ public class NoOpScanPolicyObserver extends BaseRegionObserver {
    */
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      HStore store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
-    HStore.ScanInfo oldSI = store.getScanInfo();
-    HStore.ScanInfo scanInfo = new HStore.ScanInfo(store.getFamily(), oldSI.getTtl(),
+      Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+    ScanInfo oldSI = store.getScanInfo();
+    ScanInfo scanInfo = new ScanInfo(store.getFamily(), oldSI.getTtl(),
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
     Scan scan = new Scan();
     scan.setMaxVersions(oldSI.getMaxVersions());
     return new StoreScanner(store, scanInfo, scan, Collections.singletonList(memstoreScanner),
-        ScanType.MINOR_COMPACT, store.getHRegion().getSmallestReadPoint(),
-        HConstants.OLDEST_TIMESTAMP);
+        ScanType.MINOR_COMPACT, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 
   /**
@@ -41,21 +40,21 @@ public class NoOpScanPolicyObserver extends BaseRegionObserver {
    */
   @Override
   public InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      HStore store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
+      Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
       InternalScanner s) throws IOException {
     // this demonstrates how to override the scanners default behavior
-    HStore.ScanInfo oldSI = store.getScanInfo();
-    HStore.ScanInfo scanInfo = new HStore.ScanInfo(store.getFamily(), oldSI.getTtl(),
+    ScanInfo oldSI = store.getScanInfo();
+    ScanInfo scanInfo = new ScanInfo(store.getFamily(), oldSI.getTtl(),
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
     Scan scan = new Scan();
     scan.setMaxVersions(oldSI.getMaxVersions());
-    return new StoreScanner(store, scanInfo, scan, scanners, scanType, store.getHRegion()
-        .getSmallestReadPoint(), earliestPutTs);
+    return new StoreScanner(store, scanInfo, scan, scanners, scanType, 
+        store.getSmallestReadPoint(), earliestPutTs);
   }
 
   @Override
   public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      HStore store, final Scan scan, final NavigableSet<byte[]> targetCols, KeyValueScanner s)
+      Store store, final Scan scan, final NavigableSet<byte[]> targetCols, KeyValueScanner s)
       throws IOException {
     return new StoreScanner(store, store.getScanInfo(), scan, targetCols);
   }

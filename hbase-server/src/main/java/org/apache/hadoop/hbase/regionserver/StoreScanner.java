@@ -32,19 +32,19 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.regionserver.HStore.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
- * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
+ * Scanner scans both the memstore and the Store. Coalesce KeyValue stream
  * into List<KeyValue> for a single row.
  */
 @InterfaceAudience.Private
 public class StoreScanner extends NonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(StoreScanner.class);
-  protected HStore store;
+  protected Store store;
   protected ScanQueryMatcher matcher;
   protected KeyValueHeap heap;
   protected boolean cacheBlocks;
@@ -75,7 +75,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   protected KeyValue lastTop = null;
 
   /** An internal constructor. */
-  protected StoreScanner(HStore store, boolean cacheBlocks, Scan scan,
+  protected StoreScanner(Store store, boolean cacheBlocks, Scan scan,
       final NavigableSet<byte[]> columns, long ttl, int minVersions) {
     this.store = store;
     this.cacheBlocks = cacheBlocks;
@@ -103,7 +103,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * @param columns which columns we are scanning
    * @throws IOException
    */
-  public StoreScanner(HStore store, ScanInfo scanInfo, Scan scan, final NavigableSet<byte[]> columns)
+  public StoreScanner(Store store, ScanInfo scanInfo, Scan scan, final NavigableSet<byte[]> columns)
                               throws IOException {
     this(store, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
         scanInfo.getMinVersions());
@@ -139,7 +139,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
     this.storeOffset = scan.getRowOffsetPerColumnFamily();
 
     // Combine all seeked scanners with a heap
-    heap = new KeyValueHeap(scanners, store.comparator);
+    heap = new KeyValueHeap(scanners, store.getComparator());
 
     this.store.addChangedReaderObserver(this);
   }
@@ -154,7 +154,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * @param smallestReadPoint the readPoint that we should use for tracking
    *          versions
    */
-  public StoreScanner(HStore store, ScanInfo scanInfo, Scan scan,
+  public StoreScanner(Store store, ScanInfo scanInfo, Scan scan,
       List<? extends KeyValueScanner> scanners, ScanType scanType,
       long smallestReadPoint, long earliestPutTs) throws IOException {
     this(store, false, scan, null, scanInfo.getTtl(),
@@ -171,11 +171,11 @@ public class StoreScanner extends NonLazyKeyValueScanner
     }
 
     // Combine all seeked scanners with a heap
-    heap = new KeyValueHeap(scanners, store.comparator);
+    heap = new KeyValueHeap(scanners, store.getComparator());
   }
 
   /** Constructor for testing. */
-  StoreScanner(final Scan scan, HStore.ScanInfo scanInfo,
+  StoreScanner(final Scan scan, ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners) throws IOException {
     this(scan, scanInfo, scanType, columns, scanners,
@@ -183,7 +183,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   }
 
   // Constructor for testing.
-  StoreScanner(final Scan scan, HStore.ScanInfo scanInfo,
+  StoreScanner(final Scan scan, ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners, long earliestPutTs)
           throws IOException {
@@ -325,7 +325,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
     byte[] row = peeked.getBuffer();
     int offset = peeked.getRowOffset();
     short length = peeked.getRowLength();
-    if ((matcher.row == null) || !Bytes.equals(row, offset, length, matcher.row, matcher.rowOffset, matcher.rowLength)) {
+    if ((matcher.row == null) || !Bytes.equals(row, offset, length, matcher.row,
+        matcher.rowOffset, matcher.rowLength)) {
       this.countPerRow = 0;
       matcher.setRow(row, offset, length);
     }
@@ -490,7 +491,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
     if (this.heap == null && this.lastTop != null) {
       resetScannerStack(this.lastTop);
       if (this.heap.peek() == null
-          || store.comparator.compareRows(this.lastTop, this.heap.peek()) != 0) {
+          || store.getComparator().compareRows(this.lastTop, this.heap.peek()) != 0) {
         LOG.debug("Storescanner.peek() is changed where before = "
             + this.lastTop.toString() + ",and after = " + this.heap.peek());
         this.lastTop = null;
@@ -517,7 +518,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
     }
 
     // Combine all seeked scanners with a heap
-    heap = new KeyValueHeap(scanners, store.comparator);
+    heap = new KeyValueHeap(scanners, store.getComparator());
 
     // Reset the state of the Query Matcher and set to top row.
     // Only reset and call setRow if the row changes; avoids confusing the
@@ -529,7 +530,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
     byte[] row = kv.getBuffer();
     int offset = kv.getRowOffset();
     short length = kv.getRowLength();
-    if ((matcher.row == null) || !Bytes.equals(row, offset, length, matcher.row, matcher.rowOffset, matcher.rowLength)) {
+    if ((matcher.row == null) || !Bytes.equals(row, offset, length, matcher.row,
+        matcher.rowOffset, matcher.rowLength)) {
       this.countPerRow = 0;
       matcher.reset();
       matcher.setRow(row, offset, length);

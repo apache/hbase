@@ -24,11 +24,14 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
@@ -75,6 +78,23 @@ public interface Store extends HeapSize, StoreConfigInformation {
       throws IOException;
 
   /**
+   * Get all scanners with no filtering based on TTL (that happens further down
+   * the line).
+   * @param cacheBlocks
+   * @param isGet
+   * @param isCompaction
+   * @param matcher
+   * @param startRow
+   * @param stopRow
+   * @return all scanners for this store
+   */
+  public List<KeyValueScanner> getScanners(boolean cacheBlocks,
+      boolean isGet, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
+      byte[] stopRow) throws IOException;
+
+  public ScanInfo getScanInfo();
+
+  /**
    * Adds or replaces the specified KeyValues.
    * <p>
    * For each KeyValue specified, if a cell with the same row, family, and qualifier exists in
@@ -116,6 +136,17 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @throws IOException
    */
   public KeyValue getRowKeyAtOrBefore(final byte[] row) throws IOException;
+
+  public FileSystem getFileSystem();
+
+  /*
+   * @param maxKeyCount
+   * @param compression Compression algorithm to use
+   * @param isCompaction whether we are creating a new file in a compaction
+   * @return Writer for a new StoreFile in the tmp dir.
+   */
+  public StoreFile.Writer createWriterInTmp(int maxKeyCount,
+    Compression.Algorithm compression, boolean isCompaction) throws IOException;
 
   // Compaction oriented methods
 
@@ -259,11 +290,32 @@ public interface Store extends HeapSize, StoreConfigInformation {
   public CacheConfig getCacheConfig();
 
   /**
-   * @return the parent region hosting this store
+   * @return the parent region info hosting this store
    */
-  public HRegion getHRegion();
+  public HRegionInfo getRegionInfo();
+
+  public RegionCoprocessorHost getCoprocessorHost();
+
+  public boolean areWritesEnabled();
+
+  /**
+   * @return The smallest mvcc readPoint across all the scanners in this
+   * region. Writes older than this readPoint, are included  in every
+   * read operation.
+   */
+  public long getSmallestReadPoint();
 
   public String getColumnFamilyName();
 
   public String getTableName();
+
+  /*
+   * @param o Observer who wants to know about changes in set of Readers
+   */
+  public void addChangedReaderObserver(ChangedReadersObserver o);
+
+  /*
+   * @param o Observer no longer interested in changes in set of Readers.
+   */
+  public void deleteChangedReaderObserver(ChangedReadersObserver o);
 }
