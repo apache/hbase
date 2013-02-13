@@ -157,7 +157,7 @@ public class TestZKProcedure {
       ForeignExceptionDispatcher cohortMonitor = new ForeignExceptionDispatcher();
       Subprocedure commit = Mockito
       .spy(new SubprocedureImpl(procMembers.get(i).getFirst(), opName, cohortMonitor,
-          TIMEOUT, WAKE_FREQUENCY));
+          WAKE_FREQUENCY, TIMEOUT));
       subprocs.add(commit);
     }
 
@@ -232,7 +232,7 @@ public class TestZKProcedure {
       ForeignExceptionDispatcher cohortMonitor = new ForeignExceptionDispatcher();
       ProcedureMember comms = members.get(i).getFirst();
       Subprocedure commit = Mockito
-      .spy(new SubprocedureImpl(comms, opName, cohortMonitor, TIMEOUT, WAKE_FREQUENCY));
+      .spy(new SubprocedureImpl(comms, opName, cohortMonitor, WAKE_FREQUENCY, TIMEOUT));
       // This nasty bit has one of the impls throw a TimeoutException
       Mockito.doAnswer(new Answer<Void>() {
         @Override
