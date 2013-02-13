@@ -251,13 +251,13 @@ public class MasterFileSystem {
       }
     } while (retrySplitting);
   }
-  
+
   public void splitLog(final ServerName serverName) throws IOException {
     List<ServerName> serverNames = new ArrayList<ServerName>();
     serverNames.add(serverName);
     splitLog(serverNames);
   }
-  
+
   public void splitLog(final List<ServerName> serverNames) throws IOException {
     long splitTime = 0, splitLogSize = 0;
     List<Path> logDirs = new ArrayList<Path>();
@@ -293,7 +293,7 @@ public class MasterFileSystem {
         // splitLogLock ensures that dead region servers' logs are processed
         // one at a time
         this.splitLogLock.lock();
-        try {              
+        try {
           HLogSplitter splitter = HLogSplitter.createLogSplitter(
             conf, rootdir, logDir, oldLogDir, this.fs);
           try {
@@ -443,7 +443,7 @@ public class MasterFileSystem {
 
 
   public void deleteRegion(HRegionInfo region) throws IOException {
-    HFileArchiver.archiveRegion(fs, region);
+    HFileArchiver.archiveRegion(conf, fs, region);
   }
 
   public void deleteTable(byte[] tableName) throws IOException {
@@ -481,7 +481,7 @@ public class MasterFileSystem {
 
   /**
    * Create new HTableDescriptor in HDFS.
-   * 
+   *
    * @param htableDescriptor
    */
   public void createTableDescriptor(HTableDescriptor htableDescriptor)

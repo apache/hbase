@@ -62,20 +62,22 @@ public class HFileArchiver {
   /**
    * Cleans up all the files for a HRegion by archiving the HFiles to the
    * archive directory
+   * @param conf the configuration to use
    * @param fs the file system object
    * @param info HRegionInfo for region to be deleted
    * @throws IOException
    */
-  public static void archiveRegion(FileSystem fs, HRegionInfo info)
+  public static void archiveRegion(Configuration conf, FileSystem fs, HRegionInfo info)
       throws IOException {
-    Path rootDir = FSUtils.getRootDir(fs.getConf());
-    archiveRegion(fs, rootDir, HTableDescriptor.getTableDir(rootDir, info.getTableName()),
+    Path rootDir = FSUtils.getRootDir(conf);
+    archiveRegion(conf, fs, rootDir, HTableDescriptor.getTableDir(rootDir, info.getTableName()),
       HRegion.getRegionDir(rootDir, info));
   }
 
 
   /**
    * Remove an entire region from the table directory via archiving the region's hfiles.
+   * @param conf the configuration to use
    * @param fs {@link FileSystem} from which to remove the region
    * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
    *          the archive path)
@@ -85,7 +87,8 @@ public class HFileArchiver {
    *         operations could not complete.
    * @throws IOException if the request cannot be completed
    */
-  public static boolean archiveRegion(FileSystem fs, Path rootdir, Path tableDir, Path regionDir)
+  public static boolean archiveRegion(Configuration conf, FileSystem fs,
+      Path rootdir, Path tableDir, Path regionDir)
       throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("ARCHIVING region " + regionDir.toString());
@@ -104,7 +107,7 @@ public class HFileArchiver {
 
     // make sure the regiondir lives under the tabledir
     Preconditions.checkArgument(regionDir.toString().startsWith(tableDir.toString()));
-    Path regionArchiveDir = HFileArchiveUtil.getRegionArchiveDir(fs.getConf(), tableDir, regionDir);
+    Path regionArchiveDir = HFileArchiveUtil.getRegionArchiveDir(conf, tableDir, regionDir);
 
     LOG.debug("Have an archive directory, preparing to move files");
     FileStatusConverter getAsFile = new FileStatusConverter(fs);
@@ -180,16 +183,16 @@ public class HFileArchiver {
 
   /**
    * Remove the store files, either by archiving them or outright deletion
+   * @param conf {@link Configuration} to examine to determine the archive directory
    * @param fs the filesystem where the store files live
    * @param parent Parent region hosting the store files
-   * @param conf {@link Configuration} to examine to determine the archive directory
    * @param family the family hosting the store files
    * @param compactedFiles files to be disposed of. No further reading of these files should be
    *          attempted; otherwise likely to cause an {@link IOException}
    * @throws IOException if the files could not be correctly disposed.
    */
-  public static void archiveStoreFiles(FileSystem fs, HRegion parent,
-      Configuration conf, byte[] family, Collection<StoreFile> compactedFiles) throws IOException {
+  public static void archiveStoreFiles(Configuration conf, FileSystem fs, HRegion parent,
+      byte[] family, Collection<StoreFile> compactedFiles) throws IOException {
 
     // sometimes in testing, we don't have rss, so we need to check for that
     if (fs == null) {
