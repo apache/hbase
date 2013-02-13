@@ -199,6 +199,14 @@ message DeleteSnapshotRequest{
 message DeleteSnapshotResponse{
 }
 
+message RestoreSnapshotRequest {
+  required SnapshotDescription snapshot = 1;
+}
+
+message RestoreSnapshotResponse {
+  required int64 expectedTimeout = 1;
+}
+
 /* if you don't send the snapshot, then you will get it back
  * in the response (if the snapshot is done) so you can check the snapshot
  */
@@ -209,6 +217,14 @@ message IsSnapshotDoneRequest{
 message IsSnapshotDoneResponse{
 	optional bool done = 1 [default = false];
 	optional SnapshotDescription snapshot = 2;
+}
+
+message IsRestoreSnapshotDoneRequest {
+  optional SnapshotDescription snapshot = 1;
+}
+
+message IsRestoreSnapshotDoneResponse {
+  optional bool done = 1 [default = false];
 }
 
 service MasterAdminService {
@@ -337,4 +353,15 @@ service MasterAdminService {
    * Determine if the snapshot is done yet.
    */
   rpc isSnapshotDone(IsSnapshotDoneRequest) returns(IsSnapshotDoneResponse);
+
+  /**
+   * Restore a snapshot
+   * @param snapshot description of the snapshot to restore
+   */
+  rpc restoreSnapshot(RestoreSnapshotRequest) returns(RestoreSnapshotResponse);
+
+  /**
+   * Determine if the snapshot restore is done yet.
+   */
+  rpc isRestoreSnapshotDone(IsRestoreSnapshotDoneRequest) returns(IsRestoreSnapshotDoneResponse);
 }
