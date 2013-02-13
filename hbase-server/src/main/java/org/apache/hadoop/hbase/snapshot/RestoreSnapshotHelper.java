@@ -209,35 +209,59 @@ public class RestoreSnapshotHelper {
     Path snapshotRegionDir = new Path(snapshotDir, regionInfo.getEncodedName());
     Map<String, List<String>> snapshotFiles =
                 SnapshotReferenceUtil.getRegionHFileReferences(fs, snapshotRegionDir);
-
     Path regionDir = new Path(tableDir, regionInfo.getEncodedName());
     String tableName = tableDesc.getNameAsString();
 
+    // Restore families present in the table
+    for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
+      byte[] family = Bytes.toBytes(familyDir.getName());
+      Set<String> familyFiles = getTableRegionFamilyFiles(familyDir);
+      List<String> snapshotFamilyFiles = snapshotFiles.remove(familyDir.getName());
+      if (snapshotFamilyFiles != null) {
+        List<String> hfilesToAdd = new LinkedList<String>();
+        for (String hfileName: snapshotFamilyFiles) {
+          if (familyFiles.contains(hfileName)) {
+            // HFile already present
+            familyFiles.remove(hfileName);
+          } else {
+            // HFile missing
+            hfilesToAdd.add(hfileName);
+          }
+        }
+
+        // Restore Missing files
+        for (String hfileName: hfilesToAdd) {
+          LOG.trace("Adding HFileLink " + hfileName +
+            " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
+          restoreStoreFile(familyDir, regionInfo, hfileName);
+        }
+
+        // Remove hfiles not present in the snapshot
+        for (String hfileName: familyFiles) {
+          Path hfile = new Path(familyDir, hfileName);
+          LOG.trace("Removing hfile=" + hfile +
+            " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
+          HFileArchiver.archiveStoreFile(fs, regionInfo, conf, tableDir, family, hfile);
+        }
+      } else {
+        // Family doesn't exists in the snapshot
+        LOG.trace("Removing family=" + Bytes.toString(family) +
+          " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
+        HFileArchiver.archiveFamily(fs, conf, regionInfo, tableDir, family);
+        fs.delete(familyDir, true);
+      }
+    }
+
+    // Add families not present in the table
     for (Map.Entry<String, List<String>> familyEntry: snapshotFiles.entrySet()) {
       byte[] family = Bytes.toBytes(familyEntry.getKey());
       Path familyDir = new Path(regionDir, familyEntry.getKey());
-      Set<String> familyFiles = getTableRegionFamilyFiles(familyDir);
+      if (!fs.mkdirs(familyDir)) {
+        throw new IOException("Unable to create familyDir=" + familyDir);
+      }
 
       List<String> hfilesToAdd = new LinkedList<String>();
       for (String hfileName: familyEntry.getValue()) {
-        if (familyFiles.contains(hfileName)) {
-          // HFile already present
-          familyFiles.remove(hfileName);
-        } else {
-          // HFile missing
-          hfilesToAdd.add(hfileName);
-        }
-      }
-
-      // Remove hfiles not present in the snapshot
-      for (String hfileName: familyFiles) {
-        Path hfile = new Path(familyDir, hfileName);
-        LOG.trace("Removing hfile=" + hfile + " from table=" + tableName);
-        HFileArchiver.archiveStoreFile(fs, regionInfo, conf, tableDir, family, hfile);
-      }
-
-      // Restore Missing files
-      for (String hfileName: hfilesToAdd) {
         LOG.trace("Adding HFileLink " + hfileName + " to table=" + tableName);
         restoreStoreFile(familyDir, regionInfo, hfileName);
       }

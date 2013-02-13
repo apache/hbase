@@ -20,9 +20,12 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,10 +40,12 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
@@ -62,6 +67,7 @@ public class TestRestoreSnapshotFromClient {
 
   private final byte[] FAMILY = Bytes.toBytes("cf");
 
+  private byte[] emptySnapshot;
   private byte[] snapshotName0;
   private byte[] snapshotName1;
   private byte[] snapshotName2;
@@ -99,13 +105,22 @@ public class TestRestoreSnapshotFromClient {
 
     long tid = System.currentTimeMillis();
     tableName = Bytes.toBytes("testtb-" + tid);
+    emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
     snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
     snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
 
     // create Table and disable it
     createTable(tableName, FAMILY);
+    admin.disableTable(tableName);
+
+    // take an empty snapshot
+    admin.snapshot(emptySnapshot, tableName);
+
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+
+    // enable table and insert data
+    admin.enableTable(tableName);
     loadData(table, 500, FAMILY);
     snapshot0Rows = TEST_UTIL.countRows(table);
     admin.disableTable(tableName);
@@ -149,12 +164,62 @@ public class TestRestoreSnapshotFromClient {
     table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
 
+    // Restore from emptySnapshot
+    admin.disableTable(tableName);
+    admin.restoreSnapshot(emptySnapshot);
+    admin.enableTable(tableName);
+    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    assertEquals(0, TEST_UTIL.countRows(table));
+
     // Restore from snapshot-1
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
     table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     assertEquals(snapshot1Rows, TEST_UTIL.countRows(table));
+  }
+
+  @Test
+  public void testRestoreSchemaChange() throws IOException {
+    byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
+
+    // Add one column family and put some data in it
+    admin.disableTable(tableName);
+    admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
+    admin.enableTable(tableName);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    loadData(table, 500, TEST_FAMILY2);
+    long snapshot2Rows = snapshot1Rows + 500;
+    assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
+    assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
+
+    // Take a snapshot
+    admin.disableTable(tableName);
+    admin.snapshot(snapshotName2, tableName);
+
+    // Restore the snapshot (without the cf)
+    admin.restoreSnapshot(snapshotName0);
+    admin.enableTable(tableName);
+    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    try {
+      TEST_UTIL.countRows(table, TEST_FAMILY2);
+      fail("family '" + Bytes.toString(TEST_FAMILY2) + "' should not exists");
+    } catch (NoSuchColumnFamilyException e) {
+      // expected
+    }
+    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    Set<String> fsFamilies = getFamiliesFromFS(tableName);
+    assertEquals(1, fsFamilies.size());
+
+    // Restore back the snapshot (with the cf)
+    admin.disableTable(tableName);
+    admin.restoreSnapshot(snapshotName2);
+    admin.enableTable(tableName);
+    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
+    assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
+    fsFamilies = getFamiliesFromFS(tableName);
+    assertEquals(2, fsFamilies.size());
   }
 
   @Test(expected=SnapshotDoesNotExistException.class)
@@ -169,6 +234,7 @@ public class TestRestoreSnapshotFromClient {
     byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
+    testCloneSnapshot(clonedTableName, emptySnapshot, 0);
   }
 
   private void testCloneSnapshot(final byte[] tableName, final byte[] snapshotName,
@@ -297,5 +363,17 @@ public class TestRestoreSnapshotFromClient {
 
   private void waitCleanerRun() throws InterruptedException {
     TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
+  }
+
+  private Set<String> getFamiliesFromFS(final byte[] tableName) throws IOException {
+    MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    Set<String> families = new HashSet<String>();
+    Path tableDir = HTableDescriptor.getTableDir(mfs.getRootDir(), tableName);
+    for (Path regionDir: FSUtils.getRegionDirs(mfs.getFileSystem(), tableDir)) {
+      for (Path familyDir: FSUtils.getFamilyDirs(mfs.getFileSystem(), regionDir)) {
+        families.add(familyDir.getName());
+      }
+    }
+    return families;
   }
 }
