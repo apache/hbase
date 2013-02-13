@@ -290,7 +290,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
           acquiredBarrierLatch.countDown();
         }
       }
-      LOG.debug("Waiting on: " + acquiredBarrierLatch + " remaining members to aqcuire global barrier");
+      LOG.debug("Waiting on: " + acquiredBarrierLatch + " remaining members to acquire global barrier");
     } else {
       LOG.warn("Member " + member + " joined barrier, but we weren't waiting on it to join." +
           " Continuting on.");

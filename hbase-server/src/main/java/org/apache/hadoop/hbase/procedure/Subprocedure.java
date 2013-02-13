@@ -103,7 +103,7 @@ abstract public class Subprocedure implements Callable<Void> {
       public void receive(ForeignException ee) {
         // if this is a notification from a remote source, just log
         if (ee.isRemote()) {
-          LOG.debug("Can't reach controller, not propagating error", ee);
+          LOG.debug("Was remote foreign exception, not redispatching error", ee);
           return;
         }
 
@@ -194,14 +194,14 @@ abstract public class Subprocedure implements Callable<Void> {
             " Likely due to pool shutdown.";
         Thread.currentThread().interrupt();
       } else if (e instanceof ForeignException) {
-        msg = "Subprocedure '" + barrierName + "' aborting due to external exception!";
+        msg = "Subprocedure '" + barrierName + "' aborting due to a ForeignException!";
       } else {
         msg = "Subprocedure '" + barrierName + "' failed!";
       }
       LOG.error(msg , e);
       cancel(msg, e);
 
-      LOG.debug("Subprocedure '" + barrierName + "' Running cleanup.");
+      LOG.debug("Subprocedure '" + barrierName + "' running cleanup.");
       cleanup(e);
     } finally {
       releasedLocalBarrier.countDown();

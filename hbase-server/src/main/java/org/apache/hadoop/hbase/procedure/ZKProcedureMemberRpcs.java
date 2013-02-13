@@ -104,12 +104,11 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
 
       @Override
       public void nodeChildrenChanged(String path) {
-        LOG.info("Received children changed event:" + path);
         if (path.equals(this.acquiredZnode)) {
-          LOG.info("Received start event.");
+          LOG.info("Received procedure start children changed event: " + path);
           waitForNewProcedures();
         } else if (path.equals(this.abortZnode)) {
-          LOG.info("Received abort event.");
+          LOG.info("Received procedure abort children changed event: " + path);
           watchForAbortedProcedures();
         }
       }
@@ -303,6 +302,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
    * @param abortZNode full znode path to the failed procedure information
    */
   protected void abort(String abortZNode) {
+    LOG.debug("Aborting procedure member for znode " + abortZNode);
     String opName = ZKUtil.getNodeName(abortZNode);
     try {
       byte[] data = ZKUtil.getData(zkController.getWatcher(), abortZNode);

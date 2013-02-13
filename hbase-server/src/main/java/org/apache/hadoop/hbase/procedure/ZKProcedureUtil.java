@@ -264,6 +264,8 @@ public abstract class ZKProcedureUtil
 
   public void clearChildZNodes() throws KeeperException {
     // TODO This is potentially racy since not atomic. update when we support zk that has multi
+    LOG.info("Clearing all procedure znodes: " + acquiredZnode + " " + reachedZnode + " "
+        + abortZnode);
 
     // If the coordinator was shutdown mid-procedure, then we are going to lose
     // an procedure that was previously started by cleaning out all the previous state. Its much
@@ -275,7 +277,8 @@ public abstract class ZKProcedureUtil
 
   public void clearZNodes(String procedureName) throws KeeperException {
     // TODO This is potentially racy since not atomic. update when we support zk that has multi
-
+    LOG.info("Clearing all znodes for procedure " + procedureName + "including nodes "
+        + acquiredZnode + " " + reachedZnode + " " + abortZnode);
     ZKUtil.deleteNodeRecursively(watcher, getAcquiredBarrierNode(procedureName));
     ZKUtil.deleteNodeRecursively(watcher, getReachedBarrierNode(procedureName));
     ZKUtil.deleteNodeRecursively(watcher, getAbortZNode(procedureName));

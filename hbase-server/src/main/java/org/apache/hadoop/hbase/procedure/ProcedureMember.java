@@ -217,6 +217,7 @@ public class ProcedureMember implements Closeable {
    * @param ee exception information about the abort
    */
   public void receiveAbortProcedure(String procName, ForeignException ee) {
+    LOG.debug("Request received to abort procedure " + procName, ee);
     // if we know about the procedure, notify it
     Subprocedure sub = subprocs.get(procName);
     if (sub == null) {
@@ -224,7 +225,7 @@ public class ProcedureMember implements Closeable {
           ", ignoring it.", ee);
       return; // Procedure has already completed
     }
-    LOG.error("Remote procedure failure, not propagating error:" + ee);
+    LOG.error("Propagating foreign exception to subprocedure " + sub.getName(), ee);
     sub.monitor.receive(ee);
   }
 }
