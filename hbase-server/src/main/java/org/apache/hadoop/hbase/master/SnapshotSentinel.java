@@ -19,16 +19,15 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 
 /**
  * Watch the current snapshot under process
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface SnapshotSentinel extends Stoppable {
+public interface SnapshotSentinel {
 
   /**
    * Check to see if the snapshot is finished, where finished may be success or failure.
@@ -38,15 +37,21 @@ public interface SnapshotSentinel extends Stoppable {
   public boolean isFinished();
 
   /**
+   * Actively cancel a running snapshot.
+   * @param why Reason for cancellation.
+   */
+  public void cancel(String why);
+
+  /**
    * @return the description of the snapshot being run
    */
   public SnapshotDescription getSnapshot();
 
   /**
    * Get the exception that caused the snapshot to fail, if the snapshot has failed.
-   * @return <tt>null</tt> if the snapshot succeeded, or the {@link HBaseSnapshotException} that
-   *         caused the snapshot to fail.
+   * @return {@link ForeignException} that caused the snapshot to fail, or <tt>null</tt> if the
+   *  snapshot is still in progress or has succeeded
    */
-  public HBaseSnapshotException getExceptionIfFailed();
+  public ForeignException getExceptionIfFailed();
 
 }

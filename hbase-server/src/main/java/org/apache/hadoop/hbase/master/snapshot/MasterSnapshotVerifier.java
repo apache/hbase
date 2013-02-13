@@ -159,6 +159,11 @@ public final class MasterSnapshotVerifier {
     List<HRegionInfo> regions = MetaReader.getTableRegions(this.services.getCatalogTracker(),
       Bytes.toBytes(tableName));
     for (HRegionInfo region : regions) {
+      // if offline split parent, skip it
+      if (region.isOffline() || region.isSplit() || region.isSplitParent()) {
+        continue;
+      }
+
       verifyRegion(fs, snapshotDir, region);
     }
   }

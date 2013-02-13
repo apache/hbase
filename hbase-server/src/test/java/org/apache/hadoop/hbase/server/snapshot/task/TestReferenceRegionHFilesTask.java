@@ -29,8 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -63,16 +63,15 @@ public class TestReferenceRegionHFilesTask {
 
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("name")
         .setTable("table").build();
-    SnapshotExceptionSnare monitor = Mockito.mock(SnapshotExceptionSnare.class);
+    ForeignExceptionDispatcher monitor = Mockito.mock(ForeignExceptionDispatcher.class);
     ReferenceRegionHFilesTask task = new ReferenceRegionHFilesTask(snapshot, monitor, regionDir,
         fs, snapshotRegionDir);
-    task.run();
+    ReferenceRegionHFilesTask taskSpy = Mockito.spy(task);
+    task.call();
 
     // make sure we never get an error
-    Mockito.verify(monitor, Mockito.never()).snapshotFailure(Mockito.anyString(),
-      Mockito.eq(snapshot));
-    Mockito.verify(monitor, Mockito.never()).snapshotFailure(Mockito.anyString(),
-      Mockito.eq(snapshot), Mockito.any(Exception.class));
+    Mockito.verify(taskSpy, Mockito.never()).snapshotFailure(Mockito.anyString(),
+        Mockito.any(Exception.class));
 
     // verify that all the hfiles get referenced
     List<String> hfiles = new ArrayList<String>(2);

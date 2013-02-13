@@ -28,9 +28,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 
 /**
  * Copy over each of the files in a region's recovered.edits directory to the region's snapshot
@@ -56,18 +56,18 @@ public class CopyRecoveredEditsTask extends SnapshotTask {
    * @param regionDir directory for the region to examine for edits
    * @param snapshotRegionDir directory for the region in the snapshot
    */
-  public CopyRecoveredEditsTask(SnapshotDescription snapshot, SnapshotExceptionSnare monitor,
+  public CopyRecoveredEditsTask(SnapshotDescription snapshot, ForeignExceptionDispatcher monitor,
       FileSystem fs, Path regionDir, Path snapshotRegionDir) {
-    super(snapshot, monitor, "Copy recovered.edits for region:" + regionDir.getName());
+    super(snapshot, monitor);
     this.fs = fs;
     this.regiondir = regionDir;
     this.outputDir = HLogUtil.getRegionDirRecoveredEditsDir(snapshotRegionDir);
   }
 
   @Override
-  public void process() throws IOException {
+  public Void call() throws IOException {
     NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(this.fs, regiondir);
-    if (files == null || files.size() == 0) return;
+    if (files == null || files.size() == 0) return null;
 
     // copy over each file.
     // this is really inefficient (could be trivially parallelized), but is
@@ -83,7 +83,8 @@ public class CopyRecoveredEditsTask extends SnapshotTask {
       FileUtil.copy(fs, source, fs, out, true, fs.getConf());
 
       // check for errors to the running operation after each file
-      this.failOnError();
+      this.rethrowException();
     }
+    return null;
   }
 }

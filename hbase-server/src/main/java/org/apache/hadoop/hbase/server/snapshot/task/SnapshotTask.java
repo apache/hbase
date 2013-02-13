@@ -17,65 +17,49 @@
  */
 package org.apache.hadoop.hbase.server.snapshot.task;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.concurrent.Callable;
+
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.server.errorhandling.ExceptionCheckable;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
-import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 
 /**
  * General snapshot operation taken on a regionserver
  */
-public abstract class SnapshotTask implements ExceptionCheckable<HBaseSnapshotException>, Runnable {
-
-  private static final Log LOG = LogFactory.getLog(SnapshotTask.class);
-
-  private final SnapshotExceptionSnare errorMonitor;
-  private final String desc;
+public abstract class SnapshotTask implements ForeignExceptionSnare, Callable<Void>{
 
   protected final SnapshotDescription snapshot;
+  protected final ForeignExceptionDispatcher errorMonitor;
 
   /**
    * @param snapshot Description of the snapshot we are going to operate on
    * @param monitor listener interested in failures to the snapshot caused by this operation
-   * @param description description of the task being run, for logging
    */
-  public SnapshotTask(SnapshotDescription snapshot, SnapshotExceptionSnare monitor,
-      String description) {
+  public SnapshotTask(SnapshotDescription snapshot, ForeignExceptionDispatcher monitor) {
+    assert monitor != null : "ForeignExceptionDispatcher must not be null!";
+    assert snapshot != null : "SnapshotDescription must not be null!";
     this.snapshot = snapshot;
     this.errorMonitor = monitor;
-    this.desc = description;
   }
 
-  protected final void snapshotFailure(String message, Exception e) {
-    this.errorMonitor.snapshotFailure(message, this.snapshot, e);
-  }
-
-  @Override
-  public void failOnError() throws HBaseSnapshotException {
-    this.errorMonitor.failOnError();
+  public void snapshotFailure(String message, Exception e) {
+    ForeignException ee = new ForeignException(message, e);
+    errorMonitor.receive(ee);
   }
 
   @Override
-  public boolean checkForError() {
-    return this.errorMonitor.checkForError();
+  public void rethrowException() throws ForeignException {
+    this.errorMonitor.rethrowException();
   }
 
   @Override
-  public void run() {
-    try {
-      LOG.debug("Running: " + desc);
-      this.process();
-    } catch (Exception e) {
-      this.snapshotFailure("Failed to run " + this.desc, e);
-    }
+  public boolean hasException() {
+    return this.errorMonitor.hasException();
   }
 
-  /**
-   * Run the task for the snapshot.
-   * @throws Exception if the task fails. Will be propagated to any other tasks watching the same
-   *           {@link SnapshotErrorListener}.
-   */
-  protected abstract void process() throws Exception;
+  @Override
+  public ForeignException getException() {
+    return this.errorMonitor.getException();
+  }
 }

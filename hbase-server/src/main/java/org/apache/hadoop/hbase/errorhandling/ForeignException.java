@@ -52,11 +52,6 @@ public class ForeignException extends IOException {
   private final String source;
 
   /**
-   * Name of the original throwable's class.  Must be non-null.
-   */
-  private final String clazz;
-
-  /**
    * Create a new ForeignException that can be serialized.   It is assumed that this came from a
    * remote source.
    * @param source
@@ -68,7 +63,6 @@ public class ForeignException extends IOException {
     assert cause != null;
     assert clazz != null;
     this.source = source;
-    this.clazz = clazz;
   }
 
   /**
@@ -82,7 +76,6 @@ public class ForeignException extends IOException {
     assert source != null;
     assert cause != null;
     this.source = source;
-    this.clazz = getCause().getClass().getName();
   }
 
   /**
@@ -94,15 +87,10 @@ public class ForeignException extends IOException {
   public ForeignException(String source, String msg) {
     super(new IllegalArgumentException(msg));
     this.source = source;
-    this.clazz = getCause().getClass().getName();
   }
 
   public String getSource() {
     return source;
-  }
-
-  public String getSourceClass() {
-    return clazz;
   }
 
   /**
@@ -120,7 +108,8 @@ public class ForeignException extends IOException {
 
   @Override
   public String toString() {
-    return clazz + " via " + getSource() + ":" + getLocalizedMessage();
+    String className = getCause().getClass().getName()  ;
+    return className + " via " + getSource() + ":" + getLocalizedMessage();
   }
 
   /**

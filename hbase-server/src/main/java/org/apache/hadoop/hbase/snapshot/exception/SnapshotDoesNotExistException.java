@@ -40,6 +40,6 @@ public class SnapshotDoesNotExistException extends HBaseSnapshotException {
    * @param desc expected snapshot to find
    */
   public SnapshotDoesNotExistException(SnapshotDescription desc) {
-    super("Snapshot doesn't exist on the filesystem", desc);
+    super("Snapshot '" + desc.getName() +"' doesn't exist on the filesystem", desc);
   }
 }

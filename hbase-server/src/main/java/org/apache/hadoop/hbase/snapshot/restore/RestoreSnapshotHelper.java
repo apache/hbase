@@ -18,46 +18,35 @@
 
 package org.apache.hadoop.hbase.snapshot.restore;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.TreeMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
-
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
-import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
-import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -110,7 +99,7 @@ public class RestoreSnapshotHelper {
   private final Map<byte[], byte[]> regionsMap =
         new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
 
-  private final SnapshotExceptionSnare monitor;
+  private final ForeignExceptionDispatcher monitor;
 
   private final SnapshotDescription snapshotDesc;
   private final Path snapshotDir;
@@ -126,7 +115,7 @@ public class RestoreSnapshotHelper {
       final CatalogTracker catalogTracker,
       final SnapshotDescription snapshotDescription, final Path snapshotDir,
       final HTableDescriptor tableDescriptor, final Path tableDir,
-      final SnapshotExceptionSnare monitor)
+      final ForeignExceptionDispatcher monitor)
   {
     this.fs = fs;
     this.conf = conf;
@@ -155,7 +144,7 @@ public class RestoreSnapshotHelper {
     // NOTE: we rely upon the region name as: "table name, start key, end key"
     List<HRegionInfo> tableRegions = getTableRegions();
     if (tableRegions != null) {
-      monitor.failOnError();
+      monitor.rethrowException();
       List<HRegionInfo> regionsToRestore = new LinkedList<HRegionInfo>();
       List<HRegionInfo> regionsToRemove = new LinkedList<HRegionInfo>();
 
@@ -172,11 +161,11 @@ public class RestoreSnapshotHelper {
       }
 
       // Restore regions using the snapshot data
-      monitor.failOnError();
+      monitor.rethrowException();
       restoreRegions(regionsToRestore);
 
       // Remove regions from the current table
-      monitor.failOnError();
+      monitor.rethrowException();
       ModifyRegionUtils.deleteRegions(fs, catalogTracker, regionsToRemove);
     }
 
@@ -184,7 +173,7 @@ public class RestoreSnapshotHelper {
     if (snapshotRegionNames.size() > 0) {
       List<HRegionInfo> regionsToAdd = new LinkedList<HRegionInfo>();
 
-      monitor.failOnError();
+      monitor.rethrowException();
       for (String regionName: snapshotRegionNames) {
         LOG.info("region to add: " + regionName);
         Path regionDir = new Path(snapshotDir, regionName);
@@ -192,12 +181,12 @@ public class RestoreSnapshotHelper {
       }
 
       // Create new regions cloning from the snapshot
-      monitor.failOnError();
+      monitor.rethrowException();
       cloneRegions(regionsToAdd);
     }
 
     // Restore WALs
-    monitor.failOnError();
+    monitor.rethrowException();
     restoreWALs();
   }
 

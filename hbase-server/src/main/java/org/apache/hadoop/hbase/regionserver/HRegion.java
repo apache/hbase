@@ -2526,8 +2526,8 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP}
-   * with the provided current timestamp.
+   * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP} with the provided current
+   * timestamp.
    */
   void updateKVTimestamps(
       final Iterable<List<KeyValue>> keyLists, final byte[] now) {

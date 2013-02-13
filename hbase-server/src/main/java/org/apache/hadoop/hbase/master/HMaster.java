@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -41,18 +40,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.management.ObjectName;
 
-import com.google.common.collect.Maps;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
@@ -85,7 +76,6 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -186,18 +176,9 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
-import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
-import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
-import org.apache.hadoop.hbase.snapshot.exception.SnapshotDoesNotExistException;
-import org.apache.hadoop.hbase.snapshot.exception.SnapshotExistsException;
-import org.apache.hadoop.hbase.snapshot.exception.TablePartiallyOpenException;
-import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
-import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -223,7 +204,12 @@ import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 
+import com.google.common.collect.Maps;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -345,7 +331,6 @@ Server {
   private final boolean masterCheckCompression;
 
   private SpanReceiverHost spanReceiverHost;
-
 
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
@@ -592,10 +577,8 @@ Server {
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
         ", cluster-up flag was=" + wasUp);
 
-    // create the snapshot monitor
-    // TODO should this be config based?
-    this.snapshotManager = new SnapshotManager(this, zooKeeper, this.executorService);
-    snapshotManager.start();
+    // create the snapshot manager
+     this.snapshotManager = new SnapshotManager(this);
   }
 
   /**
@@ -2447,6 +2430,10 @@ Server {
     return this.snapshotManager;
   }
 
+  /**
+   * Triggers an asynchronous attempt to take a snapshot.
+   * {@inheritDoc}
+   */
   @Override
   public TakeSnapshotResponse snapshot(RpcController controller, TakeSnapshotRequest request)
       throws ServiceException {
@@ -2454,72 +2441,8 @@ Server {
     // get the snapshot information
     SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(request.getSnapshot(),
       this.conf);
-
-    // check to see if we already completed the snapshot
-    if (isSnapshotCompleted(snapshot)) {
-      throw new ServiceException(new SnapshotExistsException("Snapshot '" + snapshot.getName()
-          + "' already stored on the filesystem.", snapshot));
-    }
-
-    LOG.debug("No existing snapshot, attempting snapshot...");
-
-    // check to see if the table exists
-    HTableDescriptor desc = null;
     try {
-      desc = this.tableDescriptors.get(snapshot.getTable());
-    } catch (FileNotFoundException e) {
-      String msg = "Table:" + snapshot.getTable() + " info doesn't exist!";
-      LOG.error(msg);
-      throw new ServiceException(new SnapshotCreationException(msg, e, snapshot));
-    } catch (IOException e) {
-      throw new ServiceException(new SnapshotCreationException(
-          "Error while geting table description for table " + snapshot.getTable(), e, snapshot));
-    }
-    if (desc == null) {
-      throw new ServiceException(new SnapshotCreationException("Table '" + snapshot.getTable()
-          + "' doesn't exist, can't take snapshot.", snapshot));
-    }
-
-    // set the snapshot version, now that we are ready to take it
-    snapshot = snapshot.toBuilder().setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION)
-        .build();
-
-    try {
-      if (cpHost != null) {
-        cpHost.preSnapshot(snapshot, desc);
-      }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-
-    // if the table is enabled, then have the RS run actually the snapshot work
-    if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
-      LOG.debug("Table enabled, starting distributed snapshot.");
-      throw new ServiceException(new UnsupportedOperationException(
-          "Enabled table snapshots are not yet supported"));
-    }
-    // For disabled table, snapshot is created by the master
-    else if (this.assignmentManager.getZKTable().isDisabledTable(snapshot.getTable())) {
-      LOG.debug("Table is disabled, running snapshot entirely on master.");
-      try {
-        snapshotManager.snapshotDisabledTable(snapshot);
-      } catch (HBaseSnapshotException e) {
-        throw new ServiceException(e);
-      }
-
-      LOG.debug("Started snapshot: " + snapshot);
-    } else {
-      LOG.error("Can't snapshot table '" + snapshot.getTable()
-          + "', isn't open or closed, we don't know what to do!");
-      throw new ServiceException(new SnapshotCreationException(
-          "Table is not entirely open or closed", new TablePartiallyOpenException(
-              snapshot.getTable() + " isn't fully open."), snapshot));
-    }
-
-    try {
-      if (cpHost != null) {
-        cpHost.postSnapshot(snapshot, desc);
-      }
+      snapshotManager.takeSnapshot(snapshot);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -2538,41 +2461,11 @@ Server {
       throws ServiceException {
     try {
       ListSnapshotResponse.Builder builder = ListSnapshotResponse.newBuilder();
+      List<SnapshotDescription> snapshots = snapshotManager.getCompletedSnapshots();
 
-      // first create the snapshot description and check to see if it exists
-      Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(this.getMasterFileSystem()
-          .getRootDir());
-
-      // if there are no snapshots, return an empty list
-      if (!this.getMasterFileSystem().getFileSystem().exists(snapshotDir)) {
-        return builder.build();
-      }
-
-      FileSystem fs = this.getMasterFileSystem().getFileSystem();
-
-      // ignore all the snapshots in progress
-      FileStatus[] snapshots = fs.listStatus(snapshotDir,
-        new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
-      // look through all the completed snapshots
-      for (FileStatus snapshot : snapshots) {
-        Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
-        // if the snapshot is bad
-        if (!fs.exists(info)) {
-          LOG.error("Snapshot information for " + snapshot.getPath() + " doesn't exist");
-          continue;
-        }
-        FSDataInputStream in = null;
-        try {
-          in = fs.open(info);
-          SnapshotDescription desc = SnapshotDescription.parseFrom(in);
-          builder.addSnapshots(desc);
-        } catch (IOException e) {
-          LOG.warn("Found a corrupted snapshot " + snapshot.getPath(), e);
-        } finally {
-          if (in != null) {
-            in.close();
-          }
-        }
+      // convert to protobuf
+      for (SnapshotDescription snapshot : snapshots) {
+        builder.addSnapshots(snapshot);
       }
       return builder.build();
     } catch (IOException e) {
@@ -2580,109 +2473,40 @@ Server {
     }
   }
 
+  /**
+   * Execute Delete Snapshot operation.
+   * @returns DeleteSnapshotResponse (a protobuf wrapped void) if the snapshot existed and was
+   *    deleted properly.
+   * @throws ServiceException wrapping SnapshotDoesNotExistException if specified snapshot did not
+   *    exist.
+   */
   @Override
   public DeleteSnapshotResponse deleteSnapshot(RpcController controller,
       DeleteSnapshotRequest request) throws ServiceException {
     try {
-      if (cpHost != null) {
-        cpHost.preDeleteSnapshot(request.getSnapshot());
-      }
-
-      // check to see if it is completed
-      if (!isSnapshotCompleted(request.getSnapshot())) {
-        throw new SnapshotDoesNotExistException(request.getSnapshot());
-      }
-
-      String snapshotName = request.getSnapshot().getName();
-      LOG.debug("Deleting snapshot: " + snapshotName);
-      // first create the snapshot description and check to see if it exists
-      Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, this
-          .getMasterFileSystem().getRootDir());
-
-      // delete the existing snapshot
-      if (!this.getMasterFileSystem().getFileSystem().delete(snapshotDir, true)) {
-        throw new ServiceException("Failed to delete snapshot directory: " + snapshotDir);
-      }
-
-      if (cpHost != null) {
-        cpHost.postDeleteSnapshot(request.getSnapshot());
-      }
-
+      snapshotManager.deleteSnapshot(request.getSnapshot());
       return DeleteSnapshotResponse.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
 
+  /**
+   * Checks if the specified snapshot is done.
+   * @returns true if the snapshot is in file system ready to use,
+   *   false if the snapshot is in the process of completing
+   * @throws ServiceException wrapping UnknownSnapshotException if invalid snapshot, or
+   *  a wrapped HBaseSnapshotException with progress failure reason.
+   */
   @Override
   public IsSnapshotDoneResponse isSnapshotDone(RpcController controller,
       IsSnapshotDoneRequest request) throws ServiceException {
     LOG.debug("Checking to see if snapshot from request:" + request + " is done");
     try {
-      // check the request to make sure it has a snapshot
-      if (!request.hasSnapshot()) {
-        throw new UnknownSnapshotException(
-            "No snapshot name passed in request, can't figure out which snapshot you want to check.");
-      }
-
-      SnapshotDescription expected = request.getSnapshot();
       IsSnapshotDoneResponse.Builder builder = IsSnapshotDoneResponse.newBuilder();
-
-      // check to see if the sentinel exists
-      SnapshotSentinel sentinel = this.snapshotManager.getCurrentSnapshotSentinel();
-      if (sentinel != null) {
-
-        // pass on any failure we find in the sentinel
-        HBaseSnapshotException e = sentinel.getExceptionIfFailed();
-        if (e != null) throw e;
-
-        // get the current snapshot and compare it against the requested
-        SnapshotDescription snapshot = sentinel.getSnapshot();
-        LOG.debug("Have a snapshot to compare:" + snapshot);
-        if (expected.getName().equals(snapshot.getName())) {
-          LOG.trace("Running snapshot (" + snapshot.getName() + ") does match request:"
-              + expected.getName());
-
-          // check to see if we are done
-          if (sentinel.isFinished()) {
-            builder.setDone(true);
-            LOG.debug("Snapshot " + snapshot + " has completed, notifying client.");
-          } else if (LOG.isDebugEnabled()) {
-            LOG.debug("Sentinel isn't finished with snapshot!");
-          }
-          return builder.build();
-        }
-
-      }
-
-      // check to see if the snapshot is already on the fs
-      if (!isSnapshotCompleted(expected)) {
-        throw new UnknownSnapshotException("Snapshot:" + expected.getName()
-            + " is not currently running or one of the known completed snapshots.");
-      }
-
-      builder.setDone(true);
+      boolean done = snapshotManager.isSnapshotDone(request.getSnapshot());
+      builder.setDone(done);
       return builder.build();
-    } catch (HBaseSnapshotException e) {
-      throw new ServiceException(e);
-    }
-  }
-
-  /**
-   * Check to see if the snapshot is one of the currently completed snapshots
-   * @param expected snapshot to check
-   * @return <tt>true</tt> if the snapshot is stored on the {@link FileSystem}, <tt>false</tt> if is
-   *         not stored
-   * @throws IOException if the filesystem throws an unexpected exception
-   */
-  private boolean isSnapshotCompleted(SnapshotDescription snapshot) throws ServiceException {
-    final Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, this
-        .getMasterFileSystem().getRootDir());
-    FileSystem fs = this.getMasterFileSystem().getFileSystem();
-
-    // check to see if the snapshot already exists
-    try {
-      return fs.exists(snapshotDir);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -2704,56 +2528,9 @@ Server {
   @Override
   public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
       RestoreSnapshotRequest request) throws ServiceException {
-    SnapshotDescription reqSnapshot = request.getSnapshot();
-    FileSystem fs = this.getMasterFileSystem().getFileSystem();
-    Path rootDir = this.getMasterFileSystem().getRootDir();
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getSnapshot(), rootDir);
-
     try {
-      // check if the snapshot exists
-      if (!fs.exists(snapshotDir)) {
-        LOG.error("A Snapshot named '" + reqSnapshot.getName() + "' does not exist.");
-        throw new SnapshotDoesNotExistException(reqSnapshot);
-      }
-
-      // read snapshot information
-      SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-      HTableDescriptor snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
-      String tableName = reqSnapshot.getTable();
-
-      // Execute the restore/clone operation
-      if (MetaReader.tableExists(catalogTracker, tableName)) {
-        if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
-          throw new ServiceException(new UnsupportedOperationException("Table '" +
-            snapshot.getTable() + "' must be disabled in order to perform a restore operation."));
-        }
-
-        if (cpHost != null) {
-          cpHost.preRestoreSnapshot(snapshot, snapshotTableDesc);
-        }
-
-        snapshotManager.restoreSnapshot(snapshot, snapshotTableDesc);
-        LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
-
-        if (cpHost != null) {
-          cpHost.postRestoreSnapshot(snapshot, snapshotTableDesc);
-        }
-      } else {
-        HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc,
-                                                           Bytes.toBytes(tableName));
-
-        if (cpHost != null) {
-          cpHost.preCloneSnapshot(snapshot, htd);
-        }
-
-        snapshotManager.cloneSnapshot(snapshot, htd);
-        LOG.info("Clone snapshot=" + snapshot.getName() + " as table=" + tableName);
-
-        if (cpHost != null) {
-          cpHost.postCloneSnapshot(snapshot, htd);
-        }
-      }
-
+      SnapshotDescription reqSnapshot = request.getSnapshot();
+      snapshotManager.restoreSnapshot(reqSnapshot);
       return RestoreSnapshotResponse.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -2775,28 +2552,12 @@ Server {
       IsRestoreSnapshotDoneRequest request) throws ServiceException {
     try {
       SnapshotDescription snapshot = request.getSnapshot();
-      SnapshotSentinel sentinel = this.snapshotManager.getRestoreSnapshotSentinel(snapshot.getTable());
       IsRestoreSnapshotDoneResponse.Builder builder = IsRestoreSnapshotDoneResponse.newBuilder();
-      LOG.debug("Verify snapshot=" + snapshot.getName() + " against=" + sentinel.getSnapshot().getName() +
-        " table=" + snapshot.getTable());
-      if (sentinel != null && sentinel.getSnapshot().getName().equals(snapshot.getName())) {
-        HBaseSnapshotException e = sentinel.getExceptionIfFailed();
-        if (e != null) throw e;
-
-        // check to see if we are done
-        if (sentinel.isFinished()) {
-          LOG.debug("Restore snapshot=" + snapshot + " has completed. Notifying the client.");
-        } else {
-          builder.setDone(false);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Sentinel is not yet finished with restoring snapshot=" + snapshot);
-          }
-        }
-      }
+      boolean isRestoring = snapshotManager.isRestoringTable(snapshot);
+      builder.setDone(!isRestoring);
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
 }
-

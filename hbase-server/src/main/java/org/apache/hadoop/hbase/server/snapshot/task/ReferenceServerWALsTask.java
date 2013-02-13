@@ -28,9 +28,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -41,7 +42,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceStability.Evolving
 public class ReferenceServerWALsTask extends SnapshotTask {
   private static final Log LOG = LogFactory.getLog(ReferenceServerWALsTask.class);
-  // XXX does this need to be HasThread?
   private final FileSystem fs;
   private final Configuration conf;
   private final String serverName;
@@ -53,23 +53,28 @@ public class ReferenceServerWALsTask extends SnapshotTask {
    *          propagate errors found while running the task
    * @param logDir log directory for the server. Name of the directory is taken as the name of the
    *          server
-   * @param conf {@link Configuration} to extract fileystem information
+   * @param conf {@link Configuration} to extract filesystem information
    * @param fs filesystem where the log files are stored and should be referenced
-   * @throws IOException
    */
   public ReferenceServerWALsTask(SnapshotDescription snapshot,
-      SnapshotExceptionSnare failureListener, final Path logDir, final Configuration conf,
-      final FileSystem fs) throws IOException {
-    super(snapshot, failureListener, "Reference WALs for server:" + logDir.getName());
+      ForeignExceptionDispatcher failureListener, final Path logDir, final Configuration conf,
+      final FileSystem fs) {
+    super(snapshot, failureListener);
     this.fs = fs;
     this.conf = conf;
     this.serverName = logDir.getName();
     this.logDir = logDir;
   }
 
+  /**
+   * Create reference files (empty files with the same path and file name as original).
+   * @throws IOException exception from hdfs or network problems
+   * @throws ForeignException exception from an external procedure
+   */
   @Override
-  public void process() throws IOException {
+  public Void call() throws IOException, ForeignException {
     // TODO switch to using a single file to reference all required WAL files
+
     // Iterate through each of the log files and add a reference to it.
     // assumes that all the files under the server's logs directory is a log
     FileStatus[] serverLogs = FSUtils.listStatus(fs, logDir, null);
@@ -80,12 +85,9 @@ public class ReferenceServerWALsTask extends SnapshotTask {
         + Arrays.toString(serverLogs));
 
     for (FileStatus file : serverLogs) {
-      this.failOnError();
+      this.rethrowException();
 
-      // TODO - switch to using MonitoredTask
-      // add the reference to the file
-      // 0. Build a reference path based on the file name
-      // get the current snapshot directory
+      // add the reference to the file. ex: hbase/.snapshots/.logs/<serverName>/<hlog>
       Path rootDir = FSUtils.getRootDir(conf);
       Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(this.snapshot, rootDir);
       Path snapshotLogDir = TakeSnapshotUtils.getSnapshotHLogsDir(snapshotDir, serverName);
@@ -98,6 +100,8 @@ public class ReferenceServerWALsTask extends SnapshotTask {
       }
       LOG.debug("Completed WAL referencing for: " + file.getPath() + " to " + ref);
     }
+
     LOG.debug("Successfully completed WAL referencing for ALL files");
+    return null;
   }
 }

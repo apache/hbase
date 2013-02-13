@@ -46,4 +46,11 @@ public class CorruptedSnapshotException extends HBaseSnapshotException {
   public CorruptedSnapshotException(String message, SnapshotDescription snapshot) {
     super(message, snapshot);
   }
+
+  /**
+   * @param message message describing the exception
+   */
+  public CorruptedSnapshotException(String message) {
+    super(message, (SnapshotDescription)null);
+  }
 }

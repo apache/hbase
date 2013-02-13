@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public abstract class HBaseSnapshotException extends HBaseIOException {
+public class HBaseSnapshotException extends HBaseIOException {
 
   private SnapshotDescription description;
 

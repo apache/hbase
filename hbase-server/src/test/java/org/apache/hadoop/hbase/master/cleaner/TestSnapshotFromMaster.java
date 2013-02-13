@@ -38,8 +38,6 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
-import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -51,8 +49,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshot
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
-import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -79,10 +75,11 @@ public class TestSnapshotFromMaster {
   private static final int NUM_RS = 2;
   private static Path rootDir;
   private static Path snapshots;
-  private static Path archiveDir;
   private static FileSystem fs;
   private static HMaster master;
 
+  // for hfile archiving test.
+  private static Path archiveDir;
   private static final String STRING_TABLE_NAME = "test";
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
@@ -118,7 +115,7 @@ public class TestSnapshotFromMaster {
     conf.setInt("hbase.client.retries.number", 1);
     // set the only HFile cleaner as the snapshot cleaner
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-      SnapshotHFileCleaner.class.getCanonicalName());
+        SnapshotHFileCleaner.class.getCanonicalName());
     conf.setLong(SnapshotHFileCleaner.HFILE_CACHE_REFRESH_PERIOD_CONF_KEY, cacheRefreshPeriod);
   }
 
@@ -130,7 +127,6 @@ public class TestSnapshotFromMaster {
 
   @After
   public void tearDown() throws Exception {
-
     UTIL.deleteTable(TABLE_NAME);
 
     // delete the archive directory, if its exists
@@ -186,7 +182,7 @@ public class TestSnapshotFromMaster {
 
     // set a mock handler to simulate a snapshot
     DisabledTableSnapshotHandler mockHandler = Mockito.mock(DisabledTableSnapshotHandler.class);
-    Mockito.when(mockHandler.getExceptionIfFailed()).thenReturn(null);
+    Mockito.when(mockHandler.getException()).thenReturn(null);
     Mockito.when(mockHandler.getSnapshot()).thenReturn(desc);
     Mockito.when(mockHandler.isFinished()).thenReturn(new Boolean(true));
 
@@ -218,15 +214,6 @@ public class TestSnapshotFromMaster {
     builder.setSnapshot(desc);
     response = master.isSnapshotDone(null, builder.build());
     assertTrue("Completed, on-disk snapshot not found", response.getDone());
-    
-    HBaseSnapshotException testException = new SnapshotCreationException("test fail", desc);
-    Mockito.when(mockHandler.getExceptionIfFailed()).thenReturn(testException);
-    try {
-      master.isSnapshotDone(null, builder.build());
-      fail("Master should have passed along snapshot error, but didn't");
-    }catch(ServiceException e) {
-      LOG.debug("Correctly got exception back from the master on failure: " + e.getMessage());
-    }
   }
 
   @Test

@@ -17,9 +17,15 @@
  */
 package org.apache.hadoop.hbase.server.snapshot.task;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -31,22 +37,21 @@ public class TestSnapshotTask {
    * Check that errors from running the task get propagated back to the error listener.
    */
   @Test
-  public void testErrorPropagationg() {
-    SnapshotExceptionSnare error = Mockito.mock(SnapshotExceptionSnare.class);
+  public void testErrorPropagation() throws Exception {
+    ForeignExceptionDispatcher error = mock(ForeignExceptionDispatcher.class);
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("snapshot")
         .setTable("table").build();
     final Exception thrown = new Exception("Failed!");
-    SnapshotTask fail = new SnapshotTask(snapshot, error, "always fails") {
-
+    SnapshotTask fail = new SnapshotTask(snapshot, error) {
       @Override
-      protected void process() throws Exception {
-        throw thrown;
+      public Void call() {
+        snapshotFailure("Injected failure", thrown);
+        return null;
       }
     };
-    fail.run();
+    fail.call();
 
-    Mockito.verify(error, Mockito.times(1)).snapshotFailure(Mockito.anyString(),
-      Mockito.eq(snapshot), Mockito.eq(thrown));
+    verify(error, Mockito.times(1)).receive(any(ForeignException.class));
   }
 
 }

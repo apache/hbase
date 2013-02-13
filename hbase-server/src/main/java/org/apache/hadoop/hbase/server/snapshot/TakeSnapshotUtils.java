@@ -32,19 +32,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
+import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
-import org.apache.hadoop.hbase.server.errorhandling.ExceptionListener;
-import org.apache.hadoop.hbase.server.errorhandling.OperationAttemptTimer;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.FSUtils.DirFilter;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -118,11 +116,11 @@ public class TakeSnapshotUtils {
    * @return the timer to use update to signal the start and end of the snapshot
    */
   @SuppressWarnings("rawtypes")
-  public static OperationAttemptTimer getMasterTimerAndBindToMonitor(SnapshotDescription snapshot,
-      Configuration conf, ExceptionListener monitor) {
+  public static TimeoutExceptionInjector getMasterTimerAndBindToMonitor(SnapshotDescription snapshot,
+      Configuration conf, ForeignExceptionListener monitor) {
     long maxTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
       SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
-    return new OperationAttemptTimer(monitor, maxTime, snapshot);
+    return new TimeoutExceptionInjector(monitor, maxTime);
   }
 
   /**

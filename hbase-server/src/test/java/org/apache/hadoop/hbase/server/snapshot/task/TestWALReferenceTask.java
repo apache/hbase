@@ -29,9 +29,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Test;
@@ -76,16 +76,16 @@ public class TestWALReferenceTask {
     FSUtils.setRootDir(conf, testDir);
     SnapshotDescription snapshot = SnapshotDescription.newBuilder()
         .setName("testWALReferenceSnapshot").build();
-    SnapshotExceptionSnare listener = Mockito.mock(SnapshotExceptionSnare.class);
+    ForeignExceptionDispatcher listener = Mockito.mock(ForeignExceptionDispatcher.class);
 
     // reference all the files in the first server directory
     ReferenceServerWALsTask task = new ReferenceServerWALsTask(snapshot, listener, server1Dir,
         conf, fs);
-    task.run();
+    task.call();
 
     // reference all the files in the first server directory
     task = new ReferenceServerWALsTask(snapshot, listener, server2Dir, conf, fs);
-    task.run();
+    task.call();
 
     // verify that we got everything
     FSUtils.logFileSystemState(fs, testDir, LOG);
@@ -96,7 +96,7 @@ public class TestWALReferenceTask {
     TakeSnapshotUtils.verifyAllLogsGotReferenced(fs, logDir, servers, snapshot, snapshotLogDir);
 
     // make sure we never got an error
-    Mockito.verify(listener, Mockito.atLeastOnce()).failOnError();
+    Mockito.verify(listener, Mockito.atLeastOnce()).rethrowException();
     Mockito.verifyNoMoreInteractions(listener);
   }
 }

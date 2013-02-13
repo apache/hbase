@@ -28,11 +28,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class UnknownSnapshotException extends HBaseSnapshotException {
 
-
   /**
-   * @param msg full infomration about the failure
+   * @param msg full information about the failure
    */
   public UnknownSnapshotException(String msg) {
     super(msg);
   }
+
+  public UnknownSnapshotException(String msg, Exception  e) {
+    super(msg, e);
+  }
+
 }

@@ -26,11 +26,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -48,7 +48,7 @@ public class TestCopyRecoveredEditsTask {
   public void testCopyFiles() throws Exception {
 
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("snapshot").build();
-    SnapshotExceptionSnare monitor = Mockito.mock(SnapshotExceptionSnare.class);
+    ForeignExceptionDispatcher monitor = Mockito.mock(ForeignExceptionDispatcher.class);
     FileSystem fs = UTIL.getTestFileSystem();
     Path root = UTIL.getDataTestDir();
     String regionName = "regionA";
@@ -75,7 +75,8 @@ public class TestCopyRecoveredEditsTask {
 
       CopyRecoveredEditsTask task = new CopyRecoveredEditsTask(snapshot, monitor, fs, regionDir,
           snapshotRegionDir);
-      task.run();
+      CopyRecoveredEditsTask taskSpy = Mockito.spy(task);
+      taskSpy.call();
 
       Path snapshotEdits = HLogUtil.getRegionDirRecoveredEditsDir(snapshotRegionDir);
       FileStatus[] snapshotEditFiles = FSUtils.listStatus(fs, snapshotEdits);
@@ -83,12 +84,10 @@ public class TestCopyRecoveredEditsTask {
       FileStatus file = snapshotEditFiles[0];
       assertEquals("Didn't copy expected file", file1.getName(), file.getPath().getName());
 
-      Mockito.verify(monitor, Mockito.never()).receiveError(Mockito.anyString(),
-        Mockito.any(HBaseSnapshotException.class));
-      Mockito.verify(monitor, Mockito.never()).snapshotFailure(Mockito.anyString(),
-        Mockito.any(SnapshotDescription.class));
-      Mockito.verify(monitor, Mockito.never()).snapshotFailure(Mockito.anyString(),
-        Mockito.any(SnapshotDescription.class), Mockito.any(Exception.class));
+      Mockito.verify(monitor, Mockito.never()).receive(Mockito.any(ForeignException.class));
+      Mockito.verify(taskSpy, Mockito.never()).snapshotFailure(Mockito.anyString(),
+           Mockito.any(Exception.class));
+
     } finally {
       // cleanup the working directory
       FSUtils.delete(fs, regionDir, true);
@@ -103,7 +102,7 @@ public class TestCopyRecoveredEditsTask {
   @Test
   public void testNoEditsDir() throws Exception {
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("snapshot").build();
-    SnapshotExceptionSnare monitor = Mockito.mock(SnapshotExceptionSnare.class);
+    ForeignExceptionDispatcher monitor = Mockito.mock(ForeignExceptionDispatcher.class);
     FileSystem fs = UTIL.getTestFileSystem();
     Path root = UTIL.getDataTestDir();
     String regionName = "regionA";
@@ -118,7 +117,7 @@ public class TestCopyRecoveredEditsTask {
 
       CopyRecoveredEditsTask task = new CopyRecoveredEditsTask(snapshot, monitor, fs, regionDir,
           snapshotRegionDir);
-      task.run();
+      task.call();
     } finally {
       // cleanup the working directory
       FSUtils.delete(fs, regionDir, true);

@@ -26,9 +26,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
@@ -54,8 +54,8 @@ public class ReferenceRegionHFilesTask extends SnapshotTask {
    * @param regionSnapshotDir directory in the snapshot to store region files
    */
   public ReferenceRegionHFilesTask(final SnapshotDescription snapshot,
-      SnapshotExceptionSnare monitor, Path regionDir, final FileSystem fs, Path regionSnapshotDir) {
-    super(snapshot, monitor, "Reference hfiles for region:" + regionDir.getName());
+      ForeignExceptionDispatcher monitor, Path regionDir, final FileSystem fs, Path regionSnapshotDir) {
+    super(snapshot, monitor);
     this.regiondir = regionDir;
     this.fs = fs;
 
@@ -76,14 +76,14 @@ public class ReferenceRegionHFilesTask extends SnapshotTask {
   }
 
   @Override
-  public void process() throws IOException {
+  public Void call() throws IOException {
     FileStatus[] families = FSUtils.listStatus(fs, regiondir, new FSUtils.FamilyDirFilter(fs));
 
     // if no families, then we are done again
     if (families == null || families.length == 0) {
       LOG.info("No families under region directory:" + regiondir
           + ", not attempting to add references.");
-      return;
+      return null;
     }
 
     // snapshot directories to store the hfile reference
@@ -109,6 +109,7 @@ public class ReferenceRegionHFilesTask extends SnapshotTask {
 
       // create a reference for each hfile
       for (FileStatus hfile : hfiles) {
+        // references are 0-length files, relying on file name.
         Path referenceFile = new Path(snapshotFamilyDir, hfile.getPath().getName());
         LOG.debug("Creating reference for:" + hfile.getPath() + " at " + referenceFile);
         if (!fs.createNewFile(referenceFile)) {
@@ -122,5 +123,6 @@ public class ReferenceRegionHFilesTask extends SnapshotTask {
       LOG.debug("and the snapshot directory:");
       FSUtils.logFileSystemState(fs, snapshotDir, LOG);
     }
+    return null;
   }
 }

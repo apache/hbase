@@ -21,34 +21,28 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
-import org.apache.hadoop.hbase.master.snapshot.manage.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Handler to Restore a snapshot.
@@ -63,7 +57,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   private final HTableDescriptor hTableDescriptor;
   private final SnapshotDescription snapshot;
 
-  private final SnapshotExceptionSnare monitor;
+  private final ForeignExceptionDispatcher monitor;
   private volatile boolean stopped = false;
 
   public RestoreSnapshotHandler(final MasterServices masterServices,
@@ -75,7 +69,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
     this.snapshot = snapshot;
 
     // Monitor
-    this.monitor = new SnapshotExceptionSnare(snapshot);
+    this.monitor = new ForeignExceptionDispatcher();
 
     // Check table exists.
     getTableDescriptor();
@@ -114,7 +108,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
     } catch (IOException e) {
       String msg = "restore snapshot=" + snapshot + " failed";
       LOG.error(msg, e);
-      monitor.snapshotFailure("Failed due to exception:" + e.getMessage(), snapshot, e);
+      monitor.receive(new ForeignException(masterServices.getServerName().toString(), e));
       throw new RestoreSnapshotException(msg, e);
     } finally {
       this.stopped = true;
@@ -132,25 +126,16 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   }
 
   @Override
-  public void stop(String why) {
+  public void cancel(String why) {
     if (this.stopped) return;
     this.stopped = true;
-    LOG.info("Stopping restore snapshot=" + snapshot + " because: " + why);
-    this.monitor.snapshotFailure("Failing restore because server is stopping.", snapshot);
+    String msg = "Stopping restore snapshot=" + snapshot + " because: " + why;
+    LOG.info(msg);
+    CancellationException ce = new CancellationException(why);
+    this.monitor.receive(new ForeignException(masterServices.getServerName().toString(), ce));
   }
 
-  @Override
-  public boolean isStopped() {
-    return this.stopped;
-  }
-
-  @Override
-  public HBaseSnapshotException getExceptionIfFailed() {
-    try {
-      this.monitor.failOnError();
-    } catch (HBaseSnapshotException e) {
-      return e;
-    }
-    return null;
+  public ForeignException getExceptionIfFailed() {
+    return this.monitor.getException();
   }
 }
