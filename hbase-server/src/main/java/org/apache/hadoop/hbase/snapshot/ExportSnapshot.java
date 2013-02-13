@@ -304,8 +304,8 @@ public final class ExportSnapshot extends Configured implements Tool {
     private FileStatus getFileStatus(final FileSystem fs, final Path path) {
       try {
         if (HFileLink.isHFileLink(path)) {
-          Path refPath = HFileLink.getReferencedPath(fs, inputRoot, inputArchive, path);
-          return fs.getFileStatus(refPath);
+          HFileLink link = new HFileLink(inputRoot, inputArchive, path);
+          return link.getFileStatus(fs);
         } else if (isHLogLinkPath(path)) {
           String serverName = path.getParent().getName();
           String logName = path.getName();
@@ -375,7 +375,7 @@ public final class ExportSnapshot extends Configured implements Tool {
         public void storeFile (final String region, final String family, final String hfile)
             throws IOException {
           Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
-          long size = fs.getFileStatus(HFileLink.getReferencedPath(conf, fs, path)).getLen();
+          long size = new HFileLink(conf, path).getFileStatus(fs).getLen();
           files.add(new Pair<Path, Long>(path, size));
         }
 

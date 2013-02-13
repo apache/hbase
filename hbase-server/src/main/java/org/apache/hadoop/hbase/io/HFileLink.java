@@ -143,50 +143,6 @@ public class HFileLink extends FileLink {
   }
 
   /**
-   * The returned path can be the "original" file path like: /hbase/table/region/cf/hfile
-   * or a path to the archived file like: /hbase/.archive/table/region/cf/hfile
-   *
-   * @param fs {@link FileSystem} on which to check the HFileLink
-   * @param conf {@link Configuration} from which to extract specific archive locations
-   * @param path HFileLink path
-   * @return Referenced path (original path or archived path)
-   * @throws IOException on unexpected error.
-   */
-  public static Path getReferencedPath(final Configuration conf, final FileSystem fs,
-      final Path path) throws IOException {
-    return getReferencedPath(fs, FSUtils.getRootDir(conf),
-                             HFileArchiveUtil.getArchivePath(conf), path);
-  }
-
-  /**
-   * The returned path can be the "original" file path like: /hbase/table/region/cf/hfile
-   * or a path to the archived file like: /hbase/.archive/table/region/cf/hfile
-   *
-   * @param fs {@link FileSystem} on which to check the HFileLink
-   * @param rootDir root hbase directory
-   * @param archiveDir Path to the hbase archive directory
-   * @param path HFileLink path
-   * @return Referenced path (original path or archived path)
-   * @throws IOException on unexpected error.
-   */
-  public static Path getReferencedPath(final FileSystem fs, final Path rootDir,
-      final Path archiveDir, final Path path) throws IOException {
-    Path hfilePath = getRelativeTablePath(path);
-
-    Path originPath = new Path(rootDir, hfilePath);
-    if (fs.exists(originPath)) {
-      return originPath;
-    }
-
-    Path archivePath = new Path(archiveDir, hfilePath);
-    if (fs.exists(archivePath)) {
-      return archivePath;
-    }
-
-    return new Path(new Path(rootDir, HConstants.HBASE_TEMP_DIRECTORY), hfilePath);
-  }
-
-  /**
    * Convert a HFileLink path to a table relative path.
    * e.g. the link: /hbase/test/0123/cf/testtb=4567-abcd
    *      becomes: /hbase/testtb/4567/cf/abcd
