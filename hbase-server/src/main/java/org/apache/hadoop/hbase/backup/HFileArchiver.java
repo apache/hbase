@@ -233,6 +233,28 @@ public class HFileArchiver {
   }
 
   /**
+   * Archive the store file
+   * @param fs the filesystem where the store files live
+   * @param regionInfo region hosting the store files
+   * @param conf {@link Configuration} to examine to determine the archive directory
+   * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
+   * @param family the family hosting the store files
+   * @param storeFile file to be archived
+   * @throws IOException if the files could not be correctly disposed.
+   */
+  public static void archiveStoreFile(FileSystem fs, HRegionInfo regionInfo,
+      Configuration conf, Path tableDir, byte[] family, Path storeFile) throws IOException {
+    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
+    // make sure we don't archive if we can't and that the archive dir exists
+    if (!fs.mkdirs(storeArchiveDir)) {
+      throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
+          + Bytes.toString(family) + ", deleting compacted files instead.");
+    }
+
+    fs.rename(storeFile, new Path(storeArchiveDir, storeFile.getName()));
+  }
+
+  /**
    * Archive the given files and resolve any conflicts with existing files via appending the time
    * archiving started (so all conflicts in the same group have the same timestamp appended).
    * <p>

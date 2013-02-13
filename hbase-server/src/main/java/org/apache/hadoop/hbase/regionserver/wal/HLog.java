@@ -57,7 +57,7 @@ public interface HLog {
    */
   static final String RECOVERED_EDITS_DIR = "recovered.edits";
   static final Pattern EDITFILES_NAME_PATTERN = Pattern.compile("-?[0-9]+");
-  static final String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
+  public static final String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
 
   public interface Reader {
     void init(FileSystem fs, Path path, Configuration c) throws IOException;

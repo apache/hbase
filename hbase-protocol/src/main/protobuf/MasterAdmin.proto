@@ -204,7 +204,6 @@ message RestoreSnapshotRequest {
 }
 
 message RestoreSnapshotResponse {
-  required int64 expectedTimeout = 1;
 }
 
 /* if you don't send the snapshot, then you will get it back
@@ -224,7 +223,7 @@ message IsRestoreSnapshotDoneRequest {
 }
 
 message IsRestoreSnapshotDoneResponse {
-  optional bool done = 1 [default = false];
+  optional bool done = 1 [default = true];
 }
 
 service MasterAdminService {

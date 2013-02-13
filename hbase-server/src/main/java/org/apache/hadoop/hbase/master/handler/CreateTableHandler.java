@@ -19,18 +19,7 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,9 +38,8 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -60,11 +48,11 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class CreateTableHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(CreateTableHandler.class);
-  private MasterFileSystem fileSystemManager;
-  private final HTableDescriptor hTableDescriptor;
-  private Configuration conf;
-  private final AssignmentManager assignmentManager;
-  private final CatalogTracker catalogTracker;
+  protected final MasterFileSystem fileSystemManager;
+  protected final HTableDescriptor hTableDescriptor;
+  protected final Configuration conf;
+  protected final AssignmentManager assignmentManager;
+  protected final CatalogTracker catalogTracker;
   private final HRegionInfo [] newRegions;
 
   public CreateTableHandler(Server server, MasterFileSystem fileSystemManager,
@@ -145,61 +133,21 @@ public class CreateTableHandler extends EventHandler {
 
   private void handleCreateTable(String tableName) throws IOException,
       KeeperException {
-    int regionNumber = newRegions.length;
-    ThreadPoolExecutor regionOpenAndInitThreadPool = getRegionOpenAndInitThreadPool(
-        "RegionOpenAndInitThread-" + tableName, regionNumber);
-    CompletionService<HRegion> completionService = new ExecutorCompletionService<HRegion>(
-        regionOpenAndInitThreadPool);
+    // 1. Create table descriptor on disk
     // TODO: Currently we make the table descriptor and as side-effect the
     // tableDir is created.  Should we change below method to be createTable
     // where we create table in tmp dir with its table descriptor file and then
     // do rename to move it into place?
     FSTableDescriptors.createTableDescriptor(this.hTableDescriptor, this.conf);
-    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
-    for (final HRegionInfo newRegion : newRegions) {
-      completionService.submit(new Callable<HRegion>() {
-        public HRegion call() throws IOException {
 
-          // 1. Create HRegion
-          HRegion region = HRegion.createHRegion(newRegion,
-              fileSystemManager.getRootDir(), conf, hTableDescriptor, null,
-              false, true);
-
-          // 2. Close the new region to flush to disk. Close log file too.
-          region.close();
-          return region;
-        }
-      });
-    }
-    try {
-      // 3. wait for all regions to finish creation
-      for (int i = 0; i < regionNumber; i++) {
-        Future<HRegion> future = completionService.take();
-        HRegion region = future.get();
-        regionInfos.add(region.getRegionInfo());
-      }
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException(e.getMessage());
-    } catch (ExecutionException e) {
-      throw new IOException(e.getCause());
-    } finally {
-      regionOpenAndInitThreadPool.shutdownNow();
-    }
-    if (regionInfos.size() > 0) {
-      MetaEditor.addRegionsToMeta(this.catalogTracker, regionInfos);
+    // 2. Create regions
+    List<HRegionInfo> regions = handleCreateRegions(tableName);
+    if (regions != null && regions.size() > 0) {
+      // 3. Trigger immediate assignment of the regions in round-robin fashion
+      ModifyRegionUtils.assignRegions(assignmentManager, regions);
     }
 
-    // 4. Trigger immediate assignment of the regions in round-robin fashion
-    try {
-      List<HRegionInfo> regions = Arrays.asList(newRegions);
-      assignmentManager.getRegionStates().createRegionStates(regions);
-      assignmentManager.assign(regions);
-    } catch (InterruptedException ie) {
-      LOG.error("Caught " + ie + " during round-robin assignment");
-      throw new IOException(ie);
-    }
-
-    // 5. Set table enabled flag up in zk.
+    // 4. Set table enabled flag up in zk.
     try {
       assignmentManager.getZKTable().
         setEnabledTable(this.hTableDescriptor.getNameAsString());
@@ -209,20 +157,14 @@ public class CreateTableHandler extends EventHandler {
     }
   }
 
-  protected ThreadPoolExecutor getRegionOpenAndInitThreadPool(
-      final String threadNamePrefix, int regionNumber) {
-    int maxThreads = Math.min(regionNumber, conf.getInt(
-        "hbase.hregion.open.and.init.threads.max", 10));
-    ThreadPoolExecutor openAndInitializeThreadPool = Threads
-    .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-        new ThreadFactory() {
-          private int count = 1;
-
-          public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, threadNamePrefix + "-" + count++);
-            return t;
-          }
-        });
-    return openAndInitializeThreadPool;
+  protected List<HRegionInfo> handleCreateRegions(String tableName) throws IOException {
+    // 1. create regions
+    List<HRegionInfo> regions = ModifyRegionUtils.createRegions(conf, fileSystemManager.getRootDir(),
+      hTableDescriptor, newRegions, catalogTracker);
+    if (regions != null && regions.size() > 0) {
+      // 2. add regions to .META.
+      MetaEditor.addRegionsToMeta(catalogTracker, regions);
+    }
+    return regions;
   }
 }

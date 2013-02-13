@@ -29,6 +29,12 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class SnapshotDoesNotExistException extends HBaseSnapshotException {
+  /**
+   * @param msg full description of the failure
+   */
+  public SnapshotDoesNotExistException(String msg) {
+    super(msg);
+  }
 
   /**
    * @param desc expected snapshot to find
@@ -36,5 +42,4 @@ public class SnapshotDoesNotExistException extends HBaseSnapshotException {
   public SnapshotDoesNotExistException(SnapshotDescription desc) {
     super("Snapshot doesn't exist on the filesystem", desc);
   }
-
 }

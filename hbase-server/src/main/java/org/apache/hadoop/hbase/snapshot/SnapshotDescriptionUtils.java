@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,16 +41,16 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * Utility class to help manage {@link SnapshotDescription SnapshotDesriptions}.
  * <p>
  * Snapshots are laid out on disk like this:
- * 
+ *
  * <pre>
  * /hbase/.snapshots
  *          /.tmp                <---- working directory
  *          /[snapshot name]     <----- completed snapshot
  * </pre>
- * 
+ *
  * A completed snapshot named 'completed' then looks like (multiple regions, servers, files, etc.
  * signified by '...' on the same directory depth).
- * 
+ *
  * <pre>
  * /hbase/.snapshots/completed
  *                   .snapshotinfo          <--- Description of the snapshot
@@ -66,7 +67,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *                      ...
  *                    ...
  * </pre>
- * 
+ *
  * Utility methods in this class are useful for getting the correct locations for different parts of
  * the snapshot, as well as moving completed snapshots into place (see
  * {@link #completeSnapshot(SnapshotDescription, Path, Path, FileSystem)}, and writing the

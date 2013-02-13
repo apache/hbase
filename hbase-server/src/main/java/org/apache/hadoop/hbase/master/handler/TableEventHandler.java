@@ -195,7 +195,7 @@ public abstract class TableEventHandler extends EventHandler {
    * @throws FileNotFoundException
    * @throws IOException
    */
-  HTableDescriptor getTableDescriptor()
+  protected HTableDescriptor getTableDescriptor()
   throws FileNotFoundException, IOException {
     final String name = Bytes.toString(tableName);
     HTableDescriptor htd =
