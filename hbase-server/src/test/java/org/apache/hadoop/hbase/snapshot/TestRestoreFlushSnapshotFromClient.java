@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -107,24 +108,24 @@ public class TestRestoreFlushSnapshotFromClient {
     loadData(table, 500, FAMILY);
     snapshot0Rows = TEST_UTIL.countRows(table);
     LOG.info("=== before snapshot with 500 rows");
-    logFSTree(FSUtils.getRootDir(TEST_UTIL.getConfiguration()));
+    logFSTree();
 
     // take a snapshot
     admin.snapshot(Bytes.toString(snapshotName0), Bytes.toString(tableName), SnapshotDescription.Type.FLUSH);
 
     LOG.info("=== after snapshot with 500 rows");
-    logFSTree(FSUtils.getRootDir(TEST_UTIL.getConfiguration()));
+    logFSTree();
 
     // insert more data
     loadData(table, 500, FAMILY);
     snapshot1Rows = TEST_UTIL.countRows(table);
     LOG.info("=== before snapshot with 1000 rows");
-    logFSTree(FSUtils.getRootDir(TEST_UTIL.getConfiguration()));
+    logFSTree();
 
     // take a snapshot of the updated table
     admin.snapshot(Bytes.toString(snapshotName1), Bytes.toString(tableName), SnapshotDescription.Type.FLUSH);
     LOG.info("=== after snapshot with 1000 rows");
-    logFSTree(FSUtils.getRootDir(TEST_UTIL.getConfiguration()));
+    logFSTree();
   }
 
   @After
@@ -148,12 +149,12 @@ public class TestRestoreFlushSnapshotFromClient {
     // Restore from snapshot-0
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName0);
-    logFSTree(FSUtils.getRootDir(TEST_UTIL.getConfiguration()));
+    logFSTree();
     admin.enableTable(tableName);
     table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 
     LOG.info("=== after restore with 500 row snapshot");
-    logFSTree(FSUtils.getRootDir(TEST_UTIL.getConfiguration()));
+    logFSTree();
 
     assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
 
@@ -240,19 +241,8 @@ public class TestRestoreFlushSnapshotFromClient {
     table.flushCommits();
   }
 
-  private void logFSTree(Path root) throws IOException {
-    LOG.debug("Current file system:");
-    logFSTree(root, "|-");
-  }
-
-  private void logFSTree(Path root, String prefix) throws IOException {
-    for (FileStatus file : TEST_UTIL.getDFSCluster().getFileSystem().listStatus(root)) {
-      if (file.isDir()) {
-        LOG.debug(prefix + file.getPath().getName() + "/");
-        logFSTree(file.getPath(), prefix + "---");
-      } else {
-        LOG.debug(prefix + file.getPath().getName() + "\tsz=" + file.getLen());
-      }
-    }
+  private void logFSTree() throws IOException {
+    MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    FSUtils.logFileSystemState(mfs.getFileSystem(), mfs.getRootDir(), LOG);
   }
 }
