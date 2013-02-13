@@ -136,14 +136,21 @@ public class CreateTableHandler extends EventHandler {
         cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);
       }
       handleCreateTable(tableName);
+      completed(null);
       if (cpHost != null) {
         cpHost.postCreateTableHandler(this.hTableDescriptor, this.newRegions);
       }
-    } catch (IOException e) {
+    } catch (Throwable e) {
       LOG.error("Error trying to create the table " + tableName, e);
-    } catch (KeeperException e) {
-      LOG.error("Error trying to create the table " + tableName, e);
+      completed(e);
     }
+  }
+
+  /**
+   * Called after that process() is completed.
+   * @param exception null if process() is successful or not null if something has failed.
+   */
+  protected void completed(final Throwable exception) {
   }
 
   /**

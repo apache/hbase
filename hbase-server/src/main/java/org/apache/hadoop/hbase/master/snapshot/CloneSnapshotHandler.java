@@ -116,9 +116,12 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
       // these handlers aren't futures so we need to register the error here.
       this.monitor.receive(new ForeignException(NAME, rse));
       throw rse;
-    } finally {
-      this.stopped = true;
     }
+  }
+
+  @Override
+  protected void completed(final Throwable exception) {
+    this.stopped = true;
   }
 
   @Override
