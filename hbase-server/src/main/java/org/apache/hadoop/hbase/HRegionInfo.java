@@ -114,6 +114,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   private static final int ENC_SEPARATOR = '.';
   public  static final int MD5_HEX_LENGTH   = 32;
 
+  /** A non-capture group so that this can be embedded. */
+  public static final String ENCODED_REGION_NAME_REGEX = "(?:[a-f0-9]+)";
+
   /**
    * Does region name contain its encoded name?
    * @param regionName region name

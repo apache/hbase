@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
+import java.io.InputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -44,11 +46,13 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * Helper to Restore/Clone a Snapshot
@@ -335,9 +339,28 @@ public class RestoreSnapshotHelper {
       final String hfileName) throws IOException {
     if (HFileLink.isHFileLink(hfileName)) {
       HFileLink.createFromHFileLink(conf, fs, familyDir, hfileName);
+    } else if (StoreFile.isReference(hfileName)) {
+      restoreReferenceFile(familyDir, regionInfo, hfileName);
     } else {
       HFileLink.create(conf, fs, familyDir, regionInfo, hfileName);
     }
+  }
+
+  /**
+   * Create a new {@link Reference} as copy of the source one.
+   *
+   * @param familyDir destination directory for the store file
+   * @param regionInfo destination region info for the table
+   * @param hfileName reference file name
+   */
+  private void restoreReferenceFile(final Path familyDir, final HRegionInfo regionInfo,
+      final String hfileName) throws IOException {
+    Path inPath = new Path(new Path(new Path(snapshotDesc.getTable(),
+        regionInfo.getEncodedName()), familyDir.getName()), hfileName);
+    Path outPath = new Path(familyDir, StoreFile.getReferredToFile(inPath).getName());
+    InputStream in = new HFileLink(conf, inPath).open(fs);
+    OutputStream out = fs.create(outPath);
+    IOUtils.copyBytes(in, out, conf);
   }
 
   /**
