@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.catalog;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -155,6 +157,26 @@ public class MetaEditor {
     HTable t = MetaReader.getMetaHTable(ct);
     try {
       t.delete(deletes);
+    } finally {
+      t.close();
+    }
+  }
+
+  /**
+   * Execute the passed <code>mutations</code> against <code>.META.</code> table.
+   * @param ct CatalogTracker on whose back we will ride the edit.
+   * @param mutations Puts and Deletes to execute on .META.
+   * @throws IOException
+   */
+  static void mutateMetaTable(final CatalogTracker ct, final List<Mutation> mutations)
+      throws IOException {
+    HTable t = MetaReader.getMetaHTable(ct);
+    try {
+      t.batch(mutations);
+    } catch (InterruptedException e) {
+      InterruptedIOException ie = new InterruptedIOException(e.getMessage());
+      ie.initCause(e);
+      throw ie;
     } finally {
       t.close();
     }
@@ -348,6 +370,36 @@ public class MetaEditor {
     }
     deleteFromMetaTable(catalogTracker, deletes);
     LOG.info("Deleted from META, regions: " + regionsInfo);
+  }
+
+  /**
+   * Adds and Removes the specified regions from .META.
+   * @param catalogTracker
+   * @param regionsToRemove list of regions to be deleted from META
+   * @param regionsToAdd list of regions to be added to META
+   * @throws IOException
+   */
+  public static void mutateRegions(CatalogTracker catalogTracker,
+      final List<HRegionInfo> regionsToRemove, final List<HRegionInfo> regionsToAdd)
+      throws IOException {
+    List<Mutation> mutation = new ArrayList<Mutation>();
+    if (regionsToRemove != null) {
+      for (HRegionInfo hri: regionsToRemove) {
+        mutation.add(new Delete(hri.getRegionName()));
+      }
+    }
+    if (regionsToAdd != null) {
+      for (HRegionInfo hri: regionsToAdd) {
+        mutation.add(makePutFromRegionInfo(hri));
+      }
+    }
+    mutateMetaTable(catalogTracker, mutation);
+    if (regionsToRemove != null && regionsToRemove.size() > 0) {
+      LOG.debug("Deleted from META, regions: " + regionsToRemove);
+    }
+    if (regionsToAdd != null && regionsToAdd.size() > 0) {
+      LOG.debug("Add to META, regions: " + regionsToAdd);
+    }
   }
 
   /**
