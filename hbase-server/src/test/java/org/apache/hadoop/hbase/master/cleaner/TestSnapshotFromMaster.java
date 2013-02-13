@@ -110,7 +110,7 @@ public class TestSnapshotFromMaster {
     conf.setInt("hbase.hregion.memstore.flush.size", 25000);
     // so make sure we get a compaction when doing a load, but keep around some
     // files in the store
-    conf.setInt("hbase.hstore.compaction.min", 5);
+    conf.setInt("hbase.hstore.compaction.min", 3);
     conf.setInt("hbase.hstore.compactionThreshold", 5);
     // block writes if we get to 12 store files
     conf.setInt("hbase.hstore.blockingStoreFiles", 12);
@@ -296,7 +296,7 @@ public class TestSnapshotFromMaster {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
-    // load the table
+    // load the table (creates 4 hfiles)
     UTIL.loadTable(new HTable(UTIL.getConfiguration(), TABLE_NAME), TEST_FAM);
 
     // disable the table so we can take a snapshot
@@ -322,7 +322,7 @@ public class TestSnapshotFromMaster {
     // compact the files so we get some archived files for the table we just snapshotted
     List<HRegion> regions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
     for (HRegion region : regions) {
-      region.compactStores();
+      region.compactStores(); // min is 3 so will compact and archive
     }
 
     // make sure the cleaner has run
