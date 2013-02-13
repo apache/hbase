@@ -922,4 +922,11 @@
         properties from a zoo.cfg file has been deprecated.
     </description>
   </property>
+  <property>
+    <name>hbase.snapshot.enabled</name>
+    <value>true</value>
+    <description>
+        Set to true to allow snapshots to be taken / restored / cloned.
+    </description>
+  </property>
 </configuration>
