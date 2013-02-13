@@ -182,11 +182,11 @@ public class TestSnapshotFromClient {
     boolean fail = false;
     do {
     try {
-    admin.getTableDescriptor(Bytes.toBytes(tableName));
-    fail = true;
-        LOG.error("Table:" + tableName + " already exists, checking a new name");
-    tableName = tableName+"!";
-    }catch(TableNotFoundException e) {
+      admin.getTableDescriptor(Bytes.toBytes(tableName));
+      fail = true;
+          LOG.error("Table:" + tableName + " already exists, checking a new name");
+      tableName = tableName+"!";
+    } catch (TableNotFoundException e) {
       fail = false;
       }
     } while (fail);

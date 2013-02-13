@@ -278,9 +278,8 @@ message SnapshotDescription {
 	optional int64 creationTime = 3 [default = 0];
 	enum Type {
 		DISABLED = 0;
-		TIMESTAMP = 1;
-		GLOBAL = 2;
+		FLUSH = 1;
 	}
-	optional Type type = 4 [default = TIMESTAMP];
+	optional Type type = 4 [default = FLUSH];
 	optional int32 version = 5;
 }

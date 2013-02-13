@@ -113,7 +113,6 @@ public class TakeSnapshotUtils {
    * @param monitor monitor to notify when the snapshot life expires
    * @return the timer to use update to signal the start and end of the snapshot
    */
-  @SuppressWarnings("rawtypes")
   public static TimeoutExceptionInjector getMasterTimerAndBindToMonitor(SnapshotDescription snapshot,
       Configuration conf, ForeignExceptionListener monitor) {
     long maxTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),

@@ -70,43 +70,8 @@ public class TestSnapshotDescriptionUtils {
   private static final Log LOG = LogFactory.getLog(TestSnapshotDescriptionUtils.class);
 
   @Test
-  public void testValidateDescriptor() {
-    EnvironmentEdge edge = new EnvironmentEdge() {
-      @Override
-      public long currentTimeMillis() {
-        return 0;
-      }
-    };
-    EnvironmentEdgeManagerTestHelper.injectEdge(edge);
-
-    // check a basic snapshot description
-    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
-    builder.setName("snapshot");
-    builder.setTable("table");
-
-    // check that time is to an amount in the future
+  public void testValidateMissingTableName() {
     Configuration conf = new Configuration(false);
-    conf.setLong(SnapshotDescriptionUtils.TIMESTAMP_SNAPSHOT_SPLIT_POINT_ADDITION, 1);
-    SnapshotDescription desc = SnapshotDescriptionUtils.validate(builder.build(), conf);
-    assertEquals("Description creation time wasn't set correctly", 1, desc.getCreationTime());
-
-    // test a global snapshot
-    edge = new EnvironmentEdge() {
-      @Override
-      public long currentTimeMillis() {
-        return 2;
-      }
-    };
-    EnvironmentEdgeManagerTestHelper.injectEdge(edge);
-    builder.setType(Type.GLOBAL);
-    desc = SnapshotDescriptionUtils.validate(builder.build(), conf);
-    assertEquals("Description creation time wasn't set correctly", 2, desc.getCreationTime());
-
-    // test that we don't override a given value
-    builder.setCreationTime(10);
-    desc = SnapshotDescriptionUtils.validate(builder.build(), conf);
-    assertEquals("Description creation time wasn't set correctly", 10, desc.getCreationTime());
-
     try {
       SnapshotDescriptionUtils.validate(SnapshotDescription.newBuilder().setName("fail").build(),
         conf);

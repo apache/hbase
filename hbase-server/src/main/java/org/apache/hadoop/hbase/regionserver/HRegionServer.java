@@ -52,7 +52,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
 
-import com.google.protobuf.Message;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -101,8 +100,8 @@ import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
@@ -148,6 +147,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequ
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -186,9 +187,10 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
+import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -219,11 +221,9 @@ import org.cliffc.high_scale_lib.Counter;
 
 import com.google.common.base.Function;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-
-import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
-import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -434,6 +434,9 @@ public class  HRegionServer implements ClientProtocol,
   private final QosFunction qosFunction;
   
   private RegionServerCoprocessorHost rsHost;
+
+  /** Handle all the snapshot requests to this server */
+  RegionServerSnapshotManager snapshotManager;
 
   /**
    * Starts a HRegionServer at the default location
@@ -779,6 +782,13 @@ public class  HRegionServer implements ClientProtocol,
     } catch (KeeperException e) {
       this.abort("Failed to retrieve Cluster ID",e);
     }
+
+    // watch for snapshots
+    try {
+      this.snapshotManager = new RegionServerSnapshotManager(this);
+    } catch (KeeperException e) {
+      this.abort("Failed to reach zk cluster when creating snapshot handler.");
+    }
   }
 
   /**
@@ -855,6 +865,9 @@ public class  HRegionServer implements ClientProtocol,
           break;
         }
       }
+
+      // start the snapshot handler, since the server is ready to run
+      this.snapshotManager.start();
 
       // We registered with the Master.  Go into run mode.
       long lastMsg = 0;
@@ -933,6 +946,12 @@ public class  HRegionServer implements ClientProtocol,
     if (this.compactionChecker != null)
       this.compactionChecker.interrupt();
 
+    try {
+      if (snapshotManager != null) snapshotManager.stop(this.abortRequested);
+    } catch (IOException e) {
+      LOG.warn("Failed to close snapshot handler cleanly", e);
+    }
+
     if (this.killed) {
       // Just skip out w/o closing regions.  Used when testing.
     } else if (abortRequested) {
@@ -948,6 +967,13 @@ public class  HRegionServer implements ClientProtocol,
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta or root.
     if (this.catalogTracker != null) this.catalogTracker.stop();
+
+    // stop the snapshot handler, forcefully killing all running tasks
+    try {
+      if (snapshotManager != null) snapshotManager.stop(this.abortRequested || this.killed);
+    } catch (IOException e) {
+      LOG.warn("Failed to close snapshot handler cleanly", e);
+    }
 
     // Closing the compactSplit thread before closing meta regions
     if (!this.killed && containsMetaTableRegions()) {

@@ -48,10 +48,16 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 /**
  * General snapshot verification on the master.
  * <p>
- * This is a light-weight verification mechanism for all the files in a snapshot. It doesn't attempt
- * to verify that the files are exact copies (that would be paramount to taking the snapshot
- * again!), but instead just attempts to ensure that the files match the expected files and are the
- * same length.
+ * This is a light-weight verification mechanism for all the files in a snapshot. It doesn't
+ * attempt to verify that the files are exact copies (that would be paramount to taking the
+ * snapshot again!), but instead just attempts to ensure that the files match the expected
+ * files and are the same length.
+ * <p>
+ * Taking an online snapshots can race against other operations and this is an last line of
+ * defense.  For example, if meta changes between when snapshots are taken not all regions of a
+ * table may be present.  This can be caused by a region split (daughters present on this scan,
+ * but snapshot took parent), or move (snapshots only checks lists of region servers, a move could
+ * have caused a region to be skipped or done twice).
  * <p>
  * Current snapshot files checked:
  * <ol>
@@ -65,11 +71,9 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
  * <li>All the hfiles are present (either in .archive directory in the region)</li>
  * <li>All recovered.edits files are present (by name) and have the correct file size</li>
  * </ul>
- * <li>HLogs for each server running the snapshot have been referenced
- * <ul>
- * <li>Only checked for {@link Type#GLOBAL} snapshots</li>
- * </ul>
- * </li>
+ * <li>HLogs for each server running the snapshot have been referenced.  (In the design for
+ * in the {@link Type#GLOBAL} or {@link Type#LOGROLL} online snapshots</li>
+ * </ol>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -112,22 +116,6 @@ public final class MasterSnapshotVerifier {
 
     // check that each region is valid
     verifyRegions(snapshotDir);
-
-    // check that the hlogs, if they exist, are valid
-    if (shouldCheckLogs(snapshot.getType())) {
-      verifyLogs(snapshotDir, snapshotServers);
-    }
-  }
-
-  /**
-   * Check to see if the snapshot should verify the logs directory based on the type of the logs.
-   * @param type type of snapshot being taken
-   * @return <tt>true</tt> if the logs directory should be verified, <tt>false</tt> otherwise
-   */
-  private boolean shouldCheckLogs(Type type) {
-    // This is better handled in the Type enum via type, but since its PB based, this is the
-    // simplest way to handle it
-    return type.equals(Type.GLOBAL);
   }
 
   /**
@@ -151,7 +139,7 @@ public final class MasterSnapshotVerifier {
   }
 
   /**
-   * Check that all the regions in the the snapshot are valid
+   * Check that all the regions in the the snapshot are valid, and accounted for.
    * @param snapshotDir snapshot directory to check
    * @throws IOException if we can't reach .META. or read the files from the FS
    */
@@ -177,6 +165,7 @@ public final class MasterSnapshotVerifier {
     // make sure we have region in the snapshot
     Path regionDir = new Path(snapshotDir, region.getEncodedName());
     if (!fs.exists(regionDir)) {
+      // could happen due to a move or split race.
       throw new CorruptedSnapshotException("No region directory found for region:" + region,
           snapshot);
     }

@@ -2133,7 +2133,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void snapshot(final String snapshotName, final String tableName) throws IOException,
       SnapshotCreationException, IllegalArgumentException {
-    snapshot(snapshotName, tableName, SnapshotDescription.Type.TIMESTAMP);
+    snapshot(snapshotName, tableName, SnapshotDescription.Type.FLUSH);
   }
 
   /**

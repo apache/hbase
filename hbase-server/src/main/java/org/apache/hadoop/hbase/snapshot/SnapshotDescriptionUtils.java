@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
-import java.io.FileNotFoundException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -111,30 +110,14 @@ public class SnapshotDescriptionUtils {
 
   /** Temporary directory under the snapshot directory to store in-progress snapshots */
   public static final String SNAPSHOT_TMP_DIR_NAME = ".tmp";
-
   // snapshot operation values
   /** Default value if no start time is specified */
   public static final long NO_SNAPSHOT_START_TIME_SPECIFIED = 0;
 
-  public static final String MASTER_WAIT_TIME_GLOBAL_SNAPSHOT = "hbase.snapshot.global.master.timeout";
-  public static final String REGION_WAIT_TIME_GLOBAL_SNAPSHOT = "hbase.snapshot.global.region.timeout";
-  public static final String MASTER_WAIT_TIME_TIMESTAMP_SNAPSHOT = "hbase.snapshot.timestamp.master.timeout";
-  public static final String REGION_WAIT_TIME_TIMESTAMP_SNAPSHOT = "hbase.snapshot.timestamp.region.timeout";
-  public static final String MASTER_WAIT_TIME_DISABLED_SNAPSHOT = "hbase.snapshot.disabled.master.timeout";
-
-  /** Default timeout of 60 sec for a snapshot timeout on a region */
-  public static final long DEFAULT_REGION_SNAPSHOT_TIMEOUT = 60000;
+  public static final String MASTER_SNAPSHOT_TIMEOUT_MILLIS = "hbase.snapshot.master.timeout.millis";
 
   /** By default, wait 60 seconds for a snapshot to complete */
   public static final long DEFAULT_MAX_WAIT_TIME = 60000;
-
-  /**
-   * Conf key for amount of time the in the future a timestamp snapshot should be taken (ms).
-   * Defaults to {@value SnapshotDescriptionUtils#DEFAULT_TIMESTAMP_SNAPSHOT_SPLIT_IN_FUTURE}
-   */
-  public static final String TIMESTAMP_SNAPSHOT_SPLIT_POINT_ADDITION = "hbase.snapshot.timestamp.master.splittime";
-  /** Start 2 seconds in the future, if no start time given */
-  public static final long DEFAULT_TIMESTAMP_SNAPSHOT_SPLIT_IN_FUTURE = 2000;
 
   private SnapshotDescriptionUtils() {
     // private constructor for utility class
@@ -165,35 +148,9 @@ public class SnapshotDescriptionUtils {
       long defaultMaxWaitTime) {
     String confKey;
     switch (type) {
-    case GLOBAL:
-      confKey = MASTER_WAIT_TIME_GLOBAL_SNAPSHOT;
-      break;
-    case TIMESTAMP:
-
-      confKey = MASTER_WAIT_TIME_TIMESTAMP_SNAPSHOT;
     case DISABLED:
     default:
-      confKey = MASTER_WAIT_TIME_DISABLED_SNAPSHOT;
-    }
-    return conf.getLong(confKey, defaultMaxWaitTime);
-  }
-
-  /**
-   * @param conf {@link Configuration} from which to check for the timeout
-   * @param type type of snapshot being taken
-   * @param defaultMaxWaitTime Default amount of time to wait, if none is in the configuration
-   * @return the max amount of time the region should wait for a snapshot to complete
-   */
-  public static long getMaxRegionTimeout(Configuration conf, SnapshotDescription.Type type,
-      long defaultMaxWaitTime) {
-    String confKey;
-    switch (type) {
-    case GLOBAL:
-      confKey = REGION_WAIT_TIME_GLOBAL_SNAPSHOT;
-      break;
-    case TIMESTAMP:
-    default:
-      confKey = REGION_WAIT_TIME_TIMESTAMP_SNAPSHOT;
+      confKey = MASTER_SNAPSHOT_TIMEOUT_MILLIS;
     }
     return conf.getLong(confKey, defaultMaxWaitTime);
   }
@@ -299,13 +256,6 @@ public class SnapshotDescriptionUtils {
     long time = snapshot.getCreationTime();
     if (time == SnapshotDescriptionUtils.NO_SNAPSHOT_START_TIME_SPECIFIED) {
       time = EnvironmentEdgeManager.currentTimeMillis();
-      if (snapshot.getType().equals(SnapshotDescription.Type.TIMESTAMP)) {
-        long increment = conf.getLong(
-          SnapshotDescriptionUtils.TIMESTAMP_SNAPSHOT_SPLIT_POINT_ADDITION,
-          SnapshotDescriptionUtils.DEFAULT_TIMESTAMP_SNAPSHOT_SPLIT_IN_FUTURE);
-        LOG.debug("Setting timestamp snapshot in future by " + increment + " ms.");
-        time += increment;
-      }
       LOG.debug("Creation time not specified, setting to:" + time + " (current time:"
           + EnvironmentEdgeManager.currentTimeMillis() + ").");
       SnapshotDescription.Builder builder = snapshot.toBuilder();

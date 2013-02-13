@@ -145,6 +145,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     } catch (Exception e) {
       LOG.error("Got exception taking snapshot", e);
       String reason = "Failed due to exception:" + e.getMessage();
+      LOG.error("Got exception taking snapshot", e);
       ForeignException ee = new ForeignException(reason, e);
       monitor.receive(ee);
       // need to mark this completed to close off and allow cleanup to happen.
