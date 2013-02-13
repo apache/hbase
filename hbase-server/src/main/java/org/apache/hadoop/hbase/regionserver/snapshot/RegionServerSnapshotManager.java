@@ -95,7 +95,6 @@ public class RegionServerSnapshotManager {
   private final RegionServerServices rss;
   private final ProcedureMemberRpcs memberRpcs;
   private final ProcedureMember member;
-  private final long wakeMillis;
   private final SnapshotSubprocedurePool taskManager;
 
   /**
@@ -111,7 +110,6 @@ public class RegionServerSnapshotManager {
     this.memberRpcs = controller;
     this.member = cohortMember;
     // read in the snapshot request configuration properties
-    wakeMillis = conf.getLong(SNAPSHOT_REQUEST_WAKE_MILLIS_KEY, SNAPSHOT_REQUEST_WAKE_MILLIS_DEFAULT);
     taskManager = new SnapshotSubprocedurePool(parent, conf);
   }
 
@@ -132,7 +130,7 @@ public class RegionServerSnapshotManager {
 
     // read in the snapshot request configuration properties
     Configuration conf = rss.getConfiguration();
-    wakeMillis = conf.getLong(SNAPSHOT_REQUEST_WAKE_MILLIS_KEY, SNAPSHOT_REQUEST_WAKE_MILLIS_DEFAULT);
+    long wakeMillis = conf.getLong(SNAPSHOT_REQUEST_WAKE_MILLIS_KEY, SNAPSHOT_REQUEST_WAKE_MILLIS_DEFAULT);
     long keepAlive = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
     int opThreads = conf.getInt(SNAPSHOT_REQUEST_THREADS_KEY, SNAPSHOT_REQUEST_THREADS_DEFAULT);
 
@@ -207,7 +205,14 @@ public class RegionServerSnapshotManager {
 
     LOG.debug("Launching subprocedure for snapshot " + snapshot.getName() + " from table " + snapshot.getTable());
     ForeignExceptionDispatcher exnDispatcher = new ForeignExceptionDispatcher();
+    Configuration conf = rss.getConfiguration();
+    long timeoutMillis = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+    long wakeMillis = conf.getLong(SNAPSHOT_REQUEST_WAKE_MILLIS_KEY, SNAPSHOT_REQUEST_WAKE_MILLIS_DEFAULT);
+
     switch (snapshot.getType()) {
+    case FLUSH:
+      return new FlushSnapshotSubprocedure(member, exnDispatcher, wakeMillis,
+          timeoutMillis, involvedRegions, snapshot, taskManager);
     default:
       throw new UnsupportedOperationException("Unrecognized snapshot type:" + snapshot.getType());
     }
