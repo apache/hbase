@@ -15,24 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.server.errorhandling.impl;
+package org.apache.hadoop.hbase.errorhandling;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Utility class for testing error propagation
+ * The ForeignExceptionListener is an interface for objects that can receive a ForeignException.
+ * <p>
+ * Implementations must be thread-safe, because this is expected to be used to propagate exceptions
+ * from foreign threads.
  */
-public class ExceptionTestingUtils {
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public interface ForeignExceptionListener {
 
   /**
-   * Determine if the stack trace contains the given calling class
-   * @param stack trace to examine
-   * @param clazz Class to search for
-   * @return <tt>true</tt> if the stack contains the calling class
+   * Receive a ForeignException.
+   * <p>
+   * Implementers must ensure that this method is thread-safe.
+   * @param message reason for the error
+   * @param e exception causing the error.  Implementations must accept and handle null here.
    */
-  public static boolean stackContainsClass(StackTraceElement[] stack, Class<?> clazz) {
-    String name = clazz.getName();
-    for (StackTraceElement elem : stack) {
-      if (elem.getClassName().equals(name)) return true;
-    }
-    return false;
-  }
+  public void receive(String message, ForeignException e);
 }

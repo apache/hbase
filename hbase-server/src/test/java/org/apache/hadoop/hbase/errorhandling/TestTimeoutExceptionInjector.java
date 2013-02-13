@@ -15,57 +15,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.server.errorhandling.impl;
+package org.apache.hadoop.hbase.errorhandling;
 
 import static org.junit.Assert.fail;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.server.errorhandling.ExceptionListener;
-import org.apache.hadoop.hbase.server.errorhandling.OperationAttemptTimer;
-import org.apache.hadoop.hbase.server.errorhandling.exception.OperationAttemptTimeoutException;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 /**
- * Test the {@link OperationAttemptTimer} to ensure we fulfill contracts
+ * Test the {@link TimeoutExceptionInjector} to ensure we fulfill contracts
  */
 @Category(SmallTests.class)
-@SuppressWarnings("unchecked")
-public class TestOperationAttemptTimer {
+public class TestTimeoutExceptionInjector {
 
-  private static final Log LOG = LogFactory.getLog(TestOperationAttemptTimer.class);
+  private static final Log LOG = LogFactory.getLog(TestTimeoutExceptionInjector.class);
 
+  /**
+   * Test that a manually triggered timer fires an exception.
+   */
   @Test(timeout = 1000)
   public void testTimerTrigger() {
-    final long time = 10000000;
-    ExceptionListener<Exception> listener = Mockito.mock(ExceptionListener.class);
-    OperationAttemptTimer timer = new OperationAttemptTimer(listener, time);
+    final long time = 10000000; // pick a value that is very far in the future
+    ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
+    TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.start();
     timer.trigger();
-    Mockito.verify(listener, Mockito.times(1)).receiveError(Mockito.anyString(),
-      Mockito.any(OperationAttemptTimeoutException.class));
+    Mockito.verify(listener, Mockito.times(1)).receive(Mockito.anyString(),
+      Mockito.any(ForeignException.class));
   }
 
+  /**
+   * Test that a manually triggered exception with data fires with the data in receiveError.
+   */
   @Test
   public void testTimerPassesOnErrorInfo() {
-    final long time = 10;
-    ExceptionListener<Exception> listener = Mockito.mock(ExceptionListener.class);
-    final Object[] data = new Object[] { "data" };
-    OperationAttemptTimer timer = new OperationAttemptTimer(listener, time, data);
+    final long time = 1000000;
+    ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
+    TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.start();
     timer.trigger();
-    Mockito.verify(listener).receiveError(Mockito.anyString(),
-      Mockito.any(OperationAttemptTimeoutException.class), Mockito.eq(data[0]));
+    Mockito.verify(listener).receive(Mockito.anyString(), Mockito.any(ForeignException.class));
   }
 
+  /**
+   * Demonstrate TimeoutExceptionInjector semantics -- completion means no more exceptions passed to
+   * error listener.
+   */
   @Test(timeout = 1000)
   public void testStartAfterComplete() throws InterruptedException {
     final long time = 10;
-    ExceptionListener<Exception> listener = Mockito.mock(ExceptionListener.class);
-    OperationAttemptTimer timer = new OperationAttemptTimer(listener, time);
+    ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
+    TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.complete();
     try {
       timer.start();
@@ -77,11 +81,15 @@ public class TestOperationAttemptTimer {
     Mockito.verifyZeroInteractions(listener);
   }
 
+  /**
+   * Demonstrate TimeoutExceptionInjector semantics -- triggering fires exception and completes
+   * the timer.
+   */
   @Test(timeout = 1000)
   public void testStartAfterTrigger() throws InterruptedException {
     final long time = 10;
-    ExceptionListener<Exception> listener = Mockito.mock(ExceptionListener.class);
-    OperationAttemptTimer timer = new OperationAttemptTimer(listener, time);
+    ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
+    TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.trigger();
     try {
       timer.start();
@@ -90,8 +98,8 @@ public class TestOperationAttemptTimer {
       LOG.debug("Correctly failed timer: " + e.getMessage());
     }
     Thread.sleep(time * 2);
-    Mockito.verify(listener, Mockito.times(1)).receiveError(Mockito.anyString(),
-      Mockito.any(OperationAttemptTimeoutException.class));
+    Mockito.verify(listener, Mockito.times(1)).receive(Mockito.anyString(),
+      Mockito.any(ForeignException.class));
     Mockito.verifyNoMoreInteractions(listener);
   }
 }
