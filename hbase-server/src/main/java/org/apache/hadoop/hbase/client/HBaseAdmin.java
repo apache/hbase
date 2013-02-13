@@ -2237,7 +2237,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         LOG.debug("Interrupted while waiting for snapshot " + snapshot + " to complete");
         Thread.currentThread().interrupt();
       }
-      LOG.debug("Getting current status of snasphot from master...");
+      LOG.debug("Getting current status of snapshot from master...");
       done = execute(new MasterAdminCallable<IsSnapshotDoneResponse>() {
         @Override
         public IsSnapshotDoneResponse call() throws ServiceException {
