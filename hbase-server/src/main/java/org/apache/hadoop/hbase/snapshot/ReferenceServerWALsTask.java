@@ -76,11 +76,14 @@ public class ReferenceServerWALsTask extends SnapshotTask {
     // Iterate through each of the log files and add a reference to it.
     // assumes that all the files under the server's logs directory is a log
     FileStatus[] serverLogs = FSUtils.listStatus(fs, logDir, null);
-    if (serverLogs == null) LOG.info("No logs for server directory:" + logDir
-        + ", done referencing files.");
+    if (serverLogs == null) {
+      LOG.debug("No logs for server directory:" + logDir + ", done referencing files.");
+      return null;
+    }
 
-    if (LOG.isDebugEnabled()) LOG.debug("Adding references for WAL files:"
-        + Arrays.toString(serverLogs));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Adding references for WAL files:" + Arrays.toString(serverLogs));
+    }
 
     for (FileStatus file : serverLogs) {
       this.rethrowException();

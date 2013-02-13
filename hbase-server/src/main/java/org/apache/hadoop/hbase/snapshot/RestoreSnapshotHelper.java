@@ -41,14 +41,12 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -132,8 +130,6 @@ public class RestoreSnapshotHelper {
    * @return the set of regions touched by the restore operation
    */
   public RestoreMetaChanges restoreHdfsRegions() throws IOException {
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
-
     LOG.debug("starting restore");
     Set<String> snapshotRegionNames = SnapshotReferenceUtil.getSnapshotRegionNames(fs, snapshotDir);
     if (snapshotRegionNames == null) {
@@ -152,7 +148,7 @@ public class RestoreSnapshotHelper {
         String regionName = regionInfo.getEncodedName();
         if (snapshotRegionNames.contains(regionName)) {
           LOG.info("region to restore: " + regionName);
-          snapshotRegionNames.remove(regionInfo);
+          snapshotRegionNames.remove(regionName);
           metaChanges.addRegionToRestore(regionInfo);
         } else {
           LOG.info("region to remove: " + regionName);
@@ -196,7 +192,7 @@ public class RestoreSnapshotHelper {
   /**
    * Describe the set of operations needed to update META after restore.
    */
-  public class RestoreMetaChanges {
+  public static class RestoreMetaChanges {
     private List<HRegionInfo> regionsToRestore = null;
     private List<HRegionInfo> regionsToRemove = null;
     private List<HRegionInfo> regionsToAdd = null;
@@ -325,13 +321,11 @@ public class RestoreSnapshotHelper {
 
     // Add families not present in the table
     for (Map.Entry<String, List<String>> familyEntry: snapshotFiles.entrySet()) {
-      byte[] family = Bytes.toBytes(familyEntry.getKey());
       Path familyDir = new Path(regionDir, familyEntry.getKey());
       if (!fs.mkdirs(familyDir)) {
         throw new IOException("Unable to create familyDir=" + familyDir);
       }
 
-      List<String> hfilesToAdd = new LinkedList<String>();
       for (String hfileName: familyEntry.getValue()) {
         LOG.trace("Adding HFileLink " + hfileName + " to table=" + tableName);
         restoreStoreFile(familyDir, regionInfo, hfileName);
@@ -384,7 +378,7 @@ public class RestoreSnapshotHelper {
     }
 
     // create the regions on disk
-    List<HRegionInfo> clonedRegions = ModifyRegionUtils.createRegions(conf, tableDir.getParent(),
+    ModifyRegionUtils.createRegions(conf, tableDir.getParent(),
       tableDesc, clonedRegionsInfo, new ModifyRegionUtils.RegionFillTask() {
         public void fillRegion(final HRegion region) throws IOException {
           cloneRegion(region, snapshotRegions.get(region.getRegionInfo().getEncodedName()));

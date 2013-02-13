@@ -210,7 +210,7 @@ public final class SnapshotInfo extends Configured implements Tool {
           }
 
           if (showFiles) {
-            System.out.printf("%8s %s/%s/%s/%s %s\n",
+            System.out.printf("%8s %s/%s/%s/%s %s%n",
               (size < 0 ? "-" : StringUtils.humanReadableInt(size)),
               table, region, family, hfile,
               (inArchive ? "(archive)" : (size < 0) ? "(NOT FOUND)" : ""));
@@ -225,7 +225,7 @@ public final class SnapshotInfo extends Configured implements Tool {
           logsCount.addAndGet(1);
 
           if (showFiles) {
-            System.out.printf("%8s recovered.edits %s on region %s\n",
+            System.out.printf("%8s recovered.edits %s on region %s%n",
               StringUtils.humanReadableInt(size), logfile, region);
           }
         }
@@ -243,7 +243,7 @@ public final class SnapshotInfo extends Configured implements Tool {
           }
 
           if (showFiles) {
-            System.out.printf("%8s log %s on server %s %s\n",
+            System.out.printf("%8s log %s on server %s %s%n",
               (size < 0 ? "-" : StringUtils.humanReadableInt(size)),
               logfile, server,
               (size < 0 ? "(NOT FOUND)" : ""));
@@ -255,24 +255,24 @@ public final class SnapshotInfo extends Configured implements Tool {
     System.out.println();
     if (hfilesMissing.get() > 0 || logsMissing.get() > 0) {
       System.out.println("**************************************************************");
-      System.out.printf("BAD SNAPSHOT: %d hfile(s) and %d log(s) missing.\n",
+      System.out.printf("BAD SNAPSHOT: %d hfile(s) and %d log(s) missing.%n",
         hfilesMissing.get(), logsMissing.get());
       System.out.println("**************************************************************");
     }
 
-    System.out.printf("%d HFiles (%d in archive), total size %s (%.2f%% %s shared with the source table)\n",
+    System.out.printf("%d HFiles (%d in archive), total size %s (%.2f%% %s shared with the source table)%n",
       hfilesCount.get() + hfileArchiveCount.get(), hfileArchiveCount.get(),
       StringUtils.humanReadableInt(hfileSize.get() + hfileArchiveSize.get()),
       ((float)hfileSize.get() / (hfileSize.get() + hfileArchiveSize.get())) * 100,
       StringUtils.humanReadableInt(hfileSize.get())
     );
-    System.out.printf("%d Logs, total size %s\n",
+    System.out.printf("%d Logs, total size %s%n",
       logsCount.get(), StringUtils.humanReadableInt(logSize.get()));
     System.out.println();
   }
 
   private void printUsageAndExit() {
-    System.err.printf("Usage: bin/hbase %s [options]\n", getClass().getName());
+    System.err.printf("Usage: bin/hbase %s [options]%n", getClass().getName());
     System.err.println(" where [options] are:");
     System.err.println("  -h|-help                Show this help and exit.");
     System.err.println("  -snapshot NAME          Snapshot to examine.");

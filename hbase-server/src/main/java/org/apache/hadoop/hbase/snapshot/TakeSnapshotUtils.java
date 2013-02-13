@@ -138,7 +138,7 @@ public class TakeSnapshotUtils {
     Multimap<String, String> realLogs = getMapOfServersAndLogs(fs, logsDir, serverNames);
     if (realLogs != null) {
       assertNotNull(snapshot, "No server logs added to snapshot", snapshotLogs);
-    } else if (realLogs == null) {
+    } else {
       assertNull(snapshot, "Snapshotted server logs that don't exist", snapshotLogs);
     }
 

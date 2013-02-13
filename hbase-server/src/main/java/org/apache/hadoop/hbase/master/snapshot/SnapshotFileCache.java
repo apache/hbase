@@ -275,7 +275,7 @@ public class SnapshotFileCache implements Stoppable {
   /**
    * Information about a snapshot directory
    */
-  public class SnapshotDirectoryInfo {
+  private static class SnapshotDirectoryInfo {
     long lastModified;
     Collection<String> files;
 

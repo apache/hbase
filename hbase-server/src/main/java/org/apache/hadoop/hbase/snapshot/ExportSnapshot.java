@@ -650,7 +650,7 @@ public final class ExportSnapshot extends Configured implements Tool {
 
   // ExportSnapshot
   private void printUsageAndExit() {
-    System.err.printf("Usage: bin/hbase %s [options]\n", getClass().getName());
+    System.err.printf("Usage: bin/hbase %s [options]%n", getClass().getName());
     System.err.println(" where [options] are:");
     System.err.println("  -h|-help                Show this help and exit.");
     System.err.println("  -snapshot NAME          Snapshot to restore.");

@@ -2441,7 +2441,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         .setName(snapshotName).setTable(tableName).build();
 
     // actually restore the snapshot
-    RestoreSnapshotResponse response = internalRestoreSnapshotAsync(snapshot);
+    internalRestoreSnapshotAsync(snapshot);
 
     final IsRestoreSnapshotDoneRequest request = IsRestoreSnapshotDoneRequest.newBuilder()
         .setSnapshot(snapshot).build();
