@@ -240,10 +240,13 @@ public class TestStoreFile extends HBaseTestCase {
    */
   public void testReferenceToHFileLink() throws IOException {
     final String columnFamily = "f";
+
+    Path rootDir = FSUtils.getRootDir(conf);
+
     String tablename = "_original-evil-name"; // adding legal table name chars to verify regex handles it.
     HRegionInfo hri = new HRegionInfo(Bytes.toBytes(tablename));
     // store dir = <root>/<tablename>/<rgn>/<cf>
-    Path storedir = new Path(new Path(FSUtils.getRootDir(conf),
+    Path storedir = new Path(new Path(rootDir,
       new Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
 
     // Make a store file and write data to it. <root>/<tablename>/<rgn>/<cf>/<file>
@@ -257,7 +260,7 @@ public class TestStoreFile extends HBaseTestCase {
 
     // create link to store file. <root>/clone/region/<cf>/<hfile>-<region>-<table>
     String target = "clone";
-    Path dstPath = new Path(FSUtils.getRootDir(conf), new Path(new Path(target, "region"), columnFamily));
+    Path dstPath = new Path(rootDir, new Path(new Path(target, "region"), columnFamily));
     HFileLink.create(conf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath = new Path(dstPath,
                   HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
@@ -265,9 +268,9 @@ public class TestStoreFile extends HBaseTestCase {
     // create splits of the link.
     // <root>/clone/splitA/<cf>/<reftohfilelink>,
     // <root>/clone/splitB/<cf>/<reftohfilelink>
-    Path splitDirA = new Path(new Path(FSUtils.getRootDir(conf),
+    Path splitDirA = new Path(new Path(rootDir,
         new Path(target, "splitA")), columnFamily);
-    Path splitDirB = new Path(new Path(FSUtils.getRootDir(conf),
+    Path splitDirB = new Path(new Path(rootDir,
         new Path(target, "splitB")), columnFamily);
     StoreFile f = new StoreFile(fs, linkFilePath, conf, cacheConf, BloomType.NONE,
         NoOpDataBlockEncoder.INSTANCE);
@@ -276,7 +279,7 @@ public class TestStoreFile extends HBaseTestCase {
     Path pathB = StoreFile.split(fs, splitDirB, f, splitRow, false); // bottom
 
     // OK test the thing
-    FSUtils.logFileSystemState(fs, FSUtils.getRootDir(conf), LOG);
+    FSUtils.logFileSystemState(fs, rootDir, LOG);
 
     // There is a case where a file with the hfilelink pattern is actually a daughter
     // reference to a hfile link.  This code in StoreFile that handles this case.

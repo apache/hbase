@@ -156,6 +156,8 @@ public class StoreFile {
   // If this storefile is a link to another, this is the link instance.
   private HFileLink link;
 
+  private Configuration conf;
+
   // Block cache configuration and reference.
   private final CacheConfig cacheConf;
 
@@ -257,6 +259,7 @@ public class StoreFile {
       throws IOException {
     this.fs = fs;
     this.path = p;
+    this.conf = conf;
     this.cacheConf = cacheConf;
     this.dataBlockEncoder =
         dataBlockEncoder == null ? NoOpDataBlockEncoder.INSTANCE
@@ -514,28 +517,6 @@ public class StoreFile {
   }
 
   /**
-   * helper function to compute HDFS blocks distribution of a given file.
-   * For reference file, it is an estimate
-   * @param fs  The FileSystem
-   * @param p  The path of the file
-   * @return HDFS blocks distribution
-   */
-  static public HDFSBlocksDistribution computeHDFSBlockDistribution(
-    FileSystem fs, Path p) throws IOException {
-    if (isReference(p)) {
-      Reference reference = Reference.read(fs, p);
-      Path referencePath = getReferredToFile(p);
-      return computeRefFileHDFSBlockDistribution(fs, reference, referencePath);
-    } else {
-      if (HFileLink.isHFileLink(p)) p = HFileLink.getReferencedPath(fs, p);
-      FileStatus status = fs.getFileStatus(p);
-      long length = status.getLen();
-      return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, length);
-    }
-  }
-
-
-  /**
    * compute HDFS block distribution, for reference file, it is an estimate
    */
   private void computeHDFSBlockDistribution() throws IOException {
@@ -590,7 +571,7 @@ public class StoreFile {
         this.reference = Reference.read(fs, this.path);
         this.referencePath = getReferredToLink(this.path);
         LOG.debug("Reference file "+ path + " referred to " + referencePath + "!");
-        link = new HFileLink(fs.getConf(), referencePath);
+        link = new HFileLink(conf, referencePath);
         this.reader = new HalfStoreFileReader(this.fs, this.referencePath, link,
             this.cacheConf, this.reference,
             dataBlockEncoder.getEncodingInCache());

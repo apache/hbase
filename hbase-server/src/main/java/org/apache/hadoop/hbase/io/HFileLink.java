@@ -126,19 +126,6 @@ public class HFileLink extends FileLink {
 
   /**
    * The returned path can be the "original" file path like: /hbase/table/region/cf/hfile
-   * or a path to the archived file like: /hbase/archive/table/region/cf/hfile
-   *
-   * @param fs {@link FileSystem} on which to check the HFileLink
-   * @param path HFileLink path
-   * @return Referenced path (original path or archived path)
-   * @throws IOException on unexpected error.
-   */
-  public static Path getReferencedPath(FileSystem fs, final Path path) throws IOException {
-    return getReferencedPath(fs.getConf(), fs, path);
-  }
-
-  /**
-   * The returned path can be the "original" file path like: /hbase/table/region/cf/hfile
    * or a path to the archived file like: /hbase/.archive/table/region/cf/hfile
    *
    * @param fs {@link FileSystem} on which to check the HFileLink
