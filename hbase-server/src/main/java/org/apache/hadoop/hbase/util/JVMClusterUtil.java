@@ -235,22 +235,25 @@ public class JVMClusterUtil {
         }
       }
       // Do active after.
-      if (activeMaster != null) activeMaster.master.shutdown();
+      if (activeMaster != null)
+        activeMaster.master.shutdown();
+
     }
-    boolean noWait = false;
+    boolean wasInterrupted = false;
     final long maxTime = System.currentTimeMillis() + 120 * 1000;
     if (regionservers != null) {
+      // first try nicely.
       for (RegionServerThread t : regionservers) {
         t.getRegionServer().stop("Shutdown requested");
       }
       for (RegionServerThread t : regionservers) {
-        if (t.isAlive() && !noWait && System.currentTimeMillis() < maxTime) {
+        if (t.isAlive() && !wasInterrupted && System.currentTimeMillis() < maxTime) {
           try {
             t.join(maxTime);
           } catch (InterruptedException e) {
             LOG.info("Got InterruptedException on shutdown - " +
                 "not waiting anymore on region server ends", e);
-            noWait = true; // someone wants us to speed up.
+            wasInterrupted = true; // someone wants us to speed up.
           }
         }
       }
@@ -260,14 +263,16 @@ public class JVMClusterUtil {
         for (RegionServerThread t : regionservers) {
           if (t.isAlive()) {
             try {
+              LOG.warn("RegionServerThreads remaining, give one more chance before interrupting");
               t.join(10);
             } catch (InterruptedException e) {
-              noWait = true;
+              wasInterrupted = true;
             }
           }
         }
         for (RegionServerThread t : regionservers) {
           if (t.isAlive()) {
+            LOG.warn("RegionServerThreads taking too long to stop, interrupting");
             t.interrupt();
           }
         }
@@ -278,7 +283,7 @@ public class JVMClusterUtil {
 
     if (masters != null) {
       for (JVMClusterUtil.MasterThread t : masters) {
-        while (t.master.isAlive() && !noWait) {
+        while (t.master.isAlive() && !wasInterrupted) {
           try {
             // The below has been replaced to debug sometime hangs on end of
             // tests.
@@ -287,7 +292,7 @@ public class JVMClusterUtil {
           } catch(InterruptedException e) {
             LOG.info("Got InterruptedException on shutdown - " +
                 "not waiting anymore on master ends", e);
-            noWait = true;
+            wasInterrupted = true;
           }
         }
       }
@@ -295,9 +300,9 @@ public class JVMClusterUtil {
     LOG.info("Shutdown of " +
       ((masters != null) ? masters.size() : "0") + " master(s) and " +
       ((regionservers != null) ? regionservers.size() : "0") +
-      " regionserver(s) " + (noWait ? "interrupted" : "complete"));
+      " regionserver(s) " + (wasInterrupted ? "interrupted" : "complete"));
 
-    if (!noWait){
+    if (wasInterrupted){
       Thread.currentThread().interrupt();
     }
   }
