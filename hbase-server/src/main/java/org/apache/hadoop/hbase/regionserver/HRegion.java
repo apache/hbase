@@ -1957,10 +1957,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Perform a batch put with no pre-specified locks
-<<<<<<< HEAD
-=======
    * @see HRegion#batchMutate(Pair[])
->>>>>>> apache/trunk
    */
   public OperationStatus[] put(Put[] puts) throws IOException {
     @SuppressWarnings("unchecked")

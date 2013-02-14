@@ -3770,12 +3770,8 @@ public class HRegionServer implements ClientProtocol,
    *
    * @param region
    * @param mutate
-<<<<<<< HEAD
    * @return result to return to client if default operation should be
    * bypassed as indicated by RegionObserver, null otherwise
-=======
-   * @return the Result
->>>>>>> apache/trunk
    * @throws IOException
    */
   protected Result append(final HRegion region,
