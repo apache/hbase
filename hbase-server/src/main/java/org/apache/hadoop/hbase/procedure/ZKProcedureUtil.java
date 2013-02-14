@@ -99,9 +99,8 @@ public abstract class ZKProcedureUtil
 
   @Override
   public void close() throws IOException {
-    if (watcher != null) {
-      watcher.close();
-    }
+    // the watcher is passed from either Master or Region Server
+    // watcher.close() will be called by the owner so no need to call close() here
   }
 
   public String getAcquiredBarrierNode(String opInstanceName) {
