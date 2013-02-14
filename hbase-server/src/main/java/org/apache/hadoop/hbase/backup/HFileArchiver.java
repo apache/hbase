@@ -255,7 +255,14 @@ public class HFileArchiver {
           + Bytes.toString(family) + ", deleting compacted files instead.");
     }
 
-    fs.rename(storeFile, new Path(storeArchiveDir, storeFile.getName()));
+    // do the actual archive
+    long start = EnvironmentEdgeManager.currentTimeMillis();
+    File file = new FileablePath(fs, storeFile);
+    if (!resolveAndArchiveFile(storeArchiveDir, file, Long.toString(start))) {
+      throw new IOException("Failed to archive/delete the file for region:"
+          + regionInfo.getRegionNameAsString() + ", family:" + Bytes.toString(family)
+          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
+    }
   }
 
   /**
