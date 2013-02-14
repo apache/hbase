@@ -175,12 +175,13 @@ public class TestStoreFile extends HBaseTestCase {
   public void testHFileLink() throws IOException {
     final String columnFamily = "f";
 
-    Configuration testConf = new Configuration(this.conf);
-    FSUtils.setRootDir(testConf, this.testDir);
+    // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/ 
+    Configuration testConf = new Configuration(this.conf); 
+    FSUtils.setRootDir(testConf, this.testDir);  
 
     HRegionInfo hri = new HRegionInfo(Bytes.toBytes("table-link"));
     Path storedir = new Path(new Path(this.testDir,
-      new Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
+        new Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
 
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(testConf, cacheConf,
@@ -197,7 +198,7 @@ public class TestStoreFile extends HBaseTestCase {
                   HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
 
     // Try to open store file from link
-    StoreFile hsf = new StoreFile(this.fs, linkFilePath, conf, cacheConf,
+    StoreFile hsf = new StoreFile(this.fs, linkFilePath, testConf, cacheConf,
         BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     assertTrue(hsf.isLink());
 
