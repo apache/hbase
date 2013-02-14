@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -99,6 +100,8 @@ public class TestFlushSnapshotFromClient {
     conf.setInt("hbase.client.retries.number", 1);
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      ConstantSizeRegionSplitPolicy.class.getName());    
   }
 
   @Before
@@ -384,6 +387,10 @@ public class TestFlushSnapshotFromClient {
     LOG.info("Taken " + takenSize + " snapshots:  " + taken);
     assertTrue("We expect at least 1 request to be rejected because of we concurrently" +
         " issued many requests", takenSize < ssNum && takenSize > 0);
+    // delete snapshots so subsequent tests are clean.  
+    for (SnapshotDescription ss : taken) {
+      admin.deleteSnapshot(ss.getName());
+    }
   }
 
   private void logFSTree(Path root) throws IOException {
