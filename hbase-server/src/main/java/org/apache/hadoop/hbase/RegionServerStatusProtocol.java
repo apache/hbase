@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.KerberosInfo;
@@ -33,7 +32,5 @@ import org.apache.hadoop.hbase.security.KerberosInfo;
 @TokenInfo("HBASE_AUTH_TOKEN")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface RegionServerStatusProtocol extends
-    RegionServerStatusService.BlockingInterface, VersionedProtocol {
-  public static final long VERSION = 1L;
-}
+public interface RegionServerStatusProtocol
+extends RegionServerStatusService.BlockingInterface, IpcProtocol {}

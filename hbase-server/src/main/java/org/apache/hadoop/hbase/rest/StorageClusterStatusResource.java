@@ -23,7 +23,6 @@ import java.io.IOException;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 
 @InterfaceAudience.Private
@@ -62,15 +60,15 @@ public class StorageClusterStatusResource extends ResourceBase {
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-      ClusterStatus status = admin.getClusterStatus();
+      ClusterStatus status = servlet.getAdmin().getClusterStatus();
       StorageClusterStatusModel model = new StorageClusterStatusModel();
       model.setRegions(status.getRegionsCount());
       model.setRequests(status.getRequestsCount());
@@ -103,8 +101,9 @@ public class StorageClusterStatusResource extends ResourceBase {
       return response.build();
     } catch (IOException e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      throw new WebApplicationException(e, 
-                  Response.Status.SERVICE_UNAVAILABLE);
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
+        .build();
     }
   }
 }

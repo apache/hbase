@@ -44,8 +44,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -115,7 +113,7 @@ public class TestSeekOptimizations {
   private List<KeyValue> expectedKVs = new ArrayList<KeyValue>();
 
   private Compression.Algorithm comprAlgo;
-  private StoreFile.BloomType bloomType;
+  private BloomType bloomType;
 
   private long totalSeekDiligent, totalSeekLazy;
   
@@ -128,7 +126,7 @@ public class TestSeekOptimizations {
   }
 
   public TestSeekOptimizations(Compression.Algorithm comprAlgo,
-      StoreFile.BloomType bloomType) {
+      BloomType bloomType) {
     this.comprAlgo = comprAlgo;
     this.bloomType = bloomType;
   }
@@ -421,7 +419,7 @@ public class TestSeekOptimizations {
 
         region.put(put);
         if (!del.isEmpty()) {
-          region.delete(del, null, true);
+          region.delete(del, true);
         }
 
         // Add remaining timestamps (those we have not deleted) to expected

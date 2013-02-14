@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_ZK_SESSION_TIMEOUT;
+import static org.apache.hadoop.hbase.HConstants.ZK_SESSION_TIMEOUT;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -27,8 +30,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Properties;
 import java.util.Map.Entry;
+import java.util.Properties;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -137,7 +140,7 @@ public class HQuorumPeer {
 
     // Set the max session timeout from the provided client-side timeout
     properties.setProperty("maxSessionTimeout",
-        conf.get("zookeeper.session.timeout", "180000"));
+      conf.get(ZK_SESSION_TIMEOUT, Integer.toString(DEFAULT_ZK_SESSION_TIMEOUT)));
 
     if (myId == -1) {
       throw new IOException("Could not find my address: " + myAddress +

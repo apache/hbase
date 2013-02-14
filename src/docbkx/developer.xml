@@ -163,7 +163,7 @@ mvn clean package -DskipTests
       <section xml:id="build.tgz">
         <title>Building the HBase tarball</title>
         <para>Do the following to build the HBase tarball.
-        Passing the -Drelease will generate javadoc and run the RAT plugin to verify licenses on source.
+        Passing the -Prelease will generate javadoc and run the RAT plugin to verify licenses on source.
         <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:assembly -DskipTests -Prelease</programlisting>
 </para>
       </section>
@@ -308,6 +308,19 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
 [INFO] -----------------------------------------------------------------------</programlisting>
         </para>
       </section>
+      <section xml:id="documentation">
+          <title>Generating the HBase Reference Guide</title>
+          <para>The manual is marked up using <link xlink:href="http://www.docbook.org/">docbook</link>.
+              We then use the <link xlink:href="http://code.google.com/p/docbkx-tools/">docbkx maven plugin</link>
+              to transform the markup to html.  This plugin is run when you specify the <command>site</command>
+              goal as in when you run <command>mvn site</command> or you can call the plugin explicitly to
+              just generate the manual by doing <command>mvn docbkx:generate-html</command>
+              (TODO: It looks like you have to run <command>mvn site</command> first because docbkx wants to
+              include a transformed <filename>hbase-default.xml</filename>.  Fix).
+              When you run mvn site, we do the document generation twice, once to generate the multipage
+              manual and then again for the single page manual (the single page version is easier to search).
+          </para>
+      </section>
     <section xml:id="hbase.org">
     <title>Updating hbase.apache.org</title>
       <section xml:id="hbase.org.site.contributing">
@@ -320,12 +333,23 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
       </section>
       <section xml:id="hbase.org.site.publishing">
       <title>Publishing hbase.apache.org</title>
-      <para>If you're a committer with rights to publish the site artifacts: set up your apache credentials and the target site location locally in a place and
-      form that maven can pick it up, in <filename>~/.m2/settings.xml</filename>.  See <xref linked="mvn_repo" /> for an example.
-      Next, run the following:
-      <programlisting>$ mvn -DskipTests -Papache-release site site:deploy</programlisting>
-      You will be asked for your password.  It can take a little time.
-      Remember that it can take a few hours for your site changes to show up.
+      <para>As of <link xlink:href="https://issues.apache.org/jira/browse/INFRA-5680">INFRA-5680 Migrate apache hbase website</link>,
+          to publish the website, build it, and then deploy it over a checkout of <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>,
+          and then check it in.  For example, if trunk is checked out out at <filename>/Users/stack/checkouts/trunk</filename>
+          and hbase.apache.org is checked out at <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
+          the site, do the following:
+          <programlisting>
+              # Build the site and deploy it to the checked out directory
+              # Getting the javadoc into site is a little tricky.  You have to build it independent, then
+              # 'aggregate' it at top-level so the pre-site site lifecycle step can find it; that is
+              # what the javadoc:javadoc and javadoc:aggregate is about.
+              $ MAVEN_OPTS=" -Xmx3g" mvn clean -DskipTests javadoc:javadoc javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
+              # Check the deployed site by viewing in a brower.
+              # If all is good, commit it and it will show up at http://hbase.apache.org
+              #
+              $ cd /Users/stack/checkouts/hbase.apache.org/trunk
+              $ svn commit -m 'Committing latest version of website...'
+          </programlisting>
       </para>
       </section>
     </section>
@@ -477,11 +501,13 @@ error will be reported when a non-existent test case is specified.
 
 <section xml:id="hbase.unittests.cmds.test.profiles">
 <title>Other test invocation permutations</title>
-<para>Running <programlisting>mvn test -P runSmallTests</programlisting> will execute small tests only, in a single JVM.
+<para>Running <programlisting>mvn test -P runSmallTests</programlisting> will execute "small" tests only, using a single JVM.
 </para>
-<para>Running <programlisting>mvn test -P runMediumTests</programlisting> will execute medium tests in a single JVM.
+<para>Running <programlisting>mvn test -P runMediumTests</programlisting> will execute "medium" tests only, launching a new JVM for each test-class.
 </para>
-<para>Running <programlisting>mvn test -P runLargeTests</programlisting> execute medium tests in a single JVM.
+<para>Running <programlisting>mvn test -P runLargeTests</programlisting> will execute "large" tests only, launching a new JVM for each test-class.
+</para>
+<para>For convenience, you can run <programlisting>mvn test -P runDevTests</programlisting> to execute both small and medium tests, using a single JVM.
 </para>
 </section>
 
@@ -1046,6 +1072,12 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
          </section>
           <section xml:id="common.patch.feedback.writable">
             <title>Implementing Writable</title>
+            <note>
+                <title>Applies pre-0.96 only</title>
+                <para>In 0.96, HBase moved to protobufs.  The below section on Writables
+                    applies to 0.94.x and previous, not to 0.96 and beyond.
+                </para>
+            </note>
             <para>Every class returned by RegionServers must implement <code>Writable</code>.  If you
             are creating a new class that needs to implement this interface, don't forget the default constructor.
             </para>
@@ -1053,8 +1085,29 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
           <section xml:id="common.patch.feedback.javadoc">
             <title>Javadoc</title>
             <para>This is also a very common feedback item.  Don't forget Javadoc!
+                <para>Javadoc warnings are checked during precommit. If the precommit tool gives you a '-1',
+                    please fix the javadoc issue. Your patch won't be committed if it adds such warnings.
+                </para>
             </para>
           </section>
+          <section xml:id="common.patch.feedback.findbugs">
+            <title>Findbugs</title>
+                <para>
+                    Findbugs is used to detect common bugs pattern. As Javadoc, it is checked during
+                    the precommit build up on Apache's Jenkins, and as with Javadoc, please fix them.
+                    You can run findbugs locally with 'mvn findbugs:findbugs': it will generate the
+                    findbugs files locally.  Sometimes, you may have to write code smarter than
+                    Findbugs. You can annotate your code to tell Findbugs you know what you're
+                    doing, by annotating your class with:
+                    <programlisting>@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+                    value="HE_EQUALS_USE_HASHCODE",
+                    justification="I know what I'm doing")</programlisting>
+            </para>
+            <para>
+                    Note that we're using the apache licensed version of the annotations.
+            </para>
+          </section>
+
           <section xml:id="common.patch.feedback.javadoc.defaults">
             <title>Javadoc - Useless Defaults</title>
             <para>Don't just leave the @param arguments the way your IDE generated them.  Don't do this...
@@ -1101,6 +1154,18 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
           </para>
           <para>Commiters will also resolve the Jira, typically after the patch passes a build.
           </para>
+          <section xml:id="committer.tests">
+              <title>Committers are responsible for making sure commits do not break the build or tests</title>
+          <para>
+              If a committer commits a patch it is their responsibility
+              to make sure it passes the test suite.  It is helpful
+              if contributors keep an eye out that their patch
+              does not break the hbase build and/or tests but ultimately,
+              a contributor cannot be expected to be up on the
+              particular vagaries and interconnections that occur
+              in a project like hbase.  A committer should.
+            </para>
+        </section>
         </section>
 
        </section>   <!--  submitting patches -->

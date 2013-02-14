@@ -52,6 +52,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -70,12 +71,12 @@ import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -188,7 +189,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     List<Object[]> configurations = new ArrayList<Object[]>();
     for (Compression.Algorithm comprAlgo :
          HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
-      for (StoreFile.BloomType bloomType : StoreFile.BloomType.values()) {
+      for (BloomType bloomType : BloomType.values()) {
         configurations.add(new Object[] { comprAlgo, bloomType });
       }
     }
@@ -266,6 +267,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       "mapred.local.dir",
       testPath, "mapred-local-dir");
 
+    createSubDir(
+      "hbase.local.dir",
+      testPath, "hbase-local-dir");
     return testPath;
   }
 
@@ -383,7 +387,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     //file system, the tests should use getBaseTestDir, otherwise, we can use
     //the working directory, and create a unique sub dir there
     FileSystem fs = getTestFileSystem();
-    if (fs.getUri().getScheme().equals(fs.getLocal(conf).getUri().getScheme())) {
+    if (fs.getUri().getScheme().equals(FileSystem.getLocal(conf).getUri().getScheme())) {
       File dataTestDir = new File(getDataTestDir().toString());
       dataTestDirOnTestFS = new Path(dataTestDir.getAbsolutePath());
     } else {
@@ -677,7 +681,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return startMiniCluster(numMasters, numSlaves, null);
   }
 
-
   /**
    * Start up a minicluster of hbase, optionally dfs, and zookeeper.
    * Modifies Configuration.  Homes the cluster data directory under a random
@@ -703,7 +706,41 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return Mini hbase cluster instance created.
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
-    final int numSlaves, final String[] dataNodeHosts)
+      final int numSlaves, final String[] dataNodeHosts) throws Exception {
+    return startMiniCluster(numMasters, numSlaves, dataNodeHosts, null, null);
+  }
+
+  /**
+   * Start up a minicluster of hbase, optionally dfs, and zookeeper.
+   * Modifies Configuration.  Homes the cluster data directory under a random
+   * subdirectory in a directory under System property test.build.data.
+   * Directory is cleaned up on exit.
+   * @param numMasters Number of masters to start up.  We'll start this many
+   * hbase masters.  If numMasters > 1, you can find the active/primary master
+   * with {@link MiniHBaseCluster#getMaster()}.
+   * @param numSlaves Number of slaves to start up.  We'll start this many
+   * regionservers. If dataNodeHosts == null, this also indicates the number of
+   * datanodes to start. If dataNodeHosts != null, the number of datanodes is
+   * based on dataNodeHosts.length.
+   * If numSlaves is > 1, then make sure
+   * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
+   * bind errors.
+   * @param dataNodeHosts hostnames DNs to run on.
+   * This is useful if you want to run datanode on distinct hosts for things
+   * like HDFS block location verification.
+   * If you start MiniDFSCluster without host names,
+   * all instances of the datanodes will have the same host name.
+   * @param masterClass The class to use as HMaster, or null for default
+   * @param regionserverClass The class to use as HRegionServer, or null for
+   * default
+   * @throws Exception
+   * @see {@link #shutdownMiniCluster()}
+   * @return Mini hbase cluster instance created.
+   */
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+    final int numSlaves, final String[] dataNodeHosts,
+    Class<? extends HMaster> masterClass,
+    Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
   throws Exception {
     int numDataNodes = numSlaves;
     if ( dataNodeHosts != null && dataNodeHosts.length != 0) {
@@ -732,7 +769,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
 
     // Start the MiniHBaseCluster
-    return startMiniHBaseCluster(numMasters, numSlaves);
+    return startMiniHBaseCluster(numMasters, numSlaves, masterClass, regionserverClass);
   }
 
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters, final int numSlaves)
@@ -1269,6 +1306,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"),
     Bytes.toBytes("uuu"), Bytes.toBytes("vvv"), Bytes.toBytes("www"),
     Bytes.toBytes("xxx"), Bytes.toBytes("yyy")
+  };
+
+  public static final byte[][] KEYS_FOR_HBA_CREATE_TABLE = {
+      Bytes.toBytes("bbb"),
+      Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
+      Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
+      Bytes.toBytes("iii"), Bytes.toBytes("jjj"), Bytes.toBytes("kkk"),
+      Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
+      Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
+      Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"),
+      Bytes.toBytes("uuu"), Bytes.toBytes("vvv"), Bytes.toBytes("www"),
+      Bytes.toBytes("xxx"), Bytes.toBytes("yyy"), Bytes.toBytes("zzz")
   };
 
   /**
@@ -1873,17 +1922,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     throws IOException {
     boolean startedServer = ensureSomeRegionServersAvailable(num);
 
+    int nonStoppedServers = 0;
     for (JVMClusterUtil.RegionServerThread rst :
       getMiniHBaseCluster().getRegionServerThreads()) {
 
       HRegionServer hrs = rst.getRegionServer();
       if (hrs.isStopping() || hrs.isStopped()) {
         LOG.info("A region server is stopped or stopping:"+hrs);
-        LOG.info("Started new server=" + getMiniHBaseCluster().startRegionServer());
-        startedServer = true;
+      } else {
+        nonStoppedServers++;
       }
     }
-
+    for (int i=nonStoppedServers; i<num; ++i) {
+      LOG.info("Started new server=" + getMiniHBaseCluster().startRegionServer());
+      startedServer = true;
+    }
     return startedServer;
   }
 
@@ -2343,5 +2396,29 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public void setFileSystemURI(String fsURI) {
     FS_URI = fsURI;
+  }
+  
+  /**
+   * Wrapper method for {@link Waiter#waitFor(Configuration, long, Predicate)}.
+   */
+  public <E extends Exception> long waitFor(long timeout, Predicate<E> predicate)
+      throws E {
+    return Waiter.waitFor(this.conf, timeout, predicate);
+  }
+
+  /**
+   * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, Predicate)}.
+   */
+  public <E extends Exception> long waitFor(long timeout, long interval, Predicate<E> predicate)
+      throws E {
+    return Waiter.waitFor(this.conf, timeout, interval, predicate);
+  }
+
+  /**
+   * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate)}.
+   */
+  public <E extends Exception> long waitFor(long timeout, long interval,
+      boolean failIfTimeout, Predicate<E> predicate) throws E {
+    return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
   }
 }

@@ -179,13 +179,13 @@ public class TestFilter {
       Delete d = new Delete(ROW);
       d.deleteColumns(FAMILIES[0], QUALIFIERS_ONE[1]);
       d.deleteColumns(FAMILIES[1], QUALIFIERS_ONE[1]);
-      this.region.delete(d, null, false);
+      this.region.delete(d, false);
     }
     for(byte [] ROW : ROWS_TWO) {
       Delete d = new Delete(ROW);
       d.deleteColumns(FAMILIES[0], QUALIFIERS_TWO[1]);
       d.deleteColumns(FAMILIES[1], QUALIFIERS_TWO[1]);
-      this.region.delete(d, null, false);
+      this.region.delete(d, false);
     }
     colsPerRow -= 2;
 
@@ -194,13 +194,13 @@ public class TestFilter {
       Delete d = new Delete(ROWS_ONE[1]);
       d.deleteColumns(FAMILIES[0], QUALIFIER);
       d.deleteColumns(FAMILIES[1], QUALIFIER);
-      this.region.delete(d, null, false);
+      this.region.delete(d, false);
     }
     for(byte [] QUALIFIER : QUALIFIERS_TWO) {
       Delete d = new Delete(ROWS_TWO[1]);
       d.deleteColumns(FAMILIES[0], QUALIFIER);
       d.deleteColumns(FAMILIES[1], QUALIFIER);
-      this.region.delete(d, null, false);
+      this.region.delete(d, false);
     }
     numRows -= 2;
   }

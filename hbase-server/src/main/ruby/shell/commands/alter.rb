@@ -62,6 +62,11 @@ the framework to understand how to load the coprocessor classes:
 
   [coprocessor jar file location] | class name | [priority] | [arguments]
 
+You can also set configuration settings specific to this table or column family:
+
+  hbase> alter 't1', CONFIGURATION => {'hbase.hregion.scan.loadColumnFamiliesOnDemand' => 'true'}
+  hbase> alter 't1', {NAME => 'f2', CONFIGURATION => {'hbase.hstore.blockingStoreFiles' => '10'}}
+
 You can also remove a table-scope attribute:
 
   hbase> alter 't1', METHOD => 'table_att_unset', NAME => 'MAX_FILESIZE'
@@ -72,7 +77,7 @@ There could be more than one alteration in one command:
 
   hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 }, 
    { MAX_FILESIZE => '134217728' }, { METHOD => 'delete', NAME => 'f2' },
-   OWNER => 'johndoe', CONFIG => { 'mykey' => 'myvalue' }
+   OWNER => 'johndoe', METADATA => { 'mykey' => 'myvalue' }
 EOF
       end
 

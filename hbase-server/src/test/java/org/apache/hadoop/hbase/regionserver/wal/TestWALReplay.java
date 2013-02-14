@@ -380,7 +380,7 @@ public class TestWALReplay {
     }
     // Now assert edits made it in.
     final Get g = new Get(rowName);
-    Result result = region.get(g, null);
+    Result result = region.get(g);
     assertEquals(countPerFamily * htd.getFamilies().size(),
       result.size());
     // Now close the region (without flush), split the log, reopen the region and assert that
@@ -395,7 +395,7 @@ public class TestWALReplay {
     // HRegionServer usually does this. It knows the largest seqid across all regions.
     wal2.setSequenceNumber(seqid2);
     assertTrue(seqid + result.size() < seqid2);
-    final Result result1b = region2.get(g, null);
+    final Result result1b = region2.get(g);
     assertEquals(result.size(), result1b.size());
 
     // Next test.  Add more edits, then 'crash' this region by stealing its wal
@@ -405,7 +405,7 @@ public class TestWALReplay {
       addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region2, "y");
     }
     // Get count of edits.
-    final Result result2 = region2.get(g, null);
+    final Result result2 = region2.get(g);
     assertEquals(2 * result.size(), result2.size());
     wal2.sync();
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
@@ -432,7 +432,7 @@ public class TestWALReplay {
         long seqid3 = region3.initialize();
         // HRegionServer usually does this. It knows the largest seqid across all regions.
         wal3.setSequenceNumber(seqid3);
-        Result result3 = region3.get(g, null);
+        Result result3 = region3.get(g);
         // Assert that count of cells is same as before crash.
         assertEquals(result2.size(), result3.size());
         assertEquals(htd.getFamilies().size() * countPerFamily,
@@ -492,7 +492,7 @@ public class TestWALReplay {
 
     // Now assert edits made it in.
     final Get g = new Get(rowName);
-    Result result = region.get(g, null);
+    Result result = region.get(g);
     assertEquals(countPerFamily * htd.getFamilies().size(),
       result.size());
 
@@ -524,7 +524,7 @@ public class TestWALReplay {
     wal2.setSequenceNumber(seqid2);
     assertTrue(seqid + result.size() < seqid2);
 
-    final Result result1b = region2.get(g, null);
+    final Result result1b = region2.get(g);
     assertEquals(result.size(), result1b.size());
   }
 
@@ -557,8 +557,8 @@ public class TestWALReplay {
     }
 
     // Add a cache flush, shouldn't have any effect
-    long logSeqId = wal.startCacheFlush(regionName);
-    wal.completeCacheFlush(regionName, tableName, logSeqId, hri.isMetaRegion());
+    wal.startCacheFlush(regionName);
+    wal.completeCacheFlush(regionName);
 
     // Add an edit to another family, should be skipped.
     WALEdit edit = new WALEdit();
@@ -612,7 +612,7 @@ public class TestWALReplay {
           assertTrue(seqid > wal.getSequenceNumber());
 
           Get get = new Get(rowName);
-          Result result = region.get(get, -1);
+          Result result = region.get(get);
           // Make sure we only see the good edits
           assertEquals(countPerFamily * (htd.getFamilies().size() - 1),
             result.size());
@@ -661,7 +661,7 @@ public class TestWALReplay {
     wal.doCompleteCacheFlush = true;
     // allow complete cache flush with the previous seq number got after first
     // set of edits.
-    wal.completeCacheFlush(hri.getEncodedNameAsBytes(), hri.getTableName(), sequenceNumber, false);
+    wal.completeCacheFlush(hri.getEncodedNameAsBytes());
     wal.close();
     FileStatus[] listStatus = this.fs.listStatus(wal.getDir());
     HLogSplitter.splitLogFile(hbaseRootDir, listStatus[0], this.fs, this.conf,
@@ -686,12 +686,11 @@ public class TestWALReplay {
     }
 
     @Override
-    public void completeCacheFlush(byte[] encodedRegionName, byte[] tableName, long logSeqId,
-        boolean isMetaRegion) throws IOException {
+    public void completeCacheFlush(byte[] encodedRegionName) {
       if (!doCompleteCacheFlush) {
         return;
       }
-      super.completeCacheFlush(encodedRegionName, tableName, logSeqId, isMetaRegion);
+      super.completeCacheFlush(encodedRegionName);
     }
   }
 

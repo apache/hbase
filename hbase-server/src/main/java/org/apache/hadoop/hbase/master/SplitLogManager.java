@@ -26,6 +26,7 @@ import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.S
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +41,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskFinisher.Status;
@@ -123,6 +125,8 @@ public class SplitLogManager extends ZooKeeperListener {
   private volatile Set<ServerName> deadWorkers = null;
   private final Object deadWorkersLock = new Object();
 
+  private Set<String> failedDeletions = null;
+
   /**
    * Wrapper around {@link #SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
    *   Stoppable stopper, MasterServices master, ServerName serverName, TaskFinisher tf)}
@@ -180,6 +184,8 @@ public class SplitLogManager extends ZooKeeperListener {
     this.serverName = serverName;
     this.timeoutMonitor =
       new TimeoutMonitor(conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000), stopper);
+
+    this.failedDeletions = Collections.synchronizedSet(new HashSet<String>());
   }
 
   public void finishInitialization(boolean masterRecovery) {
@@ -194,7 +200,7 @@ public class SplitLogManager extends ZooKeeperListener {
     }
   }
 
-  private FileStatus[] getFileList(List<Path> logDirs) throws IOException {
+  private FileStatus[] getFileList(List<Path> logDirs, PathFilter filter) throws IOException {
     List<FileStatus> fileStatus = new ArrayList<FileStatus>();
     for (Path hLogDir : logDirs) {
       this.fs = hLogDir.getFileSystem(conf);
@@ -202,8 +208,7 @@ public class SplitLogManager extends ZooKeeperListener {
         LOG.warn(hLogDir + " doesn't exist. Nothing to do!");
         continue;
       }
-      // TODO filter filenames?
-      FileStatus[] logfiles = FSUtils.listStatus(fs, hLogDir, null);
+      FileStatus[] logfiles = FSUtils.listStatus(fs, hLogDir, filter);
       if (logfiles == null || logfiles.length == 0) {
         LOG.info(hLogDir + " is empty dir, no logs to split");
       } else {
@@ -228,6 +233,7 @@ public class SplitLogManager extends ZooKeeperListener {
     logDirs.add(logDir);
     return splitLogDistributed(logDirs);
   }
+
   /**
    * The caller will block until all the log files of the given region server
    * have been processed - successfully split or an error is encountered - by an
@@ -239,9 +245,25 @@ public class SplitLogManager extends ZooKeeperListener {
    * @return cumulative size of the logfiles split
    */
   public long splitLogDistributed(final List<Path> logDirs) throws IOException {
+    return splitLogDistributed(logDirs, null);
+  }
+
+  /**
+   * The caller will block until all the META log files of the given region server
+   * have been processed - successfully split or an error is encountered - by an
+   * available worker region server. This method must only be called after the
+   * region servers have been brought online.
+   *
+   * @param logDirs List of log dirs to split
+   * @param filter the Path filter to select specific files for considering
+   * @throws IOException If there was an error while splitting any log file
+   * @return cumulative size of the logfiles split
+   */
+  public long splitLogDistributed(final List<Path> logDirs, PathFilter filter) 
+      throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus(
           "Doing distributed log split in " + logDirs);
-    FileStatus[] logfiles = getFileList(logDirs);
+    FileStatus[] logfiles = getFileList(logDirs, filter);
     status.setStatus("Checking directory contents...");
     LOG.debug("Scheduling batch of logs to split");
     SplitLogCounters.tot_mgr_log_split_batch_start.incrementAndGet();
@@ -418,11 +440,12 @@ public class SplitLogManager extends ZooKeeperListener {
         }
       }
     }
-    // delete the task node in zk. Keep trying indefinitely - its an async
+    // delete the task node in zk. It's an async
     // call and no one is blocked waiting for this node to be deleted. All
     // task names are unique (log.<timestamp>) there is no risk of deleting
     // a future task.
-    deleteNode(path, Long.MAX_VALUE);
+    // if a deletion fails, TimeoutMonitor will retry the same deletion later
+    deleteNode(path, zkretries);
     return;
   }
 
@@ -529,6 +552,21 @@ public class SplitLogManager extends ZooKeeperListener {
       // albeit in a more crude fashion
       resubmit(path, task, FORCE);
     }
+  }
+
+  /**
+   * Helper function to check whether to abandon retries in ZooKeeper AsyncCallback functions
+   * @param statusCode integer value of a ZooKeeper exception code
+   * @param action description message about the retried action
+   * @return true when need to abandon retries otherwise false
+   */
+  private boolean needAbandonRetries(int statusCode, String action) {
+    if (statusCode == KeeperException.Code.SESSIONEXPIRED.intValue()) {
+      LOG.error("ZK session expired. Master is expected to shut down. Abandoning retries for "
+          + "action=" + action);
+      return true;
+    }
+    return false;
   }
 
   private void heartbeat(String path, int new_version, ServerName workerName) {
@@ -662,8 +700,7 @@ public class SplitLogManager extends ZooKeeperListener {
   }
 
   private void deleteNodeFailure(String path) {
-    LOG.fatal("logic failure, failing to delete a node should never happen " +
-        "because delete has infinite retries");
+    LOG.info("Failed to delete node " + path + " and will retry soon.");
     return;
   }
 
@@ -847,7 +884,7 @@ public class SplitLogManager extends ZooKeeperListener {
     volatile long last_update;
     volatile int last_version;
     volatile ServerName cur_worker_name;
-    TaskBatch batch;
+    volatile TaskBatch batch;
     volatile TerminationStatus status;
     volatile int incarnation;
     volatile int unforcedResubmits;
@@ -1005,6 +1042,16 @@ public class SplitLogManager extends ZooKeeperListener {
         SplitLogCounters.tot_mgr_resubmit_unassigned.incrementAndGet();
         LOG.debug("resubmitting unassigned task(s) after timeout");
       }
+
+      // Retry previously failed deletes
+      if (failedDeletions.size() > 0) {
+        List<String> tmpPaths = new ArrayList<String>(failedDeletions);
+        for (String tmpPath : tmpPaths) {
+          // deleteNode is an async call
+          deleteNode(tmpPath, zkretries);
+        }
+        failedDeletions.removeAll(tmpPaths);
+      }
     }
   }
 
@@ -1019,6 +1066,10 @@ public class SplitLogManager extends ZooKeeperListener {
     public void processResult(int rc, String path, Object ctx, String name) {
       SplitLogCounters.tot_mgr_node_create_result.incrementAndGet();
       if (rc != 0) {
+        if (needAbandonRetries(rc, "Create znode " + path)) {
+          createNodeFailure(path);
+          return;
+        }
         if (rc == KeeperException.Code.NODEEXISTS.intValue()) {
           // What if there is a delete pending against this pre-existing
           // znode? Then this soon-to-be-deleted task znode must be in TASK_DONE
@@ -1058,8 +1109,7 @@ public class SplitLogManager extends ZooKeeperListener {
         Stat stat) {
       SplitLogCounters.tot_mgr_get_data_result.incrementAndGet();
       if (rc != 0) {
-        if (rc == KeeperException.Code.SESSIONEXPIRED.intValue()) {
-          LOG.error("ZK session expired. Master is expected to shut down. Abandoning retries.");
+        if (needAbandonRetries(rc, "GetData from znode " + path)) {
           return;
         }
         if (rc == KeeperException.Code.NONODE.intValue()) {
@@ -1113,6 +1163,10 @@ public class SplitLogManager extends ZooKeeperListener {
     public void processResult(int rc, String path, Object ctx) {
       SplitLogCounters.tot_mgr_node_delete_result.incrementAndGet();
       if (rc != 0) {
+        if (needAbandonRetries(rc, "Delete znode " + path)) {
+          failedDeletions.add(path);
+          return;
+        }
         if (rc != KeeperException.Code.NONODE.intValue()) {
           SplitLogCounters.tot_mgr_node_delete_err.incrementAndGet();
           Long retry_count = (Long) ctx;
@@ -1120,13 +1174,14 @@ public class SplitLogManager extends ZooKeeperListener {
               path + " remaining retries=" + retry_count);
           if (retry_count == 0) {
             LOG.warn("delete failed " + path);
+            failedDeletions.add(path);
             deleteNodeFailure(path);
           } else {
             deleteNode(path, retry_count - 1);
           }
           return;
         } else {
-        LOG.debug(path +
+          LOG.info(path +
             " does not exist. Either was created but deleted behind our" +
             " back by another pending delete OR was deleted" +
             " in earlier retry rounds. zkretries = " + (Long) ctx);
@@ -1151,8 +1206,7 @@ public class SplitLogManager extends ZooKeeperListener {
     @Override
     public void processResult(int rc, String path, Object ctx, String name) {
       if (rc != 0) {
-        if (rc == KeeperException.Code.SESSIONEXPIRED.intValue()) {
-          LOG.error("ZK session expired. Master is expected to shut down. Abandoning retries.");
+        if (needAbandonRetries(rc, "CreateRescan znode " + path)) {
           return;
         }
         Long retry_count = (Long)ctx;

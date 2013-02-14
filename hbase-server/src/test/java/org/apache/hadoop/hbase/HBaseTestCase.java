@@ -332,7 +332,7 @@ public abstract class HBaseTestCase extends TestCase {
           try {
             Put put;
             if(ts != -1) {
-              put = new Put(t, ts, null);
+              put = new Put(t, ts);
             } else {
               put = new Put(t);
             }
@@ -403,11 +403,10 @@ public abstract class HBaseTestCase extends TestCase {
     /**
      *
      * @param delete
-     * @param lockid
      * @param writeToWAL
      * @throws IOException
      */
-    public void delete(Delete delete,  Integer lockid, boolean writeToWAL)
+    public void delete(Delete delete,  boolean writeToWAL)
     throws IOException;
 
     /**
@@ -448,13 +447,13 @@ public abstract class HBaseTestCase extends TestCase {
       region.put(put);
     }
 
-    public void delete(Delete delete,  Integer lockid, boolean writeToWAL)
+    public void delete(Delete delete,  boolean writeToWAL)
     throws IOException {
-      this.region.delete(delete, lockid, writeToWAL);
+      this.region.delete(delete, writeToWAL);
     }
 
     public Result get(Get get) throws IOException {
-      return region.get(get, null);
+      return region.get(get);
     }
 
     public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
@@ -472,11 +471,6 @@ public abstract class HBaseTestCase extends TestCase {
         return new
           InternalScannerIncommon(region.getScanner(scan));
       }
-
-    public Result get(Get get, Integer lockid) throws IOException{
-      return this.region.get(get, lockid);
-    }
-
 
     public void flushcache() throws IOException {
       this.region.flushcache();
@@ -502,7 +496,7 @@ public abstract class HBaseTestCase extends TestCase {
     }
 
 
-    public void delete(Delete delete,  Integer lockid, boolean writeToWAL)
+    public void delete(Delete delete, boolean writeToWAL)
     throws IOException {
       this.table.delete(delete);
     }
@@ -610,7 +604,7 @@ public abstract class HBaseTestCase extends TestCase {
     throws IOException {
       Get get = new Get(row);
       get.setTimeStamp(timestamp);
-      Result res = region.get(get, null);
+      Result res = region.get(get);
       NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map =
         res.getMap();
       byte [] res_value = map.get(family).get(qualifier).get(timestamp);

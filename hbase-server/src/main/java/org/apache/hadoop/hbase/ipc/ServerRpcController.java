@@ -121,4 +121,13 @@ public class ServerRpcController implements RpcController {
   public boolean failedOnException() {
     return serviceException != null;
   }
+
+  /**
+   * Throws an IOException back out if one is currently stored.
+   */
+  public void checkFailed() throws IOException {
+    if (failedOnException()) {
+      throw getFailedOn();
+    }
+  }
 }

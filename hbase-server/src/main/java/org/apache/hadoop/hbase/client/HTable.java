@@ -21,16 +21,15 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -53,20 +52,17 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -245,7 +241,6 @@ public class HTable implements HTableInterface {
 
   /**
    * setup this HTable's parameter based on the passed configuration
-   * @param conf
    */
   private void finishSetup() throws IOException {
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
@@ -347,11 +342,10 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * Finds the region on which the given row is being served.
+   * Finds the region on which the given row is being served. Does not reload the cache.
    * @param row Row to find.
    * @return Location of the row.
    * @throws IOException if a remote or network exception occurs
-   * @deprecated use {@link #getRegionLocation(byte [], boolean)} instead
    */
   public HRegionLocation getRegionLocation(final byte [] row)
   throws IOException {
@@ -361,8 +355,7 @@ public class HTable implements HTableInterface {
   /**
    * Finds the region on which the given row is being served.
    * @param row Row to find.
-   * @param reload whether or not to reload information or just use cached
-   * information
+   * @param reload true to reload information or false to use cached information
    * @return Location of the row.
    * @throws IOException if a remote or network exception occurs
    */
@@ -882,6 +875,147 @@ public class HTable implements HTableInterface {
   }
 
   /**
+   * Goal of this inner class is to keep track of the initial position of a get in a list before
+   * sorting it. This is used to send back results in the same orders we got the Gets before we sort
+   * them.
+   */
+  private static class SortedGet implements Comparable<SortedGet> {
+    protected int initialIndex = -1; // Used to store the get initial index in a list.
+    protected Get get; // Encapsulated Get instance.
+
+    public SortedGet (Get get, int initialIndex) {
+      this.get = get;
+      this.initialIndex = initialIndex;
+    }
+
+    public int getInitialIndex() {
+      return initialIndex;
+    }
+
+    @Override
+    public int compareTo(SortedGet o) {
+      return get.compareTo(o.get);
+    }
+
+    public Get getGet() {
+      return get;
+    }
+
+    @Override
+    public int hashCode() {
+      return get.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (obj instanceof SortedGet)
+        return get.equals(((SortedGet)obj).get);
+      else
+        return false;
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public Boolean[] exists(final List<Get> gets) throws IOException {
+    // Prepare the sorted list of gets. Take the list of gets received, and encapsulate them into
+    // a list of SortedGet instances. Simple list parsing, so complexity here is O(n)
+    // The list is later used to recreate the response order based on the order the Gets
+    // got received.
+    ArrayList<SortedGet> sortedGetsList = new ArrayList<HTable.SortedGet>();
+    for (int indexGet = 0; indexGet < gets.size(); indexGet++) {
+      sortedGetsList.add(new SortedGet (gets.get(indexGet), indexGet));
+    }
+
+    // Sorting the list to get the Gets ordered based on the key.
+    Collections.sort(sortedGetsList); // O(n log n)
+
+    // step 1: sort the requests by regions to send them bundled.
+    // Map key is startKey index. Map value is the list of Gets related to the region starting
+    // with the startKey.
+    Map<Integer, List<Get>> getsByRegion = new HashMap<Integer, List<Get>>();
+
+    // Reference map to quickly find back in which region a get belongs.
+    Map<Get, Integer> getToRegionIndexMap = new HashMap<Get, Integer>();
+    Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys();
+
+    int regionIndex = 0;
+    for (final SortedGet get : sortedGetsList) {
+      // Progress on the regions until we find the one the current get resides in.
+      while ((regionIndex < startEndKeys.getSecond().length) && ((Bytes.compareTo(startEndKeys.getSecond()[regionIndex], get.getGet().getRow()) <= 0))) {
+        regionIndex++;
+      }
+      List<Get> regionGets = getsByRegion.get(regionIndex);
+      if (regionGets == null) {
+        regionGets = new ArrayList<Get>();
+        getsByRegion.put(regionIndex, regionGets);
+      }
+      regionGets.add(get.getGet());
+      getToRegionIndexMap.put(get.getGet(), regionIndex);
+    }
+
+    // step 2: make the requests
+    Map<Integer, Future<List<Boolean>>> futures =
+        new HashMap<Integer, Future<List<Boolean>>>(sortedGetsList.size());
+    for (final Map.Entry<Integer, List<Get>> getsByRegionEntry : getsByRegion.entrySet()) {
+      Callable<List<Boolean>> callable = new Callable<List<Boolean>>() {
+        public List<Boolean> call() throws Exception {
+          return new ServerCallable<List<Boolean>>(connection, tableName, getsByRegionEntry.getValue()
+              .get(0).getRow(), operationTimeout) {
+            public List<Boolean> call() throws IOException {
+              try {
+                MultiGetRequest requests = RequestConverter.buildMultiGetRequest(location
+                    .getRegionInfo().getRegionName(), getsByRegionEntry.getValue(), true, false);
+                MultiGetResponse responses = server.multiGet(null, requests);
+                return responses.getExistsList();
+              } catch (ServiceException se) {
+                throw ProtobufUtil.getRemoteException(se);
+              }
+            }
+          }.withRetries();
+        }
+      };
+      futures.put(getsByRegionEntry.getKey(), pool.submit(callable));
+    }
+
+    // step 3: collect the failures and successes
+    Map<Integer, List<Boolean>> responses = new HashMap<Integer, List<Boolean>>();
+    for (final Map.Entry<Integer, List<Get>> sortedGetEntry : getsByRegion.entrySet()) {
+      try {
+        Future<List<Boolean>> future = futures.get(sortedGetEntry.getKey());
+        List<Boolean> resp = future.get();
+
+        if (resp == null) {
+          LOG.warn("Failed for gets on region: " + sortedGetEntry.getKey());
+        }
+        responses.put(sortedGetEntry.getKey(), resp);
+      } catch (ExecutionException e) {
+        LOG.warn("Failed for gets on region: " + sortedGetEntry.getKey());
+      } catch (InterruptedException e) {
+        LOG.warn("Failed for gets on region: " + sortedGetEntry.getKey());
+        Thread.currentThread().interrupt();
+      }
+    }
+    Boolean[] results = new Boolean[sortedGetsList.size()];
+
+    // step 4: build the response.
+    Map<Integer, Integer> indexes = new HashMap<Integer, Integer>();
+    for (int i = 0; i < sortedGetsList.size(); i++) {
+      Integer regionInfoIndex = getToRegionIndexMap.get(sortedGetsList.get(i).getGet());
+      Integer index = indexes.get(regionInfoIndex);
+      if (index == null) {
+        index = 0;
+      }
+      results[sortedGetsList.get(i).getInitialIndex()] = responses.get(regionInfoIndex).get(index);
+      indexes.put(regionInfoIndex, index + 1);
+    }
+
+    return results;
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
@@ -960,7 +1094,7 @@ public class HTable implements HTableInterface {
   }
 
   // validate for well-formedness
-  private void validatePut(final Put put) throws IllegalArgumentException{
+  public void validatePut(final Put put) throws IllegalArgumentException{
     if (put.isEmpty()) {
       throw new IllegalArgumentException("No columns to insert");
     }
@@ -973,46 +1107,6 @@ public class HTable implements HTableInterface {
         }
       }
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public RowLock lockRow(final byte [] row)
-  throws IOException {
-    return new ServerCallable<RowLock>(connection, tableName, row, operationTimeout) {
-        public RowLock call() throws IOException {
-          try {
-            LockRowRequest request = RequestConverter.buildLockRowRequest(
-              location.getRegionInfo().getRegionName(), row);
-            LockRowResponse response = server.lockRow(null, request);
-            return new RowLock(row, response.getLockId());
-          } catch (ServiceException se) {
-            throw ProtobufUtil.getRemoteException(se);
-          }
-        }
-      }.withRetries();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void unlockRow(final RowLock rl)
-  throws IOException {
-    new ServerCallable<Boolean>(connection, tableName, rl.getRow(), operationTimeout) {
-        public Boolean call() throws IOException {
-          try {
-            UnlockRowRequest request = RequestConverter.buildUnlockRowRequest(
-              location.getRegionInfo().getRegionName(), rl.getLockId());
-            server.unlockRow(null, request);
-            return Boolean.TRUE;
-          } catch (ServiceException se) {
-            throw ProtobufUtil.getRemoteException(se);
-          }
-        }
-      }.withRetries();
   }
 
   /**
@@ -1195,61 +1289,8 @@ public class HTable implements HTableInterface {
   /**
    * {@inheritDoc}
    */
-  @Override
-  @Deprecated
-  public <T extends CoprocessorProtocol> T coprocessorProxy(
-      Class<T> protocol, byte[] row) {
-    return (T)Proxy.newProxyInstance(this.getClass().getClassLoader(),
-        new Class[]{protocol},
-        new ExecRPCInvoker(configuration,
-            connection,
-            protocol,
-            tableName,
-            row));
-  }
-
-  /**
-   * {@inheritDoc}
-   */
   public CoprocessorRpcChannel coprocessorService(byte[] row) {
     return new RegionCoprocessorRpcChannel(connection, tableName, row);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  @Deprecated
-  public <T extends CoprocessorProtocol, R> Map<byte[],R> coprocessorExec(
-      Class<T> protocol, byte[] startKey, byte[] endKey,
-      Batch.Call<T,R> callable)
-      throws IOException, Throwable {
-
-    final Map<byte[],R> results =  Collections.synchronizedMap(new TreeMap<byte[],R>(
-        Bytes.BYTES_COMPARATOR));
-    coprocessorExec(protocol, startKey, endKey, callable,
-        new Batch.Callback<R>(){
-      public void update(byte[] region, byte[] row, R value) {
-        results.put(region, value);
-      }
-    });
-    return results;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  @Deprecated
-  public <T extends CoprocessorProtocol, R> void coprocessorExec(
-      Class<T> protocol, byte[] startKey, byte[] endKey,
-      Batch.Call<T,R> callable, Batch.Callback<R> callback)
-      throws IOException, Throwable {
-
-    // get regions covered by the row range
-    List<byte[]> keys = getStartKeysInRange(startKey, endKey);
-    connection.processExecs(protocol, keys, tableName, pool, callable,
-        callback);
   }
 
   /**
@@ -1259,17 +1300,11 @@ public class HTable implements HTableInterface {
   public <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
       byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable)
       throws ServiceException, Throwable {
-    final Map<byte[],R> results =  new ConcurrentSkipListMap<byte[], R>(Bytes.BYTES_COMPARATOR);
+    final Map<byte[],R> results =  Collections.synchronizedMap(
+        new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
       public void update(byte[] region, byte[] row, R value) {
-        if (value == null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Call to " + service.getName() +
-                " received NULL value from Batch.Call for region " + Bytes.toStringBinary(region));
-          }
-        } else {
-          results.put(region, value);
-        }
+        results.put(region, value);
       }
     });
     return results;

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.google.common.collect.LinkedHashMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -84,6 +82,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
+
+import com.google.common.collect.LinkedHashMultimap;
 
 /**
  * Manages and performs region assignment.
@@ -162,8 +162,10 @@ public class AssignmentManager extends ZooKeeperListener {
    * that ServerShutdownHandler can be fully enabled and re-assign regions
    * of dead servers. So that when re-assignment happens, AssignmentManager
    * has proper region states.
+   *
+   * Protected to ease testing.
    */
-  final AtomicBoolean failoverCleanupDone = new AtomicBoolean(false);
+  protected final AtomicBoolean failoverCleanupDone = new AtomicBoolean(false);
 
   /**
    * Constructs a new assignment manager.
@@ -610,7 +612,7 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private void handleRegion(final RegionTransition rt, int expectedVersion) {
     if (rt == null) {
-      LOG.warn("Unexpected NULL input " + rt);
+      LOG.warn("Unexpected NULL input for RegionTransition rt");
       return;
     }
     final ServerName sn = rt.getServerName();
@@ -1059,13 +1061,27 @@ public class AssignmentManager extends ZooKeeperListener {
               ZKUtil.listChildrenAndWatchForNewChildren(
                 watcher, watcher.assignmentZNode);
             if (children != null) {
+              Stat stat = new Stat();
               for (String child : children) {
                 // if region is in transition, we already have a watch
                 // on it, so no need to watch it again. So, as I know for now,
                 // this is needed to watch splitting nodes only.
                 if (!regionStates.isRegionInTransition(child)) {
-                  ZKUtil.watchAndCheckExists(watcher,
-                    ZKUtil.joinZNode(watcher.assignmentZNode, child));
+                  stat.setVersion(0);
+                  byte[] data = ZKAssign.getDataAndWatch(watcher,
+                    ZKUtil.joinZNode(watcher.assignmentZNode, child), stat);
+                  if (data != null && stat.getVersion() > 0) {
+                    try {
+                      RegionTransition rt = RegionTransition.parseFrom(data);
+
+                      //See HBASE-7551, handle splitting too, in case we miss the node change event
+                      if (rt.getEventType() == EventType.RS_ZK_REGION_SPLITTING) {
+                        handleRegion(rt, stat.getVersion());
+                      }
+                    } catch (DeserializationException de) {
+                      LOG.error("error getting data for " + child, de);
+                    }
+                  }
                 }
               }
             }
@@ -1461,6 +1477,7 @@ public class AssignmentManager extends ZooKeeperListener {
           return;
         }
         // This never happens. Currently regionserver close always return true.
+        // Todo; this can now happen (0.96) if there is an exception in a coprocessor
         LOG.warn("Server " + server + " region CLOSE RPC returned false for " +
           region.getRegionNameAsString());
       } catch (Throwable t) {
@@ -2633,11 +2650,11 @@ public class AssignmentManager extends ZooKeeperListener {
     threadPoolExecutorService.submit(new UnAssignCallable(this, regionInfo));
   }
 
-  boolean isCarryingRoot(ServerName serverName) {
+  public boolean isCarryingRoot(ServerName serverName) {
     return isCarryingRegion(serverName, HRegionInfo.ROOT_REGIONINFO);
   }
 
-  boolean isCarryingMeta(ServerName serverName) {
+  public boolean isCarryingMeta(ServerName serverName) {
     return isCarryingRegion(serverName, HRegionInfo.FIRST_META_REGIONINFO);
   }
 

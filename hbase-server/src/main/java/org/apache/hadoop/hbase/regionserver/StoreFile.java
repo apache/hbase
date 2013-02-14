@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
@@ -58,7 +57,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.BloomFilter;
@@ -92,21 +90,6 @@ import com.google.common.collect.Ordering;
 @InterfaceAudience.LimitedPrivate("Coprocessor")
 public class StoreFile {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
-
-  public static enum BloomType {
-    /**
-     * Bloomfilters disabled
-     */
-    NONE,
-    /**
-     * Bloom enabled with Table row as Key
-     */
-    ROW,
-    /**
-     * Bloom enabled with Table row & column (family+qualifier) as Key
-     */
-    ROWCOL
-  }
 
   // Keys for fileinfo values in HFile
 
@@ -647,7 +630,16 @@ public class StoreFile {
    */
   public Reader createReader() throws IOException {
     if (this.reader == null) {
-      this.reader = open();
+      try {
+        this.reader = open();
+      } catch (IOException e) {
+        try {
+          this.closeReader(true);
+        } catch (IOException ee) {              
+        }
+        throw e;
+      }
+
     }
     return this.reader;
   }
@@ -1551,7 +1543,7 @@ public class StoreFile {
           bloom = null;
           shouldCheckBloom = true;
         } else {
-          bloom = reader.getMetaBlock(HFileWriterV1.BLOOM_FILTER_DATA_KEY,
+          bloom = reader.getMetaBlock(HFile.BLOOM_FILTER_DATA_KEY,
               true);
           shouldCheckBloom = bloom != null;
         }
@@ -1761,7 +1753,7 @@ public class StoreFile {
       return reader.getTrailer().getMajorVersion();
     }
 
-    HFile.Reader getHFileReader() {
+    public HFile.Reader getHFileReader() {
       return reader;
     }
 

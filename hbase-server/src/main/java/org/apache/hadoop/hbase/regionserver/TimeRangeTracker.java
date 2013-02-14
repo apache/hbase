@@ -148,6 +148,4 @@ public class TimeRangeTracker implements Writable {
   public String toString() {
     return "[" + minimumTimestamp + "," + maximumTimestamp + "]";
   }
-
 }
-

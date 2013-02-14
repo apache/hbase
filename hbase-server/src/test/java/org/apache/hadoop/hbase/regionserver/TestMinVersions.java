@@ -133,13 +133,13 @@ public class TestMinVersions extends HBaseTestCase {
 
       Get g = new Get(T1);
       g.setMaxVersions();
-      Result r = region.get(g, null); // this'll use ScanWildcardColumnTracker
+      Result r = region.get(g); // this'll use ScanWildcardColumnTracker
       checkResult(r, c0, T3,T2,T1);
 
       g = new Get(T1);
       g.setMaxVersions();
       g.addColumn(c0, c0);
-      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3,T2,T1);
     } finally {
       HRegion.closeHRegion(region);
@@ -169,18 +169,18 @@ public class TestMinVersions extends HBaseTestCase {
       p.add(c0, c0, T3);
       region.put(p);
 
-      Delete d = new Delete(T1, ts-1, null);
-      region.delete(d, null, true);
+      Delete d = new Delete(T1, ts-1);
+      region.delete(d, true);
 
       Get g = new Get(T1);
       g.setMaxVersions();
-      Result r = region.get(g, null);  // this'll use ScanWildcardColumnTracker
+      Result r = region.get(g);  // this'll use ScanWildcardColumnTracker
       checkResult(r, c0, T3);
 
       g = new Get(T1);
       g.setMaxVersions();
       g.addColumn(c0, c0);
-      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3);
 
       // now flush/compact
@@ -190,13 +190,13 @@ public class TestMinVersions extends HBaseTestCase {
       // try again
       g = new Get(T1);
       g.setMaxVersions();
-      r = region.get(g, null);  // this'll use ScanWildcardColumnTracker
+      r = region.get(g);  // this'll use ScanWildcardColumnTracker
       checkResult(r, c0, T3);
 
       g = new Get(T1);
       g.setMaxVersions();
       g.addColumn(c0, c0);
-      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3);
     } finally {
       HRegion.closeHRegion(region);
@@ -241,18 +241,18 @@ public class TestMinVersions extends HBaseTestCase {
       // now the latest change is in the memstore,
       // but it is not the latest version
 
-      Result r = region.get(new Get(T1), null);
+      Result r = region.get(new Get(T1));
       checkResult(r, c0, T4);
 
       Get g = new Get(T1);
       g.setMaxVersions();
-      r = region.get(g, null); // this'll use ScanWildcardColumnTracker
+      r = region.get(g); // this'll use ScanWildcardColumnTracker
       checkResult(r, c0, T4,T3);
 
       g = new Get(T1);
       g.setMaxVersions();
       g.addColumn(c0, c0);
-      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T4,T3);
 
       p = new Put(T1, ts+1);
@@ -263,13 +263,13 @@ public class TestMinVersions extends HBaseTestCase {
 
       g = new Get(T1);
       g.setMaxVersions();
-      r = region.get(g, null);  // this'll use ScanWildcardColumnTracker
+      r = region.get(g);  // this'll use ScanWildcardColumnTracker
       checkResult(r, c0, T5,T4);
 
       g = new Get(T1);
       g.setMaxVersions();
       g.addColumn(c0, c0);
-      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T5,T4);
     } finally {
       HRegion.closeHRegion(region);
@@ -308,30 +308,30 @@ public class TestMinVersions extends HBaseTestCase {
       p.add(c0, c0, T4);
       region.put(p);
 
-      Result r = region.get(new Get(T1), null);
+      Result r = region.get(new Get(T1));
       checkResult(r, c0, T4);
 
       Get g = new Get(T1);
       g.setTimeRange(0L, ts+1);
-      r = region.get(g, null);
+      r = region.get(g);
       checkResult(r, c0, T4);
 
   // oldest version still exists
       g.setTimeRange(0L, ts-2);
-      r = region.get(g, null);
+      r = region.get(g);
       checkResult(r, c0, T1);
 
       // gets see only available versions
       // even before compactions
       g = new Get(T1);
       g.setMaxVersions();
-      r = region.get(g, null); // this'll use ScanWildcardColumnTracker
+      r = region.get(g); // this'll use ScanWildcardColumnTracker
       checkResult(r, c0, T4,T3);
 
       g = new Get(T1);
       g.setMaxVersions();
       g.addColumn(c0, c0);
-      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T4,T3);
 
       // now flush
@@ -340,7 +340,7 @@ public class TestMinVersions extends HBaseTestCase {
       // with HBASE-4241 a flush will eliminate the expired rows
       g = new Get(T1);
       g.setTimeRange(0L, ts-2);
-      r = region.get(g, null);
+      r = region.get(g);
       assertTrue(r.isEmpty());
 
       // major compaction
@@ -349,17 +349,17 @@ public class TestMinVersions extends HBaseTestCase {
       // after compaction the 4th version is still available
       g = new Get(T1);
       g.setTimeRange(0L, ts+1);
-      r = region.get(g, null);
+      r = region.get(g);
       checkResult(r, c0, T4);
 
       // so is the 3rd
       g.setTimeRange(0L, ts);
-      r = region.get(g, null);
+      r = region.get(g);
       checkResult(r, c0, T3);
 
       // but the 2nd and earlier versions are gone
       g.setTimeRange(0L, ts-1);
-      r = region.get(g, null);
+      r = region.get(g);
       assertTrue(r.isEmpty());
     } finally {
       HRegion.closeHRegion(region);
@@ -407,14 +407,14 @@ public class TestMinVersions extends HBaseTestCase {
       g.addColumn(c1,c1);
       g.setFilter(new TimestampsFilter(tss));
       g.setMaxVersions();
-      Result r = region.get(g, null);
+      Result r = region.get(g);
       checkResult(r, c1, T2,T1);
 
       g = new Get(T1);
       g.addColumn(c0,c0);
       g.setFilter(new TimestampsFilter(tss));
       g.setMaxVersions();
-      r = region.get(g, null);
+      r = region.get(g);
       checkResult(r, c0, T2,T1);
 
       // now flush/compact
@@ -425,14 +425,14 @@ public class TestMinVersions extends HBaseTestCase {
       g.addColumn(c1,c1);
       g.setFilter(new TimestampsFilter(tss));
       g.setMaxVersions();
-      r = region.get(g, null);
+      r = region.get(g);
       checkResult(r, c1, T2);
 
       g = new Get(T1);
       g.addColumn(c0,c0);
       g.setFilter(new TimestampsFilter(tss));
       g.setMaxVersions();
-      r = region.get(g, null);
+      r = region.get(g);
       checkResult(r, c0, T2);
     } finally {
       HRegion.closeHRegion(region);

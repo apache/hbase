@@ -91,7 +91,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </a>
-          <a class="brand" href="/master-status">HBase Master</a>
+          <a class="brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
           <div class="nav-collapse">
             <ul class="nav">
                 <li><a href="/">Home</a></li>
@@ -108,12 +108,11 @@
 <div class="container">
 
 
-    <div class="row inner_header">
-        <div class="span8">
-            <h1>Table action request accepted</h1>
-        </div>
-        <div class="span4 logo">
-            <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
+    <div class="container">
+        <div class="row inner_header">
+            <div class="page-header">
+                <h1>Table action request accepted</h1>
+            </div>
         </div>
     </div>
 <p><hr><p>
@@ -183,14 +182,14 @@
 <div class="container">
 
 
-    <div class="row">
-        <div class="span8">
-            <h1>Table: <%= tableName %></h1>
-        </div>
-        <div class="span4">
-            <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
+    <div class="container">
+        <div class="row inner_header">
+            <div class="page-header">
+                <h1>Table <small><%= tableName %></small></h1>
+            </div>
         </div>
     </div>
+    <div class="row">
 <%
   if(tableName.equals(Bytes.toString(HConstants.ROOT_TABLE_NAME))) {
 %>
@@ -319,7 +318,7 @@
 }
 } // end else
 
-HConnectionManager.deleteConnection(hbadmin.getConfiguration(), false);
+HConnectionManager.deleteConnection(hbadmin.getConfiguration());
 %>
 
 
@@ -360,6 +359,7 @@ Actions:
 </table>
 </center>
 <p>
+</div>
 </div>
 <% } %>
 <%

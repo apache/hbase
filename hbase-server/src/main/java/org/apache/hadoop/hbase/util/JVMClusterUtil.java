@@ -237,28 +237,57 @@ public class JVMClusterUtil {
       // Do active after.
       if (activeMaster != null) activeMaster.master.shutdown();
     }
+    boolean noWait = false;
+    final long maxTime = System.currentTimeMillis() + 120 * 1000;
     if (regionservers != null) {
       for (RegionServerThread t : regionservers) {
-        if (t.isAlive()) {
+        t.getRegionServer().stop("Shutdown requested");
+      }
+      for (RegionServerThread t : regionservers) {
+        if (t.isAlive() && !noWait && System.currentTimeMillis() < maxTime) {
           try {
-            t.getRegionServer().stop("Shutdown requested");
-            t.join();
+            t.join(maxTime);
           } catch (InterruptedException e) {
-            // continue
+            LOG.info("Got InterruptedException on shutdown - " +
+                "not waiting anymore on region server ends", e);
+            noWait = true; // someone wants us to speed up.
+          }
+        }
+      }
+
+      // Let's try to interrupt the remaining threads if any.
+      for (int i = 0; i < 10; ++i) {
+        for (RegionServerThread t : regionservers) {
+          if (t.isAlive()) {
+            try {
+              t.join(10);
+            } catch (InterruptedException e) {
+              noWait = true;
+            }
+          }
+        }
+        for (RegionServerThread t : regionservers) {
+          if (t.isAlive()) {
+            t.interrupt();
           }
         }
       }
     }
+
+
+
     if (masters != null) {
       for (JVMClusterUtil.MasterThread t : masters) {
-        while (t.master.isAlive()) {
+        while (t.master.isAlive() && !noWait) {
           try {
             // The below has been replaced to debug sometime hangs on end of
             // tests.
             // this.master.join():
             Threads.threadDumpingIsAlive(t.master.getThread());
           } catch(InterruptedException e) {
-            // continue
+            LOG.info("Got InterruptedException on shutdown - " +
+                "not waiting anymore on master ends", e);
+            noWait = true;
           }
         }
       }
@@ -266,6 +295,10 @@ public class JVMClusterUtil {
     LOG.info("Shutdown of " +
       ((masters != null) ? masters.size() : "0") + " master(s) and " +
       ((regionservers != null) ? regionservers.size() : "0") +
-      " regionserver(s) complete");
+      " regionserver(s) " + (noWait ? "interrupted" : "complete"));
+
+    if (!noWait){
+      Thread.currentThread().interrupt();
+    }
   }
 }

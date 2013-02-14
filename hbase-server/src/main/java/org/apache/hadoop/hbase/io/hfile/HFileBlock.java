@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -129,8 +130,9 @@ public class HFileBlock implements Cacheable {
   public static final int BYTE_BUFFER_HEAP_SIZE = (int) ClassSize.estimateBase(
       ByteBuffer.wrap(new byte[0], 0, 0).getClass(), false);
 
-  static final int EXTRA_SERIALIZATION_SPACE = Bytes.SIZEOF_LONG +
-      Bytes.SIZEOF_INT;
+  // minorVersion+offset+nextBlockOnDiskSizeWithHeader
+  public static final int EXTRA_SERIALIZATION_SPACE = 2 * Bytes.SIZEOF_INT
+      + Bytes.SIZEOF_LONG;
 
   /**
    * Each checksum value is an integer that can be stored in 4 bytes.
@@ -139,22 +141,39 @@ public class HFileBlock implements Cacheable {
 
   private static final CacheableDeserializer<Cacheable> blockDeserializer =
       new CacheableDeserializer<Cacheable>() {
-        public HFileBlock deserialize(ByteBuffer buf) throws IOException{
-          ByteBuffer newByteBuffer = ByteBuffer.allocate(buf.limit()
-              - HFileBlock.EXTRA_SERIALIZATION_SPACE);
-          buf.limit(buf.limit()
-              - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
-          newByteBuffer.put(buf);
-          HFileBlock ourBuffer = new HFileBlock(newByteBuffer, 
-                                   MINOR_VERSION_NO_CHECKSUM);
-
+        public HFileBlock deserialize(ByteBuffer buf, boolean reuse) throws IOException{
+          buf.limit(buf.limit() - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
+          ByteBuffer newByteBuffer;
+          if (reuse) {
+            newByteBuffer = buf.slice();
+          } else {
+           newByteBuffer = ByteBuffer.allocate(buf.limit());
+           newByteBuffer.put(buf);
+          }
           buf.position(buf.limit());
           buf.limit(buf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE);
+          int minorVersion=buf.getInt();
+          HFileBlock ourBuffer = new HFileBlock(newByteBuffer, minorVersion);
           ourBuffer.offset = buf.getLong();
           ourBuffer.nextBlockOnDiskSizeWithHeader = buf.getInt();
           return ourBuffer;
         }
+        
+        @Override
+        public int getDeserialiserIdentifier() {
+          return deserializerIdentifier;
+        }
+
+        @Override
+        public HFileBlock deserialize(ByteBuffer b) throws IOException {
+          return deserialize(b, false);
+        }
       };
+  private static final int deserializerIdentifier;
+  static {
+    deserializerIdentifier = CacheableDeserializerIdManager
+        .registerDeserializer(blockDeserializer);
+  }
 
   private BlockType blockType;
 
@@ -356,6 +375,17 @@ public class HFileBlock implements Cacheable {
   public ByteBuffer getBufferReadOnly() {
     return ByteBuffer.wrap(buf.array(), buf.arrayOffset(),
         buf.limit() - totalChecksumBytes()).slice();
+  }
+
+  /**
+   * Returns the buffer of this block, including header data. The clients must
+   * not modify the buffer object. This method has to be public because it is
+   * used in {@link BucketCache} to avoid buffer copy.
+   * 
+   * @return the byte buffer with header included for read-only operations
+   */
+  public ByteBuffer getBufferReadOnlyWithHeader() {
+    return ByteBuffer.wrap(buf.array(), buf.arrayOffset(), buf.limit()).slice();
   }
 
   /**
@@ -1287,110 +1317,6 @@ public class HFileBlock implements Cacheable {
   }
 
   /**
-   * Reads version 1 blocks from the file system. In version 1 blocks,
-   * everything is compressed, including the magic record, if compression is
-   * enabled. Everything might be uncompressed if no compression is used. This
-   * reader returns blocks represented in the uniform version 2 format in
-   * memory.
-   */
-  static class FSReaderV1 extends AbstractFSReader {
-
-    /** Header size difference between version 1 and 2 */
-    private static final int HEADER_DELTA = HEADER_SIZE_NO_CHECKSUM - 
-                                            MAGIC_LENGTH;
-
-    public FSReaderV1(FSDataInputStream istream, Algorithm compressAlgo,
-        long fileSize) throws IOException {
-      super(istream, istream, compressAlgo, fileSize, 0, null, null);
-    }
-
-    /**
-     * Read a version 1 block. There is no uncompressed header, and the block
-     * type (the magic record) is part of the compressed data. This
-     * implementation assumes that the bounded range file input stream is
-     * needed to stop the decompressor reading into next block, because the
-     * decompressor just grabs a bunch of data without regard to whether it is
-     * coming to end of the compressed section.
-     *
-     * The block returned is still a version 2 block, and in particular, its
-     * first {@link #HEADER_SIZE} bytes contain a valid version 2 header.
-     *
-     * @param offset the offset of the block to read in the file
-     * @param onDiskSizeWithMagic the on-disk size of the version 1 block,
-     *          including the magic record, which is the part of compressed
-     *          data if using compression
-     * @param uncompressedSizeWithMagic uncompressed size of the version 1
-     *          block, including the magic record
-     */
-    @Override
-    public HFileBlock readBlockData(long offset, long onDiskSizeWithMagic,
-        int uncompressedSizeWithMagic, boolean pread) throws IOException {
-      if (uncompressedSizeWithMagic <= 0) {
-        throw new IOException("Invalid uncompressedSize="
-            + uncompressedSizeWithMagic + " for a version 1 block");
-      }
-
-      if (onDiskSizeWithMagic <= 0 || onDiskSizeWithMagic >= Integer.MAX_VALUE)
-      {
-        throw new IOException("Invalid onDiskSize=" + onDiskSizeWithMagic
-            + " (maximum allowed: " + Integer.MAX_VALUE + ")");
-      }
-
-      int onDiskSize = (int) onDiskSizeWithMagic;
-
-      if (uncompressedSizeWithMagic < MAGIC_LENGTH) {
-        throw new IOException("Uncompressed size for a version 1 block is "
-            + uncompressedSizeWithMagic + " but must be at least "
-            + MAGIC_LENGTH);
-      }
-
-      // The existing size already includes magic size, and we are inserting
-      // a version 2 header.
-      ByteBuffer buf = ByteBuffer.allocate(uncompressedSizeWithMagic
-          + HEADER_DELTA);
-
-      int onDiskSizeWithoutHeader;
-      if (compressAlgo == Compression.Algorithm.NONE) {
-        // A special case when there is no compression.
-        if (onDiskSize != uncompressedSizeWithMagic) {
-          throw new IOException("onDiskSize=" + onDiskSize
-              + " and uncompressedSize=" + uncompressedSizeWithMagic
-              + " must be equal for version 1 with no compression");
-        }
-
-        // The first MAGIC_LENGTH bytes of what this will read will be
-        // overwritten.
-        readAtOffset(istream, buf.array(), buf.arrayOffset() + HEADER_DELTA,
-            onDiskSize, false, offset, pread);
-
-        onDiskSizeWithoutHeader = uncompressedSizeWithMagic - MAGIC_LENGTH;
-      } else {
-        InputStream bufferedBoundedStream = createBufferedBoundedStream(
-            offset, onDiskSize, pread);
-        Compression.decompress(buf.array(), buf.arrayOffset()
-            + HEADER_DELTA, bufferedBoundedStream, onDiskSize,
-            uncompressedSizeWithMagic, this.compressAlgo);
-
-        // We don't really have a good way to exclude the "magic record" size
-        // from the compressed block's size, since it is compressed as well.
-        onDiskSizeWithoutHeader = onDiskSize;
-      }
-
-      BlockType newBlockType = BlockType.parse(buf.array(), buf.arrayOffset()
-          + HEADER_DELTA, MAGIC_LENGTH);
-
-      // We set the uncompressed size of the new HFile block we are creating
-      // to the size of the data portion of the block without the magic record,
-      // since the magic record gets moved to the header.
-      HFileBlock b = new HFileBlock(newBlockType, onDiskSizeWithoutHeader,
-          uncompressedSizeWithMagic - MAGIC_LENGTH, -1L, buf, FILL_HEADER,
-          offset, MemStore.NO_PERSISTENT_TS, 0, 0, ChecksumType.NULL.getCode(),
-          onDiskSizeWithoutHeader + HEADER_SIZE_NO_CHECKSUM);
-      return b;
-    }
-  }
-
-  /**
    * We always prefetch the header of the next block, so that we know its
    * on-disk size in advance and can read it in one operation.
    */
@@ -1780,7 +1706,17 @@ public class HFileBlock implements Cacheable {
 
   @Override
   public void serialize(ByteBuffer destination) {
-    destination.put(this.buf.duplicate());
+    ByteBuffer dupBuf = this.buf.duplicate();
+    dupBuf.rewind();
+    destination.put(dupBuf);
+    destination.putInt(this.minorVersion);
+    destination.putLong(this.offset);
+    destination.putInt(this.nextBlockOnDiskSizeWithHeader);
+    destination.rewind();
+  }
+
+  public void serializeExtraInfo(ByteBuffer destination) {
+    destination.putInt(this.minorVersion);
     destination.putLong(this.offset);
     destination.putInt(this.nextBlockOnDiskSizeWithHeader);
     destination.rewind();

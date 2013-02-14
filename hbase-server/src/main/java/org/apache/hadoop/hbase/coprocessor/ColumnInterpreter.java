@@ -24,9 +24,11 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 
 /**
  * Defines how value for specific column is interpreted and provides utility
@@ -35,7 +37,8 @@ import com.google.protobuf.ByteString;
  * handle null case gracefully. Refer to {@link LongColumnInterpreter} for an
  * example.
  * <p>
- * Takes two generic parameters. The cell value type of the interpreter is <T>.
+ * Takes two generic parameters and three Message parameters. 
+ * The cell value type of the interpreter is <T>.
  * During some computations like sum, average, the return type can be different
  * than the cell value data type, for eg, sum of int cell values might overflow
  * in case of a int result, we should use Long for its result. Therefore, this
@@ -44,12 +47,19 @@ import com.google.protobuf.ByteString;
  * <S>. There is a conversion method
  * {@link ColumnInterpreter#castToReturnType(Object)} which takes a <T> type and
  * returns a <S> type.
+ * The {@link AggregateImplementation} uses PB messages to initialize the 
+ * user's ColumnInterpreter implementation, and for sending the responses
+ * back to {@link AggregationClient}.
  * @param <T> Cell value data type
  * @param <S> Promoted data type
+ * @param <P> PB message that is used to transport initializer specific bytes
+ * @param <Q> PB message that is used to transport Cell (<T>) instance
+ * @param <R> PB message that is used to transport Promoted (<S>) instance
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface ColumnInterpreter<T, S> {
+public abstract class ColumnInterpreter<T, S, P extends Message, 
+Q extends Message, R extends Message> {
 
   /**
    * @param colFamily
@@ -58,7 +68,7 @@ public interface ColumnInterpreter<T, S> {
    * @return value of type T
    * @throws IOException
    */
-  T getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)
+  public abstract T getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)
       throws IOException;
 
   /**
@@ -67,36 +77,36 @@ public interface ColumnInterpreter<T, S> {
    * @return sum or non null value among (if either of them is null); otherwise
    * returns a null.
    */
-  public S add(S l1, S l2);
+  public abstract S add(S l1, S l2);
 
   /**
    * returns the maximum value for this type T
    * @return max
    */
 
-  T getMaxValue();
+  public abstract T getMaxValue();
 
-  T getMinValue();
+  public abstract T getMinValue();
 
   /**
    * @param o1
    * @param o2
    * @return multiplication
    */
-  S multiply(S o1, S o2);
+  public abstract S multiply(S o1, S o2);
 
   /**
    * @param o
    * @return increment
    */
-  S increment(S o);
+  public abstract S increment(S o);
 
   /**
    * provides casting opportunity between the data types.
    * @param o
    * @return cast
    */
-  S castToReturnType(T o);
+  public abstract S castToReturnType(T o);
 
   /**
    * This takes care if either of arguments are null. returns 0 if they are
@@ -105,7 +115,7 @@ public interface ColumnInterpreter<T, S> {
    * <li>>0 if l1 > l2 or l1 is not null and l2 is null.
    * <li>< 0 if l1 < l2 or l1 is null and l2 is not null.
    */
-  int compare(final T l1, final T l2);
+  public abstract int compare(final T l1, final T l2);
 
   /**
    * used for computing average of <S> data values. Not providing the divide
@@ -114,51 +124,58 @@ public interface ColumnInterpreter<T, S> {
    * @param l
    * @return Average
    */
-  double divideForAvg(S o, Long l);
+  public abstract double divideForAvg(S o, Long l);
 
   /**
    * This method should return any additional data that is needed on the
    * server side to construct the ColumnInterpreter. The server
-   * will pass this to the {@link #initialize(ByteString)}
+   * will pass this to the {@link #initialize}
    * method. If there is no ColumnInterpreter specific data (for e.g.,
    * {@link LongColumnInterpreter}) then null should be returned.
    * @return the PB message
    */
-  ByteString columnInterpreterSpecificData();
-
-  /**
-   * Return the PB for type T
-   * @param t
-   * @return PB-message
-   */
-  ByteString getProtoForCellType(T t);
-
-  /**
-   * Return the PB for type S
-   * @param s
-   * @return PB-message
-   */
-  ByteString getProtoForPromotedType(S s);
+  public abstract P getRequestData();
 
   /**
    * This method should initialize any field(s) of the ColumnInterpreter with
    * a parsing of the passed message bytes (used on the server side).
-   * @param bytes
+   * @param msg
    */
-  void initialize(ByteString bytes);
+  public abstract void initialize(P msg);
   
   /**
-   * Converts the bytes in the server's response to the expected type S
-   * @param response
-   * @return response of type S constructed from the message
+   * This method gets the PB message corresponding to the cell type
+   * @param t
+   * @return the PB message for the cell-type instance
    */
-  S parseResponseAsPromotedType(byte[] response);
-  
+  public abstract Q getProtoForCellType(T t);
+
+  /**
+   * This method gets the PB message corresponding to the cell type
+   * @param q
+   * @return the cell-type instance from the PB message
+   */
+  public abstract T getCellValueFromProto(Q q);
+
+  /**
+   * This method gets the PB message corresponding to the promoted type
+   * @param s
+   * @return the PB message for the promoted-type instance
+   */
+  public abstract R getProtoForPromotedType(S s);
+
+  /**
+   * This method gets the promoted type from the proto message
+   * @param r
+   * @return the promoted-type instance from the PB message
+   */
+  public abstract S getPromotedValueFromProto(R r);
+
   /**
    * The response message comes as type S. This will convert/cast it to T.
    * In some sense, performs the opposite of {@link #castToReturnType(Object)}
    * @param response
    * @return cast
    */
-  T castToCellType(S response);
+  public abstract T castToCellType(S response);
 }

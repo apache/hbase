@@ -638,7 +638,7 @@ public class StorageClusterStatusModel
 	public String toString() {
 	  StringBuilder sb = new StringBuilder();
 	  sb.append(String.format("%d live servers, %d dead servers, " + 
-      "%.4f average load\n\n", liveNodes.size(), deadNodes.size(),
+      "%.4f average load%n%n", liveNodes.size(), deadNodes.size(),
       averageLoad));
     if (!liveNodes.isEmpty()) {
       sb.append(liveNodes.size());

@@ -402,7 +402,7 @@ to ensure well-formedness of your document after an edit session.
 
         <para>Distributed modes require an instance of the <emphasis>Hadoop
         Distributed File System</emphasis> (HDFS). See the Hadoop <link
-        xlink:href="http://hadoop.apache.org/common/docs/current/api/overview-summary.html#overview_description">
+        xlink:href="http://hadoop.apache.org/common/docs/r1.1.1/api/overview-summary.html#overview_description">
         requirements and instructions</link> for how to set up a HDFS. Before
         proceeding, ensure you have an appropriate, working HDFS.</para>
 
@@ -1051,6 +1051,54 @@ index e70ebc6..96f8c27 100644
        RegionSize can also be set on a per-table basis via
        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link>.
       </para>
+      <section xml:id="too_many_regions">
+          <title>How many regions per RegionServer?</title>
+          <para>
+              Typically you want to keep your region count low on HBase for numerous reasons.
+              Usually right around 100 regions per RegionServer has yielded the best results.
+              Here are some of the reasons below for keeping region count low:
+              <unorderedlist>
+                  <listitem><para>
+                          MSLAB requires 2mb per memstore (that's 2mb per family per region).
+                          1000 regions that have 2 families each is 3.9GB of heap used, and it's not even storing data yet. NB: the 2MB value is configurable.
+                  </para></listitem>
+                  <listitem><para>If you fill all the regions at somewhat the same rate, the global memory usage makes it that it forces tiny
+                          flushes when you have too many regions which in turn generates compactions.
+                          Rewriting the same data tens of times is the last thing you want.
+                          An example is filling 1000 regions (with one family) equally and let's consider a lower bound for global memstore
+                          usage of 5GB (the region server would have a big heap).
+                          Once it reaches 5GB it will force flush the biggest region,
+                          at that point they should almost all have about 5MB of data so
+                          it would flush that amount. 5MB inserted later, it would flush another
+                          region that will now have a bit over 5MB of data, and so on.
+                          A basic formula for the amount of regions to have per region server would
+                          look like this:
+                          Heap * upper global memstore limit = amount of heap devoted to memstore
+                          then the amount of heap devoted to memstore / (Number of regions per RS * CFs).
+                          This will give you the rough memstore size if everything is being written to.
+                          A more accurate formula is
+                          Heap * upper global memstore limit = amount of heap devoted to memstore then the
+                          amount of heap devoted to memstore / (Number of actively written regions per RS * CFs).
+                          This can allot you a higher region count from the write perspective if you know how many
+                          regions you will be writing to at one time.
+                  </para></listitem>
+                  <listitem><para>The master as is is allergic to tons of regions, and will
+                          take a lot of time assigning them and moving them around in batches.
+                          The reason is that it's heavy on ZK usage, and it's not very async
+                          at the moment (could really be improved -- and has been imporoved a bunch
+                          in 0.96 hbase).
+                  </para></listitem>
+                  <listitem><para>
+                          In older versions of HBase (pre-v2 hfile, 0.90 and previous), tons of regions
+                          on a few RS can cause the store file index to rise raising heap usage and can
+                          create memory pressure or OOME on the RSs
+                  </para></listitem>
+          </unorderedlist>
+      </para>
+      <para>Another issue is the effect of the number of regions on mapreduce jobs.
+          Keeping 5 regions per RS would be too low for a job, whereas 1000 will generate too many maps.
+      </para>
+      </section>
 
       </section>
       <section xml:id="disable.splitting">

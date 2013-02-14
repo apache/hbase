@@ -115,7 +115,6 @@ public class MetaReader {
       public boolean visit(Result r) throws IOException {
         if (r ==  null || r.isEmpty()) return true;
         Pair<HRegionInfo, ServerName> region = HRegionInfo.getHRegionInfoAndServerName(r);
-        if (region == null) return true;
         HRegionInfo hri = region.getFirst();
         if (hri  == null) return true;
         if (hri.getTableNameAsString() == null) return true;

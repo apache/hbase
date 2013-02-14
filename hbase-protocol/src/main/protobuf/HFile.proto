@@ -27,3 +27,19 @@ import "hbase.proto";
 message FileInfoProto {
   repeated BytesBytesPair mapEntry = 1;
 }
+
+// HFile file trailer
+message FileTrailerProto {
+  optional uint64 fileInfoOffset = 1;
+  optional uint64 loadOnOpenDataOffset = 2;
+  optional uint64 uncompressedDataIndexSize = 3;
+  optional uint64 totalUncompressedBytes = 4;
+  optional uint32 dataIndexCount = 5;
+  optional uint32 metaIndexCount = 6;
+  optional uint64 entryCount = 7;
+  optional uint32 numDataIndexLevels = 8;
+  optional uint64 firstDataBlockOffset = 9;
+  optional uint64 lastDataBlockOffset = 10;
+  optional string comparatorClassName = 11;
+  optional uint32 compressionCodec = 12;
+}

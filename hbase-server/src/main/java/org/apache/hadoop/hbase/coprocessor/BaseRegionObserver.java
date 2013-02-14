@@ -140,7 +140,8 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      final HStore store, final InternalScanner scanner) throws IOException {
+      final HStore store, final InternalScanner scanner, final ScanType scanType)
+          throws IOException {
     return scanner;
   }
 
@@ -314,6 +315,12 @@ public abstract class BaseRegionObserver implements RegionObserver {
     return hasMore;
   }
 
+  @Override
+  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final InternalScanner s, final byte[] currentRow, final boolean hasMore) throws IOException {
+    return hasMore;
+  }
+  
   @Override
   public void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s) throws IOException {

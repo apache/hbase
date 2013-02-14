@@ -35,6 +35,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   private final HRegionInfo regionInfo;
   private final String hostname;
   private final int port;
+  private final long seqNum;
   // Cache of the 'toString' result.
   private String cachedString = null;
   // Cache of the hostname + port
@@ -43,14 +44,20 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   /**
    * Constructor
    * @param regionInfo the HRegionInfo for the region
-   * @param hostname Hostname
-   * @param port port
    */
   public HRegionLocation(HRegionInfo regionInfo, final String hostname,
-      final int port) {
+      final int port, final long seqNum) {
     this.regionInfo = regionInfo;
     this.hostname = hostname;
     this.port = port;
+    this.seqNum = seqNum;
+  }
+
+  /**
+   * Test constructor w/o seqNum.
+   */
+  public HRegionLocation(HRegionInfo regionInfo, final String hostname, final int port) {
+    this(regionInfo, hostname, port, 0);
   }
 
   /**
@@ -60,7 +67,8 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   public synchronized String toString() {
     if (this.cachedString == null) {
       this.cachedString = "region=" + this.regionInfo.getRegionNameAsString() +
-      ", hostname=" + this.hostname + ", port=" + this.port;
+      ", hostname=" + this.hostname + ", port=" + this.port
+      + ", seqNum=" + seqNum;
     }
     return this.cachedString;
   }
@@ -103,6 +111,10 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
 
   public int getPort() {
     return this.port;
+  }
+
+  public long getSeqNum() {
+    return seqNum;
   }
 
   /**

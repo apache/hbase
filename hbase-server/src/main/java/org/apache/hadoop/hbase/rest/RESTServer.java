@@ -44,6 +44,7 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.thread.QueuedThreadPool;
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
@@ -139,6 +140,17 @@ public class RESTServer implements Constants {
     connector.setHost(servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0"));
 
     server.addConnector(connector);
+
+    // Set the default max thread number to 100 to limit
+    // the number of concurrent requests so that REST server doesn't OOM easily.
+    // Jetty set the default max thread number to 250, if we don't set it.
+    //
+    // Our default min thread number 2 is the same as that used by Jetty.
+    int maxThreads = servlet.getConfiguration().getInt("hbase.rest.threads.max", 100);
+    int minThreads = servlet.getConfiguration().getInt("hbase.rest.threads.min", 2);
+    QueuedThreadPool threadPool = new QueuedThreadPool(maxThreads);
+    threadPool.setMinThreads(minThreads);
+    server.setThreadPool(threadPool);
 
     server.setSendServerVersion(false);
     server.setSendDateHeader(false);

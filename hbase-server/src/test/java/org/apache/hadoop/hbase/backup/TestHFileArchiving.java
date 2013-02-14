@@ -37,12 +37,11 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
@@ -86,6 +85,10 @@ public class TestHFileArchiving {
     conf.setInt("hbase.hregion.memstore.flush.size", 25000);
     // disable major compactions
     conf.setInt(HConstants.MAJOR_COMPACTION_PERIOD, 0);
+
+    // prevent aggressive region split
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      ConstantSizeRegionSplitPolicy.class.getName());
   }
 
   @Before
@@ -355,7 +358,7 @@ public class TestHFileArchiving {
 
         try {
           // Try to archive the file
-          HFileArchiver.archiveRegion(fs, rootDir,
+          HFileArchiver.archiveRegion(conf, fs, rootDir,
               sourceRegionDir.getParent(), sourceRegionDir);
 
           // The archiver succeded, the file is no longer in the original location

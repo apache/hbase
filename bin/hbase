@@ -153,28 +153,8 @@ add_maven_deps_to_classpath() {
 }
 
 
-add_maven_main_classes_to_classpath() {
- # assumes all modules are named hbase-* in the top level directory
-  IFS=$ORIG_IFS
-  for module in `ls $HBASE_HOME | grep 'hbase-*'`
-  do
-    add_to_cp_if_exists "$HBASE_HOME/$module/target/classes"
-  done
-}
-
-add_maven_test_classes_to_classpath(){
- # assumes all modules are named hbase-* in the top level directory
-  IFS=$ORIG_IFS
-  for module in `ls $HBASE_HOME | grep 'hbase-*'`
-  do
-    add_to_cp_if_exists "$HBASE_HOME/$module/target/test-classes"
-  done
-}
-
 #Add the development env class path stuff
 if $in_dev_env; then
-  add_maven_main_classes_to_classpath
-  add_maven_test_classes_to_classpath
   add_maven_deps_to_classpath
 fi
 
@@ -255,6 +235,21 @@ fi
  
 # restore ordinary behaviour
 unset IFS
+
+#Set the right GC options based on the what we are running
+declare -a client_cmds=("shell" "hbck" "hlog" "hfile" "zkcli")
+for cmd in $client_cmds; do
+	if [[ $cmd == $COMMAND ]]; then
+		client=true
+		break
+	fi
+done
+
+if [[ $client ]]; then
+	HBASE_OPTS="$HBASE_OPTS $CLIENT_GC_OPTS"
+else
+	HBASE_OPTS="$HBASE_OPTS $SERVER_GC_OPTS"
+fi
 
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then

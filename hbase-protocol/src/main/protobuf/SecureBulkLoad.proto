@@ -1,0 +1,71 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "SecureBulkLoadProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import 'hbase.proto';
+import 'Client.proto';
+
+message SecureBulkLoadHFilesRequest {
+  repeated BulkLoadHFileRequest.FamilyPath familyPath = 1;
+  optional bool assignSeqNum = 2;
+  required DelegationTokenProto fsToken = 3;
+  required string bulkToken = 4;
+}
+
+message SecureBulkLoadHFilesResponse {
+  required bool loaded = 1;
+}
+
+message DelegationTokenProto {
+  optional bytes identifier = 1;
+  optional bytes password = 2;
+  optional string kind = 3;
+  optional string service = 4;
+}
+
+message PrepareBulkLoadRequest {
+  required bytes tableName = 1;
+}
+
+message PrepareBulkLoadResponse {
+  required string bulkToken = 1;
+}
+
+message CleanupBulkLoadRequest {
+  required string bulkToken = 1;
+
+}
+
+message CleanupBulkLoadResponse {
+}
+
+service SecureBulkLoadService {
+    rpc prepareBulkLoad(PrepareBulkLoadRequest)
+      returns (PrepareBulkLoadResponse);
+
+    rpc secureBulkLoadHFiles(SecureBulkLoadHFilesRequest)
+      returns (SecureBulkLoadHFilesResponse);
+
+    rpc cleanupBulkLoad(CleanupBulkLoadRequest)
+      returns (CleanupBulkLoadResponse);
+}

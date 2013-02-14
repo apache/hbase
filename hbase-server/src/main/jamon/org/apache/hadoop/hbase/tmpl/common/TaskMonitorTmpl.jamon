@@ -56,14 +56,14 @@ boolean first = true;
 [<%for MonitoredTask task : tasks%><%if first%><%java>first = false;</%java><%else>,</%if><% task.toJSON() %></%for>]
 <%else>
 <h2>Tasks</h2>
-  <div id="tasks_menu">
-    <a href="?filter=all">Show All Monitored Tasks</a>
-    <a href="?filter=general">Show non-RPC Tasks</a>
-    <a href="?filter=handler">Show All RPC Handler Tasks</a>
-    <a href="?filter=rpc">Show Active RPC Calls</a>
-    <a href="?filter=operation">Show Client Operations</a>
-    <a href="?format=json&filter=<% filter %>">View as JSON</a>
-  </div>
+  <ul class="nav nav-pills">
+    <li <%if filter.equals("all")%>class="active"</%if>><a href="?filter=all">Show All Monitored Tasks</a></li>
+    <li <%if filter.equals("general")%>class="active"</%if>><a href="?filter=general">Show non-RPC Tasks</a></li>
+    <li <%if filter.equals("handler")%>class="active"</%if>><a href="?filter=handler">Show All RPC Handler Tasks</a></li>
+    <li <%if filter.equals("rpc")%>class="active"</%if>><a href="?filter=rpc">Show Active RPC Calls</a></li>
+    <li <%if filter.equals("operation")%>class="active"</%if>><a href="?filter=operation">Show Client Operations</a></li>
+    <li><a href="?format=json&filter=<% filter %>">View as JSON</a></li>
+  </ul>
   <%if tasks.isEmpty()%>
     <p>No tasks currently running on this node.</p>
   <%else>

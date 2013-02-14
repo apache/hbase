@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.*;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -216,7 +217,7 @@ public class TestScannersWithFilters {
     marshaller.marshal(model, writer);
     LOG.debug(writer.toString());
     byte[] body = Bytes.toBytes(writer.toString());
-    Response response = client.put("/" + TABLE + "/scanner", 
+    Response response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_XML, body);
     assertEquals(response.getCode(), 201);
     String scannerURI = response.getLocation();
@@ -225,6 +226,7 @@ public class TestScannersWithFilters {
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cells = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
 
@@ -250,7 +252,7 @@ public class TestScannersWithFilters {
     marshaller.marshal(model, writer);
     LOG.debug(writer.toString());
     byte[] body = Bytes.toBytes(writer.toString());
-    Response response = client.put("/" + TABLE + "/scanner", 
+    Response response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_XML, body);
     assertEquals(response.getCode(), 201);
     String scannerURI = response.getLocation();
@@ -259,6 +261,7 @@ public class TestScannersWithFilters {
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
 
@@ -312,6 +315,7 @@ public class TestScannersWithFilters {
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
 

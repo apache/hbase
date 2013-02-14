@@ -76,6 +76,7 @@ if (toRemove > 0) {
 
 
 <%if !rit.isEmpty() %>
+    <section>
     <h2>Regions in Transition</h2>
     <table class="table table-striped">
             <tr><th>Region</th><th>State</th><th>RIT time (ms)</th></tr>
@@ -95,5 +96,6 @@ if (toRemove > 0) {
     <%if removed > 0 %>
     (<% removed %> more regions in transition not shown)
     </%if>
+    </section>
 </%if>
 

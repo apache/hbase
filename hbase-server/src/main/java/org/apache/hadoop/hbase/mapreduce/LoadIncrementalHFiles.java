@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ServerCallable;
+import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -71,11 +72,13 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -91,19 +94,30 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class LoadIncrementalHFiles extends Configured implements Tool {
-  private static Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
-  static AtomicLong regionCount = new AtomicLong(0);
+  private static final Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
+  static final AtomicLong regionCount = new AtomicLong(0);
   private HBaseAdmin hbAdmin;
   private Configuration cfg;
 
-  public static String NAME = "completebulkload";
-  private static String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
+  public static final String NAME = "completebulkload";
+  private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
   private boolean assignSeqIds;
 
-  public LoadIncrementalHFiles(Configuration conf) throws Exception {
+  private boolean useSecure;
+  private Token<?> userToken;
+  private String bulkToken;
+
+  //package private for testing
+  LoadIncrementalHFiles(Configuration conf, Boolean useSecure) throws Exception {
     super(conf);
     this.cfg = conf;
     this.hbAdmin = new HBaseAdmin(conf);
+    //added simple for testing
+    this.useSecure = useSecure != null ? useSecure : User.isHBaseSecurityEnabled(conf);
+  }
+
+  public LoadIncrementalHFiles(Configuration conf) throws Exception {
+    this(conf, null);
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
   }
 
@@ -215,6 +229,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         return;
       }
 
+      //If using secure bulk load
+      //prepare staging directory and token
+      if(useSecure) {
+        FileSystem fs = FileSystem.get(cfg);
+        //This condition is here for unit testing
+        //Since delegation token doesn't work in mini cluster
+        if(User.isSecurityEnabled()) {
+         userToken = fs.getDelegationToken("renewer");
+        }
+        bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getTableName());
+      }
+
       // Assumes that region splits can happen while this occurs.
       while (!queue.isEmpty()) {
         // need to reload split keys each iteration.
@@ -243,6 +269,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
 
     } finally {
+      if(useSecure) {
+        if(userToken != null) {
+          try {
+            userToken.cancel(cfg);
+          } catch (Exception e) {
+            LOG.warn("Failed to cancel HDFS delegation token.", e);
+          }
+        }
+        if(bulkToken != null) {
+          new SecureBulkLoadClient(table).cleanupBulkLoad(bulkToken);
+        }
+      }
       pool.shutdown();
       if (queue != null && !queue.isEmpty()) {
         StringBuilder err = new StringBuilder();
@@ -476,11 +514,47 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         tableName, first) {
       @Override
       public Boolean call() throws Exception {
-        LOG.debug("Going to connect to server " + location + " for row "
-            + Bytes.toStringBinary(row));
-        byte[] regionName = location.getRegionInfo().getRegionName();
-        return ProtobufUtil.bulkLoadHFile(server, famPaths, regionName,
-            assignSeqIds);
+        SecureBulkLoadClient secureClient = null;
+        boolean success = false;
+
+        try {
+          LOG.debug("Going to connect to server " + location + " for row "
+              + Bytes.toStringBinary(row));
+          byte[] regionName = location.getRegionInfo().getRegionName();
+          if(!useSecure) {
+            success = ProtobufUtil.bulkLoadHFile(server, famPaths, regionName, assignSeqIds);
+          } else {
+            HTable table = new HTable(conn.getConfiguration(), tableName);
+            secureClient = new SecureBulkLoadClient(table);
+            success = secureClient.bulkLoadHFiles(famPaths, userToken, bulkToken, location.getRegionInfo().getStartKey());
+          }
+          return success;
+        } finally {
+          //Best effort copying of files that might not have been imported
+          //from the staging directory back to original location
+          //in user directory
+          if(secureClient != null && !success) {
+            FileSystem fs = FileSystem.get(cfg);
+            for(Pair<byte[], String> el : famPaths) {
+              Path hfileStagingPath = null;
+              Path hfileOrigPath = new Path(el.getSecond());
+              try {
+                hfileStagingPath= new Path(secureClient.getStagingPath(bulkToken, el.getFirst()),
+                    hfileOrigPath.getName());
+                if(fs.rename(hfileStagingPath, hfileOrigPath)) {
+                  LOG.debug("Moved back file " + hfileOrigPath + " from " +
+                      hfileStagingPath);
+                } else if(fs.exists(hfileStagingPath)){
+                  LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
+                      hfileStagingPath);
+                }
+              } catch(Exception ex) {
+                LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
+                    hfileStagingPath, ex);
+              }
+            }
+          }
+        }
       }
     };
 
@@ -626,11 +700,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = null;
+    HColumnDescriptor hcd;
 
     // Add column families
     // Build a set of keys
-    byte[][] keys = null;
+    byte[][] keys;
     TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     
     for (FileStatus stat : familyDirStatuses) {
@@ -667,10 +741,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
             " last="  + Bytes.toStringBinary(last));
           
           // To eventually infer start key-end key boundaries
-          Integer value = map.containsKey(first)?(Integer)map.get(first):0;
+          Integer value = map.containsKey(first)? map.get(first):0;
           map.put(first, value+1);
 
-          value = map.containsKey(last)?(Integer)map.get(last):0;
+          value = map.containsKey(last)? map.get(last):0;
           map.put(last, value-1);
         }  finally {
           reader.close();

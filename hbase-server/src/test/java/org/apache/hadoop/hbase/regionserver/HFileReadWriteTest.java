@@ -146,7 +146,7 @@ public class HFileReadWriteTest {
   private HFileDataBlockEncoder dataBlockEncoder =
       NoOpDataBlockEncoder.INSTANCE;
 
-  private StoreFile.BloomType bloomType = StoreFile.BloomType.NONE;
+  private BloomType bloomType = BloomType.NONE;
   private int blockSize;
   private Compression.Algorithm compression = Compression.Algorithm.NONE;
 
@@ -178,7 +178,7 @@ public class HFileReadWriteTest {
         + Arrays.toString(Compression.Algorithm.values()) +
         Workload.MERGE.onlyUsedFor());
     options.addOption(BLOOM_FILTER_OPTION, true, "Bloom filter type, one of "
-        + Arrays.toString(StoreFile.BloomType.values()) +
+        + Arrays.toString(BloomType.values()) +
         Workload.MERGE.onlyUsedFor());
     options.addOption(BLOCK_SIZE_OPTION, true, "HFile block size" +
         Workload.MERGE.onlyUsedFor());
@@ -239,7 +239,7 @@ public class HFileReadWriteTest {
     }
 
     if (cmdLine.hasOption(BLOOM_FILTER_OPTION)) {
-      bloomType = StoreFile.BloomType.valueOf(cmdLine.getOptionValue(
+      bloomType = BloomType.valueOf(cmdLine.getOptionValue(
           BLOOM_FILTER_OPTION));
     }
 
@@ -407,7 +407,7 @@ public class HFileReadWriteTest {
       Scan scan = new Scan();
 
       // Include deletes
-      scanner = new StoreScanner(store, store.scanInfo, scan, scanners,
+      scanner = new StoreScanner(store, store.getScanInfo(), scan, scanners,
           ScanType.MAJOR_COMPACT, Long.MIN_VALUE, Long.MIN_VALUE);
 
       ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
@@ -468,7 +468,7 @@ public class HFileReadWriteTest {
     // We are passing the ROWCOL Bloom filter type, but StoreFile will still
     // use the Bloom filter type specified in the HFile.
     return new StoreFile(fs, filePath, conf, cacheConf,
-        StoreFile.BloomType.ROWCOL, dataBlockEncoder);
+        BloomType.ROWCOL, dataBlockEncoder);
   }
 
   public static int charToHex(int c) {

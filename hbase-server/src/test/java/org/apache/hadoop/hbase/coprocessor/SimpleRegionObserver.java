@@ -106,8 +106,6 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     Leases leases = re.getRegionServerServices().getLeases();
     leases.createLease("x", 2000, null);
     leases.cancelLease("x");
-    Integer lid = re.getRegion().getLock(null, Bytes.toBytes("some row"), true);
-    re.getRegion().releaseRowLock(lid);
   }
 
   @Override
@@ -188,7 +186,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      HStore store, InternalScanner scanner) {
+      HStore store, InternalScanner scanner, ScanType scanType) {
     hadPreCompact = true;
     return scanner;
   }

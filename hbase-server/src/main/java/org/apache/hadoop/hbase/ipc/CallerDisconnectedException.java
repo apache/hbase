@@ -25,11 +25,8 @@ import java.io.IOException;
  * but is only used for logging on the server side, etc.
  */
 public class CallerDisconnectedException extends IOException {
+  private static final long serialVersionUID = 1L;
   public CallerDisconnectedException(String msg) {
     super(msg);
   }
-
-  private static final long serialVersionUID = 1L;
-
-  
 }

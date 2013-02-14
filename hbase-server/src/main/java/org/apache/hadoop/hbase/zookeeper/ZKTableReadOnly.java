@@ -43,7 +43,7 @@ public class ZKTableReadOnly {
   private ZKTableReadOnly() {}
   
   /**
-   * Go to zookeeper and see if state of table is {@link ZooKeeperProtos.Table.State#DISABLED}.
+   * Go to zookeeper and see if state of table is {@code ZooKeeperProtos.Table.State#DISABLED}.
    * This method does not use cache.
    * This method is for clients other than {@link AssignmentManager}
    * @param zkw
@@ -59,7 +59,7 @@ public class ZKTableReadOnly {
   }
 
   /**
-   * Go to zookeeper and see if state of table is {@link ZooKeeperProtos.Table.State#ENABLED}.
+   * Go to zookeeper and see if state of table is {@code ZooKeeperProtos.Table.State#ENABLED}.
    * This method does not use cache.
    * This method is for clients other than {@link AssignmentManager}
    * @param zkw
@@ -74,8 +74,8 @@ public class ZKTableReadOnly {
   }
 
   /**
-   * Go to zookeeper and see if state of table is {@link ZooKeeperProtos.Table.State#DISABLING}
-   * of {@link ZooKeeperProtos.Table.State#DISABLED}.
+   * Go to zookeeper and see if state of table is {@code ZooKeeperProtos.Table.State#DISABLING}
+   * of {@code ZooKeeperProtos.Table.State#DISABLED}.
    * This method does not use cache.
    * This method is for clients other than {@link AssignmentManager}.
    * @param zkw

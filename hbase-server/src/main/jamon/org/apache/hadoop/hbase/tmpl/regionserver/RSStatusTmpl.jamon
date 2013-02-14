@@ -68,7 +68,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </a>
-          <a class="brand" href="/rs-status">HBase Region Server</a>
+          <a class="brand" href="/rs-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
           <div class="nav-collapse">
             <ul class="nav">
                 <li class="active"><a href="/">Home</a></li>
@@ -87,22 +87,27 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 
 <div class="container">
     <div class="row inner_header">
-        <div class="span8">
-            <h1>RegionServer: <% serverName.getHostname() %></h1>
-        </div>
-        <div class="span4 logo">
-            <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
+        <div class="page-header">
+            <h1>RegionServer <small><% serverName.getHostname() %></small></h1>
         </div>
     </div>
+    <div class="row">
 
+    <section>
     <h2>Server Metrics</h2>
     <& ServerMetricsTmpl; mWrap = regionServer.getMetrics().getRegionServerWrapper(); &>
+    </section>
 
+    <section>
     <& ../common/TaskMonitorTmpl; filter = filter &>
+    </section>
 
+    <section>
     <h2>Regions</h2>
     <& RegionListTmpl; regionServer = regionServer; onlineRegions = onlineRegions; &>
+    </section>
 
+    <section>
     <h2>Software Attributes</h2>
     <table id="attributes_table" class="table table-striped">
         <tr>
@@ -151,6 +156,8 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
             <td>Address of HBase Master</td>
         </tr>
     </table>
+    </section>
+    </div>
 </div>
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>

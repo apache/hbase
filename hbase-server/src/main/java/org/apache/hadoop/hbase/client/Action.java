@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Action<R> implements Comparable {
+public class Action<R> implements Comparable<R> {
 
   private Row action;
   private int originalIndex;
@@ -76,5 +76,13 @@ public class Action<R> implements Comparable {
   @Override
   public int compareTo(Object o) {
     return action.compareTo(((Action) o).getAction());
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
+    Action<?> other = (Action<?>) obj;
+    return compareTo(other) == 0;
   }
 }

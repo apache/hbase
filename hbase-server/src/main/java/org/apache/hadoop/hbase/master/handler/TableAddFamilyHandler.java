@@ -58,15 +58,13 @@ public class TableAddFamilyHandler extends TableEventHandler {
     if(cpHost != null){
       cpHost.preAddColumnHandler(this.tableName, this.familyDesc);
     }
-    // Update table descriptor in HDFS
-    HTableDescriptor htd = this.masterServices.getMasterFileSystem()
-        .addColumn(tableName, familyDesc);
-    // Update in-memory descriptor cache
-    this.masterServices.getTableDescriptors().add(htd);
+    // Update table descriptor
+    this.masterServices.getMasterFileSystem().addColumn(tableName, familyDesc);
     if(cpHost != null){
       cpHost.postAddColumnHandler(this.tableName, this.familyDesc);
     }
   }
+
   @Override
   public String toString() {
     String name = "UnknownServerName";

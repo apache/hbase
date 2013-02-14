@@ -21,6 +21,10 @@
 
 # Set environment variables here.
 
+# This script sets variables multiple times over the course of starting an hbase process,
+# so try to keep things idempotent unless you want to take an even deeper look
+# into the startup scripts (bin/hbase, etc.)
+
 # The java implementation to use.  Java 1.6 required.
 # export JAVA_HOME=/usr/java/jdk1.6.0/
 
@@ -34,12 +38,20 @@
 # Below are what we set by default.  May only work with SUN JVM.
 # For more on why as well as other possible settings,
 # see http://wiki.apache.org/hadoop/PerformanceTuning
-export HBASE_OPTS="$HBASE_OPTS -XX:+UseConcMarkSweepGC"
+export HBASE_OPTS="-XX:+UseConcMarkSweepGC"
 
-# Uncomment below to enable java garbage collection logging in the .out file.
-# export HBASE_OPTS="$HBASE_OPTS -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps $HBASE_GC_OPTS" 
+# Uncomment below to enable java garbage collection logging for the server-side processes
+# this enables basic gc logging for the server processes to the .out file
+# export SERVER_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps $HBASE_GC_OPTS"
 
-# Uncomment below (along with above GC logging) to put GC information in its own logfile (will set HBASE_GC_OPTS)
+# this enables gc logging using automatic GC log rolling. Only applies to jdk 1.6.0_34+ and 1.7.0_2+. Either use this set of options or the one above
+# export SERVER_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=1 -XX:GCLogFileSize=512M $HBASE_GC_OPTS"
+
+# Uncomment below to enable java garbage collection logging for the client processes in the .out file.
+# export CLIENT_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps $HBASE_GC_OPTS"
+
+# Uncomment below (along with above GC logging) to put GC information in its own logfile (will set HBASE_GC_OPTS).
+# This applies to both the server and client GC options above
 # export HBASE_USE_GC_LOGFILE=true
 
 

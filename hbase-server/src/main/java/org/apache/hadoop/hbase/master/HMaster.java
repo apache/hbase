@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -78,11 +79,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
-import org.apache.hadoop.hbase.ipc.ProtocolSignature;
+import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.ipc.UnknownProtocolException;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
@@ -96,7 +97,6 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
-import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
@@ -337,6 +337,9 @@ Server {
   // monitor for snapshot of hbase tables
   private SnapshotManager snapshotManager;
 
+  /** The health check chore. */
+  private HealthCheckChore healthCheckChore;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -368,9 +371,9 @@ Server {
     }
     int numHandlers = conf.getInt("hbase.master.handler.count",
       conf.getInt("hbase.regionserver.handler.count", 25));
-    this.rpcServer = HBaseRPC.getServer(MasterMonitorProtocol.class, this,
-      new Class<?>[]{MasterMonitorProtocol.class,
-        MasterAdminProtocol.class, RegionServerStatusProtocol.class},
+    this.rpcServer = HBaseServerRPC.getServer(MasterMonitorProtocol.class, this,
+        new Class<?>[]{MasterMonitorProtocol.class,
+            MasterAdminProtocol.class, RegionServerStatusProtocol.class},
         initialIsa.getHostName(), // BindAddress is IP we got for this server.
         initialIsa.getPort(),
         numHandlers,
@@ -416,6 +419,13 @@ Server {
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
+
+    // Health checker thread.
+    int sleepTime = this.conf.getInt(HConstants.HEALTH_CHORE_WAKE_FREQ,
+      HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
+    if (isHealthCheckerConfigured()) {
+      healthCheckChore = new HealthCheckChore(sleepTime, this, getConfiguration());
+    }
   }
 
   /**
@@ -440,7 +450,8 @@ Server {
     while (!amm.isActiveMaster()) {
       LOG.debug("Waiting for master address ZNode to be written " +
         "(Also watching cluster state node)");
-      Thread.sleep(c.getInt("zookeeper.session.timeout", 180 * 1000));
+      Thread.sleep(
+        c.getInt(HConstants.ZK_SESSION_TIMEOUT, HConstants.DEFAULT_ZK_SESSION_TIMEOUT));
     }
 
   }
@@ -548,8 +559,7 @@ Server {
    */
   private void initializeZKBasedSystemTrackers() throws IOException,
       InterruptedException, KeeperException {
-    this.catalogTracker = createCatalogTracker(this.zooKeeper, this.conf,
-        this, conf.getInt("hbase.master.catalog.timeout", 600000));
+    this.catalogTracker = createCatalogTracker(this.zooKeeper, this.conf, this);
     this.catalogTracker.start();
 
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
@@ -595,9 +605,9 @@ Server {
    * @throws IOException
    */
   CatalogTracker createCatalogTracker(final ZooKeeperWatcher zk,
-      final Configuration conf, Abortable abortable, final int defaultTimeout)
+      final Configuration conf, Abortable abortable)
   throws IOException {
-    return new CatalogTracker(zk, conf, abortable, defaultTimeout);
+    return new CatalogTracker(zk, conf, abortable);
   }
 
   // Check if we should stop every 100ms
@@ -970,35 +980,9 @@ Server {
       return;
     }
     LOG.info("Forcing splitLog and expire of " + sn);
+    fileSystemManager.splitMetaLog(sn);
     fileSystemManager.splitLog(sn);
     serverManager.expireServer(sn);
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(
-      String protocol, long version, int clientMethodsHashCode)
-  throws IOException {
-    if (MasterMonitorProtocol.class.getName().equals(protocol)) {
-      return new ProtocolSignature(MasterMonitorProtocol.VERSION, null);
-    } else if (MasterAdminProtocol.class.getName().equals(protocol)) {
-      return new ProtocolSignature(MasterAdminProtocol.VERSION, null);
-    } else if (RegionServerStatusProtocol.class.getName().equals(protocol)) {
-      return new ProtocolSignature(RegionServerStatusProtocol.VERSION, null);
-    }
-    throw new IOException("Unknown protocol: " + protocol);
-  }
-
-  public long getProtocolVersion(String protocol, long clientVersion) {
-    if (MasterMonitorProtocol.class.getName().equals(protocol)) {
-      return MasterMonitorProtocol.VERSION;
-    } else if (MasterAdminProtocol.class.getName().equals(protocol)) {
-      return MasterAdminProtocol.VERSION;
-    } else if (RegionServerStatusProtocol.class.getName().equals(protocol)) {
-      return RegionServerStatusProtocol.VERSION;
-    }
-    // unknown protocol
-    LOG.warn("Version requested for unimplemented protocol: "+protocol);
-    return -1;
   }
 
   @Override
@@ -1089,6 +1073,11 @@ Server {
      this.infoServer.start();
     }
 
+   // Start the health checker
+   if (this.healthCheckChore != null) {
+     Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker");
+   }
+
     // Start allowing requests to happen.
     this.rpcServer.openServer();
     this.rpcServerOpen = true;
@@ -1124,6 +1113,9 @@ Server {
       }
     }
     if (this.executorService != null) this.executorService.shutdown();
+    if (this.healthCheckChore != null) {
+      this.healthCheckChore.interrupt();
+    }
   }
 
   private static Thread getAndStartClusterStatusChore(HMaster master) {
@@ -1579,19 +1571,22 @@ Server {
   }
 
   @Override
+  public void deleteTable(final byte[] tableName) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preDeleteTable(tableName);
+    }
+    this.executorService.submit(new DeleteTableHandler(tableName, this, this));
+    if (cpHost != null) {
+      cpHost.postDeleteTable(tableName);
+    }
+  }
+
+  @Override
   public DeleteTableResponse deleteTable(RpcController controller, DeleteTableRequest request)
   throws ServiceException {
-    byte [] tableName = request.getTableName().toByteArray();
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preDeleteTable(tableName);
-      }
-      this.executorService.submit(new DeleteTableHandler(tableName, this, this));
-
-      if (cpHost != null) {
-        cpHost.postDeleteTable(tableName);
-      }
+      deleteTable(request.getTableName().toByteArray());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1626,45 +1621,55 @@ Server {
     }
   }
 
+  @Override
+  public void addColumn(final byte[] tableName, final HColumnDescriptor column)
+      throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      if (cpHost.preAddColumn(tableName, column)) {
+        return;
+      }
+    }
+    new TableAddFamilyHandler(tableName, column, this, this).process();
+    if (cpHost != null) {
+      cpHost.postAddColumn(tableName, column);
+    }
+  }
+
+  @Override
   public AddColumnResponse addColumn(RpcController controller, AddColumnRequest req)
   throws ServiceException {
-    byte [] tableName = req.getTableName().toByteArray();
-    HColumnDescriptor column = HColumnDescriptor.convert(req.getColumnFamilies());
-
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        if (cpHost.preAddColumn(tableName, column)) {
-          return AddColumnResponse.newBuilder().build();
-        }
-      }
-      new TableAddFamilyHandler(tableName, column, this, this).process();
-      if (cpHost != null) {
-        cpHost.postAddColumn(tableName, column);
-      }
+      addColumn(req.getTableName().toByteArray(),
+        HColumnDescriptor.convert(req.getColumnFamilies()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
     return AddColumnResponse.newBuilder().build();
   }
 
+  @Override
+  public void modifyColumn(byte[] tableName, HColumnDescriptor descriptor)
+      throws IOException {
+    checkInitialized();
+    checkCompression(descriptor);
+    if (cpHost != null) {
+      if (cpHost.preModifyColumn(tableName, descriptor)) {
+        return;
+      }
+    }
+    new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
+    if (cpHost != null) {
+      cpHost.postModifyColumn(tableName, descriptor);
+    }
+  }
+
+  @Override
   public ModifyColumnResponse modifyColumn(RpcController controller, ModifyColumnRequest req)
   throws ServiceException {
-    byte [] tableName = req.getTableName().toByteArray();
-    HColumnDescriptor descriptor = HColumnDescriptor.convert(req.getColumnFamilies());
-
     try {
-      checkInitialized();
-      checkCompression(descriptor);
-      if (cpHost != null) {
-        if (cpHost.preModifyColumn(tableName, descriptor)) {
-          return ModifyColumnResponse.newBuilder().build();
-        }
-      }
-      new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
-      if (cpHost != null) {
-        cpHost.postModifyColumn(tableName, descriptor);
-      }
+      modifyColumn(req.getTableName().toByteArray(),
+        HColumnDescriptor.convert(req.getColumnFamilies()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1672,21 +1677,25 @@ Server {
   }
 
   @Override
+  public void deleteColumn(final byte[] tableName, final byte[] columnName)
+      throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      if (cpHost.preDeleteColumn(tableName, columnName)) {
+        return;
+      }
+    }
+    new TableDeleteFamilyHandler(tableName, columnName, this, this).process();
+    if (cpHost != null) {
+      cpHost.postDeleteColumn(tableName, columnName);
+    }
+  }
+
+  @Override
   public DeleteColumnResponse deleteColumn(RpcController controller, DeleteColumnRequest req)
   throws ServiceException {
-    final byte [] tableName = req.getTableName().toByteArray();
-    final byte [] columnName = req.getColumnName().toByteArray();
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        if (cpHost.preDeleteColumn(tableName, columnName)) {
-          return DeleteColumnResponse.newBuilder().build();
-        }
-      }
-      new TableDeleteFamilyHandler(tableName, columnName, this, this).process();
-      if (cpHost != null) {
-        cpHost.postDeleteColumn(tableName, columnName);
-      }
+      deleteColumn(req.getTableName().toByteArray(), req.getColumnName().toByteArray());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1694,20 +1703,23 @@ Server {
   }
 
   @Override
+  public void enableTable(final byte[] tableName) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preEnableTable(tableName);
+    }
+    this.executorService.submit(new EnableTableHandler(this, tableName,
+      catalogTracker, assignmentManager, false));
+    if (cpHost != null) {
+      cpHost.postEnableTable(tableName);
+   }
+  }
+
+  @Override
   public EnableTableResponse enableTable(RpcController controller, EnableTableRequest request)
   throws ServiceException {
-    byte [] tableName = request.getTableName().toByteArray();
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preEnableTable(tableName);
-      }
-      this.executorService.submit(new EnableTableHandler(this, tableName,
-        catalogTracker, assignmentManager, false));
-
-      if (cpHost != null) {
-        cpHost.postEnableTable(tableName);
-     }
+      enableTable(request.getTableName().toByteArray());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1715,20 +1727,23 @@ Server {
   }
 
   @Override
+  public void disableTable(final byte[] tableName) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preDisableTable(tableName);
+    }
+    this.executorService.submit(new DisableTableHandler(this, tableName,
+      catalogTracker, assignmentManager, false));
+    if (cpHost != null) {
+      cpHost.postDisableTable(tableName);
+    }
+  }
+
+  @Override
   public DisableTableResponse disableTable(RpcController controller, DisableTableRequest request)
   throws ServiceException {
-    byte [] tableName = request.getTableName().toByteArray();
     try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preDisableTable(tableName);
-      }
-      this.executorService.submit(new DisableTableHandler(this, tableName,
-        catalogTracker, assignmentManager, false));
-
-      if (cpHost != null) {
-        cpHost.postDisableTable(tableName);
-      }
+      disableTable(request.getTableName().toByteArray());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1771,25 +1786,28 @@ Server {
   }
 
   @Override
+  public void modifyTable(final byte[] tableName, final HTableDescriptor descriptor)
+      throws IOException {
+    checkInitialized();
+    checkCompression(descriptor);
+    if (cpHost != null) {
+      cpHost.preModifyTable(tableName, descriptor);
+    }
+    new ModifyTableHandler(tableName, descriptor, this, this).process();
+
+    if (cpHost != null) {
+      cpHost.postModifyTable(tableName, descriptor);
+    }
+  }
+
+  @Override
   public ModifyTableResponse modifyTable(RpcController controller, ModifyTableRequest req)
   throws ServiceException {
-    final byte [] tableName = req.getTableName().toByteArray();
-    HTableDescriptor htd = HTableDescriptor.convert(req.getTableSchema());
     try {
-      checkInitialized();
-      checkCompression(htd);
-      if (cpHost != null) {
-        cpHost.preModifyTable(tableName, htd);
-      }
-      TableEventHandler tblHandle = new ModifyTableHandler(tableName, htd, this, this);
-      this.executorService.submit(tblHandle);
-      tblHandle.waitForPersist();
-
-      if (cpHost != null) {
-        cpHost.postModifyTable(tableName, htd);
-      }
+      modifyTable(req.getTableName().toByteArray(),
+        HTableDescriptor.convert(req.getTableSchema()));
     } catch (IOException ioe) {
-        throw new ServiceException(ioe);
+      throw new ServiceException(ioe);
     }
     return ModifyTableResponse.newBuilder().build();
   }
@@ -2344,7 +2362,7 @@ Server {
       String serviceName = call.getServiceName();
       String methodName = call.getMethodName();
       if (!coprocessorServiceHandlers.containsKey(serviceName)) {
-        throw new HBaseRPC.UnknownProtocolException(null,
+        throw new UnknownProtocolException(null,
             "No registered master coprocessor service found for name "+serviceName);
       }
 
@@ -2352,7 +2370,7 @@ Server {
       Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
       Descriptors.MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
       if (methodDesc == null) {
-        throw new HBaseRPC.UnknownProtocolException(service.getClass(),
+        throw new UnknownProtocolException(service.getClass(),
             "Unknown method "+methodName+" called on master service "+serviceName);
       }
 
@@ -2361,7 +2379,7 @@ Server {
           .mergeFrom(call.getRequest()).build();
       final Message.Builder responseBuilder =
           service.getResponsePrototype(methodDesc).newBuilderForType();
-      service.callMethod(methodDesc, controller, execRequest, new RpcCallback<Message>() {
+      service.callMethod(methodDesc, execController, execRequest, new RpcCallback<Message>() {
         @Override
         public void run(Message message) {
           if (message != null) {
@@ -2581,5 +2599,10 @@ Server {
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  private boolean isHealthCheckerConfigured() {
+    String healthScriptLocation = this.conf.get(HConstants.HEALTH_SCRIPT_LOC);
+    return org.apache.commons.lang.StringUtils.isNotBlank(healthScriptLocation);
   }
 }

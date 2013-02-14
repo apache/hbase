@@ -43,13 +43,12 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -87,7 +86,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * </pre>
  */
 @InterfaceAudience.Private
-public class ReplicationZookeeper implements Closeable{
+public class ReplicationZookeeper implements Closeable {
   private static final Log LOG =
     LogFactory.getLog(ReplicationZookeeper.class);
   // Name of znode we use to lock when failover
@@ -111,24 +110,24 @@ public class ReplicationZookeeper implements Closeable{
   // peers' id node; e.g. /hbase/replication/peers/PEER_ID/peer-state
   private String peerStateNodeName;
   private final Configuration conf;
-  // Is this cluster replicating at the moment?
-  private AtomicBoolean replicating;
   // The key to our own cluster
   private String ourClusterKey;
   // Abortable
   private Abortable abortable;
-  private ReplicationStatusTracker statusTracker;
+  private final ReplicationStateInterface replicationState;
 
   /**
    * ZNode content if enabled state.
    */
   // Public so it can be seen by test code.
-  public static final byte[] ENABLED_ZNODE_BYTES = toByteArray(ZooKeeperProtos.ReplicationState.State.ENABLED);
+  public static final byte[] ENABLED_ZNODE_BYTES =
+      toByteArray(ZooKeeperProtos.ReplicationState.State.ENABLED);
 
   /**
    * ZNode content if disabled state.
    */
-  static final byte[] DISABLED_ZNODE_BYTES = toByteArray(ZooKeeperProtos.ReplicationState.State.DISABLED);
+  static final byte[] DISABLED_ZNODE_BYTES =
+      toByteArray(ZooKeeperProtos.ReplicationState.State.DISABLED);
 
   /**
    * Constructor used by clients of replication (like master and HBase clients)
@@ -140,8 +139,9 @@ public class ReplicationZookeeper implements Closeable{
       final ZooKeeperWatcher zk) throws KeeperException {
     this.conf = conf;
     this.zookeeper = zk;
-    this.replicating = new AtomicBoolean();
     setZNodes(abortable);
+    this.replicationState =
+        new ReplicationStateImpl(this.zookeeper, getRepStateNode(), abortable, new AtomicBoolean());
   }
 
   /**
@@ -157,9 +157,10 @@ public class ReplicationZookeeper implements Closeable{
     this.abortable = server;
     this.zookeeper = server.getZooKeeper();
     this.conf = server.getConfiguration();
-    this.replicating = replicating;
     setZNodes(server);
 
+    this.replicationState =
+        new ReplicationStateImpl(this.zookeeper, getRepStateNode(), server, replicating);
     this.peerClusters = new HashMap<String, ReplicationPeer>();
     ZKUtil.createWithParents(this.zookeeper,
         ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName));
@@ -180,11 +181,6 @@ public class ReplicationZookeeper implements Closeable{
     ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
     this.rsZNode = ZKUtil.joinZNode(replicationZNode, rsZNodeName);
     ZKUtil.createWithParents(this.zookeeper, this.rsZNode);
-
-    // Set a tracker on replicationStateNodeNode
-    this.statusTracker = new ReplicationStatusTracker(this.zookeeper, abortable);
-    statusTracker.start();
-    readReplicationStateZnode();
   }
 
   private void connectExistingPeers() throws IOException, KeeperException {
@@ -366,18 +362,6 @@ public class ReplicationZookeeper implements Closeable{
   }
 
   /**
-   * Set the new replication state for this cluster
-   * @param newState
-   */
-  public void setReplicating(boolean newState) throws KeeperException {
-    ZKUtil.createWithParents(this.zookeeper,
-        ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName));
-    byte[] stateBytes = (newState == true) ? ENABLED_ZNODE_BYTES : DISABLED_ZNODE_BYTES;
-    ZKUtil.setData(this.zookeeper,
-      ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName), stateBytes);
-  }
-
-  /**
    * Remove the peer from zookeeper. which will trigger the watchers on every
    * region server and close their sources
    * @param id
@@ -411,8 +395,12 @@ public class ReplicationZookeeper implements Closeable{
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
       ZKUtil.createAndWatch(this.zookeeper, ZKUtil.joinZNode(this.peersZNode, id),
         toByteArray(clusterKey));
+      // There is a race b/w PeerWatcher and ReplicationZookeeper#add method to create the
+      // peer-state znode. This happens while adding a peer.
+      // The peer state data is set as "ENABLED" by default.
+      ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, getPeerStateNode(id),
+        ENABLED_ZNODE_BYTES);
       // A peer is enabled by default
-      ZKUtil.createAndWatch(this.zookeeper, getPeerStateNode(id), ENABLED_ZNODE_BYTES);
     } catch (KeeperException e) {
       throw new IOException("Unable to add peer", e);
     }
@@ -637,40 +625,27 @@ public class ReplicationZookeeper implements Closeable{
     return ZKUtil.joinZNode(this.peersZNode, ZKUtil.joinZNode(id, this.peerStateNodeName));
   }
 
-  /**
-   * This reads the state znode for replication and sets the atomic boolean
-   */
-  private void readReplicationStateZnode() {
-    try {
-      this.replicating.set(getReplication());
-      LOG.info("Replication is now " + (this.replicating.get()?
-        "started" : "stopped"));
-    } catch (KeeperException e) {
-      this.abortable.abort("Failed getting data on from " + getRepStateNode(), e);
-    }
+  private String getRepStateNode() {
+    return ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName);
   }
 
   /**
-   * Get the replication status of this cluster. If the state znode doesn't
-   * exist it will also create it and set it true.
+   * Get the replication status of this cluster. If the state znode doesn't exist it will also
+   * create it and set it true.
    * @return returns true when it's enabled, else false
    * @throws KeeperException
    */
   public boolean getReplication() throws KeeperException {
-    byte [] data = this.statusTracker.getData(false);
-    if (data == null || data.length == 0) {
-      setReplicating(true);
-      return true;
-    }
-    try {
-      return isPeerEnabled(data);
-    } catch (DeserializationException e) {
-      throw ZKUtil.convert(e);
-    }
+    return this.replicationState.getState();
   }
 
-  private String getRepStateNode() {
-    return ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName);
+  /**
+   * Set the new replication state for this cluster
+   * @param newState
+   * @throws KeeperException
+   */
+  public void setReplication(boolean newState) throws KeeperException {
+    this.replicationState.setState(newState);
   }
 
   /**
@@ -814,6 +789,58 @@ public class ReplicationZookeeper implements Closeable{
       return false;
     }
     return true;
+  }
+
+  /**
+   * It "atomically" copies all the hlogs queues from another region server and returns them all
+   * sorted per peer cluster (appended with the dead server's znode).
+   * @param znode
+   * @return HLog queues sorted per peer cluster
+   */
+  public SortedMap<String, SortedSet<String>> copyQueuesFromRSUsingMulti(String znode) {
+    SortedMap<String, SortedSet<String>> queues = new TreeMap<String, SortedSet<String>>();
+    String deadRSZnodePath = ZKUtil.joinZNode(rsZNode, znode);// hbase/replication/rs/deadrs
+    List<String> peerIdsToProcess = null;
+    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+    try {
+      peerIdsToProcess = ZKUtil.listChildrenNoWatch(this.zookeeper, deadRSZnodePath);
+      if (peerIdsToProcess == null) return null; // node already processed
+      for (String peerId : peerIdsToProcess) {
+        String newPeerId = peerId + "-" + znode;
+        String newPeerZnode = ZKUtil.joinZNode(this.rsServerNameZnode, newPeerId);
+        // check the logs queue for the old peer cluster
+        String oldClusterZnode = ZKUtil.joinZNode(deadRSZnodePath, peerId);
+        List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
+        if (hlogs == null || hlogs.size() == 0) continue; // empty log queue.
+        // create the new cluster znode
+        SortedSet<String> logQueue = new TreeSet<String>();
+        queues.put(newPeerId, logQueue);
+        ZKUtilOp op = ZKUtilOp.createAndFailSilent(newPeerZnode, HConstants.EMPTY_BYTE_ARRAY);
+        listOfOps.add(op);
+        // get the offset of the logs and set it to new znodes
+        for (String hlog : hlogs) {
+          String oldHlogZnode = ZKUtil.joinZNode(oldClusterZnode, hlog);
+          byte[] logOffset = ZKUtil.getData(this.zookeeper, oldHlogZnode);
+          LOG.debug("Creating " + hlog + " with data " + Bytes.toString(logOffset));
+          String newLogZnode = ZKUtil.joinZNode(newPeerZnode, hlog);
+          listOfOps.add(ZKUtilOp.createAndFailSilent(newLogZnode, logOffset));
+          // add ops for deleting
+          listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldHlogZnode));
+          logQueue.add(hlog);
+        }
+        // add delete op for peer
+        listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
+      }
+      // add delete op for dead rs
+      listOfOps.add(ZKUtilOp.deleteNodeFailSilent(deadRSZnodePath));
+      LOG.debug(" The multi list size is: " + listOfOps.size());
+      ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
+      LOG.info("Atomically moved the dead regionserver logs. ");
+    } catch (KeeperException e) {
+      // Multi call failed; it looks like some other regionserver took away the logs.
+      LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);
+    }
+    return queues;
   }
 
   /**
@@ -1021,6 +1048,15 @@ public class ReplicationZookeeper implements Closeable{
   public Map<String, ReplicationPeer> getPeerClusters() {
     return this.peerClusters;
   }
+  
+  /**
+   * Determine if a ZK path points to a peer node.
+   * @param path path to be checked
+   * @return true if the path points to a peer node, otherwise false
+   */
+  public boolean isPeerPath(String path) {
+    return path.split("/").length == peersZNode.split("/").length + 1;
+  }
 
   /**
    * Extracts the znode name of a peer cluster from a ZK path
@@ -1051,8 +1087,7 @@ public class ReplicationZookeeper implements Closeable{
 
   @Override
   public void close() throws IOException {
-    if (statusTracker != null)
-      statusTracker.stop();
+    if (replicationState != null) replicationState.close();
   }
 
   /**
@@ -1067,7 +1102,10 @@ public class ReplicationZookeeper implements Closeable{
   static boolean ensurePeerEnabled(final ZooKeeperWatcher zookeeper, final String path)
       throws NodeExistsException, KeeperException {
     if (ZKUtil.checkExists(zookeeper, path) == -1) {
-      ZKUtil.createAndWatch(zookeeper, path, ENABLED_ZNODE_BYTES);
+      // There is a race b/w PeerWatcher and ReplicationZookeeper#add method to create the
+      // peer-state znode. This happens while adding a peer.
+      // The peer state data is set as "ENABLED" by default.
+      ZKUtil.createNodeIfNotExistsAndWatch(zookeeper, path, ENABLED_ZNODE_BYTES);
       return true;
     }
     return false;
@@ -1079,26 +1117,8 @@ public class ReplicationZookeeper implements Closeable{
    *         serialized ENABLED state.
    * @throws DeserializationException
    */
-  static boolean isPeerEnabled(final byte[] bytes) throws DeserializationException {
+  static boolean isStateEnabled(final byte[] bytes) throws DeserializationException {
     ZooKeeperProtos.ReplicationState.State state = parseStateFrom(bytes);
     return ZooKeeperProtos.ReplicationState.State.ENABLED == state;
-  }
-
-  /**
-   * Tracker for status of the replication
-   */
-  public class ReplicationStatusTracker extends ZooKeeperNodeTracker {
-    public ReplicationStatusTracker(ZooKeeperWatcher watcher,
-        Abortable abortable) {
-      super(watcher, getRepStateNode(), abortable);
-    }
-
-    @Override
-    public synchronized void nodeDataChanged(String path) {
-      if (path.equals(node)) {
-        super.nodeDataChanged(path);
-        readReplicationStateZnode();
-      }
-    }
   }
 }

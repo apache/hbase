@@ -583,6 +583,34 @@ $JIRA_COMMENT_FOOTER"
 }
 
 ###############################################################################
+### Check line lengths
+checkLineLengths () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking that no line have length > $MAX_LINE_LENGTH"
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  #see http://en.wikipedia.org/wiki/Diff#Unified_format
+
+  ll=`cat $PATCH_DIR/patch | grep "^+" | grep -v "^@@" | grep -v "^+++" | grep -v "import" | wc -L`
+  MAX_LINE_LENGTH_PATCH=`expr $MAX_LINE_LENGTH + 1`
+  if [[ "$ll" -gt "$MAX_LINE_LENGTH_PATCH" ]]; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:red}-1 lineLengths{color}.  The patch introduces lines longer than $MAX_LINE_LENGTH"
+    return 1
+  fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+1 lineLengths{color}.  The patch does not introduce lines longer than $MAX_LINE_LENGTH"
+  return 0
+}
+
+###############################################################################
 ### Run the tests
 runTests () {
   echo ""
@@ -594,6 +622,10 @@ runTests () {
   echo "======================================================================"
   echo ""
   echo ""
+
+
+  ### kill any process remaining from another test, maybe even another project
+  jps | grep surefirebooter | cut -d ' ' -f 1 | xargs kill -9 2>/dev/null
   
   failed_tests=""
   ### Kill any rogue build processes from the last attempt
@@ -621,16 +653,26 @@ runTests () {
   fi
   ZOMBIE_TESTS_COUNT=`jps | grep surefirebooter | wc -l`
   if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
-    echo "There are $ZOMBIE_TESTS_COUNT zombie tests, they should have been killed by surefire but survived"
-    echo "************ BEGIN zombies jstack extract"
-    jps | grep surefirebooter | cut -d ' ' -f 1 | xargs -n 1 jstack | grep ".test" | grep "\.java"
-    echo "************ END  zombies jstack extract"
-     JIRA_COMMENT="$JIRA_COMMENT
+    #It seems sometimes the tests are not dying immediately. Let's give them 30s
+    echo "Suspicious java process found - waiting 30s to see if there are just slow to stop"
+    sleep 30
+    ZOMBIE_TESTS_COUNT=`jps | grep surefirebooter | wc -l`
+    if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
+      echo "There are $ZOMBIE_TESTS_COUNT zombie tests, they should have been killed by surefire but survived"
+      echo "************ BEGIN zombies jstack extract"
+      ZB_STACK=`jps | grep surefirebooter | cut -d ' ' -f 1 | xargs -n 1 jstack | grep ".test" | grep "\.java"`
+      jps | grep surefirebooter | cut -d ' ' -f 1 | xargs -n 1 jstack
+      echo "************ END  zombies jstack extract"
+      JIRA_COMMENT="$JIRA_COMMENT
 
-     {color:red}-1 core zombie tests{color}.  There are zombie tests. See build logs for details."
-    BAD=1
+     {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} zombie test(s): ${ZB_STACK}"
+      BAD=1
+      jps | grep surefirebooter | cut -d ' ' -f 1 | xargs kill -9
+    else
+      echo "We're ok: there is no zombie test, but some tests took some time to stop"
+    fi
   else
-    echo "We're ok: there is no zombie tests"
+    echo "We're ok: there is no zombie test"
   fi
   return $BAD
 }
@@ -772,6 +814,8 @@ checkJavacWarnings
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
 checkReleaseAuditWarnings
+(( RESULT = RESULT + $? ))
+checkLineLengths
 (( RESULT = RESULT + $? ))
 ### Do not call these when run by a developer 
 if [[ $JENKINS == "true" ]] ; then

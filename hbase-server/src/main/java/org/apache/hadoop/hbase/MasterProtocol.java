@@ -16,29 +16,14 @@
  * limitations under the License.
  */
 
-// Functions implemented by all the master protocols (e.g. MasterAdminProtocol,
-// MasterMonitorProtocol).  Currently, this is only isMasterRunning, which is used,
-// on proxy creation, to check if the master has been stopped.  If it has,
-// a MasterNotRunningException is thrown back to the client, and the client retries.
-
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 
-public interface MasterProtocol extends VersionedProtocol, MasterService.BlockingInterface {
-
-  /**
-   * @param c Unused (set to null).
-   * @param req IsMasterRunningRequest
-   * @return IsMasterRunningRequest that contains:<br>
-   * isMasterRunning: true if master is available
-   * @throws ServiceException
-   */
-  public IsMasterRunningResponse isMasterRunning(RpcController c, IsMasterRunningRequest req)
-  throws ServiceException;
-}
+/**
+ * Functions implemented by all the master protocols: e.g. {@link MasterAdminProtocol}
+ * and {@link MasterMonitorProtocol}. Currently, the only shared method
+ * {@link #isMasterRunning(com.google.protobuf.RpcController, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest)}
+ * which is used on connection setup to check if the master has been stopped.
+ */
+public interface MasterProtocol extends IpcProtocol, MasterService.BlockingInterface {}

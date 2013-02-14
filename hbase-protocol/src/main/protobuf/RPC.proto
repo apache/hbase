@@ -86,13 +86,10 @@ message RpcRequestBody {
   /** Name of the RPC method */
   required string methodName = 1;
 
-  /** protocol version of class declaring the called method */
-  optional uint64 clientProtocolVersion = 2;
-
   /** Bytes corresponding to the client protobuf request. This is the actual
    *  bytes corresponding to the RPC request argument.
    */
-  optional bytes request = 3;
+  optional bytes request = 2;
 
   /** Some metainfo about the request. Helps us to treat RPCs with
    *  different priorities. For now this is just the classname of the request

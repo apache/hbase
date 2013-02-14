@@ -33,8 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.client.ClientProtocol;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -113,12 +112,12 @@ public abstract class ServerCallable<T> implements Callable<T> {
   }
 
   public void beforeCall() {
-    HBaseRPC.setRpcTimeout(this.callTimeout);
+    HBaseClientRPC.setRpcTimeout(this.callTimeout);
     this.startTime = System.currentTimeMillis();
   }
 
   public void afterCall() {
-    HBaseRPC.resetRpcTimeout();
+    HBaseClientRPC.resetRpcTimeout();
     this.endTime = System.currentTimeMillis();
   }
 

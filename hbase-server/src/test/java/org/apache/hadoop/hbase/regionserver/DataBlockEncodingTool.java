@@ -367,8 +367,6 @@ public class DataBlockEncodingTool {
   /**
    * Check decompress performance of a given algorithm and print it.
    * @param algorithm Compression algorithm.
-   * @param compressorCodec Compressor to be tested.
-   * @param decompressorCodec Decompressor of the same algorithm.
    * @param name Name of algorithm.
    * @param buffer Buffer to be compressed.
    * @param offset Position of the beginning of the data.
@@ -584,7 +582,7 @@ public class DataBlockEncodingTool {
     CacheConfig cacheConf = new CacheConfig(conf);
     FileSystem fs = FileSystem.get(conf);
     StoreFile hsf = new StoreFile(fs, path, conf, cacheConf,
-        StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+        BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
 
     StoreFile.Reader reader = hsf.createReader();
     reader.loadFileInfo();

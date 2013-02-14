@@ -29,12 +29,9 @@ option optimize_for = SPEED;
  */
 message TableSchema {
   optional bytes name = 1;
-  message Attribute {
-    required bytes name = 1;
-    required bytes value = 2;
-  }
-  repeated Attribute attributes = 2;
+  repeated BytesBytesPair attributes = 2;
   repeated ColumnFamilySchema columnFamilies = 3;
+  repeated NameStringPair configuration = 4;
 }
 
 /**
@@ -43,11 +40,8 @@ message TableSchema {
  */
 message ColumnFamilySchema {
   required bytes name = 1;
-  message Attribute {
-    required bytes name = 1;
-    required bytes value = 2;
-  }
-  repeated Attribute attributes = 2;
+  repeated BytesBytesPair attributes = 2;
+  repeated NameStringPair configuration = 3;
 }
 
 /**
@@ -282,4 +276,12 @@ message SnapshotDescription {
 	}
 	optional Type type = 4 [default = FLUSH];
 	optional int32 version = 5;
+}
+
+message EmptyMsg {
+}
+
+message LongMsg {
+  required int64 longMsg = 1;
+
 }

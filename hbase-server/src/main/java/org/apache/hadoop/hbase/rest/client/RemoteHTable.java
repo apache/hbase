@@ -35,7 +35,6 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.util.StringUtils;
 
@@ -55,7 +54,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.rest.Constants;
@@ -82,7 +80,7 @@ public class RemoteHTable implements HTableInterface {
   final long sleepTime;
 
   @SuppressWarnings("rawtypes")
-  protected String buildRowSpec(final byte[] row, final Map familyMap, 
+  protected String buildRowSpec(final byte[] row, final Map familyMap,
       final long startTime, final long endTime, final int maxVersions) {
     StringBuffer sb = new StringBuffer();
     sb.append('/');
@@ -174,7 +172,7 @@ public class RemoteHTable implements HTableInterface {
         byte[][] split = KeyValue.parseColumn(cell.getColumn());
         byte[] column = split[0];
         byte[] qualifier = split.length > 1 ? split[1] : null;
-        kvs.add(new KeyValue(row.getKey(), column, qualifier, 
+        kvs.add(new KeyValue(row.getKey(), column, qualifier,
           cell.getTimestamp(), cell.getValue()));
       }
       results.add(new Result(kvs));
@@ -252,7 +250,7 @@ public class RemoteHTable implements HTableInterface {
         TableSchemaModel schema = new TableSchemaModel();
         schema.getObjectFromMessage(response.getBody());
         return schema.getTableDescriptor();
-      case 509: 
+      case 509:
         try {
           Thread.sleep(sleepTime);
         } catch (InterruptedException e) { }
@@ -344,6 +342,19 @@ public class RemoteHTable implements HTableInterface {
     LOG.warn("exists() is really get(), just use get()");
     Result result = get(get);
     return (result != null && !(result.isEmpty()));
+  }
+
+  /**
+   * exists(List) is really a list of get() calls. Just use get().
+   * @param gets list of Get to test for the existence
+   */
+  public Boolean[] exists(List<Get> gets) throws IOException {
+    LOG.warn("exists(List<Get>) is really list of get() calls, just use get()");
+    Boolean[] results = new Boolean[gets.size()];
+    for (int i = 0; i < results.length; i++) {
+      results[i] = exists(gets.get(i));
+    }
+    return results;
   }
 
   public void put(Put put) throws IOException {
@@ -529,7 +540,7 @@ public class RemoteHTable implements HTableInterface {
       }
       return results[0];
     }
-    
+
     class Iter implements Iterator<Result> {
 
       Result cache;
@@ -563,7 +574,7 @@ public class RemoteHTable implements HTableInterface {
       public void remove() {
         throw new RuntimeException("remove() not supported");
       }
-      
+
     }
 
     @Override
@@ -605,14 +616,6 @@ public class RemoteHTable implements HTableInterface {
 
   public Result getRowOrBefore(byte[] row, byte[] family) throws IOException {
     throw new IOException("getRowOrBefore not supported");
-  }
-
-  public RowLock lockRow(byte[] row) throws IOException {
-    throw new IOException("lockRow not implemented");
-  }
-
-  public void unlockRow(RowLock rl) throws IOException {
-    throw new IOException("unlockRow not implemented");
   }
 
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
@@ -723,29 +726,6 @@ public class RemoteHTable implements HTableInterface {
   public <R> Object[] batchCallback(List<? extends Row> actions, Batch.Callback<R> callback)
    throws IOException, InterruptedException {
     throw new IOException("batchCallback not supported");
-  }
-
-  @Override
-  public <T extends CoprocessorProtocol> T coprocessorProxy(Class<T> protocol,
-      byte[] row) {
-    throw new
-    UnsupportedOperationException("coprocessorProxy not implemented");
-  }
-
-  @Override
-  public <T extends CoprocessorProtocol, R> Map<byte[], R> coprocessorExec(
-      Class<T> protocol, byte[] startKey, byte[] endKey,
-      Batch.Call<T, R> callable)
-      throws IOException, Throwable {
-    throw new UnsupportedOperationException("coprocessorExec not implemented");
-  }
-
-  @Override
-  public <T extends CoprocessorProtocol, R> void coprocessorExec(
-      Class<T> protocol, byte[] startKey, byte[] endKey,
-      Batch.Call<T, R> callable, Batch.Callback<R> callback)
-      throws IOException, Throwable {
-    throw new UnsupportedOperationException("coprocessorExec not implemented");
   }
 
   @Override

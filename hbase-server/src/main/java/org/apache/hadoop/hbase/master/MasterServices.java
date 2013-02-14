@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import com.google.protobuf.Service;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -77,6 +78,63 @@ public interface MasterServices extends Server {
    *     a single region is created.
    */
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
+      throws IOException;
+
+  /**
+   * Delete a table
+   * @param tableName The table name
+   * @throws IOException
+   */
+  public void deleteTable(final byte[] tableName) throws IOException;
+
+  /**
+   * Modify the descriptor of an existing table
+   * @param tableName The table name
+   * @param descriptor The updated table descriptor
+   * @throws IOException
+   */
+  public void modifyTable(final byte[] tableName, final HTableDescriptor descriptor)
+      throws IOException;
+
+  /**
+   * Enable an existing table
+   * @param tableName The table name
+   * @throws IOException
+   */
+  public void enableTable(final byte[] tableName) throws IOException;
+
+  /**
+   * Disable an existing table
+   * @param tableName The table name
+   * @throws IOException
+   */
+  public void disableTable(final byte[] tableName) throws IOException;
+
+  /**
+   * Add a new column to an existing table
+   * @param tableName The table name
+   * @param column The column definition
+   * @throws IOException
+   */
+  public void addColumn(final byte[] tableName, final HColumnDescriptor column)
+      throws IOException;
+
+  /**
+   * Modify the column descriptor of an existing column in an existing table
+   * @param tableName The table name
+   * @param descriptor The updated column definition
+   * @throws IOException
+   */
+  public void modifyColumn(byte[] tableName, HColumnDescriptor descriptor)
+      throws IOException;
+
+  /**
+   * Delete a column from an existing table
+   * @param tableName The table name
+   * @param columnName The column name
+   * @throws IOException
+   */
+  public void deleteColumn(final byte[] tableName, final byte[] columnName)
       throws IOException;
 
   /**

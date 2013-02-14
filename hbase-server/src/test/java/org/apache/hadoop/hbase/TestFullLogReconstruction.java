@@ -57,7 +57,7 @@ public class TestFullLogReconstruction {
     // faster failover with cluster.shutdown();fs.close() idiom
     c.setInt("ipc.client.connect.max.retries", 1);
     c.setInt("dfs.client.block.recovery.retries", 1);
-    c.setInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT, 1000);
+    c.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     TEST_UTIL.startMiniCluster(2);
   }
 

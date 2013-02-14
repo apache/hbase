@@ -21,13 +21,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
@@ -43,6 +51,28 @@ public class TestKeepDeletes extends HBaseTestCase {
   private final byte[] c0 = COLUMNS[0];
   private final byte[] c1 = COLUMNS[1];
 
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    /* HBASE-6832: [WINDOWS] Tests should use explicit timestamp for Puts, and not rely on
+     * implicit RS timing.
+     * Use an explicit timer (IncrementingEnvironmentEdge) so that the put, delete
+     * compact timestamps are tracked. Otherwise, forced major compaction will not purge
+     * Delete's having the same timestamp. see ScanQueryMatcher.match():
+     * if (retainDeletesInOutput
+     *     || (!isUserScan && (EnvironmentEdgeManager.currentTimeMillis() - timestamp)
+     *     <= timeToPurgeDeletes) ... )
+     *
+     */
+    EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
+  }
+
+  @Override
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    EnvironmentEdgeManager.reset();
+  }
+
   /**
    * Make sure that deleted rows are retained.
    * Family delete markers are deleted.
@@ -55,7 +85,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -70,8 +100,8 @@ public class TestKeepDeletes extends HBaseTestCase {
     region.put(p);
 
     // now place a delete marker at ts+2
-    Delete d = new Delete(T1, ts+2, null);
-    region.delete(d, null, true);
+    Delete d = new Delete(T1, ts+2);
+    region.delete(d, true);
 
     // a raw scan can see the delete markers
     // (one for each column family)
@@ -81,14 +111,14 @@ public class TestKeepDeletes extends HBaseTestCase {
     Get g = new Get(T1);
     g.setMaxVersions();
     g.setTimeRange(0L, ts+2);
-    Result r = region.get(g, null);
+    Result r = region.get(g);
     checkResult(r, c0, c0, T2,T1);
 
     // flush
     region.flushcache();
 
     // yep, T2 still there, T1 gone
-    r = region.get(g, null);
+    r = region.get(g);
     checkResult(r, c0, c0, T2);
 
     // major compact
@@ -100,12 +130,12 @@ public class TestKeepDeletes extends HBaseTestCase {
     assertEquals(1, countDeleteMarkers(region));
 
     // still there (even after multiple compactions)
-    r = region.get(g, null);
+    r = region.get(g);
     checkResult(r, c0, c0, T2);
 
     // a timerange that includes the delete marker won't see past rows
     g.setTimeRange(0L, ts+4);
-    r = region.get(g, null);
+    r = region.get(g);
     assertTrue(r.isEmpty());
 
     // two more puts, this will expire the older puts.
@@ -121,7 +151,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
-    r = region.get(g, null);
+    r = region.get(g);
     assertTrue(r.isEmpty());
 
     region.flushcache();
@@ -130,7 +160,7 @@ public class TestKeepDeletes extends HBaseTestCase {
 
     // verify that the delete marker itself was collected
     region.put(p);
-    r = region.get(g, null);
+    r = region.get(g);
     checkResult(r, c0, c0, T1);
     assertEquals(0, countDeleteMarkers(region));
 
@@ -138,7 +168,7 @@ public class TestKeepDeletes extends HBaseTestCase {
   }
 
   /**
-   * Even when the store does not keep deletes a "raw" scan will 
+   * Even when the store does not keep deletes a "raw" scan will
    * return everything it can find (unless discarding cells is guaranteed
    * to have no effect).
    * Assuming this the desired behavior. Could also disallow "raw" scanning
@@ -151,14 +181,14 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, false);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
 
-    Delete d = new Delete(T1, ts, null);
+    Delete d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
     // scan still returns delete markers and deletes rows
     Scan s = new Scan();
@@ -195,19 +225,19 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, false);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();  
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
-    Delete d = new Delete(T1, ts+2, null);
+    Delete d = new Delete(T1, ts+2);
     d.deleteColumn(c0, c0, ts);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
     // "past" get does not see rows behind delete marker
     Get g = new Get(T1);
     g.setMaxVersions();
     g.setTimeRange(0L, ts+1);
-    Result r = region.get(g, null);
+    Result r = region.get(g);
     assertTrue(r.isEmpty());
 
     // "past" scan does not see rows behind delete marker
@@ -242,7 +272,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     s.setRaw(true);
     s.setMaxVersions();
     s.addColumn(c0, c0);
-    
+
     try {
       InternalScanner scan = region.getScanner(s);
       fail("raw scanner with columns should have failed");
@@ -261,7 +291,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -272,16 +302,16 @@ public class TestKeepDeletes extends HBaseTestCase {
     p.add(c0, c0, T3);
     region.put(p);
 
-    Delete d = new Delete(T1, ts+1, null);
-    region.delete(d, null, true);
+    Delete d = new Delete(T1, ts+1);
+    region.delete(d, true);
 
-    d = new Delete(T1, ts+2, null);
+    d = new Delete(T1, ts+2);
     d.deleteColumn(c0, c0, ts+2);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
-    d = new Delete(T1, ts+3, null);
+    d = new Delete(T1, ts+3);
     d.deleteColumns(c0, c0, ts+3);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
     Scan s = new Scan();
     s.setRaw(true);
@@ -307,23 +337,23 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
 
-    Delete d = new Delete(T1, ts, null);
+    Delete d = new Delete(T1, ts);
     d.deleteColumns(c0, c0, ts);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
-    d = new Delete(T1, ts, null);
+    d = new Delete(T1, ts);
     d.deleteFamily(c0);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
-    d = new Delete(T1, ts, null);
+    d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+1);
-    region.delete(d, null, true);
-    
-    d = new Delete(T1, ts, null);
+    region.delete(d, true);
+
+    d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+2);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
     // 1 family marker, 1 column marker, 2 version markers
     assertEquals(4, countDeleteMarkers(region));
@@ -349,7 +379,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
@@ -361,21 +391,21 @@ public class TestKeepDeletes extends HBaseTestCase {
     region.put(p);
 
     // all the following deletes affect the put
-    Delete d = new Delete(T1, ts, null);
+    Delete d = new Delete(T1, ts);
     d.deleteColumns(c0, c0, ts);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
-    d = new Delete(T1, ts, null);
+    d = new Delete(T1, ts);
     d.deleteFamily(c0, ts);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
-    d = new Delete(T1, ts, null);
+    d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+1);
-    region.delete(d, null, true);
-    
-    d = new Delete(T1, ts, null);
+    region.delete(d, true);
+
+    d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+2);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
     // 1 family marker, 1 column marker, 2 version markers
     assertEquals(4, countDeleteMarkers(region));
@@ -411,7 +441,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     p.add(c0, c1, T1);
@@ -440,22 +470,22 @@ public class TestKeepDeletes extends HBaseTestCase {
     p.add(c1, c1, T2);
     region.put(p);
 
-    Delete d = new Delete(T1, ts+2, null);
+    Delete d = new Delete(T1, ts+2);
     d.deleteColumns(c0, c0, ts+2);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
-    d = new Delete(T1, ts+2, null);
+    d = new Delete(T1, ts+2);
     d.deleteFamily(c1, ts+2);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
-    d = new Delete(T2, ts+2, null);
+    d = new Delete(T2, ts+2);
     d.deleteFamily(c0, ts+2);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
     // add an older delete, to make sure it is filtered
-    d = new Delete(T1, ts-10, null);
+    d = new Delete(T1, ts-10);
     d.deleteFamily(c1, ts-10);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
     // ts + 2 does NOT include the delete at ts+2
     checkGet(region, T1, c0, c0, ts+2, T2, T1);
@@ -492,7 +522,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -502,19 +532,19 @@ public class TestKeepDeletes extends HBaseTestCase {
     p = new Put(T1, ts-10);
     p.add(c0, c1, T1);
     region.put(p);
-    
-    Delete d = new Delete(T1, ts, null);
+
+    Delete d = new Delete(T1, ts);
     // test corner case (Put and Delete have same TS)
     d.deleteColumns(c0, c0, ts);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
-    d = new Delete(T1, ts+1, null);
+    d = new Delete(T1, ts+1);
     d.deleteColumn(c0, c0, ts+1);
-    region.delete(d, null, true);
-    
-    d = new Delete(T1, ts+3, null);
+    region.delete(d, true);
+
+    d = new Delete(T1, ts+3);
     d.deleteColumn(c0, c0, ts+3);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
     region.flushcache();
     region.compactStores(true);
@@ -527,7 +557,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     p = new Put(T1, ts+2);
     p.add(c0, c0, T2);
     region.put(p);
-    
+
     // delete, put, delete, delete, put
     assertEquals(3, countDeleteMarkers(region));
 
@@ -584,7 +614,7 @@ public class TestKeepDeletes extends HBaseTestCase {
         HConstants.FOREVER, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTimeMillis();
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
@@ -601,11 +631,11 @@ public class TestKeepDeletes extends HBaseTestCase {
     region.put(p);
 
     // family markers are each family
-    Delete d = new Delete(T1, ts+1, null);
-    region.delete(d, null, true);
+    Delete d = new Delete(T1, ts+1);
+    region.delete(d, true);
 
-    d = new Delete(T2, ts+2, null);
-    region.delete(d, null, true);
+    d = new Delete(T2, ts+2);
+    region.delete(d, true);
 
     Scan s = new Scan(T1);
     s.setTimeRange(0, ts+1);
@@ -634,7 +664,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1, true);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000; // 2s in the past
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T3);
@@ -652,17 +682,17 @@ public class TestKeepDeletes extends HBaseTestCase {
     // all puts now are just retained because of min versions = 3
 
     // place a family delete marker
-    Delete d = new Delete(T1, ts-1, null);
-    region.delete(d, null, true);
+    Delete d = new Delete(T1, ts-1);
+    region.delete(d, true);
     // and a column delete marker
-    d = new Delete(T1, ts-2, null);
+    d = new Delete(T1, ts-2);
     d.deleteColumns(c0, c0, ts-1);
-    region.delete(d, null, true);
+    region.delete(d, true);
 
     Get g = new Get(T1);
     g.setMaxVersions();
     g.setTimeRange(0L, ts-2);
-    Result r = region.get(g, null);
+    Result r = region.get(g);
     checkResult(r, c0, c0, T1,T0);
 
     // 3 families, one column delete marker
@@ -672,7 +702,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     // no delete marker removes by the flush
     assertEquals(4, countDeleteMarkers(region));
 
-    r = region.get(g, null);
+    r = region.get(g);
     checkResult(r, c0, c0, T1);
     p = new Put(T1, ts+1);
     p.add(c0, c0, T4);
@@ -681,7 +711,7 @@ public class TestKeepDeletes extends HBaseTestCase {
 
     assertEquals(4, countDeleteMarkers(region));
 
-    r = region.get(g, null);
+    r = region.get(g);
     checkResult(r, c0, c0, T1);
 
     // this will push out the last put before
@@ -709,7 +739,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     g.addColumn(fam, col);
     g.setMaxVersions();
     g.setTimeRange(0L, time);
-    Result r = region.get(g, null);
+    Result r = region.get(g);
     checkResult(r, fam, col, vals);
 
   }

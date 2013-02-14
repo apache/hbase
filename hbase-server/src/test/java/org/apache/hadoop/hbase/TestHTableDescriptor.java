@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -69,6 +70,43 @@ public class TestHTableDescriptor {
     // remove it and check that it is gone
     desc.removeCoprocessor(className);
     assertFalse(desc.hasCoprocessor(className));
+  }
+
+  /**
+   * Test cps in the table description
+   * @throws Exception
+   */
+  @Test
+  public void testSetListRemoveCP() throws Exception {
+    HTableDescriptor desc = new HTableDescriptor("testGetSetRemoveCP");
+    // simple CP
+    String className1 = BaseRegionObserver.class.getName();
+    String className2 = SampleRegionWALObserver.class.getName();
+    // Check that any coprocessor is present.
+    assertTrue(desc.getCoprocessors().size() == 0);
+
+    // Add the 1 coprocessor and check if present.
+    desc.addCoprocessor(className1);
+    assertTrue(desc.getCoprocessors().size() == 1);
+    assertTrue(desc.getCoprocessors().contains(className1));
+
+    // Add the 2nd coprocessor and check if present.
+    // remove it and check that it is gone
+    desc.addCoprocessor(className2);
+    assertTrue(desc.getCoprocessors().size() == 2);
+    assertTrue(desc.getCoprocessors().contains(className2));
+
+    // Remove one and check
+    desc.removeCoprocessor(className1);
+    assertTrue(desc.getCoprocessors().size() == 1);
+    assertFalse(desc.getCoprocessors().contains(className1));
+    assertTrue(desc.getCoprocessors().contains(className2));
+
+    // Remove the last and check
+    desc.removeCoprocessor(className2);
+    assertTrue(desc.getCoprocessors().size() == 0);
+    assertFalse(desc.getCoprocessors().contains(className1));
+    assertFalse(desc.getCoprocessors().contains(className2));
   }
 
   /**
@@ -122,5 +160,41 @@ public class TestHTableDescriptor {
       LOG.info("Testing: '" + tn + "'");
       assertFalse(Pattern.matches(HTableDescriptor.VALID_USER_TABLE_REGEX, tn));
     }
+  }
+
+    /**
+   * Test default value handling for maxFileSize
+   */
+  @Test
+  public void testGetMaxFileSize() {
+    HTableDescriptor desc = new HTableDescriptor("table");
+    assertEquals(-1, desc.getMaxFileSize());
+    desc.setMaxFileSize(1111L);
+    assertEquals(1111L, desc.getMaxFileSize());
+  }
+
+  /**
+   * Test default value handling for memStoreFlushSize
+   */
+  @Test
+  public void testGetMemStoreFlushSize() {
+    HTableDescriptor desc = new HTableDescriptor("table");
+    assertEquals(-1, desc.getMemStoreFlushSize());
+    desc.setMemStoreFlushSize(1111L);
+    assertEquals(1111L, desc.getMemStoreFlushSize());
+  }
+
+  /**
+   * Test that we add and remove strings from configuration properly.
+   */
+  @Test
+  public void testAddGetRemoveConfiguration() throws Exception {
+    HTableDescriptor desc = new HTableDescriptor("table");
+    String key = "Some";
+    String value = "value";
+    desc.setConfiguration(key, value);
+    assertEquals(value, desc.getConfigurationValue(key));
+    desc.removeConfiguration(key);
+    assertEquals(null, desc.getConfigurationValue(key));
   }
 }

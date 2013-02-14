@@ -55,11 +55,8 @@ public class TableModifyFamilyHandler extends TableEventHandler {
     if (cpHost != null) {
       cpHost.preModifyColumnHandler(this.tableName, this.familyDesc);
     }
-    // Update table descriptor in HDFS
-    HTableDescriptor htd =
-      this.masterServices.getMasterFileSystem().modifyColumn(tableName, familyDesc);
-    // Update in-memory descriptor cache
-    this.masterServices.getTableDescriptors().add(htd);
+    // Update table descriptor
+    this.masterServices.getMasterFileSystem().modifyColumn(tableName, familyDesc);
     if (cpHost != null) {
       cpHost.postModifyColumnHandler(this.tableName, this.familyDesc);
     }

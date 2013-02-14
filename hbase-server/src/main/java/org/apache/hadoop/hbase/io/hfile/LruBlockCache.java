@@ -44,6 +44,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock.BlockPriority;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -172,6 +174,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   /** Overhead of the structure itself */
   private long overhead;
+
+  /** Where to send victims (blocks evicted from the cache) */
+  private BucketCache victimHandler = null;
 
   /**
    * Default constructor.  Specify maximum size and expected average block
@@ -342,6 +347,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
     CachedBlock cb = map.get(cacheKey);
     if(cb == null) {
       if (!repeat) stats.miss(caching);
+      if (victimHandler != null)
+        return victimHandler.getBlock(cacheKey, caching, repeat);
       return null;
     }
     stats.hit(caching);
@@ -349,12 +356,20 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return cb.getBuffer();
   }
 
+  /**
+   * Whether the cache contains block with specified cacheKey
+   * @param cacheKey
+   * @return true if contains the block
+   */
+  public boolean containsBlock(BlockCacheKey cacheKey) {
+    return map.containsKey(cacheKey);
+  }
 
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
     CachedBlock cb = map.get(cacheKey);
     if (cb == null) return false;
-    evictBlock(cb);
+    evictBlock(cb, false);
     return true;
   }
 
@@ -377,14 +392,31 @@ public class LruBlockCache implements BlockCache, HeapSize {
           ++numEvicted;
       }
     }
+    if (victimHandler != null) {
+      numEvicted += victimHandler.evictBlocksByHfileName(hfileName);
+    }
     return numEvicted;
   }
 
-  protected long evictBlock(CachedBlock block) {
+  /**
+   * Evict the block, and it will be cached by the victim handler if exists &&
+   * block may be read again later
+   * @param block
+   * @param evictedByEvictionProcess true if the given block is evicted by
+   *          EvictionThread
+   * @return the heap size of evicted block
+   */
+  protected long evictBlock(CachedBlock block, boolean evictedByEvictionProcess) {
     map.remove(block.getCacheKey());
     updateSizeMetrics(block, true);
     elements.decrementAndGet();
     stats.evicted();
+    if (evictedByEvictionProcess && victimHandler != null) {
+      boolean wait = getCurrentSize() < acceptableSize();
+      boolean inMemory = block.getPriority() == BlockPriority.MEMORY;
+      victimHandler.cacheBlockWithWait(block.getCacheKey(), block.getBuffer(),
+          inMemory, wait);
+    }
     return block.heapSize();
   }
 
@@ -512,7 +544,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
       CachedBlock cb;
       long freedBytes = 0;
       while ((cb = queue.pollLast()) != null) {
-        freedBytes += evictBlock(cb);
+        freedBytes += evictBlock(cb, true);
         if (freedBytes >= toFree) {
           return freedBytes;
         }
@@ -532,6 +564,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
       if(this.overflow() == that.overflow()) return 0;
       return this.overflow() > that.overflow() ? 1 : -1;
     }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null || !(that instanceof BlockBucket)){
+        return false;
+      }
+
+      return compareTo(( BlockBucket)that) == 0;
+    }
+
   }
 
   /**
@@ -625,13 +667,13 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
     public void evict() {
       synchronized(this) {
-        this.notify(); // FindBugs NN_NAKED_NOTIFY
+        this.notifyAll(); // FindBugs NN_NAKED_NOTIFY
       }
     }
 
-    void shutdown() {
+    synchronized void shutdown() {
       this.go = false;
-      interrupt();
+      this.notifyAll();
     }
 
     /**
@@ -693,7 +735,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-      (3 * Bytes.SIZEOF_LONG) + (8 * ClassSize.REFERENCE) +
+      (3 * Bytes.SIZEOF_LONG) + (9 * ClassSize.REFERENCE) +
       (5 * Bytes.SIZEOF_FLOAT) + Bytes.SIZEOF_BOOLEAN
       + ClassSize.OBJECT);
 
@@ -762,6 +804,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   public void shutdown() {
+    if (victimHandler != null)
+      victimHandler.shutdown();
     this.scheduleThreadPool.shutdown();
     for (int i = 0; i < 10; i++) {
       if (!this.scheduleThreadPool.isShutdown()) Threads.sleep(10);
@@ -810,6 +854,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
       counts.put(encoding, (count == null ? 0 : count) + 1);
     }
     return counts;
+  }
+
+  public void setVictimCache(BucketCache handler) {
+    assert victimHandler == null;
+    victimHandler = handler;
   }
 
 }

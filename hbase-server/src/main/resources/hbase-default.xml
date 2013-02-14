@@ -49,11 +49,18 @@
   </property>
   <property>
     <name>hbase.tmp.dir</name>
-    <value>/tmp/hbase-${user.name}</value>
+    <value>${java.io.tmpdir}/hbase-${user.name}</value>
     <description>Temporary directory on the local filesystem.
     Change this setting to point to a location more permanent
     than '/tmp' (The '/tmp' directory is often cleared on
     machine restart).
+    </description>
+  </property>
+  <property>
+    <name>hbase.local.dir</name>
+    <value>${hbase.tmp.dir}/local/</value>
+    <description>Directory on the local filesystem to be used 
+    as a local storage.
     </description>
   </property>
   <property>
@@ -157,12 +164,6 @@
     <name>hbase.client.scanner.timeout.period</name>
     <value>60000</value>
     <description>Client scanner lease period in milliseconds. Default is
-    60 seconds. </description>
-  </property>
-  <property>
-    <name>hbase.regionserver.rowlock.timeout.period</name>
-    <value>60000</value>
-    <description>Row lock time out period in milliseconds. Default is
     60 seconds. </description>
   </property>
   <property>
@@ -521,11 +522,12 @@
           block is finished.
       </description>
   </property>
+
   <property>
-    <name>hbase.rpc.engine</name>
-    <value>org.apache.hadoop.hbase.ipc.ProtobufRpcEngine</value>
-    <description>Implementation of org.apache.hadoop.hbase.ipc.RpcEngine to be
-    used for client / server RPC call marshalling.
+    <name>hbase.rpc.server.engine</name>
+    <value>org.apache.hadoop.hbase.ipc.ProtobufRpcServerEngine</value>
+    <description>Implementation of org.apache.hadoop.hbase.ipc.RpcServerEngine to be
+    used for server RPC call marshalling.
     </description>
   </property>
   <property>
@@ -697,6 +699,18 @@
     for more information.
     </description>
   </property>
+  <property>
+    <name>hbase.zookeeper.useMulti</name>
+    <value>false</value>
+    <description>Instructs HBase to make use of ZooKeeper's multi-update functionality.
+    This allows certain ZooKeeper operations to complete more quickly and prevents some issues
+    with rare Replication failure scenarios (see the release note of HBASE-2611 for an example). 
+    IMPORTANT: only set this to true if all ZooKeeper servers in the cluster are on version 3.4+
+    and will not be downgraded.  ZooKeeper versions before 3.4 do not support multi-update and will
+    not fail gracefully if multi-update is invoked (see ZOOKEEPER-1495).
+    </description>
+  </property>
+
   <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
 
   <!--
@@ -927,6 +941,30 @@
     <value>true</value>
     <description>
         Set to true to allow snapshots to be taken / restored / cloned.
+    </description>
+  </property>
+  <property>
+    <name>hbase.rest.threads.max</name>
+    <value>100</value>
+    <description>
+        The maximum number of threads of the REST server thread pool.
+        Threads in the pool are reused to process REST requests. This
+        controls the maximum number of requests processed concurrently.
+        It may help to control the memory used by the REST server to
+        avoid OOM issues. If the thread pool is full, incoming requests
+        will be queued up and wait for some free threads. The default
+        is 100.
+    </description>
+  </property>
+  <property>
+    <name>hbase.rest.threads.min</name>
+    <value>2</value>
+    <description>
+        The minimum number of threads of the REST server thread pool.
+        The thread pool always has at least these number of threads so
+        the REST server is ready to serve incoming requests. The default
+        is 2.
+>>>>>>> apache/trunk
     </description>
   </property>
 </configuration>

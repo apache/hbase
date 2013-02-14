@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.security.User;
 
 import java.net.InetAddress;
@@ -90,7 +91,7 @@ public class RequestContext {
    */
   public static void set(User user,
       InetAddress remoteAddress,
-      Class<? extends VersionedProtocol> protocol) {
+      Class<? extends IpcProtocol> protocol) {
     RequestContext ctx = instance.get();
     ctx.user = user;
     ctx.remoteAddress = remoteAddress;
@@ -111,12 +112,12 @@ public class RequestContext {
 
   private User user;
   private InetAddress remoteAddress;
-  private Class<? extends VersionedProtocol> protocol;
+  private Class<? extends IpcProtocol> protocol;
   // indicates we're within a RPC request invocation
   private boolean inRequest;
 
   private RequestContext(User user, InetAddress remoteAddr,
-      Class<? extends VersionedProtocol> protocol) {
+      Class<? extends IpcProtocol> protocol) {
     this.user = user;
     this.remoteAddress = remoteAddr;
     this.protocol = protocol;
@@ -130,7 +131,7 @@ public class RequestContext {
     return remoteAddress;
   }
 
-  public Class<? extends VersionedProtocol> getProtocol() {
+  public Class<? extends IpcProtocol> getProtocol() {
     return protocol;
   }
 

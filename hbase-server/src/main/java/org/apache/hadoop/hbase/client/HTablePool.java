@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
@@ -41,7 +40,7 @@ import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 
 /**
  * A simple pool of HTable instances.
- * 
+ *
  * Each HTablePool acts as a pool for all tables. To use, instantiate an
  * HTablePool and use {@link #getTable(String)} to get an HTable from the pool.
  *
@@ -51,12 +50,12 @@ import org.apache.hadoop.hbase.util.PoolMap.PoolType;
  * Once you are done with it, close your instance of {@link HTableInterface}
  * by calling {@link HTableInterface#close()} rather than returning the tables
  * to the pool with (deprecated) {@link #putTable(HTableInterface)}.
- * 
+ *
  * <p>
  * A pool can be created with a <i>maxSize</i> which defines the most HTable
  * references that will ever be retained for each table. Otherwise the default
  * is {@link Integer#MAX_VALUE}.
- * 
+ *
  * <p>
  * Pool will manage its own connections to the cluster. See
  * {@link HConnectionManager}.
@@ -79,7 +78,7 @@ public class HTablePool implements Closeable {
 
   /**
    * Constructor to set maximum versions and use the specified configuration.
-   * 
+   *
    * @param config
    *          configuration
    * @param maxSize
@@ -92,7 +91,7 @@ public class HTablePool implements Closeable {
   /**
    * Constructor to set maximum versions and use the specified configuration and
    * table factory.
-   * 
+   *
    * @param config
    *          configuration
    * @param maxSize
@@ -108,7 +107,7 @@ public class HTablePool implements Closeable {
   /**
    * Constructor to set maximum versions and use the specified configuration and
    * pool type.
-   * 
+   *
    * @param config
    *          configuration
    * @param maxSize
@@ -128,7 +127,7 @@ public class HTablePool implements Closeable {
    * {@link PoolType#Reusable} and {@link PoolType#ThreadLocal}. If the pool
    * type is null or not one of those two values, then it will default to
    * {@link PoolType#Reusable}.
-   * 
+   *
    * @param config
    *          configuration
    * @param maxSize
@@ -168,7 +167,7 @@ public class HTablePool implements Closeable {
    * Get a reference to the specified table from the pool.
    * <p>
    * <p/>
-   * 
+   *
    * @param tableName
    *          table name
    * @return a reference to the specified table
@@ -186,9 +185,9 @@ public class HTablePool implements Closeable {
   /**
    * Get a reference to the specified table from the pool.
    * <p>
-   * 
+   *
    * Create a new one if one is not available.
-   * 
+   *
    * @param tableName
    *          table name
    * @return a reference to the specified table
@@ -206,9 +205,9 @@ public class HTablePool implements Closeable {
   /**
    * Get a reference to the specified table from the pool.
    * <p>
-   * 
+   *
    * Create a new one if one is not available.
-   * 
+   *
    * @param tableName
    *          table name
    * @return a reference to the specified table
@@ -222,7 +221,7 @@ public class HTablePool implements Closeable {
   /**
    * This method is not needed anymore, clients should call
    * HTableInterface.close() rather than returning the tables to the pool
-   * 
+   *
    * @param table
    *          the proxy table user got from pool
    * @deprecated
@@ -248,10 +247,10 @@ public class HTablePool implements Closeable {
   /**
    * Puts the specified HTable back into the pool.
    * <p>
-   * 
+   *
    * If the pool already contains <i>maxSize</i> references to the table, then
    * the table instance gets closed after flushing buffered edits.
-   * 
+   *
    * @param table
    *          table
    */
@@ -279,7 +278,7 @@ public class HTablePool implements Closeable {
    * Note: this is a 'shutdown' of the given table pool and different from
    * {@link #putTable(HTableInterface)}, that is used to return the table
    * instance to the pool for future re-use.
-   * 
+   *
    * @param tableName
    */
   public void closeTablePool(final String tableName) throws IOException {
@@ -294,7 +293,7 @@ public class HTablePool implements Closeable {
 
   /**
    * See {@link #closeTablePool(String)}.
-   * 
+   *
    * @param tableName
    */
   public void closeTablePool(final byte[] tableName) throws IOException {
@@ -314,7 +313,7 @@ public class HTablePool implements Closeable {
     this.tables.clear();
   }
 
-  int getCurrentPoolSize(String tableName) {
+  public int getCurrentPoolSize(String tableName) {
     return tables.size(tableName);
   }
 
@@ -349,6 +348,11 @@ public class HTablePool implements Closeable {
     @Override
     public boolean exists(Get get) throws IOException {
       return table.exists(get);
+    }
+
+    @Override
+    public Boolean[] exists(List<Get> gets) throws IOException {
+      return table.exists(gets);
     }
 
     @Override
@@ -457,42 +461,11 @@ public class HTablePool implements Closeable {
 
     /**
      * Returns the actual table back to the pool
-     * 
+     *
      * @throws IOException
      */
     public void close() throws IOException {
       returnTable(table);
-    }
-
-    @Override
-    public RowLock lockRow(byte[] row) throws IOException {
-      return table.lockRow(row);
-    }
-
-    @Override
-    public void unlockRow(RowLock rl) throws IOException {
-      table.unlockRow(rl);
-    }
-
-    @Override
-    public <T extends CoprocessorProtocol> T coprocessorProxy(
-        Class<T> protocol, byte[] row) {
-      return table.coprocessorProxy(protocol, row);
-    }
-
-    @Override
-    public <T extends CoprocessorProtocol, R> Map<byte[], R> coprocessorExec(
-        Class<T> protocol, byte[] startKey, byte[] endKey,
-        Batch.Call<T, R> callable) throws IOException, Throwable {
-      return table.coprocessorExec(protocol, startKey, endKey, callable);
-    }
-
-    @Override
-    public <T extends CoprocessorProtocol, R> void coprocessorExec(
-        Class<T> protocol, byte[] startKey, byte[] endKey,
-        Batch.Call<T, R> callable, Batch.Callback<R> callback)
-        throws IOException, Throwable {
-      table.coprocessorExec(protocol, startKey, endKey, callable, callback);
     }
 
     @Override
@@ -521,7 +494,7 @@ public class HTablePool implements Closeable {
 
     /**
      * Expose the wrapped HTable to tests in the same package
-     * 
+     *
      * @return wrapped htable
      */
     HTableInterface getWrappedTable() {

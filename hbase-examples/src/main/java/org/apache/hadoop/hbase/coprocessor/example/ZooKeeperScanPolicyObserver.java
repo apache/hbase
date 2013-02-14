@@ -63,8 +63,8 @@ import org.apache.zookeeper.ZooKeeper;
  * listeners registered with ZooKeeperWatcher cannot be removed.
  */
 public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
-  public static String node = "/backup/example/lastbackup";
-  public static String zkkey = "ZK";
+  public static final String node = "/backup/example/lastbackup";
+  public static final String zkkey = "ZK";
   private static final Log LOG = LogFactory.getLog(ZooKeeperScanPolicyObserver.class);
 
   /**
@@ -93,6 +93,7 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
      *
      * @return the last know version of the data
      */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION")
     public byte[] getData() {
       // try at most twice/minute
       if (needSetup && EnvironmentEdgeManager.currentTimeMillis() > lastSetupTry + 30000) {

@@ -55,10 +55,10 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class ServerShutdownHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(ServerShutdownHandler.class);
-  private final ServerName serverName;
-  private final MasterServices services;
-  private final DeadServer deadServers;
-  private final boolean shouldSplitHlog; // whether to split HLog or not
+  protected final ServerName serverName;
+  protected final MasterServices services;
+  protected final DeadServer deadServers;
+  protected final boolean shouldSplitHlog; // whether to split HLog or not
 
   public ServerShutdownHandler(final Server server, final MasterServices services,
       final DeadServer deadServers, final ServerName serverName,
@@ -87,63 +87,6 @@ public class ServerShutdownHandler extends EventHandler {
       return this.getClass().getSimpleName() + " for " + serverName;
     } else {
       return super.getInformativeName();
-    }
-  }
-
-  /**
-   * Before assign the ROOT region, ensure it haven't
-   *  been assigned by other place
-   * <p>
-   * Under some scenarios, the ROOT region can be opened twice, so it seemed online
-   * in two regionserver at the same time.
-   * If the ROOT region has been assigned, so the operation can be canceled.
-   * @throws InterruptedException
-   * @throws IOException
-   * @throws KeeperException
-   */
-  private void verifyAndAssignRoot()
-  throws InterruptedException, IOException, KeeperException {
-    long timeout = this.server.getConfiguration().
-      getLong("hbase.catalog.verification.timeout", 1000);
-    if (!this.server.getCatalogTracker().verifyRootRegionLocation(timeout)) {
-      this.services.getAssignmentManager().assignRoot();
-    }
-  }
-
-  /**
-   * Failed many times, shutdown processing
-   * @throws IOException
-   */
-  private void verifyAndAssignRootWithRetries() throws IOException {
-    int iTimes = this.server.getConfiguration().getInt(
-        "hbase.catalog.verification.retries", 10);
-
-    long waitTime = this.server.getConfiguration().getLong(
-        "hbase.catalog.verification.timeout", 1000);
-
-    int iFlag = 0;
-    while (true) {
-      try {
-        verifyAndAssignRoot();
-        break;
-      } catch (KeeperException e) {
-        this.server.abort("In server shutdown processing, assigning root", e);
-        throw new IOException("Aborting", e);
-      } catch (Exception e) {
-        if (iFlag >= iTimes) {
-          this.server.abort("verifyAndAssignRoot failed after" + iTimes
-              + " times retries, aborting", e);
-          throw new IOException("Aborting", e);
-        }
-        try {
-          Thread.sleep(waitTime);
-        } catch (InterruptedException e1) {
-          LOG.warn("Interrupted when is the thread sleep", e1);
-          Thread.currentThread().interrupt();
-          throw new IOException("Interrupted", e1);
-        }
-        iFlag++;
-      }
     }
   }
 
@@ -182,30 +125,13 @@ public class ServerShutdownHandler extends EventHandler {
           LOG.info("Skipping log splitting for " + serverName);
         }
       } catch (IOException ioe) {
-        this.services.getExecutorService().submit(this);
+        //typecast to SSH so that we make sure that it is the SSH instance that
+        //gets submitted as opposed to MSSH or some other derived instance of SSH
+        this.services.getExecutorService().submit((ServerShutdownHandler)this);
         this.deadServers.add(serverName);
         throw new IOException("failed log splitting for " +
           serverName + ", will retry", ioe);
       }
-
-      // Assign root and meta if we were carrying them.
-      if (isCarryingRoot()) { // -ROOT-
-        LOG.info("Server " + serverName +
-            " was carrying ROOT. Trying to assign.");
-        this.services.getAssignmentManager().
-          regionOffline(HRegionInfo.ROOT_REGIONINFO);
-        verifyAndAssignRootWithRetries();
-      }
-
-      // Carrying meta?
-      if (isCarryingMeta()) {
-        LOG.info("Server " + serverName +
-          " was carrying META. Trying to assign.");
-        this.services.getAssignmentManager().
-          regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
-        this.services.getAssignmentManager().assignMeta();
-      }
-
       // We don't want worker thread in the MetaServerShutdownHandler
       // executor pool to block by waiting availability of -ROOT-
       // and .META. server. Otherwise, it could run into the following issue:
@@ -430,7 +356,7 @@ public class ServerShutdownHandler extends EventHandler {
     if (daughter == null) return 0;
     if (isDaughterMissing(catalogTracker, daughter)) {
       LOG.info("Fixup; missing daughter " + daughter.getRegionNameAsString());
-      MetaEditor.addDaughter(catalogTracker, daughter, null);
+      MetaEditor.addDaughter(catalogTracker, daughter, null, HConstants.NO_SEQNUM);
 
       // TODO: Log WARN if the regiondir does not exist in the fs.  If its not
       // there then something wonky about the split -- things will keep going

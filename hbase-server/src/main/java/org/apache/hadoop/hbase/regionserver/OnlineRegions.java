@@ -40,11 +40,11 @@ interface OnlineRegions extends Server {
   /**
    * This method removes HRegion corresponding to hri from the Map of onlineRegions.
    *
-   * @param encodedRegionName
-   * @param destination - destination, if any. Null otherwise
+   * @param r Region to remove.
+   * @param destination Destination, if any, null otherwise.
    * @return True if we removed a region from online list.
    */
-  public boolean removeFromOnlineRegions(String encodedRegionName, ServerName destination);
+  public boolean removeFromOnlineRegions(final HRegion r, ServerName destination);
 
   /**
    * Return {@link HRegion} instance.

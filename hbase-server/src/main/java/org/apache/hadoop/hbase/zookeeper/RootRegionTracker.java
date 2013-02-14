@@ -28,8 +28,7 @@ import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracks the root region server location node in zookeeper.
- * Root region location is set by {@link RootLocationEditor} usually called
- * out of <code>RegionServerServices</code>.
+ * Root region location is set by <code>RegionServerServices</code>.
  * This class has a watcher on the root location and notices changes.
  */
 @InterfaceAudience.Private

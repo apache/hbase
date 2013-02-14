@@ -42,13 +42,12 @@ message Get {
   required bytes row = 1;
   repeated Column column = 2;
   repeated NameBytesPair attribute = 3;
-  optional uint64 lockId = 4;
-  optional Filter filter = 5;
-  optional TimeRange timeRange = 6;
-  optional uint32 maxVersions = 7 [default = 1];
-  optional bool cacheBlocks = 8 [default = true];
-  optional uint32 storeLimit = 9;
-  optional uint32 storeOffset = 10;
+  optional Filter filter = 4;
+  optional TimeRange timeRange = 5;
+  optional uint32 maxVersions = 6 [default = 1];
+  optional bool cacheBlocks = 7 [default = true];
+  optional uint32 storeLimit = 8;
+  optional uint32 storeOffset = 9;
 }
 
 message Result {
@@ -72,8 +71,22 @@ message GetRequest {
   optional bool closestRowBefore = 3;
 
   // The result isn't asked for, just check for
-  // the existence. If specified, closestRowBefore
-  // will be ignored
+  // the existence. If closestRowBefore specified,
+  // this will be ignored
+  optional bool existenceOnly = 4;
+}
+
+message MultiGetRequest {
+  required RegionSpecifier region = 1;
+  repeated Get get = 2;
+
+  // If the row to get doesn't exist, return the
+  // closest row before.
+  optional bool closestRowBefore = 3;
+
+  // The result isn't asked for, just check for
+  // the existence. If closestRowBefore specified,
+  // this will be ignored
   optional bool existenceOnly = 4;
 }
 
@@ -82,6 +95,13 @@ message GetResponse {
 
   // used for Get to check existence only
   optional bool exists = 2;
+}
+
+message MultiGetResponse {
+  repeated Result result = 1;
+
+  // used for Get to check existence only
+  repeated bool exists = 2;
 }
 
 /**
@@ -109,8 +129,7 @@ message Mutate {
   repeated ColumnValue columnValue = 3;
   repeated NameBytesPair attribute = 4;
   optional uint64 timestamp = 5;
-  optional uint64 lockId = 6;
-  optional bool writeToWAL = 7 [default = true];
+  optional bool writeToWAL = 6 [default = true];
 
   // For some mutate, result may be returned, in which case,
   // time range can be specified for potential performance gain
@@ -186,6 +205,7 @@ message Scan {
   optional uint64 maxResultSize = 10;
   optional uint32 storeLimit = 11;
   optional uint32 storeOffset = 12;
+  optional bool loadColumnFamiliesOnDemand = 13; /* DO NOT add defaults to loadColumnFamiliesOnDemand. */
 }
 
 /**
@@ -217,24 +237,7 @@ message ScanResponse {
   optional uint64 scannerId = 2;
   optional bool moreResults = 3;
   optional uint32 ttl = 4;
-}
-
-message LockRowRequest {
-  required RegionSpecifier region = 1;
-  repeated bytes row = 2;
-}
-
-message LockRowResponse {
-  required uint64 lockId = 1;
-  optional uint32 ttl = 2;
-}
-
-message UnlockRowRequest {
-  required RegionSpecifier region = 1;
-  required uint64 lockId = 2;
-}
-
-message UnlockRowResponse {
+  optional uint64 resultSizeBytes = 5;
 }
 
 /**
@@ -254,43 +257,6 @@ message BulkLoadHFileRequest {
 
 message BulkLoadHFileResponse {
   required bool loaded = 1;
-}
-
-/**
- * An individual coprocessor call. You must specify the protocol,
- * the method, and the row to which the call will be executed.
- *
- * You can specify the configuration settings in the property list.
- *
- * The parameter list has the parameters used for the method.
- * A parameter is a pair of parameter name and the binary parameter
- * value. The name is the parameter class name.  The value is the
- * binary format of the parameter, for example, protocol buffer
- * encoded value.
- */
-message Exec {
-  required bytes row = 1;
-  required string protocolName = 2;
-  required string methodName = 3;
-  repeated NameStringPair property = 4;
-  repeated NameBytesPair parameter = 5;
-}
-
-  /**
-   * Executes a single {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol}
-   * method using the registered protocol handlers.
-   * {@link CoprocessorProtocol} implementations must be registered via the
-   * {@link org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(
-   * Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)}
-   * method before they are available.
- */
-message ExecCoprocessorRequest {
-  required RegionSpecifier region = 1;
-  required Exec call = 2;
-}
-
-message ExecCoprocessorResponse {
-  required NameBytesPair value = 1;
 }
 
 message CoprocessorServiceCall {
@@ -317,7 +283,6 @@ message CoprocessorServiceResponse {
 message MultiAction {
   optional Mutate mutate = 1;
   optional Get get = 2;
-  optional Exec exec = 3;
 }
 
 /**
@@ -329,7 +294,7 @@ message MultiAction {
  * is returned as a stringified parameter.
  */
 message ActionResult {
-  optional NameBytesPair value = 1;
+  optional Result value = 1;
   optional NameBytesPair exception = 2;
 }
 
@@ -355,23 +320,17 @@ service ClientService {
   rpc get(GetRequest)
     returns(GetResponse);
 
+  rpc multiGet(MultiGetRequest)
+    returns(MultiGetResponse);
+
   rpc mutate(MutateRequest)
     returns(MutateResponse);
 
   rpc scan(ScanRequest)
     returns(ScanResponse);
 
-  rpc lockRow(LockRowRequest)
-    returns(LockRowResponse);
-
-  rpc unlockRow(UnlockRowRequest)
-    returns(UnlockRowResponse);
-
   rpc bulkLoadHFile(BulkLoadHFileRequest)
     returns(BulkLoadHFileResponse);
-
-  rpc execCoprocessor(ExecCoprocessorRequest)
-    returns(ExecCoprocessorResponse);
 
   rpc execService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);

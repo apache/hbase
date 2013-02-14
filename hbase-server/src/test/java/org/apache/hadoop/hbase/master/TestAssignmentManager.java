@@ -689,7 +689,7 @@ public class TestAssignmentManager {
     };
     ((ZooKeeperWatcher) zkw).registerListener(am);
     Mockito.doThrow(new InterruptedException()).when(recoverableZk)
-        .getChildren("/hbase/unassigned", null);
+        .getChildren("/hbase/region-in-transition", null);
     am.setWatcher((ZooKeeperWatcher) zkw);
     try {
       am.processDeadServersAndRegionsInTransition(null);

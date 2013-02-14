@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * Cache Key for use with implementations of {@link BlockCache}
  */
 @InterfaceAudience.Private
-public class BlockCacheKey implements HeapSize {
+public class BlockCacheKey implements HeapSize, java.io.Serializable {
   private final String hfileName;
   private final long offset;
   private final DataBlockEncoding encoding;

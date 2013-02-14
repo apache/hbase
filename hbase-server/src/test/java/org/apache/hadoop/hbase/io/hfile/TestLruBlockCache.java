@@ -77,7 +77,7 @@ public class TestLruBlockCache {
     int n = 0;
     while(cache.getEvictionCount() == 0) {
       Thread.sleep(200);
-      assertTrue(n++ < 10);
+      assertTrue(n++ < 20);
     }
     System.out.println("Background Evictions run: " + cache.getEvictionCount());
 
@@ -662,6 +662,11 @@ public class TestLruBlockCache {
 
     @Override
     public void serialize(ByteBuffer destination) {
+    }
+    
+    @Override
+    public BlockType getBlockType() {
+      return BlockType.DATA;
     }
 
   }

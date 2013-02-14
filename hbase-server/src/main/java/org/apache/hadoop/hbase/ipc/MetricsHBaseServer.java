@@ -19,14 +19,11 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServer {
-  private static Log LOG = LogFactory.getLog(MetricsHBaseServer.class);
   private MetricsHBaseServerSource source;
 
   public MetricsHBaseServer(String serverName, MetricsHBaseServerWrapper wrapper) {

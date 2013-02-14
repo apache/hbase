@@ -40,6 +40,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -73,7 +74,7 @@ public class ReplicationSourceManager {
   private final ReplicationZookeeper zkHelper;
   // All about stopping
   private final Stoppable stopper;
-  // All logs we are currently trackign
+  // All logs we are currently tracking
   private final Map<String, SortedSet<String>> hlogsById;
   private final Configuration conf;
   private final FileSystem fs;
@@ -157,7 +158,7 @@ public class ReplicationSourceManager {
     }
     synchronized (this.hlogsById) {
       SortedSet<String> hlogs = this.hlogsById.get(id);
-      if (!queueRecovered && hlogs.first() != key) {
+      if (!queueRecovered && !hlogs.first().equals(key)) {
         SortedSet<String> hlogSet = hlogs.headSet(key);
         for (String hlog : hlogSet) {
           this.zkHelper.removeLogFromList(hlog, id);
@@ -504,8 +505,10 @@ public class ReplicationSourceManager {
       if (peers == null) {
         return;
       }
-      String id = ReplicationZookeeper.getZNodeName(path);
-      removePeer(id);
+      if (zkHelper.isPeerPath(path)) {
+        String id = ReplicationZookeeper.getZNodeName(path);
+        removePeer(id);
+      }
     }
 
     /**
@@ -579,14 +582,22 @@ public class ReplicationSourceManager {
         LOG.info("Not transferring queue since we are shutting down");
         return;
       }
-      if (!zkHelper.lockOtherRS(rsZnode)) {
-        return;
+      SortedMap<String, SortedSet<String>> newQueues = null;
+
+      // check whether there is multi support. If yes, use it.
+      if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
+        LOG.info("Atomically moving " + rsZnode + "'s hlogs to my queue");
+        newQueues = zkHelper.copyQueuesFromRSUsingMulti(rsZnode);
+      } else {
+        LOG.info("Moving " + rsZnode + "'s hlogs to my queue");
+        if (!zkHelper.lockOtherRS(rsZnode)) {
+          return;
+        }
+        newQueues = zkHelper.copyQueuesFromRS(rsZnode);
+        zkHelper.deleteRsQueues(rsZnode);
       }
-      LOG.info("Moving " + rsZnode + "'s hlogs to my queue");
-      SortedMap<String, SortedSet<String>> newQueues =
-          zkHelper.copyQueuesFromRS(rsZnode);
-      zkHelper.deleteRsQueues(rsZnode);
-      if (newQueues == null || newQueues.size() == 0) {
+      // process of copying over the failed queue is completed.
+      if (newQueues.size() == 0) {
         return;
       }
 

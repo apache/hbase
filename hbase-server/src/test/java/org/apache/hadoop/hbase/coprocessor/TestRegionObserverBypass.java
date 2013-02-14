@@ -18,30 +18,34 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
+import static junit.framework.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
 
 @Category(MediumTests.class)
 public class TestRegionObserverBypass {
@@ -60,12 +64,23 @@ public class TestRegionObserverBypass {
         TestCoprocessor.class.getName());
     util = new HBaseTestingUtility(conf);
     util.startMiniCluster();
-    util.createTable(tableName, new byte[][] {dummy, test});
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    HBaseAdmin admin = util.getHBaseAdmin();
+    if (admin.tableExists(tableName)) {
+      if (admin.isTableEnabled(tableName)) {
+        admin.disableTable(tableName);
+      }
+      admin.deleteTable(tableName);
+    }
+    util.createTable(tableName, new byte[][] {dummy, test});
   }
 
   /**
@@ -89,6 +104,10 @@ public class TestRegionObserverBypass {
    */
   @Test
   public void testMulti() throws Exception {
+    //ensure that server time increments every time we do an operation, otherwise
+    //previous deletes will eclipse successive puts having the same timestamp
+    EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
+
     HTable t = new HTable(util.getConfiguration(), tableName);
     List<Put> puts = new ArrayList<Put>();
     Put p = new Put(row1);
@@ -170,6 +189,8 @@ public class TestRegionObserverBypass {
     checkRowAndDelete(t,row2,1);
     checkRowAndDelete(t,row3,0);
     t.close();
+
+    EnvironmentEdgeManager.reset();
   }
 
   private void checkRowAndDelete(HTable t, byte[] row, int count) throws IOException {

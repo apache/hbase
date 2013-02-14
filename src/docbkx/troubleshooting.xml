@@ -54,7 +54,7 @@
           prolonged garbage collection pauses that last longer than the default ZooKeeper session timeout.
           For more information on GC pauses, see the
           <link xlink:href="http://www.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/">3 part blog post</link>  by Todd Lipcon
-          and <xref linkend="gcpause" /> above. 
+          and <xref linkend="gcpause" /> above.
       </para>
     </section>
     <section xml:id="trouble.log">
@@ -91,7 +91,7 @@
           <title>NameNode</title>
           <para>The NameNode log is on the NameNode server.  The HBase Master is typically run on the NameNode server, and well as ZooKeeper.</para>
           <para>For smaller clusters the JobTracker is typically run on the NameNode server as well.</para>
-         </section>        
+         </section>
         <section xml:id="trouble.log.locations.datanode">
           <title>DataNode</title>
           <para>Each DataNode server will have a DataNode log for HDFS, as well as a RegionServer log for HBase.</para>
@@ -105,32 +105,32 @@
            insight on timings at the server.  Once enabled, the amount of log
            spewed is voluminous.  It is not recommended that you leave this
            logging on for more than short bursts of time.  To enable RPC-level
-           logging, browse to the RegionServer UI and click on 
+           logging, browse to the RegionServer UI and click on
            <emphasis>Log Level</emphasis>.  Set the log level to <varname>DEBUG</varname> for the package
            <classname>org.apache.hadoop.ipc</classname> (Thats right, for
            <classname>hadoop.ipc</classname>, NOT, <classname>hbase.ipc</classname>).  Then tail the RegionServers log.  Analyze.</para>
            <para>To disable, set the logging level back to <varname>INFO</varname> level.
            </para>
-         </section>                 
-       </section>      
+         </section>
+       </section>
       <section xml:id="trouble.log.gc">
         <title>JVM Garbage Collection Logs</title>
-          <para>HBase is memory intensive, and using the default GC you can see long pauses in all threads including the <emphasis>Juliet Pause</emphasis> aka "GC of Death". 
-           To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.  
+          <para>HBase is memory intensive, and using the default GC you can see long pauses in all threads including the <emphasis>Juliet Pause</emphasis> aka "GC of Death".
+           To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.
           </para>
           <para>
           To enable, in <filename>hbase-env.sh</filename> add:
-          <programlisting> 
+          <programlisting>
 export HBASE_OPTS="-XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/home/hadoop/hbase/logs/gc-hbase.log"
           </programlisting>
-           Adjust the log directory to wherever you log.  Note:  The GC log does NOT roll automatically, so you'll have to keep an eye on it so it doesn't fill up the disk. 
+           Adjust the log directory to wherever you log.  Note:  The GC log does NOT roll automatically, so you'll have to keep an eye on it so it doesn't fill up the disk.
           </para>
           <para>
          At this point you should see logs like so:
           <programlisting>
-64898.952: [GC [1 CMS-initial-mark: 2811538K(3055704K)] 2812179K(3061272K), 0.0007360 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+64898.952: [GC [1 CMS-initial-mark: 2811538K(3055704K)] 2812179K(3061272K), 0.0007360 secs] [Times: user=0.00 sys=0.00, real=0.00 secs]
 64898.953: [CMS-concurrent-mark-start]
-64898.971: [GC 64898.971: [ParNew: 5567K->576K(5568K), 0.0101110 secs] 2817105K->2812715K(3061272K), 0.0102200 secs] [Times: user=0.07 sys=0.00, real=0.01 secs] 
+64898.971: [GC 64898.971: [ParNew: 5567K->576K(5568K), 0.0101110 secs] 2817105K->2812715K(3061272K), 0.0102200 secs] [Times: user=0.07 sys=0.00, real=0.01 secs]
           </programlisting>
           </para>
           <para>
@@ -139,20 +139,20 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+
             <para>
            The third line indicates a "minor GC", which pauses the VM for 0.0101110 seconds - aka 10 milliseconds. It has reduced the "ParNew" from about 5.5m to 576k.
            Later on in this cycle we see:
-           <programlisting> 
-64901.445: [CMS-concurrent-mark: 1.542/2.492 secs] [Times: user=10.49 sys=0.33, real=2.49 secs] 
+           <programlisting>
+64901.445: [CMS-concurrent-mark: 1.542/2.492 secs] [Times: user=10.49 sys=0.33, real=2.49 secs]
 64901.445: [CMS-concurrent-preclean-start]
-64901.453: [GC 64901.453: [ParNew: 5505K->573K(5568K), 0.0062440 secs] 2868746K->2864292K(3061272K), 0.0063360 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
-64901.476: [GC 64901.476: [ParNew: 5563K->575K(5568K), 0.0072510 secs] 2869283K->2864837K(3061272K), 0.0073320 secs] [Times: user=0.05 sys=0.01, real=0.01 secs] 
-64901.500: [GC 64901.500: [ParNew: 5517K->573K(5568K), 0.0120390 secs] 2869780K->2865267K(3061272K), 0.0121150 secs] [Times: user=0.09 sys=0.00, real=0.01 secs] 
-64901.529: [GC 64901.529: [ParNew: 5507K->569K(5568K), 0.0086240 secs] 2870200K->2865742K(3061272K), 0.0087180 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
-64901.554: [GC 64901.555: [ParNew: 5516K->575K(5568K), 0.0107130 secs] 2870689K->2866291K(3061272K), 0.0107820 secs] [Times: user=0.06 sys=0.00, real=0.01 secs] 
-64901.578: [CMS-concurrent-preclean: 0.070/0.133 secs] [Times: user=0.48 sys=0.01, real=0.14 secs] 
+64901.453: [GC 64901.453: [ParNew: 5505K->573K(5568K), 0.0062440 secs] 2868746K->2864292K(3061272K), 0.0063360 secs] [Times: user=0.05 sys=0.00, real=0.01 secs]
+64901.476: [GC 64901.476: [ParNew: 5563K->575K(5568K), 0.0072510 secs] 2869283K->2864837K(3061272K), 0.0073320 secs] [Times: user=0.05 sys=0.01, real=0.01 secs]
+64901.500: [GC 64901.500: [ParNew: 5517K->573K(5568K), 0.0120390 secs] 2869780K->2865267K(3061272K), 0.0121150 secs] [Times: user=0.09 sys=0.00, real=0.01 secs]
+64901.529: [GC 64901.529: [ParNew: 5507K->569K(5568K), 0.0086240 secs] 2870200K->2865742K(3061272K), 0.0087180 secs] [Times: user=0.05 sys=0.00, real=0.01 secs]
+64901.554: [GC 64901.555: [ParNew: 5516K->575K(5568K), 0.0107130 secs] 2870689K->2866291K(3061272K), 0.0107820 secs] [Times: user=0.06 sys=0.00, real=0.01 secs]
+64901.578: [CMS-concurrent-preclean: 0.070/0.133 secs] [Times: user=0.48 sys=0.01, real=0.14 secs]
 64901.578: [CMS-concurrent-abortable-preclean-start]
-64901.584: [GC 64901.584: [ParNew: 5504K->571K(5568K), 0.0087270 secs] 2871220K->2866830K(3061272K), 0.0088220 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
-64901.609: [GC 64901.609: [ParNew: 5512K->569K(5568K), 0.0063370 secs] 2871771K->2867322K(3061272K), 0.0064230 secs] [Times: user=0.06 sys=0.00, real=0.01 secs] 
-64901.615: [CMS-concurrent-abortable-preclean: 0.007/0.037 secs] [Times: user=0.13 sys=0.00, real=0.03 secs] 
-64901.616: [GC[YG occupancy: 645 K (5568 K)]64901.616: [Rescan (parallel) , 0.0020210 secs]64901.618: [weak refs processing, 0.0027950 secs] [1 CMS-remark: 2866753K(3055704K)] 2867399K(3061272K), 0.0049380 secs] [Times: user=0.00 sys=0.01, real=0.01 secs] 
+64901.584: [GC 64901.584: [ParNew: 5504K->571K(5568K), 0.0087270 secs] 2871220K->2866830K(3061272K), 0.0088220 secs] [Times: user=0.05 sys=0.00, real=0.01 secs]
+64901.609: [GC 64901.609: [ParNew: 5512K->569K(5568K), 0.0063370 secs] 2871771K->2867322K(3061272K), 0.0064230 secs] [Times: user=0.06 sys=0.00, real=0.01 secs]
+64901.615: [CMS-concurrent-abortable-preclean: 0.007/0.037 secs] [Times: user=0.13 sys=0.00, real=0.03 secs]
+64901.616: [GC[YG occupancy: 645 K (5568 K)]64901.616: [Rescan (parallel) , 0.0020210 secs]64901.618: [weak refs processing, 0.0027950 secs] [1 CMS-remark: 2866753K(3055704K)] 2867399K(3061272K), 0.0049380 secs] [Times: user=0.00 sys=0.01, real=0.01 secs]
 64901.621: [CMS-concurrent-sweep-start]
             </programlisting>
             </para>
@@ -161,20 +161,20 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+
             </para>
             <para>
             There are a few more minor GCs, then there is a pause at the 2nd last line:
-            <programlisting>  
-64901.616: [GC[YG occupancy: 645 K (5568 K)]64901.616: [Rescan (parallel) , 0.0020210 secs]64901.618: [weak refs processing, 0.0027950 secs] [1 CMS-remark: 2866753K(3055704K)] 2867399K(3061272K), 0.0049380 secs] [Times: user=0.00 sys=0.01, real=0.01 secs] 
+            <programlisting>
+64901.616: [GC[YG occupancy: 645 K (5568 K)]64901.616: [Rescan (parallel) , 0.0020210 secs]64901.618: [weak refs processing, 0.0027950 secs] [1 CMS-remark: 2866753K(3055704K)] 2867399K(3061272K), 0.0049380 secs] [Times: user=0.00 sys=0.01, real=0.01 secs]
             </programlisting>
             </para>
             <para>
-            The pause here is 0.0049380 seconds (aka 4.9 milliseconds) to 'remark' the heap.  
+            The pause here is 0.0049380 seconds (aka 4.9 milliseconds) to 'remark' the heap.
             </para>
             <para>
             At this point the sweep starts, and you can watch the heap size go down:
             <programlisting>
-64901.637: [GC 64901.637: [ParNew: 5501K->569K(5568K), 0.0097350 secs] 2871958K->2867441K(3061272K), 0.0098370 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+64901.637: [GC 64901.637: [ParNew: 5501K->569K(5568K), 0.0097350 secs] 2871958K->2867441K(3061272K), 0.0098370 secs] [Times: user=0.05 sys=0.00, real=0.01 secs]
 ...  lines removed ...
-64904.936: [GC 64904.936: [ParNew: 5532K->568K(5568K), 0.0070720 secs] 1365024K->1360689K(3061272K), 0.0071930 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
-64904.953: [CMS-concurrent-sweep: 2.030/3.332 secs] [Times: user=9.57 sys=0.26, real=3.33 secs] 
+64904.936: [GC 64904.936: [ParNew: 5532K->568K(5568K), 0.0070720 secs] 1365024K->1360689K(3061272K), 0.0071930 secs] [Times: user=0.05 sys=0.00, real=0.01 secs]
+64904.953: [CMS-concurrent-sweep: 2.030/3.332 secs] [Times: user=9.57 sys=0.26, real=3.33 secs]
             </programlisting>
             At this point, the CMS sweep took 3.332 seconds, and heap went from about ~ 2.8 GB to 1.3 GB (approximate).
             </para>
@@ -186,14 +186,14 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+
             </para>
             <para>
              Add this to HBASE_OPTS:
-            <programlisting> 
+            <programlisting>
 export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above&gt; &lt;gc logging options from above&gt;"
             </programlisting>
             </para>
             <para>
             For more information on GC pauses, see the <link xlink:href="http://www.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/">3 part blog post</link>  by Todd Lipcon
             and <xref linkend="gcpause" /> above.
-            </para>                  
+            </para>
       </section>
     </section>
     <section xml:id="trouble.resources">
@@ -201,7 +201,7 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
       <section xml:id="trouble.resources.searchhadoop">
         <title>search-hadoop.com</title>
         <para>
-        <link xlink:href="http://search-hadoop.com">search-hadoop.com</link> indexes all the mailing lists and is great for historical searches.  
+        <link xlink:href="http://search-hadoop.com">search-hadoop.com</link> indexes all the mailing lists and is great for historical searches.
         Search here first when you have an issue as its more than likely someone has already had your problem.
         </para>
       </section>
@@ -212,7 +212,7 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
         is generally used for questions on released versions of Apache HBase.  Before going to the mailing list, make sure your
         question has not already been answered by searching the mailing list archives first.  Use
         <xref linkend="trouble.resources.searchhadoop" />.
-        Take some time crafting your question<footnote><para>See <link xlink="http://www.mikeash.com/getting_answers.html">Getting Answers</link></para></footnote>; a quality question that includes all context and 
+        Take some time crafting your question<footnote><para>See <link xlink="http://www.mikeash.com/getting_answers.html">Getting Answers</link></para></footnote>; a quality question that includes all context and
         exhibits evidence the author has tried to find answers in the manual and out on lists
         is more likely to get a prompt response.
         </para>
@@ -236,7 +236,7 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
               <title>Master Web Interface</title>
               <para>The Master starts a web-interface on port 60010 by default.
               </para>
-              <para>The Master web UI lists created tables and their definition (e.g., ColumnFamilies, blocksize, etc.).  Additionally, 
+              <para>The Master web UI lists created tables and their definition (e.g., ColumnFamilies, blocksize, etc.).  Additionally,
               the available RegionServers in the cluster are listed along with selected high-level metrics (requests, number of regions, usedHeap, maxHeap).
               The Master web UI allows navigation to each RegionServer's web UI.
               </para>
@@ -263,13 +263,13 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
 	ls path [watch]
 	set path data [version]
 	delquota [-n|-b] path
-	quit 
+	quit
 	printwatches on|off
 	create [-s] [-e] path data acl
 	stat path [watch]
-	close 
+	close
 	ls2 path [watch]
-	history 
+	history
 	listquota path
 	setAcl path acl
 	getAcl path
@@ -292,7 +292,7 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
       </section>
       <section xml:id="trouble.tools.top">
         <title>top</title>
-        <para>         
+        <para>
         <code>top</code> is probably one of the most important tool when first trying to see what’s running on a machine and how the resources are consumed. Here’s an example from production system:
         <programlisting>
 top - 14:46:59 up 39 days, 11:55,  1 user,  load average: 3.75, 3.57, 3.84
@@ -300,10 +300,10 @@ Tasks: 309 total,   1 running, 308 sleeping,   0 stopped,   0 zombie
 Cpu(s):  4.5%us,  1.6%sy,  0.0%ni, 91.7%id,  1.4%wa,  0.1%hi,  0.6%si,  0.0%st
 Mem:  24414432k total, 24296956k used,   117476k free,     7196k buffers
 Swap: 16008732k total,	14348k used, 15994384k free, 11106908k cached
- 
-  PID USER  	PR  NI  VIRT  RES  SHR S %CPU %MEM	TIME+  COMMAND                                                                                                                                                                      
-15558 hadoop	18  -2 3292m 2.4g 3556 S   79 10.4   6523:52 java                                                                                                                                                                          
-13268 hadoop	18  -2 8967m 8.2g 4104 S   21 35.1   5170:30 java                                                                                                                                                                          
+
+  PID USER  	PR  NI  VIRT  RES  SHR S %CPU %MEM	TIME+  COMMAND
+15558 hadoop	18  -2 3292m 2.4g 3556 S   79 10.4   6523:52 java
+13268 hadoop	18  -2 8967m 8.2g 4104 S   21 35.1   5170:30 java
  8895 hadoop	18  -2 1581m 497m 3420 S   11  2.1   4002:32 java
 …
         </programlisting>
@@ -351,7 +351,7 @@ hadoop@sv4borg12:~$ jps
         <programlisting>
 hadoop@sv4borg12:~$ ps aux | grep HRegionServer
 hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/jdk1.6.0_14/bin/java -Xmx8000m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -XX:+UseConcMarkSweepGC -XX:NewSize=64m -XX:MaxNewSize=64m -XX:CMSInitiatingOccupancyFraction=88 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/export1/hadoop/logs/gc-hbase.log -Dcom.sun.management.jmxremote.port=10102 -Dcom.sun.management.jmxremote.authenticate=true -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.password.file=/home/hadoop/hbase/conf/jmxremote.password -Dcom.sun.management.jmxremote -Dhbase.log.dir=/export1/hadoop/logs -Dhbase.log.file=hbase-hadoop-regionserver-sv4borg12.log -Dhbase.home.dir=/home/hadoop/hbase -Dhbase.id.str=hadoop -Dhbase.root.logger=INFO,DRFA -Djava.library.path=/home/hadoop/hbase/lib/native/Linux-amd64-64 -classpath /home/hadoop/hbase/bin/../conf:[many jars]:/home/hadoop/hadoop/conf org.apache.hadoop.hbase.regionserver.HRegionServer start
-        </programlisting>      
+        </programlisting>
         </para>
       </section>
       <section xml:id="trouble.tools.jstack">
@@ -371,7 +371,7 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
         	at java.util.concurrent.LinkedBlockingQueue.poll(LinkedBlockingQueue.java:395)
         	at org.apache.hadoop.hbase.regionserver.HRegionServer.run(HRegionServer.java:647)
         	at java.lang.Thread.run(Thread.java:619)
- 
+
         	The MemStore flusher thread that is currently flushing to a file:
 "regionserver60020.cacheFlusher" daemon prio=10 tid=0x0000000040f4e000 nid=0x45eb in Object.wait() [0x00007f16b5b86000..0x00007f16b5b87af0]
    java.lang.Thread.State: WAITING (on object monitor)
@@ -444,7 +444,7 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
         </para>
         <para>
         	A thread that receives data from HDFS:
-        <programlisting>        	
+        <programlisting>
 "IPC Client (47) connection to sv4borg9/10.4.24.40:9000 from hadoop" daemon prio=10 tid=0x00007f16a02d0000 nid=0x4fa3 runnable [0x00007f16b517d000..0x00007f16b517dbf0]
    java.lang.Thread.State: RUNNABLE
         	at sun.nio.ch.EPollArrayWrapper.epollWait(Native Method)
@@ -509,27 +509,27 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
        </section>
        <section xml:id="trouble.tools.clustersshtop">
         <title>clusterssh+top</title>
-         <para> 
-          clusterssh+top, it’s like a poor man’s monitoring system and it can be quite useful when you have only a few machines as it’s very easy to setup. Starting clusterssh will give you one terminal per machine and another terminal in which whatever you type will be retyped in every window. This means that you can type “top” once and it will start it for all of your machines at the same time giving you full view of the current state of your cluster. You can also tail all the logs at the same time, edit files, etc.      
+         <para>
+          clusterssh+top, it’s like a poor man’s monitoring system and it can be quite useful when you have only a few machines as it’s very easy to setup. Starting clusterssh will give you one terminal per machine and another terminal in which whatever you type will be retyped in every window. This means that you can type “top” once and it will start it for all of your machines at the same time giving you full view of the current state of your cluster. You can also tail all the logs at the same time, edit files, etc.
           </para>
        </section>
     </section>
     </section>
-    
+
     <section xml:id="trouble.client">
       <title>Client</title>
-       <para>For more information on the HBase client, see <xref linkend="client"/>. 
+       <para>For more information on the HBase client, see <xref linkend="client"/>.
        </para>
        <section xml:id="trouble.client.scantimeout">
             <title>ScannerTimeoutException or UnknownScannerException</title>
-            <para>This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout.  
+            <para>This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout.
             For example, if <code>Scan.setCaching</code> is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 <code>.next()</code> calls on the ResultScanner
             because data is being transferred in blocks of 500 rows to the client.  Reducing the setCaching value may be an option, but setting this value too low makes for inefficient
             processing on numbers of rows.
             </para>
             <para>See <xref linkend="perf.hbase.client.caching"/>.
             </para>
-       </section>    
+       </section>
        <section xml:id="trouble.client.lease.exception">
             <title><classname>LeaseException</classname> when calling <classname>Scanner.next</classname></title>
             <para>
@@ -546,27 +546,27 @@ Harsh J investigated the issue as part of the mailing list thread
             <title>Shell or client application throws lots of scary exceptions during normal operation</title>
             <para>Since 0.20.0 the default log level for <code>org.apache.hadoop.hbase.*</code>is DEBUG. </para>
             <para>
-            On your clients, edit <filename>$HBASE_HOME/conf/log4j.properties</filename> and change this: <code>log4j.logger.org.apache.hadoop.hbase=DEBUG</code> to this: <code>log4j.logger.org.apache.hadoop.hbase=INFO</code>, or even <code>log4j.logger.org.apache.hadoop.hbase=WARN</code>. 
+            On your clients, edit <filename>$HBASE_HOME/conf/log4j.properties</filename> and change this: <code>log4j.logger.org.apache.hadoop.hbase=DEBUG</code> to this: <code>log4j.logger.org.apache.hadoop.hbase=INFO</code>, or even <code>log4j.logger.org.apache.hadoop.hbase=WARN</code>.
             </para>
-       </section>    
+       </section>
        <section xml:id="trouble.client.longpauseswithcompression">
             <title>Long Client Pauses With Compression</title>
-            <para>This is a fairly frequent question on the Apache HBase dist-list.  The scenario is that a client is typically inserting a lot of data into a 
+            <para>This is a fairly frequent question on the Apache HBase dist-list.  The scenario is that a client is typically inserting a lot of data into a
             relatively un-optimized HBase cluster.  Compression can exacerbate the pauses, although it is not the source of the problem.</para>
             <para>See <xref linkend="precreate.regions"/> on the pattern for pre-creating regions and confirm that the table isn't starting with a single region.</para>
-            <para>See <xref linkend="perf.configurations"/> for cluster configuration, particularly <code>hbase.hstore.blockingStoreFiles</code>, <code>hbase.hregion.memstore.block.multiplier</code>, 
+            <para>See <xref linkend="perf.configurations"/> for cluster configuration, particularly <code>hbase.hstore.blockingStoreFiles</code>, <code>hbase.hregion.memstore.block.multiplier</code>,
             <code>MAX_FILESIZE</code> (region size), and <code>MEMSTORE_FLUSHSIZE.</code>  </para>
-            <para>A slightly longer explanation of why pauses can happen is as follows:  Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are 
+            <para>A slightly longer explanation of why pauses can happen is as follows:  Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are
             too many files to compact because the compactor is given too many small files to compact and has to compact the same data repeatedly.  This situation can occur even with minor compactions.
             Compounding this situation, Apache HBase doesn't compress data in memory.  Thus, the 64MB that lives in the MemStore could become a 6MB file after compression - which results in a smaller StoreFile.  The upside is that
             more data is packed into the same region, but performance is achieved by being able to write larger files - which is why HBase waits until the flushize before writing a new StoreFile.  And smaller StoreFiles
-            become targets for compaction.  Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.   
+            become targets for compaction.  Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.
             </para>
             <para>
             For additional information, see this thread on <link xlink:href="http://search-hadoop.com/m/WUnLM6ojHm1/Long+client+pauses+with+compression&amp;subj=Long+client+pauses+with+compression">Long client pauses with compression</link>.
             </para>
-            
-       </section>    
+
+       </section>
        <section xml:id="trouble.client.zookeeper">
             <title>ZooKeeper Client Connection Errors</title>
             <para>Errors like this...
@@ -588,11 +588,11 @@ Harsh J investigated the issue as part of the mailing list thread
  11/07/05 11:26:45 INFO zookeeper.ClientCnxn: Opening socket connection to
  server localhost/127.0.0.1:2181
 </programlisting>
-            ... are either due to ZooKeeper being down, or unreachable due to network issues.            
+            ... are either due to ZooKeeper being down, or unreachable due to network issues.
             </para>
             <para>The utility <xref linkend="trouble.tools.builtin.zkcli"/> may help investigate ZooKeeper issues.
             </para>
-       </section>    
+       </section>
        <section xml:id="trouble.client.oome.directmemory.leak">
             <title>Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)</title>
             <para>
@@ -607,15 +607,15 @@ it  a bit hefty.  You want to make this setting client-side only especially if y
 server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep
 separate client-side and server-side config dirs).
             </para>
-       </section>    
+       </section>
        <section xml:id="trouble.client.slowdown.admin">
             <title>Client Slowdown When Calling Admin Methods (flush, compact, etc.)</title>
             <para>
 This is a client issue fixed by <link xlink:href="https://issues.apache.org/jira/browse/HBASE-5073">HBASE-5073</link> in 0.90.6.
-There was a ZooKeeper leak in the client and the client was getting pummeled by ZooKeeper events with each additional 
-invocation of the admin API. 
+There was a ZooKeeper leak in the client and the client was getting pummeled by ZooKeeper events with each additional
+invocation of the admin API.
             </para>
-       </section>    
+       </section>
 
        <section xml:id="trouble.client.security.rpc">
            <title>Secure Client Cannot Connect ([Caused by GSSException: No valid credentials provided (Mechanism level: Failed to find any Kerberos tgt)])</title>
@@ -637,16 +637,16 @@ Finally, depending on your Kerberos configuration, you may need to install the <
            <para>
 You may also need to download the <link xlink:href="http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html">unlimited strength JCE policy files</link>. Uncompress and extract the downloaded file, and install the policy jars into &lt;java-home&gt;/lib/security.
            </para>
-       </section>    
+       </section>
 
     </section>
-    
+
     <section xml:id="trouble.mapreduce">
       <title>MapReduce</title>
       <section xml:id="trouble.mapreduce.local">
         <title>You Think You're On The Cluster, But You're Actually Local</title>
         <para>This following stacktrace happened using <code>ImportTsv</code>, but things like this
-        can happen on any job with a mis-configuration.        
+        can happen on any job with a mis-configuration.
 <programlisting>
     WARN mapred.LocalJobRunner: job_local_0001
 java.lang.IllegalArgumentException: Can't read partitions file
@@ -671,17 +671,17 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
 </programlisting>
        LocalJobRunner means the job is running locally, not on the cluster.
       </para>
-      <para>See 
+      <para>See
       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath">
-      http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath</link> for more 
+      http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath</link> for more
       information on HBase MapReduce jobs and classpaths.
-      </para>        
+      </para>
       </section>
     </section>
-    
+
     <section xml:id="trouble.namenode">
       <title>NameNode</title>
-       <para>For more information on the NameNode, see <xref linkend="arch.hdfs"/>. 
+       <para>For more information on the NameNode, see <xref linkend="arch.hdfs"/>.
        </para>
        <section xml:id="trouble.namenode.disk">
             <title>HDFS Utilization of Tables and Regions</title>
@@ -691,7 +691,7 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
             <para><programlisting>hadoop fs -du /hbase/myTable</programlisting> ...returns a list of the regions under the HBase table 'myTable' and their disk utilization. </para>
             <para>For more information on HDFS shell commands, see the <link xlink:href="http://hadoop.apache.org/common/docs/current/file_system_shell.html">HDFS FileSystem Shell documentation</link>.
             </para>
-       </section>    
+       </section>
        <section xml:id="trouble.namenode.hbase.objects">
             <title>Browsing HDFS for HBase Objects</title>
             <para>Somtimes it will be necessary to explore the HBase objects that exist on HDFS.  These objects could include the WALs (Write Ahead Logs), tables, regions, StoreFiles, etc.
@@ -709,30 +709,30 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
             <para>The HDFS directory structure of HBase WAL is..
             <programlisting>
 <filename>/hbase</filename>
-     <filename>/.logs</filename>     
+     <filename>/.logs</filename>
           <filename>/&lt;RegionServer&gt;</filename>    (RegionServers)
                <filename>/&lt;HLog&gt;</filename>           (WAL HLog files for the RegionServer)
             </programlisting>
             </para>
-		    <para>See the <link xlink:href="see http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html">HDFS User Guide</link> for other non-shell diagnostic 
-		    utilities like <code>fsck</code>. 
+		    <para>See the <link xlink:href="see http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html">HDFS User Guide</link> for other non-shell diagnostic
+		    utilities like <code>fsck</code>.
             </para>
           <section xml:id="trouble.namenode.uncompaction">
             <title>Use Cases</title>
-              <para>Two common use-cases for querying HDFS for HBase objects is research the degree of uncompaction of a table.  If there are a large number of StoreFiles for each ColumnFamily it could 
+              <para>Two common use-cases for querying HDFS for HBase objects is research the degree of uncompaction of a table.  If there are a large number of StoreFiles for each ColumnFamily it could
               indicate the need for a major compaction.  Additionally, after a major compaction if the resulting StoreFile is "small" it could indicate the need for a reduction of ColumnFamilies for
               the table.
 		    </para>
 		  </section>
 
-       </section>    
+       </section>
      </section>
-        
+
     <section xml:id="trouble.network">
       <title>Network</title>
       <section xml:id="trouble.network.spikes">
         <title>Network Spikes</title>
-        <para>If you are seeing periodic network spikes you might want to check the <code>compactionQueues</code> to see if major 
+        <para>If you are seeing periodic network spikes you might want to check the <code>compactionQueues</code> to see if major
         compactions are happening.
         </para>
         <para>See <xref linkend="managed.compactions"/> for more information on managing compactions.
@@ -748,12 +748,12 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
         <para>Are all the network interfaces functioning correctly?  Are you sure?  See the Troubleshooting Case Study in <xref linkend="trouble.casestudy"/>.
         </para>
       </section>
-       
+
     </section>
-        
+
     <section xml:id="trouble.rs">
       <title>RegionServer</title>
-        <para>For more information on the RegionServers, see <xref linkend="regionserver.arch"/>. 
+        <para>For more information on the RegionServers, see <xref linkend="regionserver.arch"/>.
        </para>
       <section xml:id="trouble.rs.startup">
         <title>Startup Errors</title>
@@ -761,9 +761,9 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
             <title>Master Starts, But RegionServers Do Not</title>
             <para>The Master believes the RegionServers have the IP of 127.0.0.1 - which is localhost and resolves to the master's own localhost.
             </para>
-            <para>The RegionServers are erroneously informing the Master that their IP addresses are 127.0.0.1. 
+            <para>The RegionServers are erroneously informing the Master that their IP addresses are 127.0.0.1.
             </para>
-            <para>Modify <filename>/etc/hosts</filename> on the region servers, from...  
+            <para>Modify <filename>/etc/hosts</filename> on the region servers, from...
             <programlisting>
 # Do not remove the following line, or various programs
 # that require network functionality will fail.
@@ -779,7 +779,7 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
             </programlisting>
             </para>
           </section>
-          
+
           <section xml:id="trouble.rs.startup.compression">
             <title>Compression Link Errors</title>
             <para>
@@ -793,8 +793,8 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
             </programlisting>
             .. then there is a path issue with the compression libraries.  See the Configuration section on <link linkend="lzo.compression">LZO compression configuration</link>.
             </para>
-          </section> 
-      </section>    
+          </section>
+      </section>
       <section xml:id="trouble.rs.runtime">
         <title>Runtime Errors</title>
 
@@ -807,7 +807,7 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
             Adding <code>-XX:+UseMembar</code> to the HBase <varname>HBASE_OPTS</varname> in <filename>conf/hbase-env.sh</filename>
             may fix it.
             </para>
-            <para>Also, are you using <xref linkend="client.rowlocks"/>?  These are discouraged because they can lock up the 
+            <para>Also, are you using <xref linkend="client.rowlocks"/>?  These are discouraged because they can lock up the
             RegionServers if not managed properly.
             </para>
         </section>
@@ -816,7 +816,7 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
            <para>
            If you see log messages like this...
 <programlisting>
-2010-09-13 01:24:17,336 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: 
+2010-09-13 01:24:17,336 WARN org.apache.hadoop.hdfs.server.datanode.DataNode:
 Disk-related IOException in BlockReceiver constructor. Cause is java.io.IOException: Too many open files
         at java.io.UnixFileSystem.createFileExclusively(Native Method)
         at java.io.File.createNewFile(File.java:883)
@@ -847,7 +847,7 @@ Disk-related IOException in BlockReceiver constructor. Cause is java.io.IOExcept
            <programlisting>
 2009-02-24 10:01:33,516 WARN org.apache.hadoop.hbase.util.Sleeper: We slept xxx ms, ten times longer than scheduled: 10000
 2009-02-24 10:01:33,516 WARN org.apache.hadoop.hbase.util.Sleeper: We slept xxx ms, ten times longer than scheduled: 15000
-2009-02-24 10:01:36,472 WARN org.apache.hadoop.hbase.regionserver.HRegionServer: unable to report to master for xxx milliseconds - retrying      
+2009-02-24 10:01:36,472 WARN org.apache.hadoop.hbase.regionserver.HRegionServer: unable to report to master for xxx milliseconds - retrying
            </programlisting>
            ... or see full GC compactions then you may be experiencing full GC's.
            </para>
@@ -878,12 +878,12 @@ java.io.IOException: Session Expired
        at org.apache.zookeeper.ClientCnxn$SendThread.readConnectResult(ClientCnxn.java:589)
        at org.apache.zookeeper.ClientCnxn$SendThread.doIO(ClientCnxn.java:709)
        at org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:945)
-ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expired           
+ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expired
            </programlisting>
            <para>
            The JVM is doing a long running garbage collecting which is pausing every threads (aka "stop the world").
            Since the RegionServer's local ZooKeeper client cannot send heartbeats, the session times out.
-           By design, we shut down any node that isn't able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere.  
+           By design, we shut down any node that isn't able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere.
            </para>
            <para>
             <itemizedlist>
@@ -892,7 +892,7 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
               <listitem>Make sure you are not CPU starving the RegionServer thread. For example, if you are running a MapReduce job using 6 CPU-intensive tasks on a machine with 4 cores, you are probably starving the RegionServer enough to create longer garbage collection pauses.</listitem>
               <listitem>Increase the ZooKeeper session timeout</listitem>
            </itemizedlist>
-           If you wish to increase the session timeout, add the following to your <filename>hbase-site.xml</filename> to increase the timeout from the default of 60 seconds to 120 seconds. 
+           If you wish to increase the session timeout, add the following to your <filename>hbase-site.xml</filename> to increase the timeout from the default of 60 seconds to 120 seconds.
            <programlisting>
 &lt;property&gt;
     &lt;name&gt;zookeeper.session.timeout&lt;/name&gt;
@@ -906,8 +906,8 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
            </para>
            <para>
            Be aware that setting a higher timeout means that the regions served by a failed RegionServer will take at least
-           that amount of time to be transfered to another RegionServer. For a production system serving live requests, we would instead 
-           recommend setting it lower than 1 minute and over-provision your cluster in order the lower the memory load on each machines (hence having 
+           that amount of time to be transfered to another RegionServer. For a production system serving live requests, we would instead
+           recommend setting it lower than 1 minute and over-provision your cluster in order the lower the memory load on each machines (hence having
            less garbage to collect per machine).
            </para>
            <para>
@@ -948,35 +948,41 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
            </para>
         </section>
 
-      </section>    
+      </section>
       <section xml:id="trouble.rs.shutdown">
         <title>Shutdown Errors</title>
 
-      </section>    
+      </section>
 
-    </section>    
+    </section>
 
     <section xml:id="trouble.master">
       <title>Master</title>
-       <para>For more information on the Master, see <xref linkend="master"/>. 
+       <para>For more information on the Master, see <xref linkend="master"/>.
        </para>
       <section xml:id="trouble.master.startup">
         <title>Startup Errors</title>
           <section xml:id="trouble.master.startup.migration">
              <title>Master says that you need to run the hbase migrations script</title>
              <para>Upon running that, the hbase migrations script says no files in root directory.</para>
-             <para>HBase expects the root directory to either not exist, or to have already been initialized by hbase running a previous time. If you create a new directory for HBase using Hadoop DFS, this error will occur. 
-             Make sure the HBase root directory does not currently exist or has been initialized by a previous run of HBase. Sure fire solution is to just use Hadoop dfs to delete the HBase root and let HBase create and initialize the directory itself. 
-             </para>          
+             <para>HBase expects the root directory to either not exist, or to have already been initialized by hbase running a previous time. If you create a new directory for HBase using Hadoop DFS, this error will occur.
+             Make sure the HBase root directory does not currently exist or has been initialized by a previous run of HBase. Sure fire solution is to just use Hadoop dfs to delete the HBase root and let HBase create and initialize the directory itself.
+             </para>
           </section>
-          
-      </section>    
+          <section xml:id="trouble.master.startup.zk.buffer">
+              <title>Packet len6080218 is out of range!</title>
+              <para>If you have many regions on your cluster and you see an error
+                  like that reported above in this sections title in your logs, see
+                  <link xlink:href="https://issues.apache.org/jira/browse/HBASE-4246">HBASE-4246 Cluster with too many regions cannot withstand some master failover scenarios</link>.</para>
+          </section>
+
+      </section>
       <section xml:id="trouble.master.shutdown">
         <title>Shutdown Errors</title>
 
-      </section>    
+      </section>
 
-    </section>    
+    </section>
 
     <section xml:id="trouble.zookeeper">
       <title>ZooKeeper</title>
@@ -985,28 +991,28 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
           <section xml:id="trouble.zookeeper.startup.address">
              <title>Could not find my address: xyz in list of ZooKeeper quorum servers</title>
              <para>A ZooKeeper server wasn't able to start, throws that error. xyz is the name of your server.</para>
-             <para>This is a name lookup problem. HBase tries to start a ZooKeeper server on some machine but that machine isn't able to find itself in the <varname>hbase.zookeeper.quorum</varname> configuration.  
-             </para>          
-             <para>Use the hostname presented in the error message instead of the value you used. If you have a DNS server, you can set <varname>hbase.zookeeper.dns.interface</varname> and <varname>hbase.zookeeper.dns.nameserver</varname> in <filename>hbase-site.xml</filename> to make sure it resolves to the correct FQDN.   
-             </para>          
+             <para>This is a name lookup problem. HBase tries to start a ZooKeeper server on some machine but that machine isn't able to find itself in the <varname>hbase.zookeeper.quorum</varname> configuration.
+             </para>
+             <para>Use the hostname presented in the error message instead of the value you used. If you have a DNS server, you can set <varname>hbase.zookeeper.dns.interface</varname> and <varname>hbase.zookeeper.dns.nameserver</varname> in <filename>hbase-site.xml</filename> to make sure it resolves to the correct FQDN.
+             </para>
           </section>
-          
-      </section>    
+
+      </section>
       <section xml:id="trouble.zookeeper.general">
           <title>ZooKeeper, The Cluster Canary</title>
           <para>ZooKeeper is the cluster's "canary in the mineshaft". It'll be the first to notice issues if any so making sure its happy is the short-cut to a humming cluster.
-          </para> 
+          </para>
           <para>
           See the <link xlink:href="http://wiki.apache.org/hadoop/ZooKeeper/Troubleshooting">ZooKeeper Operating Environment Troubleshooting</link> page. It has suggestions and tools for checking disk and networking performance; i.e. the operating environment your ZooKeeper and HBase are running in.
           </para>
          <para>Additionally, the utility <xref linkend="trouble.tools.builtin.zkcli"/> may help investigate ZooKeeper issues.
          </para>
-      </section>  
+      </section>
 
-    </section>    
+    </section>
 
     <section xml:id="trouble.ec2">
-       <title>Amazon EC2</title>      
+       <title>Amazon EC2</title>
           <section xml:id="trouble.ec2.zookeeper">
              <title>ZooKeeper does not seem to work on Amazon EC2</title>
              <para>HBase does not start when deployed as Amazon EC2 instances.  Exceptions like the below appear in the Master and/or RegionServer logs: </para>
@@ -1018,8 +1024,8 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
   java.net.ConnectException: Connection refused
              </programlisting>
              <para>
-             Security group policy is blocking the ZooKeeper port on a public address. 
-             Use the internal EC2 host names when configuring the ZooKeeper quorum peer list. 
+             Security group policy is blocking the ZooKeeper port on a public address.
+             Use the internal EC2 host names when configuring the ZooKeeper quorum peer list.
              </para>
           </section>
           <section xml:id="trouble.ec2.instability">
@@ -1033,11 +1039,11 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
              See Andrew's answer here, up on the user list: <link xlink:href="http://search-hadoop.com/m/sPdqNFAwyg2">Remote Java client connection into EC2 instance</link>.
              </para>
           </section>
-          
+
     </section>
-    
+
     <section xml:id="trouble.versions">
-       <title>HBase and Hadoop version issues</title>      
+       <title>HBase and Hadoop version issues</title>
           <section xml:id="trouble.versions.205">
              <title><code>NoClassDefFoundError</code> when trying to run 0.90.x on hadoop-0.20.205.x (or hadoop-1.0.x)</title>
              <para>Apache HBase 0.90.x does not ship with hadoop-0.20.205.x, etc.  To make it run, you need to replace the hadoop
@@ -1069,7 +1075,7 @@ org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate w
 ...</computeroutput>
 ...are you trying to talk to an Hadoop 2.0.x from an HBase that has an Hadoop 1.0.x client?
 Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the <command>-Dhadoop.profile=2.0</command>
-attribute to Maven (See <xref linkend="maven.build.hadoop" /> for more). 
+attribute to Maven (See <xref linkend="maven.build.hadoop" /> for more).
 </para>
 
 </section>
@@ -1080,5 +1086,5 @@ attribute to Maven (See <xref linkend="maven.build.hadoop" /> for more).
       <para>For Performance and Troubleshooting Case Studies, see <xref linkend="casestudies"/>.
       </para>
     </section>
-	
+
   </chapter>

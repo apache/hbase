@@ -32,7 +32,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
  * protocol interfaces to hbase-policy.xml entries.
  */
 public class HBasePolicyProvider extends PolicyProvider {
-  protected static Service[] services = {
+  protected final static Service[] services = {
       new Service("security.client.protocol.acl", ClientProtocol.class),
       new Service("security.client.protocol.acl", AdminProtocol.class),
       new Service("security.admin.protocol.acl", MasterMonitorProtocol.class),
@@ -48,7 +48,7 @@ public class HBasePolicyProvider extends PolicyProvider {
   public static void init(Configuration conf,
       ServiceAuthorizationManager authManager) {
     // set service-level authorization security policy
-    conf.set("hadoop.policy.file", "hbase-policy.xml");
+    System.setProperty("hadoop.policy.file", "hbase-policy.xml");
     if (conf.getBoolean(
           ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
       authManager.refresh(conf, new HBasePolicyProvider());

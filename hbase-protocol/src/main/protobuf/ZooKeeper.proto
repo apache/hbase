@@ -44,7 +44,7 @@ message Master {
 }
 
 /**
- * Content of the '/hbase/shutdown', cluster state, znode.
+ * Content of the '/hbase/running', cluster state, znode.
  */
 message ClusterUp {
   // If this znode is present, cluster is up.  Currently

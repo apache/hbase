@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -85,6 +86,18 @@ public class MasterFileSystem {
   final boolean distributedLogSplitting;
   final SplitLogManager splitLogManager;
   private final MasterServices services;
+
+  private final static PathFilter META_FILTER = new PathFilter() {
+    public boolean accept(Path p) {
+      return HLogUtil.isMetaFile(p);
+    }
+  };
+
+  private final static PathFilter NON_META_FILTER = new PathFilter() {
+    public boolean accept(Path p) {
+      return !HLogUtil.isMetaFile(p);
+    }
+  };
 
   public MasterFileSystem(Server master, MasterServices services,
       MetricsMaster metricsMaster, boolean masterRecovery)
@@ -242,7 +255,8 @@ public class MasterFileSystem {
                 + " belongs to an existing region server");
           }
         }
-        splitLog(serverNames);
+        splitLog(serverNames, META_FILTER);
+        splitLog(serverNames, NON_META_FILTER);
         retrySplitting = false;
       } catch (IOException ioe) {
         LOG.warn("Failed splitting of " + serverNames, ioe);
@@ -271,8 +285,30 @@ public class MasterFileSystem {
     splitLog(serverNames);
   }
 
-  public void splitLog(final List<ServerName> serverNames) throws IOException {
+  /**
+   * Specialized method to handle the splitting for meta HLog
+   * @param serverName
+   * @throws IOException
+   */
+  public void splitMetaLog(final ServerName serverName) throws IOException {
     long splitTime = 0, splitLogSize = 0;
+    List<ServerName> serverNames = new ArrayList<ServerName>();
+    serverNames.add(serverName);
+    List<Path> logDirs = getLogDirs(serverNames);
+    if (logDirs.isEmpty()) {
+      LOG.info("No meta logs to split");
+      return;
+    }
+    splitLogManager.handleDeadWorkers(serverNames);
+    splitTime = EnvironmentEdgeManager.currentTimeMillis();
+    splitLogSize = splitLogManager.splitLogDistributed(logDirs, META_FILTER);
+    splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
+    if (this.metricsMaster != null) {
+      this.metricsMaster.addSplit(splitTime, splitLogSize);
+    }
+  }
+
+  private List<Path> getLogDirs(final List<ServerName> serverNames) throws IOException {
     List<Path> logDirs = new ArrayList<Path>();
     for (ServerName serverName: serverNames) {
       Path logDir = new Path(this.rootdir, HLogUtil.getHLogDirectoryName(serverName.toString()));
@@ -290,6 +326,23 @@ public class MasterFileSystem {
       }
       logDirs.add(splitDir);
     }
+    return logDirs;
+  }
+
+  public void splitLog(final List<ServerName> serverNames) throws IOException {
+    splitLog(serverNames, NON_META_FILTER);
+  }
+
+  /**
+   * This method is the base split method that splits HLog files matching a filter.
+   * Callers should pass the appropriate filter for meta and non-meta HLogs.
+   * @param serverNames
+   * @param filter
+   * @throws IOException
+   */
+  public void splitLog(final List<ServerName> serverNames, PathFilter filter) throws IOException {
+    long splitTime = 0, splitLogSize = 0;
+    List<Path> logDirs = getLogDirs(serverNames);
 
     if (logDirs.isEmpty()) {
       LOG.info("No logs to split");
@@ -299,7 +352,7 @@ public class MasterFileSystem {
     if (distributedLogSplitting) {
       splitLogManager.handleDeadWorkers(serverNames);
       splitTime = EnvironmentEdgeManager.currentTimeMillis();
-      splitLogSize = splitLogManager.splitLogDistributed(logDirs);
+      splitLogSize = splitLogManager.splitLogDistributed(logDirs,filter);
       splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
     } else {
       for(Path logDir: logDirs){
@@ -411,7 +464,7 @@ public class MasterFileSystem {
       // if not the cleaner will take care of them.
       for (Path tabledir: FSUtils.getTableDirs(fs, tmpdir)) {
         for (Path regiondir: FSUtils.getRegionDirs(fs, tabledir)) {
-          HFileArchiver.archiveRegion(fs, this.rootdir, tabledir, regiondir);
+          HFileArchiver.archiveRegion(c, fs, this.rootdir, tabledir, regiondir);
         }
       }
       if (!fs.delete(tmpdir, true)) {

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -56,29 +57,34 @@ public class TestSplitLogWorker {
   private ZooKeeperWatcher zkw;
   private SplitLogWorker slw;
 
-  private void waitForCounter(AtomicLong ctr, long oldval, long newval,
-      long timems) {
+  private void waitForCounter(AtomicLong ctr, long oldval, long newval, long timems)
+      throws Exception {
     assertTrue("ctr=" + ctr.get() + ", oldval=" + oldval + ", newval=" + newval,
       waitForCounterBoolean(ctr, oldval, newval, timems));
   }
 
-  private boolean waitForCounterBoolean(AtomicLong ctr, long oldval, long newval,
-      long timems) {
-    long curt = System.currentTimeMillis();
-    long endt = curt + timems;
-    while (curt < endt) {
-      if (ctr.get() == oldval) {
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException e) {
-        }
-        curt = System.currentTimeMillis();
-      } else {
-        assertEquals(newval, ctr.get());
-        return true;
+  private boolean waitForCounterBoolean(final AtomicLong ctr, final long oldval, long newval,
+      long timems) throws Exception {
+
+    return waitForCounterBoolean(ctr, oldval, newval, timems, true);
+  }
+
+  private boolean waitForCounterBoolean(final AtomicLong ctr, final long oldval, long newval,
+      long timems, boolean failIfTimeout) throws Exception {
+
+    long timeWaited = TEST_UTIL.waitFor(timems, 10, failIfTimeout,
+      new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return (ctr.get() != oldval);
       }
+    });
+
+    if( timeWaited > 0) {
+      // when not timed out
+      assertEquals(newval, ctr.get());
     }
-    return false;
+    return true;
   }
 
   @Before
@@ -134,7 +140,7 @@ public class TestSplitLogWorker {
     SplitLogWorker slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(), RS, neverEndingTask);
     slw.start();
     try {
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1000);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1500);
       byte [] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TATAS));
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);
       assertTrue(slt.isOwned(RS));
@@ -170,10 +176,10 @@ public class TestSplitLogWorker {
     slw1.start();
     slw2.start();
     try {
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1000);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1500);
       // Assert that either the tot_wkr_failed_to_grab_task_owned count was set of if
       // not it, that we fell through to the next counter in line and it was set.
-      assertTrue(waitForCounterBoolean(SplitLogCounters.tot_wkr_failed_to_grab_task_owned, 0, 1, 1000) ||
+      assertTrue(waitForCounterBoolean(SplitLogCounters.tot_wkr_failed_to_grab_task_owned, 0, 1, 1500, false) ||
           SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.get() == 1);
       byte [] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TRFT));
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);
@@ -201,14 +207,14 @@ public class TestSplitLogWorker {
         new SplitLogTask.Unassigned(MANAGER).toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1000);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1500);
       assertEquals(1, slw.taskReadySeq);
       byte [] bytes = ZKUtil.getData(zkw, PATH);
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);
       assertTrue(slt.isOwned(SRV));
       slt = new SplitLogTask.Unassigned(MANAGER);
       ZKUtil.setData(zkw, PATH, slt.toByteArray());
-      waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 1000);
+      waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 1500);
     } finally {
       stopSplitLogWorker(slw);
     }
@@ -229,7 +235,7 @@ public class TestSplitLogWorker {
       zkw.getRecoverableZooKeeper().create(PATH1, unassignedManager.toByteArray(),
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1000);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1500);
       // now the worker is busy doing the above task
 
       // create another task
@@ -241,9 +247,9 @@ public class TestSplitLogWorker {
       final ServerName anotherWorker = new ServerName("another-worker,1,1");
       SplitLogTask slt = new SplitLogTask.Owned(anotherWorker);
       ZKUtil.setData(zkw, PATH1, slt.toByteArray());
-      waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 1000);
+      waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 1500);
 
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 1, 2, 1000);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 1, 2, 1500);
       assertEquals(2, slw.taskReadySeq);
       byte [] bytes = ZKUtil.getData(zkw, PATH2);
       slt = SplitLogTask.parseFrom(bytes);
@@ -268,25 +274,25 @@ public class TestSplitLogWorker {
     zkw.getRecoverableZooKeeper().create(task,slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
       CreateMode.PERSISTENT);
 
-    waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1000);
+    waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1500);
     // now the worker is busy doing the above task
 
     // preempt the task, have it owned by another worker
     ZKUtil.setData(zkw, task, slt.toByteArray());
-    waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 1000);
+    waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 0, 1, 1500);
 
     // create a RESCAN node
     String rescan = ZKSplitLog.getEncodedNodeName(zkw, "RESCAN");
     rescan = zkw.getRecoverableZooKeeper().create(rescan, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
       CreateMode.PERSISTENT_SEQUENTIAL);
 
-    waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 1, 2, 1000);
+    waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 1, 2, 1500);
     // RESCAN node might not have been processed if the worker became busy
     // with the above task. preempt the task again so that now the RESCAN
     // node is processed
     ZKUtil.setData(zkw, task, slt.toByteArray());
-    waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 1, 2, 1000);
-    waitForCounter(SplitLogCounters.tot_wkr_task_acquired_rescan, 0, 1, 1000);
+    waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 1, 2, 1500);
+    waitForCounter(SplitLogCounters.tot_wkr_task_acquired_rescan, 0, 1, 1500);
 
     List<String> nodes = ZKUtil.listChildrenNoWatch(zkw, zkw.splitLogZNode);
     LOG.debug(nodes);

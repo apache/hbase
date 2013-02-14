@@ -601,11 +601,1150 @@ public final class HFileProtos {
     // @@protoc_insertion_point(class_scope:FileInfoProto)
   }
   
+  public interface FileTrailerProtoOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // optional uint64 fileInfoOffset = 1;
+    boolean hasFileInfoOffset();
+    long getFileInfoOffset();
+    
+    // optional uint64 loadOnOpenDataOffset = 2;
+    boolean hasLoadOnOpenDataOffset();
+    long getLoadOnOpenDataOffset();
+    
+    // optional uint64 uncompressedDataIndexSize = 3;
+    boolean hasUncompressedDataIndexSize();
+    long getUncompressedDataIndexSize();
+    
+    // optional uint64 totalUncompressedBytes = 4;
+    boolean hasTotalUncompressedBytes();
+    long getTotalUncompressedBytes();
+    
+    // optional uint32 dataIndexCount = 5;
+    boolean hasDataIndexCount();
+    int getDataIndexCount();
+    
+    // optional uint32 metaIndexCount = 6;
+    boolean hasMetaIndexCount();
+    int getMetaIndexCount();
+    
+    // optional uint64 entryCount = 7;
+    boolean hasEntryCount();
+    long getEntryCount();
+    
+    // optional uint32 numDataIndexLevels = 8;
+    boolean hasNumDataIndexLevels();
+    int getNumDataIndexLevels();
+    
+    // optional uint64 firstDataBlockOffset = 9;
+    boolean hasFirstDataBlockOffset();
+    long getFirstDataBlockOffset();
+    
+    // optional uint64 lastDataBlockOffset = 10;
+    boolean hasLastDataBlockOffset();
+    long getLastDataBlockOffset();
+    
+    // optional string comparatorClassName = 11;
+    boolean hasComparatorClassName();
+    String getComparatorClassName();
+    
+    // optional uint32 compressionCodec = 12;
+    boolean hasCompressionCodec();
+    int getCompressionCodec();
+  }
+  public static final class FileTrailerProto extends
+      com.google.protobuf.GeneratedMessage
+      implements FileTrailerProtoOrBuilder {
+    // Use FileTrailerProto.newBuilder() to construct.
+    private FileTrailerProto(Builder builder) {
+      super(builder);
+    }
+    private FileTrailerProto(boolean noInit) {}
+    
+    private static final FileTrailerProto defaultInstance;
+    public static FileTrailerProto getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public FileTrailerProto getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // optional uint64 fileInfoOffset = 1;
+    public static final int FILEINFOOFFSET_FIELD_NUMBER = 1;
+    private long fileInfoOffset_;
+    public boolean hasFileInfoOffset() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public long getFileInfoOffset() {
+      return fileInfoOffset_;
+    }
+    
+    // optional uint64 loadOnOpenDataOffset = 2;
+    public static final int LOADONOPENDATAOFFSET_FIELD_NUMBER = 2;
+    private long loadOnOpenDataOffset_;
+    public boolean hasLoadOnOpenDataOffset() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public long getLoadOnOpenDataOffset() {
+      return loadOnOpenDataOffset_;
+    }
+    
+    // optional uint64 uncompressedDataIndexSize = 3;
+    public static final int UNCOMPRESSEDDATAINDEXSIZE_FIELD_NUMBER = 3;
+    private long uncompressedDataIndexSize_;
+    public boolean hasUncompressedDataIndexSize() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public long getUncompressedDataIndexSize() {
+      return uncompressedDataIndexSize_;
+    }
+    
+    // optional uint64 totalUncompressedBytes = 4;
+    public static final int TOTALUNCOMPRESSEDBYTES_FIELD_NUMBER = 4;
+    private long totalUncompressedBytes_;
+    public boolean hasTotalUncompressedBytes() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public long getTotalUncompressedBytes() {
+      return totalUncompressedBytes_;
+    }
+    
+    // optional uint32 dataIndexCount = 5;
+    public static final int DATAINDEXCOUNT_FIELD_NUMBER = 5;
+    private int dataIndexCount_;
+    public boolean hasDataIndexCount() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    public int getDataIndexCount() {
+      return dataIndexCount_;
+    }
+    
+    // optional uint32 metaIndexCount = 6;
+    public static final int METAINDEXCOUNT_FIELD_NUMBER = 6;
+    private int metaIndexCount_;
+    public boolean hasMetaIndexCount() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public int getMetaIndexCount() {
+      return metaIndexCount_;
+    }
+    
+    // optional uint64 entryCount = 7;
+    public static final int ENTRYCOUNT_FIELD_NUMBER = 7;
+    private long entryCount_;
+    public boolean hasEntryCount() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    public long getEntryCount() {
+      return entryCount_;
+    }
+    
+    // optional uint32 numDataIndexLevels = 8;
+    public static final int NUMDATAINDEXLEVELS_FIELD_NUMBER = 8;
+    private int numDataIndexLevels_;
+    public boolean hasNumDataIndexLevels() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    public int getNumDataIndexLevels() {
+      return numDataIndexLevels_;
+    }
+    
+    // optional uint64 firstDataBlockOffset = 9;
+    public static final int FIRSTDATABLOCKOFFSET_FIELD_NUMBER = 9;
+    private long firstDataBlockOffset_;
+    public boolean hasFirstDataBlockOffset() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    public long getFirstDataBlockOffset() {
+      return firstDataBlockOffset_;
+    }
+    
+    // optional uint64 lastDataBlockOffset = 10;
+    public static final int LASTDATABLOCKOFFSET_FIELD_NUMBER = 10;
+    private long lastDataBlockOffset_;
+    public boolean hasLastDataBlockOffset() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    public long getLastDataBlockOffset() {
+      return lastDataBlockOffset_;
+    }
+    
+    // optional string comparatorClassName = 11;
+    public static final int COMPARATORCLASSNAME_FIELD_NUMBER = 11;
+    private java.lang.Object comparatorClassName_;
+    public boolean hasComparatorClassName() {
+      return ((bitField0_ & 0x00000400) == 0x00000400);
+    }
+    public String getComparatorClassName() {
+      java.lang.Object ref = comparatorClassName_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          comparatorClassName_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getComparatorClassNameBytes() {
+      java.lang.Object ref = comparatorClassName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        comparatorClassName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // optional uint32 compressionCodec = 12;
+    public static final int COMPRESSIONCODEC_FIELD_NUMBER = 12;
+    private int compressionCodec_;
+    public boolean hasCompressionCodec() {
+      return ((bitField0_ & 0x00000800) == 0x00000800);
+    }
+    public int getCompressionCodec() {
+      return compressionCodec_;
+    }
+    
+    private void initFields() {
+      fileInfoOffset_ = 0L;
+      loadOnOpenDataOffset_ = 0L;
+      uncompressedDataIndexSize_ = 0L;
+      totalUncompressedBytes_ = 0L;
+      dataIndexCount_ = 0;
+      metaIndexCount_ = 0;
+      entryCount_ = 0L;
+      numDataIndexLevels_ = 0;
+      firstDataBlockOffset_ = 0L;
+      lastDataBlockOffset_ = 0L;
+      comparatorClassName_ = "";
+      compressionCodec_ = 0;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt64(1, fileInfoOffset_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt64(2, loadOnOpenDataOffset_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt64(3, uncompressedDataIndexSize_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt64(4, totalUncompressedBytes_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt32(5, dataIndexCount_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeUInt32(6, metaIndexCount_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeUInt64(7, entryCount_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeUInt32(8, numDataIndexLevels_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeUInt64(9, firstDataBlockOffset_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeUInt64(10, lastDataBlockOffset_);
+      }
+      if (((bitField0_ & 0x00000400) == 0x00000400)) {
+        output.writeBytes(11, getComparatorClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000800) == 0x00000800)) {
+        output.writeUInt32(12, compressionCodec_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(1, fileInfoOffset_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, loadOnOpenDataOffset_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(3, uncompressedDataIndexSize_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, totalUncompressedBytes_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(5, dataIndexCount_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(6, metaIndexCount_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(7, entryCount_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(8, numDataIndexLevels_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(9, firstDataBlockOffset_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(10, lastDataBlockOffset_);
+      }
+      if (((bitField0_ & 0x00000400) == 0x00000400)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(11, getComparatorClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000800) == 0x00000800)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(12, compressionCodec_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto other = (org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto) obj;
+      
+      boolean result = true;
+      result = result && (hasFileInfoOffset() == other.hasFileInfoOffset());
+      if (hasFileInfoOffset()) {
+        result = result && (getFileInfoOffset()
+            == other.getFileInfoOffset());
+      }
+      result = result && (hasLoadOnOpenDataOffset() == other.hasLoadOnOpenDataOffset());
+      if (hasLoadOnOpenDataOffset()) {
+        result = result && (getLoadOnOpenDataOffset()
+            == other.getLoadOnOpenDataOffset());
+      }
+      result = result && (hasUncompressedDataIndexSize() == other.hasUncompressedDataIndexSize());
+      if (hasUncompressedDataIndexSize()) {
+        result = result && (getUncompressedDataIndexSize()
+            == other.getUncompressedDataIndexSize());
+      }
+      result = result && (hasTotalUncompressedBytes() == other.hasTotalUncompressedBytes());
+      if (hasTotalUncompressedBytes()) {
+        result = result && (getTotalUncompressedBytes()
+            == other.getTotalUncompressedBytes());
+      }
+      result = result && (hasDataIndexCount() == other.hasDataIndexCount());
+      if (hasDataIndexCount()) {
+        result = result && (getDataIndexCount()
+            == other.getDataIndexCount());
+      }
+      result = result && (hasMetaIndexCount() == other.hasMetaIndexCount());
+      if (hasMetaIndexCount()) {
+        result = result && (getMetaIndexCount()
+            == other.getMetaIndexCount());
+      }
+      result = result && (hasEntryCount() == other.hasEntryCount());
+      if (hasEntryCount()) {
+        result = result && (getEntryCount()
+            == other.getEntryCount());
+      }
+      result = result && (hasNumDataIndexLevels() == other.hasNumDataIndexLevels());
+      if (hasNumDataIndexLevels()) {
+        result = result && (getNumDataIndexLevels()
+            == other.getNumDataIndexLevels());
+      }
+      result = result && (hasFirstDataBlockOffset() == other.hasFirstDataBlockOffset());
+      if (hasFirstDataBlockOffset()) {
+        result = result && (getFirstDataBlockOffset()
+            == other.getFirstDataBlockOffset());
+      }
+      result = result && (hasLastDataBlockOffset() == other.hasLastDataBlockOffset());
+      if (hasLastDataBlockOffset()) {
+        result = result && (getLastDataBlockOffset()
+            == other.getLastDataBlockOffset());
+      }
+      result = result && (hasComparatorClassName() == other.hasComparatorClassName());
+      if (hasComparatorClassName()) {
+        result = result && getComparatorClassName()
+            .equals(other.getComparatorClassName());
+      }
+      result = result && (hasCompressionCodec() == other.hasCompressionCodec());
+      if (hasCompressionCodec()) {
+        result = result && (getCompressionCodec()
+            == other.getCompressionCodec());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasFileInfoOffset()) {
+        hash = (37 * hash) + FILEINFOOFFSET_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getFileInfoOffset());
+      }
+      if (hasLoadOnOpenDataOffset()) {
+        hash = (37 * hash) + LOADONOPENDATAOFFSET_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getLoadOnOpenDataOffset());
+      }
+      if (hasUncompressedDataIndexSize()) {
+        hash = (37 * hash) + UNCOMPRESSEDDATAINDEXSIZE_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getUncompressedDataIndexSize());
+      }
+      if (hasTotalUncompressedBytes()) {
+        hash = (37 * hash) + TOTALUNCOMPRESSEDBYTES_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getTotalUncompressedBytes());
+      }
+      if (hasDataIndexCount()) {
+        hash = (37 * hash) + DATAINDEXCOUNT_FIELD_NUMBER;
+        hash = (53 * hash) + getDataIndexCount();
+      }
+      if (hasMetaIndexCount()) {
+        hash = (37 * hash) + METAINDEXCOUNT_FIELD_NUMBER;
+        hash = (53 * hash) + getMetaIndexCount();
+      }
+      if (hasEntryCount()) {
+        hash = (37 * hash) + ENTRYCOUNT_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getEntryCount());
+      }
+      if (hasNumDataIndexLevels()) {
+        hash = (37 * hash) + NUMDATAINDEXLEVELS_FIELD_NUMBER;
+        hash = (53 * hash) + getNumDataIndexLevels();
+      }
+      if (hasFirstDataBlockOffset()) {
+        hash = (37 * hash) + FIRSTDATABLOCKOFFSET_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getFirstDataBlockOffset());
+      }
+      if (hasLastDataBlockOffset()) {
+        hash = (37 * hash) + LASTDATABLOCKOFFSET_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getLastDataBlockOffset());
+      }
+      if (hasComparatorClassName()) {
+        hash = (37 * hash) + COMPARATORCLASSNAME_FIELD_NUMBER;
+        hash = (53 * hash) + getComparatorClassName().hashCode();
+      }
+      if (hasCompressionCodec()) {
+        hash = (37 * hash) + COMPRESSIONCODEC_FIELD_NUMBER;
+        hash = (53 * hash) + getCompressionCodec();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProtoOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        fileInfoOffset_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        loadOnOpenDataOffset_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        uncompressedDataIndexSize_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        totalUncompressedBytes_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        dataIndexCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        metaIndexCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000020);
+        entryCount_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        numDataIndexLevels_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000080);
+        firstDataBlockOffset_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000100);
+        lastDataBlockOffset_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000200);
+        comparatorClassName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000400);
+        compressionCodec_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000800);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto build() {
+        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto result = new org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.fileInfoOffset_ = fileInfoOffset_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.loadOnOpenDataOffset_ = loadOnOpenDataOffset_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.uncompressedDataIndexSize_ = uncompressedDataIndexSize_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.totalUncompressedBytes_ = totalUncompressedBytes_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.dataIndexCount_ = dataIndexCount_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.metaIndexCount_ = metaIndexCount_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.entryCount_ = entryCount_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.numDataIndexLevels_ = numDataIndexLevels_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.firstDataBlockOffset_ = firstDataBlockOffset_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        result.lastDataBlockOffset_ = lastDataBlockOffset_;
+        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+          to_bitField0_ |= 0x00000400;
+        }
+        result.comparatorClassName_ = comparatorClassName_;
+        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
+          to_bitField0_ |= 0x00000800;
+        }
+        result.compressionCodec_ = compressionCodec_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.getDefaultInstance()) return this;
+        if (other.hasFileInfoOffset()) {
+          setFileInfoOffset(other.getFileInfoOffset());
+        }
+        if (other.hasLoadOnOpenDataOffset()) {
+          setLoadOnOpenDataOffset(other.getLoadOnOpenDataOffset());
+        }
+        if (other.hasUncompressedDataIndexSize()) {
+          setUncompressedDataIndexSize(other.getUncompressedDataIndexSize());
+        }
+        if (other.hasTotalUncompressedBytes()) {
+          setTotalUncompressedBytes(other.getTotalUncompressedBytes());
+        }
+        if (other.hasDataIndexCount()) {
+          setDataIndexCount(other.getDataIndexCount());
+        }
+        if (other.hasMetaIndexCount()) {
+          setMetaIndexCount(other.getMetaIndexCount());
+        }
+        if (other.hasEntryCount()) {
+          setEntryCount(other.getEntryCount());
+        }
+        if (other.hasNumDataIndexLevels()) {
+          setNumDataIndexLevels(other.getNumDataIndexLevels());
+        }
+        if (other.hasFirstDataBlockOffset()) {
+          setFirstDataBlockOffset(other.getFirstDataBlockOffset());
+        }
+        if (other.hasLastDataBlockOffset()) {
+          setLastDataBlockOffset(other.getLastDataBlockOffset());
+        }
+        if (other.hasComparatorClassName()) {
+          setComparatorClassName(other.getComparatorClassName());
+        }
+        if (other.hasCompressionCodec()) {
+          setCompressionCodec(other.getCompressionCodec());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              fileInfoOffset_ = input.readUInt64();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              loadOnOpenDataOffset_ = input.readUInt64();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              uncompressedDataIndexSize_ = input.readUInt64();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              totalUncompressedBytes_ = input.readUInt64();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              dataIndexCount_ = input.readUInt32();
+              break;
+            }
+            case 48: {
+              bitField0_ |= 0x00000020;
+              metaIndexCount_ = input.readUInt32();
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000040;
+              entryCount_ = input.readUInt64();
+              break;
+            }
+            case 64: {
+              bitField0_ |= 0x00000080;
+              numDataIndexLevels_ = input.readUInt32();
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000100;
+              firstDataBlockOffset_ = input.readUInt64();
+              break;
+            }
+            case 80: {
+              bitField0_ |= 0x00000200;
+              lastDataBlockOffset_ = input.readUInt64();
+              break;
+            }
+            case 90: {
+              bitField0_ |= 0x00000400;
+              comparatorClassName_ = input.readBytes();
+              break;
+            }
+            case 96: {
+              bitField0_ |= 0x00000800;
+              compressionCodec_ = input.readUInt32();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // optional uint64 fileInfoOffset = 1;
+      private long fileInfoOffset_ ;
+      public boolean hasFileInfoOffset() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public long getFileInfoOffset() {
+        return fileInfoOffset_;
+      }
+      public Builder setFileInfoOffset(long value) {
+        bitField0_ |= 0x00000001;
+        fileInfoOffset_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearFileInfoOffset() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        fileInfoOffset_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint64 loadOnOpenDataOffset = 2;
+      private long loadOnOpenDataOffset_ ;
+      public boolean hasLoadOnOpenDataOffset() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public long getLoadOnOpenDataOffset() {
+        return loadOnOpenDataOffset_;
+      }
+      public Builder setLoadOnOpenDataOffset(long value) {
+        bitField0_ |= 0x00000002;
+        loadOnOpenDataOffset_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearLoadOnOpenDataOffset() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        loadOnOpenDataOffset_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint64 uncompressedDataIndexSize = 3;
+      private long uncompressedDataIndexSize_ ;
+      public boolean hasUncompressedDataIndexSize() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public long getUncompressedDataIndexSize() {
+        return uncompressedDataIndexSize_;
+      }
+      public Builder setUncompressedDataIndexSize(long value) {
+        bitField0_ |= 0x00000004;
+        uncompressedDataIndexSize_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearUncompressedDataIndexSize() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        uncompressedDataIndexSize_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint64 totalUncompressedBytes = 4;
+      private long totalUncompressedBytes_ ;
+      public boolean hasTotalUncompressedBytes() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public long getTotalUncompressedBytes() {
+        return totalUncompressedBytes_;
+      }
+      public Builder setTotalUncompressedBytes(long value) {
+        bitField0_ |= 0x00000008;
+        totalUncompressedBytes_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearTotalUncompressedBytes() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        totalUncompressedBytes_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint32 dataIndexCount = 5;
+      private int dataIndexCount_ ;
+      public boolean hasDataIndexCount() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      public int getDataIndexCount() {
+        return dataIndexCount_;
+      }
+      public Builder setDataIndexCount(int value) {
+        bitField0_ |= 0x00000010;
+        dataIndexCount_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearDataIndexCount() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        dataIndexCount_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint32 metaIndexCount = 6;
+      private int metaIndexCount_ ;
+      public boolean hasMetaIndexCount() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      public int getMetaIndexCount() {
+        return metaIndexCount_;
+      }
+      public Builder setMetaIndexCount(int value) {
+        bitField0_ |= 0x00000020;
+        metaIndexCount_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearMetaIndexCount() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        metaIndexCount_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint64 entryCount = 7;
+      private long entryCount_ ;
+      public boolean hasEntryCount() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      public long getEntryCount() {
+        return entryCount_;
+      }
+      public Builder setEntryCount(long value) {
+        bitField0_ |= 0x00000040;
+        entryCount_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearEntryCount() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        entryCount_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint32 numDataIndexLevels = 8;
+      private int numDataIndexLevels_ ;
+      public boolean hasNumDataIndexLevels() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      public int getNumDataIndexLevels() {
+        return numDataIndexLevels_;
+      }
+      public Builder setNumDataIndexLevels(int value) {
+        bitField0_ |= 0x00000080;
+        numDataIndexLevels_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearNumDataIndexLevels() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        numDataIndexLevels_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint64 firstDataBlockOffset = 9;
+      private long firstDataBlockOffset_ ;
+      public boolean hasFirstDataBlockOffset() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public long getFirstDataBlockOffset() {
+        return firstDataBlockOffset_;
+      }
+      public Builder setFirstDataBlockOffset(long value) {
+        bitField0_ |= 0x00000100;
+        firstDataBlockOffset_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearFirstDataBlockOffset() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        firstDataBlockOffset_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint64 lastDataBlockOffset = 10;
+      private long lastDataBlockOffset_ ;
+      public boolean hasLastDataBlockOffset() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      public long getLastDataBlockOffset() {
+        return lastDataBlockOffset_;
+      }
+      public Builder setLastDataBlockOffset(long value) {
+        bitField0_ |= 0x00000200;
+        lastDataBlockOffset_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearLastDataBlockOffset() {
+        bitField0_ = (bitField0_ & ~0x00000200);
+        lastDataBlockOffset_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional string comparatorClassName = 11;
+      private java.lang.Object comparatorClassName_ = "";
+      public boolean hasComparatorClassName() {
+        return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+      public String getComparatorClassName() {
+        java.lang.Object ref = comparatorClassName_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          comparatorClassName_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setComparatorClassName(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000400;
+        comparatorClassName_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearComparatorClassName() {
+        bitField0_ = (bitField0_ & ~0x00000400);
+        comparatorClassName_ = getDefaultInstance().getComparatorClassName();
+        onChanged();
+        return this;
+      }
+      void setComparatorClassName(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000400;
+        comparatorClassName_ = value;
+        onChanged();
+      }
+      
+      // optional uint32 compressionCodec = 12;
+      private int compressionCodec_ ;
+      public boolean hasCompressionCodec() {
+        return ((bitField0_ & 0x00000800) == 0x00000800);
+      }
+      public int getCompressionCodec() {
+        return compressionCodec_;
+      }
+      public Builder setCompressionCodec(int value) {
+        bitField0_ |= 0x00000800;
+        compressionCodec_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearCompressionCodec() {
+        bitField0_ = (bitField0_ & ~0x00000800);
+        compressionCodec_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:FileTrailerProto)
+    }
+    
+    static {
+      defaultInstance = new FileTrailerProto(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:FileTrailerProto)
+  }
+  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_FileInfoProto_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_FileInfoProto_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_FileTrailerProto_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_FileTrailerProto_fieldAccessorTable;
   
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -616,9 +1755,18 @@ public final class HFileProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\013HFile.proto\032\013hbase.proto\"2\n\rFileInfoPr" +
-      "oto\022!\n\010mapEntry\030\001 \003(\0132\017.BytesBytesPairBA" +
-      "\n*org.apache.hadoop.hbase.protobuf.gener" +
-      "atedB\013HFileProtosH\001\210\001\001\240\001\001"
+      "oto\022!\n\010mapEntry\030\001 \003(\0132\017.BytesBytesPair\"\335" +
+      "\002\n\020FileTrailerProto\022\026\n\016fileInfoOffset\030\001 " +
+      "\001(\004\022\034\n\024loadOnOpenDataOffset\030\002 \001(\004\022!\n\031unc" +
+      "ompressedDataIndexSize\030\003 \001(\004\022\036\n\026totalUnc" +
+      "ompressedBytes\030\004 \001(\004\022\026\n\016dataIndexCount\030\005" +
+      " \001(\r\022\026\n\016metaIndexCount\030\006 \001(\r\022\022\n\nentryCou" +
+      "nt\030\007 \001(\004\022\032\n\022numDataIndexLevels\030\010 \001(\r\022\034\n\024" +
+      "firstDataBlockOffset\030\t \001(\004\022\033\n\023lastDataBl" +
+      "ockOffset\030\n \001(\004\022\033\n\023comparatorClassName\030\013",
+      " \001(\t\022\030\n\020compressionCodec\030\014 \001(\rBA\n*org.ap" +
+      "ache.hadoop.hbase.protobuf.generatedB\013HF" +
+      "ileProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -633,6 +1781,14 @@ public final class HFileProtos {
               new java.lang.String[] { "MapEntry", },
               org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.class,
               org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.Builder.class);
+          internal_static_FileTrailerProto_descriptor =
+            getDescriptor().getMessageTypes().get(1);
+          internal_static_FileTrailerProto_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_FileTrailerProto_descriptor,
+              new java.lang.String[] { "FileInfoOffset", "LoadOnOpenDataOffset", "UncompressedDataIndexSize", "TotalUncompressedBytes", "DataIndexCount", "MetaIndexCount", "EntryCount", "NumDataIndexLevels", "FirstDataBlockOffset", "LastDataBlockOffset", "ComparatorClassName", "CompressionCodec", },
+              org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.class,
+              org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.Builder.class);
           return null;
         }
       };

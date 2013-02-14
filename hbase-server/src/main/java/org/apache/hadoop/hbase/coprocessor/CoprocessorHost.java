@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
@@ -48,6 +47,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.jar.JarEntry;
@@ -72,6 +73,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       "hbase.coprocessor.master.classes";
   public static final String WAL_COPROCESSOR_CONF_KEY =
     "hbase.coprocessor.wal.classes";
+
+  //coprocessor jars are put under ${hbase.local.dir}/coprocessor/jars/
+  private static final String COPROCESSOR_JARS_DIR = File.separator
+      + "coprocessor" + File.separator + "jars" + File.separator;
 
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   /** Ordered set of loaded coprocessors with lock */
@@ -131,7 +136,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   protected void loadSystemCoprocessors(Configuration conf, String confKey) {
     Class<?> implClass = null;
 
-    // load default coprocessors from configure file    
+    // load default coprocessors from configure file
     String[] defaultCPClasses = conf.getStrings(confKey);
     if (defaultCPClasses == null || defaultCPClasses.length == 0)
       return;
@@ -175,7 +180,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   public E load(Path path, String className, int priority,
       Configuration conf) throws IOException {
     Class<?> implClass = null;
-    LOG.debug("Loading coprocessor class " + className + " with path " + 
+    LOG.debug("Loading coprocessor class " + className + " with path " +
         path + " and priority " + priority);
 
     ClassLoader cl = null;
@@ -210,13 +215,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       if (!path.toString().endsWith(".jar")) {
         throw new IOException(path.toString() + ": not a jar file?");
       }
-      FileSystem fs = path.getFileSystem(HBaseConfiguration.create());
-      Path dst = new Path(System.getProperty("java.io.tmpdir") +
-          java.io.File.separator +"." + pathPrefix +
+      FileSystem fs = path.getFileSystem(this.conf);
+      File parentDir = new File(this.conf.get("hbase.local.dir") + COPROCESSOR_JARS_DIR);
+      parentDir.mkdirs();
+      File dst = new File(parentDir, "." + pathPrefix +
           "." + className + "." + System.currentTimeMillis() + ".jar");
-      fs.copyToLocalFile(path, dst);
-      File tmpLocal = new File(dst.toString());
-      tmpLocal.deleteOnExit();
+      fs.copyToLocalFile(path, new Path(dst.toString()));
+      dst.deleteOnExit();
 
       // TODO: code weaving goes here
 
@@ -229,8 +234,8 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       // NOTE: Path.toURL is deprecated (toURI instead) but the URLClassLoader
       // unsurprisingly wants URLs, not URIs; so we will use the deprecated
       // method which returns URLs for as long as it is available
-      List<URL> paths = new ArrayList<URL>();
-      URL url = new File(dst.toString()).getCanonicalFile().toURL();
+      final List<URL> paths = new ArrayList<URL>();
+      URL url = dst.getCanonicalFile().toURL();
       paths.add(url);
 
       JarFile jarFile = new JarFile(dst.toString());
@@ -238,8 +243,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
         if (entry.getName().matches("/lib/[^/]+\\.jar")) {
-          File file = new File(System.getProperty("java.io.tmpdir") +
-              java.io.File.separator +"." + pathPrefix +
+          File file = new File(parentDir, "." + pathPrefix +
               "." + className + "." + System.currentTimeMillis() + "." + entry.getName().substring(5));
           IOUtils.copyBytes(jarFile.getInputStream(entry), new FileOutputStream(file), conf, true);
           file.deleteOnExit();
@@ -248,7 +252,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
       jarFile.close();
 
-      cl = new CoprocessorClassLoader(paths, this.getClass().getClassLoader());
+      cl = AccessController.doPrivileged(new PrivilegedAction<CoprocessorClassLoader>() {
+              @Override
+              public CoprocessorClassLoader run() {
+                return new CoprocessorClassLoader(paths, this.getClass().getClassLoader());
+              }
+            });
+
       // cache cp classloader as a weak value, will be GC'ed when no reference left
       ClassLoader prev = classLoadersCache.putIfAbsent(path, cl);
       if (prev != null) {
@@ -470,6 +480,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         return table.exists(get);
       }
 
+      public Boolean[] exists(List<Get> gets) throws IOException{
+        return table.exists(gets);
+      }
+
       public void put(Put put) throws IOException {
         table.put(put);
       }
@@ -547,16 +561,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         return tableName;
       }
 
-      public RowLock lockRow(byte[] row) throws IOException {
-        throw new RuntimeException(
-          "row locking is not allowed within the coprocessor environment");
-      }
-
-      public void unlockRow(RowLock rl) throws IOException {
-        throw new RuntimeException(
-          "row locking is not allowed within the coprocessor environment");
-      }
-
       @Override
       public void batch(List<? extends Row> actions, Object[] results)
           throws IOException, InterruptedException {
@@ -584,26 +588,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       @Override
       public Result[] get(List<Get> gets) throws IOException {
         return table.get(gets);
-      }
-
-      @Override
-      public <T extends CoprocessorProtocol, R> void coprocessorExec(Class<T> protocol,
-          byte[] startKey, byte[] endKey, Batch.Call<T, R> callable,
-          Batch.Callback<R> callback) throws IOException, Throwable {
-        table.coprocessorExec(protocol, startKey, endKey, callable, callback);
-      }
-
-      @Override
-      public <T extends CoprocessorProtocol, R> Map<byte[], R> coprocessorExec(
-          Class<T> protocol, byte[] startKey, byte[] endKey, Batch.Call<T, R> callable)
-          throws IOException, Throwable {
-        return table.coprocessorExec(protocol, startKey, endKey, callable);
-      }
-
-      @Override
-      public <T extends CoprocessorProtocol> T coprocessorProxy(Class<T> protocol,
-          byte[] row) {
-        return table.coprocessorProxy(protocol, row);
       }
 
       @Override

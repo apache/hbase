@@ -31,6 +31,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Iterator;
 
 /**
  * A {@link Filter} that checks a single column value, but does not emit the
@@ -84,28 +86,31 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @param qualifier
    * @param compareOp
    * @param comparator
-   * @param foundColumn
-   * @param matchedColumn
    * @param filterIfMissing
    * @param latestVersionOnly
    */
-  protected SingleColumnValueExcludeFilter(final byte[] family, final byte [] qualifier,
-    final CompareOp compareOp, ByteArrayComparable comparator, final boolean foundColumn,
-    final boolean matchedColumn, final boolean filterIfMissing, final boolean latestVersionOnly) {
-    super(family,qualifier,compareOp,comparator,foundColumn,
-      matchedColumn,filterIfMissing,latestVersionOnly);
+  protected SingleColumnValueExcludeFilter(final byte[] family, final byte[] qualifier,
+      final CompareOp compareOp, ByteArrayComparable comparator, final boolean filterIfMissing,
+      final boolean latestVersionOnly) {
+    super(family, qualifier, compareOp, comparator, filterIfMissing, latestVersionOnly);
   }
 
-  public ReturnCode filterKeyValue(KeyValue keyValue) {
-    ReturnCode superRetCode = super.filterKeyValue(keyValue);
-    if (superRetCode == ReturnCode.INCLUDE) {
+  // We cleaned result row in FilterRow to be consistent with scanning process.
+  public boolean hasFilterRow() {
+   return true;
+  }
+
+  // Here we remove from row all key values from testing column
+  public void filterRow(List<KeyValue> kvs) {
+    Iterator it = kvs.iterator();
+    while (it.hasNext()) {
+      KeyValue kv = (KeyValue)it.next();
       // If the current column is actually the tested column,
       // we will skip it instead.
-      if (keyValue.matchingColumn(this.columnFamily, this.columnQualifier)) {
-        return ReturnCode.SKIP;
+      if (kv.matchingColumn(this.columnFamily, this.columnQualifier)) {
+        it.remove();
       }
     }
-    return superRetCode;
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
@@ -157,11 +162,10 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
       throw new DeserializationException(ioe);
     }
 
-    return new SingleColumnValueExcludeFilter(
-      parentProto.hasColumnFamily()?parentProto.getColumnFamily().toByteArray():null,
-      parentProto.hasColumnQualifier()?parentProto.getColumnQualifier().toByteArray():null,
-      compareOp, comparator, parentProto.getFoundColumn(),parentProto.getMatchedColumn(),
-      parentProto.getFilterIfMissing(),parentProto.getLatestVersionOnly());
+    return new SingleColumnValueExcludeFilter(parentProto.hasColumnFamily() ? parentProto
+        .getColumnFamily().toByteArray() : null, parentProto.hasColumnQualifier() ? parentProto
+        .getColumnQualifier().toByteArray() : null, compareOp, comparator, parentProto
+        .getFilterIfMissing(), parentProto.getLatestVersionOnly());
   }
 
   /**

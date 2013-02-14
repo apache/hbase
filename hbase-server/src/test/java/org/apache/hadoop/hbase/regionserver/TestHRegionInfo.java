@@ -103,31 +103,6 @@ public class TestHRegionInfo {
                  + id + "." + md5HashInHex + ".",
                  nameStr);
   }
-
-  @Test
-  public void testGetSetOfHTD() throws IOException {
-    HBaseTestingUtility HTU = new HBaseTestingUtility();
-    final String tablename = "testGetSetOfHTD";
-
-    // Delete the temporary table directory that might still be there from the
-    // previous test run.
-    FSTableDescriptors.deleteTableDescriptorIfExists(tablename,
-        HTU.getConfiguration());
-
-    HTableDescriptor htd = new HTableDescriptor(tablename);
-    FSTableDescriptors.createTableDescriptor(htd, HTU.getConfiguration());
-    HRegionInfo hri = new HRegionInfo(Bytes.toBytes("testGetSetOfHTD"),
-        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-    HTableDescriptor htd2 = hri.getTableDesc();
-    assertTrue(htd.equals(htd2));
-    final String key = "SOME_KEY";
-    assertNull(htd.getValue(key));
-    final String value = "VALUE";
-    htd.setValue(key, value);
-    hri.setTableDesc(htd);
-    HTableDescriptor htd3 = hri.getTableDesc();
-    assertTrue(htd.equals(htd3));
-  }
   
   @Test
   public void testContainsRange() {

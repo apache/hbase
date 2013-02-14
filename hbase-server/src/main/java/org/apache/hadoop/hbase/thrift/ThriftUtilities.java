@@ -29,8 +29,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
@@ -54,7 +53,7 @@ public class ThriftUtilities {
       throws IllegalArgument {
     Compression.Algorithm comp =
       Compression.getCompressionAlgorithmByName(in.compression.toLowerCase());
-    StoreFile.BloomType bt =
+    BloomType bt =
       BloomType.valueOf(in.bloomFilterType);
 
     if (in.name == null || !in.name.hasRemaining()) {

@@ -44,6 +44,11 @@ public class NullComparator extends ByteArrayComparable {
   }
 
   @Override
+  public boolean equals(Object obj) {
+    return obj == null;
+  }
+
+  @Override
   public int compareTo(byte[] value, int offset, int length) {
     throw new UnsupportedOperationException();
   }

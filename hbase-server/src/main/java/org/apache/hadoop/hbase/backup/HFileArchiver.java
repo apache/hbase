@@ -56,7 +56,7 @@ public class HFileArchiver {
   private static final String SEPARATOR = ".";
 
   /** Number of retries in case of fs operation failure */
-  private static final int DEFAULT_RETRIES_NUMBER = 6;
+  private static final int DEFAULT_RETRIES_NUMBER = 3;
 
   private HFileArchiver() {
     // hidden ctor since this is just a util
@@ -73,12 +73,13 @@ public class HFileArchiver {
   public static void archiveRegion(Configuration conf, FileSystem fs, HRegionInfo info)
       throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
-    archiveRegion(fs, rootDir, HTableDescriptor.getTableDir(rootDir, info.getTableName()),
+    archiveRegion(conf, fs, rootDir, HTableDescriptor.getTableDir(rootDir, info.getTableName()),
       HRegion.getRegionDir(rootDir, info));
   }
 
   /**
    * Remove an entire region from the table directory via archiving the region's hfiles.
+   * @param conf the configuration to use
    * @param fs {@link FileSystem} from which to remove the region
    * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
    *          the archive path)
@@ -88,7 +89,8 @@ public class HFileArchiver {
    *         operations could not complete.
    * @throws IOException if the request cannot be completed
    */
-  public static boolean archiveRegion(FileSystem fs, Path rootdir, Path tableDir, Path regionDir)
+  public static boolean archiveRegion(Configuration conf, FileSystem fs,
+      Path rootdir, Path tableDir, Path regionDir)
       throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("ARCHIVING region " + regionDir.toString());
@@ -107,7 +109,7 @@ public class HFileArchiver {
 
     // make sure the regiondir lives under the tabledir
     Preconditions.checkArgument(regionDir.toString().startsWith(tableDir.toString()));
-    Path regionArchiveDir = HFileArchiveUtil.getRegionArchiveDir(rootdir, tableDir, regionDir);
+    Path regionArchiveDir = HFileArchiveUtil.getRegionArchiveDir(conf, tableDir, regionDir);
 
     LOG.debug("Have an archive directory, preparing to move files");
     FileStatusConverter getAsFile = new FileStatusConverter(fs);
@@ -430,34 +432,6 @@ public class HFileArchiver {
       LOG.debug("Finished archiving file from: " + currentFile + ", to: " + archiveFile);
     }
     return true;
-  }
-
-  /**
-   * Simple delete of regular files from the {@link FileSystem}.
-   * <p>
-   * This method is a more generic implementation that the other deleteXXX
-   * methods in this class, allowing more code reuse at the cost of a couple
-   * more, short-lived objects (which should have minimum impact on the jvm).
-   * @param fs {@link FileSystem} where the files live
-   * @param files {@link Collection} of files to be deleted
-   * @throws IOException if a file cannot be deleted. All files will be
-   *           attempted to deleted before throwing the exception, rather than
-   *           failing at the first file.
-   */
-  private static void deleteFilesWithoutArchiving(Collection<File> files) throws IOException {
-    List<IOException> errors = new ArrayList<IOException>(0);
-    for (File file : files) {
-      try {
-        LOG.debug("Deleting region file:" + file);
-        file.delete();
-      } catch (IOException e) {
-        LOG.error("Failed to delete file:" + file);
-        errors.add(e);
-      }
-    }
-    if (errors.size() > 0) {
-      throw MultipleIOException.createIOException(errors);
-    }
   }
 
   /**

@@ -380,7 +380,7 @@ public class ServerManager {
   public double getAverageLoad() {
     int totalLoad = 0;
     int numServers = 0;
-    double averageLoad = 0.0;
+    double averageLoad;
     for (ServerLoad sl: this.onlineServers.values()) {
         numServers++;
         totalLoad += sl.getNumberOfRegions();
@@ -680,7 +680,7 @@ public class ServerManager {
     */
   private AdminProtocol getServerConnection(final ServerName sn)
   throws IOException {
-    AdminProtocol admin = this.serverConnections.get(sn.toString());
+    AdminProtocol admin = this.serverConnections.get(sn);
     if (admin == null) {
       LOG.debug("New connection to " + sn.toString());
       admin = this.connection.getAdmin(sn.getHostname(), sn.getPort());
@@ -886,7 +886,7 @@ public class ServerManager {
    * To clear any dead server with same host name and port of any online server
    */
   void clearDeadServersWithSameHostNameAndPortOfOnlineServer() {
-    ServerName sn = null;
+    ServerName sn;
     for (ServerName serverName : getOnlineServersList()) {
       while ((sn = ServerName.
           findServerWithSameHostnamePort(this.deadservers, serverName)) != null) {

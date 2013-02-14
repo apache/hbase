@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -27,9 +27,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Map;
 import java.util.List;
-
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -58,6 +57,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -83,7 +84,7 @@ public class TestZooKeeper {
     Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniZKCluster();
     conf.setBoolean("dfs.support.append", true);
-    conf.setInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT, 1000);
+    conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
         LoadBalancer.class);
     TEST_UTIL.startMiniCluster(2);
@@ -122,7 +123,7 @@ public class TestZooKeeper {
    * @throws InterruptedException
    */
   // fails frequently, disabled for now, see HBASE-6406
-  // @Test
+  //@Test
   public void testClientSessionExpired() throws Exception {
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -230,7 +231,7 @@ public class TestZooKeeper {
    * Make sure we can use the cluster
    * @throws Exception
    */
-  public void testSanity() throws Exception{
+  private void testSanity() throws Exception{
     HBaseAdmin admin =
       new HBaseAdmin(TEST_UTIL.getConfiguration());
     String tableName = "test"+System.currentTimeMillis();
@@ -357,6 +358,10 @@ public class TestZooKeeper {
     ZooKeeperWatcher zk2 = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       "testMasterAddressManagerFromZK", null);
 
+    // Save the previous ACL
+    Stat s =  new Stat();
+    List<ACL> oldACL =  zk.getACL("/", s);
+
     // I set this acl after the attempted creation of the cluster home node.
     // Add retries in case of retryable zk exceptions.
     while (true) {
@@ -396,6 +401,12 @@ public class TestZooKeeper {
     }
     zk.close();
     ZKUtil.createAndFailSilent(zk2, aclZnode);
+
+    // Restore the ACL
+    ZooKeeper zk3 = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance);
+    zk3.addAuthInfo("digest", "hbase:rox".getBytes());
+    zk3.setACL("/", oldACL, -1);
+    zk3.close();
  }
 
   /**
@@ -464,8 +475,8 @@ public class TestZooKeeper {
     ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 
-    Put p = null;
-    int numberOfPuts = 0;
+    Put p;
+    int numberOfPuts;
     for (numberOfPuts = 0; numberOfPuts < 6; numberOfPuts++) {
       p = new Put(Bytes.toBytes(numberOfPuts));
       p.add(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("value" + numberOfPuts));

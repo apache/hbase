@@ -49,8 +49,6 @@ public class TestClientTimeouts {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    RandomTimeoutRpcEngine.setProtocolEngine(conf, MasterAdminProtocol.class);
-    RandomTimeoutRpcEngine.setProtocolEngine(conf, MasterMonitorProtocol.class);
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
@@ -73,26 +71,35 @@ public class TestClientTimeouts {
     HConnection lastConnection = null;
     boolean lastFailed = false;
     int initialInvocations = RandomTimeoutRpcEngine.getNumberOfInvocations();
-    for (int i = 0; i < 5 || (lastFailed && i < 100); ++i) {
-      lastFailed = false;
-      // Ensure the HBaseAdmin uses a new connection by changing Configuration.
-      Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-      conf.setLong(HConstants.HBASE_CLIENT_PREFETCH_LIMIT, ++lastLimit);
-      try {
-        HBaseAdmin admin = new HBaseAdmin(conf);
-        HConnection connection = admin.getConnection();
-        assertFalse(connection == lastConnection);
-        // run some admin commands
-        HBaseAdmin.checkHBaseAvailable(conf);
-        admin.setBalancerRunning(false, false);
-      } catch (MasterNotRunningException ex) {
-        // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
-        // a MasterNotRunningException.  It's a bug if we get other exceptions.
-        lastFailed = true;
+
+    RandomTimeoutRpcEngine engine = new RandomTimeoutRpcEngine(TEST_UTIL.getConfiguration());
+    try {
+      for (int i = 0; i < 5 || (lastFailed && i < 100); ++i) {
+        lastFailed = false;
+        // Ensure the HBaseAdmin uses a new connection by changing Configuration.
+        Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
+        conf.setLong(HConstants.HBASE_CLIENT_PREFETCH_LIMIT, ++lastLimit);
+        try {
+          HBaseAdmin admin = new HBaseAdmin(conf);
+          HConnection connection = admin.getConnection();
+          assertFalse(connection == lastConnection);
+          lastConnection = connection;
+          // override the connection's rpc engine for timeout testing
+          ((HConnectionManager.HConnectionImplementation)connection).setRpcEngine(engine);
+          // run some admin commands
+          HBaseAdmin.checkHBaseAvailable(conf);
+          admin.setBalancerRunning(false, false);
+        } catch (MasterNotRunningException ex) {
+          // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
+          // a MasterNotRunningException.  It's a bug if we get other exceptions.
+          lastFailed = true;
+        }
       }
+      // Ensure the RandomTimeoutRpcEngine is actually being used.
+      assertFalse(lastFailed);
+      assertTrue(RandomTimeoutRpcEngine.getNumberOfInvocations() > initialInvocations);
+    } finally {
+      engine.close();
     }
-    // Ensure the RandomTimeoutRpcEngine is actually being used.
-    assertFalse(lastFailed);
-    assertTrue(RandomTimeoutRpcEngine.getNumberOfInvocations() > initialInvocations);
   }
 }

@@ -19,19 +19,16 @@ package org.apache.hadoop.hbase.protobuf;
 
 import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -39,11 +36,8 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.TreeMap;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -63,18 +57,14 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.coprocessor.Exec;
-import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -93,6 +83,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UUID;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALEdit.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALKey;
+import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
@@ -100,8 +91,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
@@ -113,7 +102,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -127,14 +115,19 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hbase.Cell;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcChannel;
 import com.google.protobuf.Service;
@@ -143,7 +136,6 @@ import com.google.protobuf.ServiceException;
 /**
  * Protobufs utility.
  */
-@SuppressWarnings("deprecation")
 public final class ProtobufUtil {
 
   private ProtobufUtil() {
@@ -229,52 +221,6 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer Exec to a client Exec
-   *
-   * @param proto the protocol buffer Exec to convert
-   * @return the converted client Exec
-   */
-  @SuppressWarnings("unchecked")
-  public static Exec toExec(
-      final ClientProtos.Exec proto) throws IOException {
-    byte[] row = proto.getRow().toByteArray();
-    String protocolName = proto.getProtocolName();
-    String methodName = proto.getMethodName();
-    List<Object> parameters = new ArrayList<Object>();
-    Class<? extends CoprocessorProtocol> protocol = null;
-    Method method = null;
-    try {
-      List<Class<?>> types = new ArrayList<Class<?>>();
-      for (NameBytesPair parameter: proto.getParameterList()) {
-        String type = parameter.getName();
-        Class<?> declaredClass = PRIMITIVES.get(type);
-        if (declaredClass == null) {
-          declaredClass = Class.forName(parameter.getName());
-        }
-        parameters.add(toObject(parameter));
-        types.add(declaredClass);
-      }
-      Class<?> [] parameterTypes = new Class<?> [types.size()];
-      types.toArray(parameterTypes);
-      protocol = (Class<? extends CoprocessorProtocol>)
-        Class.forName(protocolName);
-      method = protocol.getMethod(methodName, parameterTypes);
-    } catch (NoSuchMethodException nsme) {
-      throw new IOException(nsme);
-    } catch (ClassNotFoundException cnfe) {
-      throw new IOException(cnfe);
-    }
-    Configuration conf = HBaseConfiguration.create();
-    for (NameStringPair p: proto.getPropertyList()) {
-      conf.set(p.getName(), p.getValue());
-    }
-    Object[] parameterObjects = new Object[parameters.size()];
-    parameters.toArray(parameterObjects);
-    return new Exec(conf, row, protocol,
-      method, parameterObjects);
-  }
-
-  /**
    * Convert a ServerName to a protocol buffer ServerName
    *
    * @param serverName the ServerName to convert
@@ -357,11 +303,7 @@ public final class ProtobufUtil {
       final ClientProtos.Get proto) throws IOException {
     if (proto == null) return null;
     byte[] row = proto.getRow().toByteArray();
-    RowLock rowLock = null;
-    if (proto.hasLockId()) {
-      rowLock = new RowLock(proto.getLockId());
-    }
-    Get get = new Get(row, rowLock);
+    Get get = new Get(row);
     if (proto.hasCacheBlocks()) {
       get.setCacheBlocks(proto.getCacheBlocks());
     }
@@ -424,11 +366,7 @@ public final class ProtobufUtil {
     if (proto.hasTimestamp()) {
       timestamp = proto.getTimestamp();
     }
-    RowLock lock = null;
-    if (proto.hasLockId()) {
-      lock = new RowLock(proto.getLockId());
-    }
-    Put put = new Put(row, timestamp, lock);
+    Put put = new Put(row, timestamp);
     put.setWriteToWAL(proto.getWriteToWAL());
     for (NameBytesPair attribute: proto.getAttributeList()) {
       put.setAttribute(attribute.getName(),
@@ -467,11 +405,7 @@ public final class ProtobufUtil {
     if (proto.hasTimestamp()) {
       timestamp = proto.getTimestamp();
     }
-    RowLock lock = null;
-    if (proto.hasLockId()) {
-      lock = new RowLock(proto.getLockId());
-    }
-    Delete delete = new Delete(row, timestamp, lock);
+    Delete delete = new Delete(row, timestamp);
     delete.setWriteToWAL(proto.getWriteToWAL());
     for (NameBytesPair attribute: proto.getAttributeList()) {
       delete.setAttribute(attribute.getName(),
@@ -536,10 +470,10 @@ public final class ProtobufUtil {
 
   /**
    * Convert a MutateRequest to Mutation
-   * 
+   *
    * @param proto the protocol buffer Mutate to convert
    * @return the converted Mutation
-   * @throws IOException 
+   * @throws IOException
    */
   public static Mutation toMutation(final Mutate proto) throws IOException {
     MutateType type = proto.getMutateType();
@@ -566,12 +500,8 @@ public final class ProtobufUtil {
       final Mutate proto) throws IOException {
     MutateType type = proto.getMutateType();
     assert type == MutateType.INCREMENT : type.name();
-    RowLock lock = null;
-    if (proto.hasLockId()) {
-      lock = new RowLock(proto.getLockId());
-    }
     byte[] row = proto.getRow().toByteArray();
-    Increment increment = new Increment(row, lock);
+    Increment increment = new Increment(row);
     increment.setWriteToWAL(proto.getWriteToWAL());
     if (proto.hasTimeRange()) {
       HBaseProtos.TimeRange timeRange = proto.getTimeRange();
@@ -617,6 +547,10 @@ public final class ProtobufUtil {
     }
     if (scan.getMaxResultSize() > 0) {
       scanBuilder.setMaxResultSize(scan.getMaxResultSize());
+    }
+    Boolean loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
+    if (loadColumnFamiliesOnDemand != null) {
+      scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand.booleanValue());
     }
     scanBuilder.setMaxVersions(scan.getMaxVersions());
     TimeRange timeRange = scan.getTimeRange();
@@ -701,6 +635,9 @@ public final class ProtobufUtil {
     if (proto.hasStoreOffset()) {
       scan.setRowOffsetPerColumnFamily(proto.getStoreOffset());
     }
+    if (proto.hasLoadColumnFamiliesOnDemand()) {
+      scan.setLoadColumnFamiliesOnDemand(proto.getLoadColumnFamiliesOnDemand());
+    }
     if (proto.hasTimeRange()) {
       HBaseProtos.TimeRange timeRange = proto.getTimeRange();
       long minStamp = 0;
@@ -741,43 +678,6 @@ public final class ProtobufUtil {
     return scan;
   }
 
-
-  /**
-   * Create a new protocol buffer Exec based on a client Exec
-   *
-   * @param exec
-   * @return protocol buffer Exec
-   * @throws IOException
-   */
-  public static ClientProtos.Exec toExec(
-      final Exec exec) throws IOException {
-    ClientProtos.Exec.Builder
-      builder = ClientProtos.Exec.newBuilder();
-    Configuration conf = exec.getConf();
-    if (conf != null) {
-      NameStringPair.Builder propertyBuilder = NameStringPair.newBuilder();
-      Iterator<Entry<String, String>> iterator = conf.iterator();
-      while (iterator.hasNext()) {
-        Entry<String, String> entry = iterator.next();
-        propertyBuilder.setName(entry.getKey());
-        propertyBuilder.setValue(entry.getValue());
-        builder.addProperty(propertyBuilder.build());
-      }
-    }
-    builder.setProtocolName(exec.getProtocolName());
-    builder.setMethodName(exec.getMethodName());
-    builder.setRow(ByteString.copyFrom(exec.getRow()));
-    Object[] parameters = exec.getParameters();
-    if (parameters != null && parameters.length > 0) {
-      Class<?>[] declaredClasses = exec.getParameterClasses();
-      for (int i = 0, n = parameters.length; i < n; i++) {
-        builder.addParameter(
-          ProtobufUtil.toParameter(declaredClasses[i], parameters[i]));
-      }
-    }
-    return builder.build();
-  }
-
   /**
    * Create a protocol buffer Get based on a client Get.
    *
@@ -792,9 +692,6 @@ public final class ProtobufUtil {
     builder.setRow(ByteString.copyFrom(get.getRow()));
     builder.setCacheBlocks(get.getCacheBlocks());
     builder.setMaxVersions(get.getMaxVersions());
-    if (get.getLockId() >= 0) {
-      builder.setLockId(get.getLockId());
-    }
     if (get.getFilter() != null) {
       builder.setFilter(ProtobufUtil.toFilter(get.getFilter()));
     }
@@ -850,9 +747,6 @@ public final class ProtobufUtil {
     builder.setRow(ByteString.copyFrom(increment.getRow()));
     builder.setMutateType(MutateType.INCREMENT);
     builder.setWriteToWAL(increment.getWriteToWAL());
-    if (increment.getLockId() >= 0) {
-      builder.setLockId(increment.getLockId());
-    }
     TimeRange timeRange = increment.getTimeRange();
     if (!timeRange.isAllTime()) {
       HBaseProtos.TimeRange.Builder timeRangeBuilder =
@@ -895,9 +789,6 @@ public final class ProtobufUtil {
     mutateBuilder.setRow(ByteString.copyFrom(mutation.getRow()));
     mutateBuilder.setMutateType(mutateType);
     mutateBuilder.setWriteToWAL(mutation.getWriteToWAL());
-    if (mutation.getLockId() >= 0) {
-      mutateBuilder.setLockId(mutation.getLockId());
-    }
     mutateBuilder.setTimestamp(mutation.getTimeStamp());
     Map<String, byte[]> attributes = mutation.getAttributesMap();
     if (!attributes.isEmpty()) {
@@ -1079,7 +970,11 @@ public final class ProtobufUtil {
    * Convert a delete KeyValue type to protocol buffer DeleteType.
    *
    * @param type
+<<<<<<< HEAD
    * @return protocol buffer DeleteType
+=======
+   * @return a DeleteType
+>>>>>>> apache/trunk
    * @throws IOException
    */
   public static DeleteType toDeleteType(
@@ -1093,29 +988,6 @@ public final class ProtobufUtil {
       return DeleteType.DELETE_FAMILY;
       default:
         throw new IOException("Unknown delete type: " + type);
-    }
-  }
-
-  /**
-   * Convert a protocol buffer Parameter to a Java object
-   *
-   * @param parameter the protocol buffer Parameter to convert
-   * @return the converted Java object
-   * @throws IOException if failed to deserialize the parameter
-   */
-  public static Object toObject(
-      final NameBytesPair parameter) throws IOException {
-    if (parameter == null || !parameter.hasValue()) return null;
-    byte[] bytes = parameter.getValue().toByteArray();
-    ByteArrayInputStream bais = null;
-    try {
-      bais = new ByteArrayInputStream(bytes);
-      DataInput in = new DataInputStream(bais);
-      return HbaseObjectWritable.readObject(in, null);
-    } finally {
-      if (bais != null) {
-        bais.close();
-      }
     }
   }
 
@@ -1141,57 +1013,6 @@ public final class ProtobufUtil {
     } catch (Exception e) {
       throw new IOException(e);
     }
-  }
-
-  /**
-   * Serialize a Java Object into a Parameter. The Java Object should be a
-   * Writable or protocol buffer Message
-   *
-   * @param value the Writable/Message object to be serialized
-   * @return the converted protocol buffer Parameter
-   * @throws IOException if failed to serialize the object
-   */
-  public static NameBytesPair toParameter(
-      final Object value) throws IOException {
-    Class<?> declaredClass = Object.class;
-    if (value != null) {
-      declaredClass = value.getClass();
-    }
-    return toParameter(declaredClass, value);
-  }
-
-  /**
-   * Serialize a Java Object into a Parameter. The Java Object should be a
-   * Writable or protocol buffer Message
-   *
-   * @param declaredClass the declared class of the parameter
-   * @param value the Writable/Message object to be serialized
-   * @return the converted protocol buffer Parameter
-   * @throws IOException if failed to serialize the object
-   */
-  public static NameBytesPair toParameter(
-      final Class<?> declaredClass, final Object value) throws IOException {
-    NameBytesPair.Builder builder = NameBytesPair.newBuilder();
-    builder.setName(declaredClass.getName());
-    if (value != null) {
-      ByteArrayOutputStream baos = null;
-      try {
-        baos = new ByteArrayOutputStream();
-        DataOutput out = new DataOutputStream(baos);
-        Class<?> clz = declaredClass;
-        if (HbaseObjectWritable.getClassCode(declaredClass) == null) {
-          clz = value.getClass();
-        }
-        HbaseObjectWritable.writeObject(out, value, clz, null);
-        builder.setValue(
-          ByteString.copyFrom(baos.toByteArray()));
-      } finally {
-        if (baos != null) {
-          baos.close();
-        }
-      }
-    }
-    return builder.build();
   }
 
 // Start helpers for Client
@@ -1272,8 +1093,7 @@ public final class ProtobufUtil {
         if (actions.size() > rowMutations) {
           MultiRequest request =
             RequestConverter.buildMultiRequest(regionName, actions);
-          ClientProtos.MultiResponse
-            proto = client.multi(null, request);
+          ClientProtos.MultiResponse proto = client.multi(null, request);
           List<Object> results = ResponseConverter.getResults(proto);
           for (int i = 0, n = results.size(); i < n; i++) {
             int originalIndex = actions.get(i).getOriginalIndex();
@@ -1306,29 +1126,6 @@ public final class ProtobufUtil {
       BulkLoadHFileResponse response =
         client.bulkLoadHFile(null, request);
       return response.getLoaded();
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
-  /**
-   * A helper to exec a coprocessor Exec using client protocol.
-   *
-   * @param client
-   * @param exec
-   * @param regionName
-   * @return the exec result
-   * @throws IOException
-   */
-  public static ExecResult execCoprocessor(final ClientProtocol client,
-      final Exec exec, final byte[] regionName) throws IOException {
-    ExecCoprocessorRequest request =
-      RequestConverter.buildExecCoprocessorRequest(regionName, exec);
-    try {
-      ExecCoprocessorResponse response =
-        client.execCoprocessor(null, request);
-      Object value = ProtobufUtil.toObject(response.getValue());
-      return new ExecResult(regionName, value);
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
@@ -1792,6 +1589,91 @@ public final class ProtobufUtil {
   }
 
   /**
+   * A utility used to grant a user some permissions. The permissions will
+   * be global if table is not specified.  Otherwise, they are for those
+   * table/column family/qualifier only.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param userShortName the short name of the user to grant permissions
+   * @param t optional table name
+   * @param f optional column family
+   * @param q optional qualifier
+   * @param actions the permissions to be granted
+   * @throws ServiceException
+   */
+  public static void grant(AccessControlService.BlockingInterface protocol,
+      String userShortName, byte[] t, byte[] f, byte[] q,
+      Permission.Action... actions) throws ServiceException {
+    List<AccessControlProtos.Permission.Action> permActions =
+        Lists.newArrayListWithCapacity(actions.length);
+    for (Permission.Action a : actions) {
+      permActions.add(ProtobufUtil.toPermissionAction(a));
+    }
+    AccessControlProtos.GrantRequest request = RequestConverter.
+      buildGrantRequest(userShortName, t, f, q, permActions.toArray(
+        new AccessControlProtos.Permission.Action[actions.length]));
+    protocol.grant(null, request);
+  }
+
+  /**
+   * A utility used to revoke a user some permissions. The permissions will
+   * be global if table is not specified.  Otherwise, they are for those
+   * table/column family/qualifier only.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param userShortName the short name of the user to revoke permissions
+   * @param t optional table name
+   * @param f optional column family
+   * @param q optional qualifier
+   * @param actions the permissions to be revoked
+   * @throws ServiceException
+   */
+  public static void revoke(AccessControlService.BlockingInterface protocol,
+      String userShortName, byte[] t, byte[] f, byte[] q,
+      Permission.Action... actions) throws ServiceException {
+    List<AccessControlProtos.Permission.Action> permActions =
+        Lists.newArrayListWithCapacity(actions.length);
+    for (Permission.Action a : actions) {
+      permActions.add(ProtobufUtil.toPermissionAction(a));
+    }
+    AccessControlProtos.RevokeRequest request = RequestConverter.
+      buildRevokeRequest(userShortName, t, f, q, permActions.toArray(
+        new AccessControlProtos.Permission.Action[actions.length]));
+    protocol.revoke(null, request);
+  }
+
+  /**
+   * A utility used to get user permissions.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param t optional table name
+   * @throws ServiceException
+   */
+  public static List<UserPermission> getUserPermissions(
+      AccessControlService.BlockingInterface protocol,
+      byte[] t) throws ServiceException {
+    AccessControlProtos.UserPermissionsRequest.Builder builder =
+      AccessControlProtos.UserPermissionsRequest.newBuilder();
+    if (t != null) {
+      builder.setTable(ByteString.copyFrom(t));
+    }
+    AccessControlProtos.UserPermissionsRequest request = builder.build();
+    AccessControlProtos.UserPermissionsResponse response =
+      protocol.getUserPermissions(null, request);
+    List<UserPermission> perms = new ArrayList<UserPermission>();
+    for (AccessControlProtos.UserPermission perm: response.getPermissionList()) {
+      perms.add(ProtobufUtil.toUserPermission(perm));
+    }
+    return perms;
+  }
+
+  /**
    * Convert a protobuf UserTablePermissions to a
    * ListMultimap<String, TablePermission> where key is username.
    *
@@ -1812,6 +1694,36 @@ public final class ProtobufUtil {
     }
 
     return perms;
+  }
+
+  /**
+   * Converts a Token instance (with embedded identifier) to the protobuf representation.
+   *
+   * @param token the Token instance to copy
+   * @return the protobuf Token message
+   */
+  public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
+    AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
+    builder.setIdentifier(ByteString.copyFrom(token.getIdentifier()));
+    builder.setPassword(ByteString.copyFrom(token.getPassword()));
+    if (token.getService() != null) {
+      builder.setService(ByteString.copyFromUtf8(token.getService().toString()));
+    }
+    return builder.build();
+  }
+
+  /**
+   * Converts a protobuf Token message back into a Token instance.
+   *
+   * @param proto the protobuf Token message
+   * @return the Token instance
+   */
+  public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
+    return new Token<AuthenticationTokenIdentifier>(
+        proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
+        proto.hasPassword() ? proto.getPassword().toByteArray() : null,
+        AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE,
+        proto.hasService() ? new Text(proto.getService().toStringUtf8()) : null);
   }
 
   /**
@@ -1911,5 +1823,40 @@ public final class ProtobufUtil {
       kv.getTimestamp(),
       KeyValue.Type.codeToType((byte)kv.getKeyType().getNumber()),
       kv.getValue().toByteArray());
+  }
+
+  /**
+   * Get an instance of the argument type declared in a class's signature. The
+   * argument type is assumed to be a PB Message subclass, and the instance is
+   * created using parseFrom method on the passed ByteString.
+   * @param runtimeClass the runtime type of the class
+   * @param position the position of the argument in the class declaration
+   * @param b the ByteString which should be parsed to get the instance created
+   * @return the instance
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public static <T extends Message> 
+  T getParsedGenericInstance(Class<?> runtimeClass, int position, ByteString b) 
+      throws IOException {
+    Type type = runtimeClass.getGenericSuperclass();
+    Type argType = ((ParameterizedType)type).getActualTypeArguments()[position];
+    Class<T> classType = (Class<T>)argType;
+    T inst;
+    try {
+      Method m = classType.getMethod("parseFrom", ByteString.class);
+      inst = (T)m.invoke(null, b);
+      return inst;
+    } catch (SecurityException e) {
+      throw new IOException(e);
+    } catch (NoSuchMethodException e) {
+      throw new IOException(e);
+    } catch (IllegalArgumentException e) {
+      throw new IOException(e);
+    } catch (InvocationTargetException e) {
+      throw new IOException(e);
+    } catch (IllegalAccessException e) {
+      throw new IOException(e);
+    }
   }
 }

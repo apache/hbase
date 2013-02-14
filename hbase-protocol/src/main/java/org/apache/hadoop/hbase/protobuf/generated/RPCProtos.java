@@ -1637,11 +1637,7 @@ public final class RPCProtos {
     boolean hasMethodName();
     String getMethodName();
     
-    // optional uint64 clientProtocolVersion = 2;
-    boolean hasClientProtocolVersion();
-    long getClientProtocolVersion();
-    
-    // optional bytes request = 3;
+    // optional bytes request = 2;
     boolean hasRequest();
     com.google.protobuf.ByteString getRequest();
     
@@ -1710,21 +1706,11 @@ public final class RPCProtos {
       }
     }
     
-    // optional uint64 clientProtocolVersion = 2;
-    public static final int CLIENTPROTOCOLVERSION_FIELD_NUMBER = 2;
-    private long clientProtocolVersion_;
-    public boolean hasClientProtocolVersion() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    public long getClientProtocolVersion() {
-      return clientProtocolVersion_;
-    }
-    
-    // optional bytes request = 3;
-    public static final int REQUEST_FIELD_NUMBER = 3;
+    // optional bytes request = 2;
+    public static final int REQUEST_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString request_;
     public boolean hasRequest() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     public com.google.protobuf.ByteString getRequest() {
       return request_;
@@ -1734,7 +1720,7 @@ public final class RPCProtos {
     public static final int REQUESTCLASSNAME_FIELD_NUMBER = 4;
     private java.lang.Object requestClassName_;
     public boolean hasRequestClassName() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     public String getRequestClassName() {
       java.lang.Object ref = requestClassName_;
@@ -1764,7 +1750,6 @@ public final class RPCProtos {
     
     private void initFields() {
       methodName_ = "";
-      clientProtocolVersion_ = 0L;
       request_ = com.google.protobuf.ByteString.EMPTY;
       requestClassName_ = "";
     }
@@ -1788,12 +1773,9 @@ public final class RPCProtos {
         output.writeBytes(1, getMethodNameBytes());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeUInt64(2, clientProtocolVersion_);
+        output.writeBytes(2, request_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeBytes(3, request_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeBytes(4, getRequestClassNameBytes());
       }
       getUnknownFields().writeTo(output);
@@ -1811,13 +1793,9 @@ public final class RPCProtos {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(2, clientProtocolVersion_);
+          .computeBytesSize(2, request_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, request_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(4, getRequestClassNameBytes());
       }
@@ -1849,11 +1827,6 @@ public final class RPCProtos {
         result = result && getMethodName()
             .equals(other.getMethodName());
       }
-      result = result && (hasClientProtocolVersion() == other.hasClientProtocolVersion());
-      if (hasClientProtocolVersion()) {
-        result = result && (getClientProtocolVersion()
-            == other.getClientProtocolVersion());
-      }
       result = result && (hasRequest() == other.hasRequest());
       if (hasRequest()) {
         result = result && getRequest()
@@ -1876,10 +1849,6 @@ public final class RPCProtos {
       if (hasMethodName()) {
         hash = (37 * hash) + METHODNAME_FIELD_NUMBER;
         hash = (53 * hash) + getMethodName().hashCode();
-      }
-      if (hasClientProtocolVersion()) {
-        hash = (37 * hash) + CLIENTPROTOCOLVERSION_FIELD_NUMBER;
-        hash = (53 * hash) + hashLong(getClientProtocolVersion());
       }
       if (hasRequest()) {
         hash = (37 * hash) + REQUEST_FIELD_NUMBER;
@@ -2007,12 +1976,10 @@ public final class RPCProtos {
         super.clear();
         methodName_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
-        clientProtocolVersion_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000002);
         request_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000002);
         requestClassName_ = "";
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
       
@@ -2058,13 +2025,9 @@ public final class RPCProtos {
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        result.clientProtocolVersion_ = clientProtocolVersion_;
+        result.request_ = request_;
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
-        }
-        result.request_ = request_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
         }
         result.requestClassName_ = requestClassName_;
         result.bitField0_ = to_bitField0_;
@@ -2085,9 +2048,6 @@ public final class RPCProtos {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.getDefaultInstance()) return this;
         if (other.hasMethodName()) {
           setMethodName(other.getMethodName());
-        }
-        if (other.hasClientProtocolVersion()) {
-          setClientProtocolVersion(other.getClientProtocolVersion());
         }
         if (other.hasRequest()) {
           setRequest(other.getRequest());
@@ -2135,18 +2095,13 @@ public final class RPCProtos {
               methodName_ = input.readBytes();
               break;
             }
-            case 16: {
+            case 18: {
               bitField0_ |= 0x00000002;
-              clientProtocolVersion_ = input.readUInt64();
-              break;
-            }
-            case 26: {
-              bitField0_ |= 0x00000004;
               request_ = input.readBytes();
               break;
             }
             case 34: {
-              bitField0_ |= 0x00000008;
+              bitField0_ |= 0x00000004;
               requestClassName_ = input.readBytes();
               break;
             }
@@ -2192,31 +2147,10 @@ public final class RPCProtos {
         onChanged();
       }
       
-      // optional uint64 clientProtocolVersion = 2;
-      private long clientProtocolVersion_ ;
-      public boolean hasClientProtocolVersion() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      public long getClientProtocolVersion() {
-        return clientProtocolVersion_;
-      }
-      public Builder setClientProtocolVersion(long value) {
-        bitField0_ |= 0x00000002;
-        clientProtocolVersion_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearClientProtocolVersion() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        clientProtocolVersion_ = 0L;
-        onChanged();
-        return this;
-      }
-      
-      // optional bytes request = 3;
+      // optional bytes request = 2;
       private com.google.protobuf.ByteString request_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasRequest() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public com.google.protobuf.ByteString getRequest() {
         return request_;
@@ -2225,13 +2159,13 @@ public final class RPCProtos {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000004;
+  bitField0_ |= 0x00000002;
         request_ = value;
         onChanged();
         return this;
       }
       public Builder clearRequest() {
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000002);
         request_ = getDefaultInstance().getRequest();
         onChanged();
         return this;
@@ -2240,7 +2174,7 @@ public final class RPCProtos {
       // optional string requestClassName = 4;
       private java.lang.Object requestClassName_ = "";
       public boolean hasRequestClassName() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       public String getRequestClassName() {
         java.lang.Object ref = requestClassName_;
@@ -2256,19 +2190,19 @@ public final class RPCProtos {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000008;
+  bitField0_ |= 0x00000004;
         requestClassName_ = value;
         onChanged();
         return this;
       }
       public Builder clearRequestClassName() {
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000004);
         requestClassName_ = getDefaultInstance().getRequestClassName();
         onChanged();
         return this;
       }
       void setRequestClassName(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000004;
         requestClassName_ = value;
         onChanged();
       }
@@ -3761,17 +3695,16 @@ public final class RPCProtos {
       " \001(\0132\020.UserInformation\022?\n\010protocol\030\002 \001(\t" +
       ":-org.apache.hadoop.hbase.client.ClientP" +
       "rotocol\"<\n\020RpcRequestHeader\022\016\n\006callId\030\001 " +
-      "\002(\r\022\030\n\005tinfo\030\002 \001(\0132\t.RPCTInfo\"n\n\016RpcRequ" +
-      "estBody\022\022\n\nmethodName\030\001 \002(\t\022\035\n\025clientPro" +
-      "tocolVersion\030\002 \001(\004\022\017\n\007request\030\003 \001(\014\022\030\n\020r" +
-      "equestClassName\030\004 \001(\t\"{\n\021RpcResponseHead",
-      "er\022\016\n\006callId\030\001 \002(\r\022)\n\006status\030\002 \002(\0162\031.Rpc" +
-      "ResponseHeader.Status\"+\n\006Status\022\013\n\007SUCCE" +
-      "SS\020\000\022\t\n\005ERROR\020\001\022\t\n\005FATAL\020\002\"#\n\017RpcRespons" +
-      "eBody\022\020\n\010response\030\001 \001(\014\"9\n\014RpcException\022" +
-      "\025\n\rexceptionName\030\001 \002(\t\022\022\n\nstackTrace\030\002 \001" +
-      "(\tB<\n*org.apache.hadoop.hbase.protobuf.g" +
-      "eneratedB\tRPCProtosH\001\240\001\001"
+      "\002(\r\022\030\n\005tinfo\030\002 \001(\0132\t.RPCTInfo\"O\n\016RpcRequ" +
+      "estBody\022\022\n\nmethodName\030\001 \002(\t\022\017\n\007request\030\002" +
+      " \001(\014\022\030\n\020requestClassName\030\004 \001(\t\"{\n\021RpcRes" +
+      "ponseHeader\022\016\n\006callId\030\001 \002(\r\022)\n\006status\030\002 ",
+      "\002(\0162\031.RpcResponseHeader.Status\"+\n\006Status" +
+      "\022\013\n\007SUCCESS\020\000\022\t\n\005ERROR\020\001\022\t\n\005FATAL\020\002\"#\n\017R" +
+      "pcResponseBody\022\020\n\010response\030\001 \001(\014\"9\n\014RpcE" +
+      "xception\022\025\n\rexceptionName\030\001 \002(\t\022\022\n\nstack" +
+      "Trace\030\002 \001(\tB<\n*org.apache.hadoop.hbase.p" +
+      "rotobuf.generatedB\tRPCProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -3807,7 +3740,7 @@ public final class RPCProtos {
           internal_static_RpcRequestBody_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RpcRequestBody_descriptor,
-              new java.lang.String[] { "MethodName", "ClientProtocolVersion", "Request", "RequestClassName", },
+              new java.lang.String[] { "MethodName", "Request", "RequestClassName", },
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.class,
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.Builder.class);
           internal_static_RpcResponseHeader_descriptor =

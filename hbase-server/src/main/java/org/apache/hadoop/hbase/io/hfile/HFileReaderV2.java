@@ -77,8 +77,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
   static final int MIN_MINOR_VERSION = 0;
 
   /** Maximum minor version supported by this HFile format */
-  // We went to version 2 when we moved to pb'ing the fileinfo trailer on the file. This version can read Writables
-  // version 1 too.
+  // We went to version 2 when we moved to pb'ing fileinfo and the trailer on
+  // the file. This version can read Writables version 1.
   static final int MAX_MINOR_VERSION = 2;
 
   /**

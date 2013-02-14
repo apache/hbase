@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -36,7 +37,6 @@ import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -49,10 +49,19 @@ public class MockRegionServerServices implements RegionServerServices {
   private final ConcurrentSkipListMap<byte[], Boolean> rit = 
     new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
+  private ZooKeeperWatcher zkw = null;
+
+  public MockRegionServerServices(ZooKeeperWatcher zkw){
+    this.zkw = zkw;
+  }
+
+  public MockRegionServerServices(){
+    this(null);
+  }
 
   @Override
-  public boolean removeFromOnlineRegions(String encodedRegionName, ServerName destination) {
-    return this.regions.remove(encodedRegionName) != null;
+  public boolean removeFromOnlineRegions(HRegion r, ServerName destination) {
+    return this.regions.remove(r.getRegionInfo().getEncodedName()) != null;
   }
 
   @Override
@@ -78,11 +87,6 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public boolean isStopping() {
     return this.stopping;
-  }
-
-  @Override
-  public HLog getWAL() {
-    return null;
   }
 
   @Override
@@ -112,7 +116,7 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public ZooKeeperWatcher getZooKeeper() {
-    return null;
+    return zkw;
   }
   
   public RegionServerAccounting getRegionServerAccounting() {
@@ -160,6 +164,12 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public Leases getLeases() {
+    return null;
+  }
+
+  @Override
+  public HLog getWAL(HRegionInfo regionInfo) throws IOException {
+    // TODO Auto-generated method stub
     return null;
   }
 }

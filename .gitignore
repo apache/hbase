@@ -11,3 +11,6 @@
 *.orig
 *~
 hbase-*/test
+*.iws
+*.iml
+*.ipr

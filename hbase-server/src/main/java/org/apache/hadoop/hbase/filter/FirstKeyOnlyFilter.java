@@ -90,13 +90,13 @@ public class FirstKeyOnlyFilter extends FilterBase {
    */
   public static FirstKeyOnlyFilter parseFrom(final byte [] pbBytes)
   throws DeserializationException {
-    FilterProtos.FirstKeyOnlyFilter proto;
+    // There is nothing to deserialize.  Why do this at all?
     try {
-      proto = FilterProtos.FirstKeyOnlyFilter.parseFrom(pbBytes);
+      FilterProtos.FirstKeyOnlyFilter.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-
+    // Just return a new instance.
     return new FirstKeyOnlyFilter();
   }
 

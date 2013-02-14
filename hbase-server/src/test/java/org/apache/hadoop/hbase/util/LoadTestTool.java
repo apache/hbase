@@ -31,7 +31,9 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 
 /**
  * A command-line utility that reads, writes, and verifies data. Unlike
@@ -67,7 +69,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       "<verify_percent>[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
 
   private static final String OPT_USAGE_BLOOM = "Bloom filter type, one of " +
-      Arrays.toString(StoreFile.BloomType.values());
+      Arrays.toString(BloomType.values());
 
   private static final String OPT_USAGE_COMPRESSION = "Compression type, " +
       "one of " + Arrays.toString(Compression.Algorithm.values());
@@ -115,11 +117,11 @@ public class LoadTestTool extends AbstractHBaseTool {
   private DataBlockEncoding dataBlockEncodingAlgo;
   private boolean encodeInCacheOnly;
   private Compression.Algorithm compressAlgo;
-  private StoreFile.BloomType bloomType;
+  private BloomType bloomType;
 
   // Writer options
   private int numWriterThreads = DEFAULT_NUM_THREADS;
-  private long minColsPerKey, maxColsPerKey;
+  private int minColsPerKey, maxColsPerKey;
   private int minColDataSize, maxColDataSize;
   private boolean isMultiPut;
 
@@ -260,7 +262,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
       int colIndex = 0;
       minColsPerKey = 1;
-      maxColsPerKey = 2 * Long.parseLong(writeOpts[colIndex++]);
+      maxColsPerKey = 2 * Integer.parseInt(writeOpts[colIndex++]);
       int avgColDataSize =
           parseInt(writeOpts[colIndex++], 1, Integer.MAX_VALUE);
       minColDataSize = avgColDataSize / 2;
@@ -317,7 +319,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
     bloomType = bloomStr == null ? null :
-        StoreFile.BloomType.valueOf(bloomStr);
+        BloomType.valueOf(bloomStr);
   }
 
   public void initTestTable() throws IOException {
@@ -342,16 +344,16 @@ public class LoadTestTool extends AbstractHBaseTool {
       initTestTable();
     }
 
+    LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(
+        minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey, COLUMN_FAMILY);
+
     if (isWrite) {
-      writerThreads = new MultiThreadedWriter(conf, tableName, COLUMN_FAMILY);
+      writerThreads = new MultiThreadedWriter(dataGen, conf, tableName);
       writerThreads.setMultiPut(isMultiPut);
-      writerThreads.setColumnsPerKey(minColsPerKey, maxColsPerKey);
-      writerThreads.setDataSize(minColDataSize, maxColDataSize);
     }
 
     if (isRead) {
-      readerThreads = new MultiThreadedReader(conf, tableName, COLUMN_FAMILY,
-          verifyPercent);
+      readerThreads = new MultiThreadedReader(dataGen, conf, tableName, verifyPercent);
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
     }

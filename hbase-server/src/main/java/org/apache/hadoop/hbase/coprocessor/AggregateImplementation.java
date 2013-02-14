@@ -19,6 +19,10 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +46,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateServi
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -49,14 +54,20 @@ import com.google.protobuf.Service;
 /**
  * A concrete AggregateProtocol implementation. Its system level coprocessor
  * that computes the aggregate function at a region level.
- * @param <T>
- * @param <S>
+ * {@link ColumnInterpreter} is used to interpret column value. This class is
+ * parameterized with the following (these are the types with which the {@link ColumnInterpreter}
+ * is parameterized, and for more description on these, refer to {@link ColumnInterpreter}):
+ * @param <T> Cell value data type
+ * @param <S> Promoted data type
+ * @param <P> PB message that is used to transport initializer specific bytes
+ * @param <Q> PB message that is used to transport Cell (<T>) instance
+ * @param <R> PB message that is used to transport Promoted (<S>) instance
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AggregateImplementation<T, S> extends AggregateService implements
-    CoprocessorService, Coprocessor {
-  protected static Log log = LogFactory.getLog(AggregateImplementation.class);
+public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message> 
+extends AggregateService implements CoprocessorService, Coprocessor {
+  protected static final Log log = LogFactory.getLog(AggregateImplementation.class);
   private RegionCoprocessorEnvironment env;
 
   /**
@@ -73,7 +84,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
     AggregateResponse response = null;
     T max = null;
     try {
-      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
@@ -96,7 +107,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
       } while (hasMoreRows);
       if (max != null) {
         AggregateResponse.Builder builder = AggregateResponse.newBuilder();
-        builder.addFirstPart(ci.getProtoForCellType(max));
+        builder.addFirstPart(ci.getProtoForCellType(max).toByteString());
         response = builder.build();
       }
     } catch (IOException e) {
@@ -127,7 +138,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
     InternalScanner scanner = null;
     T min = null;
     try {
-      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
@@ -149,7 +160,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
       } while (hasMoreRows);
       if (min != null) {
         response = AggregateResponse.newBuilder().addFirstPart( 
-          ci.getProtoForCellType(min)).build();
+          ci.getProtoForCellType(min).toByteString()).build();
       }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
@@ -179,7 +190,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
     InternalScanner scanner = null;
     long sum = 0l;
     try {
-      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null;
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
@@ -203,7 +214,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
       } while (hasMoreRows);
       if (sumVal != null) {
         response = AggregateResponse.newBuilder().addFirstPart( 
-          ci.getProtoForPromotedType(sumVal)).build();
+          ci.getProtoForPromotedType(sumVal).toByteString()).build();
       }
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
@@ -287,7 +298,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
     AggregateResponse response = null;
     InternalScanner scanner = null;
     try {
-      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null;
       Long rowCountVal = 0l;
       Scan scan = ProtobufUtil.toScan(request.getScan());
@@ -311,7 +322,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
         rowCountVal++;
       } while (hasMoreRows);
       if (sumVal != null) {
-        ByteString first = ci.getProtoForPromotedType(sumVal);
+        ByteString first = ci.getProtoForPromotedType(sumVal).toByteString();
         AggregateResponse.Builder pair = AggregateResponse.newBuilder();
         pair.addFirstPart(first);
         ByteBuffer bb = ByteBuffer.allocate(8).putLong(rowCountVal);
@@ -346,7 +357,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
     InternalScanner scanner = null;
     AggregateResponse response = null;
     try {
-      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null, sumSqVal = null, tempVal = null;
       long rowCountVal = 0l;
       Scan scan = ProtobufUtil.toScan(request.getScan());
@@ -374,8 +385,8 @@ public class AggregateImplementation<T, S> extends AggregateService implements
         rowCountVal++;
       } while (hasMoreRows);
       if (sumVal != null) {
-        ByteString first_sumVal = ci.getProtoForPromotedType(sumVal);
-        ByteString first_sumSqVal = ci.getProtoForPromotedType(sumSqVal);
+        ByteString first_sumVal = ci.getProtoForPromotedType(sumVal).toByteString();
+        ByteString first_sumSqVal = ci.getProtoForPromotedType(sumSqVal).toByteString();
         AggregateResponse.Builder pair = AggregateResponse.newBuilder();
         pair.addFirstPart(first_sumVal);
         pair.addFirstPart(first_sumSqVal);
@@ -410,7 +421,7 @@ public class AggregateImplementation<T, S> extends AggregateService implements
     AggregateResponse response = null;
     InternalScanner scanner = null;
     try {
-      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      ColumnInterpreter<T, S, P, Q, R> ci = constructColumnInterpreterFromRequest(request);
       S sumVal = null, sumWeights = null, tempVal = null, tempWeight = null;
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
@@ -442,9 +453,9 @@ public class AggregateImplementation<T, S> extends AggregateService implements
         sumVal = ci.add(sumVal, tempVal);
         sumWeights = ci.add(sumWeights, tempWeight);
       } while (hasMoreRows);
-      ByteString first_sumVal = ci.getProtoForPromotedType(sumVal);
+      ByteString first_sumVal = ci.getProtoForPromotedType(sumVal).toByteString();
       S s = sumWeights == null ? ci.castToReturnType(ci.getMinValue()) : sumWeights;
-      ByteString first_sumWeights = ci.getProtoForPromotedType(s);
+      ByteString first_sumWeights = ci.getProtoForPromotedType(s).toByteString();
       AggregateResponse.Builder pair = AggregateResponse.newBuilder();
       pair.addFirstPart(first_sumVal);
       pair.addFirstPart(first_sumWeights); 
@@ -462,15 +473,17 @@ public class AggregateImplementation<T, S> extends AggregateService implements
   }
 
   @SuppressWarnings("unchecked")
-  ColumnInterpreter<T,S> constructColumnInterpreterFromRequest(
+  ColumnInterpreter<T,S,P,Q,R> constructColumnInterpreterFromRequest(
       AggregateArgument request) throws IOException {
     String className = request.getInterpreterClassName();
     Class<?> cls;
     try {
       cls = Class.forName(className);
-      ColumnInterpreter<T,S> ci = (ColumnInterpreter<T, S>) cls.newInstance();
+      ColumnInterpreter<T,S,P,Q,R> ci = (ColumnInterpreter<T, S, P, Q, R>) cls.newInstance();
       if (request.hasInterpreterSpecificBytes()) {
-        ci.initialize(request.getInterpreterSpecificBytes());
+        ByteString b = request.getInterpreterSpecificBytes();
+        P initMsg = ProtobufUtil.getParsedGenericInstance(ci.getClass(), 2, b);
+        ci.initialize(initMsg);
       }
       return ci;
     } catch (ClassNotFoundException e) {

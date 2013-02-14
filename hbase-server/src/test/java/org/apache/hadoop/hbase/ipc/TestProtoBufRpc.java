@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
@@ -52,7 +53,7 @@ public class TestProtoBufRpc {
   private static RpcServer server;
 
   public interface TestRpcService
-      extends TestProtobufRpcProto.BlockingInterface, VersionedProtocol {
+      extends TestProtobufRpcProto.BlockingInterface, IpcProtocol {
     public long VERSION = 1;
   }
 
@@ -76,32 +77,16 @@ public class TestProtoBufRpc {
         EmptyRequestProto request) throws ServiceException {
       throw new ServiceException("error", new IOException("error"));
     }
-
-    @Override
-    public long getProtocolVersion(String protocol, long clientVersion)
-        throws IOException {
-      // TODO Auto-generated method stub
-      return 0;
-    }
-
-    @Override
-    public ProtocolSignature getProtocolSignature(String protocol,
-        long clientVersion, int clientMethodsHash) throws IOException {
-      // TODO Auto-generated method stub
-      return null;
-    }
   }
 
   @Before
   public  void setUp() throws IOException { // Setup server for both protocols
     conf = new Configuration();
-    // Set RPC engine to protobuf RPC engine
-    HBaseRPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine.class);
 
     // Create server side implementation
     PBServerImpl serverImpl = new PBServerImpl();
     // Get RPC server for server side implementation
-    server = HBaseRPC.getServer(TestRpcService.class,serverImpl, 
+    server = HBaseServerRPC.getServer(TestRpcService.class,serverImpl,
         new Class[]{TestRpcService.class}, 
         ADDRESS, PORT, 10, 10, true, conf, 0);
     addr = server.getListenerAddress();
@@ -114,37 +99,29 @@ public class TestProtoBufRpc {
     server.stop();
   }
 
-  private static TestRpcService getClient() throws IOException {
-    // Set RPC engine to protobuf RPC engine
-    HBaseRPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
-    return (TestRpcService) HBaseRPC.getProxy(TestRpcService.class, 0, 
-        addr, conf, 10000);
-  }
-
   @Test
   public void testProtoBufRpc() throws Exception {
-    TestRpcService client = getClient();
-    testProtoBufRpc(client);
-  }
-  
-  // separated test out so that other tests can call it.
-  public static void testProtoBufRpc(TestRpcService client) throws Exception {  
-    // Test ping method
-    EmptyRequestProto emptyRequest = EmptyRequestProto.newBuilder().build();
-    client.ping(null, emptyRequest);
-    
-    // Test echo method
-    EchoRequestProto echoRequest = EchoRequestProto.newBuilder()
-        .setMessage("hello").build();
-    EchoResponseProto echoResponse = client.echo(null, echoRequest);
-    Assert.assertEquals(echoResponse.getMessage(), "hello");
-    
-    // Test error method - error should be thrown as RemoteException
+    ProtobufRpcClientEngine clientEngine = new ProtobufRpcClientEngine(conf);
     try {
-      client.error(null, emptyRequest);
-      Assert.fail("Expected exception is not thrown");
-    } catch (ServiceException e) {
+      TestRpcService client = clientEngine.getProxy(TestRpcService.class, addr, conf, 10000);
+      // Test ping method
+      EmptyRequestProto emptyRequest = EmptyRequestProto.newBuilder().build();
+      client.ping(null, emptyRequest);
+
+      // Test echo method
+      EchoRequestProto echoRequest = EchoRequestProto.newBuilder()
+          .setMessage("hello").build();
+      EchoResponseProto echoResponse = client.echo(null, echoRequest);
+      Assert.assertEquals(echoResponse.getMessage(), "hello");
+
+      // Test error method - error should be thrown as RemoteException
+      try {
+        client.error(null, emptyRequest);
+        Assert.fail("Expected exception is not thrown");
+      } catch (ServiceException e) {
+      }
+    } finally {
+      clientEngine.close();
     }
   }
 }

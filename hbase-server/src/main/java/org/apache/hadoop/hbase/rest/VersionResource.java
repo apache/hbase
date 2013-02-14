@@ -71,7 +71,8 @@ public class VersionResource extends ResourceBase {
    * @return a response for a version request 
    */
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF})
   public Response get(final @Context ServletContext context, 
       final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {

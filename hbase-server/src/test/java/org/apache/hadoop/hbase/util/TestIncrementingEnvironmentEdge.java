@@ -34,7 +34,7 @@ public class TestIncrementingEnvironmentEdge {
 
   @Test
   public void testGetCurrentTimeUsesSystemClock() {
-    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge(1);
     assertEquals(1, edge.currentTimeMillis());
     assertEquals(2, edge.currentTimeMillis());
     assertEquals(3, edge.currentTimeMillis());

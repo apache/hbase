@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceStability.Stable
 public class Increment implements Row {
   private byte [] row = null;
-  private long lockId = -1L;
   private boolean writeToWAL = true;
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableMap<byte [], Long>> familyMap =
@@ -55,31 +54,17 @@ public class Increment implements Row {
   public Increment() {}
 
   /**
-   * Create a Increment operation for the specified row.
-   * <p>
-   * At least one column must be incremented.
-   * @param row row key
-   */
-  public Increment(byte [] row) {
-    this(row, null);
-  }
-
-  /**
    * Create a Increment operation for the specified row, using an existing row
    * lock.
    * <p>
    * At least one column must be incremented.
    * @param row row key
-   * @param rowLock previously acquired row lock, or null
    */
-  public Increment(byte [] row, RowLock rowLock) {
+  public Increment(byte [] row) {
     if (row == null) {
       throw new IllegalArgumentException("Cannot increment a null row");
     }
     this.row = row;
-    if(rowLock != null) {
-      this.lockId = rowLock.getLockId();
-    }
   }
 
   /**
@@ -116,22 +101,6 @@ public class Increment implements Row {
    */
   public byte [] getRow() {
     return this.row;
-  }
-
-  /**
-   * Method for retrieving the increment's RowLock
-   * @return RowLock
-   */
-  public RowLock getRowLock() {
-    return new RowLock(this.row, this.lockId);
-  }
-
-  /**
-   * Method for retrieving the increment's lockId
-   * @return lockId
-   */
-  public long getLockId() {
-    return this.lockId;
   }
 
   /**
@@ -273,5 +242,17 @@ public class Increment implements Row {
   @Override
   public int compareTo(Row i) {
     return Bytes.compareTo(this.getRow(), i.getRow());
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    Row other = (Row) obj;
+    return compareTo(other) == 0;
   }
 }

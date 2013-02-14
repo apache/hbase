@@ -24,6 +24,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -231,13 +232,38 @@ public abstract class FSUtils {
     try {
       fs.close();
     } catch (Exception e) {
-        LOG.error("file system close failed: ", e);
+      LOG.error("file system close failed: ", e);
     }
     IOException io = new IOException("File system is not available");
     io.initCause(exception);
     throw io;
   }
 
+  /**
+   * We use reflection because {@link DistributedFileSystem#setSafeMode(
+   * FSConstants.SafeModeAction action, boolean isChecked)} is not in hadoop 1.1
+   * 
+   * @param dfs
+   * @return whether we're in safe mode
+   * @throws IOException
+   */
+  private static boolean isInSafeMode(DistributedFileSystem dfs) throws IOException {
+    boolean inSafeMode = false;
+    try {
+      Method m = DistributedFileSystem.class.getMethod("setSafeMode", new Class<?> []{
+          org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.class, boolean.class});
+      inSafeMode = (Boolean) m.invoke(dfs,
+        org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET, true);
+    } catch (Exception e) {
+      if (e instanceof IOException) throw (IOException) e;
+      
+      // Check whether dfs is on safemode.
+      inSafeMode = dfs.setSafeMode(
+        org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET);      
+    }
+    return inSafeMode;    
+  }
+  
   /**
    * Check whether dfs is in safemode. 
    * @param conf
@@ -249,8 +275,7 @@ public abstract class FSUtils {
     FileSystem fs = FileSystem.get(conf);
     if (fs instanceof DistributedFileSystem) {
       DistributedFileSystem dfs = (DistributedFileSystem)fs;
-      // Check whether dfs is on safemode.
-      isInSafeMode = dfs.setSafeMode(org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET);
+      isInSafeMode = isInSafeMode(dfs);
     }
     if (isInSafeMode) {
       throw new IOException("File system is in safemode, it can't be written now");
@@ -622,7 +647,7 @@ public abstract class FSUtils {
     if (!(fs instanceof DistributedFileSystem)) return;
     DistributedFileSystem dfs = (DistributedFileSystem)fs;
     // Make sure dfs is not in safe mode
-    while (dfs.setSafeMode(org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET)) {
+    while (isInSafeMode(dfs)) {
       LOG.info("Waiting for dfs to exit safe mode...");
       try {
         Thread.sleep(wait);
@@ -1231,11 +1256,11 @@ public abstract class FSUtils {
     // presumes any directory under hbase.rootdir is a table
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
     for (FileStatus tableDir : tableDirs) {
-      // Skip the .log directory.  All others should be tables.  Inside a table,
-      // there are compaction.dir directories to skip.  Otherwise, all else
+      // Skip the .log and other non-table directories.  All others should be tables.
+      // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
       // should be regions. 
       Path d = tableDir.getPath();
-      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
+      if (HConstants.HBASE_NON_TABLE_DIRS.contains(d.getName())) {
         continue;
       }
       FileStatus[] regionDirs = fs.listStatus(d, df);
@@ -1278,7 +1303,7 @@ public abstract class FSUtils {
       status = filter == null ? fs.listStatus(dir) : fs.listStatus(dir, filter);
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
-      LOG.info(dir + " doesn't exist");
+      LOG.debug(dir + " doesn't exist");
     }
     if (status == null || status.length < 1) return null;
     return status;
@@ -1302,7 +1327,7 @@ public abstract class FSUtils {
    * @param fs
    * @param path
    * @param recursive
-   * @return
+   * @return the value returned by the fs.delete()
    * @throws IOException
    */
   public static boolean delete(final FileSystem fs, final Path path, final boolean recursive)
@@ -1315,7 +1340,7 @@ public abstract class FSUtils {
    * 
    * @param fs
    * @param path
-   * @return
+   * @return the value returned by fs.exists()
    * @throws IOException
    */
   public static boolean isExists(final FileSystem fs, final Path path) throws IOException {

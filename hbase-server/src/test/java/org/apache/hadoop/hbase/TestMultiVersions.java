@@ -134,7 +134,7 @@ public class TestMultiVersions {
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(contents));
     this.admin.createTable(desc);
-    Put put = new Put(row, timestamp1, null);
+    Put put = new Put(row, timestamp1);
     put.add(contents, contents, value1);
     HTable table = new HTable(UTIL.getConfiguration(), tableName);
     table.put(put);
@@ -147,7 +147,7 @@ public class TestMultiVersions {
     // is tied to an HConnection that has since gone stale.
     table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
     // Overwrite previous value
-    put = new Put(row, timestamp2, null);
+    put = new Put(row, timestamp2);
     put.add(contents, contents, value2);
     table.put(put);
     // Now verify that getRow(row, column, latest) works
@@ -218,7 +218,7 @@ public class TestMultiVersions {
     // Insert data
     for (int i = 0; i < locations.size(); i++) {
       for (int j = 0; j < timestamp.length; j++) {
-        Put put = new Put(rows[i], timestamp[j], null);
+        Put put = new Put(rows[i], timestamp[j]);
         put.add(HConstants.CATALOG_FAMILY, null, timestamp[j],
             Bytes.toBytes(timestamp[j]));
         table.put(put);

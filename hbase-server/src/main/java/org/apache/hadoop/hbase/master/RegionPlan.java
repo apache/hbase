@@ -117,6 +117,18 @@ public class RegionPlan implements Comparable<RegionPlan> {
   }
 
   @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    RegionPlan other = (RegionPlan) obj;
+    return compareTo(other) == 0;
+  }
+
+  @Override
   public String toString() {
     return "hri=" + this.hri.getRegionNameAsString() + ", src=" +
       (this.source == null? "": this.source.toString()) +

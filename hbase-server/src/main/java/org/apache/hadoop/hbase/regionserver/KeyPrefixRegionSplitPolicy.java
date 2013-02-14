@@ -34,7 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
   private static final Log LOG = LogFactory
       .getLog(KeyPrefixRegionSplitPolicy.class);
-  public static String PREFIX_LENGTH_KEY = "prefix_split_key_policy.prefix_length";
+  public static final String PREFIX_LENGTH_KEY = "prefix_split_key_policy.prefix_length";
 
   private int prefixLength = 0;
 

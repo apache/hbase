@@ -167,12 +167,14 @@ public interface RegionObserver extends Coprocessor {
    * @param store the store being compacted
    * @param scanner the scanner over existing data used in the store file
    * rewriting
+   * @param scanType type of Scan
    * @return the scanner to use during compaction.  Should not be {@code null}
    * unless the implementation is writing new store files on its own.
    * @throws IOException if an error occurred on the coprocessor
    */
   InternalScanner preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final HStore store, final InternalScanner scanner) throws IOException;
+      final HStore store, final InternalScanner scanner,
+      final ScanType scanType) throws IOException;
 
   /**
    * Called prior to writing the {@link StoreFile}s selected for compaction into
@@ -734,6 +736,27 @@ public interface RegionObserver extends Coprocessor {
       final boolean hasNext)
     throws IOException;
 
+  /**
+   * This will be called by the scan flow when the current scanned row is being filtered out by the
+   * filter. The filter may be filtering out the row via any of the below scenarios
+   * <ol>
+   * <li>
+   * <code>boolean filterRowKey(byte [] buffer, int offset, int length)</code> returning true</li>
+   * <li>
+   * <code>boolean filterRow()</code> returning true</li>
+   * <li>
+   * <code>void filterRow(List<KeyValue> kvs)</code> removing all the kvs from the passed List</li>
+   * </ol>
+   * @param c the environment provided by the region server
+   * @param s the scanner
+   * @param currentRow The current rowkey which got filtered out
+   * @param hasMore the 'has more' indication
+   * @return whether more rows are available for the scanner or not
+   * @throws IOException
+   */
+  boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final InternalScanner s, final byte[] currentRow, final boolean hasMore) throws IOException;
+  
   /**
    * Called before the client closes a scanner.
    * <p>
