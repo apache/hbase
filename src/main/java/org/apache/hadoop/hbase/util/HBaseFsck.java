@@ -1411,14 +1411,14 @@ public class HBaseFsck extends Configured implements Tool {
 
     Path hbaseDir = new Path(getConf().get(HConstants.HBASE_DIR));
     FileSystem fs = hbaseDir.getFileSystem(getConf());
-    UserGroupInformation ugi = User.getCurrent().getUGI();
+    User user = User.getCurrent();
     FileStatus[] files = fs.listStatus(hbaseDir);
     for (FileStatus file : files) {
       try {
-        FSUtils.checkAccess(ugi, file, FsAction.WRITE);
+        FSUtils.checkAccess(user, file, FsAction.WRITE);
       } catch (AccessControlException ace) {
         LOG.warn("Got AccessControlException when preCheckPermission ", ace);
-        errors.reportError(ERROR_CODE.WRONG_USAGE, "Current user " + ugi.getUserName()
+        errors.reportError(ERROR_CODE.WRONG_USAGE, "Current user " + user.getShortName()
           + " does not have write perms to " + file.getPath()
           + ". Please rerun hbck as hdfs user " + file.getOwner());
         throw new AccessControlException(ace);
