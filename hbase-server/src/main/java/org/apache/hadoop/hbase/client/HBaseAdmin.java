@@ -75,7 +75,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
@@ -695,7 +694,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
-   * Wait for the table to be enabled.
+   * Wait for the table to be enabled and available
    * If enabling the table exceeds the retry period, an exception is thrown.
    * @param tableName name of the table
    * @throws IOException if a remote or network exception occurs or
@@ -705,7 +704,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     boolean enabled = false;
     long start = EnvironmentEdgeManager.currentTimeMillis();
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
-      enabled = isTableEnabled(tableName);
+      enabled = isTableEnabled(tableName) && isTableAvailable(tableName);
       if (enabled) {
         break;
       }
@@ -2407,7 +2406,8 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * Execute Restore/Clone snapshot and wait for the server to complete (blocking).
-   *
+   * To check if the cloned table exists, use {@link #isTableAvailable} -- it is not safe to
+   * create an HTable instance to this table before it is available.
    * @param snapshot snapshot to restore
    * @param tableName table name to restore the snapshot on
    * @throws IOException if a remote or network exception occurs
