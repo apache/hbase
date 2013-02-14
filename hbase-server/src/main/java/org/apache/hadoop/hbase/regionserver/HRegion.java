@@ -4374,10 +4374,10 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     // delete out the 'A' region
-    HFileArchiver.archiveRegion(a.getBaseConf(), fs,
+    HFileArchiver.archiveRegion(fs,
       FSUtils.getRootDir(a.getBaseConf()), a.getTableDir(), a.getRegionDir());
     // delete out the 'B' region
-    HFileArchiver.archiveRegion(a.getBaseConf(), fs,
+    HFileArchiver.archiveRegion(fs,
       FSUtils.getRootDir(b.getBaseConf()), b.getTableDir(), b.getRegionDir());
 
     LOG.info("merge completed. New region is " + dstRegion);
