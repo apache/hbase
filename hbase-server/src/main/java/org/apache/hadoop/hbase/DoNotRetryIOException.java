@@ -52,4 +52,8 @@ public class DoNotRetryIOException extends HBaseIOException {
   public DoNotRetryIOException(String message, Throwable cause) {
     super(message, cause);
   }
+
+  public DoNotRetryIOException(Throwable cause) {
+    super(cause);
+  }
 }

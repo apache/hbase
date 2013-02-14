@@ -179,6 +179,10 @@ public class MyLittleHBaseClient {
   more methods. Additionally, there are methods for managing tables in the
   HBaseAdmin class.</p>
 
+  <p>See also the section in the HBase Reference Guide where it discusses
+  <a href="http://hbase.apache.org/book.html#client">HBase Client</a>.  It
+  has section on how to access HBase from inside your multithreaded environtment
+  how to control resources consumed client-side, etc.</p>
 </body>
 </html>
 */

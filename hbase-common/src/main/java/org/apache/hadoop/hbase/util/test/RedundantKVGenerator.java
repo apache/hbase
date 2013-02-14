@@ -28,12 +28,15 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.io.WritableUtils;
 
+import com.google.common.primitives.Bytes;
+
 /**
  * Generate list of key values which are very useful to test data block encoding
  * and compression.
  */
 public class RedundantKVGenerator {
   // row settings
+  static byte[] DEFAULT_COMMON_PREFIX = new byte[0];
   static int DEFAULT_NUMBER_OF_ROW_PREFIXES = 10;
   static int DEFAULT_AVERAGE_PREFIX_LENGTH = 6;
   static int DEFAULT_PREFIX_LENGTH_VARIANCE = 3;
@@ -107,6 +110,7 @@ public class RedundantKVGenerator {
       ) {
     this.randomizer = randomizer;
 
+    this.commonPrefix = DEFAULT_COMMON_PREFIX;
     this.numberOfRowPrefixes = numberOfRowPrefixes;
     this.averagePrefixLength = averagePrefixLength;
     this.prefixLengthVariance = prefixLengthVariance;
@@ -115,7 +119,7 @@ public class RedundantKVGenerator {
     this.numberOfRows = numberOfRows;
 
     this.chanceForSameQualifier = chanceForSameQualifier;
-    this.chanceForSimiliarQualifier = chanceForSimiliarQualifier;
+    this.chanceForSimilarQualifier = chanceForSimiliarQualifier;
     this.averageQualifierLength = averageQualifierLength;
     this.qualifierLengthVariance = qualifierLengthVariance;
 
@@ -131,6 +135,7 @@ public class RedundantKVGenerator {
   private Random randomizer;
 
   // row settings
+  private byte[] commonPrefix;//global prefix before rowPrefixes
   private int numberOfRowPrefixes;
   private int averagePrefixLength = 6;
   private int prefixLengthVariance = 3;
@@ -138,9 +143,12 @@ public class RedundantKVGenerator {
   private int suffixLengthVariance = 3;
   private int numberOfRows = 500;
 
+  //family
+  private byte[] family;
+
   // qualifier
   private float chanceForSameQualifier = 0.5f;
-  private float chanceForSimiliarQualifier = 0.4f;
+  private float chanceForSimilarQualifier = 0.4f;
   private int averageQualifierLength = 9;
   private int qualifierLengthVariance = 3;
 
@@ -161,7 +169,8 @@ public class RedundantKVGenerator {
           prefixLengthVariance;
       byte[] newPrefix = new byte[prefixLength];
       randomizer.nextBytes(newPrefix);
-      prefixes.add(newPrefix);
+      byte[] newPrefixWithCommon = newPrefix;
+      prefixes.add(newPrefixWithCommon);
     }
 
     // generate rest of the row
@@ -173,7 +182,8 @@ public class RedundantKVGenerator {
       int randomPrefix = randomizer.nextInt(prefixes.size());
       byte[] row = new byte[prefixes.get(randomPrefix).length +
                             suffixLength];
-      rows.add(row);
+      byte[] rowWithCommonPrefix = Bytes.concat(commonPrefix, row);
+      rows.add(rowWithCommonPrefix);
     }
 
     return rows;
@@ -188,20 +198,22 @@ public class RedundantKVGenerator {
     List<KeyValue> result = new ArrayList<KeyValue>();
 
     List<byte[]> rows = generateRows();
-    Map<Integer, List<byte[]>> rowsToQualifier =
-        new HashMap<Integer, List<byte[]>>();
+    Map<Integer, List<byte[]>> rowsToQualifier = new HashMap<Integer, List<byte[]>>();
 
-    byte[] family = new byte[columnFamilyLength];
-    randomizer.nextBytes(family);
+    if(family==null){
+      family = new byte[columnFamilyLength];
+      randomizer.nextBytes(family);
+    }
 
-    long baseTimestamp = Math.abs(randomizer.nextLong()) /
-        baseTimestampDivide;
+    long baseTimestamp = Math.abs(randomizer.nextLong()) / baseTimestampDivide;
 
     byte[] value = new byte[valueLength];
 
     for (int i = 0; i < howMany; ++i) {
-      long timestamp = baseTimestamp + randomizer.nextInt(
-          timestampDiffSize);
+      long timestamp = baseTimestamp;
+      if(timestampDiffSize > 0){
+        timestamp += randomizer.nextInt(timestampDiffSize);
+      }
       Integer rowId = randomizer.nextInt(rows.size());
       byte[] row = rows.get(rowId);
 
@@ -209,13 +221,11 @@ public class RedundantKVGenerator {
       // occasionally completely different
       byte[] qualifier;
       float qualifierChance = randomizer.nextFloat();
-      if (!rowsToQualifier.containsKey(rowId) ||
-          qualifierChance > chanceForSameQualifier +
-          chanceForSimiliarQualifier) {
+      if (!rowsToQualifier.containsKey(rowId)
+          || qualifierChance > chanceForSameQualifier + chanceForSimilarQualifier) {
         int qualifierLength = averageQualifierLength;
-        qualifierLength +=
-            randomizer.nextInt(2 * qualifierLengthVariance + 1) -
-            qualifierLengthVariance;
+        qualifierLength += randomizer.nextInt(2 * qualifierLengthVariance + 1)
+            - qualifierLengthVariance;
         qualifier = new byte[qualifierLength];
         randomizer.nextBytes(qualifier);
 
@@ -227,8 +237,8 @@ public class RedundantKVGenerator {
       } else if (qualifierChance > chanceForSameQualifier) {
         // similar qualifier
         List<byte[]> previousQualifiers = rowsToQualifier.get(rowId);
-        byte[] originalQualifier = previousQualifiers.get(
-            randomizer.nextInt(previousQualifiers.size()));
+        byte[] originalQualifier = previousQualifiers.get(randomizer.nextInt(previousQualifiers
+            .size()));
 
         qualifier = new byte[originalQualifier.length];
         int commonPrefix = randomizer.nextInt(qualifier.length);
@@ -241,8 +251,7 @@ public class RedundantKVGenerator {
       } else {
         // same qualifier
         List<byte[]> previousQualifiers = rowsToQualifier.get(rowId);
-        qualifier = previousQualifiers.get(
-            randomizer.nextInt(previousQualifiers.size()));
+        qualifier = previousQualifiers.get(randomizer.nextInt(previousQualifiers.size()));
       }
 
       if (randomizer.nextFloat() < chanceForZeroValue) {
@@ -286,5 +295,99 @@ public class RedundantKVGenerator {
 
     return result;
   }
+  
+  
+  /************************ get/set ***********************************/
+  
+  public RedundantKVGenerator setCommonPrefix(byte[] prefix){
+    this.commonPrefix = prefix;
+    return this;
+  }
 
+  public RedundantKVGenerator setRandomizer(Random randomizer) {
+    this.randomizer = randomizer;
+    return this;
+  }
+
+  public RedundantKVGenerator setNumberOfRowPrefixes(int numberOfRowPrefixes) {
+    this.numberOfRowPrefixes = numberOfRowPrefixes;
+    return this;
+  }
+
+  public RedundantKVGenerator setAveragePrefixLength(int averagePrefixLength) {
+    this.averagePrefixLength = averagePrefixLength;
+    return this;
+  }
+
+  public RedundantKVGenerator setPrefixLengthVariance(int prefixLengthVariance) {
+    this.prefixLengthVariance = prefixLengthVariance;
+    return this;
+  }
+
+  public RedundantKVGenerator setAverageSuffixLength(int averageSuffixLength) {
+    this.averageSuffixLength = averageSuffixLength;
+    return this;
+  }
+
+  public RedundantKVGenerator setSuffixLengthVariance(int suffixLengthVariance) {
+    this.suffixLengthVariance = suffixLengthVariance;
+    return this;
+  }
+
+  public RedundantKVGenerator setNumberOfRows(int numberOfRows) {
+    this.numberOfRows = numberOfRows;
+    return this;
+  }
+
+  public RedundantKVGenerator setChanceForSameQualifier(float chanceForSameQualifier) {
+    this.chanceForSameQualifier = chanceForSameQualifier;
+    return this;
+  }
+
+  public RedundantKVGenerator setChanceForSimilarQualifier(float chanceForSimiliarQualifier) {
+    this.chanceForSimilarQualifier = chanceForSimiliarQualifier;
+    return this;
+  }
+
+  public RedundantKVGenerator setAverageQualifierLength(int averageQualifierLength) {
+    this.averageQualifierLength = averageQualifierLength;
+    return this;
+  }
+
+  public RedundantKVGenerator setQualifierLengthVariance(int qualifierLengthVariance) {
+    this.qualifierLengthVariance = qualifierLengthVariance;
+    return this;
+  }
+
+  public RedundantKVGenerator setColumnFamilyLength(int columnFamilyLength) {
+    this.columnFamilyLength = columnFamilyLength;
+    return this;
+  }
+
+  public RedundantKVGenerator setFamily(byte[] family) {
+    this.family = family;
+    this.columnFamilyLength = family.length;
+    return this;
+  }
+
+  public RedundantKVGenerator setValueLength(int valueLength) {
+    this.valueLength = valueLength;
+    return this;
+  }
+
+  public RedundantKVGenerator setChanceForZeroValue(float chanceForZeroValue) {
+    this.chanceForZeroValue = chanceForZeroValue;
+    return this;
+  }
+
+  public RedundantKVGenerator setBaseTimestampDivide(int baseTimestampDivide) {
+    this.baseTimestampDivide = baseTimestampDivide;
+    return this;
+  }
+
+  public RedundantKVGenerator setTimestampDiffSize(int timestampDiffSize) {
+    this.timestampDiffSize = timestampDiffSize;
+    return this;
+  }
+  
 }

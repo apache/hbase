@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -48,6 +50,16 @@ public class ByteRangeTool {
       ranges.add(new ByteRange(array));
     }
     return ranges;
+  }
+
+  public static void write(OutputStream os, ByteRange byteRange) throws IOException {
+    os.write(byteRange.getBytes(), byteRange.getOffset(), byteRange.getLength());
+  }
+
+  public static void write(OutputStream os, ByteRange byteRange, int byteRangeInnerOffset)
+      throws IOException {
+    os.write(byteRange.getBytes(), byteRange.getOffset() + byteRangeInnerOffset,
+      byteRange.getLength() - byteRangeInnerOffset);
   }
 
 }

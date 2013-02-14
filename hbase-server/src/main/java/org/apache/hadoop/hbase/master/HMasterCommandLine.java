@@ -121,8 +121,7 @@ public class HMasterCommandLine extends ServerCommandLine {
       // If 'local', defer to LocalHBaseCluster instance.  Starts master
       // and regionserver both in the one JVM.
       if (LocalHBaseCluster.isLocal(conf)) {
-        final MiniZooKeeperCluster zooKeeperCluster =
-          new MiniZooKeeperCluster();
+        final MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster(conf);
         File zkDataPath = new File(conf.get(HConstants.ZOOKEEPER_DATA_DIR));
         int zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);
         if (zkClientPort == 0) {

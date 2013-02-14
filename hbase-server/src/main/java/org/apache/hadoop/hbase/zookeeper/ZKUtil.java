@@ -198,7 +198,13 @@ public class ZKUtil {
     if (System.getProperty("java.security.auth.login.config") != null)
       return;
 
+    // No keytab specified, no auth
     String keytabFilename = conf.get(keytabFileKey);
+    if (keytabFilename == null) {
+      LOG.warn("no keytab specified for: " + keytabFileKey);
+      return;
+    }
+
     String principalConfig = conf.get(userNameKey, System.getProperty("user.name"));
     String principalName = SecurityUtil.getServerPrincipal(principalConfig, hostname);
 
@@ -206,7 +212,7 @@ public class ZKUtil {
     // If keyTab is not specified use the Ticket Cache.
     // and set the zookeeper login context name.
     JaasConfiguration jaasConf = new JaasConfiguration(loginContextName,
-      keytabFilename, principalName);
+        principalName, keytabFilename);
     javax.security.auth.login.Configuration.setConfiguration(jaasConf);
     System.setProperty(loginContextProperty, loginContextName);
   }
@@ -913,7 +919,8 @@ public class ZKUtil {
       return true;
 
     // Master & RSs uses hbase.zookeeper.client.*
-    return "kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication"));
+    return("kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication")) &&
+         conf.get("hbase.zookeeper.client.keytab.file") != null);
   }
 
   private static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node) {
@@ -933,15 +940,6 @@ public class ZKUtil {
       return Ids.CREATOR_ALL_ACL;
     } else {
       return Ids.OPEN_ACL_UNSAFE;
-    }
-  }
-
-  public static void waitForZKConnectionIfAuthenticating(ZooKeeperWatcher zkw)
-      throws InterruptedException {
-    if (isSecureZooKeeper(zkw.getConfiguration())) {
-       LOG.debug("Waiting for ZooKeeperWatcher to authenticate");
-       zkw.saslLatch.await();
-       LOG.debug("Done waiting.");
     }
   }
 
@@ -971,7 +969,6 @@ public class ZKUtil {
       String znode, byte [] data)
   throws KeeperException {
     try {
-      waitForZKConnectionIfAuthenticating(zkw);
       zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.EPHEMERAL);
     } catch (KeeperException.NodeExistsException nee) {
@@ -1011,7 +1008,6 @@ public class ZKUtil {
       ZooKeeperWatcher zkw, String znode, byte [] data)
   throws KeeperException {
     try {
-      waitForZKConnectionIfAuthenticating(zkw);
       zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.PERSISTENT);
     } catch (KeeperException.NodeExistsException nee) {
@@ -1049,7 +1045,6 @@ public class ZKUtil {
       String znode, byte [] data)
   throws KeeperException, KeeperException.NodeExistsException {
     try {
-      waitForZKConnectionIfAuthenticating(zkw);
       zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.PERSISTENT);
       Stat stat = zkw.getRecoverableZooKeeper().exists(znode, zkw);
@@ -1083,13 +1078,8 @@ public class ZKUtil {
   public static void asyncCreate(ZooKeeperWatcher zkw,
       String znode, byte [] data, final AsyncCallback.StringCallback cb,
       final Object ctx) {
-    try {
-      waitForZKConnectionIfAuthenticating(zkw);
-      zkw.getRecoverableZooKeeper().getZooKeeper().create(znode, data,
-          createACL(zkw, znode), CreateMode.PERSISTENT, cb, ctx);
-    } catch (InterruptedException e) {
-      zkw.interruptedException(e);
-    }
+    zkw.getRecoverableZooKeeper().getZooKeeper().create(znode, data,
+        createACL(zkw, znode), CreateMode.PERSISTENT, cb, ctx);
   }
 
   /**
@@ -1131,7 +1121,6 @@ public class ZKUtil {
     String znode = create.getPath();
     try {
       RecoverableZooKeeper zk = zkw.getRecoverableZooKeeper();
-      waitForZKConnectionIfAuthenticating(zkw);
       if (zk.exists(znode, false) == null) {
         zk.create(znode, create.getData(), create.getAcl(), CreateMode.fromFlag(create.getFlags()));
       }
@@ -1186,7 +1175,6 @@ public class ZKUtil {
       if(znode == null) {
         return;
       }
-      waitForZKConnectionIfAuthenticating(zkw);
       zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.PERSISTENT);
     } catch(KeeperException.NodeExistsException nee) {

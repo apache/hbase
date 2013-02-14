@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -240,7 +241,7 @@ public class HBaseFsck extends Configured implements Tool {
    * When initially looking at HDFS, we attempt to find any orphaned data.
    */
   private List<HbckInfo> orphanHdfsDirs = Collections.synchronizedList(new ArrayList<HbckInfo>());
-  
+
   private Map<String, Set<String>> orphanTableDirs = new HashMap<String, Set<String>>();
 
   /**
@@ -399,7 +400,7 @@ public class HBaseFsck extends Configured implements Tool {
     if (!checkMetaOnly) {
       reportTablesInFlux();
     }
-    
+
     // get regions according to what is online on each RegionServer
     loadDeployedRegions();
 
@@ -797,19 +798,21 @@ public class HBaseFsck extends Configured implements Tool {
           if (!orphanTableDirs.containsKey(tableName)) {
             LOG.warn("Unable to read .tableinfo from " + hbaseRoot, ioe);
             //should only report once for each table
-            errors.reportError(ERROR_CODE.NO_TABLEINFO_FILE, 
+            errors.reportError(ERROR_CODE.NO_TABLEINFO_FILE,
                 "Unable to read .tableinfo from " + hbaseRoot + "/" + tableName);
             Set<String> columns = new HashSet<String>();
             orphanTableDirs.put(tableName, getColumnFamilyList(columns, hbi));
           }
         }
       }
-      modTInfo.addRegionInfo(hbi);
+      if (!hbi.isSkipChecks()) {
+        modTInfo.addRegionInfo(hbi);
+      }
     }
 
     return tablesInfo;
   }
-  
+
   /**
    * To get the column family list according to the column family dirs
    * @param columns
@@ -827,7 +830,7 @@ public class HBaseFsck extends Configured implements Tool {
     }
     return columns;
   }
-  
+
   /**
    * To fabricate a .tableinfo file with following contents<br>
    * 1. the correct tablename <br>
@@ -845,7 +848,7 @@ public class HBaseFsck extends Configured implements Tool {
     FSTableDescriptors.createTableDescriptor(htd, getConf(), true);
     return true;
   }
-  
+
   /**
    * To fix orphan table by creating a .tableinfo file under tableDir <br>
    * 1. if TableInfo is cached, to recover the .tableinfo accordingly <br>
@@ -1416,8 +1419,9 @@ public class HBaseFsck extends Configured implements Tool {
         FSUtils.checkAccess(ugi, file, FsAction.WRITE);
       } catch (AccessControlException ace) {
         LOG.warn("Got AccessControlException when preCheckPermission ", ace);
-        System.err.println("Current user " + ugi.getUserName() + " does not have write perms to " + file.getPath()
-            + ". Please rerun hbck as hdfs user " + file.getOwner());
+        errors.reportError(ERROR_CODE.WRONG_USAGE, "Current user " + ugi.getUserName()
+          + " does not have write perms to " + file.getPath()
+          + ". Please rerun hbck as hdfs user " + file.getOwner());
         throw new AccessControlException(ace);
       }
     }
@@ -1651,6 +1655,18 @@ public class HBaseFsck extends Configured implements Tool {
 
     // ========== Cases where the region is in META =============
     } else if (inMeta && inHdfs && !isDeployed && splitParent) {
+      // check whether this is an actual error, or just transient state where parent
+      // is not cleaned
+      if (hbi.metaEntry.splitA != null && hbi.metaEntry.splitB != null) {
+        // check that split daughters are there
+        HbckInfo infoA = this.regionInfoMap.get(hbi.metaEntry.splitA.getEncodedName());
+        HbckInfo infoB = this.regionInfoMap.get(hbi.metaEntry.splitB.getEncodedName());
+        if (infoA != null && infoB != null) {
+          // we already processed or will process daughters. Move on, nothing to see here.
+          hbi.setSkipChecks(true);
+          return;
+        }
+      }
       errors.reportError(ERROR_CODE.LINGERING_SPLIT_PARENT, "Region "
           + descriptiveName + " is a split parent in META, in HDFS, "
           + "and not deployed on any region server. This could be transient.");
@@ -1781,7 +1797,9 @@ public class HBaseFsck extends Configured implements Tool {
         modTInfo.addServer(server);
       }
 
-      modTInfo.addRegionInfo(hbi);
+      if (!hbi.isSkipChecks()) {
+        modTInfo.addRegionInfo(hbi);
+      }
 
       tablesInfo.put(tableName, modTInfo);
     }
@@ -2319,19 +2337,19 @@ public class HBaseFsck extends Configured implements Tool {
 
       if (details) {
         // do full region split map dump
-        System.out.println("---- Table '"  +  this.tableName
+        errors.print("---- Table '"  +  this.tableName
             + "': region split map");
         dump(splits, regions);
-        System.out.println("---- Table '"  +  this.tableName
+        errors.print("---- Table '"  +  this.tableName
             + "': overlap groups");
         dumpOverlapProblems(overlapGroups);
-        System.out.println("There are " + overlapGroups.keySet().size()
+        errors.print("There are " + overlapGroups.keySet().size()
             + " overlap groups with " + overlapGroups.size()
             + " overlapping regions");
       }
       if (!sidelinedRegions.isEmpty()) {
         LOG.warn("Sidelined big overlapped regions, please bulk load them!");
-        System.out.println("---- Table '"  +  this.tableName
+        errors.print("---- Table '"  +  this.tableName
             + "': sidelined big overlapped regions");
         dumpSidelinedRegions(sidelinedRegions);
       }
@@ -2346,13 +2364,15 @@ public class HBaseFsck extends Configured implements Tool {
      */
     void dump(SortedSet<byte[]> splits, Multimap<byte[], HbckInfo> regions) {
       // we display this way because the last end key should be displayed as well.
+      StringBuilder sb = new StringBuilder();
       for (byte[] k : splits) {
-        System.out.print(Bytes.toStringBinary(k) + ":\t");
+        sb.setLength(0); // clear out existing buffer, if any.
+        sb.append(Bytes.toStringBinary(k) + ":\t");
         for (HbckInfo r : regions.get(k)) {
-          System.out.print("[ "+ r.toString() + ", "
+          sb.append("[ "+ r.toString() + ", "
               + Bytes.toStringBinary(r.getEndKey())+ "]\t");
         }
-        System.out.println();
+        errors.print(sb.toString());
       }
     }
   }
@@ -2361,12 +2381,12 @@ public class HBaseFsck extends Configured implements Tool {
     // we display this way because the last end key should be displayed as
     // well.
     for (byte[] k : regions.keySet()) {
-      System.out.print(Bytes.toStringBinary(k) + ":\n");
+      errors.print(Bytes.toStringBinary(k) + ":");
       for (HbckInfo r : regions.get(k)) {
-        System.out.print("[ " + r.toString() + ", "
-            + Bytes.toStringBinary(r.getEndKey()) + "]\n");
+        errors.print("[ " + r.toString() + ", "
+            + Bytes.toStringBinary(r.getEndKey()) + "]");
       }
-      System.out.println("----");
+      errors.print("----");
     }
   }
 
@@ -2374,9 +2394,9 @@ public class HBaseFsck extends Configured implements Tool {
     for (Map.Entry<Path, HbckInfo> entry: regions.entrySet()) {
       String tableName = Bytes.toStringBinary(entry.getValue().getTableName());
       Path path = entry.getKey();
-      System.out.println("This sidelined region dir should be bulk loaded: "
+      errors.print("This sidelined region dir should be bulk loaded: "
         + path.toString());
-      System.out.println("Bulk load command looks like: "
+      errors.print("Bulk load command looks like: "
         + "hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles "
         + path.toUri().getPath() + " "+ tableName);
     }
@@ -2543,7 +2563,8 @@ public class HBaseFsck extends Configured implements Tool {
               || hri.isMetaRegion() || hri.isRootRegion())) {
             return true;
           }
-          MetaEntry m = new MetaEntry(hri, sn, ts);
+          PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(result);
+          MetaEntry m = new MetaEntry(hri, sn, ts, daughters.getFirst(), daughters.getSecond());
           HbckInfo hbInfo = new HbckInfo(m);
           HbckInfo previous = regionInfoMap.put(hri.getEncodedName(), hbInfo);
           if (previous != null) {
@@ -2582,11 +2603,19 @@ public class HBaseFsck extends Configured implements Tool {
   static class MetaEntry extends HRegionInfo {
     ServerName regionServer;   // server hosting this region
     long modTime;          // timestamp of most recent modification metadata
+    HRegionInfo splitA, splitB; //split daughters
 
     public MetaEntry(HRegionInfo rinfo, ServerName regionServer, long modTime) {
+      this(rinfo, regionServer, modTime, null, null);
+    }
+
+    public MetaEntry(HRegionInfo rinfo, ServerName regionServer, long modTime,
+        HRegionInfo splitA, HRegionInfo splitB) {
       super(rinfo);
       this.regionServer = regionServer;
       this.modTime = modTime;
+      this.splitA = splitA;
+      this.splitB = splitB;
     }
 
     public boolean equals(Object o) {
@@ -2635,6 +2664,7 @@ public class HBaseFsck extends Configured implements Tool {
     private HdfsEntry hdfsEntry = null; // info in HDFS
     private List<OnlineEntry> deployedEntries = Lists.newArrayList(); // on Region Server
     private List<ServerName> deployedOn = Lists.newArrayList(); // info on RS's
+    private boolean skipChecks = false; // whether to skip further checks to this region info.
 
     HbckInfo(MetaEntry metaEntry) {
       this.metaEntry = metaEntry;
@@ -2752,6 +2782,14 @@ public class HBaseFsck extends Configured implements Tool {
       }
       return hdfsEntry.hri;
     }
+
+    public void setSkipChecks(boolean skipChecks) {
+      this.skipChecks = skipChecks;
+    }
+
+    public boolean isSkipChecks() {
+      return skipChecks;
+    }
   }
 
   final static Comparator<HbckInfo> cmp = new Comparator<HbckInfo>() {
@@ -2807,23 +2845,25 @@ public class HBaseFsck extends Configured implements Tool {
    * Prints summary of all tables found on the system.
    */
   private void printTableSummary(SortedMap<String, TableInfo> tablesInfo) {
-    System.out.println("Summary:");
+    StringBuilder sb = new StringBuilder();
+    errors.print("Summary:");
     for (TableInfo tInfo : tablesInfo.values()) {
       if (errors.tableHasErrors(tInfo)) {
-        System.out.println("Table " + tInfo.getName() + " is inconsistent.");
+        errors.print("Table " + tInfo.getName() + " is inconsistent.");
       } else {
-        System.out.println("  " + tInfo.getName() + " is okay.");
+        errors.print("  " + tInfo.getName() + " is okay.");
       }
-      System.out.println("    Number of regions: " + tInfo.getNumRegions());
-      System.out.print("    Deployed on: ");
+      errors.print("    Number of regions: " + tInfo.getNumRegions());
+      sb.setLength(0); // clear out existing buffer, if any.
+      sb.append("    Deployed on: ");
       for (ServerName server : tInfo.deployedOn) {
-        System.out.print(" " + server.toString());
+        sb.append(" " + server.toString());
       }
-      System.out.println();
+      errors.print(sb.toString());
     }
   }
 
-  private static ErrorReporter getErrorReporter(
+  static ErrorReporter getErrorReporter(
       final Configuration conf) throws ClassNotFoundException {
     Class<? extends ErrorReporter> reporter = conf.getClass("hbasefsck.errorreporter", PrintingErrorReporter.class, ErrorReporter.class);
     return (ErrorReporter)ReflectionUtils.newInstance(reporter, conf);
@@ -2836,7 +2876,8 @@ public class HBaseFsck extends Configured implements Tool {
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
-      ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE
+      ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
+      WRONG_USAGE
     }
     public void clear();
     public void report(String message);
@@ -2870,6 +2911,11 @@ public class HBaseFsck extends Configured implements Tool {
     }
 
     public synchronized void reportError(ERROR_CODE errorCode, String message) {
+      if (errorCode == ERROR_CODE.WRONG_USAGE) {
+        System.err.println(message);
+        return;
+      }
+
       errorList.add(errorCode);
       if (!summary) {
         System.out.println("ERROR: " + message);
@@ -3220,15 +3266,15 @@ public class HBaseFsck extends Configured implements Tool {
   boolean shouldFixHdfsHoles() {
     return fixHdfsHoles;
   }
-  
+
   public void setFixTableOrphans(boolean shouldFix) {
     fixTableOrphans = shouldFix;
   }
-   
+
   boolean shouldFixTableOrphans() {
     return fixTableOrphans;
   }
-  
+
   public void setFixHdfsOverlaps(boolean shouldFix) {
     fixHdfsOverlaps = shouldFix;
   }
@@ -3358,48 +3404,53 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   protected HBaseFsck printUsageAndExit() {
-    System.err.println("Usage: fsck [opts] {only tables}");
-    System.err.println(" where [opts] are:");
-    System.err.println("   -help Display help options (this)");
-    System.err.println("   -details Display full report of all regions.");
-    System.err.println("   -timelag <timeInSeconds>  Process only regions that " +
+    StringWriter sw = new StringWriter(2048);
+    PrintWriter out = new PrintWriter(sw);
+    out.println("Usage: fsck [opts] {only tables}");
+    out.println(" where [opts] are:");
+    out.println("   -help Display help options (this)");
+    out.println("   -details Display full report of all regions.");
+    out.println("   -timelag <timeInSeconds>  Process only regions that " +
                        " have not experienced any metadata updates in the last " +
                        " <timeInSeconds> seconds.");
-    System.err.println("   -sleepBeforeRerun <timeInSeconds> Sleep this many seconds" +
+    out.println("   -sleepBeforeRerun <timeInSeconds> Sleep this many seconds" +
         " before checking if the fix worked if run with -fix");
-    System.err.println("   -summary Print only summary of the tables and status.");
-    System.err.println("   -metaonly Only check the state of ROOT and META tables.");
-    System.err.println("   -sidelineDir <hdfs://> HDFS path to backup existing meta and root.");
+    out.println("   -summary Print only summary of the tables and status.");
+    out.println("   -metaonly Only check the state of ROOT and META tables.");
+    out.println("   -sidelineDir <hdfs://> HDFS path to backup existing meta and root.");
 
-    System.err.println("");
-    System.err.println("  Metadata Repair options: (expert features, use with caution!)");
-    System.err.println("   -fix              Try to fix region assignments.  This is for backwards compatiblity");
-    System.err.println("   -fixAssignments   Try to fix region assignments.  Replaces the old -fix");
-    System.err.println("   -fixMeta          Try to fix meta problems.  This assumes HDFS region info is good.");
-    System.err.println("   -noHdfsChecking   Don't load/check region info from HDFS."
+    out.println("");
+    out.println("  Metadata Repair options: (expert features, use with caution!)");
+    out.println("   -fix              Try to fix region assignments.  This is for backwards compatiblity");
+    out.println("   -fixAssignments   Try to fix region assignments.  Replaces the old -fix");
+    out.println("   -fixMeta          Try to fix meta problems.  This assumes HDFS region info is good.");
+    out.println("   -noHdfsChecking   Don't load/check region info from HDFS."
         + " Assumes META region info is good. Won't check/fix any HDFS issue, e.g. hole, orphan, or overlap");
-    System.err.println("   -fixHdfsHoles     Try to fix region holes in hdfs.");
-    System.err.println("   -fixHdfsOrphans   Try to fix region dirs with no .regioninfo file in hdfs");
-    System.err.println("   -fixTableOrphans  Try to fix table dirs with no .tableinfo file in hdfs (online mode only)");
-    System.err.println("   -fixHdfsOverlaps  Try to fix region overlaps in hdfs.");
-    System.err.println("   -fixVersionFile   Try to fix missing hbase.version file in hdfs.");
-    System.err.println("   -maxMerge <n>     When fixing region overlaps, allow at most <n> regions to merge. (n=" + DEFAULT_MAX_MERGE +" by default)");
-    System.err.println("   -sidelineBigOverlaps  When fixing region overlaps, allow to sideline big overlaps");
-    System.err.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
-    System.err.println("   -fixSplitParents  Try to force offline split parents to be online.");
-    System.err.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
-    System.err.println("   -fixReferenceFiles  Try to offline lingering reference store files");
+    out.println("   -fixHdfsHoles     Try to fix region holes in hdfs.");
+    out.println("   -fixHdfsOrphans   Try to fix region dirs with no .regioninfo file in hdfs");
+    out.println("   -fixTableOrphans  Try to fix table dirs with no .tableinfo file in hdfs (online mode only)");
+    out.println("   -fixHdfsOverlaps  Try to fix region overlaps in hdfs.");
+    out.println("   -fixVersionFile   Try to fix missing hbase.version file in hdfs.");
+    out.println("   -maxMerge <n>     When fixing region overlaps, allow at most <n> regions to merge. (n=" + DEFAULT_MAX_MERGE +" by default)");
+    out.println("   -sidelineBigOverlaps  When fixing region overlaps, allow to sideline big overlaps");
+    out.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
+    out.println("   -fixSplitParents  Try to force offline split parents to be online.");
+    out.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
+    out.println("   -fixReferenceFiles  Try to offline lingering reference store files");
 
-    System.err.println("");
-    System.err.println("  Datafile Repair options: (expert features, use with caution!)");
-    System.err.println("   -checkCorruptHFiles     Check all Hfiles by opening them to make sure they are valid");
-    System.err.println("   -sidelineCorruptHfiles  Quarantine corrupted HFiles.  implies -checkCorruptHfiles");
+    out.println("");
+    out.println("  Datafile Repair options: (expert features, use with caution!)");
+    out.println("   -checkCorruptHFiles     Check all Hfiles by opening them to make sure they are valid");
+    out.println("   -sidelineCorruptHfiles  Quarantine corrupted HFiles.  implies -checkCorruptHfiles");
 
-    System.err.println("");
-    System.err.println("  Metadata Repair shortcuts");
-    System.err.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
+    out.println("");
+    out.println("  Metadata Repair shortcuts");
+    out.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
         "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps -fixReferenceFiles");
-    System.err.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
+    out.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
+
+    out.flush();
+    errors.reportError(ERROR_CODE.WRONG_USAGE, sw.toString());
 
     setRetCode(-2);
     return this;
@@ -3445,39 +3496,40 @@ public class HBaseFsck extends Configured implements Tool {
         setDisplayFullReport();
       } else if (cmd.equals("-timelag")) {
         if (i == args.length - 1) {
-          System.err.println("HBaseFsck: -timelag needs a value.");
+          errors.reportError(ERROR_CODE.WRONG_USAGE, "HBaseFsck: -timelag needs a value.");
           return printUsageAndExit();
         }
         try {
           long timelag = Long.parseLong(args[i+1]);
           setTimeLag(timelag);
         } catch (NumberFormatException e) {
-          System.err.println("-timelag needs a numeric value.");
+          errors.reportError(ERROR_CODE.WRONG_USAGE, "-timelag needs a numeric value.");
           return printUsageAndExit();
         }
         i++;
       } else if (cmd.equals("-sleepBeforeRerun")) {
         if (i == args.length - 1) {
-          System.err.println("HBaseFsck: -sleepBeforeRerun needs a value.");
+          errors.reportError(ERROR_CODE.WRONG_USAGE,
+            "HBaseFsck: -sleepBeforeRerun needs a value.");
           return printUsageAndExit();
         }
         try {
           sleepBeforeRerun = Long.parseLong(args[i+1]);
         } catch (NumberFormatException e) {
-          System.err.println("-sleepBeforeRerun needs a numeric value.");
+          errors.reportError(ERROR_CODE.WRONG_USAGE, "-sleepBeforeRerun needs a numeric value.");
           return printUsageAndExit();
         }
         i++;
       } else if (cmd.equals("-sidelineDir")) {
         if (i == args.length - 1) {
-          System.err.println("HBaseFsck: -sidelineDir needs a value.");
+          errors.reportError(ERROR_CODE.WRONG_USAGE, "HBaseFsck: -sidelineDir needs a value.");
           return printUsageAndExit();
         }
         i++;
         setSidelineDir(args[i]);
       } else if (cmd.equals("-fix")) {
-        System.err.println("This option is deprecated, please use " +
-          "-fixAssignments instead.");
+        errors.reportError(ERROR_CODE.WRONG_USAGE,
+          "This option is deprecated, please use  -fixAssignments instead.");
         setFixAssignments(true);
       } else if (cmd.equals("-fixAssignments")) {
         setFixAssignments(true);
@@ -3532,27 +3584,31 @@ public class HBaseFsck extends Configured implements Tool {
         setCheckHdfs(true);
       } else if (cmd.equals("-maxOverlapsToSideline")) {
         if (i == args.length - 1) {
-          System.err.println("-maxOverlapsToSideline needs a numeric value argument.");
+          errors.reportError(ERROR_CODE.WRONG_USAGE,
+            "-maxOverlapsToSideline needs a numeric value argument.");
           return printUsageAndExit();
         }
         try {
           int maxOverlapsToSideline = Integer.parseInt(args[i+1]);
           setMaxOverlapsToSideline(maxOverlapsToSideline);
         } catch (NumberFormatException e) {
-          System.err.println("-maxOverlapsToSideline needs a numeric value argument.");
+          errors.reportError(ERROR_CODE.WRONG_USAGE,
+            "-maxOverlapsToSideline needs a numeric value argument.");
           return printUsageAndExit();
         }
         i++;
       } else if (cmd.equals("-maxMerge")) {
         if (i == args.length - 1) {
-          System.err.println("-maxMerge needs a numeric value argument.");
+          errors.reportError(ERROR_CODE.WRONG_USAGE,
+            "-maxMerge needs a numeric value argument.");
           return printUsageAndExit();
         }
         try {
           int maxMerge = Integer.parseInt(args[i+1]);
           setMaxMerge(maxMerge);
         } catch (NumberFormatException e) {
-          System.err.println("-maxMerge needs a numeric value argument.");
+          errors.reportError(ERROR_CODE.WRONG_USAGE,
+            "-maxMerge needs a numeric value argument.");
           return printUsageAndExit();
         }
         i++;
@@ -3561,11 +3617,11 @@ public class HBaseFsck extends Configured implements Tool {
       } else if (cmd.equals("-metaonly")) {
         setCheckMetaOnly();
       } else if (cmd.startsWith("-")) {
-        System.err.println("Unrecognized option:" + cmd);
+        errors.reportError(ERROR_CODE.WRONG_USAGE, "Unrecognized option:" + cmd);
         return printUsageAndExit();
       } else {
         includeTable(cmd);
-        System.out.println("Allow checking/fixes for table: " + cmd);
+        errors.print("Allow checking/fixes for table: " + cmd);
       }
     }
 
@@ -3597,9 +3653,7 @@ public class HBaseFsck extends Configured implements Tool {
         tableDirs = FSUtils.getTableDirs(FSUtils.getCurrentFileSystem(getConf()), rootdir);
       }
       hfcc.checkTables(tableDirs);
-      PrintWriter out = new PrintWriter(System.out);
-      hfcc.report(out);
-      out.flush();
+      hfcc.report(errors);
     }
 
     // check and fix table integrity, region consistency.
@@ -3634,13 +3688,22 @@ public class HBaseFsck extends Configured implements Tool {
    * ls -r for debugging purposes
    */
   void debugLsr(Path p) throws IOException {
-    debugLsr(getConf(), p);
+    debugLsr(getConf(), p, errors);
   }
 
   /**
    * ls -r for debugging purposes
    */
-  public static void debugLsr(Configuration conf, Path p) throws IOException {
+  public static void debugLsr(Configuration conf,
+      Path p) throws IOException {
+    debugLsr(conf, p, new PrintingErrorReporter());
+  }
+
+  /**
+   * ls -r for debugging purposes
+   */
+  public static void debugLsr(Configuration conf,
+      Path p, ErrorReporter errors) throws IOException {
     if (!LOG.isDebugEnabled() || p == null) {
       return;
     }
@@ -3650,7 +3713,7 @@ public class HBaseFsck extends Configured implements Tool {
       // nothing
       return;
     }
-    System.out.println(p);
+    errors.print(p.toString());
 
     if (fs.isFile(p)) {
       return;
@@ -3659,7 +3722,7 @@ public class HBaseFsck extends Configured implements Tool {
     if (fs.getFileStatus(p).isDir()) {
       FileStatus[] fss= fs.listStatus(p);
       for (FileStatus status : fss) {
-        debugLsr(conf, status.getPath());
+        debugLsr(conf, status.getPath(), errors);
       }
     }
   }

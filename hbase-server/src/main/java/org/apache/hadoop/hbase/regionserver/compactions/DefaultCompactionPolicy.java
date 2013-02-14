@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Random;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 
@@ -50,6 +52,26 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
 
   public DefaultCompactionPolicy() {
     compactor = new DefaultCompactor(this);
+  }
+
+  @Override
+  public List<StoreFile> preSelectCompaction(
+      List<StoreFile> candidateFiles, final List<StoreFile> filesCompacting) {
+    // candidates = all storefiles not already in compaction queue
+    if (!filesCompacting.isEmpty()) {
+      // exclude all files older than the newest file we're currently
+      // compacting. this allows us to preserve contiguity (HBASE-2856)
+      StoreFile last = filesCompacting.get(filesCompacting.size() - 1);
+      int idx = candidateFiles.indexOf(last);
+      Preconditions.checkArgument(idx != -1);
+      candidateFiles.subList(0, idx + 1).clear();
+    }
+    return candidateFiles;
+  }
+
+  @Override
+  public int getSystemCompactionPriority(final Collection<StoreFile> storeFiles) {
+    return this.comConf.getBlockingStorefileCount() - storeFiles.size();
   }
 
   /**
@@ -293,7 +315,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
    */
-  public boolean isMajorCompaction(final List<StoreFile> filesToCompact)
+  public boolean isMajorCompaction(final Collection<StoreFile> filesToCompact)
       throws IOException {
     boolean result = false;
     long mcTime = getNextMajorCompactTime(filesToCompact);
@@ -308,7 +330,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
       long cfTtl = this.store.getStoreFileTtl();
       if (filesToCompact.size() == 1) {
         // Single file
-        StoreFile sf = filesToCompact.get(0);
+        StoreFile sf = filesToCompact.iterator().next();
         Long minTimestamp = sf.getMinimumTimestamp();
         long oldest = (minTimestamp == null)
             ? Long.MIN_VALUE
@@ -337,7 +359,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     return result;
   }
 
-  public long getNextMajorCompactTime(final List<StoreFile> filesToCompact) {
+  public long getNextMajorCompactTime(final Collection<StoreFile> filesToCompact) {
     // default = 24hrs
     long ret = comConf.getMajorCompactionPeriod();
     if (ret > 0) {
@@ -366,11 +388,10 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     return compactionSize > comConf.getThrottlePoint();
   }
 
-  /**
-   * @param numCandidates Number of candidate store files
-   * @return whether a compactionSelection is possible
-   */
-  public boolean needsCompaction(int numCandidates) {
+  @Override
+  public boolean needsCompaction(final Collection<StoreFile> storeFiles,
+      final List<StoreFile> filesCompacting) {
+    int numCandidates = storeFiles.size() - filesCompacting.size();
     return numCandidates > comConf.getMinFilesToCompact();
   }
 

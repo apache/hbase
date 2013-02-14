@@ -1076,7 +1076,7 @@ public class TestHLogSplit {
       }
       Path tableDir = new Path(HBASEDIR, new String(TABLE_NAME));
       Path regionDir = new Path(tableDir, REGIONS.get(0));
-      Path recoveredEdits = new Path(regionDir, HLogSplitter.RECOVERED_EDITS);
+      Path recoveredEdits = new Path(regionDir, HLog.RECOVERED_EDITS_DIR);
       String region = "juliet";
       Path julietLog = new Path(HLOGDIR, HLOG_FILE_PREFIX + ".juliet");
       try {

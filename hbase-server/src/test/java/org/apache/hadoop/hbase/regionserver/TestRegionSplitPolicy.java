@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -249,6 +248,42 @@ public class TestRegionSplitPolicy {
 
     assertEquals("store 2 split",
         Bytes.toString(policy.getSplitPoint()));
+  }
+
+  @Test
+  public void testDelimitedKeyPrefixRegionSplitPolicy() throws IOException {
+    HTableDescriptor myHtd = new HTableDescriptor();
+    myHtd.setValue(HTableDescriptor.SPLIT_POLICY,
+        DelimitedKeyPrefixRegionSplitPolicy.class.getName());
+    myHtd.setValue(DelimitedKeyPrefixRegionSplitPolicy.DELIMITER_KEY, ",");
+
+    HRegion myMockRegion = Mockito.mock(HRegion.class);
+    Mockito.doReturn(myHtd).when(myMockRegion).getTableDesc();
+    Mockito.doReturn(stores).when(myMockRegion).getStores();
+
+    HStore mockStore = Mockito.mock(HStore.class);
+    Mockito.doReturn(2000L).when(mockStore).getSize();
+    Mockito.doReturn(true).when(mockStore).canSplit();
+    Mockito.doReturn(Bytes.toBytes("ab,cd")).when(mockStore).getSplitPoint();
+    stores.put(new byte[] { 1 }, mockStore);
+
+    DelimitedKeyPrefixRegionSplitPolicy policy = (DelimitedKeyPrefixRegionSplitPolicy) RegionSplitPolicy
+        .create(myMockRegion, conf);
+
+    assertEquals("ab", Bytes.toString(policy.getSplitPoint()));
+
+    Mockito.doReturn(true).when(myMockRegion).shouldForceSplit();
+    Mockito.doReturn(Bytes.toBytes("efg,h")).when(myMockRegion)
+        .getExplicitSplitPoint();
+
+    policy = (DelimitedKeyPrefixRegionSplitPolicy) RegionSplitPolicy
+        .create(myMockRegion, conf);
+
+    assertEquals("efg", Bytes.toString(policy.getSplitPoint()));
+
+    Mockito.doReturn(Bytes.toBytes("ijk")).when(myMockRegion)
+    .getExplicitSplitPoint();
+    assertEquals("ijk", Bytes.toString(policy.getSplitPoint()));
   }
 
 }

@@ -145,7 +145,8 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
 
     // Master controlled events to be executed on the master
     M_SERVER_SHUTDOWN         (70, ExecutorType.MASTER_SERVER_OPERATIONS),  // Master is processing shutdown of a RS
-    M_META_SERVER_SHUTDOWN    (72, ExecutorType.MASTER_META_SERVER_OPERATIONS);  // Master is processing shutdown of RS hosting a meta region (-ROOT- or .META.).
+    M_META_SERVER_SHUTDOWN    (72, ExecutorType.MASTER_META_SERVER_OPERATIONS),  // Master is processing shutdown of RS hosting a meta region (-ROOT- or .META.).
+    M_MASTER_RECOVERY         (73, ExecutorType.MASTER_SERVER_OPERATIONS); // Master is processing recovery of regions found in ZK RIT
 
     private final int code;
     private final ExecutorService.ExecutorType executor;

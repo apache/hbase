@@ -251,9 +251,12 @@ row10	c1	c2
        <title>WALPlayer</title>
        <para>WALPlayer is a utility to replay WAL files into HBase.
        </para>
-       <para>The WAL can be replayed for a set of tables or all tables, and a timerange can be provided (in milliseconds). The WAL is filtered to this set of tables. The output can optionally be mapped to another set of tables.
+       <para>The WAL can be replayed for a set of tables or all tables, and a
+           timerange can be provided (in milliseconds). The WAL is filtered to
+           this set of tables. The output can optionally be mapped to another set of tables.
        </para>
-       <para>WALPlayer can also generate HFiles for later bulk importing, in that case only a single table and no mapping can be specified.
+       <para>WALPlayer can also generate HFiles for later bulk importing, in that case
+           only a single table and no mapping can be specified.
        </para>
        <para>Invoke via:
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer [options] &lt;wal inputdir&gt; &lt;tables&gt; [&lt;tableMappings>]&gt;
@@ -263,18 +266,41 @@ row10	c1	c2
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer /backuplogdir oldTable1,oldTable2 newTable1,newTable2
 </programlisting>
        </para>
+       <para>
+           WALPlayer, by default, runs as a mapreduce job.  To NOT run WALPlayer as a mapreduce job on your cluster,
+           force it to run all in the local process by adding the flags <code>-Dmapred.job.tracker=local</code> on the command line.
+       </para>
     </section>
     <section xml:id="rowcounter">
-       <title>RowCounter</title>
-       <para>RowCounter is a mapreduce job to count all the rows of a table.  This is a good utility to use
-           as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
-           It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to
-           exploit.
+       <title>RowCounter and CellCounter</title>
+       <para><ulink url="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html">RowCounter</ulink> is a
+       mapreduce job to count all the rows of a table.  This is a good utility to use as a sanity check to ensure that HBase can read
+       all the blocks of a table if there are any concerns of metadata inconsistency. It will run the mapreduce all in a single
+       process but it will run faster if you have a MapReduce cluster in place for it to exploit.
 <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter &lt;tablename&gt; [&lt;column1&gt; &lt;column2&gt;...]
 </programlisting>
        </para>
-       <para>Note:  caching for the input Scan is configured via <code>hbase.client.scanner.caching</code> in the job configuration.
+       <para>Note: caching for the input Scan is configured via <code>hbase.client.scanner.caching</code> in the job configuration.
        </para>
+       <para>HBase ships another diagnostic mapreduce job called
+         <ulink url="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/CellCounter.html">CellCounter</ulink>. Like
+         RowCounter, it gathers more fine-grained statistics about your table. The statistics gathered by RowCounter are more fine-grained
+         and include:
+         <itemizedlist>
+           <listitem>Total number of rows in the table.</listitem>
+           <listitem>Total number of CFs across all rows.</listitem>
+           <listitem>Total qualifiers across all rows.</listitem>
+           <listitem>Total occurrence of each CF.</listitem>
+           <listitem>Total occurrence of each qualifier.</listitem>
+           <listitem>Total number of versions of each qualifier.</listitem>
+         </itemizedlist>
+       </para>
+       <para>The program allows you to limit the scope of the run. Provide a row regex or prefix to limit the rows to analyze. Use
+         <code>hbase.mapreduce.scan.column.family</code> to specify scanning a single column family.
+         <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.CellCounter &lt;tablename&gt; &lt;outputDir&gt; [regex or prefix]</programlisting>
+       </para>
+       <para>Note: just like RowCounter, caching for the input Scan is configured via <code>hbase.client.scanner.caching</code> in the
+       job configuration. </para>
     </section>
 
     </section>  <!--  tools -->

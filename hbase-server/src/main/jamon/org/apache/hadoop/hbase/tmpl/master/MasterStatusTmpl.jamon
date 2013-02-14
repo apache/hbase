@@ -299,6 +299,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
         <%if (frags != null) %>
             <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
         </%if>
+        <th>Online Regions</th>
         <th>Description</th>
     </tr>
     <%for HTableDescriptor htDesc : tables%>
@@ -307,6 +308,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
         <%if (frags != null) %>
             <td align="center"><% frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
+        <td><% master.getAssignmentManager().getRegionStates().getRegionsOfTable(htDesc.getName()).size() %>
         <td><% htDesc.toStringCustomizedValues() %></td>
     </tr>
     </%for>

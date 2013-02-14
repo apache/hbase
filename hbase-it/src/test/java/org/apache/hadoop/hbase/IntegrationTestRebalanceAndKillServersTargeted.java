@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.util.ChaosMonkey.Action;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -42,7 +43,7 @@ import org.junit.experimental.categories.Category;
  * killing some of these servers, and triggering balancer.
  * It's configured using a set of constants on top, which cover this scenario and are
  * reasonable for minicluster. See constants if you want to tweak the test.
- * You can configure how long the test should run by using 
+ * You can configure how long the test should run by using
  * "hbase.IntegrationTestRebalanceAndKillServersTargeted.runtime" configuration parameter,
  * which is probably most useful on cluster.
  */
@@ -116,7 +117,8 @@ public class IntegrationTestRebalanceAndKillServersTargeted extends IngestIntegr
     super.tearDown();
   }
 
-  @Test
+  // Disabled until we fix hbase-7520
+  @Ignore @Test
   public void testDataIngest() throws Exception {
     runIngestTest(DEFAULT_RUN_TIME, 2500, 10, 100, 20);
   }

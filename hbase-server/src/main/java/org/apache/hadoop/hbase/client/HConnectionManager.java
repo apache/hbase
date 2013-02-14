@@ -584,9 +584,6 @@ public class HConnectionManager {
     throws ZooKeeperConnectionException {
       this.conf = conf;
       this.managed = managed;
-      // ProtobufRpcClientEngine is the main RpcClientEngine implementation,
-      // but we maintain access through an interface to allow overriding for tests
-      this.rpcEngine = new ProtobufRpcClientEngine(conf);
       String adminClassName = conf.get(REGION_PROTOCOL_CLASS,
         DEFAULT_ADMIN_PROTOCOL_CLASS);
       this.closed = false;
@@ -621,6 +618,10 @@ public class HConnectionManager {
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
       retrieveClusterId();
+      // ProtobufRpcClientEngine is the main RpcClientEngine implementation,
+      // but we maintain access through an interface to allow overriding for tests
+      // RPC engine setup must follow obtaining the cluster ID for token authentication to work
+      this.rpcEngine = new ProtobufRpcClientEngine(this.conf);
     }
 
     /**

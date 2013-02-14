@@ -17,28 +17,39 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.apache.hadoop.hbase.util.Pair;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+import java.util.List;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+@Category(MediumTests.class)
 public class TestDeadServer {
+  final ServerName hostname123 = new ServerName("127.0.0.1", 123, 3L);
+  final ServerName hostname123_2 = new ServerName("127.0.0.1", 123, 4L);
+  final ServerName hostname1234 = new ServerName("127.0.0.2", 1234, 4L);
+  final ServerName hostname12345 = new ServerName("127.0.0.2", 12345, 4L);
+
   @Test public void testIsDead() {
     DeadServer ds = new DeadServer();
-    final ServerName hostname123 = new ServerName("127.0.0.1", 123, 3L);
     ds.add(hostname123);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname123);
     assertFalse(ds.areDeadServersInProgress());
-    final ServerName hostname1234 = new ServerName("127.0.0.2", 1234, 4L);
+
     ds.add(hostname1234);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname1234);
     assertFalse(ds.areDeadServersInProgress());
-    final ServerName hostname12345 = new ServerName("127.0.0.2", 12345, 4L);
+
     ds.add(hostname12345);
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname12345);
@@ -52,10 +63,53 @@ public class TestDeadServer {
     ds.add(deadServer);
     assertTrue(ds.isDeadServer(deadServer));
     final ServerName deadServerHostComingAlive =
-      new ServerName("127.0.0.1", 9090, 112321L);
+      new ServerName("127.0.0.1", 9090, 223341L);
     assertTrue(ds.cleanPreviousInstance(deadServerHostComingAlive));
     assertFalse(ds.isDeadServer(deadServer));
     assertFalse(ds.cleanPreviousInstance(deadServerHostComingAlive));
+  }
+
+
+  @Test
+  public void testSortExtract(){
+    ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(mee);
+    mee.setValue(1);
+
+    DeadServer d = new DeadServer();
+
+
+    d.add(hostname123);
+    mee.incValue(1);
+    d.add(hostname1234);
+    mee.incValue(1);
+    d.add(hostname12345);
+
+    List<Pair<ServerName, Long>> copy = d.copyDeadServersSince(2L);
+    Assert.assertEquals(2, copy.size());
+
+    Assert.assertEquals(hostname1234, copy.get(0).getFirst());
+    Assert.assertEquals(new Long(2L), copy.get(0).getSecond());
+
+    Assert.assertEquals(hostname12345, copy.get(1).getFirst());
+    Assert.assertEquals(new Long(3L), copy.get(1).getSecond());
+
+    EnvironmentEdgeManager.reset();
+  }
+
+  @Test
+  public void testClean(){
+    DeadServer d = new DeadServer();
+    d.add(hostname123);
+
+    d.cleanPreviousInstance(hostname12345);
+    Assert.assertFalse(d.isEmpty());
+
+    d.cleanPreviousInstance(hostname1234);
+    Assert.assertFalse(d.isEmpty());
+
+    d.cleanPreviousInstance(hostname123_2);
+    Assert.assertTrue(d.isEmpty());
   }
 
 }

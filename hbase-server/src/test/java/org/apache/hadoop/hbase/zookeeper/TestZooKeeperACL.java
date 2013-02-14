@@ -86,7 +86,6 @@ public class TestZooKeeperACL {
     zkw = new ZooKeeperWatcher(
       new Configuration(TEST_UTIL.getConfiguration()),
         TestZooKeeper.class.getName(), null);
-    ZKUtil.waitForZKConnectionIfAuthenticating(zkw);
   }
 
   /**

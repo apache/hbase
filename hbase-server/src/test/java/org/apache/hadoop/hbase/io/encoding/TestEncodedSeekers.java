@@ -105,15 +105,15 @@ public class TestEncodedSeekers {
 
     //write the data, but leave some in the memstore
     doPuts(region);
-    
+
     //verify correctness when memstore contains data
     doGets(region);
-    
+
     //verify correctness again after compacting
     region.compactStores();
     doGets(region);
 
-    
+
     Map<DataBlockEncoding, Integer> encodingCounts = cache.getEncodingCountsForTest();
 
     // Ensure that compactions don't pollute the cache with unencoded blocks
@@ -124,8 +124,8 @@ public class TestEncodedSeekers {
     assertEquals(encoding, encodingInCache);
     assertTrue(encodingCounts.get(encodingInCache) > 0);
   }
-  
-  
+
+
   private void doPuts(HRegion region) throws IOException{
     LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(MIN_VALUE_SIZE, MAX_VALUE_SIZE);
      for (int i = 0; i < NUM_ROWS; ++i) {
@@ -146,8 +146,8 @@ public class TestEncodedSeekers {
       }
     }
   }
-  
-  
+
+
   private void doGets(HRegion region) throws IOException{
     for (int i = 0; i < NUM_ROWS; ++i) {
       final byte[] rowKey = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();

@@ -952,6 +952,38 @@ public class StoreFile {
   }
 
   /**
+   * Gets the approximate mid-point of this file that is optimal for use in splitting it.
+   * @param comparator Comparator used to compare KVs.
+   * @return The split point row, or null if splitting is not possible, or reader is null.
+   */
+  byte[] getFileSplitPoint(KVComparator comparator) throws IOException {
+    if (this.reader == null) {
+      LOG.warn("Storefile " + this + " Reader is null; cannot get split point");
+      return null;
+    }
+    // Get first, last, and mid keys.  Midkey is the key that starts block
+    // in middle of hfile.  Has column and timestamp.  Need to return just
+    // the row we want to split on as midkey.
+    byte [] midkey = this.reader.midkey();
+    if (midkey != null) {
+      KeyValue mk = KeyValue.createKeyValueFromKey(midkey, 0, midkey.length);
+      byte [] fk = this.reader.getFirstKey();
+      KeyValue firstKey = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
+      byte [] lk = this.reader.getLastKey();
+      KeyValue lastKey = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
+      // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
+      if (comparator.compareRows(mk, firstKey) == 0 || comparator.compareRows(mk, lastKey) == 0) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("cannot split because midkey is the same as first or last row");
+        }
+        return null;
+      }
+      return mk.getRow();
+    }
+    return null;
+  }
+
+  /**
    * A StoreFile writer.  Use this to read/write HBase Store Files. It is package
    * local because it is an implementation detail of the HBase regionserver.
    */
@@ -1770,18 +1802,19 @@ public class StoreFile {
   /**
    * Useful comparators for comparing StoreFiles.
    */
-  abstract static class Comparators {
+  public abstract static class Comparators {
     /**
      * Comparator that compares based on the Sequence Ids of the
      * the StoreFiles. Bulk loads that did not request a seq ID
      * are given a seq id of -1; thus, they are placed before all non-
      * bulk loads, and bulk loads with sequence Id. Among these files,
-     * the bulkLoadTime is used to determine the ordering.
+     * the size is used to determine the ordering, then bulkLoadTime.
      * If there are ties, the path name is used as a tie-breaker.
      */
-    static final Comparator<StoreFile> SEQ_ID =
+    public static final Comparator<StoreFile> SEQ_ID =
       Ordering.compound(ImmutableList.of(
           Ordering.natural().onResultOf(new GetSeqId()),
+          Ordering.natural().onResultOf(new GetFileSize()).reverse(),
           Ordering.natural().onResultOf(new GetBulkTime()),
           Ordering.natural().onResultOf(new GetPathName())
       ));
@@ -1790,6 +1823,13 @@ public class StoreFile {
       @Override
       public Long apply(StoreFile sf) {
         return sf.getMaxSequenceId();
+      }
+    }
+
+    private static class GetFileSize implements Function<StoreFile, Long> {
+      @Override
+      public Long apply(StoreFile sf) {
+        return sf.getReader().length();
       }
     }
 
@@ -1807,19 +1847,5 @@ public class StoreFile {
         return sf.getPath().getName();
       }
     }
-
-    /**
-     * FILE_SIZE = descending sort StoreFiles (largest --> smallest in size)
-     */
-    static final Comparator<StoreFile> FILE_SIZE = Ordering.natural().reverse()
-        .onResultOf(new Function<StoreFile, Long>() {
-          @Override
-          public Long apply(StoreFile sf) {
-            if (sf == null) {
-              throw new IllegalArgumentException("StorFile can not be null");
-            }
-            return sf.getReader().length();
-          }
-        });
   }
 }

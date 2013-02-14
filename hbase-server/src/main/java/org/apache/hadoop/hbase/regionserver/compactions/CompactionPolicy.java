@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -53,6 +54,16 @@ public abstract class CompactionPolicy extends Configured {
   HStore store;
 
   /**
+   * This is called before coprocessor preCompactSelection and should filter the candidates
+   * for coprocessor; i.e. exclude the files that definitely cannot be compacted at this time.
+   * @param candidateFiles candidate files, ordered from oldest to newest
+   * @param filesCompacting files currently compacting
+   * @return the list of files that can theoretically be compacted.
+   */
+  public abstract List<StoreFile> preSelectCompaction(
+      List<StoreFile> candidateFiles, final List<StoreFile> filesCompacting);
+
+  /**
    * @param candidateFiles candidate files, ordered from oldest to newest
    * @return subset copy of candidate list that meets compaction criteria
    * @throws java.io.IOException
@@ -62,11 +73,21 @@ public abstract class CompactionPolicy extends Configured {
     final boolean forceMajor) throws IOException;
 
   /**
+   * @param storeFiles Store files in the store.
+   * @return The system compaction priority of the store, based on storeFiles.
+   *         The priority range is as such - the smaller values are higher priority;
+   *         1 is user priority; only very important, blocking compactions should use
+   *         values lower than that. With default settings, depending on the number of
+   *         store files, the non-blocking priority will be in 2-6 range.
+   */
+  public abstract int getSystemCompactionPriority(final Collection<StoreFile> storeFiles);
+
+  /**
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
    */
   public abstract boolean isMajorCompaction(
-    final List<StoreFile> filesToCompact) throws IOException;
+    final Collection<StoreFile> filesToCompact) throws IOException;
 
   /**
    * @param compactionSize Total size of some compaction
@@ -75,10 +96,12 @@ public abstract class CompactionPolicy extends Configured {
   public abstract boolean throttleCompaction(long compactionSize);
 
   /**
-   * @param numCandidates Number of candidate store files
+   * @param storeFiles Current store files.
+   * @param filesCompacting files currently compacting.
    * @return whether a compactionSelection is possible
    */
-  public abstract boolean needsCompaction(int numCandidates);
+  public abstract boolean needsCompaction(final Collection<StoreFile> storeFiles,
+      final List<StoreFile> filesCompacting);
 
   /**
    * Inform the policy that some configuration has been change,

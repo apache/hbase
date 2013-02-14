@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -517,6 +518,41 @@ public class TestHRegion extends HBaseTestCase {
       HRegion.closeHRegion(this.region);
       this.region = null;
     }
+  }
+
+  public void testAppendWithReadOnlyTable() throws Exception {
+    byte[] TABLE = Bytes.toBytes("readOnlyTable");
+    this.region = initHRegion(TABLE, getName(), conf, true, Bytes.toBytes("somefamily"));
+    boolean exceptionCaught = false;
+    Append append = new Append(Bytes.toBytes("somerow"));
+    append.add(Bytes.toBytes("somefamily"), Bytes.toBytes("somequalifier"), 
+        Bytes.toBytes("somevalue"));
+    try {
+      region.append(append, false);
+    } catch (IOException e) {
+      exceptionCaught = true;
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+    assertTrue(exceptionCaught == true);
+  }
+
+  public void testIncrWithReadOnlyTable() throws Exception {
+    byte[] TABLE = Bytes.toBytes("readOnlyTable");
+    this.region = initHRegion(TABLE, getName(), conf, true, Bytes.toBytes("somefamily"));
+    boolean exceptionCaught = false;    
+    Increment inc = new Increment(Bytes.toBytes("somerow"));
+    inc.addColumn(Bytes.toBytes("somefamily"), Bytes.toBytes("somequalifier"), 1L);
+    try {
+      region.increment(inc, false);
+    } catch (IOException e) {
+      exceptionCaught = true;
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+    assertTrue(exceptionCaught == true);
   }
 
   private void deleteColumns(HRegion r, String value, String keyPrefix)
@@ -3119,7 +3155,7 @@ public class TestHRegion extends HBaseTestCase {
     byte[] tableName = Bytes.toBytes(method);
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, Bytes.toBytes("x"), Bytes.toBytes("z"), method,
-        conf, family);
+        conf, false, family);
     try {
       byte[] rowNotServed = Bytes.toBytes("a");
       Get g = new Get(rowNotServed);
@@ -3221,7 +3257,7 @@ public class TestHRegion extends HBaseTestCase {
       }
       //before compaction
       HStore store = (HStore) region.getStore(fam1);
-      List<StoreFile> storeFiles = store.getStorefiles();
+      Collection<StoreFile> storeFiles = store.getStorefiles();
       for (StoreFile storefile : storeFiles) {
         StoreFile.Reader reader = storefile.getReader();
         reader.loadFileInfo();
@@ -3841,7 +3877,22 @@ public class TestHRegion extends HBaseTestCase {
   public static HRegion initHRegion (byte [] tableName, String callingMethod,
       Configuration conf, byte [] ... families)
     throws IOException{
-    return initHRegion(tableName, null, null, callingMethod, conf, families);
+    return initHRegion(tableName, null, null, callingMethod, conf, false, families);
+  }
+
+  /**
+   * @param tableName
+   * @param callingMethod
+   * @param conf
+   * @param isReadOnly
+   * @param families
+   * @throws IOException
+   * @return A region on which you must call {@link HRegion#closeHRegion(HRegion)} when done.
+   */
+  public static HRegion initHRegion (byte [] tableName, String callingMethod,
+      Configuration conf, boolean isReadOnly, byte [] ... families)
+    throws IOException{
+    return initHRegion(tableName, null, null, callingMethod, conf, isReadOnly, families);
   }
 
   /**
@@ -3850,14 +3901,16 @@ public class TestHRegion extends HBaseTestCase {
    * @param stopKey
    * @param callingMethod
    * @param conf
+   * @param isReadOnly
    * @param families
    * @throws IOException
    * @return A region on which you must call {@link HRegion#closeHRegion(HRegion)} when done.
    */
   private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, byte[]... families)
+      String callingMethod, Configuration conf, boolean isReadOnly, byte[]... families)
       throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.setReadOnly(isReadOnly);
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }

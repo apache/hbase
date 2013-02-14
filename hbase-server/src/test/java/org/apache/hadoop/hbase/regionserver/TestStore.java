@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -269,14 +270,16 @@ public class TestStore extends TestCase {
   }
   
   private static long getLowestTimeStampFromFS(FileSystem fs, 
-      final List<StoreFile> candidates) throws IOException {
+      final Collection<StoreFile> candidates) throws IOException {
     long minTs = Long.MAX_VALUE;
     if (candidates.isEmpty()) {
       return minTs; 
     }
     Path[] p = new Path[candidates.size()];
-    for (int i = 0; i < candidates.size(); ++i) {
-      p[i] = candidates.get(i).getPath();
+    int i = 0;
+    for (StoreFile sf : candidates) {
+      p[i] = sf.getPath();
+      ++i;
     }
     
     FileStatus[] stats = fs.listStatus(p);
@@ -305,7 +308,7 @@ public class TestStore extends TestCase {
     flush(1);
     // Now put in place an empty store file.  Its a little tricky.  Have to
     // do manually with hacked in sequence id.
-    StoreFile f = this.store.getStorefiles().get(0);
+    StoreFile f = this.store.getStorefiles().iterator().next();
     Path storedir = f.getPath().getParent();
     long seqid = f.getMaxSequenceId();
     Configuration c = HBaseConfiguration.create();

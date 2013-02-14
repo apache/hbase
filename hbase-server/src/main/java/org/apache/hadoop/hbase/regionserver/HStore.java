@@ -23,6 +23,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
@@ -78,6 +79,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -104,9 +106,10 @@ import com.google.common.collect.Lists;
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
-//TODO: move StoreConfiguration implementation into a separate class.
 @InterfaceAudience.Private
-public class HStore implements Store, StoreConfiguration {
+public class HStore implements Store {
+  public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 7;
+
   static final Log LOG = LogFactory.getLog(HStore.class);
 
   protected final MemStore memstore;
@@ -124,7 +127,6 @@ public class HStore implements Store, StoreConfiguration {
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
   static int closeCheckInterval = 0;
-  private final int blockingStoreFileCount;
   private volatile long storeSize = 0L;
   private volatile long totalUncompressedBytes = 0L;
   private final Object flushLock = new Object();
@@ -133,12 +135,7 @@ public class HStore implements Store, StoreConfiguration {
 
   private ScanInfo scanInfo;
 
-  /*
-   * List of store files inside this store. This is an immutable list that
-   * is atomically replaced when its contents change.
-   */
-  private volatile ImmutableList<StoreFile> storefiles = null;
-
+  private StoreFileManager storeFileManager;
   final List<StoreFile> filesCompacting = Lists.newArrayList();
 
   // All access must be synchronized.
@@ -213,8 +210,7 @@ public class HStore implements Store, StoreConfiguration {
 
     // Setting up cache configuration for this family
     this.cacheConf = new CacheConfig(conf, family);
-    this.blockingStoreFileCount =
-      conf.getInt("hbase.hstore.blockingStoreFiles", 7);
+
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify", false);
 
@@ -222,7 +218,9 @@ public class HStore implements Store, StoreConfiguration {
       HStore.closeCheckInterval = conf.getInt(
           "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     }
-    this.storefiles = sortAndClone(loadStoreFiles());
+
+    this.storeFileManager = new DefaultStoreFileManager(this.comparator);
+    this.storeFileManager.loadFiles(loadStoreFiles());
 
     // Initialize checksum type from name. The names are CRC32, CRC32C, etc.
     this.checksumType = getChecksumType(conf);
@@ -293,21 +291,18 @@ public class HStore implements Store, StoreConfiguration {
     return this.fs;
   }
 
-  /* Implementation of StoreConfiguration */
+  /* Implementation of StoreConfigInformation */
+  @Override
   public long getStoreFileTtl() {
     // TTL only applies if there's no MIN_VERSIONs setting on the column.
     return (this.scanInfo.getMinVersions() == 0) ? this.ttl : Long.MAX_VALUE;
   }
 
-  public Long getMajorCompactionPeriod() {
-    String strCompactionTime = this.family.getValue(HConstants.MAJOR_COMPACTION_PERIOD);
-    return (strCompactionTime != null) ? new Long(strCompactionTime) : null;
-  }
-
+  @Override
   public long getMemstoreFlushSize() {
     return this.region.memstoreFlushSize;
   }
-  /* End implementation of StoreConfiguration */
+  /* End implementation of StoreConfigInformation */
 
   /**
    * Returns the configured bytesPerChecksum value.
@@ -345,7 +340,7 @@ public class HStore implements Store, StoreConfiguration {
   }
 
   /**
-   * @return The maximum sequence id in all store files.
+   * @return The maximum sequence id in all store files. Used for log replay.
    */
   long getMaxSequenceId(boolean includeBulkFiles) {
     return StoreFile.getMaxSequenceIdInList(this.getStorefiles(), includeBulkFiles);
@@ -533,8 +528,8 @@ public class HStore implements Store, StoreConfiguration {
    * @return All store files.
    */
   @Override
-  public List<StoreFile> getStorefiles() {
-    return this.storefiles;
+  public Collection<StoreFile> getStorefiles() {
+    return this.storeFileManager.getStorefiles();
   }
 
   @Override
@@ -637,11 +632,9 @@ public class HStore implements Store, StoreConfiguration {
     // Append the new storefile into the list
     this.lock.writeLock().lock();
     try {
-      ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(storefiles);
-      newFiles.add(sf);
-      this.storefiles = sortAndClone(newFiles);
+      this.storeFileManager.insertNewFile(sf);
     } finally {
-      // We need the lock, as long as we are updating the storefiles
+      // We need the lock, as long as we are updating the storeFiles
       // or changing the memstore. Let us release it before calling
       // notifyChangeReadersObservers. See HBASE-4485 for a possible
       // deadlock scenario that could have happened if continue to hold
@@ -664,13 +657,11 @@ public class HStore implements Store, StoreConfiguration {
   }
 
   @Override
-  public ImmutableList<StoreFile> close() throws IOException {
+  public ImmutableCollection<StoreFile> close() throws IOException {
     this.lock.writeLock().lock();
     try {
-      ImmutableList<StoreFile> result = storefiles;
-
       // Clear so metrics doesn't find them.
-      storefiles = ImmutableList.of();
+      ImmutableCollection<StoreFile> result = storeFileManager.clearFiles();
 
       if (!result.isEmpty()) {
         // initialize the thread pool for closing store files in parallel.
@@ -967,7 +958,7 @@ public class HStore implements Store, StoreConfiguration {
   }
 
   /*
-   * Change storefiles adding into place the Reader produced by this new flush.
+   * Change storeFiles adding into place the Reader produced by this new flush.
    * @param sf
    * @param set That was used to make the passed file <code>p</code>.
    * @throws IOException
@@ -978,13 +969,10 @@ public class HStore implements Store, StoreConfiguration {
   throws IOException {
     this.lock.writeLock().lock();
     try {
-      ArrayList<StoreFile> newList = new ArrayList<StoreFile>(storefiles);
-      newList.add(sf);
-      storefiles = sortAndClone(newList);
-
+      this.storeFileManager.insertNewFile(sf);
       this.memstore.clearSnapshot(set);
     } finally {
-      // We need the lock, as long as we are updating the storefiles
+      // We need the lock, as long as we are updating the storeFiles
       // or changing the memstore. Let us release it before calling
       // notifyChangeReadersObservers. See HBASE-4485 for a possible
       // deadlock scenario that could have happened if continue to hold
@@ -1014,14 +1002,13 @@ public class HStore implements Store, StoreConfiguration {
    * @return all scanners for this store
    */
   protected List<KeyValueScanner> getScanners(boolean cacheBlocks,
-      boolean isGet,
-      boolean isCompaction,
-      ScanQueryMatcher matcher) throws IOException {
-    List<StoreFile> storeFiles;
+      boolean isGet, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
+      byte[] stopRow) throws IOException {
+    Collection<StoreFile> storeFilesToScan;
     List<KeyValueScanner> memStoreScanners;
     this.lock.readLock().lock();
     try {
-      storeFiles = this.getStorefiles();
+      storeFilesToScan = this.storeFileManager.getFilesForScanOrGet(isGet, startRow, stopRow);
       memStoreScanners = this.memstore.getScanners();
     } finally {
       this.lock.readLock().unlock();
@@ -1033,7 +1020,7 @@ public class HStore implements Store, StoreConfiguration {
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(storeFiles, cacheBlocks, isGet, isCompaction, matcher);
+      .getScannersForStoreFiles(storeFilesToScan, cacheBlocks, isGet, isCompaction, matcher);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);
@@ -1153,15 +1140,21 @@ public class HStore implements Store, StoreConfiguration {
     return sfs;
   }
 
-  @Override
-  public void compactRecentForTesting(int N) throws IOException {
+  /**
+   * This method tries to compact N recent files for testing.
+   * Note that because compacting "recent" files only makes sense for some policies,
+   * e.g. the default one, it assumes default policy is used. It doesn't use policy,
+   * but instead makes a compaction candidate list by itself.
+   * @param N Number of files.
+   */
+  public void compactRecentForTestingAssumingDefaultPolicy(int N) throws IOException {
     List<StoreFile> filesToCompact;
     boolean isMajor;
 
     this.lock.readLock().lock();
     try {
       synchronized (filesCompacting) {
-        filesToCompact = Lists.newArrayList(storefiles);
+        filesToCompact = Lists.newArrayList(storeFileManager.getStorefiles());
         if (!filesCompacting.isEmpty()) {
           // exclude all files older than the newest file we're currently
           // compacting. this allows us to preserve contiguity (HBASE-2856)
@@ -1176,7 +1169,7 @@ public class HStore implements Store, StoreConfiguration {
         }
 
         filesToCompact = filesToCompact.subList(count - N, count);
-        isMajor = (filesToCompact.size() == storefiles.size());
+        isMajor = (filesToCompact.size() == storeFileManager.getStorefileCount());
         filesCompacting.addAll(filesToCompact);
         Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
       }
@@ -1204,7 +1197,7 @@ public class HStore implements Store, StoreConfiguration {
 
   @Override
   public boolean hasReferences() {
-    return StoreUtils.hasReferences(this.storefiles);
+    return StoreUtils.hasReferences(this.storeFileManager.getStorefiles());
   }
 
   @Override
@@ -1214,15 +1207,14 @@ public class HStore implements Store, StoreConfiguration {
 
   @Override
   public boolean isMajorCompaction() throws IOException {
-    for (StoreFile sf : this.storefiles) {
+    for (StoreFile sf : this.storeFileManager.getStorefiles()) {
+      // TODO: what are these reader checks all over the place?
       if (sf.getReader() == null) {
         LOG.debug("StoreFile " + sf + " has null Reader");
         return false;
       }
     }
-
-    List<StoreFile> candidates = new ArrayList<StoreFile>(this.storefiles);
-    return compactionPolicy.isMajorCompaction(candidates);
+    return compactionPolicy.isMajorCompaction(this.storeFileManager.getStorefiles());
   }
 
   public CompactionRequest requestCompaction() throws IOException {
@@ -1238,22 +1230,13 @@ public class HStore implements Store, StoreConfiguration {
     CompactionRequest ret = null;
     this.lock.readLock().lock();
     try {
+      List<StoreFile> candidates = Lists.newArrayList(storeFileManager.getStorefiles());
       synchronized (filesCompacting) {
-        // candidates = all storefiles not already in compaction queue
-        List<StoreFile> candidates = Lists.newArrayList(storefiles);
-        if (!filesCompacting.isEmpty()) {
-          // exclude all files older than the newest file we're currently
-          // compacting. this allows us to preserve contiguity (HBASE-2856)
-          StoreFile last = filesCompacting.get(filesCompacting.size() - 1);
-          int idx = candidates.indexOf(last);
-          Preconditions.checkArgument(idx != -1);
-          candidates.subList(0, idx + 1).clear();
-        }
-
+        // First we need to pre-select compaction, and then pre-compact selection!
+        candidates = compactionPolicy.preSelectCompaction(candidates, filesCompacting);
         boolean override = false;
         if (region.getCoprocessorHost() != null) {
-          override = region.getCoprocessorHost().preCompactSelection(
-              this, candidates);
+          override = region.getCoprocessorHost().preCompactSelection(this, candidates);
         }
         CompactSelection filesToCompact;
         if (override) {
@@ -1284,9 +1267,8 @@ public class HStore implements Store, StoreConfiguration {
         filesCompacting.addAll(filesToCompact.getFilesToCompact());
         Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
 
-        // major compaction iff all StoreFiles are included
         boolean isMajor =
-            (filesToCompact.getFilesToCompact().size() == this.storefiles.size());
+            (filesToCompact.getFilesToCompact().size() == this.getStorefilesCount());
         if (isMajor) {
           // since we're enqueuing a major, update the compaction wait interval
           this.forceMajor = false;
@@ -1382,25 +1364,22 @@ public class HStore implements Store, StoreConfiguration {
           this.family.getBloomFilterType(), this.dataBlockEncoder);
       result.createReader();
     }
+
     try {
       this.lock.writeLock().lock();
       try {
-        // Change this.storefiles so it reflects new state but do not
+        // Change this.storeFiles so it reflects new state but do not
         // delete old store files until we have sent out notification of
         // change in case old files are still being accessed by outstanding
         // scanners.
-        ArrayList<StoreFile> newStoreFiles = Lists.newArrayList(storefiles);
-        newStoreFiles.removeAll(compactedFiles);
-        filesCompacting.removeAll(compactedFiles); // safe bc: lock.writeLock()
-
-        // If a StoreFile result, move it into place.  May be null.
+        List<StoreFile> results = new ArrayList<StoreFile>(1);
         if (result != null) {
-          newStoreFiles.add(result);
+          results.add(result);
         }
-
-        this.storefiles = sortAndClone(newStoreFiles);
+        this.storeFileManager.addCompactionResults(compactedFiles, results);
+        filesCompacting.removeAll(compactedFiles); // safe bc: lock.writeLock()
       } finally {
-        // We need the lock, as long as we are updating the storefiles
+        // We need the lock, as long as we are updating the storeFiles
         // or changing the memstore. Let us release it before calling
         // notifyChangeReadersObservers. See HBASE-4485 for a possible
         // deadlock scenario that could have happened if continue to hold
@@ -1427,7 +1406,7 @@ public class HStore implements Store, StoreConfiguration {
     // 4. Compute new store size
     this.storeSize = 0L;
     this.totalUncompressedBytes = 0L;
-    for (StoreFile hsf : this.storefiles) {
+    for (StoreFile hsf : this.storeFileManager.getStorefiles()) {
       StoreFile.Reader r = hsf.getReader();
       if (r == null) {
         LOG.warn("StoreFile " + hsf + " has a null Reader");
@@ -1437,21 +1416,6 @@ public class HStore implements Store, StoreConfiguration {
       this.totalUncompressedBytes += r.getTotalUncompressedBytes();
     }
     return result;
-  }
-
-  public ImmutableList<StoreFile> sortAndClone(List<StoreFile> storeFiles) {
-    Collections.sort(storeFiles, StoreFile.Comparators.SEQ_ID);
-    ImmutableList<StoreFile> newList = ImmutableList.copyOf(storeFiles);
-    return newList;
-  }
-
-  // ////////////////////////////////////////////////////////////////////////////
-  // Accessors.
-  // (This is the only section that is directly useful!)
-  //////////////////////////////////////////////////////////////////////////////
-  @Override
-  public int getNumberOfStoreFiles() {
-    return this.storefiles.size();
   }
 
   /*
@@ -1490,10 +1454,18 @@ public class HStore implements Store, StoreConfiguration {
       // First go to the memstore.  Pick up deletes and candidates.
       this.memstore.getRowKeyAtOrBefore(state);
       // Check if match, if we got a candidate on the asked for 'kv' row.
-      // Process each store file. Run through from newest to oldest.
-      for (StoreFile sf : Lists.reverse(storefiles)) {
-        // Update the candidate keys from the current map file
-        rowAtOrBeforeFromStoreFile(sf, state);
+      // Process each relevant store file. Run through from newest to oldest.
+      Iterator<StoreFile> sfIterator =
+          this.storeFileManager.getCandidateFilesForRowKeyBefore(state.getTargetKey());
+      while (sfIterator.hasNext()) {
+        StoreFile sf = sfIterator.next();
+        sfIterator.remove(); // Remove sf from iterator.
+        boolean haveNewCandidate = rowAtOrBeforeFromStoreFile(sf, state);
+        if (haveNewCandidate) {
+          // TODO: we may have an optimization here which stops the search if we find exact match.
+          sfIterator = this.storeFileManager.updateCandidateFilesForRowKeyBefore(sfIterator,
+            state.getTargetKey(), state.getCandidate());
+        }
       }
       return state.getCandidate();
     } finally {
@@ -1506,22 +1478,23 @@ public class HStore implements Store, StoreConfiguration {
    * @param f
    * @param state
    * @throws IOException
+   * @return True iff the candidate has been updated in the state.
    */
-  private void rowAtOrBeforeFromStoreFile(final StoreFile f,
+  private boolean rowAtOrBeforeFromStoreFile(final StoreFile f,
                                           final GetClosestRowBeforeTracker state)
       throws IOException {
     StoreFile.Reader r = f.getReader();
     if (r == null) {
       LOG.warn("StoreFile " + f + " has a null Reader");
-      return;
+      return false;
     }
     if (r.getEntries() == 0) {
       LOG.warn("StoreFile " + f + " is a empty store file");
-      return;
+      return false;
     }
     // TODO: Cache these keys rather than make each time?
     byte [] fk = r.getFirstKey();
-    if (fk == null) return;
+    if (fk == null) return false;
     KeyValue firstKV = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
     byte [] lk = r.getLastKey();
     KeyValue lastKV = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
@@ -1529,7 +1502,7 @@ public class HStore implements Store, StoreConfiguration {
     if (this.comparator.compareRows(lastKV, firstOnRow) < 0) {
       // If last key in file is not of the target table, no candidates in this
       // file.  Return.
-      if (!state.isTargetTable(lastKV)) return;
+      if (!state.isTargetTable(lastKV)) return false;
       // If the row we're looking for is past the end of file, set search key to
       // last key. TODO: Cache last and first key rather than make each time.
       firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
@@ -1537,10 +1510,10 @@ public class HStore implements Store, StoreConfiguration {
     // Get a scanner that caches blocks and that uses pread.
     HFileScanner scanner = r.getScanner(true, true, false);
     // Seek scanner.  If can't seek it, return.
-    if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
+    if (!seekToScanner(scanner, firstOnRow, firstKV)) return false;
     // If we found candidate on firstOnRow, just return. THIS WILL NEVER HAPPEN!
     // Unlikely that there'll be an instance of actual first row in table.
-    if (walkForwardInSingleRow(scanner, firstOnRow, state)) return;
+    if (walkForwardInSingleRow(scanner, firstOnRow, state)) return true;
     // If here, need to start backing up.
     while (scanner.seekBefore(firstOnRow.getBuffer(), firstOnRow.getKeyOffset(),
        firstOnRow.getKeyLength())) {
@@ -1550,10 +1523,11 @@ public class HStore implements Store, StoreConfiguration {
       // Make new first on row.
       firstOnRow = new KeyValue(kv.getRow(), HConstants.LATEST_TIMESTAMP);
       // Seek scanner.  If can't seek it, break.
-      if (!seekToScanner(scanner, firstOnRow, firstKV)) break;
+      if (!seekToScanner(scanner, firstOnRow, firstKV)) return false;
       // If we find something, break;
-      if (walkForwardInSingleRow(scanner, firstOnRow, state)) break;
+      if (walkForwardInSingleRow(scanner, firstOnRow, state)) return true;
     }
+    return false;
   }
 
   /*
@@ -1612,17 +1586,12 @@ public class HStore implements Store, StoreConfiguration {
   public boolean canSplit() {
     this.lock.readLock().lock();
     try {
-      // Not splitable if we find a reference store file present in the store.
-      for (StoreFile sf : storefiles) {
-        if (sf.isReference()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(sf + " is not splittable");
-          }
-          return false;
-        }
+      // Not split-able if we find a reference store file present in the store.
+      boolean result = !hasReferences();
+      if (!result && LOG.isDebugEnabled()) {
+        LOG.debug("Cannot split region due to reference files being there");
       }
-
-      return true;
+      return result;
     } finally {
       this.lock.readLock().unlock();
     }
@@ -1632,64 +1601,14 @@ public class HStore implements Store, StoreConfiguration {
   public byte[] getSplitPoint() {
     this.lock.readLock().lock();
     try {
-      // sanity checks
-      if (this.storefiles.isEmpty()) {
-        return null;
-      }
       // Should already be enforced by the split policy!
       assert !this.region.getRegionInfo().isMetaRegion();
-
-      // Not splitable if we find a reference store file present in the store.
-      long maxSize = 0L;
-      StoreFile largestSf = null;
-      for (StoreFile sf : storefiles) {
-        if (sf.isReference()) {
-          // Should already be enforced since we return false in this case
-          assert false : "getSplitPoint() called on a region that can't split!";
-          return null;
-        }
-
-        StoreFile.Reader r = sf.getReader();
-        if (r == null) {
-          LOG.warn("Storefile " + sf + " Reader is null");
-          continue;
-        }
-
-        long size = r.length();
-        if (size > maxSize) {
-          // This is the largest one so far
-          maxSize = size;
-          largestSf = sf;
-        }
-      }
-
-      StoreFile.Reader r = largestSf.getReader();
-      if (r == null) {
-        LOG.warn("Storefile " + largestSf + " Reader is null");
+      // Not split-able if we find a reference store file present in the store.
+      if (hasReferences()) {
+        assert false : "getSplitPoint() called on a region that can't split!";
         return null;
       }
-      // Get first, last, and mid keys.  Midkey is the key that starts block
-      // in middle of hfile.  Has column and timestamp.  Need to return just
-      // the row we want to split on as midkey.
-      byte [] midkey = r.midkey();
-      if (midkey != null) {
-        KeyValue mk = KeyValue.createKeyValueFromKey(midkey, 0, midkey.length);
-        byte [] fk = r.getFirstKey();
-        KeyValue firstKey = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
-        byte [] lk = r.getLastKey();
-        KeyValue lastKey = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
-        // if the midkey is the same as the first or last keys, then we cannot
-        // (ever) split this region.
-        if (this.comparator.compareRows(mk, firstKey) == 0 ||
-            this.comparator.compareRows(mk, lastKey) == 0) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("cannot split because midkey is the same as first or " +
-              "last row");
-          }
-          return null;
-        }
-        return mk.getRow();
-      }
+      return this.storeFileManager.getSplitPoint();
     } catch(IOException e) {
       LOG.warn("Failed getting store size for " + this, e);
     } finally {
@@ -1745,7 +1664,7 @@ public class HStore implements Store, StoreConfiguration {
 
   @Override
   public int getStorefilesCount() {
-    return this.storefiles.size();
+    return this.storeFileManager.getStorefileCount();
   }
 
   @Override
@@ -1756,7 +1675,7 @@ public class HStore implements Store, StoreConfiguration {
   @Override
   public long getStorefilesSize() {
     long size = 0;
-    for (StoreFile s: storefiles) {
+    for (StoreFile s: this.storeFileManager.getStorefiles()) {
       StoreFile.Reader r = s.getReader();
       if (r == null) {
         LOG.warn("StoreFile " + s + " has a null Reader");
@@ -1770,7 +1689,7 @@ public class HStore implements Store, StoreConfiguration {
   @Override
   public long getStorefilesIndexSize() {
     long size = 0;
-    for (StoreFile s: storefiles) {
+    for (StoreFile s: this.storeFileManager.getStorefiles()) {
       StoreFile.Reader r = s.getReader();
       if (r == null) {
         LOG.warn("StoreFile " + s + " has a null Reader");
@@ -1784,7 +1703,7 @@ public class HStore implements Store, StoreConfiguration {
   @Override
   public long getTotalStaticIndexSize() {
     long size = 0;
-    for (StoreFile s : storefiles) {
+    for (StoreFile s : this.storeFileManager.getStorefiles()) {
       size += s.getReader().getUncompressedDataIndexSize();
     }
     return size;
@@ -1793,7 +1712,7 @@ public class HStore implements Store, StoreConfiguration {
   @Override
   public long getTotalStaticBloomSize() {
     long size = 0;
-    for (StoreFile s : storefiles) {
+    for (StoreFile s : this.storeFileManager.getStorefiles()) {
       StoreFile.Reader r = s.getReader();
       size += r.getTotalBloomSize();
     }
@@ -1811,12 +1730,12 @@ public class HStore implements Store, StoreConfiguration {
 
   @Override
   public int getCompactPriority(int priority) {
-    // If this is a user-requested compaction, leave this at the highest priority
-    if(priority == Store.PRIORITY_USER) {
-      return Store.PRIORITY_USER;
-    } else {
-      return this.blockingStoreFileCount - this.storefiles.size();
+    // If this is a user-requested compaction, leave this at the user priority
+    if (priority != Store.PRIORITY_USER) {
+      priority = this.compactionPolicy.getSystemCompactionPriority(
+        this.storeFileManager.getStorefiles());
     }
+    return priority;
   }
 
   @Override
@@ -1927,7 +1846,7 @@ public class HStore implements Store, StoreConfiguration {
 
   @Override
   public boolean needsCompaction() {
-    return compactionPolicy.needsCompaction(storefiles.size() - filesCompacting.size());
+    return compactionPolicy.needsCompaction(this.storeFileManager.getStorefiles(), filesCompacting);
   }
 
   @Override
@@ -1937,7 +1856,7 @@ public class HStore implements Store, StoreConfiguration {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align((20 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
-              + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
+              + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK

@@ -27,8 +27,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,6 +45,7 @@ import org.apache.hadoop.io.WritableUtils;
 import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -1716,6 +1719,46 @@ public class Bytes {
     out[0] = 1;
     System.arraycopy(copy, 0, out, 1, copy.length);
     return out;
+  }
+
+  public static boolean equals(List<byte[]> a, List<byte[]> b) {
+    if (a == null) {
+      if (b == null) {
+        return true;
+      }
+      return false;
+    }
+    if (b == null) {
+      return false;
+    }
+    if (a.size() != b.size()) {
+      return false;
+    }
+    for (int i = 0; i < a.size(); ++i) {
+      if (!Bytes.equals(a.get(i), b.get(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static boolean isSorted(Collection<byte[]> arrays) {
+    byte[] previous = new byte[0];
+    for (byte[] array : IterableUtils.nullSafe(arrays)) {
+      if (Bytes.compareTo(previous, array) > 0) {
+        return false;
+      }
+      previous = array;
+    }
+    return true;
+  }
+
+  public static List<byte[]> getUtf8ByteArrays(List<String> strings) {
+    List<byte[]> byteArrays = Lists.newArrayListWithCapacity(CollectionUtils.nullSafeSize(strings));
+    for (String s : IterableUtils.nullSafe(strings)) {
+      byteArrays.add(Bytes.toBytes(s));
+    }
+    return byteArrays;
   }
 
 }

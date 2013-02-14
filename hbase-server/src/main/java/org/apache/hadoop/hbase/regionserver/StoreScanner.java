@@ -206,7 +206,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   protected List<KeyValueScanner> getScannersNoCompaction() throws IOException {
     final boolean isCompaction = false;
     return selectScannersFrom(store.getScanners(cacheBlocks, isGet,
-        isCompaction, matcher));
+        isCompaction, matcher, scan.getStartRow(), scan.getStopRow()));
   }
 
   /**

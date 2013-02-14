@@ -140,7 +140,6 @@ public class TestFilterList {
     /* We should filter any row */
     rowkey = Bytes.toBytes("z");
     assertTrue(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
-    assertTrue(filterMPONE.filterRow());
     assertTrue(filterMPONE.filterAllRemaining());
 
   }
@@ -191,9 +190,6 @@ public class TestFilterList {
     // Should fail here; row should be filtered out.
     KeyValue kv = new KeyValue(rowkey, rowkey, rowkey, rowkey);
     assertTrue(Filter.ReturnCode.NEXT_ROW == filterMPALL.filterKeyValue(kv));
-
-    // Both filters in Set should be satisfied by now
-    assertTrue(filterMPALL.filterRow());
   }
 
   /**

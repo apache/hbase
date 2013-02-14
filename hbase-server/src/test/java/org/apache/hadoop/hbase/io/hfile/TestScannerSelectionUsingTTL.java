@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -151,7 +152,8 @@ public class TestScannerSelectionUsingTTL {
 
     // Exercise both compaction codepaths.
     if (explicitCompaction) {
-      region.getStore(FAMILY_BYTES).compactRecentForTesting(totalNumFiles);
+      HStore store = (HStore)region.getStore(FAMILY_BYTES);
+      store.compactRecentForTestingAssumingDefaultPolicy(totalNumFiles);
     } else {
       region.compactStores();
     }

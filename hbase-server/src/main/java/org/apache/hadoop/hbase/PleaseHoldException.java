@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -26,13 +25,21 @@ import org.apache.hadoop.classification.InterfaceStability;
  * This exception is thrown by the master when a region server was shut down and
  * restarted so fast that the master still hasn't processed the server shutdown
  * of the first instance, or when master is initializing and client call admin
- * operations
+ * operations, or when an operation is performed on a region server that is still starting.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class PleaseHoldException extends IOException {
+public class PleaseHoldException extends HBaseIOException {
   public PleaseHoldException(String message) {
     super(message);
+  }
+
+  public PleaseHoldException(String message, Throwable cause) {
+    super(message, cause);
+  }
+
+  public PleaseHoldException(Throwable cause) {
+    super(cause);
   }
 }

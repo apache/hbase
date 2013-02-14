@@ -300,7 +300,7 @@ public class RegionStates {
       State state = oldState.getState();
       ServerName sn = oldState.getServerName();
       if (state != State.OFFLINE || sn != null) {
-        LOG.debug("Online a region with current state=" + state + ", expected state=OFFLINE"
+        LOG.debug("Offline a region with current state=" + state + ", expected state=OFFLINE"
           + ", assigned to server: " + sn + ", expected null");
       }
     }
@@ -317,10 +317,10 @@ public class RegionStates {
   /**
    * A server is offline, all regions on it are dead.
    */
-  public synchronized List<RegionState> serverOffline(final ServerName sn) {
+  public synchronized List<HRegionInfo> serverOffline(final ServerName sn) {
     // Clean up this server from map of servers to regions, and remove all regions
     // of this server from online map of regions.
-    List<RegionState> rits = new ArrayList<RegionState>();
+    List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
     Set<HRegionInfo> assignedRegions = serverHoldings.get(sn);
     if (assignedRegions == null) {
       assignedRegions = new HashSet<HRegionInfo>();
@@ -330,19 +330,23 @@ public class RegionStates {
       regionAssignments.remove(region);
     }
 
-    // See if any of the regions that were online on this server were in RIT
-    // If they are, normal timeouts will deal with them appropriately so
-    // let's skip a manual re-assignment.
     for (RegionState state : regionsInTransition.values()) {
-      if (assignedRegions.contains(state.getRegion())) {
-        rits.add(state);
+      HRegionInfo hri = state.getRegion();
+      if (assignedRegions.contains(hri)) {
+        // Region is open on this region server, but in transition.
+        // This region must be moving away from this server.
+        // SSH will handle it, either skip assigning, or re-assign.
+        LOG.info("Transitioning region "
+          + state + " will be handled by SSH for " + sn);
       } else if (sn.equals(state.getServerName())) {
         // Region is in transition on this region server, and this
         // region is not open on this server. So the region must be
         // moving to this server from another one (i.e. opening or
         // pending open on this server, was open on another one
         if (state.isPendingOpen() || state.isOpening()) {
-          state.setTimestamp(0); // timeout it, let timeout monitor reassign
+          LOG.info("Found opening region "
+            + state + " to be reassigned by SSH for " + sn);
+          rits.add(hri);
         } else {
           LOG.warn("THIS SHOULD NOT HAPPEN: unexpected state "
             + state + " of region in transition on server " + sn);

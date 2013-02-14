@@ -140,6 +140,7 @@ public class TestAssignmentManager {
     this.serverManager = Mockito.mock(ServerManager.class);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(true);
+    Mockito.when(this.serverManager.getDeadServers()).thenReturn(new DeadServer());
     final Map<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
     onlineServers.put(SERVERNAME_B, ServerLoad.EMPTY_SERVERLOAD);
     onlineServers.put(SERVERNAME_A, ServerLoad.EMPTY_SERVERLOAD);
@@ -186,6 +187,8 @@ public class TestAssignmentManager {
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithOpenedNode()
   throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
+    Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, REGIONINFO, 0, null, true)).
+        thenReturn(true);
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -232,6 +235,8 @@ public class TestAssignmentManager {
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithClosedNode()
   throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
+    Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, REGIONINFO, 0, null, true)).
+        thenReturn(true);
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -279,6 +284,8 @@ public class TestAssignmentManager {
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithOfflineNode()
   throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
+    Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, REGIONINFO, 0, null, true)).
+        thenReturn(true);
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -574,7 +581,7 @@ public class TestAssignmentManager {
     ClientProtocol implementation = Mockito.mock(ClientProtocol.class);
     // Get a meta row result that has region up on SERVERNAME_A
 
-    Result r = null;
+    Result r;
     if (splitRegion) {
       r = MetaMockingUtil.getMetaTableRowResultAsSplitRegion(REGIONINFO, SERVERNAME_A);
     } else {
@@ -912,7 +919,7 @@ public class TestAssignmentManager {
   /**
    * When a region is in transition, if the region server opening the region goes down,
    * the region assignment takes a long time normally (waiting for timeout monitor to trigger assign).
-   * This test is to make sure SSH times out the transition right away.
+   * This test is to make sure SSH reassigns it right away.
    */
   @Test
   public void testSSHTimesOutOpeningRegionTransition()
@@ -925,6 +932,7 @@ public class TestAssignmentManager {
     // adding region in pending open.
     RegionState state = new RegionState(REGIONINFO,
       State.OPENING, System.currentTimeMillis(), SERVERNAME_A);
+    am.getRegionStates().regionOnline(REGIONINFO, SERVERNAME_B);
     am.getRegionStates().regionsInTransition.put(REGIONINFO.getEncodedName(), state);
     // adding region plan
     am.regionPlans.put(REGIONINFO.getEncodedName(),
@@ -932,12 +940,37 @@ public class TestAssignmentManager {
     am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
 
     try {
+      am.assignInvoked = false;
       processServerShutdownHandler(ct, am, false);
-      assertTrue("Transtion is timed out", state.getStamp() == 0);
+      assertTrue(am.assignInvoked);
     } finally {
       am.getRegionStates().regionsInTransition.remove(REGIONINFO.getEncodedName());
       am.regionPlans.remove(REGIONINFO.getEncodedName());
     }
+  }
+
+  /**
+   * Scenario:<ul>
+   *  <li> master starts a close, and creates a znode</li>
+   *  <li> it fails just at this moment, before contacting the RS</li>
+   *  <li> while the second master is coming up, the targeted RS dies. But it's before ZK timeout so
+   *    we don't know, and we have an exception.</li>
+   *  <li> the master must handle this nicely and reassign.
+   *  </ul>
+   */
+  @Test
+  public void testClosingFailureDuringRecovery() throws Exception {
+
+    AssignmentManagerWithExtrasForTesting am =
+        setUpMockedAssignmentManager(this.server, this.serverManager);
+    ZKAssign.createNodeClosing(this.watcher, REGIONINFO, SERVERNAME_A);
+    am.getRegionStates().createRegionState(REGIONINFO);
+
+    assertFalse( am.getRegionStates().isRegionsInTransition() );
+
+    am.processRegionInTransition(REGIONINFO.getEncodedName(), REGIONINFO);
+
+    assertTrue( am.getRegionStates().isRegionsInTransition() );
   }
 
   /**
@@ -1084,7 +1117,7 @@ public class TestAssignmentManager {
     @Override
     public void assign(List<HRegionInfo> regions)
         throws IOException, InterruptedException {
-      assignInvoked = true;
+      assignInvoked = (regions != null && regions.size() > 0);
     }
 
     /** reset the watcher */
@@ -1136,7 +1169,7 @@ public class TestAssignmentManager {
         } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
-      };
+      }
     };
     t.start();
     while (!t.isAlive()) Threads.sleep(1);

@@ -163,16 +163,9 @@ public class TestSplitTransaction {
    * Pass a reference store
    */
   @Test public void testPrepareWithRegionsWithReference() throws IOException {
-    // create a mock that will act as a reference StoreFile
-    StoreFile storeFileMock  = Mockito.mock(StoreFile.class);
-    when(storeFileMock.isReference()).thenReturn(true);
-
-    // add the mock to the parent stores
     HStore storeMock = Mockito.mock(HStore.class);
-    List<StoreFile> storeFileList = new ArrayList<StoreFile>(1);
-    storeFileList.add(storeFileMock);
-    when(storeMock.getStorefiles()).thenReturn(storeFileList);
-    when(storeMock.close()).thenReturn(ImmutableList.copyOf(storeFileList));
+    when(storeMock.hasReferences()).thenReturn(true);
+    when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
     this.parent.stores.put(Bytes.toBytes(""), storeMock);
 
     SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
@@ -258,7 +251,7 @@ public class TestSplitTransaction {
     // Start transaction.
     SplitTransaction st = prepareGOOD_SPLIT_ROW();
     SplitTransaction spiedUponSt = spy(st);
-    when(spiedUponSt.createDaughterRegion(spiedUponSt.getSecondDaughter(), null)).
+    when(spiedUponSt.createDaughterRegion(spiedUponSt.getSecondDaughter())).
       thenThrow(new MockedFailedDaughterCreation());
     // Run the execute.  Look at what it returns.
     boolean expectedException = false;

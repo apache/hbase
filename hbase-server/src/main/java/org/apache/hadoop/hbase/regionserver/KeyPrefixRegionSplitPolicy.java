@@ -28,13 +28,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * rows by a prefix of the row-key
  *
  * This ensures that a region is not split "inside" a prefix of a row key.
- * I.e. rows can be co-located in a regionb by their prefix.
+ * I.e. rows can be co-located in a region by their prefix.
  */
 @InterfaceAudience.Private
 public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
   private static final Log LOG = LogFactory
       .getLog(KeyPrefixRegionSplitPolicy.class);
-  public static final String PREFIX_LENGTH_KEY = "prefix_split_key_policy.prefix_length";
+  @Deprecated
+  public static final String PREFIX_LENGTH_KEY_DEPRECATED = "prefix_split_key_policy.prefix_length";
+  public static final String PREFIX_LENGTH_KEY = "KeyPrefixRegionSplitPolicy.prefix_length";
 
   private int prefixLength = 0;
 
@@ -48,10 +50,14 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
       String prefixLengthString = region.getTableDesc().getValue(
           PREFIX_LENGTH_KEY);
       if (prefixLengthString == null) {
-        LOG.error(PREFIX_LENGTH_KEY + " not specified for table "
-            + region.getTableDesc().getNameAsString()
-            + ". Using default RegionSplitPolicy");
-        return;
+        //read the deprecated value
+        prefixLengthString = region.getTableDesc().getValue(PREFIX_LENGTH_KEY_DEPRECATED);
+        if (prefixLengthString == null) {
+          LOG.error(PREFIX_LENGTH_KEY + " not specified for table "
+              + region.getTableDesc().getNameAsString()
+              + ". Using default RegionSplitPolicy");
+          return;
+        }
       }
       try {
         prefixLength = Integer.parseInt(prefixLengthString);
