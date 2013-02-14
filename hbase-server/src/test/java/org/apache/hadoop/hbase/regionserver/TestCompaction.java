@@ -281,8 +281,8 @@ public class TestCompaction extends HBaseTestCase {
     final int ttl = 1000;
     for (Store hstore : this.r.stores.values()) {
       HStore store = ((HStore) hstore);
-      HStore.ScanInfo old = store.getScanInfo();
-      HStore.ScanInfo si = new HStore.ScanInfo(old.getFamily(),
+      ScanInfo old = store.getScanInfo();
+      ScanInfo si = new ScanInfo(old.getFamily(),
           old.getMinVersions(), old.getMaxVersions(), ttl,
           old.getKeepDeletedCells(), 0, old.getComparator());
       store.setScanInfo(si);
@@ -540,8 +540,8 @@ public class TestCompaction extends HBaseTestCase {
       final int ttl = 1000;
       for (Store hstore: this.r.stores.values()) {
         HStore store = (HStore)hstore;
-        HStore.ScanInfo old = store.getScanInfo();
-        HStore.ScanInfo si = new HStore.ScanInfo(old.getFamily(),
+        ScanInfo old = store.getScanInfo();
+        ScanInfo si = new ScanInfo(old.getFamily(),
             old.getMinVersions(), old.getMaxVersions(), ttl,
             old.getKeepDeletedCells(), 0, old.getComparator());
         store.setScanInfo(si);

@@ -70,7 +70,7 @@ public abstract class CompactionPolicy extends Configured {
    */
   public abstract CompactSelection selectCompaction(
     final List<StoreFile> candidateFiles, final boolean isUserCompaction,
-    final boolean forceMajor) throws IOException;
+    final boolean mayUseOffPeak, final boolean forceMajor) throws IOException;
 
   /**
    * @param storeFiles Store files in the store.

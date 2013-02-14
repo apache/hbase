@@ -246,7 +246,8 @@ public class RegionCoprocessorHost
    * {@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost#postOpen()} are such hooks.
    *
    * See also
-   * {@link org.apache.hadoop.hbase.master.MasterCoprocessorHost#handleCoprocessorThrowable(CoprocessorEnvironment, Throwable)}
+   * {@link org.apache.hadoop.hbase.master.MasterCoprocessorHost#handleCoprocessorThrowable(
+   *    CoprocessorEnvironment, Throwable)}
    * @param env The coprocessor that threw the exception.
    * @param e The exception that was thrown.
    */
@@ -256,8 +257,9 @@ public class RegionCoprocessorHost
       handleCoprocessorThrowable(env,e);
     } catch (IOException ioe) {
       // We cannot throw exceptions from the caller hook, so ignore.
-      LOG.warn("handleCoprocessorThrowable() threw an IOException while attempting to handle Throwable " + e
-        + ". Ignoring.",e);
+      LOG.warn(
+        "handleCoprocessorThrowable() threw an IOException while attempting to handle Throwable " +
+        e + ". Ignoring.",e);
     }
   }
 
@@ -343,9 +345,10 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preCompactScannerOpen(ObserverContext, HStore, List, ScanType, long, InternalScanner)}
+   * {@link RegionObserver#preCompactScannerOpen(ObserverContext,
+   *    Store, List, ScanType, long, InternalScanner)}
    */
-  public InternalScanner preCompactScannerOpen(HStore store, List<StoreFileScanner> scanners,
+  public InternalScanner preCompactScannerOpen(Store store, List<StoreFileScanner> scanners,
       ScanType scanType, long earliestPutTs) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     InternalScanner s = null;
@@ -374,7 +377,7 @@ public class RegionCoprocessorHost
    * @return If {@code true}, skip the normal selection process and use the current list
    * @throws IOException
    */
-  public boolean preCompactSelection(HStore store, List<StoreFile> candidates) throws IOException {
+  public boolean preCompactSelection(Store store, List<StoreFile> candidates) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
@@ -402,7 +405,7 @@ public class RegionCoprocessorHost
    * @param store The store where compaction is being requested
    * @param selected The store files selected to compact
    */
-  public void postCompactSelection(HStore store,
+  public void postCompactSelection(Store store,
       ImmutableList<StoreFile> selected) {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
@@ -428,7 +431,7 @@ public class RegionCoprocessorHost
    * @param scanType type of Scan
    * @throws IOException
    */
-  public InternalScanner preCompact(HStore store, InternalScanner scanner,
+  public InternalScanner preCompact(Store store, InternalScanner scanner,
       ScanType scanType) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
@@ -456,7 +459,7 @@ public class RegionCoprocessorHost
    * @param resultFile the new store file written during compaction
    * @throws IOException
    */
-  public void postCompact(HStore store, StoreFile resultFile) throws IOException {
+  public void postCompact(Store store, StoreFile resultFile) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -477,7 +480,7 @@ public class RegionCoprocessorHost
    * Invoked before a memstore flush
    * @throws IOException
    */
-  public InternalScanner preFlush(HStore store, InternalScanner scanner) throws IOException {
+  public InternalScanner preFlush(Store store, InternalScanner scanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
@@ -521,16 +524,19 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preFlushScannerOpen(ObserverContext, HStore, KeyValueScanner, InternalScanner)}
+   * {@link RegionObserver#preFlushScannerOpen(ObserverContext,
+   *    Store, KeyValueScanner, InternalScanner)}
    */
-  public InternalScanner preFlushScannerOpen(HStore store, KeyValueScanner memstoreScanner) throws IOException {
+  public InternalScanner preFlushScannerOpen(Store store, KeyValueScanner memstoreScanner)
+      throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     InternalScanner s = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          s = ((RegionObserver) env.getInstance()).preFlushScannerOpen(ctx, store, memstoreScanner, s);
+          s = ((RegionObserver) env.getInstance())
+            .preFlushScannerOpen(ctx, store, memstoreScanner, s);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -567,7 +573,7 @@ public class RegionCoprocessorHost
    * Invoked after a memstore flush
    * @throws IOException
    */
-  public void postFlush(final HStore store, final StoreFile storeFile) throws IOException {
+  public void postFlush(final Store store, final StoreFile storeFile) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -1243,9 +1249,10 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preStoreScannerOpen(ObserverContext, HStore, Scan, NavigableSet, KeyValueScanner)}
+   * {@link RegionObserver#preStoreScannerOpen(ObserverContext,
+   *    Store, Scan, NavigableSet, KeyValueScanner)}
    */
-  public KeyValueScanner preStoreScannerOpen(HStore store, Scan scan,
+  public KeyValueScanner preStoreScannerOpen(Store store, Scan scan,
       final NavigableSet<byte[]> targetCols) throws IOException {
     KeyValueScanner s = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;

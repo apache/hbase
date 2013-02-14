@@ -759,10 +759,11 @@ public class ZKAssign {
     // Verify it is in expected state
     EventType et = rt.getEventType();
     if (!et.equals(beginState)) {
-      LOG.warn(zkw.prefix("Attempt to transition the " +
-        "unassigned node for " + encoded +
-        " from " + beginState + " to " + endState + " failed, " +
-        "the node existed but was in the state " + et + " set by the server " + serverName));
+      String existingServer = (rt.getServerName() == null)
+        ? "<unknown>" : rt.getServerName().toString();
+      LOG.warn(zkw.prefix("Attempt to transition the unassigned node for " + encoded
+        + " from " + beginState + " to " + endState + " failed, the node existed but"
+        + " was in the state " + et + " set by the server " + existingServer));
       return -1;
     }
 

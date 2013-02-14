@@ -170,7 +170,7 @@ public class PerfTestCompactionPolicies {
   private List<StoreFile> runIteration(List<StoreFile> startingStoreFiles) throws IOException {
 
     List<StoreFile> storeFiles = new ArrayList<StoreFile>(startingStoreFiles);
-    CompactSelection sel = cp.selectCompaction(storeFiles, false, false);
+    CompactSelection sel = cp.selectCompaction(storeFiles, false, false, false);
     int newFileSize = 0;
 
     List<StoreFile> filesToCompact = sel.getFilesToCompact();

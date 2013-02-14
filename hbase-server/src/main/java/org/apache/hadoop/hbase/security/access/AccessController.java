@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -816,7 +816,7 @@ public class AccessController extends BaseRegionObserver
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      final HStore store, final InternalScanner scanner, final ScanType scanType)
+      final Store store, final InternalScanner scanner, final ScanType scanType)
           throws IOException {
     requirePermission("compact", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
     return scanner;
@@ -824,7 +824,7 @@ public class AccessController extends BaseRegionObserver
 
   @Override
   public void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final HStore store, final List<StoreFile> candidates) throws IOException {
+      final Store store, final List<StoreFile> candidates) throws IOException {
     requirePermission("compact", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
   }
 

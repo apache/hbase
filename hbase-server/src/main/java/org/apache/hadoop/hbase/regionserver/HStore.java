@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakCompactions;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -150,9 +151,11 @@ public class HStore implements Store {
   private int bytesPerChecksum;
 
   // Comparing KeyValues
-  final KeyValue.KVComparator comparator;
+  private final KeyValue.KVComparator comparator;
 
   private Compactor compactor;
+  
+  private OffPeakCompactions offPeakCompactions;
 
   private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
   private static int flush_retries_number;
@@ -207,10 +210,10 @@ public class HStore implements Store {
     // to clone it?
     scanInfo = new ScanInfo(family, ttl, timeToPurgeDeletes, this.comparator);
     this.memstore = new MemStore(conf, this.comparator);
+    this.offPeakCompactions = new OffPeakCompactions(conf);
 
     // Setting up cache configuration for this family
     this.cacheConf = new CacheConfig(conf, family);
-
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify", false);
 
@@ -287,6 +290,7 @@ public class HStore implements Store {
     return homedir;
   }
 
+  @Override
   public FileSystem getFileSystem() {
     return this.fs;
   }
@@ -803,8 +807,8 @@ public class HStore implements Store {
     // treat this as a minor compaction.
     InternalScanner scanner = null;
     KeyValueScanner memstoreScanner = new CollectionBackedScanner(set, this.comparator);
-    if (getHRegion().getCoprocessorHost() != null) {
-      scanner = getHRegion().getCoprocessorHost()
+    if (this.region.getCoprocessorHost() != null) {
+      scanner = this.region.getCoprocessorHost()
           .preFlushScannerOpen(this, memstoreScanner);
     }
     if (scanner == null) {
@@ -814,9 +818,9 @@ public class HStore implements Store {
           Collections.singletonList(memstoreScanner), ScanType.MINOR_COMPACT,
           this.region.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
     }
-    if (getHRegion().getCoprocessorHost() != null) {
+    if (this.region.getCoprocessorHost() != null) {
       InternalScanner cpScanner =
-        getHRegion().getCoprocessorHost().preFlush(this, scanner);
+        this.region.getCoprocessorHost().preFlush(this, scanner);
       // NULL scanner returned from coprocessor hooks means skip normal processing
       if (cpScanner == null) {
         return null;
@@ -1001,7 +1005,8 @@ public class HStore implements Store {
    * the line).
    * @return all scanners for this store
    */
-  protected List<KeyValueScanner> getScanners(boolean cacheBlocks,
+  @Override
+  public List<KeyValueScanner> getScanners(boolean cacheBlocks,
       boolean isGet, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
       byte[] stopRow) throws IOException {
     Collection<StoreFile> storeFilesToScan;
@@ -1029,17 +1034,13 @@ public class HStore implements Store {
     return scanners;
   }
 
-  /*
-   * @param o Observer who wants to know about changes in set of Readers
-   */
-  void addChangedReaderObserver(ChangedReadersObserver o) {
+  @Override
+  public void addChangedReaderObserver(ChangedReadersObserver o) {
     this.changedReaderObservers.add(o);
   }
 
-  /*
-   * @param o Observer no longer interested in changes in set of Readers.
-   */
-  void deleteChangedReaderObserver(ChangedReadersObserver o) {
+  @Override
+  public void deleteChangedReaderObserver(ChangedReadersObserver o) {
     // We don't check if observer present; it may not be (legitimately)
     this.changedReaderObservers.remove(o);
   }
@@ -1244,8 +1245,13 @@ public class HStore implements Store {
           filesToCompact = new CompactSelection(candidates);
         } else {
           boolean isUserCompaction = priority == Store.PRIORITY_USER;
+          boolean mayUseOffPeak = this.offPeakCompactions.tryStartOffPeakRequest();
           filesToCompact = compactionPolicy.selectCompaction(candidates, isUserCompaction,
-              forceMajor && filesCompacting.isEmpty());
+              mayUseOffPeak, forceMajor && filesCompacting.isEmpty());
+          if (mayUseOffPeak && !filesToCompact.isOffPeakCompaction()) {
+            // Compaction policy doesn't want to do anything with off-peak.
+            this.offPeakCompactions.endOffPeakRequest();
+          }
         }
 
         if (region.getCoprocessorHost() != null) {
@@ -1274,7 +1280,7 @@ public class HStore implements Store {
           this.forceMajor = false;
         }
 
-        LOG.debug(getHRegionInfo().getEncodedName() + " - " +
+        LOG.debug(getRegionInfo().getEncodedName() + " - " +
             getColumnFamilyName() + ": Initiating " +
             (isMajor ? "major" : "minor") + " compaction");
 
@@ -1286,14 +1292,17 @@ public class HStore implements Store {
       this.lock.readLock().unlock();
     }
     if (ret != null) {
-      CompactionRequest.preRequest(ret);
+      this.region.reportCompactionRequestStart(ret.isMajor());
     }
     return ret;
   }
 
   public void finishRequest(CompactionRequest cr) {
-    CompactionRequest.postRequest(cr);
-    cr.finishRequest();
+    this.region.reportCompactionRequestEnd(cr.isMajor());
+    if (cr.getCompactSelection().isOffPeakCompaction()) {
+      this.offPeakCompactions.endOffPeakRequest();
+      cr.getCompactSelection().setOffPeak(false);
+    }
     synchronized (filesCompacting) {
       filesCompacting.removeAll(cr.getFiles());
     }
@@ -1645,8 +1654,8 @@ public class HStore implements Store {
     lock.readLock().lock();
     try {
       KeyValueScanner scanner = null;
-      if (getHRegion().getCoprocessorHost() != null) {
-        scanner = getHRegion().getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
+      if (this.region.getCoprocessorHost() != null) {
+        scanner = this.region.getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
       }
       if (scanner == null) {
         scanner = new StoreScanner(this, getScanInfo(), scan, targetCols);
@@ -1743,13 +1752,28 @@ public class HStore implements Store {
     return compactionPolicy.throttleCompaction(compactionSize);
   }
 
-  @Override
   public HRegion getHRegion() {
     return this.region;
   }
 
-  HRegionInfo getHRegionInfo() {
+  @Override
+  public RegionCoprocessorHost getCoprocessorHost() {
+    return this.region.getCoprocessorHost();
+  }
+
+  @Override
+  public HRegionInfo getRegionInfo() {
     return this.region.getRegionInfo();
+  }
+
+  @Override
+  public boolean areWritesEnabled() {
+    return this.region.areWritesEnabled();
+  }
+
+  @Override
+  public long getSmallestReadPoint() {
+    return this.region.getSmallestReadPoint();
   }
 
   /**
@@ -1832,7 +1856,7 @@ public class HStore implements Store {
       }
       storeFile = HStore.this.commitFile(storeFilePath, cacheFlushId,
                                snapshotTimeRangeTracker, flushedSize, status);
-      if (HStore.this.getHRegion().getCoprocessorHost() != null) {
+      if (HStore.this.region.getCoprocessorHost() != null) {
         HStore.this.getHRegion()
             .getCoprocessorHost()
             .postFlush(HStore.this, storeFile);
@@ -1855,7 +1879,7 @@ public class HStore implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align((20 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
+      ClassSize.align((21 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
               + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
@@ -1873,6 +1897,7 @@ public class HStore implements Store {
     return comparator;
   }
 
+  @Override
   public ScanInfo getScanInfo() {
     return scanInfo;
   }
@@ -1884,84 +1909,4 @@ public class HStore implements Store {
   void setScanInfo(ScanInfo scanInfo) {
     this.scanInfo = scanInfo;
   }
-
-  /**
-   * Immutable information for scans over a store.
-   */
-  public static class ScanInfo {
-    private byte[] family;
-    private int minVersions;
-    private int maxVersions;
-    private long ttl;
-    private boolean keepDeletedCells;
-    private long timeToPurgeDeletes;
-    private KVComparator comparator;
-
-    public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-        + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_INT)
-        + Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN);
-
-    /**
-     * @param family {@link HColumnDescriptor} describing the column family
-     * @param ttl Store's TTL (in ms)
-     * @param timeToPurgeDeletes duration in ms after which a delete marker can
-     *        be purged during a major compaction.
-     * @param comparator The store's comparator
-     */
-    public ScanInfo(HColumnDescriptor family, long ttl, long timeToPurgeDeletes, KVComparator comparator) {
-      this(family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl, family
-          .getKeepDeletedCells(), timeToPurgeDeletes, comparator);
-    }
-    /**
-     * @param family Name of this store's column family
-     * @param minVersions Store's MIN_VERSIONS setting
-     * @param maxVersions Store's VERSIONS setting
-     * @param ttl Store's TTL (in ms)
-     * @param timeToPurgeDeletes duration in ms after which a delete marker can
-     *        be purged during a major compaction.
-     * @param keepDeletedCells Store's keepDeletedCells setting
-     * @param comparator The store's comparator
-     */
-    public ScanInfo(byte[] family, int minVersions, int maxVersions, long ttl,
-        boolean keepDeletedCells, long timeToPurgeDeletes,
-        KVComparator comparator) {
-
-      this.family = family;
-      this.minVersions = minVersions;
-      this.maxVersions = maxVersions;
-      this.ttl = ttl;
-      this.keepDeletedCells = keepDeletedCells;
-      this.timeToPurgeDeletes = timeToPurgeDeletes;
-      this.comparator = comparator;
-    }
-
-    public byte[] getFamily() {
-      return family;
-    }
-
-    public int getMinVersions() {
-      return minVersions;
-    }
-
-    public int getMaxVersions() {
-      return maxVersions;
-    }
-
-    public long getTtl() {
-      return ttl;
-    }
-
-    public boolean getKeepDeletedCells() {
-      return keepDeletedCells;
-    }
-
-    public long getTimeToPurgeDeletes() {
-      return timeToPurgeDeletes;
-    }
-
-    public KVComparator getComparator() {
-      return comparator;
-    }
-  }
-
 }

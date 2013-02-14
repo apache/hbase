@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.HStore.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
@@ -175,7 +175,7 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
     // nothing to do here
   }
 
-  protected ScanInfo getScanInfo(HStore store, RegionCoprocessorEnvironment e) {
+  protected ScanInfo getScanInfo(Store store, RegionCoprocessorEnvironment e) {
     byte[] data = ((ZKWatcher)e.getSharedData().get(zkkey)).getData();
     if (data == null) {
       return null;
@@ -184,15 +184,16 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
     if (oldSI.getTtl() == Long.MAX_VALUE) {
       return null;
     }
-    long ttl =  Math.max(EnvironmentEdgeManager.currentTimeMillis() - Bytes.toLong(data), oldSI.getTtl());    
+    long ttl = Math.max(EnvironmentEdgeManager.currentTimeMillis() -
+        Bytes.toLong(data), oldSI.getTtl());
     return new ScanInfo(store.getFamily(), ttl,
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
   }
 
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      HStore store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
-    HStore.ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
+      Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+    ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
     if (scanInfo == null) {
       // take default action
       return null;
@@ -200,30 +201,30 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
     Scan scan = new Scan();
     scan.setMaxVersions(scanInfo.getMaxVersions());
     return new StoreScanner(store, scanInfo, scan, Collections.singletonList(memstoreScanner),
-        ScanType.MINOR_COMPACT, store.getHRegion().getSmallestReadPoint(),
-        HConstants.OLDEST_TIMESTAMP);
+        ScanType.MINOR_COMPACT, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 
   @Override
-  public InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      HStore store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
+  public InternalScanner preCompactScannerOpen(
+      final ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
       InternalScanner s) throws IOException {
-    HStore.ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
+    ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
     if (scanInfo == null) {
       // take default action
       return null;
     }
     Scan scan = new Scan();
     scan.setMaxVersions(scanInfo.getMaxVersions());
-    return new StoreScanner(store, scanInfo, scan, scanners, scanType, store.getHRegion()
-        .getSmallestReadPoint(), earliestPutTs);
+    return new StoreScanner(store, scanInfo, scan, scanners, scanType,
+        store.getSmallestReadPoint(), earliestPutTs);
   }
 
   @Override
   public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final HStore store, final Scan scan, final NavigableSet<byte[]> targetCols,
+      final Store store, final Scan scan, final NavigableSet<byte[]> targetCols,
       final KeyValueScanner s) throws IOException {
-    HStore.ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
+    ScanInfo scanInfo = getScanInfo(store, c.getEnvironment());
     if (scanInfo == null) {
       // take default action
       return null;

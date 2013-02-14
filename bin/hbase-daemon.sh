@@ -235,6 +235,7 @@ case $startStop in
     rm -f "$HBASE_START_FILE"
     if [ -f $pid ]; then
       pidToKill=`cat $pid`
+      processedAt=`date +%s`
       # kill -0 == see if the PID exists
       if kill -0 $pidToKill > /dev/null 2>&1; then
         echo -n stopping $command
@@ -244,7 +245,16 @@ case $startStop in
          do
            echo -n "."
            sleep 1;
+           # if process persists more than $HBASE_STOP_TIMEOUT (default 1200 sec) no mercy
+           if [ $(( `date +%s` - $processedAt )) -gt ${HBASE_STOP_TIMEOUT:-1200} ]; then
+             break;
+           fi
          done
+        # process still there : kill kill
+        if kill -0 $pidToKill > /dev/null 2>&1; then
+          echo -n force stopping $command
+          kill -9 $pidToKill > /dev/null 2>&1
+        fi
         rm $pid
         echo
       else

@@ -163,7 +163,7 @@ public class TestCompactionState {
       // otherwise, the compaction should have already been done
       if (expectedState != state) {
         for (HRegion region: regions) {
-          state = CompactionRequest.getCompactionState(region.getRegionId());
+          state = region.getCompactionState();
           assertEquals(CompactionState.NONE, state);
         }
       } else {

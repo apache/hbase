@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
-import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -316,7 +316,7 @@ public class TestRegionObserverInterface {
 
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-        HStore store, final InternalScanner scanner, final ScanType scanType) {
+        Store store, final InternalScanner scanner, final ScanType scanType) {
       return new InternalScanner() {
         @Override
         public boolean next(List<KeyValue> results) throws IOException {
@@ -368,7 +368,7 @@ public class TestRegionObserverInterface {
 
     @Override
     public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-        HStore store, StoreFile resultFile) {
+        Store store, StoreFile resultFile) {
       lastCompaction = EnvironmentEdgeManager.currentTimeMillis();
     }
 

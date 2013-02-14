@@ -48,7 +48,6 @@ import com.google.common.collect.Collections2;
 public class DefaultCompactionPolicy extends CompactionPolicy {
 
   private static final Log LOG = LogFactory.getLog(DefaultCompactionPolicy.class);
-  private final static Calendar calendar = new GregorianCalendar();
 
   public DefaultCompactionPolicy() {
     compactor = new DefaultCompactor(this);
@@ -80,7 +79,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * @throws java.io.IOException
    */
   public CompactSelection selectCompaction(List<StoreFile> candidateFiles,
-      boolean isUserCompaction, boolean forceMajor)
+      final boolean isUserCompaction, final boolean mayUseOffPeak, final boolean forceMajor)
     throws IOException {
     // Preliminary compaction subject to filters
     CompactSelection candidateSelection = new CompactSelection(candidateFiles);
@@ -110,6 +109,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
 
     if (!majorCompaction) {
       // we're doing a minor compaction, let's see what files are applicable
+      candidateSelection.setOffPeak(mayUseOffPeak);
       candidateSelection = filterBulk(candidateSelection);
       candidateSelection = applyCompactionPolicy(candidateSelection);
       candidateSelection = checkMinFilesCriteria(candidateSelection);
@@ -232,6 +232,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
           " files ready for compaction.  Need " + minFiles + " to initiate.");
       }
       candidates.emptyFileList();
+      candidates.setOffPeak(false);
     }
     return candidates;
   }
@@ -274,11 +275,9 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     // we're doing a minor compaction, let's see what files are applicable
     int start = 0;
     double ratio = comConf.getCompactionRatio();
-    if (isOffPeakHour() && candidates.trySetOffpeak()) {
+    if (candidates.isOffPeakCompaction()) {
       ratio = comConf.getCompactionRatioOffPeak();
-      LOG.info("Running an off-peak compaction, selection ratio = " + ratio
-          + ", numOutstandingOffPeakCompactions is now "
-          + CompactSelection.getNumOutStandingOffPeakCompactions());
+      LOG.info("Running an off-peak compaction, selection ratio = " + ratio);
     }
 
     // get store file sizes for incremental compacting selection.
@@ -393,22 +392,5 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
       final List<StoreFile> filesCompacting) {
     int numCandidates = storeFiles.size() - filesCompacting.size();
     return numCandidates > comConf.getMinFilesToCompact();
-  }
-
-  /**
-   * @return whether this is off-peak hour
-   */
-  private boolean isOffPeakHour() {
-    int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
-    int startHour = comConf.getOffPeakStartHour();
-    int endHour = comConf.getOffPeakEndHour();
-    // If offpeak time checking is disabled just return false.
-    if (startHour == endHour) {
-      return false;
-    }
-    if (startHour < endHour) {
-      return (currentHour >= startHour && currentHour < endHour);
-    }
-    return (currentHour >= startHour || currentHour < endHour);
   }
 }

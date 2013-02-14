@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -137,20 +137,22 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, HStore store, InternalScanner scanner) {
+  public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, InternalScanner scanner) {
     hadPreFlush = true;
     return scanner;
   }
 
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      HStore store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+      Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
     hadPreFlushScannerOpen = true;
     return null;
   }
 
   @Override
-  public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c, HStore store, StoreFile resultFile) {
+  public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, StoreFile resultFile) {
     hadPostFlush = true;
   }
 
@@ -174,26 +176,27 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c,
-      HStore store, List<StoreFile> candidates) {
+      Store store, List<StoreFile> candidates) {
     hadPreCompactSelect = true;
   }
 
   @Override
   public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c,
-      HStore store, ImmutableList<StoreFile> selected) {
+      Store store, ImmutableList<StoreFile> selected) {
     hadPostCompactSelect = true;
   }
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      HStore store, InternalScanner scanner, ScanType scanType) {
+      Store store, InternalScanner scanner, ScanType scanType) {
     hadPreCompact = true;
     return scanner;
   }
 
   @Override
-  public InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      HStore store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
+  public InternalScanner preCompactScannerOpen(
+      final ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
       InternalScanner s) throws IOException {
     hadPreCompactScanner = true;
     return null;
@@ -201,7 +204,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      HStore store, StoreFile resultFile) {
+      Store store, StoreFile resultFile) {
     hadPostCompact = true;
   }
 
@@ -219,7 +222,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final HStore store, final Scan scan, final NavigableSet<byte[]> targetCols,
+      final Store store, final Scan scan, final NavigableSet<byte[]> targetCols,
       final KeyValueScanner s) throws IOException {
     hadPreStoreScannerOpen = true;
     return null;
@@ -450,7 +453,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
-                                   List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException {
+      List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException {
     RegionCoprocessorEnvironment e = ctx.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
