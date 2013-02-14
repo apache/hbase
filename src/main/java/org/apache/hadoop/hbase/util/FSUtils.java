@@ -23,7 +23,6 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -52,6 +51,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.security.AccessControlException;
@@ -1192,32 +1192,22 @@ public abstract class FSUtils {
   /**
    * Throw an exception if an action is not permitted by a user on a file.
    * 
-   * @param ugi
+   * @param user
    *          the user
    * @param file
    *          the file
    * @param action
    *          the action
    */
-  public static void checkAccess(UserGroupInformation ugi, FileStatus file,
+  public static void checkAccess(User user, FileStatus file,
       FsAction action) throws AccessControlException {
-    // See HBASE-7814. UserGroupInformation from hadoop 0.20.x may not support getShortUserName().
-    String username;
-    try {
-      Method m = UserGroupInformation.class.getMethod("getShortUserName", new Class<?>[]{});
-      username = (String) m.invoke(ugi);
-    } catch (NoSuchMethodException e) {
-      username = ugi.getUserName();
-    } catch (InvocationTargetException e) {
-      username = ugi.getUserName();      
-    } catch (IllegalAccessException iae) {
-      username = ugi.getUserName();      
-    }
+    // See HBASE-7814. UserGroupInformation from hadoop 0.20.x may not support getShortName().
+    String username = user.getShortName();
     if (username.equals(file.getOwner())) {
       if (file.getPermission().getUserAction().implies(action)) {
         return;
       }
-    } else if (contains(ugi.getGroupNames(), file.getGroup())) {
+    } else if (contains(user.getGroupNames(), file.getGroup())) {
       if (file.getPermission().getGroupAction().implies(action)) {
         return;
       }
