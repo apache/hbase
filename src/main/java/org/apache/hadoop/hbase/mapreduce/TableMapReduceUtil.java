@@ -513,6 +513,7 @@ public class TableMapReduceUtil {
       addDependencyJars(job.getConfiguration(),
           org.apache.zookeeper.ZooKeeper.class,
           com.google.protobuf.Message.class,
+          com.google.common.collect.ImmutableSet.class,
           job.getMapOutputKeyClass(),
           job.getMapOutputValueClass(),
           job.getInputFormatClass(),
