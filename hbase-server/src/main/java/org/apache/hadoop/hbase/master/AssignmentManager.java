@@ -2806,6 +2806,12 @@ public class AssignmentManager extends ZooKeeperListener {
             + " since it is not opening on the dead server any more: " + sn);
           it.remove();
         } else {
+          try{
+            // Delete the ZNode if exists
+            ZKAssign.deleteNodeFailSilent(watcher, hri);
+          } catch (KeeperException ke) {
+            server.abort("Unexpected ZK exception deleting node " + hri, ke);
+          }
           // Mark the region closed and assign it again by SSH
           regionStates.updateRegionState(hri, RegionState.State.CLOSED);
         }
