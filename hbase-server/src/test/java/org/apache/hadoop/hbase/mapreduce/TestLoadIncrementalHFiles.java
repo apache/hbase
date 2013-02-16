@@ -153,7 +153,7 @@ public class TestLoadIncrementalHFiles {
     admin.createTable(htd, SPLIT_KEYS);
 
     HTable table = new HTable(util.getConfiguration(), TABLE);
-    util.waitTableAvailable(TABLE, 30000);
+    util.waitTableEnabled(TABLE);
     LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration(), useSecure);
     loader.doBulkLoad(dir, table);
 
@@ -184,7 +184,7 @@ public class TestLoadIncrementalHFiles {
     admin.createTable(htd, SPLIT_KEYS);
 
     HTable table = new HTable(util.getConfiguration(), TABLE);
-    util.waitTableAvailable(TABLE, 30000);
+    util.waitTableEnabled(TABLE);
     LoadIncrementalHFiles loader = new LoadIncrementalHFiles(
       util.getConfiguration());
 

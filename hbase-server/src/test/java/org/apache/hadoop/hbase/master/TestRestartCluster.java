@@ -97,7 +97,7 @@ public class TestRestartCluster {
       UTIL.createTable(TABLE, FAMILY);
     }
     for(byte [] TABLE : TABLES) {
-      UTIL.waitTableAvailable(TABLE, 30000);
+      UTIL.waitTableEnabled(TABLE);
     }
 
     List<HRegionInfo> allRegions =
@@ -128,7 +128,7 @@ public class TestRestartCluster {
       } catch(TableExistsException tee) {
         LOG.info("Table already exists as expected");
       }
-      UTIL.waitTableAvailable(TABLE, 30000);
+      UTIL.waitTableAvailable(TABLE);
     }
   }
 

@@ -439,7 +439,7 @@ public class TestHFileOutputFormat  {
         LOG.info("Waiting for table to disable");
       }
       admin.enableTable(TABLE_NAME);
-      util.waitTableAvailable(TABLE_NAME, 30000);
+      util.waitTableAvailable(TABLE_NAME);
       assertEquals("Data should remain after reopening of regions",
           tableDigestBefore, util.checksumRows(table));
     } finally {
