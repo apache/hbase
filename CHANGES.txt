@@ -71,7 +71,6 @@ Bug
     [HBASE-7776] - Use ErrorReporter/Log instead of System.out in hbck
     [HBASE-7785] - rolling-restart.sh script unable to check expiration of master znode
     [HBASE-7793] - Port HBASE-5564 Bulkload is discarding duplicate records to 0.94
-    [HBASE-7851] - Include the guava classes as a dependency for jobs using mapreduce.TableMapReduceUtil
 
 Improvement
 
