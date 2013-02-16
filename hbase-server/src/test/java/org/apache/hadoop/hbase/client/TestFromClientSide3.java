@@ -115,8 +115,7 @@ public class TestFromClientSide3 {
     HConnection conn = HConnectionManager.getConnection(TEST_UTIL
         .getConfiguration());
     HRegionLocation loc = table.getRegionLocation(row, true);
-    AdminProtocol server = conn.getAdmin(loc.getHostname(), loc
-        .getPort());
+    AdminProtocol server = conn.getAdmin(loc.getServerName());
     byte[] regName = loc.getRegionInfo().getRegionName();
 
     for (int i = 0; i < nFlushes; i++) {
@@ -163,8 +162,7 @@ public class TestFromClientSide3 {
     // Verify we have multiple store files.
     HRegionLocation loc = hTable.getRegionLocation(row, true);
     byte[] regionName = loc.getRegionInfo().getRegionName();
-    AdminProtocol server = connection.getAdmin(
-      loc.getHostname(), loc.getPort());
+    AdminProtocol server = connection.getAdmin(loc.getServerName());
     assertTrue(ProtobufUtil.getStoreFiles(
       server, regionName, FAMILY).size() > 1);
 
@@ -177,7 +175,7 @@ public class TestFromClientSide3 {
       loc = hTable.getRegionLocation(row, true);
       if (!loc.getRegionInfo().isOffline()) {
         regionName = loc.getRegionInfo().getRegionName();
-        server = connection.getAdmin(loc.getHostname(), loc.getPort());
+        server = connection.getAdmin(loc.getServerName());
         if (ProtobufUtil.getStoreFiles(
             server, regionName, FAMILY).size() <= 1) {
           break;
@@ -211,7 +209,7 @@ public class TestFromClientSide3 {
     Thread.sleep(10 * 1000);
     loc = hTable.getRegionLocation(row, true);
     regionName = loc.getRegionInfo().getRegionName();
-    server = connection.getAdmin(loc.getHostname(), loc.getPort());
+    server = connection.getAdmin(loc.getServerName());
     int sfCount = ProtobufUtil.getStoreFiles(
       server, regionName, FAMILY).size();
     assertTrue(sfCount > 1);
@@ -236,8 +234,7 @@ public class TestFromClientSide3 {
       loc = hTable.getRegionLocation(row, true);
       regionName = loc.getRegionInfo().getRegionName();
       try {
-        server = connection.getAdmin(loc.getHostname(), loc
-            .getPort());
+        server = connection.getAdmin(loc.getServerName());
         if (ProtobufUtil.getStoreFiles(
             server, regionName, FAMILY).size() < sfCount) {
           break;

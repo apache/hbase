@@ -2527,8 +2527,7 @@ public class HRegionServer implements ClientProtocol,
     if (region == null) {
       MovedRegionInfo moveInfo = getMovedRegion(encodedRegionName);
       if (moveInfo != null) {
-        throw new RegionMovedException(moveInfo.getServerName().getHostname(),
-            moveInfo.getServerName().getPort(), moveInfo.getSeqNum());
+        throw new RegionMovedException(moveInfo.getServerName(), moveInfo.getSeqNum());
       } else {
         throw new NotServingRegionException("Region is not online: " + encodedRegionName);
       }

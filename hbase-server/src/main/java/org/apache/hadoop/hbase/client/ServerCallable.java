@@ -87,8 +87,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
    */
   public void connect(final boolean reload) throws IOException {
     this.location = connection.getRegionLocation(tableName, row, reload);
-    this.server = connection.getClient(location.getHostname(),
-        location.getPort());
+    this.server = connection.getClient(location.getServerName());
   }
 
   /** @return the server name

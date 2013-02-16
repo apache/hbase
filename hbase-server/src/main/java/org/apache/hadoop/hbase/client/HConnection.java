@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -208,10 +209,22 @@ public interface HConnection extends Abortable, Closeable {
    * @param port RegionServer port
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
-   *
+   * @deprecated - use @link {#getAdmin(final ServerName serverName)} which takes into account
+   *  the startCode
    */
+  @Deprecated
   public AdminProtocol getAdmin(final String hostname, final int port)
   throws IOException;
+
+
+  /**
+   * Establishes a connection to the region server at the specified address.
+   * @param serverName
+   * @return proxy for HRegionServer
+   * @throws IOException if a remote or network exception occurs
+   */
+  public AdminProtocol getAdmin(final ServerName serverName)
+      throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address, and return
@@ -221,10 +234,24 @@ public interface HConnection extends Abortable, Closeable {
    * @param port RegionServer port
    * @return ClientProtocol proxy for RegionServer
    * @throws IOException if a remote or network exception occurs
-   *
+   * @deprecated - use @link {#getClient(final ServerName serverName)} which takes into account
+   *  the startCode
    */
+  @Deprecated
   public ClientProtocol getClient(final String hostname, final int port)
   throws IOException;
+
+
+  /**
+   * Establishes a connection to the region server at the specified address, and return
+   * a region client protocol.
+   *
+   * @param serverName
+   * @return ClientProtocol proxy for RegionServer
+   * @throws IOException if a remote or network exception occurs
+   *
+   */
+  public ClientProtocol getClient(final ServerName serverName) throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address.
@@ -233,10 +260,22 @@ public interface HConnection extends Abortable, Closeable {
    * @param getMaster - do we check if master is alive
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
+   * @deprecated use @link {#getAdmin(final ServerName serverName, boolean getMaster)}
+   * which takes into account the startCode.
    */
-  public AdminProtocol getAdmin(final String hostname,
-     final int port, boolean getMaster)
+  @Deprecated
+  public AdminProtocol getAdmin(final String hostname, final int port, boolean getMaster)
   throws IOException;
+
+  /**
+   * Establishes a connection to the region server at the specified address.
+   * @param serverName
+   * @param getMaster - do we check if master is alive
+   * @return proxy for HRegionServer
+   * @throws IOException if a remote or network exception occurs
+   */
+  public AdminProtocol getAdmin(final ServerName serverName, boolean getMaster)
+      throws IOException;
 
   /**
    * Find region location hosting passed row

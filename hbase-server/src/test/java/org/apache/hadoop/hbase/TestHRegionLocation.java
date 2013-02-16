@@ -37,24 +37,24 @@ public class TestHRegionLocation {
   public void testHashAndEqualsCode() {
     ServerName hsa1 = new ServerName("localhost", 1234, -1L);
     HRegionLocation hrl1 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO,
-      hsa1.getHostname(), hsa1.getPort());
+        hsa1, HConstants.NO_SEQNUM);
     HRegionLocation hrl2 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO,
-      hsa1.getHostname(), hsa1.getPort());
+        hsa1, HConstants.NO_SEQNUM);
     assertEquals(hrl1.hashCode(), hrl2.hashCode());
     assertTrue(hrl1.equals(hrl2));
     HRegionLocation hrl3 = new HRegionLocation(HRegionInfo.ROOT_REGIONINFO,
-      hsa1.getHostname(), hsa1.getPort());
+        hsa1, HConstants.NO_SEQNUM);
     assertNotSame(hrl1, hrl3);
     // They are equal because they have same location even though they are
     // carrying different regions or timestamp.
     assertTrue(hrl1.equals(hrl3));
     ServerName hsa2 = new ServerName("localhost", 12345, -1L);
     HRegionLocation hrl4 = new HRegionLocation(HRegionInfo.ROOT_REGIONINFO,
-        hsa2.getHostname(), hsa2.getPort());
+        hsa2, HConstants.NO_SEQNUM);
     // These have same HRI but different locations so should be different.
     assertFalse(hrl3.equals(hrl4));
     HRegionLocation hrl5 = new HRegionLocation(hrl4.getRegionInfo(),
-        hrl4.getHostname(), hrl4.getPort(), hrl4.getSeqNum() + 1);
+        hrl4.getServerName(), hrl4.getSeqNum() + 1);
     assertTrue(hrl4.equals(hrl5));
   }
 
@@ -62,7 +62,7 @@ public class TestHRegionLocation {
   public void testToString() {
     ServerName hsa1 = new ServerName("localhost", 1234, -1L);
     HRegionLocation hrl1 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO,
-      hsa1.getHostname(), hsa1.getPort());
+      hsa1, HConstants.NO_SEQNUM);
     System.out.println(hrl1.toString());
   }
 
@@ -70,10 +70,10 @@ public class TestHRegionLocation {
   public void testCompareTo() {
     ServerName hsa1 = new ServerName("localhost", 1234, -1L);
     HRegionLocation hsl1 =
-      new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, hsa1.getHostname(), hsa1.getPort());
+      new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, hsa1, HConstants.NO_SEQNUM);
     ServerName hsa2 = new ServerName("localhost", 1235, -1L);
     HRegionLocation hsl2 =
-      new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, hsa2.getHostname(), hsa2.getPort());
+      new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, hsa2, HConstants.NO_SEQNUM);
     assertTrue(hsl1.compareTo(hsl1) == 0);
     assertTrue(hsl2.compareTo(hsl2) == 0);
     int compare1 = hsl1.compareTo(hsl2);
