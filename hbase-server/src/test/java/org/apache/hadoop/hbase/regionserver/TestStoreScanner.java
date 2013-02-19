@@ -568,6 +568,7 @@ public class TestStoreScanner extends TestCase {
       assertEquals(kvs[14], results.get(5));
       assertEquals(kvs[15], results.get(6));
       assertEquals(7, results.size());
+      scanner.close();
     }finally{
     EnvironmentEdgeManagerTestHelper.reset();
     }

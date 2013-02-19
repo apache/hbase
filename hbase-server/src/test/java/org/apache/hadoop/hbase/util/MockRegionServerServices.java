@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
@@ -170,6 +171,11 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public HLog getWAL(HRegionInfo regionInfo) throws IOException {
     // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public ExecutorService getExecutorService() {
     return null;
   }
 }

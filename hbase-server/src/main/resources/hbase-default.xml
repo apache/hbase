@@ -442,6 +442,21 @@
     </description>
   </property>
   <property>
+    <name>hbase.storescanner.parallel.seek.enable</name>
+    <value>false</value>
+    <description>
+      Enables StoreFileScanner parallel-seeking in StoreScanner,
+      a feature which can reduce response latency under special conditions.
+    </description>
+  </property>
+  <property>
+    <name>hbase.storescanner.parallel.seek.threads</name>
+    <value>10</value>
+    <description>
+      The default thread pool size if parallel-seeking feature enabled. 
+    </description>
+  </property>
+  <property>
     <name>hbase.mapreduce.hfileoutputformat.blocksize</name>
     <value>65536</value>
     <description>The mapreduce HFileOutputFormat writes storefiles/hfiles.
