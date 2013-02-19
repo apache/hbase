@@ -205,7 +205,7 @@ public class CreateTableHandler extends EventHandler {
     try {
       assignmentManager.getZKTable().setEnabledTable(tableName);
     } catch (KeeperException e) {
-      throw new IOException("Unable to ensure that the table will be" +
+      throw new IOException("Unable to ensure that " + tableName + " will be" +
         " enabled because of a ZooKeeper issue", e);
     }
   }
@@ -216,7 +216,8 @@ public class CreateTableHandler extends EventHandler {
    * @param tableName name of the table under construction
    * @return the list of regions created
    */
-  protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir, final String tableName)
+  protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir,
+    final String tableName)
       throws IOException {
     int regionNumber = newRegions.length;
     ThreadPoolExecutor regionOpenAndInitThreadPool = getRegionOpenAndInitThreadPool(

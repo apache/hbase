@@ -84,7 +84,6 @@ public final class MasterSnapshotVerifier {
   private MasterServices services;
 
   /**
-   * Build a util for the given snapshot
    * @param services services for the master
    * @param snapshot snapshot to check
    * @param rootDir root directory of the hbase installation.
@@ -137,7 +136,7 @@ public final class MasterSnapshotVerifier {
   }
 
   /**
-   * Check that all the regions in the the snapshot are valid, and accounted for.
+   * Check that all the regions in the snapshot are valid, and accounted for.
    * @param snapshotDir snapshot directory to check
    * @throws IOException if we can't reach .META. or read the files from the FS
    */
@@ -146,7 +145,7 @@ public final class MasterSnapshotVerifier {
       Bytes.toBytes(tableName));
     for (HRegionInfo region : regions) {
       // if offline split parent, skip it
-      if (region.isOffline() || region.isSplit() || region.isSplitParent()) {
+      if (region.isOffline() && (region.isSplit() || region.isSplitParent())) {
         continue;
       }
 
@@ -156,6 +155,7 @@ public final class MasterSnapshotVerifier {
 
   /**
    * Verify that the region (regioninfo, hfiles) are valid
+   * @param fs the FileSystem instance
    * @param snapshotDir snapshot directory to check
    * @param region the region to check
    */
@@ -174,10 +174,15 @@ public final class MasterSnapshotVerifier {
       throw new CorruptedSnapshotException("No region info found for region:" + region, snapshot);
     }
     FSDataInputStream in = fs.open(regionInfo);
-    HRegionInfo found = HRegionInfo.parseFrom(in);
-    if (!region.equals(found)) {
-      throw new CorruptedSnapshotException("Found region info (" + found
+    HRegionInfo found;
+    try {
+      found = HRegionInfo.parseFrom(in);
+      if (!region.equals(found)) {
+        throw new CorruptedSnapshotException("Found region info (" + found
           + ") doesn't match expected region:" + region, snapshot);
+      }
+    } finally {
+      in.close();      
     }
 
     // make sure we have the expected recovered edits files
@@ -224,21 +229,5 @@ public final class MasterSnapshotVerifier {
         }
       }
     }
-  }
-
-  /**
-   * Check that the logs stored in the log directory for the snapshot are valid - it contains all
-   * the expected logs for all servers involved in the snapshot.
-   * @param snapshotDir snapshot directory to check
-   * @param snapshotServers list of the names of servers involved in the snapshot.
-   * @throws CorruptedSnapshotException if the hlogs in the snapshot are not correct
-   * @throws IOException if we can't reach the filesystem
-   */
-  private void verifyLogs(Path snapshotDir, Set<String> snapshotServers)
-      throws CorruptedSnapshotException, IOException {
-    Path snapshotLogDir = new Path(snapshotDir, HConstants.HREGION_LOGDIR_NAME);
-    Path logsDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
-    TakeSnapshotUtils.verifyAllLogsGotReferenced(fs, logsDir, snapshotServers, snapshot,
-      snapshotLogDir);
   }
 }

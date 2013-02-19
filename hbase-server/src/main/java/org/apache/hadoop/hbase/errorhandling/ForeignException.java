@@ -52,20 +52,6 @@ public class ForeignException extends IOException {
   private final String source;
 
   /**
-   * Create a new ForeignException that can be serialized.   It is assumed that this came from a
-   * remote source.
-   * @param source
-   * @param cause
-   */
-  private ForeignException(String source, String clazz, ProxyThrowable cause) {
-    super(cause);
-    assert source != null;
-    assert cause != null;
-    assert clazz != null;
-    this.source = source;
-  }
-
-  /**
    * Create a new ForeignException that can be serialized.  It is assumed that this came form a
    * local source.
    * @param source
@@ -114,7 +100,7 @@ public class ForeignException extends IOException {
 
   /**
    * Convert a stack trace to list of {@link StackTraceElement}.
-   * @param stackTrace the stack trace to convert to protobuf message
+   * @param trace the stack trace to convert to protobuf message
    * @return <tt>null</tt> if the passed stack is <tt>null</tt>.
    */
   private static List<StackTraceElementMessage> toStackTraceElementMessages(
@@ -146,10 +132,10 @@ public class ForeignException extends IOException {
   }
 
   /**
-   * Converts an ForeignException to a array of bytes.
+   * Converts a ForeignException to an array of bytes.
    * @param source the name of the external exception source
    * @param t the "local" external exception (local)
-   * @return protobuf serialized version of ForeignThreadException
+   * @return protobuf serialized version of ForeignException
    */
   public static byte[] serialize(String source, Throwable t) {
     GenericExceptionMessage.Builder gemBuilder = GenericExceptionMessage.newBuilder();
@@ -158,7 +144,8 @@ public class ForeignException extends IOException {
       gemBuilder.setMessage(t.getMessage());
     }
     // set the stack trace, if there is one
-    List<StackTraceElementMessage> stack = ForeignException.toStackTraceElementMessages(t.getStackTrace());
+    List<StackTraceElementMessage> stack =
+        ForeignException.toStackTraceElementMessages(t.getStackTrace());
     if (stack != null) {
       gemBuilder.addAllTrace(stack);
     }
@@ -172,16 +159,16 @@ public class ForeignException extends IOException {
   /**
    * Takes a series of bytes and tries to generate an ForeignException instance for it.
    * @param bytes
-   * @return the ExternalExcpetion instance
+   * @return the ForeignExcpetion instance
    * @throws InvalidProtocolBufferException if there was deserialization problem this is thrown.
    */
   public static ForeignException deserialize(byte[] bytes) throws InvalidProtocolBufferException {
     // figure out the data we need to pass
     ForeignExceptionMessage eem = ForeignExceptionMessage.parseFrom(bytes);
     GenericExceptionMessage gem = eem.getGenericException();
-    StackTraceElement [] trace = ForeignException.toStack(gem.getTraceList());
+    StackTraceElement [] trace = ForeignException.toStackTrace(gem.getTraceList());
     ProxyThrowable dfe = new ProxyThrowable(gem.getMessage(), trace);
-    ForeignException e = new ForeignException(eem.getSource(), gem.getClassName(), dfe);
+    ForeignException e = new ForeignException(eem.getSource(), dfe);
     return e;
   }
 
@@ -192,7 +179,7 @@ public class ForeignException extends IOException {
    * @return the deserialized list or <tt>null</tt> if it couldn't be unwound (e.g. wasn't set on
    *         the sender).
    */
-  private static StackTraceElement[] toStack(List<StackTraceElementMessage> traceList) {
+  private static StackTraceElement[] toStackTrace(List<StackTraceElementMessage> traceList) {
     if (traceList == null || traceList.size() == 0) {
       return new StackTraceElement[0]; // empty array
     }

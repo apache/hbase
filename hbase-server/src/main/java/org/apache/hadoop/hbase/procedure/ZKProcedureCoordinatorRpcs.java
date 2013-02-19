@@ -66,6 +66,9 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
    * appear, first acquire to relevant listener or sets watch waiting for notification of
    * the acquire node
    *
+   * @param proc the Procedure
+   * @param info data to be stored in the acquire node
+   * @param nodeNames children of the acquire phase
    * @throws IOException if any failure occurs.
    */
   @Override
@@ -79,12 +82,10 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
       if (ZKUtil.watchAndCheckExists(zkProc.getWatcher(), abortNode)) {
         abort(abortNode);
       }
-
       // If we get an abort node watch triggered here, we'll go complete creating the acquired
       // znode but then handle the acquire znode and bail out
-
     } catch (KeeperException e) {
-      LOG.error("Failed to create abort", e);
+      LOG.error("Failed to watch abort", e);
       throw new IOException("Failed while watching abort node:" + abortNode, e);
     }
 
@@ -155,11 +156,12 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
    * Start monitoring znodes in ZK - subclass hook to start monitoring znodes they are about.
    * @return true if succeed, false if encountered initialization errors.
    */
-  final public boolean start(final ProcedureCoordinator listener) {
+  final public boolean start(final ProcedureCoordinator coordinator) {
     if (this.coordinator != null) {
-      throw new IllegalStateException("ZKProcedureCoordinator already started and already has listener installed");
+      throw new IllegalStateException(
+        "ZKProcedureCoordinator already started and already has listener installed");
     }
-    this.coordinator = listener;
+    this.coordinator = coordinator;
 
     try {
       this.zkProc = new ZKProcedureUtil(watcher, procedureType, coordName) {
@@ -170,15 +172,15 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
           logZKTree(this.baseZNode);
           if (isAcquiredPathNode(path)) {
             // node wasn't present when we created the watch so zk event triggers acquire
-            listener.memberAcquiredBarrier(ZKUtil.getNodeName(ZKUtil.getParent(path)), ZKUtil.getNodeName(path));
-          }
-          if (isReachedPathNode(path)) {
-            // node wasn't present when we created the watch so zk event triggers the finished barrier.
+            coordinator.memberAcquiredBarrier(ZKUtil.getNodeName(ZKUtil.getParent(path)),
+              ZKUtil.getNodeName(path));
+          } else if (isReachedPathNode(path)) {
+            // node was absent when we created the watch so zk event triggers the finished barrier.
 
-            // TODO Nothing enforces that acquire and reached znodes from showing up in the wrong order.
-            listener.memberFinishedBarrier(ZKUtil.getNodeName(ZKUtil.getParent(path)), ZKUtil.getNodeName(path));
-          }
-          if (isAbortPathNode(path)) {
+            // TODO Nothing enforces that acquire and reached znodes from showing up in wrong order.
+            coordinator.memberFinishedBarrier(ZKUtil.getNodeName(ZKUtil.getParent(path)),
+              ZKUtil.getNodeName(path));
+          } else if (isAbortPathNode(path)) {
             abort(path);
           }
         }

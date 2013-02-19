@@ -154,7 +154,7 @@ public class MetaEditor {
    * @param deletes Deletes to add to .META.  This list should support #remove.
    * @throws IOException
    */
-  static void deleteFromMetaTable(final CatalogTracker ct, final List<Delete> deletes)
+  public static void deleteFromMetaTable(final CatalogTracker ct, final List<Delete> deletes)
       throws IOException {
     HTable t = MetaReader.getMetaHTable(ct);
     try {

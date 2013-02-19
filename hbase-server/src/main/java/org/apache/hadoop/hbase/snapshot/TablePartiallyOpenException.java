@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Thrown if a table should be online/offline but is partial open
+ * Thrown if a table should be online/offline but is partially open
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

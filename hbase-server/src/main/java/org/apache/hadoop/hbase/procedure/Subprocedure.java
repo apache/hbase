@@ -181,7 +181,7 @@ abstract public class Subprocedure implements Callable<Void> {
       insideBarrier();
       LOG.debug("Subprocedure '" + barrierName + "' locally completed");
 
-      // Ack that the member has executed and relased local barrier
+      // Ack that the member has executed and released local barrier
       rpcs.sendMemberCompleted(this);
       LOG.debug("Subprocedure '" + barrierName + "' has notified controller of completion");
 

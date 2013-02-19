@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 /**
  * General snapshot operation taken on a regionserver
  */
+@InterfaceAudience.Private
 public abstract class SnapshotTask implements ForeignExceptionSnare, Callable<Void>{
 
   protected final SnapshotDescription snapshot;

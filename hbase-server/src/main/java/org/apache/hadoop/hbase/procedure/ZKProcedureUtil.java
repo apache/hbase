@@ -234,7 +234,7 @@ public abstract class ZKProcedureUtil
    * @param root name of the root directory in zk to print
    * @throws KeeperException
    */
-  public void logZKTree(String root) {
+  void logZKTree(String root) {
     if (!LOG.isDebugEnabled()) return;
     LOG.debug("Current zk system:");
     String prefix = "|-";

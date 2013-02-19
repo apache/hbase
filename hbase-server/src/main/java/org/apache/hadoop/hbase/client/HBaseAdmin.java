@@ -2116,7 +2116,8 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
-   * Create a timestamp consistent snapshot for the given table.
+   * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be
+   * taken. If the table is disabled, an offline snapshot is taken.
    * <p>
    * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
    * snapshot with the same name (even a different type or with different parameters) will fail with
@@ -2206,9 +2207,6 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void snapshot(SnapshotDescription snapshot) throws IOException, SnapshotCreationException,
       IllegalArgumentException {
-    // make sure the snapshot is valid
-    SnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
-
     // actually take the snapshot
     TakeSnapshotResponse response = takeSnapshotAsync(snapshot);
     final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot)
@@ -2226,9 +2224,9 @@ public class HBaseAdmin implements Abortable, Closeable {
       try {
         // sleep a backoff <= pauseTime amount
         long sleep = getPauseTime(tries++);
-        LOG.debug("Found sleep:" + sleep);
         sleep = sleep > maxPauseTime ? maxPauseTime : sleep;
-        LOG.debug(tries + ") Sleeping: " + sleep + " ms while we wait for snapshot to complete.");
+        LOG.debug("(#" + tries + ") Sleeping: " + sleep +
+          "ms while waiting for snapshot completion.");
         Thread.sleep(sleep);
 
       } catch (InterruptedException e) {
@@ -2242,8 +2240,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           return masterAdmin.isSnapshotDone(null, request);
         }
       });
-    }
-    ;
+    };
     if (!done.getDone()) {
       throw new SnapshotCreationException("Snapshot '" + snapshot.getName()
           + "' wasn't completed in expectedTime:" + max + " ms", snapshot);
@@ -2251,7 +2248,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
-   * Take a snapshot and wait for the server to complete that snapshot (asynchronous)
+   * Take a snapshot without waiting for the server to complete that snapshot (asynchronous)
    * <p>
    * Only a single snapshot should be taken at a time, or results may be undefined.
    * @param snapshot snapshot to take
@@ -2309,7 +2306,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   /**
    * Restore the specified snapshot on the original table. (The table must be disabled)
    * Before restoring the table, a new snapshot with the current table state is created.
-   * In case of failure, the table will be rolled back to the its original state.
+   * In case of failure, the table will be rolled back to its original state.
    *
    * @param snapshotName name of the snapshot to restore
    * @throws IOException if a remote or network exception occurs
@@ -2358,7 +2355,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       // Try to rollback
       try {
         String msg = "Restore snapshot=" + snapshotName +
-          " failed. Rollback to snapshot=" + rollbackSnapshot + " succeded.";
+          " failed. Rollback to snapshot=" + rollbackSnapshot + " succeeded.";
         LOG.error(msg, e);
         internalRestoreSnapshot(rollbackSnapshot, tableName);
         throw new RestoreSnapshotException(msg, e);

@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Exception for a timeout of a task.
+ * Exception for timeout of a task.
  * @see TimeoutExceptionInjector
  */
 @InterfaceAudience.Public

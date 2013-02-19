@@ -39,7 +39,7 @@ import com.google.common.collect.Lists;
 
 /**
  * Handle the master side of taking a snapshot of an online table, regardless of snapshot type.
- * Uses a {@link Procedure} to run the snapshot across all the involved regions.
+ * Uses a {@link Procedure} to run the snapshot across all the involved region servers.
  * @see ProcedureCoordinator
  */
 @InterfaceAudience.Private
@@ -84,7 +84,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
       // wait for the snapshot to complete.  A timer thread is kicked off that should cancel this
       // if it takes too long.
       proc.waitForCompleted();
-      LOG.info("Done waiting - snapshot finished!");
+      LOG.info("Done waiting - snapshot for " + this.snapshot.getName() + " finished!");
     } catch (InterruptedException e) {
       ForeignException ee =
           new ForeignException("Interrupted while waiting for snapshot to finish", e);

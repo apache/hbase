@@ -964,7 +964,6 @@
         The thread pool always has at least these number of threads so
         the REST server is ready to serve incoming requests. The default
         is 2.
->>>>>>> apache/trunk
     </description>
   </property>
 </configuration>

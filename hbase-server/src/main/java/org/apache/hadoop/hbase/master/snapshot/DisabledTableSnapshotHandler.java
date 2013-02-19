@@ -107,10 +107,11 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
       }
 
       // 3. write the table info to disk
-      LOG.info("Starting to copy tableinfo for offline snapshot: " + SnapshotDescriptionUtils.toString(snapshot));
-      TableInfoCopyTask tableInfo = new TableInfoCopyTask(this.monitor, snapshot, fs,
+      LOG.info("Starting to copy tableinfo for offline snapshot: " +
+      SnapshotDescriptionUtils.toString(snapshot));
+      TableInfoCopyTask tableInfoCopyTask = new TableInfoCopyTask(this.monitor, snapshot, fs,
           FSUtils.getRootDir(conf));
-      tableInfo.call();
+      tableInfoCopyTask.call();
       monitor.rethrowException();
     } catch (Exception e) {
       // make sure we capture the exception to propagate back to the client later

@@ -749,7 +749,7 @@ public final class HConstants {
   public static final String HFILE_ARCHIVE_DIRECTORY = ".archive";
 
   /**
-   * Name of the directory to store snapshots all snapshots. See SnapshotDescriptionUtils for
+   * Name of the directory to store all snapshots. See SnapshotDescriptionUtils for
    * remaining snapshot constants; this is here to keep HConstants dependencies at a minimum and
    * uni-directional.
    */

@@ -62,7 +62,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
   private ZKProcedureUtil zkController;
 
   /**
-   * Must call {@link #start(ProcedureMember)} before this is can be used.
+   * Must call {@link #start(ProcedureMember)} before this can be used.
    * @param watcher {@link ZooKeeperWatcher} to be owned by <tt>this</tt>. Closed via
    *          {@link #close()}.
    * @param procType name of the znode describing the procedure type
@@ -120,12 +120,6 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     return zkController;
   }
 
-  public void start() {
-    LOG.debug("Starting the procedure member");
-    watchForAbortedProcedures();
-    waitForNewProcedures();
-  }
-
   @Override
   public String getMemberName() {
     return memberName;
@@ -145,7 +139,8 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     LOG.debug("Checking for aborted procedures on node: '" + zkController.getAbortZnode() + "'");
     try {
       // this is the list of the currently aborted procedues
-      for (String node : ZKUtil.listChildrenAndWatchForNewChildren(zkController.getWatcher(), zkController.getAbortZnode())) {
+      for (String node : ZKUtil.listChildrenAndWatchForNewChildren(zkController.getWatcher(),
+        zkController.getAbortZnode())) {
         String abortNode = ZKUtil.joinZNode(zkController.getAbortZnode(), node);
         abort(abortNode);
       }
@@ -157,11 +152,12 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
 
   private void waitForNewProcedures() {
     // watch for new procedues that we need to start subprocedures for
-    LOG.debug("Looking for new procedures under znode: '" + zkController.getAcquiredBarrier() + "'");
-    List<String> runningProcedure = null;
+    LOG.debug("Looking for new procedures under znode:'" + zkController.getAcquiredBarrier() + "'");
+    List<String> runningProcedures = null;
     try {
-      runningProcedure = ZKUtil.listChildrenAndWatchForNewChildren(zkController.getWatcher(), zkController.getAcquiredBarrier());
-      if (runningProcedure == null) {
+      runningProcedures = ZKUtil.listChildrenAndWatchForNewChildren(zkController.getWatcher(),
+        zkController.getAcquiredBarrier());
+      if (runningProcedures == null) {
         LOG.debug("No running procedures.");
         return;
       }
@@ -169,7 +165,11 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       member.controllerConnectionFailure("General failure when watching for new procedures",
         new IOException(e));
     }
-    for (String procName : runningProcedure) {
+    if (runningProcedures == null) {
+      LOG.debug("No running procedures.");
+      return;
+    }
+    for (String procName : runningProcedures) {
       // then read in the procedure information
       String path = ZKUtil.joinZNode(zkController.getAcquiredBarrier(), procName);
       startNewSubprocedure(path);
@@ -177,7 +177,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
   }
 
   /**
-   * Kick off a new procedure on the listener with the data stored in the passed znode.
+   * Kick off a new sub-procedure on the listener with the data stored in the passed znode.
    * <p>
    * Will attempt to create the same procedure multiple times if an procedure znode with the same
    * name is created. It is left up the coordinator to ensure this doesn't occur.
@@ -238,7 +238,8 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     try {
       LOG.debug("Member: '" + memberName + "' joining acquired barrier for procedure (" + procName
           + ") in zk");
-      String acquiredZNode = ZKUtil.joinZNode(ZKProcedureUtil.getAcquireBarrierNode(zkController, procName), memberName);
+      String acquiredZNode = ZKUtil.joinZNode(ZKProcedureUtil.getAcquireBarrierNode(
+        zkController, procName), memberName);
       ZKUtil.createAndFailSilent(zkController.getWatcher(), acquiredZNode);
 
       // watch for the complete node for this snapshot
@@ -254,7 +255,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
   }
 
   /**
-   * This acts as the ack for a completed
+   * This acts as the ack for a completed snapshot
    */
   @Override
   public void sendMemberCompleted(Subprocedure sub) throws IOException {
@@ -278,12 +279,12 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
   public void sendMemberAborted(Subprocedure sub, ForeignException ee) {
     if (sub == null) {
       LOG.error("Failed due to null subprocedure", ee);
+      return;
     }
     String procName = sub.getName();
     LOG.debug("Aborting procedure (" + procName + ") in zk");
     String procAbortZNode = zkController.getAbortZNode(procName);
     try {
-      LOG.debug("Creating abort znode:" + procAbortZNode);
       String source = (ee.getSource() == null) ? memberName: ee.getSource();
       byte[] errorInfo = ProtobufUtil.prependPBMagic(ForeignException.serialize(source, ee));
       ZKUtil.createAndFailSilent(zkController.getWatcher(), procAbortZNode, errorInfo);
@@ -316,9 +317,10 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
           LOG.error(msg);
           // we got a remote exception, but we can't describe it so just return exn from here
           ee = new ForeignException(getMemberName(), new IllegalArgumentException(msg));
+        } else {
+          data = Arrays.copyOfRange(data, ProtobufUtil.lengthOfPBMagic(), data.length);
+          ee = ForeignException.deserialize(data);
         }
-        data = Arrays.copyOfRange(data, ProtobufUtil.lengthOfPBMagic(), data.length);
-        ee = ForeignException.deserialize(data);
       } catch (InvalidProtocolBufferException e) {
         LOG.warn("Got an error notification for op:" + opName
             + " but we can't read the information. Killing the procedure.");
@@ -336,7 +338,8 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
   public void start(ProcedureMember listener) {
     LOG.debug("Starting procedure member '" + this.memberName + "'");
     this.member = listener;
-    this.start();
+    watchForAbortedProcedures();
+    waitForNewProcedures();
   }
 
   @Override

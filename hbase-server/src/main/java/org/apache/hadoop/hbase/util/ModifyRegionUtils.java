@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
@@ -187,26 +188,14 @@ public abstract class ModifyRegionUtils {
   public static void deleteRegions(final Configuration conf, final FileSystem fs,
       final CatalogTracker catalogTracker, final List<HRegionInfo> regions) throws IOException {
     if (regions != null && regions.size() > 0) {
+      List<Delete> deletes = new ArrayList<Delete>(regions.size());
       for (HRegionInfo hri: regions) {
-        deleteRegion(conf, fs, catalogTracker, hri);
+        deletes.add(new Delete(hri.getRegionName()));
+        
+        // "Delete" region from FS
+        HFileArchiver.archiveRegion(conf, fs, hri);
       }
+      MetaEditor.deleteFromMetaTable(catalogTracker, deletes);
     }
-  }
-
-  /**
-   * Remove region from file-system and .META.
-   * (The region must be offline).
-   *
-   * @param fs {@link FileSystem} on which to delete the region directory
-   * @param catalogTracker the catalog tracker
-   * @param regionInfo {@link HRegionInfo} to delete.
-   */
-  public static void deleteRegion(final Configuration conf, final FileSystem fs,
-      final CatalogTracker catalogTracker, final HRegionInfo regionInfo) throws IOException {
-    // Remove region from .META.
-    MetaEditor.deleteRegion(catalogTracker, regionInfo);
-
-    // "Delete" region from FS
-    HFileArchiver.archiveRegion(conf, fs, regionInfo);
   }
 }

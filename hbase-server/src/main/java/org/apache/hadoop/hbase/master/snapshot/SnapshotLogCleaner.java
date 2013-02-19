@@ -44,7 +44,8 @@ public class SnapshotLogCleaner extends BaseLogCleanerDelegate {
    * Conf key for the frequency to attempt to refresh the cache of hfiles currently used in
    * snapshots (ms)
    */
-  static final String HLOG_CACHE_REFRESH_PERIOD_CONF_KEY = "hbase.master.hlogcleaner.plugins.snapshot.period";
+  static final String HLOG_CACHE_REFRESH_PERIOD_CONF_KEY =
+      "hbase.master.hlogcleaner.plugins.snapshot.period";
 
   /** Refresh cache, by default, every 5 minutes */
   private static final long DEFAULT_HLOG_CACHE_REFRESH_PERIOD = 300000;
@@ -54,6 +55,7 @@ public class SnapshotLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public synchronized boolean isFileDeletable(Path filePath) {
     try {
+      if (null == cache) return false;
       return !cache.contains(filePath.getName());
     } catch (IOException e) {
       LOG.error("Exception while checking if:" + filePath + " was valid, keeping it just in case.",

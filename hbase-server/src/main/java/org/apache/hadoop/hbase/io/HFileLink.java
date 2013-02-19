@@ -75,7 +75,7 @@ public class HFileLink extends FileLink {
       HRegionInfo.ENCODED_REGION_NAME_REGEX, StoreFile.HFILE_NAME_REGEX));
 
   /**
-   * The link should be used for hfile and reference links
+   * The pattern should be used for hfile and reference links
    * that can be found in /hbase/table/region/family/
    */
   private static final Pattern REF_OR_HFILE_LINK_PATTERN =

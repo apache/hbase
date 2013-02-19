@@ -52,6 +52,8 @@ import org.apache.zookeeper.KeeperException;
  * A handler for taking snapshots from the master.
  *
  * This is not a subclass of TableEventHandler because using that would incur an extra META scan.
+ * 
+ * The {@link #snapshotRegions(List)} call should get implemented for each snapshot flavor.
  */
 @InterfaceAudience.Private
 public abstract class TakeSnapshotHandler extends EventHandler implements SnapshotSentinel,
@@ -91,6 +93,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
     this.monitor =  new ForeignExceptionDispatcher();
 
+    loadTableDescriptor(); // check that .tableinfo is present
+
     // prepare the verify
     this.verifier = new MasterSnapshotVerifier(masterServices, snapshot, rootDir);
   }
@@ -107,19 +111,13 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   }
 
   /**
-   * Execute the core common portions of taking a snapshot.  the {@link #snapshotRegions(List)}
+   * Execute the core common portions of taking a snapshot. The {@link #snapshotRegions(List)}
    * call should get implemented for each snapshot flavor.
    */
   @Override
   public void process() {
     LOG.info("Running table snapshot operation " + eventType + " on table " + snapshot.getTable());
     try {
-      loadTableDescriptor(); // check that .tableinfo is present
-
-      byte[] ssbytes = Bytes.toBytes(snapshot.getTable());
-      List<Pair<HRegionInfo, ServerName>> regionsAndLocations = MetaReader.getTableRegionsAndLocations(
-        this.server.getCatalogTracker(), ssbytes, true);
-
       // If regions move after this meta scan, the region specific snapshot should fail, triggering
       // an external exception that gets captured here.
 
@@ -127,6 +125,10 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, this.fs);
       new TableInfoCopyTask(monitor, snapshot, fs, rootDir).call();
       monitor.rethrowException();
+
+      List<Pair<HRegionInfo, ServerName>> regionsAndLocations =
+          MetaReader.getTableRegionsAndLocations(this.server.getCatalogTracker(),
+            Bytes.toBytes(snapshot.getTable()), true);
 
       // run the snapshot
       snapshotRegions(regionsAndLocations);

@@ -44,7 +44,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class ForeignExceptionDispatcher implements ForeignExceptionListener, ForeignExceptionSnare {
   public static final Log LOG = LogFactory.getLog(ForeignExceptionDispatcher.class);
   protected final String name;
-  protected final List<ForeignExceptionListener> listeners = new ArrayList<ForeignExceptionListener>();
+  protected final List<ForeignExceptionListener> listeners =
+      new ArrayList<ForeignExceptionListener>();
   private ForeignException exception;
 
   public ForeignExceptionDispatcher(String name) {
@@ -69,7 +70,7 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
     if (e != null) {
       exception = e;
     } else {
-      exception = new ForeignException(name, e);
+      exception = new ForeignException(name, "");
     }
 
     // notify all the listeners
@@ -77,16 +78,16 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
   }
 
   @Override
-  public void rethrowException() throws ForeignException {
+  public synchronized void rethrowException() throws ForeignException {
     if (exception != null) {
       // This gets the stack where this is caused, (instead of where it was deserialized).
-      // This which is much more useful for debugging
+      // This is much more useful for debugging
       throw new ForeignException(exception.getSource(), exception.getCause());
     }
   }
 
   @Override
-  public boolean hasException() {
+  public synchronized boolean hasException() {
     return exception != null;
   }
 
@@ -102,7 +103,6 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
    */
   private void dispatch(ForeignException e) {
     // update all the listeners with the passed error
-    LOG.debug(name + " Recieved error, notifying listeners...");
     for (ForeignExceptionListener l: listeners) {
       l.receive(e);
     }

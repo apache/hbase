@@ -73,7 +73,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 public class RegionServerSnapshotManager {
   private static final Log LOG = LogFactory.getLog(RegionServerSnapshotManager.class);
 
-  /** Maximum number of concurrent snapshot region tasks that can run concurrently */
+  /** Maximum number of snapshot region tasks that can run concurrently */
   private static final String CONCURENT_SNAPSHOT_TASKS_KEY = "hbase.snapshot.region.concurrentTasks";
   private static final int DEFAULT_CONCURRENT_SNAPSHOT_TASKS = 3;
 
@@ -212,8 +212,8 @@ public class RegionServerSnapshotManager {
   /**
    * Determine if the snapshot should be handled on this server
    *
-   * NOTE: This is racy -- the master expects a list of regionservers, but the regions get the
-   * regions.  This means if a region moves somewhere between the calls we'll miss some regions.
+   * NOTE: This is racy -- the master expects a list of regionservers.
+   * This means if a region moves somewhere between the calls we'll miss some regions.
    * For example, a region move during a snapshot could result in a region to be skipped or done
    * twice.  This is manageable because the {@link MasterSnapshotVerifier} will double check the
    * region lists after the online portion of the snapshot completes and will explicitly fail the
@@ -297,7 +297,7 @@ public class RegionServerSnapshotManager {
 
     /**
      * Wait for all of the currently outstanding tasks submitted via {@link #submitTask(Callable)}.
-     * This *must* be called to after all tasks are submitted via submitTask.
+     * This *must* be called after all tasks are submitted via submitTask.
      *
      * @return <tt>true</tt> on success, <tt>false</tt> otherwise
      * @throws InterruptedException
@@ -313,7 +313,7 @@ public class RegionServerSnapshotManager {
           Future<Void> f = taskPool.take();
           f.get();
           if (!futures.remove(f)) {
-            LOG.warn("unexpected future");
+            LOG.warn("unexpected future" + f);
           }
           LOG.debug("Completed " + (i+1) + "/" + sz +  " local region snapshots.");
         }

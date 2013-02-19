@@ -44,7 +44,8 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
    * Conf key for the frequency to attempt to refresh the cache of hfiles currently used in
    * snapshots (ms)
    */
-  public static final String HFILE_CACHE_REFRESH_PERIOD_CONF_KEY = "hbase.master.hfilecleaner.plugins.snapshot.period";
+  public static final String HFILE_CACHE_REFRESH_PERIOD_CONF_KEY =
+      "hbase.master.hfilecleaner.plugins.snapshot.period";
 
   /** Refresh cache, by default, every 5 minutes */
   private static final long DEFAULT_HFILE_CACHE_REFRESH_PERIOD = 300000;

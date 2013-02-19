@@ -330,8 +330,8 @@ service MasterAdminService {
   rpc execMasterService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
 
-	/** 
-	 * Create a snapshot for the given table.
+  /** 
+   * Create a snapshot for the given table.
    * @param snapshot description of the snapshot to take
    */
   rpc snapshot(TakeSnapshotRequest) returns(TakeSnapshotResponse);
@@ -343,7 +343,7 @@ service MasterAdminService {
   rpc listSnapshots(ListSnapshotRequest) returns(ListSnapshotResponse);
 
   /**
-   * Delete an existing snapshot. This method can also be used to clean up a aborted snapshot.
+   * Delete an existing snapshot. This method can also be used to clean up an aborted snapshot.
    * @param snapshotName snapshot to delete
    */
   rpc deleteSnapshot(DeleteSnapshotRequest) returns(DeleteSnapshotResponse);

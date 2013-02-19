@@ -58,10 +58,10 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * Further, the cache is periodically refreshed ensure that files in snapshots that were deleted are
  * also removed from the cache.
  * <p>
- * A {@link SnapshotFileInspector} must be passed when creating <tt>this</tt> to allow extraction of files
- * under the /hbase/.snapshot/[snapshot name] directory, for each snapshot. This allows you to only
- * cache files under, for instance, all the logs in the .logs directory or all the files under all
- * the regions.
+ * A {@link SnapshotFileInspector} must be passed when creating <tt>this</tt> to allow extraction
+ * of files under the /hbase/.snapshot/[snapshot name] directory, for each snapshot.
+ * This allows you to only cache files under, for instance, all the logs in the .logs directory or
+ * all the files under all the regions.
  * <p>
  * <tt>this</tt> also considers all running snapshots (those under /hbase/.snapshot/.tmp) as valid
  * snapshots and will attempt to cache files from those snapshots as well.
@@ -71,7 +71,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class SnapshotFileCache implements Stoppable {
-  public interface SnapshotFileInspector {
+  interface SnapshotFileInspector {
     /**
      * Returns a collection of file names needed by the snapshot.
      * @param snapshotDir {@link Path} to the snapshot directory to scan.
@@ -90,7 +90,8 @@ public class SnapshotFileCache implements Stoppable {
    * This is a helper map of information about the snapshot directories so we don't need to rescan
    * them if they haven't changed since the last time we looked.
    */
-  private final Map<String, SnapshotDirectoryInfo> snapshots = new HashMap<String, SnapshotDirectoryInfo>();
+  private final Map<String, SnapshotDirectoryInfo> snapshots =
+      new HashMap<String, SnapshotDirectoryInfo>();
   private final Timer refreshTimer;
 
   private long lastModifiedTime = Long.MIN_VALUE;
@@ -118,7 +119,7 @@ public class SnapshotFileCache implements Stoppable {
    * filesystem
    * @param fs {@link FileSystem} where the snapshots are stored
    * @param rootDir hbase root directory
-   * @param cacheRefreshPeriod frequency (ms) with which the cache should be refreshed
+   * @param cacheRefreshPeriod period (ms) with which the cache should be refreshed
    * @param cacheRefreshDelay amount of time to wait for the cache to be refreshed
    * @param refreshThreadName name of the cache refresh thread
    * @param inspectSnapshotFiles Filter to apply to each snapshot to extract the files.
@@ -143,8 +144,11 @@ public class SnapshotFileCache implements Stoppable {
    * Exposed for TESTING.
    */
   public void triggerCacheRefreshForTesting() {
-    LOG.debug("Triggering cache refresh");
-    new RefreshCacheTask().run();
+    try {
+      SnapshotFileCache.this.refreshCache();
+    } catch (IOException e) {
+      LOG.warn("Failed to refresh snapshot hfile cache!", e);
+    }
     LOG.debug("Current cache:" + cache);
   }
 
@@ -184,7 +188,7 @@ public class SnapshotFileCache implements Stoppable {
     try {
       status = fs.getFileStatus(snapshotDir);
     } catch (FileNotFoundException e) {
-      LOG.warn("Snapshot directory: " + snapshotDir + " doesn't exist");
+      LOG.error("Snapshot directory: " + snapshotDir + " doesn't exist");
       return;
     }
     // if the snapshot directory wasn't modified since we last check, we are done

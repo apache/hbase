@@ -54,8 +54,8 @@ public class ProcedureMember implements Closeable {
   private final SubprocedureFactory builder;
   private final ProcedureMemberRpcs rpcs;
 
-//  private final WeakValueMapping<String, Subprocedure> subprocs = new WeakValueMapping<String, Subprocedure>();
-  private final ConcurrentMap<String,Subprocedure> subprocs = new MapMaker().concurrencyLevel(4).weakValues().makeMap();
+  private final ConcurrentMap<String,Subprocedure> subprocs =
+      new MapMaker().concurrencyLevel(4).weakValues().makeMap();
   private final ExecutorService pool;
 
   /**
@@ -167,7 +167,8 @@ public class ProcedureMember implements Closeable {
    public void receivedReachedGlobalBarrier(String procName) {
      Subprocedure subproc = subprocs.get(procName);
      if (subproc == null) {
-       LOG.warn("Unexpected reached glabal barrier message for Procedure '" + procName + "'");
+       LOG.warn("Unexpected reached glabal barrier message for Sub-Procedure '" + procName + "'");
+       return;
      }
      subproc.receiveReachedGlobalBarrier();
    }
@@ -187,7 +188,7 @@ public class ProcedureMember implements Closeable {
    * @return true if successfully, false if bailed due to timeout.
    * @throws InterruptedException
    */
-  public boolean closeAndWait(long timeoutMs) throws InterruptedException {
+  boolean closeAndWait(long timeoutMs) throws InterruptedException {
     pool.shutdown();
     return pool.awaitTermination(timeoutMs, TimeUnit.MILLISECONDS);
   }
@@ -204,9 +205,9 @@ public class ProcedureMember implements Closeable {
    */
   public void controllerConnectionFailure(final String message, final IOException cause) {
     Collection<Subprocedure> toNotify = subprocs.values();
+    LOG.error(message, cause);
     for (Subprocedure sub : toNotify) {
       // TODO notify the elements, if they aren't null
-      LOG.error(message, cause);
       sub.cancel(message, cause);
     }
   }

@@ -165,8 +165,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * Returns a copy of the procedure members still trying to enter the barrier.
-   * @return
+   * @return String of the procedure members both trying to enter the barrier and already in barrier
    */
   public String getStatus() {
     String waiting, done;
@@ -176,9 +175,9 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
     }
     return "Procedure " + procName + " { waiting=" + waiting + " done="+ done + " }";
   }
-  
+
   /**
-   * Get the ExternalErrorDispatcher
+   * Get the ForeignExceptionDispatcher
    * @return the Procedure's monitor.
    */
   public ForeignExceptionDispatcher getErrorMonitor() {
@@ -306,7 +305,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
       LOG.debug("Waiting on: " + acquiredBarrierLatch + " remaining members to acquire global barrier");
     } else {
       LOG.warn("Member " + member + " joined barrier, but we weren't waiting on it to join." +
-          " Continuting on.");
+          " Continuing on.");
     }
   }
 
@@ -345,7 +344,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * A callback that handles incoming ExternalExceptions.
+   * A callback that handles incoming ForeignExceptions.
    */
   @Override
   public void receive(ForeignException e) {
@@ -371,7 +370,9 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
       if (monitor != null) {
         monitor.rethrowException();
       }
-      ForeignExceptionDispatcher.LOG.debug("Waiting for '" + latchDescription + "' latch. (sleep:" + wakeFrequency + " ms)");
+      /*
+      ForeignExceptionDispatcher.LOG.debug("Waiting for '" + latchDescription + "' latch. (sleep:"
+          + wakeFrequency + " ms)"); */
       released = latch.await(wakeFrequency, TimeUnit.MILLISECONDS);
     }
   }

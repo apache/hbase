@@ -80,10 +80,11 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
 
   /**
    * The restore table is executed in place.
-   *  - The on-disk data will be restored
-   *  - [if something fail here: you need to delete the table and re-run the restore]
+   *  - The on-disk data will be restored - reference files are put in place without moving data
+   *  -  [if something fail here: you need to delete the table and re-run the restore]
    *  - META will be updated
-   *  - [if something fail here: you need to run hbck to fix META entries]
+   *  -  [if something fail here: you need to run hbck to fix META entries]
+   * The passed in list gets changed in this method
    */
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {

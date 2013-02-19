@@ -112,7 +112,7 @@ public class ProcedureCoordinator {
     }
     String procName = proc.getName();
 
-    // make sure we aren't already running an procedure of that name
+    // make sure we aren't already running a procedure of that name
     synchronized (procedures) {
       Procedure oldProc = procedures.get(procName);
       if (oldProc != null) {
@@ -129,9 +129,9 @@ public class ProcedureCoordinator {
     // kick off the procedure's execution in a separate thread
     Future<Void> f = null;
     try {
-      f = this.pool.submit(proc);
-      // if everything got started properly, we can add it known running procedures
       synchronized (procedures) {
+        f = this.pool.submit(proc);
+        // if everything got started properly, we can add it known running procedures
         this.procedures.put(procName, proc);
       }
       return true;

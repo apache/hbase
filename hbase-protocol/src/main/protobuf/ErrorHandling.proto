@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-// This file contains protocol buffers that used to error handling
+// This file contains protocol buffers that are used for error handling
 
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
 option java_outer_classname = "ErrorHandlingProtos";

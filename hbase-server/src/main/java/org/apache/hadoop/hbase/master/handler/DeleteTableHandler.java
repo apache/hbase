@@ -91,13 +91,15 @@ public class DeleteTableHandler extends TableEventHandler {
       // 4. Delete regions from FS (temp directory)
       FileSystem fs = mfs.getFileSystem();
       for (HRegionInfo hri: regions) {
-        LOG.debug("Deleting region " + hri.getRegionNameAsString() + " from FS");
+        LOG.debug("Archiving region " + hri.getRegionNameAsString() + " from FS");
         HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
             tempTableDir, new Path(tempTableDir, hri.getEncodedName()));
       }
 
       // 5. Delete table from FS (temp directory)
-      fs.delete(tempTableDir, true);
+      if (!fs.delete(tempTableDir, true)) {
+        LOG.error("Couldn't delete " + tempTableDir);
+      }
     } finally {
       // 6. Update table descriptor cache
       this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));

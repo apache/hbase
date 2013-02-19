@@ -949,7 +949,7 @@ public abstract class FSUtils {
   /**
    * A {@link PathFilter} that returns only regular files.
    */
-  public static class FileFilter implements PathFilter {
+  static class FileFilter implements PathFilter {
     private final FileSystem fs;
 
     public FileFilter(final FileSystem fs) {
@@ -991,21 +991,6 @@ public abstract class FSUtils {
                  "] is a valid directory. Returning 'not valid' and continuing.", e);
       }
       return isValid;
-    }
-  }
-
-  /**
-   * Filter out paths that are hidden (start with '.') and are not directories.
-   */
-  public static class VisibleDirectory extends DirFilter {
-
-    public VisibleDirectory(FileSystem fs) {
-      super(fs);
-    }
-
-    @Override
-    public boolean accept(Path file) {
-      return super.accept(file) && !file.getName().startsWith(".");
     }
   }
 

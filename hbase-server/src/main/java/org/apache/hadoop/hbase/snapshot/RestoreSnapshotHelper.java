@@ -95,7 +95,7 @@ import org.apache.hadoop.io.IOUtils;
  */
 @InterfaceAudience.Private
 public class RestoreSnapshotHelper {
-	private static final Log LOG = LogFactory.getLog(RestoreSnapshotHelper.class);
+  private static final Log LOG = LogFactory.getLog(RestoreSnapshotHelper.class);
 
   private final Map<byte[], byte[]> regionsMap =
         new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
@@ -290,7 +290,7 @@ public class RestoreSnapshotHelper {
   }
 
   /**
-   * Restore region by removing files not it in the snapshot
+   * Restore region by removing files not in the snapshot
    * and adding the missing ones from the snapshot.
    */
   private void restoreRegion(HRegionInfo regionInfo) throws IOException {

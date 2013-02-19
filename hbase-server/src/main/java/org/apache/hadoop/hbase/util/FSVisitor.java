@@ -118,7 +118,7 @@ public final class FSVisitor {
   }
 
   /**
-   * Iterate over each region in the table the table and inform about recovered.edits
+   * Iterate over each region in the table and inform about recovered.edits
    *
    * @param fs {@link FileSystem}
    * @param tableDir {@link Path} to the table directory

@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 
 /**
- * This online snapshot implementation forces uses the distributed procedure framework to force a
+ * This online snapshot implementation uses the distributed procedure framework to force a
  * store flush and then records the hfiles.  Its enter stage does nothing.  Its leave stage then
  * flushes the memstore, builds the region server's snapshot manifest from its hfiles list, and
  * copies .regioninfos into the snapshot working directory.  At the master side, there is an atomic
@@ -102,9 +102,9 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
     if (taskManager.hasTasks()) {
       throw new IllegalStateException("Attempting to take snapshot "
           + SnapshotDescriptionUtils.toString(snapshot)
-          + " but we have currently have outstanding tasks");
+          + " but we currently have outstanding tasks");
     }
-    
+
     // Add all hfiles already existing in region.
     for (HRegion region : regions) {
       // submit one task per region for parallelize by region.

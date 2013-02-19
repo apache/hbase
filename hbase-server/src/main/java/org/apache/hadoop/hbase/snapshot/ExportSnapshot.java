@@ -362,7 +362,8 @@ public final class ExportSnapshot extends Configured implements Tool {
    * Extract the list of files (HFiles/HLogs) to copy using Map-Reduce.
    * @return list of files referenced by the snapshot (pair of path and size)
    */
-  private List<Pair<Path, Long>> getSnapshotFiles(final FileSystem fs, final Path snapshotDir) throws IOException {
+  private List<Pair<Path, Long>> getSnapshotFiles(final FileSystem fs, final Path snapshotDir)
+      throws IOException {
     SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
     final List<Pair<Path, Long>> files = new ArrayList<Pair<Path, Long>>();
