@@ -82,7 +82,7 @@ public class Delete extends Mutation
    * @param row row key
    */
   public Delete(byte [] row) {
-    this(row, HConstants.LATEST_TIMESTAMP, null);
+    this(row, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
@@ -96,8 +96,6 @@ public class Delete extends Mutation
    * families or columns, you must specify each timestamp individually.
    * @param row row key
    * @param timestamp maximum version timestamp (only for delete row)
-   * @param rowLock previously acquired row lock, or null
-   * @deprecated {@link RowLock} is deprecated, use #de
    */
   public Delete(byte [] row, long timestamp) {
     this.row = row;
