@@ -1090,14 +1090,13 @@ public class HStore implements Store {
     List<StoreFile> sfs = new ArrayList<StoreFile>();
     long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
-      List<Path> newFiles =
-        this.compactor.compact(filesToCompact, cr.isMajor());
+      List<Path> newFiles = this.compactor.compact(cr);
       // Move the compaction into place.
       if (this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
         for (Path newFile: newFiles) {
           StoreFile sf = completeCompaction(filesToCompact, newFile);
           if (region.getCoprocessorHost() != null) {
-            region.getCoprocessorHost().postCompact(this, sf);
+            region.getCoprocessorHost().postCompact(this, sf, cr);
           }
           sfs.add(sf);
         }
@@ -1181,13 +1180,12 @@ public class HStore implements Store {
 
     try {
       // Ready to go. Have list of files to compact.
-      List<Path> newFiles =
-        this.compactor.compact(filesToCompact, isMajor);
+      List<Path> newFiles = this.compactor.compactForTesting(filesToCompact, isMajor);
       for (Path newFile: newFiles) {
         // Move the compaction into place.
         StoreFile sf = completeCompaction(filesToCompact, newFile);
         if (region.getCoprocessorHost() != null) {
-          region.getCoprocessorHost().postCompact(this, sf);
+          region.getCoprocessorHost().postCompact(this, sf, null);
         }
       }
     } finally {
@@ -1219,17 +1217,19 @@ public class HStore implements Store {
     return compactionPolicy.isMajorCompaction(this.storeFileManager.getStorefiles());
   }
 
+  @Override
   public CompactionRequest requestCompaction() throws IOException {
-    return requestCompaction(Store.NO_PRIORITY);
+    return requestCompaction(Store.NO_PRIORITY, null);
   }
 
-  public CompactionRequest requestCompaction(int priority) throws IOException {
+  @Override
+  public CompactionRequest requestCompaction(int priority, CompactionRequest request)
+      throws IOException {
     // don't even select for compaction if writes are disabled
     if (!this.region.areWritesEnabled()) {
       return null;
     }
 
-    CompactionRequest ret = null;
     this.lock.readLock().lock();
     try {
       List<StoreFile> candidates = Lists.newArrayList(storeFileManager.getStorefiles());
@@ -1238,7 +1238,7 @@ public class HStore implements Store {
         candidates = compactionPolicy.preSelectCompaction(candidates, filesCompacting);
         boolean override = false;
         if (region.getCoprocessorHost() != null) {
-          override = region.getCoprocessorHost().preCompactSelection(this, candidates);
+          override = region.getCoprocessorHost().preCompactSelection(this, candidates, request);
         }
         CompactSelection filesToCompact;
         if (override) {
@@ -1257,7 +1257,7 @@ public class HStore implements Store {
 
         if (region.getCoprocessorHost() != null) {
           region.getCoprocessorHost().postCompactSelection(this,
-              ImmutableList.copyOf(filesToCompact.getFilesToCompact()));
+            ImmutableList.copyOf(filesToCompact.getFilesToCompact()), request);
         }
 
         // no files to compact
@@ -1287,15 +1287,24 @@ public class HStore implements Store {
 
         // everything went better than expected. create a compaction request
         int pri = getCompactPriority(priority);
-        ret = new CompactionRequest(region, this, filesToCompact, isMajor, pri);
+        //not a special compaction request, so we need to make one
+        if(request == null){
+          request = new CompactionRequest(region, this, filesToCompact, isMajor, pri);
+        }else{
+          //update the request with what the system thinks the request should be
+          //its up to the request if it wants to listen
+          request.setSelection(filesToCompact);
+          request.setIsMajor(isMajor);
+          request.setPriority(pri);
+        }
       }
     } finally {
       this.lock.readLock().unlock();
     }
-    if (ret != null) {
-      this.region.reportCompactionRequestStart(ret.isMajor());
+    if (request != null) {
+      this.region.reportCompactionRequestStart(request.isMajor());
     }
-    return ret;
+    return request;
   }
 
   public void finishRequest(CompactionRequest cr) {

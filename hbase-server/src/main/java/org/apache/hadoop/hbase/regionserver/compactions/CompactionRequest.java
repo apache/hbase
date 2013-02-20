@@ -19,20 +19,22 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
@@ -46,35 +48,51 @@ import com.google.common.collect.Collections2;
 /**
  * This class holds all details necessary to run a compaction.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({ "coprocessor" })
+@InterfaceStability.Evolving
 public class CompactionRequest implements Comparable<CompactionRequest>,
     Runnable {
     static final Log LOG = LogFactory.getLog(CompactionRequest.class);
     private final HRegion region;
     private final HStore store;
-    private final CompactSelection compactSelection;
-    private final long totalSize;
-    private final boolean isMajor;
+    private CompactSelection compactSelection;
+    private long totalSize;
+    private boolean isMajor;
     private int priority;
     private final Long timeInNanos;
     private HRegionServer server = null;
 
-    public CompactionRequest(HRegion region, HStore store,
-        CompactSelection files, boolean isMajor, int priority) {
-      Preconditions.checkNotNull(region);
-      Preconditions.checkNotNull(files);
+    public static CompactionRequest getRequestForTesting(Collection<StoreFile> selection,
+        boolean isMajor) {
+      return new CompactionRequest(null, null, new CompactSelection(new ArrayList<StoreFile>(
+        selection)), isMajor, 0, System.nanoTime());
+    }
 
+    /**
+     * Constructor for a custom compaction. Uses the setXXX methods to update the state of the
+     * compaction before being used.
+     */
+    public CompactionRequest(HRegion region, HStore store, int priority) {
+    this(region, store, null, false, priority, System
+        .nanoTime());
+    }
+
+    public CompactionRequest(HRegion r, HStore s, CompactSelection files, boolean isMajor, int p) {
+      // delegate to the internal constructor after checking basic preconditions
+      this(Preconditions.checkNotNull(r), s, Preconditions.checkNotNull(files), isMajor, p, System
+          .nanoTime());
+    }
+
+    private CompactionRequest(HRegion region, HStore store, CompactSelection files, boolean isMajor,
+        int priority, long startTime) {
       this.region = region;
       this.store = store;
-      this.compactSelection = files;
-      long sz = 0;
-      for (StoreFile sf : files.getFilesToCompact()) {
-        sz += sf.getReader().length();
-      }
-      this.totalSize = sz;
       this.isMajor = isMajor;
       this.priority = priority;
-      this.timeInNanos = System.nanoTime();
+      this.timeInNanos = startTime;
+      if (files != null) {
+        this.setSelection(files);
+      }
     }
 
     /**
@@ -162,6 +180,28 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       this.server = hrs;
     }
 
+    /**
+     * Set the files (and, implicitly, the size of the compaction based on those files)
+     * @param files files that should be included in the compaction
+     */
+    public void setSelection(CompactSelection files) {
+      long sz = 0;
+      for (StoreFile sf : files.getFilesToCompact()) {
+        sz += sf.getReader().length();
+      }
+      this.totalSize = sz;
+      this.compactSelection = files;
+    }
+
+    /**
+     * Specify if this compaction should be a major compaction based on the state of the store
+     * @param isMajor <tt>true</tt> if the system determines that this compaction should be a major
+     *          compaction
+     */
+    public void setIsMajor(boolean isMajor) {
+      this.isMajor = isMajor;
+    }
+
     @Override
     public String toString() {
       String fsList = Joiner.on(", ").join(
@@ -200,12 +240,11 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         if (completed) {
           // degenerate case: blocked regions require recursive enqueues
           if (store.getCompactPriority() <= 0) {
-            server.compactSplitThread
-              .requestCompaction(region, store, "Recursive enqueue");
-          } else {
-            // see if the compaction has caused us to exceed max region size
-            server.compactSplitThread.requestSplit(region);
-          }
+            server.compactSplitThread.requestCompaction(region, store, "Recursive enqueue", null);
+            } else {
+              // see if the compaction has caused us to exceed max region size
+          server.getCompactSplitThread().requestSplit(region);
+            }
         }
       } catch (IOException ex) {
         LOG.error("Compaction failed " + this, RemoteExceptionHandler
@@ -234,4 +273,4 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         }
       }
     }
-  }
+}
