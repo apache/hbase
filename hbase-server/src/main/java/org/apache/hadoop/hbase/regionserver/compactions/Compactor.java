@@ -32,11 +32,11 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 @InterfaceAudience.Private
 public abstract class Compactor {
 
-  CompactionProgress progress;
-  CompactionPolicy policy;
+  protected CompactionProgress progress;
+  protected Configuration conf;
 
-  Compactor(final CompactionPolicy policy) {
-    this.policy = policy;
+  Compactor(final Configuration conf) {
+    this.conf = conf;
   }
 
   /**
@@ -50,10 +50,6 @@ public abstract class Compactor {
    */
   public abstract List<Path> compact(final Collection<StoreFile> filesToCompact,
     final boolean majorCompaction) throws IOException;
-
-  public Configuration getConf() {
-    return policy.getConf();
-  }
 
   public CompactionProgress getProgress() {
     return this.progress;

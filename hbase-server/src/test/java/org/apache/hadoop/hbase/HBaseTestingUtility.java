@@ -1867,6 +1867,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return HFileSystem.get(conf);
   }
 
+  public void waitTableAvailable(byte[] table)
+      throws InterruptedException, IOException {
+    waitTableAvailable(table, 30000);
+  }
+
   public void waitTableAvailable(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
@@ -1876,6 +1881,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         System.currentTimeMillis() - startWait < timeoutMillis);
       Thread.sleep(200);
     }
+  }
+
+  public void waitTableEnabled(byte[] table)
+      throws InterruptedException, IOException {
+    waitTableEnabled(table, 30000);
   }
 
   public void waitTableEnabled(byte[] table, long timeoutMillis)

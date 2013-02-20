@@ -1535,6 +1535,10 @@ public class HRegionServer implements ClientProtocol,
       conf.getInt("hbase.regionserver.executor.closeroot.threads", 1));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_META,
       conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
+    if (conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false)) {
+      this.service.startExecutorService(ExecutorType.RS_PARALLEL_SEEK,
+        conf.getInt("hbase.storescanner.parallel.seek.threads", 10));
+    }
 
     Threads.setDaemonThreadRunning(this.hlogRoller.getThread(), n + ".logRoller",
         uncaughtExceptionHandler);
@@ -2552,8 +2556,7 @@ public class HRegionServer implements ClientProtocol,
     if (region == null) {
       MovedRegionInfo moveInfo = getMovedRegion(encodedRegionName);
       if (moveInfo != null) {
-        throw new RegionMovedException(moveInfo.getServerName().getHostname(),
-            moveInfo.getServerName().getPort(), moveInfo.getSeqNum());
+        throw new RegionMovedException(moveInfo.getServerName(), moveInfo.getSeqNum());
       } else {
         throw new NotServingRegionException("Region is not online: " + encodedRegionName);
       }

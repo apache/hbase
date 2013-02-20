@@ -20,12 +20,11 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.AdminProtocol;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionKey;
 import org.mockito.Mockito;
@@ -44,7 +43,7 @@ public class HConnectionTestingUtility {
    * configuration instance.  Minimally the mock will return
    * <code>conf</conf> when {@link HConnection#getConfiguration()} is invoked.
    * Be sure to shutdown the connection when done by calling
-   * {@link HConnectionManager#deleteConnection(Configuration, boolean)} else it
+   * {@link HConnectionManager#deleteConnection(HConnectionKey, boolean)} else it
    * will stick around; this is probably not what you want.
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
@@ -70,7 +69,7 @@ public class HConnectionTestingUtility {
    * more of the popular {@link HConnection} methods so they do 'normal'
    * operation (see return doc below for list). Be sure to shutdown the
    * connection when done by calling
-   * {@link HConnectionManager#deleteConnection(Configuration, boolean)} else it
+   * {@link HConnectionManager#deleteConnection(HConnectionKey, boolean)} else it
    * will stick around; this is probably not what you want.
    *
    * @param conf Configuration to use
@@ -86,10 +85,10 @@ public class HConnectionTestingUtility {
    * {@link HConnection#getConfiguration()} is called, a 'location' when
    * {@link HConnection#getRegionLocation(byte[], byte[], boolean)} is called,
    * and that returns the passed {@link AdminProtocol} instance when
-   * {@link HConnection#getAdmin(String, int)} is called, returns the passed
-   * {@link ClientProtocol} instance when {@link HConnection#getClient(String, int)}
+   * {@link HConnection#getAdmin(ServerName)} is called, returns the passed
+   * {@link ClientProtocol} instance when {@link HConnection#getClient(ServerName)}
    * is called (Be sure call
-   * {@link HConnectionManager#deleteConnection(org.apache.hadoop.conf.Configuration, boolean)}
+   * {@link HConnectionManager#deleteConnection(HConnectionKey, boolean)}
    * when done with this mocked Connection.
    * @throws IOException
    */
@@ -100,7 +99,7 @@ public class HConnectionTestingUtility {
     HConnection c = HConnectionTestingUtility.getMockedConnection(conf);
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
-    final HRegionLocation loc = new HRegionLocation(hri, sn.getHostname(), sn.getPort());
+    final HRegionLocation loc = new HRegionLocation(hri, sn, HConstants.NO_SEQNUM);
     Mockito.when(c.getRegionLocation((byte[]) Mockito.any(),
         (byte[]) Mockito.any(), Mockito.anyBoolean())).
       thenReturn(loc);
@@ -108,12 +107,12 @@ public class HConnectionTestingUtility {
       thenReturn(loc);
     if (admin != null) {
       // If a call to getAdmin, return this implementation.
-      Mockito.when(c.getAdmin(Mockito.anyString(), Mockito.anyInt())).
+      Mockito.when(c.getAdmin(Mockito.any(ServerName.class))).
         thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this client.
-      Mockito.when(c.getClient(Mockito.anyString(), Mockito.anyInt())).
+      Mockito.when(c.getClient(Mockito.any(ServerName.class))).
         thenReturn(client);
     }
     return c;
@@ -123,12 +122,13 @@ public class HConnectionTestingUtility {
    * Get a Mockito spied-upon {@link HConnection} that goes with the passed
    * <code>conf</code> configuration instance.
    * Be sure to shutdown the connection when done by calling
-   * {@link HConnectionManager#deleteConnection(Configuration, boolean)} else it
+   * {@link HConnectionManager#deleteConnection(HConnectionKey, boolean)} else it
    * will stick around; this is probably not what you want.
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
-   * @see http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)
+   * @see @link
+   * {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
    */
   public static HConnection getSpiedConnection(final Configuration conf)
   throws ZooKeeperConnectionException {

@@ -26,8 +26,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -61,11 +64,11 @@ public class PerfTestCompactionPolicies {
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
-        {new DefaultCompactionPolicy(), 3, 2, 1.2f},
-        {new DefaultCompactionPolicy(), 4, 2, 1.2f},
-        {new DefaultCompactionPolicy(), 5, 2, 1.2f},
-        {new DefaultCompactionPolicy(), 4, 2, 1.3f},
-        {new DefaultCompactionPolicy(), 4, 2, 1.4f},
+        {DefaultCompactionPolicy.class, 3, 2, 1.2f},
+        {DefaultCompactionPolicy.class, 4, 2, 1.2f},
+        {DefaultCompactionPolicy.class, 5, 2, 1.2f},
+        {DefaultCompactionPolicy.class, 4, 2, 1.3f},
+        {DefaultCompactionPolicy.class, 4, 2, 1.4f},
 
     });
   }
@@ -77,7 +80,8 @@ public class PerfTestCompactionPolicies {
    * @param min The min number of files to compact
    * @param ratio The ratio that files must be under to be compacted.
    */
-  public PerfTestCompactionPolicies(CompactionPolicy cp, int max, int min, float ratio) {
+  public PerfTestCompactionPolicies(Class<? extends CompactionPolicy> cpClass,
+      int max, int min, float ratio) {
     this.max = max;
     this.min = min;
     this.ratio = ratio;
@@ -86,11 +90,7 @@ public class PerfTestCompactionPolicies {
     org.apache.log4j.Logger.getLogger(CompactionConfiguration.class).
         setLevel(org.apache.log4j.Level.ERROR);
 
-    org.apache.log4j.Logger.getLogger(cp.getClass()).
-        setLevel(org.apache.log4j.Level.ERROR);
-
-    this.cp = cp;
-
+    org.apache.log4j.Logger.getLogger(cpClass).setLevel(org.apache.log4j.Level.ERROR);
 
     Configuration configuration = HBaseConfiguration.create();
 
@@ -99,11 +99,10 @@ public class PerfTestCompactionPolicies {
     configuration.setInt("hbase.hstore.compaction.min", min);
     configuration.setFloat("hbase.hstore.compaction.ratio", ratio);
 
-    cp.store = createMockStore();
-
-    //Now set the conf.
-    cp.setConf(configuration);
-
+    HStore store = createMockStore();
+    this.cp = ReflectionUtils.instantiateWithCustomCtor(cpClass.getName(),
+        new Class[] { Configuration.class, StoreConfigInformation.class },
+        new Object[] { configuration, store });
 
     //Used for making paths
     random = new Random(42);

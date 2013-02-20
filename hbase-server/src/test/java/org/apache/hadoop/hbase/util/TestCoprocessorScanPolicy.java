@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase.util;
 // this is deliberately not in the o.a.h.h.regionserver package
 // in order to make sure all required classes/method are available
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -59,14 +62,18 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+
 @Category(MediumTests.class)
+@RunWith(Parameterized.class)
 public class TestCoprocessorScanPolicy {
   final Log LOG = LogFactory.getLog(getClass());
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] F = Bytes.toBytes("fam");
   private static final byte[] Q = Bytes.toBytes("qual");
   private static final byte[] R = Bytes.toBytes("row");
-
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -81,9 +88,22 @@ public class TestCoprocessorScanPolicy {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Parameters
+  public static Collection<Object[]> parameters() {
+    return HBaseTestingUtility.BOOLEAN_PARAMETERIZED;
+  }
+
+  public TestCoprocessorScanPolicy(boolean parallelSeekEnable) {
+    TEST_UTIL.getMiniHBaseCluster().getConf()
+        .setBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, parallelSeekEnable);
+  }
+
   @Test
   public void testBaseCases() throws Exception {
     byte[] tableName = Bytes.toBytes("baseCases");
+    if (TEST_UTIL.getHBaseAdmin().tableExists(tableName)) {
+      TEST_UTIL.deleteTable(tableName);
+    }
     HTable t = TEST_UTIL.createTable(tableName, F, 1);
     // set the version override to 2
     Put p = new Put(R);
@@ -130,6 +150,9 @@ public class TestCoprocessorScanPolicy {
   @Test
   public void testTTL() throws Exception {
     byte[] tableName = Bytes.toBytes("testTTL");
+    if (TEST_UTIL.getHBaseAdmin().tableExists(tableName)) {
+      TEST_UTIL.deleteTable(tableName);
+    }
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(F)
     .setMaxVersions(10)

@@ -497,7 +497,7 @@ public class CatalogTracker {
     }
     AdminProtocol protocol = null;
     try {
-      protocol = connection.getAdmin(sn.getHostname(), sn.getPort());
+      protocol = connection.getAdmin(sn);
     } catch (RetriesExhaustedException e) {
       if (e.getCause() != null && e.getCause() instanceof ConnectException) {
         // Catch this; presume it means the cached connection has gone bad.

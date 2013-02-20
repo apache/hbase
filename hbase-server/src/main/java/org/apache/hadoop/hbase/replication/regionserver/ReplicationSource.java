@@ -764,7 +764,7 @@ public class ReplicationSource extends Thread
     }
     ServerName address =
         currentPeers.get(random.nextInt(this.currentPeers.size()));
-    return this.conn.getAdmin(address.getHostname(), address.getPort());
+    return this.conn.getAdmin(address);
   }
 
   /**

@@ -20,9 +20,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,8 +33,10 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -59,6 +63,11 @@ public class StoreScanner extends NonLazyKeyValueScanner
   protected final boolean isGet;
   protected final boolean explicitColumnQuery;
   protected final boolean useRowColBloom;
+  /**
+   * A flag that enables StoreFileScanner parallel-seeking
+   */
+  protected boolean isParallelSeekEnabled = false;
+  protected ExecutorService executor;
   protected final Scan scan;
   protected final NavigableSet<byte[]> columns;
   protected final long oldestUnexpiredTS;
@@ -66,6 +75,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
+  public static final String STORESCANNER_PARALLEL_SEEK_ENABLE =
+      "hbase.storescanner.parallel.seek.enable";
 
   /** Used during unit testing to ensure that lazy seek does save seek ops */
   protected static boolean lazySeekEnabledGlobally =
@@ -92,6 +103,17 @@ public class StoreScanner extends NonLazyKeyValueScanner
     // for multi-row (non-"get") scans because this is not done in
     // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
     useRowColBloom = numCol > 1 || (!isGet && numCol == 1);
+    // The parallel-seeking is on :
+    // 1) the config value is *true*
+    // 2) store has more than one store file
+    if (store != null && ((HStore)store).getHRegion() != null
+        && store.getStorefilesCount() > 1) {
+      RegionServerServices rsService = ((HStore)store).getHRegion().getRegionServerServices();
+      if (rsService == null || !rsService.getConfiguration().getBoolean(
+            STORESCANNER_PARALLEL_SEEK_ENABLE, false)) return;
+      isParallelSeekEnabled = true;
+      executor = rsService.getExecutorService();
+    }
   }
 
   /**
@@ -127,8 +149,12 @@ public class StoreScanner extends NonLazyKeyValueScanner
         scanner.requestSeek(matcher.getStartKey(), false, true);
       }
     } else {
-      for (KeyValueScanner scanner : scanners) {
-        scanner.seek(matcher.getStartKey());
+      if (!isParallelSeekEnabled) {
+        for (KeyValueScanner scanner : scanners) {
+          scanner.seek(matcher.getStartKey());
+        }
+      } else {
+        parallelSeek(scanners, matcher.getStartKey());
       }
     }
 
@@ -166,8 +192,12 @@ public class StoreScanner extends NonLazyKeyValueScanner
     scanners = selectScannersFrom(scanners);
 
     // Seek all scanners to the initial key
-    for(KeyValueScanner scanner : scanners) {
-      scanner.seek(matcher.getStartKey());
+    if (!isParallelSeekEnabled) {
+      for (KeyValueScanner scanner : scanners) {
+        scanner.seek(matcher.getStartKey());
+      }
+    } else {
+      parallelSeek(scanners, matcher.getStartKey());
     }
 
     // Combine all seeked scanners with a heap
@@ -193,8 +223,12 @@ public class StoreScanner extends NonLazyKeyValueScanner
         Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS);
 
     // Seek all scanners to the initial key
-    for (KeyValueScanner scanner : scanners) {
-      scanner.seek(matcher.getStartKey());
+    if (!isParallelSeekEnabled) {
+      for (KeyValueScanner scanner : scanners) {
+        scanner.seek(matcher.getStartKey());
+      }
+    } else {
+      parallelSeek(scanners, matcher.getStartKey());
     }
     heap = new KeyValueHeap(scanners, scanInfo.getComparator());
   }
@@ -513,8 +547,12 @@ public class StoreScanner extends NonLazyKeyValueScanner
      * could have done it now by storing the scan object from the constructor */
     List<KeyValueScanner> scanners = getScannersNoCompaction();
 
-    for(KeyValueScanner scanner : scanners) {
-      scanner.seek(lastTopKey);
+    if (!isParallelSeekEnabled) {
+      for (KeyValueScanner scanner : scanners) {
+        scanner.seek(lastTopKey);
+      }
+    } else {
+      parallelSeek(scanners, lastTopKey);
     }
 
     // Combine all seeked scanners with a heap
@@ -546,14 +584,51 @@ public class StoreScanner extends NonLazyKeyValueScanner
     checkReseek();
     if (explicitColumnQuery && lazySeekEnabledGlobally) {
       return heap.requestSeek(kv, true, useRowColBloom);
-    } else {
-      return heap.reseek(kv);
     }
+    return heap.reseek(kv);
   }
 
   @Override
   public long getSequenceID() {
     return 0;
+  }
+
+  /**
+   * Seek storefiles in parallel to optimize IO latency as much as possible
+   * @param scanners the list {@link KeyValueScanner}s to be read from
+   * @param kv the KeyValue on which the operation is being requested
+   * @throws IOException
+   */
+  private void parallelSeek(final List<? extends KeyValueScanner>
+      scanners, final KeyValue kv) throws IOException {
+    if (scanners.isEmpty()) return;
+    int storeFileScannerCount = scanners.size();
+    CountDownLatch latch = new CountDownLatch(storeFileScannerCount);
+    List<ParallelSeekHandler> handlers = 
+        new ArrayList<ParallelSeekHandler>(storeFileScannerCount);
+    for (KeyValueScanner scanner : scanners) {
+      if (scanner instanceof StoreFileScanner) {
+        ParallelSeekHandler seekHandler = new ParallelSeekHandler(scanner, kv,
+          MultiVersionConsistencyControl.getThreadReadPoint(), latch);
+        executor.submit(seekHandler);
+        handlers.add(seekHandler);
+      } else {
+        scanner.seek(kv);
+        latch.countDown();
+      }
+    }
+
+    try {
+      latch.await();
+    } catch (InterruptedException ie) {
+      throw new InterruptedIOException(ie.getMessage());
+    }
+
+    for (ParallelSeekHandler handler : handlers) {
+      if (handler.getErr() != null) {
+        throw new IOException(handler.getErr());
+      }
+    }
   }
 
   /**

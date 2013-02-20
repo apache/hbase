@@ -505,7 +505,7 @@ public class TestHBaseFsck {
     HConnection connection = admin.getConnection();
     for (ServerName hsi : regionServers) {
       AdminProtocol server =
-        connection.getAdmin(hsi.getHostname(), hsi.getPort());
+        connection.getAdmin(hsi);
 
       // list all online regions from this region server
       List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(server);

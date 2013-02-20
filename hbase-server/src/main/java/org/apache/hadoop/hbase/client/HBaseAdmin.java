@@ -556,7 +556,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     // Wait until all regions deleted
     ClientProtocol server =
-      connection.getClient(firstMetaServer.getHostname(), firstMetaServer.getPort());
+      connection.getClient(firstMetaServer.getServerName());
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       try {
 
@@ -1184,8 +1184,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           "The servername cannot be null or empty.");
     }
     ServerName sn = new ServerName(serverName);
-    AdminProtocol admin = this.connection.getAdmin(
-        sn.getHostname(), sn.getPort());
+    AdminProtocol admin = this.connection.getAdmin(sn);
     // Close the region without updating zk state.
     CloseRegionRequest request =
       RequestConverter.buildCloseRegionRequest(encodedRegionName, false);
@@ -1211,7 +1210,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void closeRegion(final ServerName sn, final HRegionInfo hri)
   throws IOException {
     AdminProtocol admin =
-      this.connection.getAdmin(sn.getHostname(), sn.getPort());
+      this.connection.getAdmin(sn);
     // Close the region without updating zk state.
     ProtobufUtil.closeRegion(admin, hri.getRegionName(), false);
   }
@@ -1222,7 +1221,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public List<HRegionInfo> getOnlineRegions(
       final ServerName sn) throws IOException {
     AdminProtocol admin =
-      this.connection.getAdmin(sn.getHostname(), sn.getPort());
+      this.connection.getAdmin(sn);
     return ProtobufUtil.getOnlineRegions(admin);
   }
 
@@ -1285,7 +1284,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   private void flush(final ServerName sn, final HRegionInfo hri)
   throws IOException {
     AdminProtocol admin =
-      this.connection.getAdmin(sn.getHostname(), sn.getPort());
+      this.connection.getAdmin(sn);
     FlushRegionRequest request =
       RequestConverter.buildFlushRegionRequest(hri.getRegionName());
     try {
@@ -1455,7 +1454,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       final boolean major, final byte [] family)
   throws IOException {
     AdminProtocol admin =
-      this.connection.getAdmin(sn.getHostname(), sn.getPort());
+      this.connection.getAdmin(sn);
     CompactRegionRequest request =
       RequestConverter.buildCompactRegionRequest(hri.getRegionName(), major, family);
     try {
@@ -1733,7 +1732,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   private void split(final ServerName sn, final HRegionInfo hri,
       byte[] splitPoint) throws IOException {
     AdminProtocol admin =
-      this.connection.getAdmin(sn.getHostname(), sn.getPort());
+      this.connection.getAdmin(sn);
     ProtobufUtil.split(admin, hri, splitPoint);
   }
 
@@ -1857,7 +1856,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     String hostname = Addressing.parseHostname(hostnamePort);
     int port = Addressing.parsePort(hostnamePort);
     AdminProtocol admin =
-      this.connection.getAdmin(hostname, port);
+      this.connection.getAdmin(new ServerName(hostname, port, 0));
     StopServerRequest request = RequestConverter.buildStopServerRequest(
       "Called by admin client " + this.connection.toString());
     try {
@@ -1866,6 +1865,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       throw ProtobufUtil.getRemoteException(se);
     }
   }
+
 
   /**
    * @return cluster status
@@ -1998,9 +1998,8 @@ public class HBaseAdmin implements Abortable, Closeable {
  public synchronized  byte[][] rollHLogWriter(String serverName)
       throws IOException, FailedLogCloseException {
     ServerName sn = new ServerName(serverName);
-    AdminProtocol admin = this.connection.getAdmin(
-        sn.getHostname(), sn.getPort());
-    RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();;
+    AdminProtocol admin = this.connection.getAdmin(sn);
+    RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();
     try {
       RollWALWriterResponse response = admin.rollWALWriter(null, request);
       int regionCount = response.getRegionToFlushCount();
@@ -2060,7 +2059,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         } else {
           ServerName sn = regionServerPair.getSecond();
           AdminProtocol admin =
-            this.connection.getAdmin(sn.getHostname(), sn.getPort());
+            this.connection.getAdmin(sn);
           GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
             regionServerPair.getFirst().getRegionName(), true);
           GetRegionInfoResponse response = admin.getRegionInfo(null, request);
@@ -2076,7 +2075,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           try {
             ServerName sn = pair.getSecond();
             AdminProtocol admin =
-              this.connection.getAdmin(sn.getHostname(), sn.getPort());
+              this.connection.getAdmin(sn);
             GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
               pair.getFirst().getRegionName(), true);
             GetRegionInfoResponse response = admin.getRegionInfo(null, request);

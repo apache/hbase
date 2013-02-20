@@ -76,7 +76,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   private EventHandlerListener listener;
 
   // Time to wait for events to happen, should be kept short
-  protected final int waitingTimeForEvents;
+  protected int waitingTimeForEvents;
 
   private final Span parent;
 
@@ -146,7 +146,10 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     // Master controlled events to be executed on the master
     M_SERVER_SHUTDOWN         (70, ExecutorType.MASTER_SERVER_OPERATIONS),  // Master is processing shutdown of a RS
     M_META_SERVER_SHUTDOWN    (72, ExecutorType.MASTER_META_SERVER_OPERATIONS),  // Master is processing shutdown of RS hosting a meta region (-ROOT- or .META.).
-    M_MASTER_RECOVERY         (73, ExecutorType.MASTER_SERVER_OPERATIONS); // Master is processing recovery of regions found in ZK RIT
+    M_MASTER_RECOVERY         (73, ExecutorType.MASTER_SERVER_OPERATIONS), // Master is processing recovery of regions found in ZK RIT
+
+    // RS controlled events to be executed on the RS
+    RS_PARALLEL_SEEK          (80, ExecutorType.RS_PARALLEL_SEEK);
 
     private final int code;
     private final ExecutorService.ExecutorType executor;
@@ -193,8 +196,10 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     this.server = server;
     this.eventType = eventType;
     seqid = seqids.incrementAndGet();
-    this.waitingTimeForEvents = server.getConfiguration().
-        getInt("hbase.master.event.waiting.time", 1000);
+    if (server != null) {
+      this.waitingTimeForEvents = server.getConfiguration().
+          getInt("hbase.master.event.waiting.time", 1000);
+    }
   }
 
   public void run() {

@@ -30,7 +30,10 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -49,8 +52,8 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
 
   private static final Log LOG = LogFactory.getLog(DefaultCompactionPolicy.class);
 
-  public DefaultCompactionPolicy() {
-    compactor = new DefaultCompactor(this);
+  public DefaultCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
+    super(conf, storeConfigInfo);
   }
 
   @Override
@@ -78,12 +81,13 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * @return subset copy of candidate list that meets compaction criteria
    * @throws java.io.IOException
    */
+  @Override
   public CompactSelection selectCompaction(List<StoreFile> candidateFiles,
       final boolean isUserCompaction, final boolean mayUseOffPeak, final boolean forceMajor)
     throws IOException {
     // Preliminary compaction subject to filters
     CompactSelection candidateSelection = new CompactSelection(candidateFiles);
-    long cfTtl = this.store.getStoreFileTtl();
+    long cfTtl = this.storeConfigInfo.getStoreFileTtl();
     if (!forceMajor) {
       // If there are expired files, only select them so that compaction deletes them
       if (comConf.shouldDeleteExpired() && (cfTtl != Long.MAX_VALUE)) {
@@ -326,7 +330,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     long now = System.currentTimeMillis();
     if (lowTimestamp > 0l && lowTimestamp < (now - mcTime)) {
       // Major compaction time has elapsed.
-      long cfTtl = this.store.getStoreFileTtl();
+      long cfTtl = this.storeConfigInfo.getStoreFileTtl();
       if (filesToCompact.size() == 1) {
         // Single file
         StoreFile sf = filesToCompact.iterator().next();

@@ -3031,7 +3031,7 @@ public class HBaseFsck extends Configured implements Tool {
       errors.progress();
       try {
         AdminProtocol server =
-          connection.getAdmin(rsinfo.getHostname(), rsinfo.getPort());
+          connection.getAdmin(rsinfo);
 
         // list all online regions from this region server
         List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(server);

@@ -120,7 +120,7 @@ public class TestMetaReaderEditorNoCluster {
   /**
    * Test that MetaReader will ride over server throwing
    * "Server not running" IOEs.
-   * @see https://issues.apache.org/jira/browse/HBASE-3446
+   * @see @link {https://issues.apache.org/jira/browse/HBASE-3446}
    * @throws IOException
    * @throws InterruptedException
    */
@@ -133,7 +133,7 @@ public class TestMetaReaderEditorNoCluster {
     // This is a servername we use in a few places below.
     ServerName sn = new ServerName("example.com", 1234, System.currentTimeMillis());
 
-    HConnection connection = null;
+    HConnection connection;
     CatalogTracker ct = null;
     try {
       // Mock an ClientProtocol. Our mock implementation will fail a few
@@ -178,8 +178,7 @@ public class TestMetaReaderEditorNoCluster {
       // Fix the location lookup so it 'works' though no network.  First
       // make an 'any location' object.
       final HRegionLocation anyLocation =
-        new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, sn.getHostname(),
-          sn.getPort());
+        new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, sn, HConstants.NO_SEQNUM);
       // Return the any location object when locateRegion is called in HTable
       // constructor and when its called by ServerCallable (it uses getRegionLocation).
       // The ugly format below comes of 'Important gotcha on spying real objects!' from
@@ -192,7 +191,7 @@ public class TestMetaReaderEditorNoCluster {
 
       // Now shove our HRI implementation into the spied-upon connection.
       Mockito.doReturn(implementation).
-        when(connection).getClient(Mockito.anyString(), Mockito.anyInt());
+        when(connection).getClient(Mockito.any(ServerName.class));
 
       // Now start up the catalogtracker with our doctored Connection.
       ct = new CatalogTracker(zkw, null, connection, ABORTABLE);

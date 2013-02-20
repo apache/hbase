@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -497,6 +498,11 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   @Override
   public HLog getWAL(HRegionInfo regionInfo) throws IOException {
     // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public ExecutorService getExecutorService() {
     return null;
   }
 }

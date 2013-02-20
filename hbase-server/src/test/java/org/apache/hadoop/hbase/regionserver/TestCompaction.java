@@ -589,10 +589,9 @@ public class TestCompaction extends HBaseTestCase {
     HStore store = (HStore) r.getStore(COLUMN_FAMILY);
 
     Collection<StoreFile> storeFiles = store.getStorefiles();
-    Compactor tool = store.compactionPolicy.getCompactor();
+    Compactor tool = store.compactor;
 
-    List<Path> newFiles =
-      tool.compact(storeFiles, false);
+    List<Path> newFiles = tool.compact(storeFiles, false);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = FileSystem.get(conf);

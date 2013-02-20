@@ -149,7 +149,7 @@ public class HBaseFsckRepair {
   public static void closeRegionSilentlyAndWait(HBaseAdmin admin,
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
     HConnection connection = admin.getConnection();
-    AdminProtocol rs = connection.getAdmin(server.getHostname(), server.getPort());
+    AdminProtocol rs = connection.getAdmin(server);
     ProtobufUtil.closeRegion(rs, region.getRegionName(), false);
     long timeout = admin.getConfiguration()
       .getLong("hbase.hbck.close.timeout", 120000);

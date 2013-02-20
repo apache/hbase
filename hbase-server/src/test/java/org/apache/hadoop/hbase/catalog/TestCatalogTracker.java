@@ -339,8 +339,7 @@ public class TestCatalogTracker {
       Mockito.mock(AdminProtocol.class);
     Mockito.when(implementation.getRegionInfo((RpcController)Mockito.any(),
       (GetRegionInfoRequest)Mockito.any())).thenThrow(connectException);
-    Mockito.when(connection.getAdmin(Mockito.anyString(),
-      Mockito.anyInt(), Mockito.anyBoolean())).
+    Mockito.when(connection.getAdmin(Mockito.any(ServerName.class), Mockito.anyBoolean())).
       thenReturn(implementation);
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
     try {
@@ -475,8 +474,8 @@ public class TestCatalogTracker {
    * {@link HConnection#getConfiguration()} is called, a 'location' when
    * {@link HConnection#getRegionLocation(byte[], byte[], boolean)} is called,
    * and that returns the passed {@link AdminProtocol} instance when
-   * {@link HConnection#getAdmin(String, int)} is called, returns the passed
-   * {@link ClientProtocol} instance when {@link HConnection#getClient(String, int)}
+   * {@link HConnection#getAdmin(ServerName)} is called, returns the passed
+   * {@link ClientProtocol} instance when {@link HConnection#getClient(ServerName)}
    * is called (Be sure call
    * {@link HConnectionManager#deleteConnection(org.apache.hadoop.conf.Configuration)}
    * when done with this mocked Connection.
@@ -489,8 +488,7 @@ public class TestCatalogTracker {
     Mockito.doNothing().when(connection).close();
     // Make it so we return any old location when asked.
     final HRegionLocation anyLocation =
-      new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, SN.getHostname(),
-        SN.getPort());
+      new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, SN, HConstants.NO_SEQNUM);
     Mockito.when(connection.getRegionLocation((byte[]) Mockito.any(),
         (byte[]) Mockito.any(), Mockito.anyBoolean())).
       thenReturn(anyLocation);
@@ -499,12 +497,12 @@ public class TestCatalogTracker {
       thenReturn(anyLocation);
     if (admin != null) {
       // If a call to getHRegionConnection, return this implementation.
-      Mockito.when(connection.getAdmin(Mockito.anyString(), Mockito.anyInt())).
+      Mockito.when(connection.getAdmin(Mockito.any(ServerName.class))).
         thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this implementation.
-      Mockito.when(connection.getClient(Mockito.anyString(), Mockito.anyInt())).
+      Mockito.when(connection.getClient(Mockito.any(ServerName.class))).
         thenReturn(client);
     }
     return connection;

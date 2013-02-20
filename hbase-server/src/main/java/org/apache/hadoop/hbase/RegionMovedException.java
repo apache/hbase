@@ -35,17 +35,19 @@ public class RegionMovedException extends NotServingRegionException {
 
   private final String hostname;
   private final int port;
+  private final long startCode;
   private final long locationSeqNum;
 
   private static final String HOST_FIELD = "hostname=";
   private static final String PORT_FIELD = "port=";
+  private static final String STARTCODE_FIELD = "startCode=";
   private static final String LOCATIONSEQNUM_FIELD = "locationSeqNum=";
 
-  public RegionMovedException(final String hostname, final int port,
-    final long locationSeqNum) {
-    super();
-    this.hostname = hostname;
-    this.port = port;
+
+  public RegionMovedException(ServerName serverName, long locationSeqNum) {
+    this.hostname = serverName.getHostname();
+    this.port = serverName.getPort();
+    this.startCode = serverName.getStartcode();
     this.locationSeqNum = locationSeqNum;
   }
 
@@ -55,6 +57,10 @@ public class RegionMovedException extends NotServingRegionException {
 
   public int getPort() {
     return port;
+  }
+
+  public ServerName getServerName(){
+    return new ServerName(hostname, port, startCode);
   }
 
   public long getLocationSeqNum() {
@@ -69,22 +75,27 @@ public class RegionMovedException extends NotServingRegionException {
   public RegionMovedException(String s) {
     int posHostname = s.indexOf(HOST_FIELD) + HOST_FIELD.length();
     int posPort = s.indexOf(PORT_FIELD) + PORT_FIELD.length();
+    int posStartCode = s.indexOf(STARTCODE_FIELD) + STARTCODE_FIELD.length();
     int posSeqNum = s.indexOf(LOCATIONSEQNUM_FIELD) + LOCATIONSEQNUM_FIELD.length();
 
     String tmpHostname = null;
     int tmpPort = -1;
+    long tmpStartCode = -1;
     long tmpSeqNum = HConstants.NO_SEQNUM;
     try {
       // TODO: this whole thing is extremely brittle.
       tmpHostname = s.substring(posHostname, s.indexOf(' ', posHostname));
-      tmpPort = Integer.parseInt(s.substring(posPort, s.indexOf('.', posPort)));
+      tmpPort = Integer.parseInt(s.substring(posPort, s.indexOf(' ', posPort)));
+      tmpStartCode =  Long.parseLong(s.substring(posStartCode, s.indexOf('.', posStartCode)));
       tmpSeqNum = Long.parseLong(s.substring(posSeqNum, s.indexOf('.', posSeqNum)));
     } catch (Exception ignored) {
-      LOG.warn("Can't parse the hostname and the port from this string: " + s + ", continuing");
+      LOG.warn("Can't parse the hostname, port and startCode from this string: " +
+          s + ", continuing");
     }
 
     hostname = tmpHostname;
     port = tmpPort;
+    startCode = tmpStartCode;
     locationSeqNum = tmpSeqNum;
   }
 
@@ -92,8 +103,8 @@ public class RegionMovedException extends NotServingRegionException {
   public String getMessage() {
     // TODO: deserialization above depends on this. That is bad, but also means this
     // should be modified carefully.
-    return "Region moved to: " + HOST_FIELD + hostname + " " + PORT_FIELD + port + ". As of "
-      + LOCATIONSEQNUM_FIELD + locationSeqNum + ".";
+    return "Region moved to: " + HOST_FIELD + hostname + " " + PORT_FIELD + port + " " +
+        STARTCODE_FIELD + startCode + ". As of "  + LOCATIONSEQNUM_FIELD + locationSeqNum + ".";
   }
 
   /**

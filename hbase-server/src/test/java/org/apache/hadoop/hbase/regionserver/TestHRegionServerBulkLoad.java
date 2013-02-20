@@ -165,8 +165,7 @@ public class TestHRegionServerBulkLoad {
           public Void call() throws Exception {
             LOG.debug("compacting " + location + " for row "
                 + Bytes.toStringBinary(row));
-            AdminProtocol server = connection.getAdmin(
-              location.getHostname(), location.getPort());
+            AdminProtocol server = connection.getAdmin(location.getServerName());
             CompactRegionRequest request =
               RequestConverter.buildCompactRegionRequest(
                 location.getRegionInfo().getRegionName(), true, null);

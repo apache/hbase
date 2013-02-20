@@ -683,7 +683,7 @@ public class ServerManager {
     AdminProtocol admin = this.serverConnections.get(sn);
     if (admin == null) {
       LOG.debug("New connection to " + sn.toString());
-      admin = this.connection.getAdmin(sn.getHostname(), sn.getPort());
+      admin = this.connection.getAdmin(sn);
       this.serverConnections.put(sn, admin);
     }
     return admin;
