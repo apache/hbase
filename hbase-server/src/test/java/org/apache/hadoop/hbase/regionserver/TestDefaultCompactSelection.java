@@ -288,7 +288,7 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(100,50,23,12,12), true, 23, 12, 12);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1);
     conf.setFloat("hbase.hregion.majorcompaction.jitter", 0);
-    store.compactionPolicy.updateConfiguration();
+    store.compactionPolicy.setConf(conf);
     try {
       // trigger an aged major compaction
       compactEquals(sfCreate(50,25,12,12), 50, 25, 12, 12);
@@ -321,7 +321,7 @@ public class TestDefaultCompactSelection extends TestCase {
      */
     // set an off-peak compaction threshold
     this.conf.setFloat("hbase.hstore.compaction.ratio.offpeak", 5.0F);
-    store.compactionPolicy.updateConfiguration();
+    store.compactionPolicy.setConf(this.conf);
     // Test with and without the flag.
     compactEquals(sfCreate(999, 50, 12, 12, 1), false, true, 50, 12, 12, 1);
     compactEquals(sfCreate(999, 50, 12, 12, 1), 12, 12, 1);

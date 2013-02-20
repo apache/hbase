@@ -25,33 +25,22 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A compaction policy determines how to select files for compaction,
  * how to compact them, and how to generate the compacted files.
  */
 @InterfaceAudience.Private
-public abstract class CompactionPolicy extends Configured {
+public abstract class CompactionPolicy {
+  protected CompactionConfiguration comConf;
+  protected StoreConfigInformation storeConfigInfo;
 
-  /**
-   * The name of the configuration parameter that specifies
-   * the class of a compaction policy that is used to compact
-   * HBase store files.
-   */
-  public static final String COMPACTION_POLICY_KEY =
-    "hbase.hstore.compaction.policy";
-
-  private static final Class<? extends CompactionPolicy>
-    DEFAULT_COMPACTION_POLICY_CLASS = DefaultCompactionPolicy.class;
-
-  CompactionConfiguration comConf;
-  Compactor compactor;
-  HStore store;
+  public CompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
+    this.storeConfigInfo = storeConfigInfo;
+    this.comConf = new CompactionConfiguration(conf, this.storeConfigInfo);
+  }
 
   /**
    * This is called before coprocessor preCompactSelection and should filter the candidates
@@ -107,68 +96,7 @@ public abstract class CompactionPolicy extends Configured {
    * Inform the policy that some configuration has been change,
    * so cached value should be updated it any.
    */
-  public void updateConfiguration() {
-    if (getConf() != null && store != null) {
-      comConf = new CompactionConfiguration(getConf(), store);
-    }
-  }
-
-  /**
-   * Get the compactor for this policy
-   * @return the compactor for this policy
-   */
-  public Compactor getCompactor() {
-    return compactor;
-  }
-
-  /**
-   * Set the new configuration
-   */
-  @Override
   public void setConf(Configuration conf) {
-    super.setConf(conf);
-    updateConfiguration();
-  }
-
-  /**
-   * Upon construction, this method will be called with the HStore
-   * to be governed. It will be called once and only once.
-   */
-  protected void configureForStore(HStore store) {
-    this.store = store;
-    updateConfiguration();
-  }
-
-  /**
-   * Create the CompactionPolicy configured for the given HStore.
-   * @param store
-   * @param conf
-   * @return a CompactionPolicy
-   * @throws IOException
-   */
-  public static CompactionPolicy create(HStore store,
-      Configuration conf) throws IOException {
-    Class<? extends CompactionPolicy> clazz =
-      getCompactionPolicyClass(store.getFamily(), conf);
-    CompactionPolicy policy = ReflectionUtils.newInstance(clazz, conf);
-    policy.configureForStore(store);
-    return policy;
-  }
-
-  static Class<? extends CompactionPolicy> getCompactionPolicyClass(
-      HColumnDescriptor family, Configuration conf) throws IOException {
-    String className = conf.get(COMPACTION_POLICY_KEY,
-      DEFAULT_COMPACTION_POLICY_CLASS.getName());
-
-    try {
-      Class<? extends CompactionPolicy> clazz =
-        Class.forName(className).asSubclass(CompactionPolicy.class);
-      return clazz;
-    } catch (Exception  e) {
-      throw new IOException(
-        "Unable to load configured region compaction policy '"
-        + className + "' for column '" + family.getNameAsString()
-        + "'", e);
-    }
+    this.comConf = new CompactionConfiguration(conf, this.storeConfigInfo);
   }
 }

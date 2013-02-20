@@ -153,7 +153,7 @@ public class HStore implements Store {
   // Comparing KeyValues
   private final KeyValue.KVComparator comparator;
 
-  private Compactor compactor;
+  final Compactor compactor;
   
   private OffPeakCompactions offPeakCompactions;
 
@@ -222,7 +222,8 @@ public class HStore implements Store {
           "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     }
 
-    this.storeFileManager = new DefaultStoreFileManager(this.comparator);
+    StoreEngine engine = StoreEngine.create(this, this.conf, this.comparator);
+    this.storeFileManager = engine.getStoreFileManager();
     this.storeFileManager.loadFiles(loadStoreFiles());
 
     // Initialize checksum type from name. The names are CRC32, CRC32C, etc.
@@ -241,9 +242,9 @@ public class HStore implements Store {
                 + HStore.flush_retries_number);
       }
     }
-    this.compactionPolicy = CompactionPolicy.create(this, conf);
+    this.compactionPolicy = engine.getCompactionPolicy();
     // Get the compaction tool instance for this policy
-    this.compactor = compactionPolicy.getCompactor();
+    this.compactor = engine.getCompactor();
   }
 
   /**
@@ -1672,6 +1673,7 @@ public class HStore implements Store {
   }
 
   @Override
+  // TODO: why is there this and also getNumberOfStorefiles?! Remove one.
   public int getStorefilesCount() {
     return this.storeFileManager.getStorefileCount();
   }

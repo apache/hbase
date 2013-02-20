@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -44,14 +45,16 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * Compact passed set of files.
- * Create an instance and then call {@ink #compact(Collection, boolean, long)}.
+ * Create an instance and then call {@link #compact(Collection, boolean)}.
  */
 @InterfaceAudience.Private
-class DefaultCompactor extends Compactor {
+public class DefaultCompactor extends Compactor {
   private static final Log LOG = LogFactory.getLog(DefaultCompactor.class);
+  private final Store store;
 
-  DefaultCompactor(final CompactionPolicy policy) {
-    super(policy);
+  public DefaultCompactor(final Configuration conf, final Store store) {
+    super(conf);
+    this.store = store;
   }
 
   /**
@@ -72,7 +75,6 @@ class DefaultCompactor extends Compactor {
     // Calculate maximum key count after compaction (for blooms)
     // Also calculate earliest put timestamp if major compaction
     int maxKeyCount = 0;
-    Store store = policy.store;
     long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     for (StoreFile file: filesToCompact) {
       StoreFile.Reader r = file.getReader();
@@ -116,7 +118,7 @@ class DefaultCompactor extends Compactor {
       .getScannersForStoreFiles(filesToCompact, false, false, true);
 
     // Get some configs
-    int compactionKVMax = getConf().getInt(HConstants.COMPACTION_KV_MAX, 10);
+    int compactionKVMax = this.conf.getInt(HConstants.COMPACTION_KV_MAX, 10);
     Compression.Algorithm compression = store.getFamily().getCompression();
     // Avoid overriding compression setting for major compactions if the user
     // has not specified it separately
