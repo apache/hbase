@@ -222,10 +222,10 @@ public class TestSnapshotFromMaster {
   }
 
   @Test
-  public void testListSnapshots() throws Exception {
+  public void testGetCompletedSnapshots() throws Exception {
     // first check when there are no snapshots
     ListSnapshotRequest request = ListSnapshotRequest.newBuilder().build();
-    ListSnapshotResponse response = master.listSnapshots(null, request);
+    ListSnapshotResponse response = master.getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
 
     // write one snapshot to the fs
@@ -235,7 +235,7 @@ public class TestSnapshotFromMaster {
     SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
 
     // check that we get one snapshot
-    response = master.listSnapshots(null, request);
+    response = master.getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 1, response.getSnapshotsCount());
     List<SnapshotDescription> snapshots = response.getSnapshotsList();
     List<SnapshotDescription> expected = Lists.newArrayList(snapshot);
@@ -249,7 +249,7 @@ public class TestSnapshotFromMaster {
     expected.add(snapshot);
 
     // check that we get one snapshot
-    response = master.listSnapshots(null, request);
+    response = master.getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 2, response.getSnapshotsCount());
     snapshots = response.getSnapshotsList();
     assertEquals("Returned snapshots don't match created snapshots", expected, snapshots);

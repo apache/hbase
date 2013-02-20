@@ -19609,7 +19609,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse> done);
       
-      public abstract void listSnapshots(
+      public abstract void getCompletedSnapshots(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse> done);
@@ -19808,11 +19808,11 @@ public final class MasterAdminProtos {
         }
         
         @java.lang.Override
-        public  void listSnapshots(
+        public  void getCompletedSnapshots(
             com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse> done) {
-          impl.listSnapshots(controller, request, done);
+          impl.getCompletedSnapshots(controller, request, done);
         }
         
         @java.lang.Override
@@ -19912,7 +19912,7 @@ public final class MasterAdminProtos {
             case 20:
               return impl.snapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest)request);
             case 21:
-              return impl.listSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest)request);
+              return impl.getCompletedSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest)request);
             case 22:
               return impl.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest)request);
             case 23:
@@ -20166,7 +20166,7 @@ public final class MasterAdminProtos {
         org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse> done);
     
-    public abstract void listSnapshots(
+    public abstract void getCompletedSnapshots(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse> done);
@@ -20319,7 +20319,7 @@ public final class MasterAdminProtos {
               done));
           return;
         case 21:
-          this.listSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest)request,
+          this.getCompletedSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse>specializeCallback(
               done));
           return;
@@ -20811,7 +20811,7 @@ public final class MasterAdminProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.getDefaultInstance()));
       }
       
-      public  void listSnapshots(
+      public  void getCompletedSnapshots(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse> done) {
@@ -20998,7 +20998,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest request)
           throws com.google.protobuf.ServiceException;
       
-      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse listSnapshots(
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse getCompletedSnapshots(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request)
           throws com.google.protobuf.ServiceException;
@@ -21283,7 +21283,7 @@ public final class MasterAdminProtos {
       }
       
       
-      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse listSnapshots(
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse getCompletedSnapshots(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request)
           throws com.google.protobuf.ServiceException {
@@ -21661,7 +21661,7 @@ public final class MasterAdminProtos {
       "iption\"F\n\034IsRestoreSnapshotDoneRequest\022&" +
       "\n\010snapshot\030\001 \001(\0132\024.SnapshotDescription\"3" +
       "\n\035IsRestoreSnapshotDoneResponse\022\022\n\004done\030" +
-      "\001 \001(\010:\004true2\234\r\n\022MasterAdminService\0222\n\tad" +
+      "\001 \001(\010:\004true2\244\r\n\022MasterAdminService\0222\n\tad" +
       "dColumn\022\021.AddColumnRequest\032\022.AddColumnRe" +
       "sponse\022;\n\014deleteColumn\022\024.DeleteColumnReq",
       "uest\032\025.DeleteColumnResponse\022;\n\014modifyCol" +
@@ -21694,18 +21694,18 @@ public final class MasterAdminProtos {
       "orEnabledResponse\022L\n\021execMasterService\022\032" +
       ".CoprocessorServiceRequest\032\033.Coprocessor" +
       "ServiceResponse\0227\n\010snapshot\022\024.TakeSnapsh",
-      "otRequest\032\025.TakeSnapshotResponse\022<\n\rlist" +
-      "Snapshots\022\024.ListSnapshotRequest\032\025.ListSn" +
-      "apshotResponse\022A\n\016deleteSnapshot\022\026.Delet" +
-      "eSnapshotRequest\032\027.DeleteSnapshotRespons" +
-      "e\022A\n\016isSnapshotDone\022\026.IsSnapshotDoneRequ" +
-      "est\032\027.IsSnapshotDoneResponse\022D\n\017restoreS" +
-      "napshot\022\027.RestoreSnapshotRequest\032\030.Resto" +
-      "reSnapshotResponse\022V\n\025isRestoreSnapshotD" +
-      "one\022\035.IsRestoreSnapshotDoneRequest\032\036.IsR" +
-      "estoreSnapshotDoneResponseBG\n*org.apache",
-      ".hadoop.hbase.protobuf.generatedB\021Master" +
-      "AdminProtosH\001\210\001\001\240\001\001"
+      "otRequest\032\025.TakeSnapshotResponse\022D\n\025getC" +
+      "ompletedSnapshots\022\024.ListSnapshotRequest\032" +
+      "\025.ListSnapshotResponse\022A\n\016deleteSnapshot" +
+      "\022\026.DeleteSnapshotRequest\032\027.DeleteSnapsho" +
+      "tResponse\022A\n\016isSnapshotDone\022\026.IsSnapshot" +
+      "DoneRequest\032\027.IsSnapshotDoneResponse\022D\n\017" +
+      "restoreSnapshot\022\027.RestoreSnapshotRequest" +
+      "\032\030.RestoreSnapshotResponse\022V\n\025isRestoreS" +
+      "napshotDone\022\035.IsRestoreSnapshotDoneReque" +
+      "st\032\036.IsRestoreSnapshotDoneResponseBG\n*or",
+      "g.apache.hadoop.hbase.protobuf.generated" +
+      "B\021MasterAdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

@@ -337,10 +337,10 @@ service MasterAdminService {
   rpc snapshot(TakeSnapshotRequest) returns(TakeSnapshotResponse);
 
   /**
-   * List existing snapshots.
-   * @return a list of snapshot descriptors
+   * List completed snapshots.
+   * @return a list of snapshot descriptors for completed snapshots
    */
-  rpc listSnapshots(ListSnapshotRequest) returns(ListSnapshotResponse);
+  rpc getCompletedSnapshots(ListSnapshotRequest) returns(ListSnapshotResponse);
 
   /**
    * Delete an existing snapshot. This method can also be used to clean up an aborted snapshot.

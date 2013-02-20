@@ -177,7 +177,7 @@ public class TestFlushSnapshotFromClient {
       admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
 
     admin.deleteSnapshot(snapshot);
-    snapshots = admin.listSnapshots();
+    snapshots = admin.getCompletedSnapshots();
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
@@ -382,7 +382,7 @@ public class TestFlushSnapshotFromClient {
     // dump for debugging
     logFSTree(new Path(UTIL.getConfiguration().get(HConstants.HBASE_DIR)));
 
-    List<SnapshotDescription> taken = admin.listSnapshots();
+    List<SnapshotDescription> taken = admin.getCompletedSnapshots();
     int takenSize = taken.size();
     LOG.info("Taken " + takenSize + " snapshots:  " + taken);
     assertTrue("We expect at least 1 request to be rejected because of we concurrently" +

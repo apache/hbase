@@ -2483,8 +2483,8 @@ Server {
    * List the currently available/stored snapshots. Any in-progress snapshots are ignored
    */
   @Override
-  public ListSnapshotResponse listSnapshots(RpcController controller, ListSnapshotRequest request)
-      throws ServiceException {
+  public ListSnapshotResponse getCompletedSnapshots(RpcController controller,
+      ListSnapshotRequest request) throws ServiceException {
     try {
       ListSnapshotResponse.Builder builder = ListSnapshotResponse.newBuilder();
       List<SnapshotDescription> snapshots = snapshotManager.getCompletedSnapshots();

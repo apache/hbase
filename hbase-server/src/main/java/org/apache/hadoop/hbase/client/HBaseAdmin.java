@@ -2333,7 +2333,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     String rollbackSnapshot = snapshotName + "-" + EnvironmentEdgeManager.currentTimeMillis();
 
     String tableName = null;
-    for (SnapshotDescription snapshotInfo: listSnapshots()) {
+    for (SnapshotDescription snapshotInfo: getCompletedSnapshots()) {
       if (snapshotInfo.getName().equals(snapshotName)) {
         tableName = snapshotInfo.getTable();
         break;
@@ -2475,15 +2475,15 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
-   * List existing snapshots.
-   * @return a list of snapshot descriptor for existing snapshots
+   * List completed snapshots.
+   * @return a list of snapshot descriptors for completed snapshots
    * @throws IOException if a network error occurs
    */
-  public List<SnapshotDescription> listSnapshots() throws IOException {
+  public List<SnapshotDescription> getCompletedSnapshots() throws IOException {
     return execute(new MasterAdminCallable<List<SnapshotDescription>>() {
       @Override
       public List<SnapshotDescription> call() throws ServiceException {
-        return masterAdmin.listSnapshots(null, ListSnapshotRequest.newBuilder().build())
+        return masterAdmin.getCompletedSnapshots(null, ListSnapshotRequest.newBuilder().build())
             .getSnapshotsList();
       }
     });

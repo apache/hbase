@@ -319,7 +319,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 <%def userSnapshots>
 <%java>
-   List<SnapshotDescription> snapshots = admin.listSnapshots();
+   List<SnapshotDescription> snapshots = admin.getCompletedSnapshots();
 </%java>
 <%if (snapshots != null && snapshots.size() > 0)%>
 <table class="table table-striped">
