@@ -66,7 +66,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * <p>
  * On startup, requires {@link #start()} to be called.
  * <p>
- * On shutdown, requires {@link #stop()} to be called
+ * On shutdown, requires {@link #stop(boolean)} to be called
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

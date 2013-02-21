@@ -1015,7 +1015,7 @@ public final class RequestConverter {
   /**
    * Creates a protocol buffer GetSchemaAlterStatusRequest
    *
-   * @param table
+   * @param tableName
    * @return a GetSchemaAlterStatusRequest
    */
   public static GetSchemaAlterStatusRequest buildGetSchemaAlterStatusRequest(

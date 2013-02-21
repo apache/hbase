@@ -58,8 +58,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * Further, the cache is periodically refreshed ensure that files in snapshots that were deleted are
  * also removed from the cache.
  * <p>
- * A {@link SnapshotFileInspector} must be passed when creating <tt>this</tt> to allow extraction
- * of files under the /hbase/.snapshot/[snapshot name] directory, for each snapshot.
+ * A {@link SnapshotFileCache.SnapshotFileInspector} must be passed when creating <tt>this</tt> to
+ * allow extraction of files under /hbase/.snapshot/[snapshot name] directory, for each snapshot.
  * This allows you to only cache files under, for instance, all the logs in the .logs directory or
  * all the files under all the regions.
  * <p>

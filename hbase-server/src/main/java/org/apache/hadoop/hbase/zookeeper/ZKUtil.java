@@ -1752,7 +1752,7 @@ public class ZKUtil {
 
   /**
    * Helper method to print the current state of the ZK tree.
-   * @see #logZKTree(String)
+   * @see #logZKTree(ZooKeeperWatcher, String)
    * @throws KeeperException if an unexpected exception occurs
    */
   protected static void logZKTree(ZooKeeperWatcher zkw, String root, String prefix) throws KeeperException {
