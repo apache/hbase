@@ -3348,7 +3348,7 @@ public class HRegionServer implements ClientProtocol,
       if (request.getFamilyCount() == 0) {
         columnFamilies = region.getStores().keySet();
       } else {
-        columnFamilies = new HashSet<byte[]>();
+        columnFamilies = new TreeSet<byte[]>(Bytes.BYTES_RAWCOMPARATOR);
         for (ByteString cf: request.getFamilyList()) {
           columnFamilies.add(cf.toByteArray());
         }
