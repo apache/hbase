@@ -26,17 +26,14 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Properties;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
-
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.authentication.util.KerberosUtil;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -52,17 +49,19 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.CreateAndFailSilent;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.DeleteNodeFailSilent;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.SetData;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Op;
 import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.apache.zookeeper.Op;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.DeleteRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
@@ -862,6 +861,10 @@ public class ZKUtil {
   /**
    * Set data into node creating node if it doesn't yet exist.
    * Does not set watch.
+   *
+   * WARNING: this is not atomic -- it is possible to get a 0-byte data value in the znode before
+   * data is written
+   *
    * @param zkw zk reference
    * @param znode path of node
    * @param data data to set for node
@@ -1080,7 +1083,7 @@ public class ZKUtil {
   }
 
   /**
-   * Creates the specified node, if the node does not exist.  Does not set a
+   * Creates the specified node, iff the node does not exist.  Does not set a
    * watch and fails silently if the node already exists.
    *
    * The node created is persistent and open access.
@@ -1091,10 +1094,27 @@ public class ZKUtil {
    */
   public static void createAndFailSilent(ZooKeeperWatcher zkw,
       String znode) throws KeeperException {
-    createAndFailSilent(zkw,
-      (CreateAndFailSilent)ZKUtilOp.createAndFailSilent(znode, new byte[0]));
+    createAndFailSilent(zkw, znode, new byte[0]);
   }
 
+  /**
+   * Creates the specified node containing specified data, iff the node does not exist.  Does
+   * not set a watch and fails silently if the node already exists.
+   *
+   * The node created is persistent and open access.
+   *
+   * @param zkw zk reference
+   * @param znode path of node
+   * @param data a byte array data to store in the znode
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static void createAndFailSilent(ZooKeeperWatcher zkw,
+      String znode, byte[] data)
+  throws KeeperException {
+    createAndFailSilent(zkw,
+        (CreateAndFailSilent)ZKUtilOp.createAndFailSilent(znode, data));
+  }
+  
   private static void createAndFailSilent(ZooKeeperWatcher zkw, CreateAndFailSilent cafs)
   throws KeeperException {
     CreateRequest create = (CreateRequest)toZooKeeperOp(zkw, cafs).toRequestRecord();
@@ -1133,11 +1153,29 @@ public class ZKUtil {
    */
   public static void createWithParents(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
+    createWithParents(zkw, znode, new byte[0]);
+  }
+
+  /**
+   * Creates the specified node and all parent nodes required for it to exist.  The creation of
+   * parent znodes is not atomic with the leafe znode creation but the data is written atomically
+   * when the leaf node is created.
+   *
+   * No watches are set and no errors are thrown if the node already exists.
+   *
+   * The nodes created are persistent and open access.
+   *
+   * @param zkw zk reference
+   * @param znode path of node
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static void createWithParents(ZooKeeperWatcher zkw, String znode, byte[] data)
+  throws KeeperException {
     try {
       if(znode == null) {
         return;
       }
-      zkw.getRecoverableZooKeeper().create(znode, new byte[0], createACL(zkw, znode),
+      zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.PERSISTENT);
     } catch(KeeperException.NodeExistsException nee) {
       return;
@@ -1694,4 +1732,37 @@ public class ZKUtil {
     ke.initCause(e);
     return ke;
   }
+
+  /**
+   * Recursively print the current state of ZK (non-transactional)
+   * @param root name of the root directory in zk to print
+   * @throws KeeperException
+   */
+  public static void logZKTree(ZooKeeperWatcher zkw, String root) {
+    if (!LOG.isDebugEnabled()) return;
+    LOG.debug("Current zk system:");
+    String prefix = "|-";
+    LOG.debug(prefix + root);
+    try {
+      logZKTree(zkw, root, prefix);
+    } catch (KeeperException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Helper method to print the current state of the ZK tree.
+   * @see #logZKTree(ZooKeeperWatcher, String)
+   * @throws KeeperException if an unexpected exception occurs
+   */
+  protected static void logZKTree(ZooKeeperWatcher zkw, String root, String prefix) throws KeeperException {
+    List<String> children = ZKUtil.listChildrenNoWatch(zkw, root);
+    if (children == null) return;
+    for (String child : children) {
+      LOG.debug(prefix + child);
+      String node = ZKUtil.joinZNode(root.equals("/") ? "" : root, child);
+      logZKTree(zkw, node, prefix + "---");
+    }
+  }
+
 }

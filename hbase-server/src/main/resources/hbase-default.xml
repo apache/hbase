@@ -952,6 +952,13 @@
     </description>
   </property>
   <property>
+    <name>hbase.snapshot.enabled</name>
+    <value>true</value>
+    <description>
+        Set to true to allow snapshots to be taken / restored / cloned.
+    </description>
+  </property>
+  <property>
     <name>hbase.rest.threads.max</name>
     <value>100</value>
     <description>

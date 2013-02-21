@@ -56,6 +56,11 @@ public interface MasterServices extends Server {
   public ExecutorService getExecutorService();
 
   /**
+   * @return Master's instance of {@link MasterCoprocessorHost}
+   */
+  public MasterCoprocessorHost getCoprocessorHost();
+
+  /**
    * Check table is modifiable; i.e. exists and is offline.
    * @param tableName Name of table to check.
    * @throws TableNotDisabledException

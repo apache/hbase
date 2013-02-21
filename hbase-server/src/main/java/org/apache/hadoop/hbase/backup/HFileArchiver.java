@@ -73,14 +73,12 @@ public class HFileArchiver {
   public static void archiveRegion(Configuration conf, FileSystem fs, HRegionInfo info)
       throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
-    archiveRegion(conf, fs, rootDir, HTableDescriptor.getTableDir(rootDir, info.getTableName()),
+    archiveRegion(fs, rootDir, HTableDescriptor.getTableDir(rootDir, info.getTableName()),
       HRegion.getRegionDir(rootDir, info));
   }
 
-
   /**
    * Remove an entire region from the table directory via archiving the region's hfiles.
-   * @param conf the configuration to use
    * @param fs {@link FileSystem} from which to remove the region
    * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
    *          the archive path)
@@ -90,8 +88,7 @@ public class HFileArchiver {
    *         operations could not complete.
    * @throws IOException if the request cannot be completed
    */
-  public static boolean archiveRegion(Configuration conf, FileSystem fs,
-      Path rootdir, Path tableDir, Path regionDir)
+  public static boolean archiveRegion(FileSystem fs, Path rootdir, Path tableDir, Path regionDir)
       throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("ARCHIVING region " + regionDir.toString());
@@ -110,7 +107,7 @@ public class HFileArchiver {
 
     // make sure the regiondir lives under the tabledir
     Preconditions.checkArgument(regionDir.toString().startsWith(tableDir.toString()));
-    Path regionArchiveDir = HFileArchiveUtil.getRegionArchiveDir(conf, tableDir, regionDir);
+    Path regionArchiveDir = HFileArchiveUtil.getRegionArchiveDir(rootdir, tableDir, regionDir);
 
     LOG.debug("Have an archive directory, preparing to move files");
     FileStatusConverter getAsFile = new FileStatusConverter(fs);
@@ -235,6 +232,35 @@ public class HFileArchiver {
     if (!resolveAndArchive(fs, storeArchiveDir, storeFiles)) {
       throw new IOException("Failed to archive/delete all the files for region:"
           + Bytes.toString(parent.getRegionName()) + ", family:" + Bytes.toString(family)
+          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
+    }
+  }
+
+  /**
+   * Archive the store file
+   * @param fs the filesystem where the store files live
+   * @param regionInfo region hosting the store files
+   * @param conf {@link Configuration} to examine to determine the archive directory
+   * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
+   * @param family the family hosting the store files
+   * @param storeFile file to be archived
+   * @throws IOException if the files could not be correctly disposed.
+   */
+  public static void archiveStoreFile(FileSystem fs, HRegionInfo regionInfo,
+      Configuration conf, Path tableDir, byte[] family, Path storeFile) throws IOException {
+    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
+    // make sure we don't archive if we can't and that the archive dir exists
+    if (!fs.mkdirs(storeArchiveDir)) {
+      throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
+          + Bytes.toString(family) + ", deleting compacted files instead.");
+    }
+
+    // do the actual archive
+    long start = EnvironmentEdgeManager.currentTimeMillis();
+    File file = new FileablePath(fs, storeFile);
+    if (!resolveAndArchiveFile(storeArchiveDir, file, Long.toString(start))) {
+      throw new IOException("Failed to archive/delete the file for region:"
+          + regionInfo.getRegionNameAsString() + ", family:" + Bytes.toString(family)
           + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
     }
   }

@@ -1255,6 +1255,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return count;
   }
 
+  public int countRows(final HTable table, final byte[]... families) throws IOException {
+    Scan scan = new Scan();
+    for (byte[] family: families) {
+      scan.addFamily(family);
+    }
+    ResultScanner results = table.getScanner(scan);
+    int count = 0;
+    for (@SuppressWarnings("unused") Result res : results) {
+      count++;
+    }
+    results.close();
+    return count;
+  }
+
   /**
    * Return an md5 digest of the entire contents of a table.
    */

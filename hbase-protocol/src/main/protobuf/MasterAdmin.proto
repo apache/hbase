@@ -177,6 +177,55 @@ message IsCatalogJanitorEnabledResponse {
   required bool value = 1;
 }
 
+message TakeSnapshotRequest{
+	required SnapshotDescription snapshot = 1;
+}
+
+message TakeSnapshotResponse{
+	required int64 expectedTimeout = 1;
+}
+
+message ListSnapshotRequest{
+}
+
+message ListSnapshotResponse{
+	repeated SnapshotDescription snapshots = 1;
+}
+
+message DeleteSnapshotRequest{
+	required SnapshotDescription snapshot = 1;
+}
+
+message DeleteSnapshotResponse{
+}
+
+message RestoreSnapshotRequest {
+  required SnapshotDescription snapshot = 1;
+}
+
+message RestoreSnapshotResponse {
+}
+
+/* if you don't send the snapshot, then you will get it back
+ * in the response (if the snapshot is done) so you can check the snapshot
+ */
+message IsSnapshotDoneRequest{
+	optional SnapshotDescription snapshot = 1;
+}
+
+message IsSnapshotDoneResponse{
+	optional bool done = 1 [default = false];
+	optional SnapshotDescription snapshot = 2;
+}
+
+message IsRestoreSnapshotDoneRequest {
+  optional SnapshotDescription snapshot = 1;
+}
+
+message IsRestoreSnapshotDoneResponse {
+  optional bool done = 1 [default = true];
+}
+
 service MasterAdminService {
   /** Adds a column to the specified table. */
   rpc addColumn(AddColumnRequest)
@@ -280,4 +329,38 @@ service MasterAdminService {
    */
   rpc execMasterService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
+
+  /** 
+   * Create a snapshot for the given table.
+   * @param snapshot description of the snapshot to take
+   */
+  rpc snapshot(TakeSnapshotRequest) returns(TakeSnapshotResponse);
+
+  /**
+   * List completed snapshots.
+   * @return a list of snapshot descriptors for completed snapshots
+   */
+  rpc getCompletedSnapshots(ListSnapshotRequest) returns(ListSnapshotResponse);
+
+  /**
+   * Delete an existing snapshot. This method can also be used to clean up an aborted snapshot.
+   * @param snapshotName snapshot to delete
+   */
+  rpc deleteSnapshot(DeleteSnapshotRequest) returns(DeleteSnapshotResponse);
+
+  /**
+   * Determine if the snapshot is done yet.
+   */
+  rpc isSnapshotDone(IsSnapshotDoneRequest) returns(IsSnapshotDoneResponse);
+
+  /**
+   * Restore a snapshot
+   * @param snapshot description of the snapshot to restore
+   */
+  rpc restoreSnapshot(RestoreSnapshotRequest) returns(RestoreSnapshotResponse);
+
+  /**
+   * Determine if the snapshot restore is done yet.
+   */
+  rpc isRestoreSnapshotDone(IsRestoreSnapshotDoneRequest) returns(IsRestoreSnapshotDoneResponse);
 }

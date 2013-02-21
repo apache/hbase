@@ -135,6 +135,8 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     C_M_DELETE_FAMILY         (45, null), // Client asking Master to delete family of table
     C_M_MODIFY_FAMILY         (46, null), // Client asking Master to modify family of table
     C_M_CREATE_TABLE          (47, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to create a table
+    C_M_SNAPSHOT_TABLE        (48, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to snapshot an offline table
+    C_M_RESTORE_SNAPSHOT      (49, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to restore a snapshot
 
     // Updates from master to ZK. This is done by the master and there is
     // nothing to process by either Master or RS

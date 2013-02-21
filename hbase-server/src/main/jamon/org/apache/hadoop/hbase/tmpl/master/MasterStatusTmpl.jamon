@@ -43,6 +43,7 @@ org.apache.hadoop.hbase.client.HBaseAdmin;
 org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
+org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 </%import>
 <%if format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
@@ -147,6 +148,9 @@ org.apache.hadoop.hbase.HBaseConfiguration;
                     <li class="">
                         <a href="#tab_catalogTables" data-toggle="tab">Catalog Tables</a>
                     </li>
+                    <li class="">
+                        <a href="#tab_userSnapshots" data-toggle="tab">Snapshots</a>
+                    </li>
                 </ul>
                 <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
                     <div class="tab-pane active" id="tab_userTables">
@@ -158,6 +162,9 @@ org.apache.hadoop.hbase.HBaseConfiguration;
                         <%if (rootLocation != null) %>
                             <& catalogTables &>
                         </%if>
+                    </div>
+                    <div class="tab-pane" id="userSnapshots">
+                        <& userSnapshots &>
                     </div>
                 </div>
             </div>
@@ -310,6 +317,28 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 </%if>
 </%def>
 
+<%def userSnapshots>
+<%java>
+   List<SnapshotDescription> snapshots = admin.getCompletedSnapshots();
+</%java>
+<%if (snapshots != null && snapshots.size() > 0)%>
+<table class="table table-striped">
+    <tr>
+        <th>Snapshot Name</th>
+        <th>Table</th>
+        <th>Creation Time</th>
+    </tr>
+    <%for SnapshotDescription snapshotDesc : snapshots%>
+    <tr>
+        <td><a href="snapshot.jsp?name=<% snapshotDesc.getName() %>"><% snapshotDesc.getName() %></a> </td>
+        <td><a href="table.jsp?name=<% snapshotDesc.getTable() %>"><% snapshotDesc.getTable() %></a></td>
+        <td><% new Date(snapshotDesc.getCreationTime()) %></td>
+    </tr>
+    </%for>
+    <p><% snapshots.size() %> snapshot(s) in set.</p>
+</table>
+</%if>
+</%def>
 
 
 <%def deadRegionServers>

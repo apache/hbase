@@ -121,6 +121,11 @@ public class TestAccessController {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
+    conf.set("hbase.master.hfilecleaner.plugins",
+      "org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner," +
+      "org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner");
+    conf.set("hbase.master.logcleaner.plugins",
+      "org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner");
     SecureTestUtil.enableSecurity(conf);
 
     TEST_UTIL.startMiniCluster();
@@ -1796,4 +1801,50 @@ public class TestAccessController {
     verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
   }
 
+  @Test
+  public void testSnapshot() throws Exception {
+    PrivilegedExceptionAction snapshotAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+          null, null);
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction deleteAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+          null);
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction restoreAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+          null, null);
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction cloneAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+          null, null);
+        return null;
+      }
+    };
+
+    verifyAllowed(snapshotAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(snapshotAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+
+    verifyAllowed(cloneAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(deleteAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+
+    verifyAllowed(restoreAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(restoreAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+
+    verifyAllowed(deleteAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(cloneAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
 }

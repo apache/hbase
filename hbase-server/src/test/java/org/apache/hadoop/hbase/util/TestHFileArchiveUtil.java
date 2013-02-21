@@ -50,9 +50,10 @@ public class TestHFileArchiveUtil {
   
   @Test
   public void testRegionArchiveDir() {
+    Configuration conf = null;
     Path tableDir = new Path("table");
     Path regionDir = new Path("region");
-    assertNotNull(HFileArchiveUtil.getRegionArchiveDir(null, tableDir, regionDir));
+    assertNotNull(HFileArchiveUtil.getRegionArchiveDir(conf, tableDir, regionDir));
   }
   
   @Test

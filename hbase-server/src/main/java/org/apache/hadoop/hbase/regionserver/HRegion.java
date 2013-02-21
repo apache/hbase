@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -113,6 +114,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -120,6 +122,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -134,7 +137,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
@@ -2450,8 +2452,71 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP}
-   * with the provided current timestamp.
+   * Complete taking the snapshot on the region. Writes the region info and adds references to the
+   * working snapshot directory.
+   *
+   * TODO for api consistency, consider adding another version with no {@link ForeignExceptionSnare}
+   * arg.  (In the future other cancellable HRegion methods could eventually add a
+   * {@link ForeignExceptionSnare}, or we could do something fancier).
+   *
+   * @param desc snasphot description object
+   * @param exnSnare ForeignExceptionSnare that captures external exeptions in case we need to
+   *   bail out.  This is allowed to be null and will just be ignored in that case.
+   * @throws IOException if there is an external or internal error causing the snapshot to fail
+   */
+  public void addRegionToSnapshot(SnapshotDescription desc,
+      ForeignExceptionSnare exnSnare) throws IOException {
+    // This should be "fast" since we don't rewrite store files but instead
+    // back up the store files by creating a reference
+    Path rootDir = FSUtils.getRootDir(this.rsServices.getConfiguration());
+    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnapshotDirectory(desc, rootDir,
+      regionInfo.getEncodedName());
+
+    // 1. dump region meta info into the snapshot directory
+    LOG.debug("Storing region-info for snapshot.");
+    checkRegioninfoOnFilesystem(snapshotRegionDir);
+
+    // 2. iterate through all the stores in the region
+    LOG.debug("Creating references for hfiles");
+
+    // This ensures that we have an atomic view of the directory as long as we have < ls limit
+    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
+    // batches and may miss files being added/deleted. This could be more robust (iteratively
+    // checking to see if we have all the files until we are sure), but the limit is currently 1000
+    // files/batch, far more than the number of store files under a single column family.
+    for (Store store : stores.values()) {
+      // 2.1. build the snapshot reference directory for the store
+      Path dstStoreDir = TakeSnapshotUtils.getStoreSnapshotDirectory(snapshotRegionDir,
+        Bytes.toString(store.getFamily().getName()));
+      List<StoreFile> storeFiles = new ArrayList<StoreFile>(store.getStorefiles());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
+      }
+
+      // 2.2. iterate through all the store's files and create "references".
+      int sz = storeFiles.size();
+      for (int i = 0; i < sz; i++) {
+        if (exnSnare != null) {
+          exnSnare.rethrowException();
+        }
+        Path file = storeFiles.get(i).getPath();
+        // create "reference" to this store file.  It is intentionally an empty file -- all
+        // necessary infomration is captured by its fs location and filename.  This allows us to
+        // only figure out what needs to be done via a single nn operation (instead of having to
+        // open and read the files as well).
+        LOG.debug("Creating reference for file (" + (i+1) + "/" + sz + ") : " + file);
+        Path referenceFile = new Path(dstStoreDir, file.getName());
+        boolean success = fs.createNewFile(referenceFile);
+        if (!success) {
+          throw new IOException("Failed to create reference file:" + referenceFile);
+        }
+      }
+    }
+  }
+
+  /**
+   * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP} with the provided current
+   * timestamp.
    */
   void updateKVTimestamps(
       final Iterable<List<KeyValue>> keyLists, final byte[] now) {
@@ -4373,10 +4438,10 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     // delete out the 'A' region
-    HFileArchiver.archiveRegion(a.getBaseConf(), fs,
+    HFileArchiver.archiveRegion(fs,
       FSUtils.getRootDir(a.getBaseConf()), a.getTableDir(), a.getRegionDir());
     // delete out the 'B' region
-    HFileArchiver.archiveRegion(a.getBaseConf(), fs,
+    HFileArchiver.archiveRegion(fs,
       FSUtils.getRootDir(b.getBaseConf()), b.getTableDir(), b.getRegionDir());
 
     LOG.info("merge completed. New region is " + dstRegion);

@@ -178,6 +178,7 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
+import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
@@ -424,6 +425,9 @@ public class HRegionServer implements ClientProtocol,
   private final QosFunction qosFunction;
 
   private RegionServerCoprocessorHost rsHost;
+
+  /** Handle all the snapshot requests to this server */
+  RegionServerSnapshotManager snapshotManager;
 
   /**
    * Starts a HRegionServer at the default location
@@ -763,6 +767,13 @@ public class HRegionServer implements ClientProtocol,
     } catch (KeeperException e) {
       this.abort("Failed to retrieve Cluster ID",e);
     }
+
+    // watch for snapshots
+    try {
+      this.snapshotManager = new RegionServerSnapshotManager(this);
+    } catch (KeeperException e) {
+      this.abort("Failed to reach zk cluster when creating snapshot handler.");
+    }
   }
 
   /**
@@ -849,6 +860,9 @@ public class HRegionServer implements ClientProtocol,
         }
       }
 
+      // start the snapshot handler, since the server is ready to run
+      this.snapshotManager.start();
+
       // We registered with the Master.  Go into run mode.
       long lastMsg = 0;
       long oldRequestCount = -1;
@@ -930,6 +944,12 @@ public class HRegionServer implements ClientProtocol,
       this.healthCheckChore.interrupt();
     }
 
+    try {
+      if (snapshotManager != null) snapshotManager.stop(this.abortRequested);
+    } catch (IOException e) {
+      LOG.warn("Failed to close snapshot handler cleanly", e);
+    }
+
     if (this.killed) {
       // Just skip out w/o closing regions.  Used when testing.
     } else if (abortRequested) {
@@ -945,6 +965,13 @@ public class HRegionServer implements ClientProtocol,
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta or root.
     if (this.catalogTracker != null) this.catalogTracker.stop();
+
+    // stop the snapshot handler, forcefully killing all running tasks
+    try {
+      if (snapshotManager != null) snapshotManager.stop(this.abortRequested || this.killed);
+    } catch (IOException e) {
+      LOG.warn("Failed to close snapshot handler cleanly", e);
+    }
 
     // Closing the compactSplit thread before closing meta regions
     if (!this.killed && containsMetaTableRegions()) {
@@ -3745,7 +3772,8 @@ public class HRegionServer implements ClientProtocol,
    *
    * @param region
    * @param mutate
-   * @return the Result
+   * @return result to return to client if default operation should be
+   * bypassed as indicated by RegionObserver, null otherwise
    * @throws IOException
    */
   protected Result append(final HRegion region,

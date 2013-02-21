@@ -748,11 +748,21 @@ public final class HConstants {
   /** Directory under /hbase where archived hfiles are stored */
   public static final String HFILE_ARCHIVE_DIRECTORY = ".archive";
 
+  /**
+   * Name of the directory to store all snapshots. See SnapshotDescriptionUtils for
+   * remaining snapshot constants; this is here to keep HConstants dependencies at a minimum and
+   * uni-directional.
+   */
+  public static final String SNAPSHOT_DIR_NAME = ".snapshot";
+
+  /** Temporary directory used for table creation and deletion */
+  public static final String HBASE_TEMP_DIRECTORY = ".tmp";
+
   /** Directories that are not HBase table directories */
   public static final List<String> HBASE_NON_TABLE_DIRS =
     Collections.unmodifiableList(Arrays.asList(new String[] { HREGION_LOGDIR_NAME,
       HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME, SPLIT_LOGDIR_NAME,
-      HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY }));
+      HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME, HBASE_TEMP_DIRECTORY }));
 
   /** Directories that are not HBase user table directories */
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =

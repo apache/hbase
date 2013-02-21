@@ -97,8 +97,8 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
-import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
@@ -121,6 +122,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
@@ -131,6 +134,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
@@ -139,12 +148,16 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
@@ -165,6 +178,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -319,6 +333,9 @@ Server {
   private SpanReceiverHost spanReceiverHost;
 
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
+
+  // monitor for snapshot of hbase tables
+  private SnapshotManager snapshotManager;
 
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
@@ -505,6 +522,7 @@ Server {
       if (this.serverManager != null) this.serverManager.stop();
       if (this.assignmentManager != null) this.assignmentManager.stop();
       if (this.fileSystemManager != null) this.fileSystemManager.stop();
+      if (this.snapshotManager != null) this.snapshotManager.stop("server shutting down.");
       this.zooKeeper.close();
     }
     LOG.info("HMaster main thread exiting");
@@ -568,6 +586,9 @@ Server {
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
         ", cluster-up flag was=" + wasUp);
+
+    // create the snapshot manager
+    this.snapshotManager = new SnapshotManager(this);
   }
 
   /**
@@ -2015,6 +2036,7 @@ Server {
     return zooKeeper;
   }
 
+  @Override
   public MasterCoprocessorHost getCoprocessorHost() {
     return cpHost;
   }
@@ -2417,6 +2439,165 @@ Server {
 
   public HFileCleaner getHFileCleaner() {
     return this.hfileCleaner;
+  }
+
+  /**
+   * Exposed for TESTING!
+   * @return the underlying snapshot manager
+   */
+  public SnapshotManager getSnapshotManagerForTesting() {
+    return this.snapshotManager;
+  }
+
+  /**
+   * Triggers an asynchronous attempt to take a snapshot.
+   * {@inheritDoc}
+   */
+  @Override
+  public TakeSnapshotResponse snapshot(RpcController controller, TakeSnapshotRequest request)
+      throws ServiceException {
+    try {
+      this.snapshotManager.checkSnapshotSupport();
+    } catch (UnsupportedOperationException e) {
+      throw new ServiceException(e);
+    }
+
+    LOG.debug("Submitting snapshot request for:" +
+        SnapshotDescriptionUtils.toString(request.getSnapshot()));
+    // get the snapshot information
+    SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(request.getSnapshot(),
+      this.conf);
+    try {
+      snapshotManager.takeSnapshot(snapshot);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
+    // send back the max amount of time the client should wait for the snapshot to complete
+    long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
+      SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
+    return TakeSnapshotResponse.newBuilder().setExpectedTimeout(waitTime).build();
+  }
+
+  /**
+   * List the currently available/stored snapshots. Any in-progress snapshots are ignored
+   */
+  @Override
+  public ListSnapshotResponse getCompletedSnapshots(RpcController controller,
+      ListSnapshotRequest request) throws ServiceException {
+    try {
+      ListSnapshotResponse.Builder builder = ListSnapshotResponse.newBuilder();
+      List<SnapshotDescription> snapshots = snapshotManager.getCompletedSnapshots();
+
+      // convert to protobuf
+      for (SnapshotDescription snapshot : snapshots) {
+        builder.addSnapshots(snapshot);
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Execute Delete Snapshot operation.
+   * @return DeleteSnapshotResponse (a protobuf wrapped void) if the snapshot existed and was
+   *    deleted properly.
+   * @throws ServiceException wrapping SnapshotDoesNotExistException if specified snapshot did not
+   *    exist.
+   */
+  @Override
+  public DeleteSnapshotResponse deleteSnapshot(RpcController controller,
+      DeleteSnapshotRequest request) throws ServiceException {
+    try {
+      this.snapshotManager.checkSnapshotSupport();
+    } catch (UnsupportedOperationException e) {
+      throw new ServiceException(e);
+    }
+
+    try {
+      snapshotManager.deleteSnapshot(request.getSnapshot());
+      return DeleteSnapshotResponse.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Checks if the specified snapshot is done.
+   * @return true if the snapshot is in file system ready to use,
+   *   false if the snapshot is in the process of completing
+   * @throws ServiceException wrapping UnknownSnapshotException if invalid snapshot, or
+   *  a wrapped HBaseSnapshotException with progress failure reason.
+   */
+  @Override
+  public IsSnapshotDoneResponse isSnapshotDone(RpcController controller,
+      IsSnapshotDoneRequest request) throws ServiceException {
+    LOG.debug("Checking to see if snapshot from request:" +
+        SnapshotDescriptionUtils.toString(request.getSnapshot()) + " is done");
+    try {
+      IsSnapshotDoneResponse.Builder builder = IsSnapshotDoneResponse.newBuilder();
+      boolean done = snapshotManager.isSnapshotDone(request.getSnapshot());
+      builder.setDone(done);
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Execute Restore/Clone snapshot operation.
+   *
+   * <p>If the specified table exists a "Restore" is executed, replacing the table
+   * schema and directory data with the content of the snapshot.
+   * The table must be disabled, or a UnsupportedOperationException will be thrown.
+   *
+   * <p>If the table doesn't exist a "Clone" is executed, a new table is created
+   * using the schema at the time of the snapshot, and the content of the snapshot.
+   *
+   * <p>The restore/clone operation does not require copying HFiles. Since HFiles
+   * are immutable the table can point to and use the same files as the original one.
+   */
+  @Override
+  public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
+      RestoreSnapshotRequest request) throws ServiceException {
+    try {
+      this.snapshotManager.checkSnapshotSupport();
+    } catch (UnsupportedOperationException e) {
+      throw new ServiceException(e);
+    }
+
+    try {
+      SnapshotDescription reqSnapshot = request.getSnapshot();
+      snapshotManager.restoreSnapshot(reqSnapshot);
+      return RestoreSnapshotResponse.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Returns the status of the requested snapshot restore/clone operation.
+   * This method is not exposed to the user, it is just used internally by HBaseAdmin
+   * to verify if the restore is completed.
+   *
+   * No exceptions are thrown if the restore is not running, the result will be "done".
+   *
+   * @return done <tt>true</tt> if the restore/clone operation is completed.
+   * @throws RestoreSnapshotExcepton if the operation failed.
+   */
+  @Override
+  public IsRestoreSnapshotDoneResponse isRestoreSnapshotDone(RpcController controller,
+      IsRestoreSnapshotDoneRequest request) throws ServiceException {
+    try {
+      SnapshotDescription snapshot = request.getSnapshot();
+      IsRestoreSnapshotDoneResponse.Builder builder = IsRestoreSnapshotDoneResponse.newBuilder();
+      boolean isRestoring = snapshotManager.isRestoringTable(snapshot);
+      builder.setDone(!isRestoring);
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   private boolean isHealthCheckerConfigured() {

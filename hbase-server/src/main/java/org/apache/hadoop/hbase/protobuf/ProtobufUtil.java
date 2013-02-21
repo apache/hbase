@@ -970,7 +970,7 @@ public final class ProtobufUtil {
    * Convert a delete KeyValue type to protocol buffer DeleteType.
    *
    * @param type
-   * @return a DeleteType
+   * @return protocol buffer DeleteType
    * @throws IOException
    */
   public static DeleteType toDeleteType(

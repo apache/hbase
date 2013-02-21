@@ -947,6 +947,27 @@ public abstract class FSUtils {
   }
 
   /**
+   * A {@link PathFilter} that returns only regular files.
+   */
+  static class FileFilter implements PathFilter {
+    private final FileSystem fs;
+
+    public FileFilter(final FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path p) {
+      try {
+        return fs.isFile(p);
+      } catch (IOException e) {
+        LOG.debug("unable to verify if path=" + p + " is a regular file", e);
+        return false;
+      }
+    }
+  }
+
+  /**
    * A {@link PathFilter} that returns directories.
    */
   public static class DirFilter implements PathFilter {
@@ -956,13 +977,14 @@ public abstract class FSUtils {
       this.fs = fs;
     }
 
+    @Override
     public boolean accept(Path p) {
       boolean isValid = false;
       try {
         if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p.toString())) {
           isValid = false;
         } else {
-            isValid = this.fs.getFileStatus(p).isDir();
+          isValid = fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
         LOG.warn("An error occurred while verifying if [" + p.toString() + 
@@ -1311,19 +1333,6 @@ public abstract class FSUtils {
   }
 
   /**
-   * Log the current state of the filesystem from a certain root directory
-   * @param fs filesystem to investigate
-   * @param root root file/directory to start logging from
-   * @param LOG log to output information
-   * @throws IOException if an unexpected exception occurs
-   */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
-      throws IOException {
-    LOG.debug("Current file system:");
-    logFSTree(LOG, fs, root, "|-");
-  }
-
-  /**
    * Throw an exception if an action is not permitted by a user on a file.
    * 
    * @param ugi
@@ -1357,6 +1366,19 @@ public abstract class FSUtils {
       }
     }
     return false;
+  }
+
+  /**
+   * Log the current state of the filesystem from a certain root directory
+   * @param fs filesystem to investigate
+   * @param root root file/directory to start logging from
+   * @param LOG log to output information
+   * @throws IOException if an unexpected exception occurs
+   */
+  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
+      throws IOException {
+    LOG.debug("Current file system:");
+    logFSTree(LOG, fs, root, "|-");
   }
 
   /**

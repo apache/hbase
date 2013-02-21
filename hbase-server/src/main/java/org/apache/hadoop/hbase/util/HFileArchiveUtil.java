@@ -99,6 +99,24 @@ public class HFileArchiveUtil {
   }
 
   /**
+   * Get the archive directory for a given region under the specified table
+   * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
+   *          the archive path)
+   * @param tabledir the original table directory. Cannot be null.
+   * @param regiondir the path to the region directory. Cannot be null.
+   * @return {@link Path} to the directory to archive the given region, or <tt>null</tt> if it
+   *         should not be archived
+   */
+  public static Path getRegionArchiveDir(Path rootdir, Path tabledir, Path regiondir) {
+    // get the archive directory for a table
+    Path archiveDir = getTableArchivePath(rootdir, tabledir.getName());
+
+    // then add on the region path under the archive
+    String encodedRegionName = regiondir.getName();
+    return HRegion.getRegionDir(archiveDir, encodedRegionName);
+  }
+
+  /**
    * Get the path to the table archive directory based on the configured archive directory.
    * <p>
    * Get the path to the table's archive directory.
@@ -109,7 +127,22 @@ public class HFileArchiveUtil {
    */
   public static Path getTableArchivePath(Path tabledir) {
     Path root = tabledir.getParent();
-    return new Path(new Path(root,HConstants.HFILE_ARCHIVE_DIRECTORY), tabledir.getName());
+    return getTableArchivePath(root, tabledir.getName());
+  }
+
+  /**
+   * Get the path to the table archive directory based on the configured archive directory.
+   * <p>
+   * Get the path to the table's archive directory.
+   * <p>
+   * Generally of the form: /hbase/.archive/[tablename]
+   * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
+   *          the archive path)
+   * @param tableName Name of the table to be archived. Cannot be null.
+   * @return {@link Path} to the archive directory for the table
+   */
+  public static Path getTableArchivePath(final Path rootdir, final String tableName) {
+    return new Path(getArchivePath(rootdir), tableName);
   }
 
   /**
@@ -133,6 +166,16 @@ public class HFileArchiveUtil {
    * @throws IOException if an unexpected error occurs
    */
   public static Path getArchivePath(Configuration conf) throws IOException {
-    return new Path(FSUtils.getRootDir(conf), HConstants.HFILE_ARCHIVE_DIRECTORY);
+    return getArchivePath(FSUtils.getRootDir(conf));
+  }
+
+  /**
+   * Get the full path to the archive directory on the configured {@link FileSystem}
+   * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
+   *          the archive path)
+   * @return the full {@link Path} to the archive directory, as defined by the configuration
+   */
+  private static Path getArchivePath(final Path rootdir) {
+    return new Path(rootdir, HConstants.HFILE_ARCHIVE_DIRECTORY);
   }
 }

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -62,7 +63,7 @@ import org.junit.experimental.categories.Category;
 public class TestMasterObserver {
   private static final Log LOG = LogFactory.getLog(TestMasterObserver.class);
 
-  public static CountDownLatch countDown = new CountDownLatch(1);
+  public static CountDownLatch tableCreationLatch = new CountDownLatch(1);
 
   public static class CPMasterObserver implements MasterObserver {
 
@@ -98,6 +99,14 @@ public class TestMasterObserver {
     private boolean postStartMasterCalled;
     private boolean startCalled;
     private boolean stopCalled;
+    private boolean preSnapshotCalled;
+    private boolean postSnapshotCalled;
+    private boolean preCloneSnapshotCalled;
+    private boolean postCloneSnapshotCalled;
+    private boolean preRestoreSnapshotCalled;
+    private boolean postRestoreSnapshotCalled;
+    private boolean preDeleteSnapshotCalled;
+    private boolean postDeleteSnapshotCalled;
     private boolean preCreateTableHandlerCalled;
     private boolean postCreateTableHandlerCalled;
     private boolean preDeleteTableHandlerCalled;
@@ -114,7 +123,6 @@ public class TestMasterObserver {
     private boolean postDisableTableHandlerCalled;
     private boolean preModifyTableHandlerCalled;
     private boolean postModifyTableHandlerCalled;
-
 
     public void enableBypass(boolean bypass) {
       this.bypass = bypass;
@@ -147,6 +155,14 @@ public class TestMasterObserver {
       postBalanceCalled = false;
       preBalanceSwitchCalled = false;
       postBalanceSwitchCalled = false;
+      preSnapshotCalled = false;
+      postSnapshotCalled = false;
+      preCloneSnapshotCalled = false;
+      postCloneSnapshotCalled = false;
+      preRestoreSnapshotCalled = false;
+      postRestoreSnapshotCalled = false;
+      preDeleteSnapshotCalled = false;
+      postDeleteSnapshotCalled = false;
       preCreateTableHandlerCalled = false;
       postCreateTableHandlerCalled = false;
       preDeleteTableHandlerCalled = false;
@@ -509,6 +525,76 @@ public class TestMasterObserver {
     public boolean wasStopped() { return stopCalled; }
 
     @Override
+    public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        throws IOException {
+      preSnapshotCalled = true;
+    }
+
+    @Override
+    public void postSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        throws IOException {
+      postSnapshotCalled = true;
+    }
+
+    public boolean wasSnapshotCalled() {
+      return preSnapshotCalled && postSnapshotCalled;
+    }
+
+    @Override
+    public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        throws IOException {
+      preCloneSnapshotCalled = true;
+    }
+
+    @Override
+    public void postCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        throws IOException {
+      postCloneSnapshotCalled = true;
+    }
+
+    public boolean wasCloneSnapshotCalled() {
+      return preCloneSnapshotCalled && postCloneSnapshotCalled;
+    }
+
+    @Override
+    public void preRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        throws IOException {
+      preRestoreSnapshotCalled = true;
+    }
+
+    @Override
+    public void postRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+        throws IOException {
+      postRestoreSnapshotCalled = true;
+    }
+
+    public boolean wasRestoreSnapshotCalled() {
+      return preRestoreSnapshotCalled && postRestoreSnapshotCalled;
+    }
+
+    @Override
+    public void preDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot) throws IOException {
+      preDeleteSnapshotCalled = true;
+    }
+
+    @Override
+    public void postDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot) throws IOException {
+      postDeleteSnapshotCalled = true;
+    }
+
+    public boolean wasDeleteSnapshotCalled() {
+      return preDeleteSnapshotCalled && postDeleteSnapshotCalled;
+    }
+
+    @Override
     public void preCreateTableHandler(
         ObserverContext<MasterCoprocessorEnvironment> env,
         HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
@@ -523,7 +609,7 @@ public class TestMasterObserver {
         ObserverContext<MasterCoprocessorEnvironment> ctx,
         HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
       postCreateTableHandlerCalled = true;
-      countDown.countDown();
+      tableCreationLatch.countDown();
     }
 
     public boolean wasPreCreateTableHandlerCalled(){
@@ -711,7 +797,9 @@ public class TestMasterObserver {
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static byte[] TEST_SNAPSHOT = Bytes.toBytes("observed_snapshot");
   private static byte[] TEST_TABLE = Bytes.toBytes("observed_table");
+  private static byte[] TEST_CLONE = Bytes.toBytes("observed_clone");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
   private static byte[] TEST_FAMILY2 = Bytes.toBytes("fam2");
   private static byte[] TEST_FAMILY3 = Bytes.toBytes("fam3");
@@ -721,6 +809,11 @@ public class TestMasterObserver {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         CPMasterObserver.class.getName());
+    conf.set("hbase.master.hfilecleaner.plugins",
+      "org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner," +
+      "org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner");
+    conf.set("hbase.master.logcleaner.plugins",
+      "org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner");
     // We need more than one data server on this test
     UTIL.startMiniCluster(2);
   }
@@ -765,16 +858,17 @@ public class TestMasterObserver {
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     HBaseAdmin admin = UTIL.getHBaseAdmin();
 
+    tableCreationLatch = new CountDownLatch(1);
     admin.createTable(htd);
     // preCreateTable can't bypass default action.
     assertTrue("Test table should be created", cp.wasCreateTableCalled());
-    countDown.await();
+    tableCreationLatch.await();
     assertTrue("Table pre create handler called.", cp
         .wasPreCreateTableHandlerCalled());
     assertTrue("Table create handler should be called.",
         cp.wasCreateTableHandlerCalled());
 
-    countDown = new CountDownLatch(1);
+    tableCreationLatch = new CountDownLatch(1);
     admin.disableTable(TEST_TABLE);
     assertTrue(admin.isTableDisabled(TEST_TABLE));
     // preDisableTable can't bypass default action.
@@ -831,7 +925,7 @@ public class TestMasterObserver {
 
     admin.createTable(htd);
     assertTrue("Test table should be created", cp.wasCreateTableCalled());
-    countDown.await();
+    tableCreationLatch.await();
     assertTrue("Table pre create handler called.", cp
         .wasPreCreateTableHandlerCalled());
     assertTrue("Table create handler should be called.",
@@ -906,6 +1000,62 @@ public class TestMasterObserver {
         cp.wasDeleteTableCalled());
     assertTrue("Delete table handler should be called.",
         cp.wasDeleteTableHandlerCalled());
+  }
+
+  @Test
+  public void testSnapshotOperations() throws Exception {
+    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    HMaster master = cluster.getMaster();
+    MasterCoprocessorHost host = master.getCoprocessorHost();
+    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
+        CPMasterObserver.class.getName());
+    cp.resetStates();
+
+    // create a table
+    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
+    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+
+    tableCreationLatch = new CountDownLatch(1);
+    admin.createTable(htd);
+    tableCreationLatch.await();
+    tableCreationLatch = new CountDownLatch(1);
+
+    admin.disableTable(TEST_TABLE);
+    assertTrue(admin.isTableDisabled(TEST_TABLE));
+
+    try {
+      // Test snapshot operation
+      assertFalse("Coprocessor should not have been called yet",
+        cp.wasSnapshotCalled());
+      admin.snapshot(TEST_SNAPSHOT, TEST_TABLE);
+      assertTrue("Coprocessor should have been called on snapshot",
+        cp.wasSnapshotCalled());
+
+      // Test clone operation
+      admin.cloneSnapshot(TEST_SNAPSHOT, TEST_CLONE);
+      assertTrue("Coprocessor should have been called on snapshot clone",
+        cp.wasCloneSnapshotCalled());
+      assertFalse("Coprocessor restore should not have been called on snapshot clone",
+        cp.wasRestoreSnapshotCalled());
+      admin.disableTable(TEST_CLONE);
+      assertTrue(admin.isTableDisabled(TEST_TABLE));
+      admin.deleteTable(TEST_CLONE);
+
+      // Test restore operation
+      cp.resetStates();
+      admin.restoreSnapshot(TEST_SNAPSHOT);
+      assertTrue("Coprocessor should have been called on snapshot restore",
+        cp.wasRestoreSnapshotCalled());
+      assertFalse("Coprocessor clone should not have been called on snapshot restore",
+        cp.wasCloneSnapshotCalled());
+
+      admin.deleteSnapshot(TEST_SNAPSHOT);
+      assertTrue("Coprocessor should have been called on snapshot delete",
+        cp.wasDeleteSnapshotCalled());
+    } finally {
+      admin.deleteTable(TEST_TABLE);
+    }
   }
 
   private void modifyTableSync(HBaseAdmin admin, byte[] tableName, HTableDescriptor htd)
