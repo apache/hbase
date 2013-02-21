@@ -55,6 +55,8 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -345,11 +347,10 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preCompactScannerOpen(ObserverContext,
-   *    Store, List, ScanType, long, InternalScanner)}
+   * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long, InternalScanner, CompactionRequest)}
    */
   public InternalScanner preCompactScannerOpen(Store store, List<StoreFileScanner> scanners,
-      ScanType scanType, long earliestPutTs) throws IOException {
+      ScanType scanType, long earliestPutTs, CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     InternalScanner s = null;
     for (RegionEnvironment env: coprocessors) {
@@ -357,7 +358,7 @@ public class RegionCoprocessorHost
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
           s = ((RegionObserver) env.getInstance()).preCompactScannerOpen(ctx, store, scanners,
-              scanType, earliestPutTs, s);
+            scanType, earliestPutTs, s, request);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env,e);
         }
@@ -370,22 +371,23 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Called prior to selecting the {@link StoreFile}s for compaction from
-   * the list of currently available candidates.
+   * Called prior to selecting the {@link StoreFile}s for compaction from the list of currently
+   * available candidates.
    * @param store The store where compaction is being requested
    * @param candidates The currently available store files
+   * @param request custom compaction request
    * @return If {@code true}, skip the normal selection process and use the current list
    * @throws IOException
    */
-  public boolean preCompactSelection(Store store, List<StoreFile> candidates) throws IOException {
+  public boolean preCompactSelection(Store store, List<StoreFile> candidates,
+      CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).preCompactSelection(
-              ctx, store, candidates);
+          ((RegionObserver) env.getInstance()).preCompactSelection(ctx, store, candidates, request);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env,e);
 
@@ -400,20 +402,20 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Called after the {@link StoreFile}s to be compacted have been selected
-   * from the available candidates.
+   * Called after the {@link StoreFile}s to be compacted have been selected from the available
+   * candidates.
    * @param store The store where compaction is being requested
    * @param selected The store files selected to compact
+   * @param request custom compaction
    */
-  public void postCompactSelection(Store store,
-      ImmutableList<StoreFile> selected) {
+  public void postCompactSelection(Store store, ImmutableList<StoreFile> selected,
+      CompactionRequest request) {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postCompactSelection(
-              ctx, store, selected);
+          ((RegionObserver) env.getInstance()).postCompactSelection(ctx, store, selected, request);
         } catch (Throwable e) {
           handleCoprocessorThrowableNoRethrow(env,e);
         }
@@ -429,18 +431,19 @@ public class RegionCoprocessorHost
    * @param store the store being compacted
    * @param scanner the scanner used to read store data during compaction
    * @param scanType type of Scan
+   * @param request the compaction that will be executed
    * @throws IOException
    */
-  public InternalScanner preCompact(Store store, InternalScanner scanner,
-      ScanType scanType) throws IOException {
+  public InternalScanner preCompact(Store store, InternalScanner scanner, ScanType scanType,
+      CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          scanner = ((RegionObserver)env.getInstance()).preCompact(
-              ctx, store, scanner, scanType);
+          scanner = ((RegionObserver) env.getInstance()).preCompact(ctx, store, scanner, scanType,
+            request);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env,e);
         }
@@ -457,15 +460,17 @@ public class RegionCoprocessorHost
    * Called after the store compaction has completed.
    * @param store the store being compacted
    * @param resultFile the new store file written during compaction
+   * @param request the compaction that is being executed
    * @throws IOException
    */
-  public void postCompact(Store store, StoreFile resultFile) throws IOException {
+  public void postCompact(Store store, StoreFile resultFile, CompactionRequest request)
+      throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postCompact(ctx, store, resultFile);
+          ((RegionObserver) env.getInstance()).postCompact(ctx, store, resultFile, request);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }

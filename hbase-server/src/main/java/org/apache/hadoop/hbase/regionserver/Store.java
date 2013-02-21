@@ -160,7 +160,8 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   public CompactionRequest requestCompaction() throws IOException;
 
-  public CompactionRequest requestCompaction(int priority) throws IOException;
+  public CompactionRequest requestCompaction(int priority, CompactionRequest request)
+      throws IOException;
 
   public void finishRequest(CompactionRequest cr);
 

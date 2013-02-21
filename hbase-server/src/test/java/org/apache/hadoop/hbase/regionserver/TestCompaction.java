@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,13 +48,17 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.compactions.*;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -591,7 +596,7 @@ public class TestCompaction extends HBaseTestCase {
     Collection<StoreFile> storeFiles = store.getStorefiles();
     Compactor tool = store.compactor;
 
-    List<Path> newFiles = tool.compact(storeFiles, false);
+    List<Path> newFiles = tool.compactForTesting(storeFiles, false);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = FileSystem.get(conf);
@@ -630,7 +635,7 @@ public class TestCompaction extends HBaseTestCase {
     }
     store.triggerMajorCompaction();
 
-    CompactionRequest request = store.requestCompaction(Store.NO_PRIORITY);
+    CompactionRequest request = store.requestCompaction(Store.NO_PRIORITY, null);
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "System-requested major compaction should not occur if there are too many store files",
@@ -648,7 +653,7 @@ public class TestCompaction extends HBaseTestCase {
       createStoreFile(r);
     }
     store.triggerMajorCompaction();
-    CompactionRequest request = store.requestCompaction(Store.PRIORITY_USER);
+    CompactionRequest request = store.requestCompaction(Store.PRIORITY_USER, null);
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "User-requested major compaction should always occur, even if there are too many store files",
@@ -656,5 +661,53 @@ public class TestCompaction extends HBaseTestCase {
       request.isMajor());
   }
 
-}
+  /**
+   * Create a custom compaction request and be sure that we can track it through the queue, knowing
+   * when the compaction is completed.
+   */
+  public void testTrackingCompactionRequest() throws Exception {
+    // setup a compact/split thread on a mock server
+    HRegionServer mockServer = Mockito.mock(HRegionServer.class);
+    Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
+    CompactSplitThread thread = new CompactSplitThread(mockServer);
+    Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
 
+    // setup a region/store with some files
+    Store store = r.getStore(COLUMN_FAMILY);
+    createStoreFile(r);
+    for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
+      createStoreFile(r);
+    }
+
+    CountDownLatch latch = new CountDownLatch(1);
+    TrackableCompactionRequest request = new TrackableCompactionRequest(r, (HStore) store, latch);
+    thread.requestCompaction(r, store, "test custom comapction", Store.PRIORITY_USER, request);
+    // wait for the latch to complete.
+    latch.await();
+
+    thread.interruptIfNecessary();
+  }
+
+  /**
+   * Simple {@link CompactionRequest} on which you can wait until the requested compaction finishes.
+   */
+  public static class TrackableCompactionRequest extends CompactionRequest {
+    private CountDownLatch done;
+
+    /**
+     * Constructor for a custom compaction. Uses the setXXX methods to update the state of the
+     * compaction before being used.
+     */
+    public TrackableCompactionRequest(HRegion region, HStore store, CountDownLatch finished) {
+      super(region, store, Store.PRIORITY_USER);
+      this.done = finished;
+    }
+
+    @Override
+    public void run() {
+      super.run();
+      this.done.countDown();
+    }
+  }
+
+}

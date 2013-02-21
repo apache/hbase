@@ -847,6 +847,36 @@ public class TestMemStore extends TestCase {
   }
 
   /**
+   * Add keyvalues with a fixed memstoreTs, and checks that memstore size is decreased
+   * as older keyvalues are deleted from the memstore.
+   * @throws Exception
+   */
+  public void testUpsertMemstoreSize() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    memstore = new MemStore(conf, KeyValue.COMPARATOR);
+    long oldSize = memstore.size.get();
+    
+    List<KeyValue> l = new ArrayList<KeyValue>();
+    KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
+    KeyValue kv2 = KeyValueTestUtil.create("r", "f", "q", 101, "v");
+    KeyValue kv3 = KeyValueTestUtil.create("r", "f", "q", 102, "v");
+
+    kv1.setMvccVersion(1); kv2.setMvccVersion(1);kv3.setMvccVersion(1);
+    l.add(kv1); l.add(kv2); l.add(kv3);
+    
+    this.memstore.upsert(l, 2);// readpoint is 2
+    long newSize = this.memstore.size.get();
+    assert(newSize > oldSize);
+    
+    KeyValue kv4 = KeyValueTestUtil.create("r", "f", "q", 104, "v");
+    kv4.setMvccVersion(1);
+    l.clear(); l.add(kv4);
+    this.memstore.upsert(l, 3);
+    assertEquals(newSize, this.memstore.size.get());
+    //this.memstore = null;
+  }
+
+  /**
    * Adds {@link #ROW_COUNT} rows and {@link #QUALIFIER_COUNT}
    * @param hmc Instance to add rows to.
    * @return How many rows we added.

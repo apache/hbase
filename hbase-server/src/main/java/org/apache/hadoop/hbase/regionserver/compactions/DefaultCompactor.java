@@ -59,16 +59,12 @@ public class DefaultCompactor extends Compactor {
 
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
-   *
-   * @param filesToCompact which files to compact
-   * @param majorCompaction true to major compact (prune all deletes, max versions, etc)
-   * @return Product of compaction or an empty list if all cells expired or deleted and
-   * nothing made it through the compaction.
-   * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  public List<Path> compact(final Collection<StoreFile> filesToCompact,
-      final boolean majorCompaction) throws IOException {
+  @Override
+  public List<Path> compact(final CompactionRequest request) throws IOException {
+    final Collection<StoreFile> filesToCompact = request.getFiles();
+    boolean majorCompaction = request.isMajor();
     // Max-sequenceID is the last key in the files we're compacting
     long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
 
@@ -139,7 +135,8 @@ public class DefaultCompactor extends Compactor {
           scanner = store
               .getCoprocessorHost()
               .preCompactScannerOpen(store, scanners,
-                  majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT, earliestPutTs);
+                majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT, earliestPutTs,
+                request);
         }
         ScanType scanType = majorCompaction? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT;
         if (scanner == null) {
@@ -150,11 +147,11 @@ public class DefaultCompactor extends Compactor {
             scanType, smallestReadPoint, earliestPutTs);
         }
         if (store.getCoprocessorHost() != null) {
-          InternalScanner cpScanner =
-            store.getCoprocessorHost().preCompact(store, scanner, scanType);
+          InternalScanner cpScanner = store.getCoprocessorHost().preCompact(store, scanner,
+            scanType, request);
           // NULL scanner returned from coprocessor hooks means skip normal processing
           if (cpScanner == null) {
-            return newFiles;  // an empty list
+            return newFiles; // an empty list
           }
           scanner = cpScanner;
         }
