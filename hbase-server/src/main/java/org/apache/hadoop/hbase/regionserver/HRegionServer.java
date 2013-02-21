@@ -2532,7 +2532,6 @@ public class HRegionServer implements ClientProtocol,
       }
       addToMovedRegions(r.getRegionInfo().getEncodedName(), destination, closeSeqNum);
     }
-
     return toReturn != null;
   }
 
@@ -3480,6 +3479,10 @@ public class HRegionServer implements ClientProtocol,
               " - ignoring this new request for this region.");
         }
 
+        // We are opening this region. If it moves back and forth for whatever reason, we don't
+        // want to keep returning the stale moved record while we are opening/if we close again.
+        removeFromMovedRegions(region.getEncodedName());
+
         if (previous == null) {
           // If there is no action in progress, we can submit a specific handler.
           // Need to pass the expected version in the constructor.
@@ -3967,9 +3970,11 @@ public class HRegionServer implements ClientProtocol,
     LOG.info("Adding moved region record: " + encodedName + " to "
         + destination.getServerName() + ":" + destination.getPort()
         + " as of " + closeSeqNum);
-    movedRegions.put(
-        encodedName,
-        new MovedRegionInfo(destination, closeSeqNum));
+    movedRegions.put(encodedName, new MovedRegionInfo(destination, closeSeqNum));
+  }
+
+  private void removeFromMovedRegions(String encodedName) {
+    movedRegions.remove(encodedName);
   }
 
   private MovedRegionInfo getMovedRegion(final String encodedRegionName) {
@@ -3990,7 +3995,7 @@ public class HRegionServer implements ClientProtocol,
   /**
    * Remove the expired entries from the moved regions list.
    */
-  protected void cleanMovedRegions(){
+  protected void cleanMovedRegions() {
     final long cutOff = System.currentTimeMillis() - TIMEOUT_REGION_MOVED;
     Iterator<Entry<String, MovedRegionInfo>> it = movedRegions.entrySet().iterator();
 
