@@ -44,8 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
 /**
- * Compact passed set of files.
- * Create an instance and then call {@link #compact(Collection, boolean)}.
+ * Compact passed set of files. Create an instance and then call {@link #compact(CompactionRequest)}
  */
 @InterfaceAudience.Private
 public class DefaultCompactor extends Compactor {

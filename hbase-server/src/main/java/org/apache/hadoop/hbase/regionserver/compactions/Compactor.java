@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -42,7 +41,6 @@ public abstract class Compactor {
 
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
-   * @param filesToCompact which files to compact
    * @param request the requested compaction
    * @return Product of compaction or an empty list if all cells expired or deleted and nothing made
    *         it through the compaction.

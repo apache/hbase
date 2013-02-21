@@ -148,8 +148,10 @@ public interface RegionObserver extends Coprocessor {
    * @param store the store where compaction is being requested
    * @param candidates the store files currently available for compaction
    * @throws IOException if an error occurred on the coprocessor
-   * @deprecated Use {@link #preCompactSelection(ObserverContext, Store, List, Object)} instead
+   * @deprecated Use {@link #preCompactSelection(ObserverContext, Store, List, CompactionRequest)}
+   *             instead
    */
+  @Deprecated
   void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Store store, final List<StoreFile> candidates) throws IOException;
 
@@ -170,9 +172,8 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param store the store being compacted
    * @param selected the store files selected to compact
-   * @param compactionAttributes custom attributes for the compaction
-   * @deprecated use {@link #postCompactSelection(ObserverContext, Store, ImmutableList, Object)}
-   *             instead.
+   * @deprecated use {@link #postCompactSelection(ObserverContext, Store, ImmutableList,
+   *             CompactionRequest)} instead.
    */
   @Deprecated
   void postCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -221,13 +222,12 @@ public interface RegionObserver extends Coprocessor {
    * @param store the store being compacted
    * @param scanner the scanner over existing data used in the store file rewriting
    * @param scanType type of Scan
-   * @param request the requested compaction
    * @return the scanner to use during compaction. Should not be {@code null} unless the
    *         implementation is writing new store files on its own.
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated use
-   *             {@link #preCompact(ObserverContext, Store, InternalScanner, ScanType, CompactionRequest)}
-   *             instead
+   *             {@link #preCompact(ObserverContext, Store, InternalScanner,
+   *             ScanType, CompactionRequest)} instead
    */
   @Deprecated
   InternalScanner preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -271,13 +271,12 @@ public interface RegionObserver extends Coprocessor {
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved store
    *          files
    * @param s the base scanner, if not {@code null}, from previous RegionObserver in the chain
-   * @param request the requested compaction
    * @return the scanner to use during compaction. {@code null} if the default implementation is to
    *         be used.
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated Use
-   *             {@link #preCompactScannerOpen(ObserverContext, Store, List, ScanType, long, InternalScanner, CompactionRequest)}
-   *             instead.
+   *             {@link #preCompactScannerOpen(ObserverContext, Store, List, ScanType, long,
+   *             InternalScanner, CompactionRequest)} instead.
    */
   @Deprecated
   InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
