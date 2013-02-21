@@ -586,7 +586,9 @@ public class MemStore implements HeapSize {
             // which means we can prove that no scanner will see this version
 
             // false means there was a change, so give us the size.
-            addedSize -= heapSizeChange(cur, true);
+            long delta = heapSizeChange(cur, true);
+            addedSize -= delta;
+            this.size.addAndGet(-delta);
             it.remove();
           } else {
             versionsVisible++;
