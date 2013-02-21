@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *
  * Utility methods in this class are useful for getting the correct locations for different parts of
  * the snapshot, as well as moving completed snapshots into place (see
- * {@code #completeSnapshot(SnapshotDescription, Path, Path, FileSystem)}, and writing the
+ * {@link #completeSnapshot}, and writing the
  * {@link SnapshotDescription} to the working snapshot directory.
  */
 public class SnapshotDescriptionUtils {

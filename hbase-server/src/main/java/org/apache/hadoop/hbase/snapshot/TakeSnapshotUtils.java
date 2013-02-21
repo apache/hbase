@@ -77,7 +77,7 @@ public class TakeSnapshotUtils {
    * <p>
    * Specific files per store are kept in a similar layout as per the current directory layout.
    * @param regionDir snapshot directory for the parent region, <b>not</b> the standard region
-   *          directory. See {@code #getRegionSnapshotDirectory(SnapshotDescription, Path, String)}
+   *          directory. See {@link #getRegionSnapshotDirectory}
    * @param family name of the store to snapshot
    * @return path to the snapshot home directory for the store/family
    */
