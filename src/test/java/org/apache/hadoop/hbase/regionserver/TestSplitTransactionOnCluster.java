@@ -631,7 +631,7 @@ public class TestSplitTransactionOnCluster {
         @Override
         int transitionNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo parent,
             ServerName serverName, int version) throws KeeperException, IOException {
-          throw new IOException();
+          throw new TransitionToSplittingFailedException();
         }
       };
     } else {
@@ -639,14 +639,35 @@ public class TestSplitTransactionOnCluster {
         @Override
         void createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region, ServerName serverName)
             throws KeeperException, IOException {
-          throw new IOException();
+          throw new SplittingNodeCreationFailedException ();
         }
       };
     }
+    String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
+        .getRegionInfo().getEncodedName());
+    // make sure the client is uptodate
+    regionServer.getZooKeeper().sync(node);
+    for (int i = 0; i < 100; i++) {
+      // We expect the znode to be deleted by this time. Here the znode could be in OPENED state and the 
+      // master has not yet deleted the znode.
+      if (ZKUtil.checkExists(regionServer.getZooKeeper(), node) != -1) {
+        Thread.sleep(100);
+      }
+    }
+    
     try {
       st.execute(regionServer, regionServer);
     } catch (IOException e) {
-      String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
+      // check for the specific instance in case the Split failed due to the existence of the znode in OPENED state.
+      // This will at least make the test to fail;
+      if (nodeCreated) {
+        assertTrue("Should be instance of TransitionToSplittingFailedException",
+            e instanceof TransitionToSplittingFailedException);
+      } else {
+        assertTrue("Should be instance of CreateSplittingNodeFailedException",
+            e instanceof SplittingNodeCreationFailedException );
+      }
+      node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
           .getRegionInfo().getEncodedName());
       // make sure the client is uptodate
       regionServer.getZooKeeper().sync(node);
@@ -1045,6 +1066,18 @@ public class TestSplitTransactionOnCluster {
 
     protected void startCatalogJanitorChore() {
       LOG.debug("Customised master executed.");
+    }
+  }
+  
+  private static class TransitionToSplittingFailedException extends IOException {
+    public TransitionToSplittingFailedException() {
+      super();
+    }
+  }
+
+  private static class SplittingNodeCreationFailedException  extends IOException {
+    public SplittingNodeCreationFailedException () {
+      super();
     }
   }
 }
