@@ -837,6 +837,15 @@
     </description>
   </property>
   <property>
+    <name>hbase.table.lock.enable</name>
+    <value>true</value>
+    <description>
+    Set to true to enable locking the table in zookeeper for schema change operations.
+    Table locking from master prevents concurrent schema modifications to corrupt table
+    state.
+    </description>
+  </property>
+  <property>
     <name>dfs.support.append</name>
     <value>true</value>
     <description>Does HDFS allow appends to files?

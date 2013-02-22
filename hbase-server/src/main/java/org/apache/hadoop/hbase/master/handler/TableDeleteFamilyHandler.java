@@ -37,11 +37,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class TableDeleteFamilyHandler extends TableEventHandler {
 
-  private final byte [] familyName;
+  private byte [] familyName;
 
   public TableDeleteFamilyHandler(byte[] tableName, byte [] familyName,
       Server server, final MasterServices masterServices) throws IOException {
-    super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices);
+    super(EventType.C_M_DELETE_FAMILY, tableName, server, masterServices);
+    this.familyName = familyName;
+  }
+
+  @Override
+  protected void prepareWithTableLock() throws IOException {
+    super.prepareWithTableLock();
     HTableDescriptor htd = getTableDescriptor();
     this.familyName = hasColumnFamily(htd, familyName);
   }

@@ -25,12 +25,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Handles adding a new family to an existing table.
@@ -41,11 +39,16 @@ public class TableModifyFamilyHandler extends TableEventHandler {
 
   public TableModifyFamilyHandler(byte[] tableName,
       HColumnDescriptor familyDesc, Server server,
-      final MasterServices masterServices) throws IOException {
+      final MasterServices masterServices) {
     super(EventType.C_M_MODIFY_FAMILY, tableName, server, masterServices);
+    this.familyDesc = familyDesc;
+  }
+
+  @Override
+  protected void prepareWithTableLock() throws IOException {
+    super.prepareWithTableLock();
     HTableDescriptor htd = getTableDescriptor();
     hasColumnFamily(htd, familyDesc.getName());
-    this.familyDesc = familyDesc;
   }
 
   @Override

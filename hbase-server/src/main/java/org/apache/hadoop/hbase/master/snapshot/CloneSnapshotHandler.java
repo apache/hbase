@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -42,7 +41,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
 
@@ -68,8 +66,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
     super(masterServices, masterServices.getMasterFileSystem(), hTableDescriptor,
-      masterServices.getConfiguration(), null, masterServices.getCatalogTracker(),
-      masterServices.getAssignmentManager());
+      masterServices.getConfiguration(), null, masterServices);
 
     // Snapshot information
     this.snapshot = snapshot;

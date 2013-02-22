@@ -316,6 +316,9 @@ Server {
 
   private TableDescriptors tableDescriptors;
 
+  // Table level lock manager for schema changes
+  private TableLockManager tableLockManager;
+
   // Time stamps for when a hmaster was started and when it became active
   private long masterStartTime;
   private long masterActiveTime;
@@ -566,7 +569,8 @@ Server {
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
     this.assignmentManager = new AssignmentManager(this, serverManager,
-      this.catalogTracker, this.balancer, this.executorService, this.metricsMaster);
+      this.catalogTracker, this.balancer, this.executorService, this.metricsMaster,
+      this.tableLockManager);
     zooKeeper.registerListenerFirst(assignmentManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
@@ -701,6 +705,13 @@ Server {
       // start up all service threads.
       status.setStatus("Initializing master service threads");
       startServiceThreads();
+    }
+
+    //Initialize table lock manager, and ensure that all write locks held previously
+    //are invalidated
+    this.tableLockManager = TableLockManager.createTableLockManager(conf, zooKeeper, serverName);
+    if (!masterRecovery) {
+      this.tableLockManager.reapAllTableWriteLocks();
     }
 
     // Wait for region servers to report in.
@@ -1508,7 +1519,7 @@ Server {
 
     this.executorService.submit(new CreateTableHandler(this,
       this.fileSystemManager, hTableDescriptor, conf,
-      newRegions, catalogTracker, assignmentManager));
+      newRegions, this).prepare());
     if (cpHost != null) {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
@@ -1575,7 +1586,7 @@ Server {
     if (cpHost != null) {
       cpHost.preDeleteTable(tableName);
     }
-    this.executorService.submit(new DeleteTableHandler(tableName, this, this));
+    this.executorService.submit(new DeleteTableHandler(tableName, this, this).prepare());
     if (cpHost != null) {
       cpHost.postDeleteTable(tableName);
     }
@@ -1629,7 +1640,9 @@ Server {
         return;
       }
     }
-    new TableAddFamilyHandler(tableName, column, this, this).process();
+    //TODO: we should process this (and some others) in an executor
+    new TableAddFamilyHandler(tableName, column, this, this)
+      .prepare().process();
     if (cpHost != null) {
       cpHost.postAddColumn(tableName, column);
     }
@@ -1657,7 +1670,8 @@ Server {
         return;
       }
     }
-    new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
+    new TableModifyFamilyHandler(tableName, descriptor, this, this)
+      .prepare().process();
     if (cpHost != null) {
       cpHost.postModifyColumn(tableName, descriptor);
     }
@@ -1684,7 +1698,7 @@ Server {
         return;
       }
     }
-    new TableDeleteFamilyHandler(tableName, columnName, this, this).process();
+    new TableDeleteFamilyHandler(tableName, columnName, this, this).prepare().process();
     if (cpHost != null) {
       cpHost.postDeleteColumn(tableName, columnName);
     }
@@ -1708,7 +1722,7 @@ Server {
       cpHost.preEnableTable(tableName);
     }
     this.executorService.submit(new EnableTableHandler(this, tableName,
-      catalogTracker, assignmentManager, false));
+      catalogTracker, assignmentManager, tableLockManager, false).prepare());
     if (cpHost != null) {
       cpHost.postEnableTable(tableName);
    }
@@ -1732,7 +1746,7 @@ Server {
       cpHost.preDisableTable(tableName);
     }
     this.executorService.submit(new DisableTableHandler(this, tableName,
-      catalogTracker, assignmentManager, false));
+      catalogTracker, assignmentManager, tableLockManager, false).prepare());
     if (cpHost != null) {
       cpHost.postDisableTable(tableName);
     }
@@ -1792,8 +1806,7 @@ Server {
     if (cpHost != null) {
       cpHost.preModifyTable(tableName, descriptor);
     }
-    new ModifyTableHandler(tableName, descriptor, this, this).process();
-
+    new ModifyTableHandler(tableName, descriptor, this, this).prepare().process();
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, descriptor);
     }
@@ -2056,12 +2069,17 @@ Server {
     return this.assignmentManager;
   }
 
+  @Override
+  public TableLockManager getTableLockManager() {
+    return this.tableLockManager;
+  }
+
   public MemoryBoundedLogMessageBuffer getRegionServerFatalLogBuffer() {
     return rsFatals;
   }
 
   public void shutdown() throws IOException {
-    if (spanReceiverHost != null) { 
+    if (spanReceiverHost != null) {
       spanReceiverHost.closeReceivers();
     }
     if (cpHost != null) {

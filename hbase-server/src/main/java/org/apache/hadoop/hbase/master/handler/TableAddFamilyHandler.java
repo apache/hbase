@@ -40,14 +40,19 @@ public class TableAddFamilyHandler extends TableEventHandler {
   private final HColumnDescriptor familyDesc;
 
   public TableAddFamilyHandler(byte[] tableName, HColumnDescriptor familyDesc,
-      Server server, final MasterServices masterServices) throws IOException {
+      Server server, final MasterServices masterServices) {
     super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices);
+    this.familyDesc = familyDesc;
+  }
+
+  @Override
+  protected void prepareWithTableLock() throws IOException {
+    super.prepareWithTableLock();
     HTableDescriptor htd = getTableDescriptor();
     if (htd.hasFamily(familyDesc.getName())) {
       throw new InvalidFamilyOperationException("Family '" +
         familyDesc.getNameAsString() + "' already exists so cannot be added");
     }
-    this.familyDesc = familyDesc;
   }
 
   @Override

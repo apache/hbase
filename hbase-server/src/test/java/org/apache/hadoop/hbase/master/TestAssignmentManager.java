@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -182,7 +183,7 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithOpenedNode()
@@ -346,7 +347,7 @@ public class TestAssignmentManager {
    * from one server to another mocking regionserver responding over zk.
    * @throws IOException
    * @throws KeeperException
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   @Test
   public void testBalance()
@@ -361,7 +362,7 @@ public class TestAssignmentManager {
         .getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, executor, null);
+      this.serverManager, ct, balancer, executor, null, master.getTableLockManager());
     am.failoverCleanupDone.set(true);
     try {
       // Make sure our new AM gets callbacks; once registered, can't unregister.
@@ -442,7 +443,7 @@ public class TestAssignmentManager {
    * To test closed region handler to remove rit and delete corresponding znode
    * if region in pending close or closing while processing shutdown of a region
    * server.(HBASE-5927).
-   * 
+   *
    * @throws KeeperException
    * @throws IOException
    * @throws ServiceException
@@ -453,12 +454,12 @@ public class TestAssignmentManager {
     testCaseWithPartiallyDisabledState(Table.State.DISABLING);
     testCaseWithPartiallyDisabledState(Table.State.DISABLED);
   }
-  
-    
+
+
   /**
    * To test if the split region is removed from RIT if the region was in SPLITTING state but the RS
    * has actually completed the splitting in META but went down. See HBASE-6070 and also HBASE-5806
-   * 
+   *
    * @throws KeeperException
    * @throws IOException
    */
@@ -469,7 +470,7 @@ public class TestAssignmentManager {
     // false indicate the region is not split
     testCaseWithSplitRegionPartial(false);
   }
-  
+
   private void testCaseWithSplitRegionPartial(boolean regionSplitDone) throws KeeperException,
       IOException, NodeExistsException, InterruptedException, ServiceException {
     // Create and startup an executor. This is used by AssignmentManager
@@ -530,7 +531,7 @@ public class TestAssignmentManager {
 
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, executor, null);
+      this.serverManager, ct, balancer, executor, null, master.getTableLockManager());
     // adding region to regions and servers maps.
     am.regionOnline(REGIONINFO, SERVERNAME_A);
     // adding region in pending close.
@@ -651,7 +652,7 @@ public class TestAssignmentManager {
         .getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, null, null);
+      this.serverManager, ct, balancer, null, null, master.getTableLockManager());
     try {
       // First make sure my mock up basically works.  Unassign a region.
       unassign(am, SERVERNAME_A, hri);
@@ -679,7 +680,7 @@ public class TestAssignmentManager {
    * Tests the processDeadServersAndRegionsInTransition should not fail with NPE
    * when it failed to get the children. Let's abort the system in this
    * situation
-   * @throws ServiceException 
+   * @throws ServiceException
    */
   @Test(timeout = 5000)
   public void testProcessDeadServersAndRegionsInTransitionShouldNotFailWithNPE()
@@ -708,7 +709,7 @@ public class TestAssignmentManager {
     }
   }
   /**
-   * TestCase verifies that the regionPlan is updated whenever a region fails to open 
+   * TestCase verifies that the regionPlan is updated whenever a region fails to open
    * and the master tries to process RS_ZK_FAILED_OPEN state.(HBASE-5546).
    */
   @Test(timeout = 5000)
@@ -795,7 +796,7 @@ public class TestAssignmentManager {
       this.gate.set(true);
       return randomServerName;
     }
-    
+
     @Override
     public Map<ServerName, List<HRegionInfo>> retainAssignment(
         Map<HRegionInfo, ServerName> regions, List<ServerName> servers) {
@@ -836,7 +837,7 @@ public class TestAssignmentManager {
   /**
    * Test verifies whether assignment is skipped for regions of tables in DISABLING state during
    * clean cluster startup. See HBASE-6281.
-   * 
+   *
    * @throws KeeperException
    * @throws IOException
    * @throws Exception
@@ -882,7 +883,7 @@ public class TestAssignmentManager {
 
   /**
    * Test verifies whether all the enabling table regions assigned only once during master startup.
-   * 
+   *
    * @throws KeeperException
    * @throws IOException
    * @throws Exception
@@ -902,7 +903,8 @@ public class TestAssignmentManager {
     try {
       // set table in enabling state.
       am.getZKTable().setEnablingTable(REGIONINFO.getTableNameAsString());
-      new EnableTableHandler(server, REGIONINFO.getTableName(), am.getCatalogTracker(), am, true)
+      new EnableTableHandler(server, REGIONINFO.getTableName(), am.getCatalogTracker(),
+          am, new NullTableLockManager(), true).prepare()
           .process();
       assertEquals("Number of assignments should be 1.", 1, assignmentCount);
       assertTrue("Table should be enabled.",
@@ -1071,7 +1073,7 @@ public class TestAssignmentManager {
     ExecutorService executor = startupMasterExecutor("mockedAMExecutor");
     this.balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
     AssignmentManagerWithExtrasForTesting am = new AssignmentManagerWithExtrasForTesting(
-      server, manager, ct, this.balancer, executor);
+      server, manager, ct, this.balancer, executor, new NullTableLockManager());
     return am;
   }
 
@@ -1090,8 +1092,9 @@ public class TestAssignmentManager {
     public AssignmentManagerWithExtrasForTesting(
         final Server master, final ServerManager serverManager,
         final CatalogTracker catalogTracker, final LoadBalancer balancer,
-        final ExecutorService service) throws KeeperException, IOException {
-      super(master, serverManager, catalogTracker, balancer, service, null);
+        final ExecutorService service, final TableLockManager tableLockManager)
+            throws KeeperException, IOException {
+      super(master, serverManager, catalogTracker, balancer, service, null, tableLockManager);
       this.es = service;
       this.ct = catalogTracker;
     }

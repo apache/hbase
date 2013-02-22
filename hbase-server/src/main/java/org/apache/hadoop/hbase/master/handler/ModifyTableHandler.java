@@ -35,13 +35,17 @@ public class ModifyTableHandler extends TableEventHandler {
 
   public ModifyTableHandler(final byte [] tableName,
       final HTableDescriptor htd, final Server server,
-      final MasterServices masterServices)
-  throws IOException {
+      final MasterServices masterServices) {
     super(EventType.C_M_MODIFY_TABLE, tableName, server, masterServices);
-    // Check table exists.
-    getTableDescriptor();
     // This is the new schema we are going to write out as this modification.
     this.htd = htd;
+  }
+
+  @Override
+  protected void prepareWithTableLock() throws IOException {
+    super.prepareWithTableLock();
+    // Check table exists.
+    getTableDescriptor();
   }
 
   @Override

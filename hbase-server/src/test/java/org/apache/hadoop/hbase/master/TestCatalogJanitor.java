@@ -320,6 +320,11 @@ public class TestCatalogJanitor {
 
     @Override
     public void deleteColumn(byte[] tableName, byte[] columnName) throws IOException { }
+
+    @Override
+    public TableLockManager getTableLockManager() {
+      return null;
+    }
   }
 
   @Test

@@ -44,9 +44,12 @@ public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
 
   public DeleteTableHandler(byte [] tableName, Server server,
-      final MasterServices masterServices)
-  throws IOException {
+      final MasterServices masterServices) {
     super(EventType.C_M_DELETE_TABLE, tableName, server, masterServices);
+  }
+
+  @Override
+  protected void prepareWithTableLock() throws IOException {
     // The next call fails if no such table.
     getTableDescriptor();
   }
@@ -110,6 +113,16 @@ public class DeleteTableHandler extends TableEventHandler {
 
     if (cpHost != null) {
       cpHost.postDeleteTableHandler(this.tableName);
+    }
+  }
+
+  @Override
+  protected void releaseTableLock() {
+    super.releaseTableLock();
+    try {
+      masterServices.getTableLockManager().tableDeleted(tableName);
+    } catch (IOException ex) {
+      LOG.warn("Received exception from TableLockManager.tableDeleted:", ex); //not critical
     }
   }
 

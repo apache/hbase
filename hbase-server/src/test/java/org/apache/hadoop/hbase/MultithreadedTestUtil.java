@@ -18,8 +18,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.util.Set;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -91,7 +94,7 @@ public abstract class MultithreadedTestUtil {
         stopped = s;
       }
     }
-    
+
     public void stop() throws Exception {
       synchronized (this) {
         stopped = true;
@@ -130,7 +133,7 @@ public abstract class MultithreadedTestUtil {
       this.stopped = true;
     }
   }
-  
+
   /**
    * A test thread that performs a repeating operation.
    */
@@ -138,13 +141,48 @@ public abstract class MultithreadedTestUtil {
     public RepeatingTestThread(TestContext ctx) {
       super(ctx);
     }
-    
+
     public final void doWork() throws Exception {
       while (ctx.shouldRun() && !stopped) {
         doAnAction();
       }
     }
-    
+
     public abstract void doAnAction() throws Exception;
+  }
+
+  /**
+   * Verify that no assertions have failed inside a future.
+   * Used for unit tests that spawn threads. E.g.,
+   * <p>
+   * <code>
+   *   List<Future<Void>> results = Lists.newArrayList();
+   *   Future<Void> f = executor.submit(new Callable<Void> {
+   *     public Void call() {
+   *       assertTrue(someMethod());
+   *     }
+   *   });
+   *   results.add(f);
+   *   assertOnFutures(results);
+   * </code>
+   * @param threadResults A list of futures
+   * @param <T>
+   * @throws InterruptedException If interrupted when waiting for a result
+   *                              from one of the futures
+   * @throws ExecutionException If an exception other than AssertionError
+   *                            occurs inside any of the futures
+   */
+  public static <T> void assertOnFutures(List<Future<T>> threadResults)
+  throws InterruptedException, ExecutionException {
+    for (Future<T> threadResult : threadResults) {
+      try {
+        threadResult.get();
+      } catch (ExecutionException e) {
+        if (e.getCause() instanceof AssertionError) {
+          throw (AssertionError) e.getCause();
+        }
+        throw e;
+      }
+    }
   }
 }

@@ -50,6 +50,9 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
@@ -66,21 +69,29 @@ public class CreateTableHandler extends EventHandler {
   protected final Configuration conf;
   private final AssignmentManager assignmentManager;
   private final CatalogTracker catalogTracker;
+  private final TableLockManager tableLockManager;
   private final HRegionInfo [] newRegions;
+  private final TableLock tableLock;
 
   public CreateTableHandler(Server server, MasterFileSystem fileSystemManager,
       HTableDescriptor hTableDescriptor, Configuration conf, HRegionInfo [] newRegions,
-      CatalogTracker catalogTracker, AssignmentManager assignmentManager)
-          throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
+      MasterServices masterServices) {
     super(server, EventType.C_M_CREATE_TABLE);
 
     this.fileSystemManager = fileSystemManager;
     this.hTableDescriptor = hTableDescriptor;
     this.conf = conf;
     this.newRegions = newRegions;
-    this.catalogTracker = catalogTracker;
-    this.assignmentManager = assignmentManager;
+    this.catalogTracker = masterServices.getCatalogTracker();
+    this.assignmentManager = masterServices.getAssignmentManager();
+    this.tableLockManager = masterServices.getTableLockManager();
 
+    this.tableLock = this.tableLockManager.writeLock(this.hTableDescriptor.getName()
+        , EventType.C_M_CREATE_TABLE.toString());
+  }
+
+  public CreateTableHandler prepare()
+      throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
     int timeout = conf.getInt("hbase.client.catalog.timeout", 10000);
     // Need META availability to create a table
     try {
@@ -94,27 +105,39 @@ public class CreateTableHandler extends EventHandler {
       throw ie;
     }
 
-    String tableName = this.hTableDescriptor.getNameAsString();
-    if (MetaReader.tableExists(catalogTracker, tableName)) {
-      throw new TableExistsException(tableName);
-    }
-
-    // If we have multiple client threads trying to create the table at the
-    // same time, given the async nature of the operation, the table
-    // could be in a state where .META. table hasn't been updated yet in
-    // the process() function.
-    // Use enabling state to tell if there is already a request for the same
-    // table in progress. This will introduce a new zookeeper call. Given
-    // createTable isn't a frequent operation, that should be ok.
+    //acquire the table write lock, blocking. Make sure that it is released.
+    this.tableLock.acquire();
+    boolean success = false;
     try {
-      if (!this.assignmentManager.getZKTable().checkAndSetEnablingTable(tableName))
+      String tableName = this.hTableDescriptor.getNameAsString();
+      if (MetaReader.tableExists(catalogTracker, tableName)) {
         throw new TableExistsException(tableName);
-    } catch (KeeperException e) {
-      throw new IOException("Unable to ensure that the table will be" +
-        " enabling because of a ZooKeeper issue", e);
-    }
-  }
+      }
 
+      // If we have multiple client threads trying to create the table at the
+      // same time, given the async nature of the operation, the table
+      // could be in a state where .META. table hasn't been updated yet in
+      // the process() function.
+      // Use enabling state to tell if there is already a request for the same
+      // table in progress. This will introduce a new zookeeper call. Given
+      // createTable isn't a frequent operation, that should be ok.
+      //TODO: now that we have table locks, re-evaluate above
+      try {
+        if (!this.assignmentManager.getZKTable().checkAndSetEnablingTable(tableName)) {
+          throw new TableExistsException(tableName);
+        }
+      } catch (KeeperException e) {
+        throw new IOException("Unable to ensure that the table will be" +
+          " enabling because of a ZooKeeper issue", e);
+      }
+      success = true;
+    } finally {
+      if (!success) {
+        releaseTableLock();
+      }
+    }
+    return this;
+  }
 
   @Override
   public String toString() {
@@ -129,8 +152,9 @@ public class CreateTableHandler extends EventHandler {
   @Override
   public void process() {
     String tableName = this.hTableDescriptor.getNameAsString();
+    LOG.info("Attempting to create the table " + tableName);
+
     try {
-      LOG.info("Attempting to create the table " + tableName);
       MasterCoprocessorHost cpHost = ((HMaster) this.server).getCoprocessorHost();
       if (cpHost != null) {
         cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);
@@ -207,6 +231,18 @@ public class CreateTableHandler extends EventHandler {
     } catch (KeeperException e) {
       throw new IOException("Unable to ensure that " + tableName + " will be" +
         " enabled because of a ZooKeeper issue", e);
+    } finally {
+      releaseTableLock();
+    }
+  }
+
+  private void releaseTableLock() {
+    if (this.tableLock != null) {
+      try {
+        this.tableLock.release();
+      } catch (IOException ex) {
+        LOG.warn("Could not release the table lock", ex);
+      }
     }
   }
 

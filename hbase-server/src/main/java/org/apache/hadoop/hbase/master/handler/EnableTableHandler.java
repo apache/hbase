@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
@@ -55,41 +57,60 @@ public class EnableTableHandler extends EventHandler {
   private final byte [] tableName;
   private final String tableNameStr;
   private final AssignmentManager assignmentManager;
-  private final CatalogTracker ct;
+  private final TableLockManager tableLockManager;
+  private final CatalogTracker catalogTracker;
   private boolean retainAssignment = false;
+  private TableLock tableLock;
 
   public EnableTableHandler(Server server, byte [] tableName,
       CatalogTracker catalogTracker, AssignmentManager assignmentManager,
-      boolean skipTableStateCheck)
-  throws TableNotFoundException, TableNotDisabledException, IOException {
+      TableLockManager tableLockManager, boolean skipTableStateCheck) {
     super(server, EventType.C_M_ENABLE_TABLE);
     this.tableName = tableName;
     this.tableNameStr = Bytes.toString(tableName);
-    this.ct = catalogTracker;
+    this.catalogTracker = catalogTracker;
     this.assignmentManager = assignmentManager;
+    this.tableLockManager = tableLockManager;
     this.retainAssignment = skipTableStateCheck;
-    // Check if table exists
-    if (!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
-      throw new TableNotFoundException(Bytes.toString(tableName));
-    }
+  }
 
-    // There could be multiple client requests trying to disable or enable
-    // the table at the same time. Ensure only the first request is honored
-    // After that, no other requests can be accepted until the table reaches
-    // DISABLED or ENABLED.
-    if (!skipTableStateCheck)
-    {
-      try {
-        if (!this.assignmentManager.getZKTable().checkDisabledAndSetEnablingTable
-          (this.tableNameStr)) {
-          LOG.info("Table " + tableNameStr + " isn't disabled; skipping enable");
-          throw new TableNotDisabledException(this.tableNameStr);
+  public EnableTableHandler prepare()
+      throws TableNotFoundException, TableNotDisabledException, IOException {
+    //acquire the table write lock, blocking
+    this.tableLock = this.tableLockManager.writeLock(tableName,
+        EventType.C_M_ENABLE_TABLE.toString());
+    this.tableLock.acquire();
+
+    boolean success = false;
+    try {
+      // Check if table exists
+      if (!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
+        throw new TableNotFoundException(Bytes.toString(tableName));
+      }
+
+      // There could be multiple client requests trying to disable or enable
+      // the table at the same time. Ensure only the first request is honored
+      // After that, no other requests can be accepted until the table reaches
+      // DISABLED or ENABLED.
+      if (!retainAssignment) {
+        try {
+          if (!this.assignmentManager.getZKTable().checkDisabledAndSetEnablingTable
+            (this.tableNameStr)) {
+            LOG.info("Table " + tableNameStr + " isn't disabled; skipping enable");
+            throw new TableNotDisabledException(this.tableNameStr);
+          }
+        } catch (KeeperException e) {
+          throw new IOException("Unable to ensure that the table will be" +
+            " enabling because of a ZooKeeper issue", e);
         }
-      } catch (KeeperException e) {
-        throw new IOException("Unable to ensure that the table will be" +
-          " enabling because of a ZooKeeper issue", e);
+      }
+      success = true;
+    } finally {
+      if (!success) {
+        releaseTableLock();
       }
     }
+    return this;
   }
 
   @Override
@@ -121,6 +142,18 @@ public class EnableTableHandler extends EventHandler {
       LOG.error("Error trying to enable the table " + this.tableNameStr, e);
     } catch (InterruptedException e) {
       LOG.error("Error trying to enable the table " + this.tableNameStr, e);
+    } finally {
+      releaseTableLock();
+    }
+  }
+
+  private void releaseTableLock() {
+    if (this.tableLock != null) {
+      try {
+        this.tableLock.release();
+      } catch (IOException ex) {
+        LOG.warn("Could not release the table lock", ex);
+      }
     }
   }
 
@@ -134,7 +167,7 @@ public class EnableTableHandler extends EventHandler {
     // Get the regions of this table. We're done when all listed
     // tables are onlined.
     List<Pair<HRegionInfo, ServerName>> tableRegionsAndLocations = MetaReader
-        .getTableRegionsAndLocations(this.ct, tableName, true);
+        .getTableRegionsAndLocations(this.catalogTracker, tableName, true);
     int countOfRegionsInTable = tableRegionsAndLocations.size();
     List<HRegionInfo> regions = regionsToAssignWithServerName(tableRegionsAndLocations);
     int regionsCount = regions.size();

@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.master.BulkAssigner;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 import org.cloudera.htrace.Trace;
@@ -50,40 +52,62 @@ public class DisableTableHandler extends EventHandler {
   private final byte [] tableName;
   private final String tableNameStr;
   private final AssignmentManager assignmentManager;
+  private final TableLockManager tableLockManager;
+  private final CatalogTracker catalogTracker;
+  private final boolean skipTableStateCheck;
+  private TableLock tableLock;
 
   public DisableTableHandler(Server server, byte [] tableName,
       CatalogTracker catalogTracker, AssignmentManager assignmentManager,
-      boolean skipTableStateCheck)
-  throws TableNotFoundException, TableNotEnabledException, IOException {
+      TableLockManager tableLockManager, boolean skipTableStateCheck) {
     super(server, EventType.C_M_DISABLE_TABLE);
     this.tableName = tableName;
     this.tableNameStr = Bytes.toString(this.tableName);
     this.assignmentManager = assignmentManager;
-    // Check if table exists
-    // TODO: do we want to keep this in-memory as well?  i guess this is
-    //       part of old master rewrite, schema to zk to check for table
-    //       existence and such
-    if (!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
-      throw new TableNotFoundException(this.tableNameStr);
-    }
+    this.catalogTracker = catalogTracker;
+    this.tableLockManager = tableLockManager;
+    this.skipTableStateCheck = skipTableStateCheck;
+  }
 
-    // There could be multiple client requests trying to disable or enable
-    // the table at the same time. Ensure only the first request is honored
-    // After that, no other requests can be accepted until the table reaches
-    // DISABLED or ENABLED.
-    if (!skipTableStateCheck)
-    {
-      try {
-        if (!this.assignmentManager.getZKTable().checkEnabledAndSetDisablingTable
-          (this.tableNameStr)) {
-          LOG.info("Table " + tableNameStr + " isn't enabled; skipping disable");
-          throw new TableNotEnabledException(this.tableNameStr);
+  public DisableTableHandler prepare()
+      throws TableNotFoundException, TableNotEnabledException, IOException {
+    //acquire the table write lock, blocking
+    this.tableLock = this.tableLockManager.writeLock(tableName,
+        EventType.C_M_DISABLE_TABLE.toString());
+    this.tableLock.acquire();
+
+    boolean success = false;
+    try {
+      // Check if table exists
+      if (!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
+        throw new TableNotFoundException(this.tableNameStr);
+      }
+
+      // There could be multiple client requests trying to disable or enable
+      // the table at the same time. Ensure only the first request is honored
+      // After that, no other requests can be accepted until the table reaches
+      // DISABLED or ENABLED.
+      //TODO: reevaluate this since we have table locks now
+      if (!skipTableStateCheck) {
+        try {
+          if (!this.assignmentManager.getZKTable().checkEnabledAndSetDisablingTable
+            (this.tableNameStr)) {
+            LOG.info("Table " + tableNameStr + " isn't enabled; skipping disable");
+            throw new TableNotEnabledException(this.tableNameStr);
+          }
+        } catch (KeeperException e) {
+          throw new IOException("Unable to ensure that the table will be" +
+            " disabling because of a ZooKeeper issue", e);
         }
-      } catch (KeeperException e) {
-        throw new IOException("Unable to ensure that the table will be" +
-          " disabling because of a ZooKeeper issue", e);
+      }
+      success = true;
+    } finally {
+      if (!success) {
+        releaseTableLock();
       }
     }
+
+    return this;
   }
 
   @Override
@@ -113,6 +137,18 @@ public class DisableTableHandler extends EventHandler {
       LOG.error("Error trying to disable table " + this.tableNameStr, e);
     } catch (KeeperException e) {
       LOG.error("Error trying to disable table " + this.tableNameStr, e);
+    } finally {
+      releaseTableLock();
+    }
+  }
+
+  private void releaseTableLock() {
+    if (this.tableLock != null) {
+      try {
+        this.tableLock.release();
+      } catch (IOException ex) {
+        LOG.warn("Could not release the table lock", ex);
+      }
     }
   }
 

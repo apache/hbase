@@ -103,6 +103,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public String splitLogZNode;
   // znode containing the state of the load balancer
   public String balancerZNode;
+  // znode containing the lock for the tables
+  public String tableLockZNode;
 
   // Certain ZooKeeper nodes need to be world-readable
   public static final ArrayList<ACL> CREATOR_ALL_AND_WORLD_READABLE =
@@ -117,23 +119,23 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   /**
    * Instantiate a ZooKeeper connection and watcher.
-   * @param descriptor Descriptive string that is added to zookeeper sessionid
-   * and used as identifier for this instance.
+   * @param identifier string that is passed to RecoverableZookeeper to be used as
+   * identifier for this instance. Use null for default.
    * @throws IOException
    * @throws ZooKeeperConnectionException
    */
-  public ZooKeeperWatcher(Configuration conf, String descriptor,
+  public ZooKeeperWatcher(Configuration conf, String identifier,
       Abortable abortable) throws ZooKeeperConnectionException, IOException {
-    this(conf, descriptor, abortable, false);
+    this(conf, identifier, abortable, false);
   }
   /**
    * Instantiate a ZooKeeper connection and watcher.
-   * @param descriptor Descriptive string that is added to zookeeper sessionid
-   * and used as identifier for this instance.
+   * @param identifier string that is passed to RecoverableZookeeper to be used as
+   * identifier for this instance. Use null for default.
    * @throws IOException
    * @throws ZooKeeperConnectionException
    */
-  public ZooKeeperWatcher(Configuration conf, String descriptor,
+  public ZooKeeperWatcher(Configuration conf, String identifier,
       Abortable abortable, boolean canCreateBaseZNode)
   throws IOException, ZooKeeperConnectionException {
     this.conf = conf;
@@ -147,10 +149,10 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
     // Identifier will get the sessionid appended later below down when we
     // handle the syncconnect event.
-    this.identifier = descriptor;
+    this.identifier = identifier;
     this.abortable = abortable;
     setNodeNames(conf);
-    this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, this, descriptor);
+    this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, this, identifier);
     if (canCreateBaseZNode) {
       createBaseZNodes();
     }
@@ -166,6 +168,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       ZKUtil.createAndFailSilent(this, tableZNode);
       ZKUtil.createAndFailSilent(this, splitLogZNode);
       ZKUtil.createAndFailSilent(this, backupMasterAddressesZNode);
+      ZKUtil.createAndFailSilent(this, tableLockZNode);
     } catch (KeeperException e) {
       throw new ZooKeeperConnectionException(
           prefix("Unexpected KeeperException creating base node"), e);
@@ -215,6 +218,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         conf.get("zookeeper.znode.splitlog", HConstants.SPLIT_LOGDIR_NAME));
     balancerZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.balancer", "balancer"));
+    tableLockZNode = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.tableLock", "table-lock"));
   }
 
   /**
@@ -232,6 +237,10 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
    */
   public void registerListenerFirst(ZooKeeperListener listener) {
     listeners.add(0, listener);
+  }
+
+  public void unregisterListener(ZooKeeperListener listener) {
+    listeners.remove(listener);
   }
 
   /**
@@ -355,10 +364,10 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         if (this.abortable != null) this.abortable.abort(msg,
             new KeeperException.SessionExpiredException());
         break;
-        
+
       case ConnectedReadOnly:
-        break; 
-        
+        break;
+
       default:
         throw new IllegalStateException("Received event is not valid.");
     }
@@ -437,7 +446,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public void abort(String why, Throwable e) {
     this.abortable.abort(why, e);
   }
-  
+
   @Override
   public boolean isAborted() {
     return this.abortable.isAborted();
@@ -449,4 +458,5 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public String getMasterAddressZNode() {
     return this.masterAddressZNode;
   }
+
 }

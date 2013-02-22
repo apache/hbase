@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.BulkReOpen;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 
@@ -61,37 +62,61 @@ public abstract class TableEventHandler extends EventHandler {
   protected final MasterServices masterServices;
   protected final byte [] tableName;
   protected final String tableNameStr;
+  protected TableLock tableLock;
 
   public TableEventHandler(EventType eventType, byte [] tableName, Server server,
-      MasterServices masterServices)
-  throws IOException {
+      MasterServices masterServices) {
     super(server, eventType);
     this.masterServices = masterServices;
     this.tableName = tableName;
-    try {
-      this.masterServices.checkTableModifiable(tableName);
-    } catch (TableNotDisabledException ex)  {
-      if (isOnlineSchemaChangeAllowed()
-          && eventType.isOnlineSchemaChangeSupported()) {
-        LOG.debug("Ignoring table not disabled exception " +
-            "for supporting online schema changes.");
-      }	else {
-        throw ex;
-      }
-    }
     this.tableNameStr = Bytes.toString(this.tableName);
   }
 
- private boolean isOnlineSchemaChangeAllowed() {
-   return this.server.getConfiguration().getBoolean(
-     "hbase.online.schema.update.enable", false);
- }
+  public TableEventHandler prepare() throws IOException {
+    //acquire the table write lock, blocking
+    this.tableLock = masterServices.getTableLockManager()
+        .writeLock(tableName, eventType.toString());
+    this.tableLock.acquire();
+    boolean success = false;
+    try {
+      try {
+        this.masterServices.checkTableModifiable(tableName);
+      } catch (TableNotDisabledException ex)  {
+        if (isOnlineSchemaChangeAllowed()
+            && eventType.isOnlineSchemaChangeSupported()) {
+          LOG.debug("Ignoring table not disabled exception " +
+              "for supporting online schema changes.");
+        } else {
+          throw ex;
+        }
+      }
+      prepareWithTableLock();
+      success = true;
+    } finally {
+      if (!success ) {
+        releaseTableLock();
+      }
+    }
+    return this;
+  }
+
+  /** Called from prepare() while holding the table lock. Subclasses
+   * can do extra initialization, and not worry about the releasing
+   * the table lock. */
+  protected void prepareWithTableLock() throws IOException {
+  }
+
+  private boolean isOnlineSchemaChangeAllowed() {
+    return this.server.getConfiguration().getBoolean(
+      "hbase.online.schema.update.enable", false);
+  }
 
   @Override
   public void process() {
     try {
       LOG.info("Handling table operation " + eventType + " on table " +
           Bytes.toString(tableName));
+
       List<HRegionInfo> hris =
         MetaReader.getTableRegions(this.server.getCatalogTracker(),
           tableName);
@@ -110,7 +135,19 @@ public abstract class TableEventHandler extends EventHandler {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
     } catch (KeeperException e) {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
-    } 
+    } finally {
+      releaseTableLock();
+    }
+  }
+
+  protected void releaseTableLock() {
+    if (this.tableLock != null) {
+      try {
+        this.tableLock.release();
+      } catch (IOException ex) {
+        LOG.warn("Could not release the table lock", ex);
+      }
+    }
   }
 
   public boolean reOpenAllRegions(List<HRegionInfo> regions) throws IOException {
@@ -137,7 +174,7 @@ public abstract class TableEventHandler extends EventHandler {
       reRegions.add(hri);
       serverToRegions.get(rsLocation).add(hri);
     }
-    
+
     LOG.info("Reopening " + reRegions.size() + " regions on "
         + serverToRegions.size() + " region servers.");
     this.masterServices.getAssignmentManager().setRegionsToReopen(reRegions);
