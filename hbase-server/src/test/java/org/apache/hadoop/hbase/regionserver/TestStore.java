@@ -228,8 +228,8 @@ public class TestStore extends TestCase {
       // the first is expired normally.
       // If not the first compaction, there is another empty store file,
       assertEquals(Math.min(i, 2), cr.getFiles().size());
-      for (int j = 0; i < cr.getFiles().size(); j++) {
-        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() < (System
+      for (int j = 0; j < cr.getFiles().size(); j++) {
+        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() < (edge
             .currentTimeMillis() - this.store.getScanInfo().getTtl()));
       }
       // Verify that the expired store file is compacted to an empty store file.
