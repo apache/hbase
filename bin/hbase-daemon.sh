@@ -29,6 +29,8 @@
 #   HBASE_PID_DIR    The pid files are stored. /tmp by default.
 #   HBASE_IDENT_STRING   A string representing this instance of hadoop. $USER by default
 #   HBASE_NICENESS The scheduling priority for daemons. Defaults to 0.
+#   HBASE_STOP_TIMEOUT  Time, in seconds, after which we kill -9 the server if it has not stopped.
+#                        Default 1200 seconds.
 #
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
@@ -46,6 +48,7 @@ bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin">/dev/null; pwd`
 
 . "$bin"/hbase-config.sh
+. "$bin"/hbase-common.sh
 
 # get arguments
 startStop=$1
@@ -235,28 +238,13 @@ case $startStop in
     rm -f "$HBASE_START_FILE"
     if [ -f $pid ]; then
       pidToKill=`cat $pid`
-      processedAt=`date +%s`
       # kill -0 == see if the PID exists
       if kill -0 $pidToKill > /dev/null 2>&1; then
         echo -n stopping $command
         echo "`date` Terminating $command" >> $loglog
         kill $pidToKill > /dev/null 2>&1
-        while kill -0 $pidToKill > /dev/null 2>&1;
-         do
-           echo -n "."
-           sleep 1;
-           # if process persists more than $HBASE_STOP_TIMEOUT (default 1200 sec) no mercy
-           if [ $(( `date +%s` - $processedAt )) -gt ${HBASE_STOP_TIMEOUT:-1200} ]; then
-             break;
-           fi
-         done
-        # process still there : kill kill
-        if kill -0 $pidToKill > /dev/null 2>&1; then
-          echo -n force stopping $command
-          kill -9 $pidToKill > /dev/null 2>&1
-        fi
+        waitForProcessEnd $pidToKill $command
         rm $pid
-        echo
       else
         retval=$?
         echo no $command to stop because kill -0 of pid $pidToKill failed with status $retval

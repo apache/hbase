@@ -28,6 +28,7 @@ bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin">/dev/null; pwd`
 
 . "$bin"/hbase-config.sh
+. "$bin"/hbase-common.sh
 
 # variables needed for stop command
 if [ "$HBASE_LOG_DIR" = "" ]; then
@@ -52,13 +53,10 @@ nohup nice -n ${HBASE_NICENESS:-0} "$HBASE_HOME"/bin/hbase \
    --config "${HBASE_CONF_DIR}" \
    master stop "$@" > "$logout" 2>&1 < /dev/null &
 
-while kill -0 `cat $pid` > /dev/null 2>&1; do
-  echo -n "."
-  sleep 1;
-done
+waitForProcessEnd `cat $pid` 'stop-master-command'
+
 rm -f $pid
-# Add a CR after we're done w/ dots.
-echo
+
 
 # distributed == false means that the HMaster will kill ZK when it exits
 # HBASE-6504 - only take the first line of the output in case verbose gc is on
