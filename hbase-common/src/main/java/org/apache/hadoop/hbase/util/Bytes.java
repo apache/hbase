@@ -628,7 +628,9 @@ public class Bytes {
   }
 
   /**
-   * Convert an int value to a byte array
+   * Convert an int value to a byte array.  Big-endian.  Same as what DataOutputStream.writeInt
+   * does.
+   *
    * @param val value
    * @return the byte array
    */

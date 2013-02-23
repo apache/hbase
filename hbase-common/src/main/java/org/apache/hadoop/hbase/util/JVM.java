@@ -127,6 +127,7 @@ public class JVM
       return (ofdc != null ? ofdc.longValue () : -1);
     }
     InputStream in = null;
+    BufferedReader output = null;
     try {
       //need to get the PID number of the process first
       RuntimeMXBean rtmbean = ManagementFactory.getRuntimeMXBean();
@@ -138,22 +139,27 @@ public class JVM
       new String[] { "bash", "-c",
           "ls /proc/" + pidhost[0] + "/fdinfo | wc -l" });
       in = p.getInputStream();
-      BufferedReader output = new BufferedReader(
-        		new InputStreamReader(in));
-
+      output = new BufferedReader(new InputStreamReader(in));
       String openFileDesCount;
       if ((openFileDesCount = output.readLine()) != null)      
              return Long.parseLong(openFileDesCount);
      } catch (IOException ie) {
-     	     LOG.warn("Not able to get the number of open file descriptors", ie);
-    } finally {
-      if (in != null){
-        try {
-          in.close();
-        } catch (IOException e) {
-          LOG.warn("Not able to close the InputStream", e);
-        }
-      }
+       LOG.warn("Not able to get the number of open file descriptors", ie);
+     } finally {
+       if (output != null) {
+         try {
+           output.close();
+         } catch (IOException e) {
+           LOG.warn("Not able to close the InputStream", e);
+         }
+       }
+       if (in != null){
+         try {
+           in.close();
+         } catch (IOException e) {
+           LOG.warn("Not able to close the InputStream", e);
+         }
+       }
     }
     return -1;
   }
@@ -165,30 +171,30 @@ public class JVM
    * @return max number of file descriptors the operating system can use.
    */
   public long getMaxFileDescriptorCount() {
-
     Long mfdc;
-
     if (!ibmvendor) {
       mfdc = runUnixMXBeanMethod("getMaxFileDescriptorCount");
       return (mfdc != null ? mfdc.longValue () : -1);
     }
     InputStream in = null;
+    BufferedReader output = null;
     try {
-      
       //using linux bash commands to retrieve info
-      Process p = Runtime.getRuntime().exec(
-        	  new String[] { "bash", "-c",
-        	  "ulimit -n" });
+      Process p = Runtime.getRuntime().exec(new String[] { "bash", "-c", "ulimit -n" });
       in = p.getInputStream();
-      BufferedReader output = new BufferedReader(
-        new InputStreamReader(in));
-
+      output = new BufferedReader(new InputStreamReader(in));
       String maxFileDesCount;
-      if ((maxFileDesCount = output.readLine()) != null)      
-        	return Long.parseLong(maxFileDesCount);
-    }   catch (IOException ie) {
-      		LOG.warn("Not able to get the max number of file descriptors", ie);
+      if ((maxFileDesCount = output.readLine()) != null) return Long.parseLong(maxFileDesCount);
+    } catch (IOException ie) {
+      LOG.warn("Not able to get the max number of file descriptors", ie);
     } finally {
+      if (output != null) {
+        try {
+          output.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close the reader", e);
+        }
+      }
       if (in != null){
         try {
           in.close();

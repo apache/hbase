@@ -25,13 +25,13 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTool;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellComparator;
-import org.apache.hbase.cell.CellScannerPosition;
+import org.apache.hbase.CellComparator;
 import org.apache.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hbase.codec.prefixtree.encode.PrefixTreeEncoder;
+import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.junit.Assert;
 import org.junit.Test;
@@ -72,10 +72,10 @@ public class TestPrefixTreeSearcher {
       searcher = DecoderFactory.checkOut(block, true);
 
       int i = -1;
-      while (searcher.next()) {
+      while (searcher.advance()) {
         ++i;
         KeyValue inputCell = rows.getInputs().get(i);
-        Cell outputCell = searcher.getCurrent();
+        Cell outputCell = searcher.current();
 
         // check all 3 permutations of equals()
         Assert.assertEquals(inputCell, outputCell);
@@ -100,7 +100,7 @@ public class TestPrefixTreeSearcher {
         ++i;
         int oppositeIndex = rows.getInputs().size() - i - 1;
         KeyValue inputKv = rows.getInputs().get(oppositeIndex);
-        KeyValue outputKv = KeyValueTool.copyToNewKeyValue(searcher.getCurrent());
+        KeyValue outputKv = KeyValueUtil.copyToNewKeyValue(searcher.current());
         Assert.assertEquals(inputKv, outputKv);
       }
       Assert.assertEquals(rows.getInputs().size(), i + 1);
@@ -118,7 +118,7 @@ public class TestPrefixTreeSearcher {
       for (KeyValue kv : rows.getInputs()) {
         boolean hit = searcher.positionAt(kv);
         Assert.assertTrue(hit);
-        Cell foundKv = searcher.getCurrent();
+        Cell foundKv = searcher.current();
         Assert.assertTrue(CellComparator.equals(kv, foundKv));
       }
     } finally {
@@ -139,7 +139,7 @@ public class TestPrefixTreeSearcher {
         KeyValue kv = rows.getInputs().get(i);
 
         //nextRow
-        KeyValue inputNextRow = KeyValueTool.createFirstKeyInNextRow(kv);
+        KeyValue inputNextRow = KeyValueUtil.createFirstKeyInNextRow(kv);
 
         CellScannerPosition position = searcher.positionAtOrBefore(inputNextRow);
         boolean isFirstInRow = rowStartIndexes.contains(i);
@@ -158,7 +158,7 @@ public class TestPrefixTreeSearcher {
         }
 
         //previous KV
-        KeyValue inputPreviousKv = KeyValueTool.previousKey(kv);
+        KeyValue inputPreviousKv = KeyValueUtil.previousKey(kv);
         boolean hit = searcher.positionAt(inputPreviousKv);
         Assert.assertFalse(hit);
         position = searcher.positionAtOrAfter(inputPreviousKv);
@@ -169,7 +169,7 @@ public class TestPrefixTreeSearcher {
           /*
            * TODO: why i+1 instead of i?
            */
-          Assert.assertEquals(rows.getInputs().get(i+1), searcher.getCurrent());
+          Assert.assertEquals(rows.getInputs().get(i+1), searcher.current());
         }
       }
     } finally {

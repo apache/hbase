@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaKeyComparator;
 import org.apache.hadoop.hbase.KeyValue.RootKeyComparator;
-import org.apache.hadoop.hbase.KeyValueTool;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -97,7 +97,7 @@ public class PrefixTreeCodec implements DataBlockEncoder{
 
     try{
       KeyValue kv;
-      while ((kv = KeyValueTool.nextShallowCopy(rawKeyValues, includesMvccVersion)) != null) {
+      while ((kv = KeyValueUtil.nextShallowCopy(rawKeyValues, includesMvccVersion)) != null) {
         builder.write(kv);
       }
       builder.flush();
@@ -132,13 +132,13 @@ public class PrefixTreeCodec implements DataBlockEncoder{
     CellSearcher searcher = null;
     try {
       searcher = DecoderFactory.checkOut(sourceAsBuffer, includesMvccVersion);
-      while (searcher.next()) {
-        KeyValue currentCell = KeyValueTool.copyToNewKeyValue(searcher.getCurrent());
+      while (searcher.advance()) {
+        KeyValue currentCell = KeyValueUtil.copyToNewKeyValue(searcher.current());
         // needs to be modified for DirectByteBuffers. no existing methods to
         // write VLongs to byte[]
         int offset = result.arrayOffset() + result.position();
-        KeyValueTool.appendToByteArray(currentCell, result.array(), offset);
-        int keyValueLength = KeyValueTool.length(currentCell);
+        KeyValueUtil.appendToByteArray(currentCell, result.array(), offset);
+        int keyValueLength = KeyValueUtil.length(currentCell);
         ByteBufferUtils.skip(result, keyValueLength);
         offset += keyValueLength;
         if (includesMvccVersion) {
@@ -163,7 +163,7 @@ public class PrefixTreeCodec implements DataBlockEncoder{
       if (!searcher.positionAtFirstCell()) {
         return null;
       }
-      return KeyValueTool.copyKeyToNewByteBuffer(searcher.getCurrent());
+      return KeyValueUtil.copyKeyToNewByteBuffer(searcher.current());
     } finally {
       DecoderFactory.checkIn(searcher);
     }

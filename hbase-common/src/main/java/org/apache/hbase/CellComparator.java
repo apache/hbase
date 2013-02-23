@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hbase.cell;
+package org.apache.hbase;
 
 import java.io.Serializable;
 import java.util.Comparator;
@@ -24,14 +24,15 @@ import java.util.Comparator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.Cell;
 
 import com.google.common.primitives.Longs;
 
 /**
- * Compare two traditional HBase cells.
- *
- * Note: This comparator is not valid for -ROOT- and .META. tables.
+ * Compare two HBase cells.  Do not use this method comparing <code>-ROOT-</code> or
+ * <code>.META.</code> cells.  Cells from these tables need a specialized comparator, one that
+ * takes account of the special formatting of the row where we have commas to delimit table from
+ * regionname, from row.  See KeyValue for how it has a special comparator to do .META. cells
+ * and yet another for -ROOT-.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -126,8 +127,10 @@ public class CellComparator implements Comparator<Cell>, Serializable{
 
     //pre-calculate the 3 hashes made of byte ranges
     int rowHash = Bytes.hashCode(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-    int familyHash = Bytes.hashCode(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
-    int qualifierHash = Bytes.hashCode(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+    int familyHash =
+      Bytes.hashCode(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
+    int qualifierHash = Bytes.hashCode(cell.getQualifierArray(), cell.getQualifierOffset(),
+      cell.getQualifierLength());
 
     //combine the 6 sub-hashes
     int hash = 31 * rowHash + familyHash;

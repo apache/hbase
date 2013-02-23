@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.cell.CellComparator;
+import org.apache.hbase.CellComparator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -122,7 +122,7 @@ public class TestMultiColumnScanner {
   @Parameters
   public static final Collection<Object[]> parameters() {
     List<Object[]> parameters = new ArrayList<Object[]>();
-    for (Object[] bloomAndCompressionParams : 
+    for (Object[] bloomAndCompressionParams :
         HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS) {
       for (boolean useDataBlockEncoding : new boolean[]{false, true}) {
         parameters.add(ArrayUtils.add(bloomAndCompressionParams,

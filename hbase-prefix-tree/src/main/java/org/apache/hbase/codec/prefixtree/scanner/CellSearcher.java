@@ -20,7 +20,6 @@ package org.apache.hbase.codec.prefixtree.scanner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellScannerPosition;
 
 /**
  * Methods for seeking to a random {@link Cell} inside a sorted collection of cells. Indicates that
@@ -28,6 +27,10 @@ import org.apache.hbase.cell.CellScannerPosition;
  */
 @InterfaceAudience.Private
 public interface CellSearcher extends ReversibleCellScanner {
+  /**
+   * Reset any state in the scanner so it appears it was freshly opened.
+   */
+  void resetToBeforeFirstEntry();
 
   /**
    * Do everything within this scanner's power to find the key. Look forward and backwards.
@@ -62,7 +65,7 @@ public interface CellSearcher extends ReversibleCellScanner {
   CellScannerPosition positionAtOrAfter(Cell key);
 
   /**
-   * Note: Added for backwards compatibility with 
+   * Note: Added for backwards compatibility with
    * {@link org.apache.hadoop.hbase.regionserver.KeyValueScanner#reseek}
    * <p/>
    * Look for the key, but only look after the current position. Probably not needed for an

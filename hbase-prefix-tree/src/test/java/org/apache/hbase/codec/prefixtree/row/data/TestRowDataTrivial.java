@@ -22,9 +22,9 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.cell.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hbase.codec.prefixtree.row.BaseTestRowData;
+import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.junit.Assert;
 
@@ -68,6 +68,6 @@ public class TestRowDataTrivial extends BaseTestRowData{
     KeyValue afterLast = KeyValue.createFirstOnRow(Bytes.toBytes("zzz"));
     CellScannerPosition position = searcher.positionAtOrAfter(afterLast);
     Assert.assertEquals(CellScannerPosition.AFTER_LAST, position);
-    Assert.assertNull(searcher.getCurrent());
+    Assert.assertNull(searcher.current());
   }
 }

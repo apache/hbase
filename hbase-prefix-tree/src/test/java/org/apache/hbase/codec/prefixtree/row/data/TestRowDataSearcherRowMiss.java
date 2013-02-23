@@ -23,9 +23,9 @@ import java.util.List;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellComparator;
-import org.apache.hbase.cell.CellScannerPosition;
+import org.apache.hbase.CellComparator;
 import org.apache.hbase.codec.prefixtree.row.BaseTestRowData;
+import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.junit.Assert;
 
@@ -66,13 +66,13 @@ public class TestRowDataSearcherRowMiss extends BaseTestRowData{
     searcher.resetToBeforeFirstEntry();
 
     //test first cell
-    searcher.next();
-    Cell first = searcher.getCurrent();
+    searcher.advance();
+    Cell first = searcher.current();
     Assert.assertTrue(CellComparator.equals(d.get(0), first));
 
     //test first cell in second row
     Assert.assertTrue(searcher.positionAt(d.get(1)));
-    Assert.assertTrue(CellComparator.equals(d.get(1), searcher.getCurrent()));
+    Assert.assertTrue(CellComparator.equals(d.get(1), searcher.current()));
 
     testBetween1and2(searcher);
     testBetween2and3(searcher);
@@ -94,12 +94,12 @@ public class TestRowDataSearcherRowMiss extends BaseTestRowData{
     //test atOrBefore
     p = searcher.positionAtOrBefore(betweenAAndAAA);
     Assert.assertEquals(CellScannerPosition.BEFORE, p);
-    Assert.assertTrue(CellComparator.equals(searcher.getCurrent(), d.get(1)));
+    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(1)));
 
     //test atOrAfter
     p = searcher.positionAtOrAfter(betweenAAndAAA);
     Assert.assertEquals(CellScannerPosition.AFTER, p);
-    Assert.assertTrue(CellComparator.equals(searcher.getCurrent(), d.get(2)));
+    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(2)));
 	}
 
   private void testBetween2and3(CellSearcher searcher){
@@ -112,12 +112,12 @@ public class TestRowDataSearcherRowMiss extends BaseTestRowData{
     //test atOrBefore
     p = searcher.positionAtOrBefore(betweenAAAndB);
     Assert.assertEquals(CellScannerPosition.BEFORE, p);
-    Assert.assertTrue(CellComparator.equals(searcher.getCurrent(), d.get(2)));
+    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(2)));
 
     //test atOrAfter
     p = searcher.positionAtOrAfter(betweenAAAndB);
     Assert.assertEquals(CellScannerPosition.AFTER, p);
-    Assert.assertTrue(CellComparator.equals(searcher.getCurrent(), d.get(3)));
+    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(3)));
   }
 
 }

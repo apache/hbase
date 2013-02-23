@@ -16,37 +16,40 @@
  * limitations under the License.
  */
 
-package org.apache.hbase.cell;
+package org.apache.hbase.io;
 
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hbase.Cell;
+import org.apache.hbase.CellScanner;
 
 /**
- * Accepts a stream of Cells and adds them to its internal data structure. This can be used to build
- * a block of cells during compactions and flushes, or to build a byte[] to send to the client. This
- * could be backed by a List<KeyValue>, but more efficient implementations will append results to a
+ * Accepts a stream of Cells. This can be used to build a block of cells during compactions
+ * and flushes, or to build a byte[] to send to the client. This could be backed by a
+ * List<KeyValue>, but more efficient implementations will append results to a
  * byte[] to eliminate overhead, and possibly encode the cells further.
+ * <p>To read Cells, use {@link CellScanner}
+ * @see CellScanner
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface CellOutputStream {
-
   /**
-   * Implementation must copy the entire state of the Cell. If the appended Cell is modified
-   * immediately after the append method returns, the modifications must have absolutely no effect
-   * on the copy of the Cell that was added to the appender. For example, calling someList.add(cell)
-   * is not correct.
+   * Implementation must copy the entire state of the Cell. If the written Cell is modified
+   * immediately after the write method returns, the modifications must have absolutely no effect
+   * on the copy of the Cell that was added in the write.
+   * @param cell Cell to write out
+   * @throws IOException
    */
-  void write(Cell cell);
+  void write(Cell cell) throws IOException;
 
   /**
-   * Let the implementation decide what to do.  Usually means writing accumulated data into a byte[]
-   * that can then be read from the implementation to be sent to disk, put in the block cache, or
-   * sent over the network.
+   * Let the implementation decide what to do.  Usually means writing accumulated data into a
+   * byte[] that can then be read from the implementation to be sent to disk, put in the block
+   * cache, or sent over the network.
+   * @throws IOException
    */
   void flush() throws IOException;
-
 }

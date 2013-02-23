@@ -205,7 +205,7 @@ public class RedundantKVGenerator {
       randomizer.nextBytes(family);
     }
 
-    long baseTimestamp = Math.abs(randomizer.nextLong()) / baseTimestampDivide;
+    long baseTimestamp = Math.abs(randomizer.nextInt()) / baseTimestampDivide;
 
     byte[] value = new byte[valueLength];
 

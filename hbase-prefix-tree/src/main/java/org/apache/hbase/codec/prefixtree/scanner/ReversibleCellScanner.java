@@ -19,13 +19,15 @@
 package org.apache.hbase.codec.prefixtree.scanner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hbase.CellScanner;
 
 /**
  * An extension of CellScanner indicating the scanner supports iterating backwards through cells.
  * <p>
- * Note: This was not added to suggest that HBase should support client facing reverse Scanners, but
- * because some {@link CellSearcher} implementations, namely PrefixTree, need a method of backing up
- * if the positionAt(..) method goes past the requested cell.
+ * Note: This was not added to suggest that HBase should support client facing reverse Scanners,
+ * but
+ * because some {@link CellSearcher} implementations, namely PrefixTree, need a method of backing
+ * up if the positionAt(..) method goes past the requested cell.
  */
 @InterfaceAudience.Private
 public interface ReversibleCellScanner extends CellScanner {
@@ -35,7 +37,8 @@ public interface ReversibleCellScanner extends CellScanner {
    * @return true if the operation was successful, meaning getCurrentCell() will return a valid
    *         Cell.<br/>
    *         false if there were no previous cells, meaning getCurrentCell() will return null.
-   *         Scanner position will be {@link org.apache.hbase.cell.CellScannerPosition#BEFORE_FIRST}
+   *         Scanner position will be
+   *         {@link org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition#BEFORE_FIRST}
    */
   boolean previous();
 
@@ -45,8 +48,8 @@ public interface ReversibleCellScanner extends CellScanner {
    * @return true if the operation was successful, meaning getCurrentCell() will return a valid
    *         Cell.<br/>
    *         false if there were no previous cells, meaning getCurrentCell() will return null.
-   *         Scanner position will be {@link org.apache.hbase.cell.CellScannerPosition#BEFORE_FIRST}
+   *         Scanner position will be
+   *         {@link org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition#BEFORE_FIRST}
    */
   boolean previousRow(boolean endOfRow);
-
 }

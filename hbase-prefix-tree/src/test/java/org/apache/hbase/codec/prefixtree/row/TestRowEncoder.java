@@ -26,7 +26,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTool;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.Cell;
 import org.apache.hbase.codec.prefixtree.PrefixTreeBlockMeta;
@@ -105,10 +105,10 @@ public class TestRowEncoder {
   @Test
   public void testForwardScanner() {
     int counter = -1;
-    while (searcher.next()) {
+    while (searcher.advance()) {
       ++counter;
       KeyValue inputKv = rows.getInputs().get(counter);
-      KeyValue outputKv = KeyValueTool.copyToNewKeyValue(searcher.getCurrent());
+      KeyValue outputKv = KeyValueUtil.copyToNewKeyValue(searcher.current());
       assertKeyAndValueEqual(inputKv, outputKv);
     }
     // assert same number of cells
@@ -127,7 +127,7 @@ public class TestRowEncoder {
       ++counter;
       int oppositeIndex = rows.getInputs().size() - counter - 1;
       KeyValue inputKv = rows.getInputs().get(oppositeIndex);
-      KeyValue outputKv = KeyValueTool.copyToNewKeyValue(searcher.getCurrent());
+      KeyValue outputKv = KeyValueUtil.copyToNewKeyValue(searcher.current());
       assertKeyAndValueEqual(inputKv, outputKv);
     }
     Assert.assertEquals(rows.getInputs().size(), counter + 1);
@@ -151,13 +151,13 @@ public class TestRowEncoder {
 
       // a next+previous should cancel out
       if (!searcher.isAfterLast()) {
-        searcher.next();
+        searcher.advance();
         searcher.previous();
       }
 
       int oppositeIndex = rows.getInputs().size() - counter - 1;
       KeyValue inputKv = rows.getInputs().get(oppositeIndex);
-      KeyValue outputKv = KeyValueTool.copyToNewKeyValue(searcher.getCurrent());
+      KeyValue outputKv = KeyValueUtil.copyToNewKeyValue(searcher.current());
       assertKeyAndValueEqual(inputKv, outputKv);
     }
     Assert.assertEquals(rows.getInputs().size(), counter + 1);

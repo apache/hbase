@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
 import org.apache.hadoop.hbase.util.Strings;
-import org.apache.hbase.cell.CellComparator;
+import org.apache.hbase.CellComparator;
 
 import com.google.common.collect.Lists;
 
@@ -63,10 +63,10 @@ public class KeyValueTestUtil {
 
   public static ByteBuffer toByteBufferAndRewind(final Iterable<? extends KeyValue> kvs,
       boolean includeMemstoreTS) {
-    int totalBytes = KeyValueTool.totalLengthWithMvccVersion(kvs, includeMemstoreTS);
+    int totalBytes = KeyValueUtil.totalLengthWithMvccVersion(kvs, includeMemstoreTS);
     ByteBuffer bb = ByteBuffer.allocate(totalBytes);
     for (KeyValue kv : IterableUtils.nullSafe(kvs)) {
-      KeyValueTool.appendToByteBuffer(bb, kv, includeMemstoreTS);
+      KeyValueUtil.appendToByteBuffer(bb, kv, includeMemstoreTS);
     }
     bb.rewind();
     return bb;
@@ -99,7 +99,7 @@ public class KeyValueTestUtil {
     List<KeyValue> kvs = Lists.newArrayList();
     KeyValue kv = null;
     while (true) {
-      kv = KeyValueTool.nextShallowCopy(bb, includesMemstoreTS);
+      kv = KeyValueUtil.nextShallowCopy(bb, includesMemstoreTS);
       if (kv == null) {
         break;
       }

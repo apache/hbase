@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hbase.util.test;
 
-import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.util.Bytes;

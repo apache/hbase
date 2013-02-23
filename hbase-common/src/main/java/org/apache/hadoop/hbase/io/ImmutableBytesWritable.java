@@ -41,6 +41,9 @@ import org.apache.hadoop.io.WritableComparator;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
+    justification="It has been like this forever")
 public class ImmutableBytesWritable
 implements WritableComparable<ImmutableBytesWritable> {
   private byte[] bytes;

@@ -20,9 +20,9 @@ package org.apache.hbase.codec.prefixtree.decode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellScannerPosition;
-import org.apache.hbase.cell.CellTool;
+import org.apache.hbase.CellUtil;
 import org.apache.hbase.codec.prefixtree.PrefixTreeBlockMeta;
+import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.scanner.CellSearcher;
 
 import com.google.common.primitives.UnsignedBytes;
@@ -33,9 +33,12 @@ import com.google.common.primitives.UnsignedBytes;
  * set up to be a Trie of rows, so finding a particular row is extremely cheap.
  * <p/>
  * Once it finds the row, it does a binary search through the cells inside the row, which is not as
- * fast as the trie search, but faster than iterating through every cell like existing block formats
- * do. For this reason, this implementation is targeted towards schemas where rows are narrow enough
- * to have several or many per block, and where you are generally looking for the entire row or the
+ * fast as the trie search, but faster than iterating through every cell like existing block
+ * formats
+ * do. For this reason, this implementation is targeted towards schemas where rows are narrow
+ * enough
+ * to have several or many per block, and where you are generally looking for the entire row or
+ * the
  * first cell. It will still be fast for wide rows or point queries, but could be improved upon.
  */
 @InterfaceAudience.Private
@@ -87,7 +90,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       }
 
       //keep hunting for the rest of the row
-      byte searchForByte = CellTool.getRowByte(key, currentNodeDepth);
+      byte searchForByte = CellUtil.getRowByte(key, currentNodeDepth);
       fanIndex = currentRowNode.whichFanNode(searchForByte);
       if(fanIndex < 0){//no matching row.  return early
         int insertionPoint = -fanIndex;
@@ -132,7 +135,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       }
 
       //keep hunting for the rest of the row
-      byte searchForByte = CellTool.getRowByte(key, currentNodeDepth);
+      byte searchForByte = CellUtil.getRowByte(key, currentNodeDepth);
       fanIndex = currentRowNode.whichFanNode(searchForByte);
       if(fanIndex < 0){//no matching row.  return early
         int insertionPoint = -fanIndex;
@@ -234,7 +237,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       if (beforeOnMiss) {
         return CellScannerPosition.BEFORE;
       }
-      if (next()) {
+      if (advance()) {
         return CellScannerPosition.AFTER;
       }
       return CellScannerPosition.AFTER_LAST;
@@ -279,7 +282,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       if (i >= key.getRowLength()) {// key was shorter, so it's first
         return -1;
       }
-      byte keyByte = CellTool.getRowByte(key, i);
+      byte keyByte = CellUtil.getRowByte(key, i);
       byte thisByte = rowBuffer[i];
       if (keyByte == thisByte) {
         continue;

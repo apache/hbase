@@ -97,6 +97,9 @@ public final class Compression {
    * risk breaking all existing HFiles out there.  Even the ones that are
    * not compressed! (They use the NONE algorithm)
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value="SE_TRANSIENT_FIELD_NOT_RESTORED",
+      justification="We are not serializing so doesn't apply (not sure why transient though)")
   public static enum Algorithm {
     LZO("lzo") {
       // Use base type to avoid compile-time dependencies.

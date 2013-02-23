@@ -20,9 +20,9 @@ package org.apache.hbase.codec.prefixtree.decode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTool;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellComparator;
+import org.apache.hbase.CellComparator;
 
 /**
  * As the PrefixTreeArrayScanner moves through the tree bytes, it changes the values in the fields
@@ -95,7 +95,7 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   public int hashCode(){
     //Temporary hack to maintain backwards compatibility with KeyValue.hashCode
     //I don't think this is used in any hot code paths
-    return KeyValueTool.copyToNewKeyValue(this).hashCode();
+    return KeyValueUtil.copyToNewKeyValue(this).hashCode();
 
     //TODO return CellComparator.hashCode(this);//see HBASE-6907
   }
@@ -190,7 +190,7 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
    * Need this separate method so we can call it from subclasses' toString() methods
    */
   protected String getKeyValueString(){
-    KeyValue kv = KeyValueTool.copyToNewKeyValue(this);
+    KeyValue kv = KeyValueUtil.copyToNewKeyValue(this);
     return kv.toString();
   }
 

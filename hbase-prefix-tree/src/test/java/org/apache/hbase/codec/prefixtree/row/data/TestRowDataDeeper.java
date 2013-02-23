@@ -22,9 +22,9 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.cell.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hbase.codec.prefixtree.row.BaseTestRowData;
+import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.junit.Assert;
 
@@ -75,9 +75,9 @@ public class TestRowDataDeeper extends BaseTestRowData{
     KeyValue cfcRow = KeyValue.createFirstOnRow(Bytes.toBytes("cfc"));
     CellScannerPosition position = searcher.positionAtOrAfter(cfcRow);
     Assert.assertEquals(CellScannerPosition.AFTER, position);
-    Assert.assertEquals(d.get(2), searcher.getCurrent());
+    Assert.assertEquals(d.get(2), searcher.current());
     searcher.previous();
-    Assert.assertEquals(d.get(1), searcher.getCurrent());
+    Assert.assertEquals(d.get(1), searcher.current());
   }
 }
 

@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.cell.CellComparator;
+import org.apache.hbase.CellComparator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

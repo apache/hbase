@@ -16,18 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hbase.cell;
+package org.apache.hbase.codec.prefixtree.scanner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * An indicator of the state of the scanner after an operation such as nextCell() or positionAt(..).
- * For example:
+ * An indicator of the state of the scanner after an operation such as nextCell() or
+ * positionAt(..). For example:
  * <ul>
  * <li>In a DataBlockScanner, the AFTER_LAST position indicates to the parent StoreFileScanner that
  * it should load the next block.</li>
- * <li>In a StoreFileScanner, the AFTER_LAST position indicates that the file has been exhausted.</li>
+ * <li>In a StoreFileScanner, the AFTER_LAST position indicates that the file has been exhausted.
+ * </li>
  * <li>In a RegionScanner, the AFTER_LAST position indicates that the scanner should move to the
  * next region.</li>
  * </ul>

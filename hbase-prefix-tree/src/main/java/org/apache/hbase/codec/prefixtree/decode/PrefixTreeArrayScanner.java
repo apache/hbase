@@ -20,13 +20,13 @@ package org.apache.hbase.codec.prefixtree.decode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellComparator;
+import org.apache.hbase.CellComparator;
+import org.apache.hbase.CellScanner;
 import org.apache.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hbase.codec.prefixtree.decode.column.ColumnReader;
 import org.apache.hbase.codec.prefixtree.decode.row.RowNodeReader;
 import org.apache.hbase.codec.prefixtree.decode.timestamp.MvccVersionDecoder;
 import org.apache.hbase.codec.prefixtree.decode.timestamp.TimestampDecoder;
-import org.apache.hbase.codec.prefixtree.scanner.CellScanner;
 
 /**
  * Extends PtCell and manipulates its protected fields.  Could alternatively contain a PtCell and
@@ -98,7 +98,8 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     return true;
   }
 
-  public void initOnBlock(PrefixTreeBlockMeta blockMeta, byte[] block, boolean includeMvccVersion) {
+  public void initOnBlock(PrefixTreeBlockMeta blockMeta, byte[] block,
+      boolean includeMvccVersion) {
     this.block = block;
     this.blockMeta = blockMeta;
     this.familyOffset = familyBuffer.length;
@@ -111,7 +112,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     resetToBeforeFirstEntry();
   }
 
-  @Override
+  // Does this have to be in the CellScanner Interface?  TODO
   public void resetToBeforeFirstEntry() {
     beforeFirst = true;
     afterLast = false;
@@ -142,13 +143,12 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   /********************** CellScanner **********************/
 
   @Override
-  public PrefixTreeCell getCurrent() {
+  public Cell current() {
     if(isOutOfBounds()){
       return null;
     }
-    return this;
+    return (Cell)this;
   }
-
 
   /******************* Object methods ************************/
 
@@ -168,11 +168,11 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
    */
   @Override
   public String toString() {
-    PrefixTreeCell currentCell = getCurrent();
+    Cell currentCell = current();
     if(currentCell==null){
       return "null";
     }
-    return currentCell.getKeyValueString();
+    return ((PrefixTreeCell)currentCell).getKeyValueString();
   }
 
 
@@ -180,11 +180,11 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   public boolean positionAtFirstCell() {
     reInitFirstNode();
-    return next();
+    return advance();
   }
 
   @Override
-  public boolean next() {
+  public boolean advance() {
     if (afterLast) {
       return false;
     }

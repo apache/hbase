@@ -22,13 +22,13 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTool;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellScannerPosition;
-import org.apache.hbase.cell.CellTool;
+import org.apache.hbase.CellUtil;
 import org.apache.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
+import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;
 
 /**
  * These methods have the same definition as any implementation of the EncodedSeeker.
@@ -69,13 +69,13 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
   @Override
   public ByteBuffer getKeyDeepCopy() {
-    return KeyValueTool.copyKeyToNewByteBuffer(ptSearcher.getCurrent());
+    return KeyValueUtil.copyKeyToNewByteBuffer(ptSearcher.current());
   }
 
 
   @Override
   public ByteBuffer getValueShallowCopy() {
-    return CellTool.getValueBufferShallowCopy(ptSearcher.getCurrent());
+    return CellUtil.getValueBufferShallowCopy(ptSearcher.current());
   }
 
   /**
@@ -83,7 +83,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    */
   @Override
   public ByteBuffer getKeyValueBuffer() {
-    return KeyValueTool.copyToNewByteBuffer(ptSearcher.getCurrent());
+    return KeyValueUtil.copyToNewByteBuffer(ptSearcher.current());
   }
 
   /**
@@ -91,22 +91,21 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    */
   @Override
   public KeyValue getKeyValue() {
-    return KeyValueTool.copyToNewKeyValue(ptSearcher.getCurrent());
+    return KeyValueUtil.copyToNewKeyValue(ptSearcher.current());
   }
 
   /**
    * Currently unused.
    * <p/>
-   * A nice, lightweight reference, though the underlying cell is transient.  This method may return
+   * A nice, lightweight reference, though the underlying cell is transient. This method may return
    * the same reference to the backing PrefixTreeCell repeatedly, while other implementations may
    * return a different reference for each Cell.
    * <p/>
-   * The goal will be to transition the upper layers of HBase, like Filters and KeyValueHeap, to use
-   * this method instead of the getKeyValue() methods above.
+   * The goal will be to transition the upper layers of HBase, like Filters and KeyValueHeap, to
+   * use this method instead of the getKeyValue() methods above.
    */
-//  @Override
-  public Cell getCurrent() {
-    return ptSearcher.getCurrent();
+  public Cell get() {
+    return ptSearcher.current();
   }
 
   @Override
@@ -116,12 +115,12 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
   @Override
   public boolean next() {
-    return ptSearcher.next();
+    return ptSearcher.advance();
   }
 
 //  @Override
   public boolean advance() {
-    return ptSearcher.next();
+    return ptSearcher.advance();
   }
 
 
@@ -134,13 +133,13 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    * - if true: go to the previous key if it's true<br/>
    * - if false: stay on the exact key
    * <p/>
-   * If the exact key is not found, then go to the previous key *if possible*, but remember to leave
-   * the scanner in a valid state if possible.
+   * If the exact key is not found, then go to the previous key *if possible*, but remember to
+   * leave the scanner in a valid state if possible.
    * <p/>
    * @param keyOnlyBytes KeyValue format of a Cell's key at which to position the seeker
    * @param offset offset into the keyOnlyBytes array
    * @param length number of bytes of the keyOnlyBytes array to use
-   * @param forceBeforeOnExactMatch if an exact match is found and seekBefore=true, back up one Cell
+   * @param forceBeforeOnExactMatch if an exact match is found and seekBefore=true, back up 1 Cell
    * @return 0 if the seeker is on the exact key<br/>
    *         1 if the seeker is not on the key for any reason, including seekBefore being true
    */

@@ -20,7 +20,6 @@ package org.apache.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hbase.cell.CellTool;
 
 
 /**
@@ -43,7 +42,7 @@ import org.apache.hbase.cell.CellTool;
  * the goal of sorting newer cells first.
  * <p/>
  * This interface does not include methods that allocate new byte[]'s such as those used in client
- * or debugging code. These should be placed in a sub-interface or the {@link CellTool} class.
+ * or debugging code. These should be placed in a sub-interface or the {@link CellUtil} class.
  * <p/>
  * Cell implements Comparable<Cell> which is only meaningful when comparing to other keys in the
  * same table. It uses CellComparator which does not work on the -ROOT- and .META. tables.

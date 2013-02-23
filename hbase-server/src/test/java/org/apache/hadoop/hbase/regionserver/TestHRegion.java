@@ -91,7 +91,7 @@ import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.cell.CellComparator;
+import org.apache.hbase.CellComparator;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -225,7 +225,7 @@ public class TestHRegion extends HBaseTestCase {
     RegionScanner scanner1 = region.getScanner(scan);
 
     System.out.println("Smallest read point:" + region.getSmallestReadPoint());
-    
+
     region.compactStores(true);
 
     scanner1.reseek(Bytes.toBytes("r2"));
@@ -254,7 +254,7 @@ public class TestHRegion extends HBaseTestCase {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        HLog.Writer writer = HLogFactory.createWriter(fs, 
+        HLog.Writer writer = HLogFactory.createWriter(fs,
             recoveredEdits, conf);
 
         long time = System.nanoTime();
@@ -306,7 +306,7 @@ public class TestHRegion extends HBaseTestCase {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        HLog.Writer writer = HLogFactory.createWriter(fs, 
+        HLog.Writer writer = HLogFactory.createWriter(fs,
             recoveredEdits, conf);
 
         long time = System.nanoTime();
@@ -367,7 +367,7 @@ public class TestHRegion extends HBaseTestCase {
           recoveredEditsDir, String.format("%019d", minSeqId-1));
       FSDataOutputStream dos=  fs.create(recoveredEdits);
       dos.close();
-      
+
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
         Bytes.BYTES_COMPARATOR);
       for (Store store : region.getStores().values()) {
@@ -525,7 +525,7 @@ public class TestHRegion extends HBaseTestCase {
     this.region = initHRegion(TABLE, getName(), conf, true, Bytes.toBytes("somefamily"));
     boolean exceptionCaught = false;
     Append append = new Append(Bytes.toBytes("somerow"));
-    append.add(Bytes.toBytes("somefamily"), Bytes.toBytes("somequalifier"), 
+    append.add(Bytes.toBytes("somefamily"), Bytes.toBytes("somequalifier"),
         Bytes.toBytes("somevalue"));
     try {
       region.append(append, false);
@@ -541,7 +541,7 @@ public class TestHRegion extends HBaseTestCase {
   public void testIncrWithReadOnlyTable() throws Exception {
     byte[] TABLE = Bytes.toBytes("readOnlyTable");
     this.region = initHRegion(TABLE, getName(), conf, true, Bytes.toBytes("somefamily"));
-    boolean exceptionCaught = false;    
+    boolean exceptionCaught = false;
     Increment inc = new Increment(Bytes.toBytes("somerow"));
     inc.addColumn(Bytes.toBytes("somefamily"), Bytes.toBytes("somequalifier"), 1L);
     try {
@@ -710,7 +710,7 @@ public class TestHRegion extends HBaseTestCase {
       LOG.info("...starting put thread while holding lock");
       ctx.addThread(putter);
       ctx.startThreads();
-  
+
       LOG.info("...waiting for put thread to sync first time");
       long startWait = System.currentTimeMillis();
       while (metricsAssertHelper.getCounter("syncTimeNumOps", source) == syncs +2 ) {
@@ -730,7 +730,7 @@ public class TestHRegion extends HBaseTestCase {
         assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
           OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
       }
-  
+
       LOG.info("Nexta, a batch put which uses an already-held lock");
       lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
       LOG.info("...obtained row lock");
@@ -740,7 +740,7 @@ public class TestHRegion extends HBaseTestCase {
         if (i == 2) pair.setSecond(lockedRow);
         putsAndLocks.add(pair);
       }
-  
+
       codes = region.batchMutate(putsAndLocks.toArray(new Pair[0]));
       LOG.info("...performed put");
       for (int i = 0; i < 10; i++) {
@@ -749,7 +749,7 @@ public class TestHRegion extends HBaseTestCase {
       }
       // Make sure we didn't do an extra batch
       metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 5, source);
-  
+
       // Make sure we still hold lock
       assertTrue(region.isRowLocked(lockedRow));
       LOG.info("...releasing lock");
@@ -1867,7 +1867,7 @@ public class TestHRegion extends HBaseTestCase {
 
   /**
    * This method tests https://issues.apache.org/jira/browse/HBASE-2516.
-   * @throws IOException 
+   * @throws IOException
    */
   public void testGetScanner_WithRegionClosed() throws IOException {
     byte[] tableName = Bytes.toBytes("testtable");
@@ -3434,11 +3434,11 @@ public class TestHRegion extends HBaseTestCase {
         }
       }
   }
-  
+
   /**
    * Testcase to check state of region initialization task set to ABORTED or not if any exceptions
    * during initialization
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -3602,7 +3602,7 @@ public class TestHRegion extends HBaseTestCase {
     Result res = this.region.get(get);
     List<KeyValue> kvs = res.getColumn(Incrementer.family,
         Incrementer.qualifier);
-    
+
     //we just got the latest version
     assertEquals(kvs.size(), 1);
     KeyValue kv = kvs.get(0);
@@ -3696,7 +3696,7 @@ public class TestHRegion extends HBaseTestCase {
     Result res = this.region.get(get);
     List<KeyValue> kvs = res.getColumn(Appender.family,
         Appender.qualifier);
-    
+
     //we just got the latest version
     assertEquals(kvs.size(), 1);
     KeyValue kv = kvs.get(0);
@@ -3765,7 +3765,7 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(1, kvs.size());
     assertEquals(Bytes.toBytes("value1"), kvs.get(0).getValue());
   }
-  
+
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {

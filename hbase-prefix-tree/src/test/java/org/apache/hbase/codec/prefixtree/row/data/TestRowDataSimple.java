@@ -24,9 +24,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellComparator;
-import org.apache.hbase.cell.CellScannerPosition;
+import org.apache.hbase.CellComparator;
 import org.apache.hbase.codec.prefixtree.row.BaseTestRowData;
+import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.junit.Assert;
 
@@ -66,13 +66,13 @@ public class TestRowDataSimple extends BaseTestRowData {
     searcher.resetToBeforeFirstEntry();
 
     // test first cell
-    searcher.next();
-    Cell first = searcher.getCurrent();
+    searcher.advance();
+    Cell first = searcher.current();
     Assert.assertTrue(CellComparator.equals(d.get(0), first));
 
     // test first cell in second row
     Assert.assertTrue(searcher.positionAt(d.get(3)));
-    Assert.assertTrue(CellComparator.equals(d.get(3), searcher.getCurrent()));
+    Assert.assertTrue(CellComparator.equals(d.get(3), searcher.current()));
 
     Cell between4And5 = new KeyValue(rowB, cf, cq1, ts - 2, v0);
 
@@ -82,12 +82,12 @@ public class TestRowDataSimple extends BaseTestRowData {
     // test atOrBefore
     p = searcher.positionAtOrBefore(between4And5);
     Assert.assertEquals(CellScannerPosition.BEFORE, p);
-    Assert.assertTrue(CellComparator.equals(searcher.getCurrent(), d.get(4)));
+    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(4)));
 
     // test atOrAfter
     p = searcher.positionAtOrAfter(between4And5);
     Assert.assertEquals(CellScannerPosition.AFTER, p);
-    Assert.assertTrue(CellComparator.equals(searcher.getCurrent(), d.get(5)));
+    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(5)));
 
     // test when key falls before first key in block
     Cell beforeFirst = new KeyValue(Bytes.toBytes("A"), cf, cq0, ts, v0);
@@ -96,8 +96,8 @@ public class TestRowDataSimple extends BaseTestRowData {
     Assert.assertEquals(CellScannerPosition.BEFORE_FIRST, p);
     p = searcher.positionAtOrAfter(beforeFirst);
     Assert.assertEquals(CellScannerPosition.AFTER, p);
-    Assert.assertTrue(CellComparator.equals(searcher.getCurrent(), d.get(0)));
-    Assert.assertEquals(d.get(0), searcher.getCurrent());
+    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(0)));
+    Assert.assertEquals(d.get(0), searcher.current());
 
     // test when key falls after last key in block
     Cell afterLast = new KeyValue(Bytes.toBytes("z"), cf, cq0, ts, v0);// must be lower case z
@@ -106,7 +106,7 @@ public class TestRowDataSimple extends BaseTestRowData {
     Assert.assertEquals(CellScannerPosition.AFTER_LAST, p);
     p = searcher.positionAtOrBefore(afterLast);
     Assert.assertEquals(CellScannerPosition.BEFORE, p);
-    Assert.assertTrue(CellComparator.equals(searcher.getCurrent(), CollectionUtils.getLast(d)));
+    Assert.assertTrue(CellComparator.equals(searcher.current(), CollectionUtils.getLast(d)));
   }
 
 }

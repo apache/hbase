@@ -21,20 +21,19 @@ package org.apache.hadoop.hbase;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellTool;
+import org.apache.hbase.CellUtil;
 
 /**
  * static convenience methods for dealing with KeyValues and collections of KeyValues
  */
 @InterfaceAudience.Private
-public class KeyValueTool {
+public class KeyValueUtil {
 
   /**************** length *********************/
 
@@ -93,10 +92,10 @@ public class KeyValueTool {
       final int offset) {
     int nextOffset = offset;
     nextOffset = Bytes.putShort(output, nextOffset, cell.getRowLength());
-    nextOffset = CellTool.copyRowTo(cell, output, nextOffset);
+    nextOffset = CellUtil.copyRowTo(cell, output, nextOffset);
     nextOffset = Bytes.putByte(output, nextOffset, cell.getFamilyLength());
-    nextOffset = CellTool.copyFamilyTo(cell, output, nextOffset);
-    nextOffset = CellTool.copyQualifierTo(cell, output, nextOffset);
+    nextOffset = CellUtil.copyFamilyTo(cell, output, nextOffset);
+    nextOffset = CellUtil.copyQualifierTo(cell, output, nextOffset);
     nextOffset = Bytes.putLong(output, nextOffset, cell.getTimestamp());
     nextOffset = Bytes.putByte(output, nextOffset, cell.getTypeByte());
     return nextOffset;
@@ -110,7 +109,7 @@ public class KeyValueTool {
     pos = Bytes.putInt(output, pos, keyLength(cell));
     pos = Bytes.putInt(output, pos, cell.getValueLength());
     pos = appendKeyToByteArrayWithoutValue(cell, output, pos);
-    CellTool.copyValueTo(cell, output, pos);
+    CellUtil.copyValueTo(cell, output, pos);
     return pos + cell.getValueLength();
   }
 
@@ -192,7 +191,17 @@ public class KeyValueTool {
    * @return previous key
    */
   public static KeyValue previousKey(final KeyValue in) {
-    return KeyValue.createFirstOnRow(CellTool.getRowArray(in), CellTool.getFamilyArray(in),
-      CellTool.getQualifierArray(in), in.getTimestamp() - 1);
+    return KeyValue.createFirstOnRow(CellUtil.getRowArray(in), CellUtil.getFamilyArray(in),
+      CellUtil.getQualifierArray(in), in.getTimestamp() - 1);
+  }
+
+  /*************** misc **********************************/
+  /**
+   * @param cell
+   * @return <code>cell<code> if it is an instance of {@link KeyValue} else we will return a
+   * new {@link KeyValue} instance made from <code>cell</code>
+   */
+  public static Cell ensureKeyValue(final Cell cell) {
+    return cell instanceof KeyValue? cell: copyToNewKeyValue(cell);
   }
 }

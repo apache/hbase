@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -35,9 +37,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hbase.Cell;
-import org.apache.hbase.cell.CellComparator;
+import org.apache.hbase.CellComparator;
 
 import com.google.common.primitives.Longs;
 
@@ -64,7 +67,7 @@ import com.google.common.primitives.Longs;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class KeyValue implements Cell, HeapSize {
+public class KeyValue implements Cell, HeapSize, Cloneable {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
   // TODO: Group Key-only comparators and operations into a Key class, just
   // for neatness sake, if can figure what to call it.
@@ -915,7 +918,7 @@ public class KeyValue implements Cell, HeapSize {
       return "empty";
     }
     return keyToString(this.bytes, this.offset + ROW_OFFSET, getKeyLength()) +
-      "/vlen=" + getValueLength() + "/ts=" + memstoreTS;
+      "/vlen=" + getValueLength() + "/mvcc=" + memstoreTS;
   }
 
   /**
@@ -2299,8 +2302,10 @@ public class KeyValue implements Cell, HeapSize {
   }
 
   /**
-   * @param in Where to read bytes from
-   * @return KeyValue created by deserializing from <code>in</code>
+   * @param in Where to read bytes from.  Creates a byte array to hold the KeyValue
+   * backing bytes copied from the steam.
+   * @return KeyValue created by deserializing from <code>in</code> OR if we find a length
+   * of zero, we will return null which can be useful marking a stream as done.
    * @throws IOException
    */
   public static KeyValue create(final DataInput in) throws IOException {
@@ -2311,14 +2316,34 @@ public class KeyValue implements Cell, HeapSize {
    * Create a KeyValue reading <code>length</code> from <code>in</code>
    * @param length
    * @param in
-   * @return Created KeyValue
+   * @return Created KeyValue OR if we find a length of zero, we will return null which
+   * can be useful marking a stream as done.
    * @throws IOException
    */
   public static KeyValue create(int length, final DataInput in) throws IOException {
+    if (length == 0) return null;
     // This is how the old Writables.readFrom used to deserialize.  Didn't even vint.
     byte [] bytes = new byte[length];
     in.readFully(bytes);
     return new KeyValue(bytes, 0, length);
+  }
+
+  /**
+   * Create a KeyValue reading from the raw InputStream.
+   * Named <code>iscreate</code> so doesn't clash with {@link #create(DataInput)}
+   * @param in
+   * @return Created KeyValue OR if we find a length of zero, we will return null which
+   * can be useful marking a stream as done.
+   * @throws IOException
+   */
+  public static KeyValue iscreate(final InputStream in) throws IOException {
+    byte [] intBytes = new byte[Bytes.SIZEOF_INT];
+    int length = in.read(intBytes);
+    if (length == 0) return null;
+    if (length != intBytes.length) throw new IOException("Failed read of int length " + length);
+    byte [] bytes = new byte[Bytes.toInt(intBytes)];
+    IOUtils.readFully(in, bytes, 0, bytes.length);
+    return new KeyValue(bytes, 0, bytes.length);
   }
 
   /**
@@ -2330,10 +2355,29 @@ public class KeyValue implements Cell, HeapSize {
    * @see #create(DataInput) for the inverse function
    */
   public static long write(final KeyValue kv, final DataOutput out) throws IOException {
-    // This is how the old Writables write used to serialize KVs.  Need to figure way to make it work for all
-    // implementations.
+    // This is how the old Writables write used to serialize KVs.  Need to figure way to make it
+    // work for all implementations.
     int length = kv.getLength();
     out.writeInt(length);
+    out.write(kv.getBuffer(), kv.getOffset(), length);
+    return length + Bytes.SIZEOF_INT;
+  }
+
+  /**
+   * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable but do
+   * not require a {@link DataOutput}, just take plain {@link OutputStream}
+   * Named <code>oswrite</code> so does not clash with {@link #write(KeyValue, DataOutput)}
+   * @param kv
+   * @param out
+   * @return Length written on stream
+   * @throws IOException
+   * @see #create(DataInput) for the inverse function
+   * @see #write(KeyValue, DataOutput)
+   */
+  public static long oswrite(final KeyValue kv, final OutputStream out) throws IOException {
+    int length = kv.getLength();
+    // This does same as DataOuput#writeInt (big-endian, etc.)
+    out.write(Bytes.toBytes(length));
     out.write(kv.getBuffer(), kv.getOffset(), length);
     return length + Bytes.SIZEOF_INT;
   }

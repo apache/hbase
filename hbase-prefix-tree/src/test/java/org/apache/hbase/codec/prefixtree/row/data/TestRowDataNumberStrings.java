@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.cell.CellComparator;
+import org.apache.hbase.CellComparator;
 import org.apache.hbase.codec.prefixtree.row.BaseTestRowData;
 
 import com.google.common.collect.Lists;

@@ -4905,20 +4905,20 @@ public final class ZooKeeperProtos {
   public interface TableLockOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // optional bytes tableName = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
     
-    // required .ServerName lockOwner = 2;
+    // optional .ServerName lockOwner = 2;
     boolean hasLockOwner();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getLockOwner();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getLockOwnerOrBuilder();
     
-    // required int64 threadId = 3;
+    // optional int64 threadId = 3;
     boolean hasThreadId();
     long getThreadId();
     
-    // required bool isShared = 4;
+    // optional bool isShared = 4;
     boolean hasIsShared();
     boolean getIsShared();
     
@@ -4955,7 +4955,7 @@ public final class ZooKeeperProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
+    // optional bytes tableName = 1;
     public static final int TABLENAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
@@ -4965,7 +4965,7 @@ public final class ZooKeeperProtos {
       return tableName_;
     }
     
-    // required .ServerName lockOwner = 2;
+    // optional .ServerName lockOwner = 2;
     public static final int LOCKOWNER_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName lockOwner_;
     public boolean hasLockOwner() {
@@ -4978,7 +4978,7 @@ public final class ZooKeeperProtos {
       return lockOwner_;
     }
     
-    // required int64 threadId = 3;
+    // optional int64 threadId = 3;
     public static final int THREADID_FIELD_NUMBER = 3;
     private long threadId_;
     public boolean hasThreadId() {
@@ -4988,7 +4988,7 @@ public final class ZooKeeperProtos {
       return threadId_;
     }
     
-    // required bool isShared = 4;
+    // optional bool isShared = 4;
     public static final int ISSHARED_FIELD_NUMBER = 4;
     private boolean isShared_;
     public boolean hasIsShared() {
@@ -5042,25 +5042,11 @@ public final class ZooKeeperProtos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (!hasTableName()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasLockOwner()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasThreadId()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasIsShared()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!getLockOwner().isInitialized()) {
-        memoizedIsInitialized = 0;
-        return false;
+      if (hasLockOwner()) {
+        if (!getLockOwner().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -5419,25 +5405,11 @@ public final class ZooKeeperProtos {
       }
       
       public final boolean isInitialized() {
-        if (!hasTableName()) {
-          
-          return false;
-        }
-        if (!hasLockOwner()) {
-          
-          return false;
-        }
-        if (!hasThreadId()) {
-          
-          return false;
-        }
-        if (!hasIsShared()) {
-          
-          return false;
-        }
-        if (!getLockOwner().isInitialized()) {
-          
-          return false;
+        if (hasLockOwner()) {
+          if (!getLockOwner().isInitialized()) {
+            
+            return false;
+          }
         }
         return true;
       }
@@ -5500,7 +5472,7 @@ public final class ZooKeeperProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // optional bytes tableName = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -5524,7 +5496,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // required .ServerName lockOwner = 2;
+      // optional .ServerName lockOwner = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName lockOwner_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> lockOwnerBuilder_;
@@ -5614,7 +5586,7 @@ public final class ZooKeeperProtos {
         return lockOwnerBuilder_;
       }
       
-      // required int64 threadId = 3;
+      // optional int64 threadId = 3;
       private long threadId_ ;
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -5635,7 +5607,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // required bool isShared = 4;
+      // optional bool isShared = 4;
       private boolean isShared_ ;
       public boolean hasIsShared() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -5786,9 +5758,9 @@ public final class ZooKeeperProtos {
       "tate.State\"\"\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISA" +
       "BLED\020\001\"+\n\027ReplicationHLogPosition\022\020\n\010pos" +
       "ition\030\001 \002(\003\"$\n\017ReplicationLock\022\021\n\tlockOw" +
-      "ner\030\001 \002(\t\"s\n\tTableLock\022\021\n\ttableName\030\001 \002(",
-      "\014\022\036\n\tlockOwner\030\002 \002(\0132\013.ServerName\022\020\n\010thr" +
-      "eadId\030\003 \002(\003\022\020\n\010isShared\030\004 \002(\010\022\017\n\007purpose" +
+      "ner\030\001 \002(\t\"s\n\tTableLock\022\021\n\ttableName\030\001 \001(",
+      "\014\022\036\n\tlockOwner\030\002 \001(\0132\013.ServerName\022\020\n\010thr" +
+      "eadId\030\003 \001(\003\022\020\n\010isShared\030\004 \001(\010\022\017\n\007purpose" +
       "\030\005 \001(\tBE\n*org.apache.hadoop.hbase.protob" +
       "uf.generatedB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
     };
