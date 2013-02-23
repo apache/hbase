@@ -106,8 +106,6 @@ public abstract class ModifyRegionUtils {
           HRegion region = HRegion.createHRegion(newRegion,
               rootDir, conf, hTableDescriptor, null,
               false, true);
-          HRegion.writeRegioninfoOnFilesystem(region.getRegionInfo(), region.getRegionDir(),
-            region.getFilesystem(), conf);
           try {
             // 2. Custom user code to interact with the created region
             if (task != null) {
@@ -174,28 +172,6 @@ public abstract class ModifyRegionUtils {
     } catch (InterruptedException e) {
       LOG.error("Caught " + e + " during round-robin assignment");
       throw new InterruptedIOException(e.getMessage());
-    }
-  }
-
-  /**
-   * Remove specified regions by removing them from file-system and .META.
-   * (The regions must be offline).
-   *
-   * @param fs {@link FileSystem} on which to delete the region directory
-   * @param catalogTracker the catalog tracker
-   * @param regions list of {@link HRegionInfo} to delete.
-   */
-  public static void deleteRegions(final Configuration conf, final FileSystem fs,
-      final CatalogTracker catalogTracker, final List<HRegionInfo> regions) throws IOException {
-    if (regions != null && regions.size() > 0) {
-      List<Delete> deletes = new ArrayList<Delete>(regions.size());
-      for (HRegionInfo hri: regions) {
-        deletes.add(new Delete(hri.getRegionName()));
-        
-        // "Delete" region from FS
-        HFileArchiver.archiveRegion(conf, fs, hri);
-      }
-      MetaEditor.deleteFromMetaTable(catalogTracker, deletes);
     }
   }
 }

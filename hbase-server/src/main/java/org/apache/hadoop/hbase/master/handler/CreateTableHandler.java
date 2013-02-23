@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 
@@ -255,59 +256,7 @@ public class CreateTableHandler extends EventHandler {
   protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir,
     final String tableName)
       throws IOException {
-    int regionNumber = newRegions.length;
-    ThreadPoolExecutor regionOpenAndInitThreadPool = getRegionOpenAndInitThreadPool(
-        "RegionOpenAndInitThread-" + tableName, regionNumber);
-    CompletionService<HRegion> completionService = new ExecutorCompletionService<HRegion>(
-        regionOpenAndInitThreadPool);
-
-    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
-    for (final HRegionInfo newRegion : newRegions) {
-      completionService.submit(new Callable<HRegion>() {
-        public HRegion call() throws IOException {
-
-          // 1. Create HRegion
-          HRegion region = HRegion.createHRegion(newRegion,
-              tableRootDir, conf, hTableDescriptor, null,
-              false, true);
-          // 2. Close the new region to flush to disk. Close log file too.
-          region.close();
-          return region;
-        }
-      });
-    }
-    try {
-      // 3. wait for all regions to finish creation
-      for (int i = 0; i < regionNumber; i++) {
-        Future<HRegion> future = completionService.take();
-        HRegion region = future.get();
-        regionInfos.add(region.getRegionInfo());
-      }
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException(e.getMessage());
-    } catch (ExecutionException e) {
-      throw new IOException(e.getCause());
-    } finally {
-      regionOpenAndInitThreadPool.shutdownNow();
-    }
-
-    return regionInfos;
-  }
-
-  protected ThreadPoolExecutor getRegionOpenAndInitThreadPool(
-      final String threadNamePrefix, int regionNumber) {
-    int maxThreads = Math.min(regionNumber, conf.getInt(
-        "hbase.hregion.open.and.init.threads.max", 10));
-    ThreadPoolExecutor openAndInitializeThreadPool = Threads
-    .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-        new ThreadFactory() {
-          private int count = 1;
-
-          public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, threadNamePrefix + "-" + count++);
-            return t;
-          }
-        });
-    return openAndInitializeThreadPool;
+    return ModifyRegionUtils.createRegions(conf, tableRootDir,
+        hTableDescriptor, newRegions, null);
   }
 }
