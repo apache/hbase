@@ -556,7 +556,7 @@ public class ServerManager {
    */
   private HRegionInterface getServerConnection(final ServerName sn)
   throws IOException {
-    HRegionInterface hri = this.serverConnections.get(sn.toString());
+    HRegionInterface hri = this.serverConnections.get(sn);
     if (hri == null) {
       LOG.debug("New connection to " + sn.toString());
       hri = this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
