@@ -76,8 +76,17 @@ public class Main implements Constants {
   public static void main(String[] args) throws Exception {
     Log LOG = LogFactory.getLog("RESTServer");
 
-	VersionInfo.logVersion();
+    VersionInfo.logVersion();
     Configuration conf = HBaseConfiguration.create();
+    // login the server principal (if using secure Hadoop)
+    if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
+      String machineName = Strings.domainNamePointerToHostName(
+        DNS.getDefaultHost(conf.get("hbase.rest.dns.interface", "default"),
+          conf.get("hbase.rest.dns.nameserver", "default")));
+      User.login(conf, "hbase.rest.keytab.file", "hbase.rest.kerberos.principal",
+        machineName);
+    }
+
     RESTServlet servlet = RESTServlet.getInstance(conf);
 
     Options options = new Options();
@@ -169,15 +178,6 @@ public class Main implements Constants {
     Context context = new Context(server, "/", Context.SESSIONS);
     context.addServlet(sh, "/*");
     context.addFilter(GzipFilter.class, "/*", 0);
-
-    // login the server principal (if using secure Hadoop)
-    if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
-      String machineName = Strings.domainNamePointerToHostName(
-        DNS.getDefaultHost(conf.get("hbase.rest.dns.interface", "default"),
-          conf.get("hbase.rest.dns.nameserver", "default")));
-      User.login(conf, "hbase.rest.keytab.file", "hbase.rest.kerberos.principal",
-        machineName);
-    }
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
