@@ -118,7 +118,7 @@ public class IntegrationTestRebalanceAndKillServersTargeted extends IngestIntegr
   }
 
   // Disabled until we fix hbase-7520
-  @Ignore @Test
+  @Test
   public void testDataIngest() throws Exception {
     runIngestTest(DEFAULT_RUN_TIME, 2500, 10, 100, 20);
   }
