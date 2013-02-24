@@ -266,7 +266,7 @@ Server {
     // Creation of a HSA will force a resolve.
     InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
     if (initialIsa.getAddress() == null) {
-      throw new IllegalArgumentException("Failed resolve of " + this.isa);
+      throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
     int numHandlers = conf.getInt("hbase.master.handler.count",
       conf.getInt("hbase.regionserver.handler.count", 25));
