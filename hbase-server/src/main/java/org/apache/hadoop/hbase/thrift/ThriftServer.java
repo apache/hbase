@@ -31,9 +31,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
 import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 
 /**
@@ -88,6 +91,16 @@ public class ThriftServer {
    */
    void doMain(final String[] args) throws Exception {
      processOptions(args);
+     
+     // login the server principal (if using secure Hadoop)
+     if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
+       String machineName = Strings.domainNamePointerToHostName(
+         DNS.getDefaultHost(conf.get("hbase.thrift.dns.interface", "default"),
+           conf.get("hbase.thrift.dns.nameserver", "default")));
+       User.login(conf, "hbase.thrift.keytab.file",
+           "hbase.thrift.kerberos.principal", machineName);
+     }
+     
      serverRunner = new ThriftServerRunner(conf);
 
      // Put up info server.
