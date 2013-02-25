@@ -34,7 +34,8 @@ import org.junit.Test;
 public class TestHColumnDescriptor {
   @Test
   public void testPb() throws DeserializationException {
-    HColumnDescriptor hcd = HTableDescriptor.META_TABLEDESC.getColumnFamilies()[0];
+    HColumnDescriptor hcd = new HColumnDescriptor(
+      HTableDescriptor.META_TABLEDESC.getColumnFamilies()[0]);
     final int v = 123;
     hcd.setBlocksize(v);
     hcd.setTimeToLive(v);

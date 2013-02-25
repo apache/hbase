@@ -42,7 +42,7 @@ public class TestHTableDescriptor {
 
   @Test
   public void testPb() throws DeserializationException, IOException {
-    HTableDescriptor htd = HTableDescriptor.META_TABLEDESC;
+    HTableDescriptor htd = new HTableDescriptor(HTableDescriptor.META_TABLEDESC);
     final int v = 123;
     htd.setMaxFileSize(v);
     htd.setDeferredLogFlush(true);
