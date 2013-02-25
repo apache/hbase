@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -99,7 +100,7 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
         // znode and the deleting, so it's safe to retry.
         successful = ZKAssign.deleteNode(this.server.getZooKeeper(),
           encodedRegionName,
-          EventHandler.EventType.RS_ZK_REGION_SPLIT);
+          EventType.RS_ZK_REGION_SPLIT);
       }
     } catch (KeeperException e) {
       if (e instanceof NoNodeException) {

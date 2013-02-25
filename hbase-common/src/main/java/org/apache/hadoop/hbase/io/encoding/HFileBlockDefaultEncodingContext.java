@@ -87,7 +87,7 @@ public class HFileBlockDefaultEncodingContext implements
       }
     }
     dummyHeader = Preconditions.checkNotNull(headerBytes, 
-      "Please pass HFileBlock.DUMMY_HEADER instead of null for param headerBytes");
+      "Please pass HFileBlock.HFILEBLOCK_DUMMY_HEADER instead of null for param headerBytes");
   }
 
   /**

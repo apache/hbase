@@ -38,10 +38,12 @@ import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.exceptions.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.TableInfoCopyTask;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -145,13 +147,13 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
       completeSnapshot(this.snapshotDir, this.workingDir, this.fs);
     } catch (Exception e) {
-      String reason = "Failed taking snapshot " + SnapshotDescriptionUtils.toString(snapshot)
+      String reason = "Failed taking snapshot " + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " due to exception:" + e.getMessage();
       LOG.error(reason, e);
       ForeignException ee = new ForeignException(reason, e);
       monitor.receive(ee);
       // need to mark this completed to close off and allow cleanup to happen.
-      cancel("Failed to take snapshot '" + SnapshotDescriptionUtils.toString(snapshot)
+      cancel("Failed to take snapshot '" + ClientSnapshotDescriptionUtils.toString(snapshot)
           + "' due to exception");
     } finally {
       LOG.debug("Launching cleanup of working dir:" + workingDir);
@@ -198,7 +200,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     if (finished) return;
 
     this.finished = true;
-    LOG.info("Stop taking snapshot=" + SnapshotDescriptionUtils.toString(snapshot) + " because: "
+    LOG.info("Stop taking snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) + " because: "
         + why);
     CancellationException ce = new CancellationException(why);
     monitor.receive(new ForeignException(master.getServerName().toString(), ce));

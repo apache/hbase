@@ -59,7 +59,7 @@ public class TableInfoCopyTask extends SnapshotTask {
     LOG.debug("Running table info copy.");
     this.rethrowException();
     LOG.debug("Attempting to copy table info for snapshot:"
-        + SnapshotDescriptionUtils.toString(this.snapshot));
+        + ClientSnapshotDescriptionUtils.toString(this.snapshot));
     // get the HTable descriptor
     HTableDescriptor orig = FSTableDescriptors.getTableDescriptor(fs, rootDir,
       Bytes.toBytes(this.snapshot.getTable()));

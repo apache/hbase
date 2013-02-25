@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -215,7 +216,7 @@ public class TestHFileBlock {
       int correctLength) throws IOException {
     HFileBlock.Writer hbw = createTestV2Block(algo, includesMemstoreTS);
     byte[] testV2Block = hbw.getHeaderAndDataForTest();
-    int osOffset = HFileBlock.HEADER_SIZE + 9;
+    int osOffset = HConstants.HFILEBLOCK_HEADER_SIZE + 9;
     if (testV2Block.length == correctLength) {
       // Force-set the "OS" field of the gzip header to 3 (Unix) to avoid
       // variations across operating systems.
@@ -295,13 +296,13 @@ public class TestHFileBlock {
         if (algo == GZ) {
           is = fs.open(path);
           hbr = new HFileBlock.FSReaderV2(is, algo, totalSize);
-          b = hbr.readBlockData(0, 2173 + HFileBlock.HEADER_SIZE +
+          b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE +
                                 b.totalChecksumBytes(), -1, pread);
           assertEquals(blockStr, b.toString());
           int wrongCompressedSize = 2172;
           try {
             b = hbr.readBlockData(0, wrongCompressedSize
-                + HFileBlock.HEADER_SIZE, -1, pread);
+                + HConstants.HFILEBLOCK_HEADER_SIZE, -1, pread);
             fail("Exception expected");
           } catch (IOException ex) {
             String expectedPrefix = "On-disk size without header provided is "
@@ -341,7 +342,7 @@ public class TestHFileBlock {
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
             DataOutputStream dos = hbw.startWriting(BlockType.DATA);
             writeEncodedBlock(algo, encoding, dos, encodedSizes, encodedBlocks,
-                blockId, includesMemstoreTS, HFileBlock.DUMMY_HEADER);
+                blockId, includesMemstoreTS, HConstants.HFILEBLOCK_DUMMY_HEADER);
             hbw.writeHeaderAndData(os);
             totalSize += hbw.getOnDiskSizeWithHeader();
           }
@@ -490,7 +491,7 @@ public class TestHFileBlock {
           for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
             if (!pread) {
               assertEquals(is.getPos(), curOffset + (i == 0 ? 0 :
-                  HFileBlock.HEADER_SIZE));
+                  HConstants.HFILEBLOCK_HEADER_SIZE));
             }
 
             assertEquals(expectedOffsets.get(i).longValue(), curOffset);
@@ -749,7 +750,7 @@ public class TestHFileBlock {
     }
 
     for (int size : new int[] { 100, 256, 12345 }) {
-      byte[] byteArr = new byte[HFileBlock.HEADER_SIZE + size];
+      byte[] byteArr = new byte[HConstants.HFILEBLOCK_HEADER_SIZE + size];
       ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
           HFileBlock.FILL_HEADER, -1, includesMemstoreTS, 
@@ -757,7 +758,7 @@ public class TestHFileBlock {
           0);
       long byteBufferExpectedSize =
           ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)
-              + HFileBlock.HEADER_SIZE + size);
+              + HConstants.HFILEBLOCK_HEADER_SIZE + size);
       long hfileBlockExpectedSize =
           ClassSize.align(ClassSize.estimateBase(HFileBlock.class, true));
       long expected = hfileBlockExpectedSize + byteBufferExpectedSize;

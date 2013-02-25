@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.ClientProtocol;
@@ -149,7 +149,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   /**
    * @param sn Name of this mock regionserver
    * @throws IOException 
-   * @throws ZooKeeperConnectionException 
+   * @throws org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException
    */
   MockRegionServer(final Configuration conf, final ServerName sn)
   throws ZooKeeperConnectionException, IOException {

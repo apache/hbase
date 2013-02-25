@@ -22,17 +22,15 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.util.NavigableSet;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.exceptions.FailedLogCloseException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -53,11 +51,6 @@ public interface HLog {
   /** The META region's HLog filename extension */
   public static final String META_HLOG_FILE_EXTN = ".meta";
 
-  /*
-   * Name of directory that holds recovered edits written by the wal log
-   * splitting code, one per region
-   */
-  static final String RECOVERED_EDITS_DIR = "recovered.edits";
   static final Pattern EDITFILES_NAME_PATTERN = Pattern.compile("-?[0-9]+");
   public static final String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
 
@@ -207,7 +200,7 @@ public interface HLog {
    * @return If lots of logs, flush the returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link HRegionInfo#getEncodedName()}
-   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
+   * @throws org.apache.hadoop.hbase.exceptions.FailedLogCloseException
    * @throws IOException
    */
   public byte[][] rollWriter() throws FailedLogCloseException, IOException;
@@ -225,7 +218,7 @@ public interface HLog {
    * @return If lots of logs, flush the returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link HRegionInfo#getEncodedName()}
-   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
+   * @throws org.apache.hadoop.hbase.exceptions.FailedLogCloseException
    * @throws IOException
    */
   public byte[][] rollWriter(boolean force) throws FailedLogCloseException,

@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -112,12 +113,12 @@ public class TestHFileDataBlockEncoder {
     // usually we have just block without headers, but don't complicate that
     HFileBlock block = getSampleHFileBlock();
     HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(
-        Compression.Algorithm.NONE, blockEncoder.getEncodingOnDisk(), HFileBlock.DUMMY_HEADER);
+        Compression.Algorithm.NONE, blockEncoder.getEncodingOnDisk(), HConstants.HFILEBLOCK_DUMMY_HEADER);
     blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
             includesMemstoreTS, context, block.getBlockType());
 
     byte[] encodedBytes = context.getUncompressedBytesWithHeader();
-    int size = encodedBytes.length - HFileBlock.HEADER_SIZE;
+    int size = encodedBytes.length - HConstants.HFILEBLOCK_HEADER_SIZE;
     HFileBlock blockOnDisk =
         new HFileBlock(context.getBlockType(), size, size, -1,
             ByteBuffer.wrap(encodedBytes), HFileBlock.FILL_HEADER, 0,
@@ -148,8 +149,8 @@ public class TestHFileDataBlockEncoder {
     ByteBuffer keyValues = RedundantKVGenerator.convertKvToByteBuffer(
         generator.generateTestKeyValues(60), includesMemstoreTS);
     int size = keyValues.limit();
-    ByteBuffer buf = ByteBuffer.allocate(size + HFileBlock.HEADER_SIZE);
-    buf.position(HFileBlock.HEADER_SIZE);
+    ByteBuffer buf = ByteBuffer.allocate(size + HConstants.HFILEBLOCK_HEADER_SIZE);
+    buf.position(HConstants.HFILEBLOCK_HEADER_SIZE);
     keyValues.rewind();
     buf.put(keyValues);
     HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, buf,

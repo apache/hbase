@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -991,7 +991,7 @@ public class TestStoreFile extends HBaseTestCase {
             dataBlockEncoderAlgo);
     cacheConf = new CacheConfig(conf);
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, fs,
-        HFile.DEFAULT_BLOCKSIZE)
+        HConstants.DEFAULT_BLOCKSIZE)
             .withFilePath(path)
             .withDataBlockEncoder(dataBlockEncoder)
             .withMaxKeyCount(2000)

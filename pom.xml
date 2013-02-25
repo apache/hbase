@@ -626,6 +626,7 @@
               <exclude>**/8e8ab58dcf39412da19833fcd8f687ac</exclude>
               <exclude>**/.git/**</exclude>
               <exclude>**/.idea/**</exclude>
+              <exclude>**/*.iml</exclude>
               <exclude>**/target/**</exclude>
               <exclude>**/CHANGES.txt</exclude>
               <exclude>**/generated/**</exclude>

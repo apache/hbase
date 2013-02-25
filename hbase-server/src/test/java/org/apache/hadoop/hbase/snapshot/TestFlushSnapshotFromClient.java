@@ -37,7 +37,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.exceptions.SnapshotCreationException;
+import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -341,13 +342,14 @@ public class TestFlushSnapshotFromClient {
       public void run() {
         try {
           HBaseAdmin admin = UTIL.getHBaseAdmin();
-          LOG.info("Submitting snapshot request: " + SnapshotDescriptionUtils.toString(ss));
+          LOG.info("Submitting snapshot request: " + ClientSnapshotDescriptionUtils.toString(ss));
           admin.takeSnapshotAsync(ss);
         } catch (Exception e) {
-          LOG.info("Exception during snapshot request: " + SnapshotDescriptionUtils.toString(ss)
+          LOG.info("Exception during snapshot request: " + ClientSnapshotDescriptionUtils.toString(
+              ss)
               + ".  This is ok, we expect some", e);
         }
-        LOG.info("Submitted snapshot request: " + SnapshotDescriptionUtils.toString(ss));
+        LOG.info("Submitted snapshot request: " + ClientSnapshotDescriptionUtils.toString(ss));
         toBeSubmitted.countDown();
       }
     };

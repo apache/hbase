@@ -21,20 +21,11 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.*;
 
-import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.zip.Checksum;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,15 +34,12 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.compress.Compressor;
 
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.*;
 
@@ -208,7 +196,7 @@ public class TestChecksum {
         os.close();
 
         long expectedChunks = ChecksumUtil.numChunks(
-                               dataSize + HFileBlock.HEADER_SIZE,
+                               dataSize + HConstants.HFILEBLOCK_HEADER_SIZE,
                                bytesPerChecksum);
         LOG.info("testChecksumChunks: pread=" + pread +
                    ", bytesPerChecksum=" + bytesPerChecksum +
@@ -230,7 +218,7 @@ public class TestChecksum {
         assertEquals(dataSize, b.getUncompressedSizeWithoutHeader());
 
         // verify that we have the expected number of checksum chunks
-        assertEquals(totalSize, HFileBlock.HEADER_SIZE + dataSize + 
+        assertEquals(totalSize, HConstants.HFILEBLOCK_HEADER_SIZE + dataSize +
                      expectedChunks * HFileBlock.CHECKSUM_SIZE);
 
         // assert that we did not encounter hbase checksum verification failures

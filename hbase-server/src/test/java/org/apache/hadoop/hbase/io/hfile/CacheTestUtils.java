@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -344,7 +345,7 @@ public class CacheTestUtils {
           prevBlockOffset, cachedBuffer, HFileBlock.DONT_FILL_HEADER,
           blockSize, includesMemstoreTS, HFileBlock.MINOR_VERSION_NO_CHECKSUM,
           0, ChecksumType.NULL.getCode(),
-          onDiskSizeWithoutHeader + HFileBlock.HEADER_SIZE);
+          onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE);
 
       String strKey;
       /* No conflicting keys */

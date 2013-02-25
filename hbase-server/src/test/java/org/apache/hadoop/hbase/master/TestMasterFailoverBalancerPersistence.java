@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.master;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.Test;
@@ -103,7 +103,7 @@ public class TestMasterFailoverBalancerPersistence {
   /**
    * return the index of the active master in the cluster
    *
-   * @throws org.apache.hadoop.hbase.MasterNotRunningException
+   * @throws org.apache.hadoop.hbase.exceptions.MasterNotRunningException
    *          if no active master found
    */
   private int getActiveMasterIndex(MiniHBaseCluster cluster) throws MasterNotRunningException {

@@ -18,17 +18,10 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.security.User;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * <strong>NOTE: for internal use only by AccessController implementation</strong>
@@ -84,7 +77,7 @@ class AccessControlFilter extends FilterBase {
   /**
    * @param pbBytes A pb serialized {@link AccessControlFilter} instance
    * @return An instance of {@link AccessControlFilter} made from <code>bytes</code>
-   * @throws DeserializationException
+   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
    * @see {@link #toByteArray()}
    */
   public static AccessControlFilter parseFrom(final byte [] pbBytes)

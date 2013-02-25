@@ -46,7 +46,8 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.exceptions.RegionServerStoppedException;
+import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -780,7 +781,7 @@ public class TestMasterFailover {
         cluster.getRegionServerThreads()) {
       try {
         onlineRegions.addAll(ProtobufUtil.getOnlineRegions(rst.getRegionServer()));
-      } catch (org.apache.hadoop.hbase.regionserver.RegionServerStoppedException e) {
+      } catch (RegionServerStoppedException e) {
         LOG.info("Got RegionServerStoppedException", e);
       }
     }

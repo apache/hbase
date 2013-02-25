@@ -37,15 +37,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClockOutOfSyncException;
+import org.apache.hadoop.hbase.exceptions.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.exceptions.YouAreDeadException;
+import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -320,7 +320,7 @@ public class ServerManager {
    * from the dead list.
    * @param serverName
    * @param what START or REPORT
-   * @throws YouAreDeadException
+   * @throws org.apache.hadoop.hbase.exceptions.YouAreDeadException
    */
   private void checkIsDead(final ServerName serverName, final String what)
       throws YouAreDeadException {

@@ -38,8 +38,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.FailedSanityCheckException;
+import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -64,6 +63,9 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
+import org.apache.hadoop.hbase.exceptions.WrongRegionException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -1002,7 +1004,7 @@ public class TestHRegion extends HBaseTestCase {
         boolean res = region.checkAndMutate(row, fam1, qual1, CompareOp.EQUAL,
             new BinaryComparator(value2), put, false);
         fail();
-      } catch (DoNotRetryIOException expected) {
+      } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException expected) {
         // expected exception.
       }
     } finally {
@@ -1520,7 +1522,7 @@ public class TestHRegion extends HBaseTestCase {
       //Test
       try {
         region.get(get);
-      } catch (DoNotRetryIOException e) {
+      } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException e) {
         assertFalse(false);
         return;
       }
@@ -1889,7 +1891,7 @@ public class TestHRegion extends HBaseTestCase {
       try {
         region.getScanner(null);
         fail("Expected to get an exception during getScanner on a region that is closed");
-      } catch (org.apache.hadoop.hbase.NotServingRegionException e) {
+      } catch (NotServingRegionException e) {
         //this is the correct exception that is expected
       } catch (IOException e) {
         fail("Got wrong type of exception - should be a NotServingRegionException, but was an IOException: "

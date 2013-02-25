@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.exceptions.RegionTooBusyException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;

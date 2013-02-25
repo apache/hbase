@@ -34,12 +34,14 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.exceptions.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -100,7 +102,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       this.masterServices.getTableDescriptors().add(hTableDescriptor);
 
       // 2. Execute the on-disk Restore
-      LOG.debug("Starting restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot));
+      LOG.debug("Starting restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot));
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
           masterServices.getConfiguration(), fs,
@@ -115,10 +117,10 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       MetaEditor.mutateRegions(catalogTracker, hrisToRemove, hris);
 
       // At this point the restore is complete. Next step is enabling the table.
-      LOG.info("Restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot) + " on table=" +
+      LOG.info("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) + " on table=" +
         Bytes.toString(tableName) + " completed!");
     } catch (IOException e) {
-      String msg = "restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot)
+      String msg = "restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " failed. Try re-running the restore command.";
       LOG.error(msg, e);
       monitor.receive(new ForeignException(masterServices.getServerName().toString(), e));
@@ -142,7 +144,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   public void cancel(String why) {
     if (this.stopped) return;
     this.stopped = true;
-    String msg = "Stopping restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot)
+    String msg = "Stopping restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot)
         + " because: " + why;
     LOG.info(msg);
     CancellationException ce = new CancellationException(why);

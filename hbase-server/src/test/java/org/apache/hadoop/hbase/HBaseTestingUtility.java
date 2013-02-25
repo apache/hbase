@@ -63,6 +63,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
+import org.apache.hadoop.hbase.exceptions.TableExistsException;
+import org.apache.hadoop.hbase.exceptions.TableNotEnabledException;
+import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -2115,7 +2119,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param serverName
    * @return
    * @throws IOException
-   * @throws ZooKeeperConnectionException
+   * @throws org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException
    * @throws KeeperException
    * @throws NodeExistsException
    */

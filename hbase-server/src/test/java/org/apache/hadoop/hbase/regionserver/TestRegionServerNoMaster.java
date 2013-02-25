@@ -26,10 +26,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
@@ -297,7 +297,7 @@ public class TestRegionServerNoMaster {
     // The open handler should have updated the value in ZK.
     Assert.assertTrue(ZKAssign.deleteNode(
         getRS().getZooKeeperWatcher(), hri.getEncodedName(),
-        EventHandler.EventType.RS_ZK_REGION_FAILED_OPEN, 1)
+        EventType.RS_ZK_REGION_FAILED_OPEN, 1)
     );
 
     reopenRegion();
@@ -330,7 +330,7 @@ public class TestRegionServerNoMaster {
     // The close should have left the ZK state as it is: it's the job the AM to delete it
     Assert.assertTrue(ZKAssign.deleteNode(
         getRS().getZooKeeperWatcher(), hri.getEncodedName(),
-        EventHandler.EventType.M_ZK_REGION_CLOSING, 0)
+        EventType.M_ZK_REGION_CLOSING, 0)
     );
 
     // The state in RIT should have changed to close

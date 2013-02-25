@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.hbase.exceptions.OrphanHLogAfterSplitException;
 import org.apache.log4j.Level;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -357,7 +358,7 @@ public class TestHLogSplit {
             HConstants.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
       new WALEdit());
     Path parent = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
-    assertEquals(parent.getName(), HLog.RECOVERED_EDITS_DIR);
+    assertEquals(parent.getName(), HConstants.RECOVERED_EDITS_DIR);
     fs.createNewFile(parent); // create a recovered.edits file
 
     Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, HBASEDIR, true);
@@ -1076,7 +1077,7 @@ public class TestHLogSplit {
       }
       Path tableDir = new Path(HBASEDIR, new String(TABLE_NAME));
       Path regionDir = new Path(tableDir, REGIONS.get(0));
-      Path recoveredEdits = new Path(regionDir, HLog.RECOVERED_EDITS_DIR);
+      Path recoveredEdits = new Path(regionDir, HConstants.RECOVERED_EDITS_DIR);
       String region = "juliet";
       Path julietLog = new Path(HLOGDIR, HLOG_FILE_PREFIX + ".juliet");
       try {

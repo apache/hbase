@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RequestContext;
@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBu
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Methods;
@@ -100,7 +101,6 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
 
   private final static FsPermission PERM_ALL_ACCESS = FsPermission.valueOf("-rwxrwxrwx");
   private final static FsPermission PERM_HIDDEN = FsPermission.valueOf("-rwx--x--x");
-  private final static String BULKLOAD_STAGING_DIR = "hbase.bulkload.staging.dir";
 
   private SecureRandom random;
   private FileSystem fs;
@@ -118,7 +118,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     this.env = (RegionCoprocessorEnvironment)env;
     random = new SecureRandom();
     conf = env.getConfiguration();
-    baseStagingDir = getBaseStagingDir(conf);
+    baseStagingDir = SecureBulkLoadUtil.getBaseStagingDir(conf);
 
     try {
       fs = FileSystem.get(conf);
@@ -288,19 +288,6 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     }
 
     return user;
-  }
-
-  /**
-   * This returns the staging path for a given column family.
-   * This is needed for clean recovery and called reflectively in LoadIncrementalHFiles
-   */
-  public static Path getStagingPath(Configuration conf, String bulkToken, byte[] family) {
-    Path stageP = new Path(getBaseStagingDir(conf), bulkToken);
-    return new Path(stageP, Bytes.toString(family));
-  }
-
-  private static Path getBaseStagingDir(Configuration conf) {
-    return new Path(conf.get(BULKLOAD_STAGING_DIR, "/tmp/hbase-staging"));
   }
 
   @Override

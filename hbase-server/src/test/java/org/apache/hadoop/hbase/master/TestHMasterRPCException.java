@@ -66,7 +66,7 @@ public class TestHMasterRPCException {
           IOException ie = ProtobufUtil.getRemoteException(ex);
           if (!(ie instanceof SocketTimeoutException)) {
             if(ie.getMessage().startsWith(
-                "org.apache.hadoop.hbase.ipc.ServerNotRunningYetException: Server is not running yet")) {
+                "org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException: Server is not running yet")) {
               return;
             }
           } else {

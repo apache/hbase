@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -276,7 +275,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     try {
       InternalScanner scan = region.getScanner(s);
       fail("raw scanner with columns should have failed");
-    } catch (DoNotRetryIOException dnre) {
+    } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException dnre) {
       // ok!
     }
 

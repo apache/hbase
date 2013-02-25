@@ -48,12 +48,13 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.exceptions.FileSystemVersionException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
@@ -289,7 +290,7 @@ public abstract class FSUtils {
    * @param rootdir root hbase directory
    * @return null if no version file exists, version string otherwise.
    * @throws IOException e
-   * @throws DeserializationException 
+   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
    */
   public static String getVersion(FileSystem fs, Path rootdir)
   throws IOException, DeserializationException {

@@ -31,32 +31,82 @@
   <description>Common functionality for HBase</description>
 
   <build>
+    <resources>
+      <resource>
+          <directory>src/main/resources/</directory>
+          <includes>
+              <include>hbase-default.xml</include>
+          </includes>
+          <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>org.apache.hadoop.hbase.ResourceCheckerJUnitListener</value>
-            </property>
-          </properties>
-        </configuration>
-        <!-- Always skip the second part executions, since we only run
-        simple unit tests in this module -->
-        <executions>
-          <execution>
-            <id>secondPartTestsExecution</id>
-            <phase>test</phase>
-            <goals>
-              <goal>test</goal>
-            </goals>
+        <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+                <!-- Generate web app sources -->
+                <execution>
+                    <id>generate</id>
+                    <phase>generate-sources</phase>
+                    <configuration>
+                        <target>
+                            <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
+
+                            <exec executable="sh">
+                                <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java"/>
+                            </exec>
+                        </target>
+                    </configuration>
+                    <goals>
+                        <goal>run</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+                <!-- Add the generated sources -->
+                <execution>
+                    <id>versionInfo-source</id>
+                    <phase>generate-sources</phase>
+                    <goals>
+                        <goal>add-source</goal>
+                    </goals>
+                    <configuration>
+                        <sources>
+                            <source>${project.build.directory}/generated-sources/java</source>
+                        </sources>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <skip>true</skip>
+              <properties>
+                <property>
+                  <name>listener</name>
+                  <value>org.apache.hadoop.hbase.ResourceCheckerJUnitListener</value>
+                </property>
+              </properties>
             </configuration>
-          </execution>
-        </executions>
-      </plugin>
+            <!-- Always skip the second part executions, since we only run
+            simple unit tests in this module -->
+            <executions>
+              <execution>
+                <id>secondPartTestsExecution</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
     </plugins>
   </build>
 

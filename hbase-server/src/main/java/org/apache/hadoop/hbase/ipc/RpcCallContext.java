@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.exceptions.CallerDisconnectedException;
+
 public interface RpcCallContext extends Delayable {
 
   /**

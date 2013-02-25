@@ -40,13 +40,6 @@
           <include>hbase-webapps/**</include>
         </includes>
       </resource>
-      <resource>
-        <directory>src/main/resources/</directory>
-        <includes>
-          <include>hbase-default.xml</include>
-        </includes>
-        <filtering>true</filtering>
-      </resource>
     </resources>
     <testResources>
       <testResource>
@@ -118,9 +111,6 @@
                 <jspcompiler uriroot="${src.webapps}/rest" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.rest" webxml="${build.webapps}/rest/WEB-INF/web.xml"/>
                 <mkdir dir="${build.webapps}/thrift/WEB-INF"/>
                 <jspcompiler uriroot="${src.webapps}/thrift" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.thrift" webxml="${build.webapps}/thrift/WEB-INF/web.xml"/>
-                <exec executable="sh">
-                  <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java"/>
-                </exec>
               </target>
             </configuration>
             <goals>

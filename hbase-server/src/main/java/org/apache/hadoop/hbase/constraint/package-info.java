@@ -146,7 +146,7 @@
  </div>
  <p>
  Note that all exceptions that you expect to be thrown must be caught and then rethrown as a 
- {@link org.apache.hadoop.hbase.constraint.ConstraintException}. This way, you can be sure that a 
+ {@link org.apache.hadoop.hbase.exceptions.ConstraintException}. This way, you can be sure that a
  {@link org.apache.hadoop.hbase.client.Put} fails for an expected reason, rather than for any reason. 
  For example, an {@link java.lang.OutOfMemoryError} is probably indicative of an inherent problem in 
  the {@link org.apache.hadoop.hbase.constraint.Constraint}, rather than a failed {@link org.apache.hadoop.hbase.client.Put}.

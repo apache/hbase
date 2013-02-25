@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager.SnapshotSubprocedurePool;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 
 /**
  * This online snapshot implementation uses the distributed procedure framework to force a
@@ -101,7 +101,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
     // assert that the taskManager is empty.
     if (taskManager.hasTasks()) {
       throw new IllegalStateException("Attempting to take snapshot "
-          + SnapshotDescriptionUtils.toString(snapshot)
+          + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " but we currently have outstanding tasks");
     }
 

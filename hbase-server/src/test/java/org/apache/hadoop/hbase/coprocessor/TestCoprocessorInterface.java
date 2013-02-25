@@ -33,7 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -322,7 +321,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
         Get g = new Get(regions[i].getStartKey());
         regions[i].get(g);
         fail();
-      } catch (DoNotRetryIOException xc) {
+      } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException xc) {
       }
       assertNull(regions[i].getCoprocessorHost().
           findCoprocessor(CoprocessorII.class.getName()));

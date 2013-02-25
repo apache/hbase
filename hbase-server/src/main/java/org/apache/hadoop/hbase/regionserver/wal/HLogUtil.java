@@ -20,9 +20,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -36,8 +33,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -157,7 +152,7 @@ public class HLogUtil {
    *         <code>regiondir</code>
    */
   public static Path getRegionDirRecoveredEditsDir(final Path regiondir) {
-    return new Path(regiondir, HLog.RECOVERED_EDITS_DIR);
+    return new Path(regiondir, HConstants.RECOVERED_EDITS_DIR);
   }
 
   /**

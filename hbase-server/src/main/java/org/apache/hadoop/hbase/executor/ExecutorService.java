@@ -44,7 +44,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This is a generic executor service. This component abstracts a
- * threadpool, a queue to which {@link EventHandler.EventType}s can be submitted,
+ * threadpool, a queue to which {@link EventType}s can be submitted,
  * and a <code>Runnable</code> that handles the object that is added to the queue.
  *
  * <p>In order to create a new service, create an instance of this class and
@@ -54,8 +54,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * <p>In order to use the service created above, call
  * {@link #submit(EventHandler)}. Register pre- and post- processing listeners
  * by registering your implementation of {@link EventHandler.EventHandlerListener}
- * with {@link #registerListener(EventHandler.EventType, EventHandler.EventHandlerListener)}.  Be sure
- * to deregister your listener when done via {@link #unregisterListener(EventHandler.EventType)}.
+ * with {@link #registerListener(EventType, EventHandler.EventHandlerListener)}.  Be sure
+ * to deregister your listener when done via {@link #unregisterListener(EventType)}.
  */
 @InterfaceAudience.Private
 public class ExecutorService {
@@ -66,45 +66,11 @@ public class ExecutorService {
     new ConcurrentHashMap<String, Executor>();
 
   // listeners that are called before and after an event is processed
-  private ConcurrentHashMap<EventHandler.EventType, EventHandlerListener> eventHandlerListeners =
-    new ConcurrentHashMap<EventHandler.EventType, EventHandlerListener>();
+  private ConcurrentHashMap<EventType, EventHandlerListener> eventHandlerListeners =
+    new ConcurrentHashMap<EventType, EventHandlerListener>();
 
   // Name of the server hosting this executor service.
   private final String servername;
-
-  /**
-   * The following is a list of all executor types, both those that run in the
-   * master and those that run in the regionserver.
-   */
-  public enum ExecutorType {
-
-    // Master executor services
-    MASTER_CLOSE_REGION        (1),
-    MASTER_OPEN_REGION         (2),
-    MASTER_SERVER_OPERATIONS   (3),
-    MASTER_TABLE_OPERATIONS    (4),
-    MASTER_RS_SHUTDOWN         (5),
-    MASTER_META_SERVER_OPERATIONS (6),
-
-    // RegionServer executor services
-    RS_OPEN_REGION             (20),
-    RS_OPEN_ROOT               (21),
-    RS_OPEN_META               (22),
-    RS_CLOSE_REGION            (23),
-    RS_CLOSE_ROOT              (24),
-    RS_CLOSE_META              (25),
-    RS_PARALLEL_SEEK           (26);
-
-    ExecutorType(int value) {}
-
-    /**
-     * @param serverName
-     * @return Conflation of the executor type and the passed servername.
-     */
-    String getExecutorName(String serverName) {
-      return this.toString() + "-" + serverName.replace("%", "%%");
-    }
-  }
 
   /**
    * Default constructor.
@@ -185,23 +151,23 @@ public class ExecutorService {
 
   /**
    * Subscribe to updates before and after processing instances of
-   * {@link EventHandler.EventType}.  Currently only one listener per
+   * {@link EventType}.  Currently only one listener per
    * event type.
    * @param type Type of event we're registering listener for
    * @param listener The listener to run.
    */
-  public void registerListener(final EventHandler.EventType type,
+  public void registerListener(final EventType type,
       final EventHandlerListener listener) {
     this.eventHandlerListeners.put(type, listener);
   }
 
   /**
    * Stop receiving updates before and after processing instances of
-   * {@link EventHandler.EventType}
+   * {@link EventType}
    * @param type Type of event we're registering listener for
    * @return The listener we removed or null if we did not remove it.
    */
-  public EventHandlerListener unregisterListener(final EventHandler.EventType type) {
+  public EventHandlerListener unregisterListener(final EventType type) {
     return this.eventHandlerListeners.remove(type);
   }
 
@@ -224,12 +190,12 @@ public class ExecutorService {
     // work queue to use - unbounded queue
     final BlockingQueue<Runnable> q = new LinkedBlockingQueue<Runnable>();
     private final String name;
-    private final Map<EventHandler.EventType, EventHandlerListener> eventHandlerListeners;
+    private final Map<EventType, EventHandlerListener> eventHandlerListeners;
     private static final AtomicLong seqids = new AtomicLong(0);
     private final long id;
 
     protected Executor(String name, int maxThreads,
-        final Map<EventHandler.EventType, EventHandlerListener> eventHandlerListeners) {
+        final Map<EventType, EventHandlerListener> eventHandlerListeners) {
       this.id = seqids.incrementAndGet();
       this.name = name;
       this.eventHandlerListeners = eventHandlerListeners;

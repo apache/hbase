@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,6 +28,9 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
+
+import static org.apache.hadoop.hbase.io.hfile.BlockType.MAGIC_LENGTH;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -39,6 +43,36 @@ public final class HConstants {
 
   /** When we encode strings, we always specify UTF8 encoding */
   public static final Charset UTF8_CHARSET = Charset.forName(UTF8_ENCODING);
+  /**
+   * Default block size for an HFile.
+   */
+  public final static int DEFAULT_BLOCKSIZE = 64 * 1024;
+  /*
+     * Name of directory that holds recovered edits written by the wal log
+     * splitting code, one per region
+     */
+  public static final String RECOVERED_EDITS_DIR = "recovered.edits";
+  /**
+   * The first four bytes of Hadoop RPC connections
+   */
+  public static final ByteBuffer RPC_HEADER = ByteBuffer.wrap("hrpc".getBytes());
+  public static final byte CURRENT_VERSION = 5;
+
+  // HFileBlock constants.
+
+  /** The size data structures with minor version is 0 */
+  public static final int HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM = MAGIC_LENGTH + 2 * Bytes.SIZEOF_INT
+      + Bytes.SIZEOF_LONG;
+  /** The size of a version 2 HFile block header, minor version 1.
+   * There is a 1 byte checksum type, followed by a 4 byte bytesPerChecksum
+   * followed by another 4 byte value to store sizeofDataOnDisk.
+   */
+  public static final int HFILEBLOCK_HEADER_SIZE = HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM +
+    Bytes.SIZEOF_BYTE + 2 * Bytes.SIZEOF_INT;
+  /** Just an array of bytes of the right size. */
+  public static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HFILEBLOCK_HEADER_SIZE];
+
+  //End HFileBlockConstants.
 
   private static byte[] toBytes(String target) {
     return target.getBytes(UTF8_CHARSET);

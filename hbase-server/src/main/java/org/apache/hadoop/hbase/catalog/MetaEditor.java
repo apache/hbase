@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -29,7 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
@@ -418,7 +417,7 @@ public class MetaEditor {
    * Deletes daughters references in offlined split parent.
    * @param catalogTracker
    * @param parent Parent row we're to remove daughter reference from
-   * @throws NotAllMetaRegionsOnlineException
+   * @throws org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException
    * @throws IOException
    */
   public static void deleteDaughtersReferencesInParent(CatalogTracker catalogTracker,

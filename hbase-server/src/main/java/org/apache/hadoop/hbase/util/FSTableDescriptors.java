@@ -39,11 +39,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.TableInfoMissingException;
+import org.apache.hadoop.hbase.exceptions.TableInfoMissingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 
 import com.google.common.primitives.Ints;

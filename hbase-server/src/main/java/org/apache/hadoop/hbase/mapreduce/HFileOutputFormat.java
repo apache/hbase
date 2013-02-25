@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
@@ -98,7 +97,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     final long maxsize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
         HConstants.DEFAULT_MAX_FILE_SIZE);
     final int blocksize = conf.getInt("hbase.mapreduce.hfileoutputformat.blocksize",
-        HFile.DEFAULT_BLOCKSIZE);
+        HConstants.DEFAULT_BLOCKSIZE);
     // Invented config.  Add to hbase-*.xml if other than default compression.
     final String defaultCompression = conf.get("hfile.compression",
         Compression.Algorithm.NONE.getName());

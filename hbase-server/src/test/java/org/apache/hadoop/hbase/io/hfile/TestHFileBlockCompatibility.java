@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -129,7 +130,7 @@ public class TestHFileBlockCompatibility {
       int correctLength) throws IOException {
     Writer hbw = createTestV2Block(algo);
     byte[] testV2Block = hbw.getHeaderAndData();
-    int osOffset = HFileBlock.HEADER_SIZE_NO_CHECKSUM + 9;
+    int osOffset = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM + 9;
     if (testV2Block.length == correctLength) {
       // Force-set the "OS" field of the gzip header to 3 (Unix) to avoid
       // variations across operating systems.
@@ -205,13 +206,13 @@ public class TestHFileBlockCompatibility {
           is = fs.open(path);
           hbr = new HFileBlock.FSReaderV2(is, is, algo, totalSize, MINOR_VERSION,
                                           fs, path);
-          b = hbr.readBlockData(0, 2173 + HFileBlock.HEADER_SIZE_NO_CHECKSUM +
+          b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM +
                                 b.totalChecksumBytes(), -1, pread);
           assertEquals(blockStr, b.toString());
           int wrongCompressedSize = 2172;
           try {
             b = hbr.readBlockData(0, wrongCompressedSize
-                + HFileBlock.HEADER_SIZE_NO_CHECKSUM, -1, pread);
+                + HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM, -1, pread);
             fail("Exception expected");
           } catch (IOException ex) {
             String expectedPrefix = "On-disk size without header provided is "
@@ -314,7 +315,7 @@ public class TestHFileBlockCompatibility {
   public static final class Writer {
 
     // These constants are as they were in minorVersion 0.
-    private static final int HEADER_SIZE = HFileBlock.HEADER_SIZE_NO_CHECKSUM;
+    private static final int HEADER_SIZE = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
     private static final boolean DONT_FILL_HEADER = HFileBlock.DONT_FILL_HEADER;
     private static final byte[] DUMMY_HEADER = 
       HFileBlock.DUMMY_HEADER_NO_CHECKSUM;
@@ -371,7 +372,7 @@ public class TestHFileBlockCompatibility {
     /**
      * Valid in the READY state. Contains the header and the uncompressed (but
      * potentially encoded, if this is a data block) bytes, so the length is
-     * {@link #uncompressedSizeWithoutHeader} + {@link HFileBlock#HEADER_SIZE}.
+     * {@link #uncompressedSizeWithoutHeader} + {@link org.apache.hadoop.hbase.HConstants#HFILEBLOCK_HEADER_SIZE}.
      */
     private byte[] uncompressedBytesWithHeader;
 

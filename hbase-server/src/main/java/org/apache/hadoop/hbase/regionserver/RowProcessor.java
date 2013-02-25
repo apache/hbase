@@ -37,7 +37,7 @@ import com.google.protobuf.Message;
  * Defines the procedure to atomically perform multiple scans and mutations
  * on a HRegion.
  *
- * This is invoked by {@link HRegion#processRowsWithLocks()}.
+ * This is invoked by HRegion#processRowsWithLocks().
  * This class performs scans and generates mutations and WAL edits.
  * The locks and MVCC will be handled by HRegion.
  *

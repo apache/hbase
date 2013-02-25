@@ -29,11 +29,11 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 import org.junit.Test;
@@ -53,7 +53,7 @@ public class TestDataBlockEncoders {
   static int NUM_RANDOM_SEEKS = 10000;
 
   private static int ENCODED_DATA_OFFSET =
-      HFileBlock.HEADER_SIZE + DataBlockEncoding.ID_SIZE;
+      HConstants.HFILEBLOCK_HEADER_SIZE + DataBlockEncoding.ID_SIZE;
 
   private RedundantKVGenerator generator = new RedundantKVGenerator();
   private Random randomizer = new Random(42l);
@@ -74,9 +74,9 @@ public class TestDataBlockEncoders {
     DataBlockEncoder encoder = encoding.getEncoder();
     if (encoder != null) {
       return encoder.newDataBlockEncodingContext(algo, encoding,
-          HFileBlock.DUMMY_HEADER);
+          HConstants.HFILEBLOCK_DUMMY_HEADER);
     } else {
-      return new HFileBlockDefaultEncodingContext(algo, encoding, HFileBlock.DUMMY_HEADER);
+      return new HFileBlockDefaultEncodingContext(algo, encoding, HConstants.HFILEBLOCK_DUMMY_HEADER);
     }
   }
 

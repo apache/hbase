@@ -37,12 +37,11 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.TestGet;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
 /**
- * {@link TestGet} is a medley of tests of get all done up as a single test.
+ * TestGet is a medley of tests of get all done up as a single test.
  * This class
  */
 @Category(MediumTests.class)

@@ -68,6 +68,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IpcProtocol;
+import org.apache.hadoop.hbase.exceptions.CallerDisconnectedException;
+import org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -78,10 +80,11 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
-import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.AuthMethod;
+import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
-import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslStatus;
+import org.apache.hadoop.hbase.security.SaslStatus;
+import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
 import org.apache.hadoop.io.BytesWritable;
@@ -125,11 +128,6 @@ import com.google.protobuf.Message;
 public abstract class HBaseServer implements RpcServer {
   private final boolean authorize;
   protected boolean isSecurityEnabled;
-  /**
-   * The first four bytes of Hadoop RPC connections
-   */
-  public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
-  public static final byte CURRENT_VERSION = 5;
 
   /**
    * How many calls/handler are allowed in the queue.
@@ -1245,8 +1243,8 @@ public abstract class HBaseServer implements RpcServer {
                     "Server is not configured to do DIGEST authentication.");
               }
               saslServer = Sasl.createSaslServer(AuthMethod.DIGEST
-                  .getMechanismName(), null, HBaseSaslRpcServer.SASL_DEFAULT_REALM,
-                  HBaseSaslRpcServer.SASL_PROPS, new SaslDigestCallbackHandler(
+                  .getMechanismName(), null, SaslUtil.SASL_DEFAULT_REALM,
+                  SaslUtil.SASL_PROPS, new SaslDigestCallbackHandler(
                       secretManager, this));
               break;
             default:
@@ -1255,7 +1253,7 @@ public abstract class HBaseServer implements RpcServer {
               String fullName = current.getUserName();
               if (LOG.isDebugEnabled())
                 LOG.debug("Kerberos principal name is " + fullName);
-              final String names[] = HBaseSaslRpcServer.splitKerberosName(fullName);
+              final String names[] = SaslUtil.splitKerberosName(fullName);
               if (names.length != 3) {
                 throw new AccessControlException(
                     "Kerberos principal name does NOT have the expected "
@@ -1266,7 +1264,7 @@ public abstract class HBaseServer implements RpcServer {
                 public Object run() throws SaslException {
                   saslServer = Sasl.createSaslServer(AuthMethod.KERBEROS
                       .getMechanismName(), names[0], names[1],
-                      HBaseSaslRpcServer.SASL_PROPS, new SaslGssCallbackHandler());
+                      SaslUtil.SASL_PROPS, new SaslGssCallbackHandler());
                   return null;
                 }
               });
@@ -1380,11 +1378,11 @@ public abstract class HBaseServer implements RpcServer {
           authMethod = AuthMethod.read(new DataInputStream(
               new ByteArrayInputStream(method)));
           dataLengthBuffer.flip();
-          if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
+          if (!HConstants.RPC_HEADER.equals(dataLengthBuffer) || version != HConstants.CURRENT_VERSION) {
               LOG.warn("Incorrect header or version mismatch from " +
                   hostAddress + ":" + remotePort +
                   " got version " + version +
-                  " expected version " + CURRENT_VERSION);
+                  " expected version " + HConstants.CURRENT_VERSION);
             setupBadVersionResponse(version);
             return -1;
           }
@@ -1402,7 +1400,7 @@ public abstract class HBaseServer implements RpcServer {
           }
           if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
             doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(
-                HBaseSaslRpcServer.SWITCH_TO_SIMPLE_AUTH), null, null);
+                SaslUtil.SWITCH_TO_SIMPLE_AUTH), null, null);
             authMethod = AuthMethod.SIMPLE;
             // client has already sent the initial Sasl message and we
             // should ignore it. Both client and server should fall back
@@ -1470,7 +1468,7 @@ public abstract class HBaseServer implements RpcServer {
      * @throws IOException
      */
     private void setupBadVersionResponse(int clientVersion) throws IOException {
-      String errMsg = "Server IPC version " + CURRENT_VERSION +
+      String errMsg = "Server IPC version " + HConstants.CURRENT_VERSION +
       " cannot communicate with client version " + clientVersion;
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 

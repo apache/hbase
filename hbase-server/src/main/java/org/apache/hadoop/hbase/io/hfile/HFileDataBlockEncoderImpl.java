@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -70,7 +71,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
    */
   public HFileDataBlockEncoderImpl(DataBlockEncoding onDisk,
       DataBlockEncoding inCache, byte[] dummyHeader) {
-    dummyHeader = dummyHeader == null ? HFileBlock.DUMMY_HEADER : dummyHeader;
+    dummyHeader = dummyHeader == null ? HConstants.HFILEBLOCK_DUMMY_HEADER : dummyHeader;
     this.onDisk = onDisk != null ?
         onDisk : DataBlockEncoding.NONE;
     this.inCache = inCache != null ?

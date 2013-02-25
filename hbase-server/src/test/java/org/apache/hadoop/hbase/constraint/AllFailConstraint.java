@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.constraint;
 
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.exceptions.ConstraintException;
 
 /**
  * Always fail the put.

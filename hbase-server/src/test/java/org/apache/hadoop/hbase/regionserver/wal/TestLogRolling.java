@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.exceptions.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.*;
@@ -186,7 +187,7 @@ public class TestLogRolling  {
   /**
    * Tests that logs are deleted
    * @throws IOException
-   * @throws FailedLogCloseException
+   * @throws org.apache.hadoop.hbase.exceptions.FailedLogCloseException
    */
   @Test
   public void testLogRolling() throws FailedLogCloseException, IOException {

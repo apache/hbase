@@ -57,15 +57,16 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
-import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.exceptions.HBaseSnapshotException;
+import org.apache.hadoop.hbase.exceptions.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
+import org.apache.hadoop.hbase.exceptions.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
-import org.apache.hadoop.hbase.snapshot.SnapshotExistsException;
-import org.apache.hadoop.hbase.snapshot.TablePartiallyOpenException;
-import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.exceptions.SnapshotDoesNotExistException;
+import org.apache.hadoop.hbase.exceptions.SnapshotExistsException;
+import org.apache.hadoop.hbase.exceptions.TablePartiallyOpenException;
+import org.apache.hadoop.hbase.exceptions.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -305,7 +306,7 @@ public class SnapshotManager implements Stoppable {
          "No snapshot name passed in request, can't figure out which snapshot you want to check.");
     }
 
-    String ssString = SnapshotDescriptionUtils.toString(expected);
+    String ssString = ClientSnapshotDescriptionUtils.toString(expected);
 
     // check to see if the sentinel exists
     TakeSnapshotHandler handler = getTakeSnapshotHandler(expected);
@@ -383,17 +384,17 @@ public class SnapshotManager implements Stoppable {
     // make sure we aren't already running a snapshot
     if (isTakingSnapshot()) {
       throw new SnapshotCreationException("Rejected taking "
-          + SnapshotDescriptionUtils.toString(snapshot)
+          + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " because we are already running another snapshot "
-          + SnapshotDescriptionUtils.toString(this.handler.getSnapshot()), snapshot);
+          + ClientSnapshotDescriptionUtils.toString(this.handler.getSnapshot()), snapshot);
     }
 
     // make sure we aren't running a restore on the same table
     if (isRestoringTable(snapshot.getTable())) {
       throw new SnapshotCreationException("Rejected taking "
-          + SnapshotDescriptionUtils.toString(snapshot)
+          + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " because we are already have a restore in progress on the same snapshot "
-          + SnapshotDescriptionUtils.toString(this.handler.getSnapshot()), snapshot);
+          + ClientSnapshotDescriptionUtils.toString(this.handler.getSnapshot()), snapshot);
     }
 
     try {
@@ -436,11 +437,11 @@ public class SnapshotManager implements Stoppable {
       try {
         if (!this.master.getMasterFileSystem().getFileSystem().delete(workingDir, true)) {
           LOG.warn("Couldn't delete working directory (" + workingDir + " for snapshot:"
-              + SnapshotDescriptionUtils.toString(snapshot));
+              + ClientSnapshotDescriptionUtils.toString(snapshot));
         }
       } catch (IOException e1) {
         LOG.warn("Couldn't delete working directory (" + workingDir + " for snapshot:" +
-            SnapshotDescriptionUtils.toString(snapshot));
+            ClientSnapshotDescriptionUtils.toString(snapshot));
       }
       // fail the snapshot
       throw new SnapshotCreationException("Could not build snapshot handler", e, snapshot);
@@ -498,13 +499,13 @@ public class SnapshotManager implements Stoppable {
     if (assignmentMgr.getZKTable().isEnabledTable(snapshot.getTable())) {
       LOG.debug("Table enabled, starting distributed snapshot.");
       snapshotEnabledTable(snapshot);
-      LOG.debug("Started snapshot: " + SnapshotDescriptionUtils.toString(snapshot));
+      LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
     }
     // For disabled table, snapshot is created by the master
     else if (assignmentMgr.getZKTable().isDisabledTable(snapshot.getTable())) {
       LOG.debug("Table is disabled, running snapshot entirely on master.");
       snapshotDisabledTable(snapshot);
-      LOG.debug("Started snapshot: " + SnapshotDescriptionUtils.toString(snapshot));
+      LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
     } else {
       LOG.error("Can't snapshot table '" + snapshot.getTable()
           + "', isn't open or closed, we don't know what to do!");
@@ -545,11 +546,11 @@ public class SnapshotManager implements Stoppable {
       try {
         if (!this.master.getMasterFileSystem().getFileSystem().delete(workingDir, true)) {
           LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
-              SnapshotDescriptionUtils.toString(snapshot));
+              ClientSnapshotDescriptionUtils.toString(snapshot));
         }
       } catch (IOException e1) {
         LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
-            SnapshotDescriptionUtils.toString(snapshot));
+            ClientSnapshotDescriptionUtils.toString(snapshot));
       }
       // fail the snapshot
       throw new SnapshotCreationException("Could not build snapshot handler", e, snapshot);
@@ -623,7 +624,7 @@ public class SnapshotManager implements Stoppable {
       this.executorService.submit(handler);
       restoreHandlers.put(tableName, handler);
     } catch (Exception e) {
-      String msg = "Couldn't clone the snapshot=" + SnapshotDescriptionUtils.toString(snapshot) +
+      String msg = "Couldn't clone the snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
         " on table=" + tableName;
       LOG.error(msg, e);
       throw new RestoreSnapshotException(msg, e);
@@ -714,7 +715,8 @@ public class SnapshotManager implements Stoppable {
       this.executorService.submit(handler);
       restoreHandlers.put(hTableDescriptor.getNameAsString(), handler);
     } catch (Exception e) {
-      String msg = "Couldn't restore the snapshot=" + SnapshotDescriptionUtils.toString(snapshot)  +
+      String msg = "Couldn't restore the snapshot=" + ClientSnapshotDescriptionUtils.toString(
+          snapshot)  +
           " on table=" + tableName;
       LOG.error(msg, e);
       throw new RestoreSnapshotException(msg, e);
@@ -764,14 +766,14 @@ public class SnapshotManager implements Stoppable {
 
     // check to see if we are done
     if (sentinel.isFinished()) {
-      LOG.debug("Restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot) +
+      LOG.debug("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
           " has completed. Notifying the client.");
       return false;
     }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sentinel is not yet finished with restoring snapshot=" +
-          SnapshotDescriptionUtils.toString(snapshot));
+          ClientSnapshotDescriptionUtils.toString(snapshot));
     }
     return true;
   }
