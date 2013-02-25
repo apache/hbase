@@ -478,6 +478,17 @@ public final class HConstants {
   public static long DEFAULT_HBASE_CLIENT_PAUSE = 1000;
 
   /**
+   * Parameter name for server pause value, used mostly as value to wait before
+   * running a retry of a failed operation.
+   */
+  public static String HBASE_SERVER_PAUSE = "hbase.server.pause";
+
+  /**
+   * Default value of {@link #HBASE_SERVER_PAUSE}.
+   */
+  public static int DEFAULT_HBASE_SERVER_PAUSE = 1000;
+
+  /**
    * Parameter name for maximum retries, used as maximum for all retryable
    * operations such as fetching of the root region from root region server,
    * getting a cell's value, starting a row update, etc.
