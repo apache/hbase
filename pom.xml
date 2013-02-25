@@ -261,6 +261,14 @@
       <organizationUrl>http://drawntoscale.com/</organizationUrl>
     </developer>
     <developer>
+      <id>sershe</id>
+      <name>Sergey Shelukhin</name>
+      <email>sershe@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Hortonworks</organization>
+      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+    </developer>
+    <developer>
       <id>stack</id>
       <name>Michael Stack</name>
       <email>stack@apache.org</email>
