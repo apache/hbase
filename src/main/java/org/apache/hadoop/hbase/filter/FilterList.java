@@ -316,10 +316,9 @@ public class FilterList implements Filter {
     return keyHint;
   }
 
-  @Override
   public boolean isFamilyEssential(byte[] name) {
     for (Filter filter : filters) {
-      if (filter.isFamilyEssential(name)) {
+      if (FilterBase.isFamilyEssential(filter, name)) {
         return true;
       }
     }

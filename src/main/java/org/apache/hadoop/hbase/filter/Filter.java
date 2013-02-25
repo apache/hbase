@@ -167,12 +167,4 @@ public interface Filter extends Writable {
    * not sure which key to seek to next.
    */
   public KeyValue getNextKeyHint(final KeyValue currentKV);
-
-  /**
-   * Check that given column family is essential for filter to check row.  Most
-   * filters always return true here. But some could have more sophisticated
-   * logic which could significantly reduce scanning process by not even
-   * touching columns until we are 100% sure that it's data is needed in result.
-   */
-  public boolean isFamilyEssential(byte[] name);
 }

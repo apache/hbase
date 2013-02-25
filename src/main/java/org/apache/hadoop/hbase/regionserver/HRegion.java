@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -3573,7 +3574,7 @@ public class HRegion implements HeapSize { // , Writable{
         Store store = stores.get(entry.getKey());
         KeyValueScanner scanner = store.getScanner(scan, entry.getValue());
         if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
-          || this.filter.isFamilyEssential(entry.getKey())) {
+          || FilterBase.isFamilyEssential(this.filter, entry.getKey())) {
           scanners.add(scanner);
         } else {
           joinedScanners.add(scanner);
