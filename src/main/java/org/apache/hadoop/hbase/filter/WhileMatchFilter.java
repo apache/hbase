@@ -106,7 +106,7 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   public boolean isFamilyEssential(byte[] name) {
-    return filter.isFamilyEssential(name);
+    return FilterBase.isFamilyEssential(this.filter, name);
   }
 
   @Override

@@ -131,13 +131,28 @@ public abstract class FilterBase implements Filter {
   }
 
   /**
+   * Check that given column family is essential for filter to check row.  Most
+   * filters always return true here. But some could have more sophisticated
+   * logic which could significantly reduce scanning process by not even
+   * touching columns until we are 100% sure that it's data is needed in result.
+   *
    * By default, we require all scan's column families to be present. Our
    * subclasses may be more precise.
-   *
-   * @inheritDoc
    */
   public boolean isFamilyEssential(byte[] name) {
     return true;
+  }
+  
+  /**
+   * Check that given column family is essential for filter to check row.
+   * This accommodates Filter implementation which didn't have this capability
+   * 
+   * @param filter
+   * @param name column family name
+   * @return whether column family is essential
+   */
+  public static boolean isFamilyEssential(Filter filter, byte[] name) {
+    return !(filter instanceof FilterBase) || ((FilterBase) filter).isFamilyEssential(name);
   }
 
   /**
