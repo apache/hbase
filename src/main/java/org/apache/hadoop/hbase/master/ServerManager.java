@@ -425,6 +425,16 @@ public class ServerManager {
   }
 
   /**
+   * The function is to allow master to submit known dead servers into SSH
+   * @param serverName
+   */
+  void processDeadServer(final ServerName serverName) {
+    this.deadservers.add(serverName);
+    this.services.getExecutorService().submit(
+      new ServerShutdownHandler(this.master, this.services, this.deadservers, serverName, true));
+  }
+
+  /**
    * Expire the servers which died during master's initialization. It will be
    * called after HMaster#assignRootAndMeta.
    * @throws IOException

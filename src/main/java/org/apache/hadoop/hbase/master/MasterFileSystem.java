@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -184,30 +185,31 @@ public class MasterFileSystem {
   }
 
   /**
-   * Inspect the log directory to recover any log file without
-   * an active region server.
+   * Inspect the log directory to find dead servers which need log splitting
    */
-  void splitLogAfterStartup() {
+  Set<ServerName> getFailedServersFromLogFolders() {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
-        HLog.SPLIT_SKIP_ERRORS_DEFAULT);
+      HLog.SPLIT_SKIP_ERRORS_DEFAULT);
+    
+    Set<ServerName> serverNames = new HashSet<ServerName>();
     Path logsDirPath = new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
+
     do {
       if (master.isStopped()) {
-        LOG.warn("Master stopped while splitting logs");
+        LOG.warn("Master stopped while trying to get failed servers.");
         break;
       }
-      List<ServerName> serverNames = new ArrayList<ServerName>();
       try {
-        if (!this.fs.exists(logsDirPath)) return;
+        if (!this.fs.exists(logsDirPath)) return serverNames;
         FileStatus[] logFolders = FSUtils.listStatus(this.fs, logsDirPath, null);
         // Get online servers after getting log folders to avoid log folder deletion of newly
         // checked in region servers . see HBASE-5916
-        Set<ServerName> onlineServers = ((HMaster) master).getServerManager().getOnlineServers()
-            .keySet();
+        Set<ServerName> onlineServers =
+            ((HMaster) master).getServerManager().getOnlineServers().keySet();
 
         if (logFolders == null || logFolders.length == 0) {
           LOG.debug("No log files to split, proceeding...");
-          return;
+          return serverNames;
         }
         for (FileStatus status : logFolders) {
           String sn = status.getPath().getName();
@@ -221,22 +223,19 @@ public class MasterFileSystem {
                 + "to a known region server, splitting");
             serverNames.add(serverName);
           } else {
-            LOG.info("Log folder " + status.getPath()
-                + " belongs to an existing region server");
+            LOG.info("Log folder " + status.getPath() + " belongs to an existing region server");
           }
         }
-        splitLog(serverNames);
         retrySplitting = false;
       } catch (IOException ioe) {
-        LOG.warn("Failed splitting of " + serverNames, ioe);
+        LOG.warn("Failed getting failed servers to be recovered.", ioe);
         if (!checkFileSystem()) {
           LOG.warn("Bad Filesystem, exiting");
           Runtime.getRuntime().halt(1);
         }
         try {
           if (retrySplitting) {
-            Thread.sleep(conf.getInt(
-              "hbase.hlog.split.failure.retry.interval", 30 * 1000));
+            Thread.sleep(conf.getInt("hbase.hlog.split.failure.retry.interval", 30 * 1000));
           }
         } catch (InterruptedException e) {
           LOG.warn("Interrupted, aborting since cannot return w/o splitting");
@@ -246,6 +245,8 @@ public class MasterFileSystem {
         }
       }
     } while (retrySplitting);
+
+    return serverNames;
   }
 
   public void splitLog(final ServerName serverName) throws IOException {
