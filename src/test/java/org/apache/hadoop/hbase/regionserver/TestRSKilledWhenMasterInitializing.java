@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,19 +36,16 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TestMasterFailover;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -101,19 +97,6 @@ public class TestRSKilledWhenMasterInitializing {
         KeeperException, InterruptedException {
       super(conf);
     }
-
-    @Override
-    protected void splitLogAfterStartup(MasterFileSystem mfs) {
-      super.splitLogAfterStartup(mfs);
-      logSplit = true;
-      // If "TestingMaster.sleep" is set, sleep after log split.
-      if (getConfiguration().getBoolean("TestingMaster.sleep", false)) {
-        int duration = getConfiguration().getInt(
-            "TestingMaster.sleep.duration", 0);
-        Threads.sleep(duration);
-      }
-    }
-
 
     public boolean isLogSplitAfterStartup() {
       return logSplit;
@@ -249,11 +232,13 @@ public class TestRSKilledWhenMasterInitializing {
   private TestingMaster startMasterAndWaitUntilLogSplit(MiniHBaseCluster cluster)
       throws IOException, InterruptedException {
     TestingMaster master = (TestingMaster) cluster.startMaster().getMaster();
-    while (!master.isLogSplitAfterStartup()) {
+    while (!master.isInitialized()) {
       Thread.sleep(100);
     }
-    LOG.debug("splitted:" + master.isLogSplitAfterStartup() + ",initialized:"
-        + master.isInitialized());
+    ServerManager serverManager = cluster.getMaster().getServerManager();
+    while (serverManager.areDeadServersInProgress()) {
+      Thread.sleep(100);
+    }
     return master;
   }
 

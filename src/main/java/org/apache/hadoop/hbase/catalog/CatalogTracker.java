@@ -118,7 +118,7 @@ public class CatalogTracker {
    */
   private ServerName metaLocation;
 
-  private boolean stopped = false;
+  private volatile boolean stopped = false;
 
   static final byte [] ROOT_REGION_NAME =
     HRegionInfo.ROOT_REGIONINFO.getRegionName();
