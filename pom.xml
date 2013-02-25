@@ -873,7 +873,7 @@
     <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.8</jruby.version>
     <junit.version>4.11</junit.version>
-    <htrace.version>1.49</htrace.version>
+    <htrace.version>1.50</htrace.version>
     <slf4j.version>1.4.3</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.9.0</mockito-all.version>
@@ -1259,7 +1259,7 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
-        <scope>runtime</scope>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.cloudera.htrace</groupId>
