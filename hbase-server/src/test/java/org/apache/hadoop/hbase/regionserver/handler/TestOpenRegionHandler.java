@@ -237,52 +237,5 @@ public class TestOpenRegionHandler {
     assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, rt.getEventType());
   }
 
-  @Test
-  public void testTransitionToFailedOpenFromOffline() throws Exception {
-    Server server = new MockServer(HTU);
-    RegionServerServices rsServices = new MockRegionServerServices(server.getZooKeeper(),
-        server.getServerName());
-    // Create it OFFLINE, which is what it expects
-    ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
-    // Create the handler
-    OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
-
-      @Override
-      boolean transitionZookeeperOfflineToOpening(String encodedName, int versionOfOfflineNode) {
-        return false;
-      }
-    };
-    rsServices.getRegionsInTransitionInRS().put(TEST_HRI.getEncodedNameAsBytes(), Boolean.TRUE);
-
-    handler.process();
-
-    RegionTransition rt = RegionTransition.parseFrom(ZKAssign.getData(server.getZooKeeper(),
-        TEST_HRI.getEncodedName()));
-    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, rt.getEventType());
-  }
-
-  @Test
-  public void testTransitionToFailedOpenFromOffline() throws Exception {
-    Server server = new MockServer(HTU);
-    RegionServerServices rsServices = new MockRegionServerServices(server.getZooKeeper(),
-        server.getServerName());
-    // Create it OFFLINE, which is what it expects
-    ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
-    // Create the handler
-    OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
-
-      @Override
-      boolean transitionZookeeperOfflineToOpening(String encodedName, int versionOfOfflineNode) {
-        return false;
-      }
-    };
-    rsServices.getRegionsInTransitionInRS().put(TEST_HRI.getEncodedNameAsBytes(), Boolean.TRUE);
-
-    handler.process();
-
-    RegionTransition rt = RegionTransition.parseFrom(ZKAssign.getData(server.getZooKeeper(),
-        TEST_HRI.getEncodedName()));
-    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, rt.getEventType());
-  }
 }
 
