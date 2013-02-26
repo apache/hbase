@@ -503,8 +503,16 @@ public class TableMapReduceUtil {
   public static void addDependencyJars(Job job) throws IOException {
     try {
       addDependencyJars(job.getConfiguration(),
+          // explicitly pull a class from each module
+          org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.class, // hbase-protocol
+          org.apache.hadoop.hbase.client.Put.class,                      // hbase-client
+          org.apache.hbase.codec.prefixtree.PrefixTreeCodec.class,       // hbase-prefix-tree
+          org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
+          // pull necessary dependencies
           org.apache.zookeeper.ZooKeeper.class,
           com.google.protobuf.Message.class,
+          // pull job classes
           job.getMapOutputKeyClass(),
           job.getMapOutputValueClass(),
           job.getInputFormatClass(),
