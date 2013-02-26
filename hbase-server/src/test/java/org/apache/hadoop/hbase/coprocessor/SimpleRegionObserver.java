@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Increment;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.Leases;
+import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -98,6 +100,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   boolean hadPostScannerOpen = false;
   boolean hadPreBulkLoadHFile = false;
   boolean hadPostBulkLoadHFile = false;
+  boolean hadPreBatchMutate = false;
+  boolean hadPostBatchMutate = false;
 
   @Override
   public void start(CoprocessorEnvironment e) throws IOException {
@@ -399,6 +403,26 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     beforeDelete = false;
     hadPostDeleted = true;
   }
+  
+  @Override
+  public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+      MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
+    RegionCoprocessorEnvironment e = c.getEnvironment();
+    assertNotNull(e);
+    assertNotNull(e.getRegion());
+    assertNotNull(miniBatchOp);
+    hadPreBatchMutate = true;
+  }
+
+  @Override
+  public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
+    RegionCoprocessorEnvironment e = c.getEnvironment();
+    assertNotNull(e);
+    assertNotNull(e.getRegion());
+    assertNotNull(miniBatchOp);
+    hadPostBatchMutate = true;
+  }
 
   @Override
   public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -492,6 +516,15 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public boolean hadPostPut() {
     return hadPostPut;
   }
+  
+  public boolean hadPreBatchMutate() {
+    return hadPreBatchMutate;
+  }
+
+  public boolean hadPostBatchMutate() {
+    return hadPostBatchMutate;
+  }
+  
   public boolean hadDelete() {
     return !beforeDelete;
   }

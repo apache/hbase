@@ -120,9 +120,9 @@ public class TestRegionObserverInterface {
 
     verifyMethodResult(SimpleRegionObserver.class,
         new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-            "hadDelete"},
+            "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
         TEST_TABLE,
-        new Boolean[] {false, false, true, true, false}
+        new Boolean[] {false, false, true, true, true, true, false}
     );
 
     Get get = new Get(ROW);
@@ -146,9 +146,9 @@ public class TestRegionObserverInterface {
 
     verifyMethodResult(SimpleRegionObserver.class,
         new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-            "hadDelete"},
+            "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
         TEST_TABLE,
-        new Boolean[] {true, true, true, true, true}
+        new Boolean[] {true, true, true, true, true, true, true}
     );
     util.deleteTable(tableName);
     table.close();
