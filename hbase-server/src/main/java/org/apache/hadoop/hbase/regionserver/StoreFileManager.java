@@ -39,7 +39,7 @@ import com.google.common.collect.ImmutableCollection;
  * Implementations are assumed to be not thread safe.
  */
 @InterfaceAudience.Private
-interface StoreFileManager {
+public interface StoreFileManager {
   /**
    * Loads the initial store files into empty StoreFileManager.
    * @param storeFiles The files to load.
@@ -56,7 +56,6 @@ interface StoreFileManager {
    * Adds compaction results into the structure.
    * @param compactedFiles The input files for the compaction.
    * @param results The resulting files for the compaction.
-   * @return The files that can be removed from storage. Usually,
    */
   public abstract void addCompactionResults(
       Collection<StoreFile> compactedFiles, Collection<StoreFile> results);

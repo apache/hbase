@@ -53,7 +53,7 @@ public class PerfTestCompactionPolicies {
 
   static final Log LOG = LogFactory.getLog(PerfTestCompactionPolicies.class);
 
-  private final CompactionPolicy cp;
+  private final DefaultCompactionPolicy cp;
   private final int max;
   private final int min;
   private final float ratio;
@@ -169,10 +169,11 @@ public class PerfTestCompactionPolicies {
   private List<StoreFile> runIteration(List<StoreFile> startingStoreFiles) throws IOException {
 
     List<StoreFile> storeFiles = new ArrayList<StoreFile>(startingStoreFiles);
-    CompactSelection sel = cp.selectCompaction(storeFiles, false, false, false);
+    CompactionRequest req = cp.selectCompaction(
+        storeFiles, new ArrayList<StoreFile>(), false, false, false);
     int newFileSize = 0;
 
-    List<StoreFile> filesToCompact = sel.getFilesToCompact();
+    Collection<StoreFile> filesToCompact = req.getFiles();
 
     if (!filesToCompact.isEmpty()) {
 

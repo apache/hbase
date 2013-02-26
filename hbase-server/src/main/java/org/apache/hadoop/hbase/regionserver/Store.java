@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
@@ -157,12 +158,14 @@ public interface Store extends HeapSize, StoreConfigInformation {
    */
   public CompactionProgress getCompactionProgress();
 
-  public CompactionRequest requestCompaction() throws IOException;
+  public CompactionContext requestCompaction() throws IOException;
 
-  public CompactionRequest requestCompaction(int priority, CompactionRequest request)
+  public CompactionContext requestCompaction(int priority, CompactionRequest baseRequest)
       throws IOException;
 
-  public void finishRequest(CompactionRequest cr);
+  public void cancelRequestedCompaction(CompactionContext compaction);
+
+  public List<StoreFile> compact(CompactionContext compaction) throws IOException;
 
   /**
    * @return true if we should run a major compaction.

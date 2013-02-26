@@ -32,9 +32,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileManager;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -49,16 +51,15 @@ import com.google.common.collect.Collections2;
  */
 @InterfaceAudience.Private
 public class DefaultCompactionPolicy extends CompactionPolicy {
-
   private static final Log LOG = LogFactory.getLog(DefaultCompactionPolicy.class);
 
   public DefaultCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
     super(conf, storeConfigInfo);
   }
 
-  @Override
-  public List<StoreFile> preSelectCompaction(
-      List<StoreFile> candidateFiles, final List<StoreFile> filesCompacting) {
+
+  private ArrayList<StoreFile> getCurrentEligibleFiles(
+      ArrayList<StoreFile> candidateFiles, final List<StoreFile> filesCompacting) {
     // candidates = all storefiles not already in compaction queue
     if (!filesCompacting.isEmpty()) {
       // exclude all files older than the newest file we're currently
@@ -71,6 +72,11 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     return candidateFiles;
   }
 
+  public List<StoreFile> preSelectCompactionForCoprocessor(
+      final Collection<StoreFile> candidates, final List<StoreFile> filesCompacting) {
+    return getCurrentEligibleFiles(new ArrayList<StoreFile>(candidates), filesCompacting);
+  }
+
   @Override
   public int getSystemCompactionPriority(final Collection<StoreFile> storeFiles) {
     return this.comConf.getBlockingStorefileCount() - storeFiles.size();
@@ -81,20 +87,20 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * @return subset copy of candidate list that meets compaction criteria
    * @throws java.io.IOException
    */
-  @Override
-  public CompactSelection selectCompaction(List<StoreFile> candidateFiles,
-      final boolean isUserCompaction, final boolean mayUseOffPeak, final boolean forceMajor)
-    throws IOException {
+  public CompactionRequest selectCompaction(Collection<StoreFile> candidateFiles,
+      final List<StoreFile> filesCompacting, final boolean isUserCompaction,
+      final boolean mayUseOffPeak, final boolean forceMajor) throws IOException {
     // Preliminary compaction subject to filters
-    CompactSelection candidateSelection = new CompactSelection(candidateFiles);
+    ArrayList<StoreFile> candidateSelection = new ArrayList<StoreFile>(candidateFiles);
+    candidateSelection = getCurrentEligibleFiles(candidateSelection, filesCompacting);
     long cfTtl = this.storeConfigInfo.getStoreFileTtl();
     if (!forceMajor) {
       // If there are expired files, only select them so that compaction deletes them
       if (comConf.shouldDeleteExpired() && (cfTtl != Long.MAX_VALUE)) {
-        CompactSelection expiredSelection = selectExpiredStoreFiles(
-          candidateSelection, EnvironmentEdgeManager.currentTimeMillis() - cfTtl);
+        ArrayList<StoreFile> expiredSelection = selectExpiredStoreFiles(
+            candidateSelection, EnvironmentEdgeManager.currentTimeMillis() - cfTtl);
         if (expiredSelection != null) {
-          return expiredSelection;
+          return new CompactionRequest(expiredSelection);
         }
       }
       candidateSelection = skipLargeFiles(candidateSelection);
@@ -106,21 +112,23 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     // Or, if there are any references among the candidates.
     boolean majorCompaction = (
       (forceMajor && isUserCompaction)
-      || ((forceMajor || isMajorCompaction(candidateSelection.getFilesToCompact()))
-          && (candidateSelection.getFilesToCompact().size() < comConf.getMaxFilesToCompact()))
-      || StoreUtils.hasReferences(candidateSelection.getFilesToCompact())
+      || ((forceMajor || isMajorCompaction(candidateSelection))
+          && (candidateSelection.size() < comConf.getMaxFilesToCompact()))
+      || StoreUtils.hasReferences(candidateSelection)
       );
 
     if (!majorCompaction) {
       // we're doing a minor compaction, let's see what files are applicable
-      candidateSelection.setOffPeak(mayUseOffPeak);
       candidateSelection = filterBulk(candidateSelection);
-      candidateSelection = applyCompactionPolicy(candidateSelection);
+      candidateSelection = applyCompactionPolicy(candidateSelection, mayUseOffPeak);
       candidateSelection = checkMinFilesCriteria(candidateSelection);
     }
-    candidateSelection =
-        removeExcessFiles(candidateSelection, isUserCompaction, majorCompaction);
-    return candidateSelection;
+    candidateSelection = removeExcessFiles(candidateSelection, isUserCompaction, majorCompaction);
+    CompactionRequest result = new CompactionRequest(candidateSelection);
+    if (!majorCompaction && !candidateSelection.isEmpty()) {
+      result.setOffPeak(mayUseOffPeak);
+    }
+    return result;
   }
 
   /**
@@ -133,33 +141,25 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * @return A CompactSelection contains the expired store files as
    *         filesToCompact
    */
-  private CompactSelection selectExpiredStoreFiles(
-      CompactSelection candidates, long maxExpiredTimeStamp) {
-    List<StoreFile> filesToCompact = candidates.getFilesToCompact();
-    if (filesToCompact == null || filesToCompact.size() == 0)
-      return null;
+  private ArrayList<StoreFile> selectExpiredStoreFiles(
+      ArrayList<StoreFile> candidates, long maxExpiredTimeStamp) {
+    if (candidates == null || candidates.size() == 0) return null;
     ArrayList<StoreFile> expiredStoreFiles = null;
-    boolean hasExpiredStoreFiles = false;
-    CompactSelection expiredSFSelection = null;
 
-    for (StoreFile storeFile : filesToCompact) {
+    for (StoreFile storeFile : candidates) {
       if (storeFile.getReader().getMaxTimestamp() < maxExpiredTimeStamp) {
         LOG.info("Deleting the expired store file by compaction: "
             + storeFile.getPath() + " whose maxTimeStamp is "
             + storeFile.getReader().getMaxTimestamp()
             + " while the max expired timestamp is " + maxExpiredTimeStamp);
-        if (!hasExpiredStoreFiles) {
+        if (expiredStoreFiles == null) {
           expiredStoreFiles = new ArrayList<StoreFile>();
-          hasExpiredStoreFiles = true;
         }
         expiredStoreFiles.add(storeFile);
       }
     }
 
-    if (hasExpiredStoreFiles) {
-      expiredSFSelection = new CompactSelection(expiredStoreFiles);
-    }
-    return expiredSFSelection;
+    return expiredStoreFiles;
   }
 
   /**
@@ -168,18 +168,16 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * exclude all files above maxCompactSize
    * Also save all references. We MUST compact them
    */
-  private CompactSelection skipLargeFiles(CompactSelection candidates) {
+  private ArrayList<StoreFile> skipLargeFiles(ArrayList<StoreFile> candidates) {
     int pos = 0;
-    while (pos < candidates.getFilesToCompact().size() &&
-      candidates.getFilesToCompact().get(pos).getReader().length() >
-        comConf.getMaxCompactSize() &&
-      !candidates.getFilesToCompact().get(pos).isReference()) {
+    while (pos < candidates.size() && !candidates.get(pos).isReference()
+      && (candidates.get(pos).getReader().length() > comConf.getMaxCompactSize())) {
       ++pos;
     }
     if (pos > 0) {
       LOG.debug("Some files are too large. Excluding " + pos
           + " files from compaction candidates");
-      candidates.clearSubList(0, pos);
+      candidates.subList(0, pos).clear();
     }
     return candidates;
   }
@@ -189,9 +187,8 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * @return filtered subset
    * exclude all bulk load files if configured
    */
-  private CompactSelection filterBulk(CompactSelection candidates) {
-    candidates.getFilesToCompact().removeAll(Collections2.filter(
-        candidates.getFilesToCompact(),
+  private ArrayList<StoreFile> filterBulk(ArrayList<StoreFile> candidates) {
+    candidates.removeAll(Collections2.filter(candidates,
         new Predicate<StoreFile>() {
           @Override
           public boolean apply(StoreFile input) {
@@ -206,9 +203,9 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * @return filtered subset
    * take upto maxFilesToCompact from the start
    */
-  private CompactSelection removeExcessFiles(CompactSelection candidates,
+  private ArrayList<StoreFile> removeExcessFiles(ArrayList<StoreFile> candidates,
       boolean isUserCompaction, boolean isMajorCompaction) {
-    int excess = candidates.getFilesToCompact().size() - comConf.getMaxFilesToCompact();
+    int excess = candidates.size() - comConf.getMaxFilesToCompact();
     if (excess > 0) {
       if (isMajorCompaction && isUserCompaction) {
         LOG.debug("Warning, compacting more than " + comConf.getMaxFilesToCompact() +
@@ -216,8 +213,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
       } else {
         LOG.debug("Too many admissible files. Excluding " + excess
           + " files from compaction candidates");
-        candidates.clearSubList(comConf.getMaxFilesToCompact(),
-          candidates.getFilesToCompact().size());
+        candidates.subList(comConf.getMaxFilesToCompact(), candidates.size()).clear();
       }
     }
     return candidates;
@@ -227,16 +223,14 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
    * @return filtered subset
    * forget the compactionSelection if we don't have enough files
    */
-  private CompactSelection checkMinFilesCriteria(CompactSelection candidates) {
+  private ArrayList<StoreFile> checkMinFilesCriteria(ArrayList<StoreFile> candidates) {
     int minFiles = comConf.getMinFilesToCompact();
-    if (candidates.getFilesToCompact().size() < minFiles) {
+    if (candidates.size() < minFiles) {
       if(LOG.isDebugEnabled()) {
-        LOG.debug("Not compacting files because we only have " +
-            candidates.getFilesToCompact().size() +
-          " files ready for compaction.  Need " + minFiles + " to initiate.");
+        LOG.debug("Not compacting files because we only have " + candidates.size() +
+          " files ready for compaction. Need " + minFiles + " to initiate.");
       }
-      candidates.emptyFileList();
-      candidates.setOffPeak(false);
+      candidates.clear();
     }
     return candidates;
   }
@@ -271,25 +265,26 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     *    | |  | |  | |  | | | | | |
     *    | |  | |  | |  | | | | | |
     */
-  CompactSelection applyCompactionPolicy(CompactSelection candidates) throws IOException {
-    if (candidates.getFilesToCompact().isEmpty()) {
+  ArrayList<StoreFile> applyCompactionPolicy(
+      ArrayList<StoreFile> candidates, boolean mayUseOffPeak) throws IOException {
+    if (candidates.isEmpty()) {
       return candidates;
     }
 
     // we're doing a minor compaction, let's see what files are applicable
     int start = 0;
     double ratio = comConf.getCompactionRatio();
-    if (candidates.isOffPeakCompaction()) {
+    if (mayUseOffPeak) {
       ratio = comConf.getCompactionRatioOffPeak();
       LOG.info("Running an off-peak compaction, selection ratio = " + ratio);
     }
 
     // get store file sizes for incremental compacting selection.
-    int countOfFiles = candidates.getFilesToCompact().size();
+    final int countOfFiles = candidates.size();
     long[] fileSizes = new long[countOfFiles];
     long[] sumSize = new long[countOfFiles];
     for (int i = countOfFiles - 1; i >= 0; --i) {
-      StoreFile file = candidates.getFilesToCompact().get(i);
+      StoreFile file = candidates.get(i);
       fileSizes[i] = file.getReader().length();
       // calculate the sum of fileSizes[i,i+maxFilesToCompact-1) for algo
       int tooFar = i + comConf.getMaxFilesToCompact() - 1;
@@ -309,8 +304,9 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
         + " files from " + countOfFiles + " candidates");
     }
 
-    candidates = candidates.getSubList(start, countOfFiles);
-
+    if (start > 0) {
+      candidates.subList(0, start).clear();
+    }
     return candidates;
   }
 

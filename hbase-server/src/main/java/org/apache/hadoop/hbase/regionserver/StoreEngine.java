@@ -24,8 +24,11 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
@@ -34,14 +37,15 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  * they are tied together and replaced together via StoreEngine-s.
  */
 @InterfaceAudience.Private
-public abstract class StoreEngine {
+public abstract class StoreEngine<
+  CP extends CompactionPolicy, C extends Compactor, SFM extends StoreFileManager> {
   protected final Store store;
   protected final Configuration conf;
   protected final KVComparator comparator;
 
-  private final PP<CompactionPolicy> compactionPolicy = new PP<CompactionPolicy>();
-  private final PP<Compactor> compactor = new PP<Compactor>();
-  private final PP<StoreFileManager> storeFileManager = new PP<StoreFileManager>();
+  protected CP compactionPolicy;
+  protected C compactor;
+  protected SFM storeFileManager;
   private boolean isInitialized = false;
 
   /**
@@ -50,7 +54,7 @@ public abstract class StoreEngine {
    */
   public static final String STORE_ENGINE_CLASS_KEY = "hbase.hstore.engine.class";
 
-  private static final Class<? extends StoreEngine>
+  private static final Class<? extends StoreEngine<?, ?, ?>>
     DEFAULT_STORE_ENGINE_CLASS = DefaultStoreEngine.class;
 
   /**
@@ -58,7 +62,7 @@ public abstract class StoreEngine {
    */
   public CompactionPolicy getCompactionPolicy() {
     createComponentsOnce();
-    return this.compactionPolicy.get();
+    return this.compactionPolicy;
   }
 
   /**
@@ -66,7 +70,7 @@ public abstract class StoreEngine {
    */
   public Compactor getCompactor() {
     createComponentsOnce();
-    return this.compactor.get();
+    return this.compactor;
   }
 
   /**
@@ -74,7 +78,7 @@ public abstract class StoreEngine {
    */
   public StoreFileManager getStoreFileManager() {
     createComponentsOnce();
-    return this.storeFileManager.get();
+    return this.storeFileManager;
   }
 
   protected StoreEngine(Configuration conf, Store store, KVComparator comparator) {
@@ -83,18 +87,22 @@ public abstract class StoreEngine {
     this.comparator = comparator;
   }
 
+  public CompactionContext createCompaction() {
+    createComponentsOnce();
+    return this.createCompactionContext();
+  }
+
+  protected abstract CompactionContext createCompactionContext();
+
   /**
    * Create the StoreEngine's components.
-   * @param storeFileManager out parameter for StoreFileManager.
-   * @param compactionPolicy out parameter for CompactionPolicy.
-   * @param compactor out parameter for Compactor.
    */
-  protected abstract void createComponents(PP<StoreFileManager> storeFileManager,
-      PP<CompactionPolicy> compactionPolicy, PP<Compactor> compactor);
+  protected abstract void createComponents();
 
   private void createComponentsOnce() {
     if (isInitialized) return;
-    createComponents(storeFileManager, compactionPolicy, compactor);
+    createComponents();
+    assert compactor != null && compactionPolicy != null && storeFileManager != null;
     isInitialized = true;
   }
 
@@ -115,20 +123,6 @@ public abstract class StoreEngine {
           new Object[] { conf, store, kvComparator });
     } catch (Exception e) {
       throw new IOException("Unable to load configured store engine '" + className + "'", e);
-    }
-  }
-
-  /**
-   * To allow StoreEngine-s to have custom dependencies between 3 components, we want to create
-   * them in one place. To return multiple, simulate C++ pointer to pointers/C# out params.
-   */
-  protected static class PP<T> {
-    private T t = null;
-    public void set(T t) {
-      this.t = t;
-    }
-    public T get() {
-      return this.t;
     }
   }
 }

@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -156,8 +156,9 @@ public class CompactionTool extends Configured implements Tool {
         " family=" + familyDir.getName());
       HStore store = getStore(region, familyDir);
       do {
-        CompactionRequest cr = store.requestCompaction();
-        List<StoreFile> storeFiles = store.compact(cr);
+        CompactionContext compaction = store.requestCompaction();
+        if (compaction == null) break;
+        List<StoreFile> storeFiles = store.compact(compaction);
         if (storeFiles != null && !storeFiles.isEmpty()) {
           if (keepCompactedFiles && deleteCompacted) {
             for (StoreFile storeFile: storeFiles) {
