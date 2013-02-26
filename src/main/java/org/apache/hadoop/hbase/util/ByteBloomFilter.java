@@ -418,24 +418,27 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
 
     int hash1 = hash.hash(buf, offset, length, 0);
     int hash2 = hash.hash(buf, offset, length, hash1);
-    int bloomBitSize = bloomSize * 8;
-
+    int bloomBitSize = bloomSize << 3;
+    
     if (randomGeneratorForTest == null) {
       // Production mode.
+      int compositeHash = hash1;
       for (int i = 0; i < hashCount; i++) {
-        long hashLoc = Math.abs((hash1 + i * hash2) % bloomBitSize);
-        if (!get(hashLoc, bloomArray, bloomOffset))
+        int hashLoc = Math.abs(compositeHash % bloomBitSize);
+        compositeHash += hash2;
+        if (!get(hashLoc, bloomArray, bloomOffset)) {
           return false;
+        }
       }
     } else {
       // Test mode with "fake lookups" to estimate "ideal false positive rate".
       for (int i = 0; i < hashCount; i++) {
-        long hashLoc = randomGeneratorForTest.nextInt(bloomBitSize);
-        if (!get(hashLoc, bloomArray, bloomOffset))
+        int hashLoc = randomGeneratorForTest.nextInt(bloomBitSize);
+        if (!get(hashLoc, bloomArray, bloomOffset)){
           return false;
+        }
       }
     }
-
     return true;
   }
 
@@ -461,9 +464,9 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
    * @param pos index of bit
    * @return true if bit at specified index is 1, false if 0.
    */
-  static boolean get(long pos, byte[] bloomArray, int bloomOffset) {
-    int bytePos = (int)(pos / 8);
-    int bitPos = (int)(pos % 8);
+  static boolean get(int pos, byte[] bloomArray, int bloomOffset) {
+    int bytePos = pos >> 3; //pos / 8
+    int bitPos = pos & 0x7; //pos % 8
     byte curByte = bloomArray[bloomOffset + bytePos];
     curByte &= bitvals[bitPos];
     return (curByte != 0);
