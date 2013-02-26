@@ -584,7 +584,9 @@ public class MemStore implements HeapSize {
         if (kv.getType() == KeyValue.Type.Put.getCode() &&
             kv.getMemstoreTS() == 0) {
           // false means there was a change, so give us the size.
-          addedSize -= heapSizeChange(kv, true);
+          long delta = heapSizeChange(cur, true);
+          addedSize -= delta;
+          this.size.addAndGet(-delta);
           it.remove();
         }
       } else {
