@@ -38,7 +38,7 @@ t to table 't1', the corresponding command would be:
 EOF
       end
 
-      def command(table, row, column,
+      def command(table, row, column = nil,
                   timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
         deleteall(table(table), row, column, timestamp)
       end
