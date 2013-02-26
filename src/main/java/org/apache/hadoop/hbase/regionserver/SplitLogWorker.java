@@ -107,9 +107,10 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         // TODO have to correctly figure out when log splitting has been
         // interrupted or has encountered a transient error and when it has
         // encountered a bad non-retry-able persistent error.
-        try {
+        try {          
+          String relativeLogPath = getRelativeLogPath(filename);
           if (HLogSplitter.splitLogFile(rootdir,
-              fs.getFileStatus(new Path(filename)), fs, conf, p) == false) {
+              fs.getFileStatus(new Path(rootdir, relativeLogPath)), fs, conf, p) == false) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {
@@ -128,6 +129,21 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           return Status.ERR;
         }
         return Status.DONE;
+      }
+
+      private String getRelativeLogPath(String logPath) {
+        StringBuilder sb = new StringBuilder();
+        String znodeDelimiter = Character.toString(Path.SEPARATOR_CHAR);
+        String[] filenameSplits = logPath.split(znodeDelimiter);
+        int len = filenameSplits.length;
+        String relativeLogPath = logPath;
+        if (len > 3) {
+          // the last three terms are .logs/server/log-file
+          relativeLogPath = sb.append(filenameSplits[len - 3]).append(znodeDelimiter)
+            .append(filenameSplits[len - 2]).append(znodeDelimiter)
+            .append(filenameSplits[len - 1]).toString();
+        }
+        return relativeLogPath;
       }
     });
   }
