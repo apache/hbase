@@ -51,9 +51,15 @@ public class MockRegionServerServices implements RegionServerServices {
     new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
   private ZooKeeperWatcher zkw = null;
+  private ServerName serverName = null;
 
-  public MockRegionServerServices(ZooKeeperWatcher zkw){
+  public MockRegionServerServices(ZooKeeperWatcher zkw) {
     this.zkw = zkw;
+  }
+  
+  public MockRegionServerServices(ZooKeeperWatcher zkw, ServerName serverName) {
+    this.zkw = zkw;
+    this.serverName = serverName;
   }
 
   public MockRegionServerServices(){
@@ -126,7 +132,7 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public ServerName getServerName() {
-    return null;
+    return this.serverName;
   }
 
   @Override
