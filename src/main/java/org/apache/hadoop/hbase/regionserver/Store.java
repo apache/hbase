@@ -729,7 +729,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @return Path The path name of the tmp file to which the store was flushed
    * @throws IOException
    */
-  private Path flushCache(final long logCacheFlushId,
+  protected Path flushCache(final long logCacheFlushId,
       SortedSet<KeyValue> snapshot,
       TimeRangeTracker snapshotTimeRangeTracker,
       AtomicLong flushedSize,

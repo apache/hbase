@@ -1448,6 +1448,10 @@ public class HRegion implements HeapSize { // , Writable{
   protected boolean internalFlushcache(
       final HLog wal, final long myseqid, MonitoredTask status)
   throws IOException {
+    if (this.rsServices != null && this.rsServices.isAborted()) {
+      // Don't flush when server aborting, it's unsafe
+      throw new IOException("Aborting flush because server is abortted...");
+    }
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
     // Clear flush flag.
     // Record latest flush time
