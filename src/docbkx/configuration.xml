@@ -229,8 +229,8 @@ to ensure well-formedness of your document after an edit session.
          <thead>
 	     <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.96</entry></row>
 	     </thead><tbody>
-         <row><entry>Hadoop-0.20.205</entry><entry>S</entry>          <entry>S</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-0.22.x  </entry><entry>S</entry>          <entry>S</entry>           <entry>X</entry></row>
+         <row><entry>Hadoop-0.20.205</entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
+         <row><entry>Hadoop-0.22.x  </entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
          <row><entry>Hadoop-1.0.x   </entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry></row>
          <row><entry>Hadoop-1.1.x   </entry><entry>NT</entry>         <entry>S</entry>           <entry>S</entry></row>
          <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry></row>
@@ -245,7 +245,7 @@ to ensure well-formedness of your document after an edit session.
 		</simplelist>
         </para>
         <para>
-	Because HBase depends on Hadoop, it bundles an instance of the Hadoop jar under its <filename>lib</filename> directory. The bundled jar is ONLY for use in standalone mode. In distributed mode, it is <emphasis>critical</emphasis> that the version of Hadoop that is out on your cluster match what is under HBase. Replace the hadoop jar found in the HBase lib directory with the hadoop jar you are running on your cluster to avoid version mismatch issues. Make sure you replace the jar in HBase everywhere on your cluster. Hadoop version mismatch issues have various manifestations but often all looks like its hung up. 
+	Because HBase depends on Hadoop, it bundles an instance of the Hadoop jar under its <filename>lib</filename> directory. The bundled jar is ONLY for use in standalone mode. In distributed mode, it is <emphasis>critical</emphasis> that the version of Hadoop that is out on your cluster match what is under HBase. Replace the hadoop jar found in the HBase lib directory with the hadoop jar you are running on your cluster to avoid version mismatch issues. Make sure you replace the jar in HBase everywhere on your cluster. Hadoop version mismatch issues have various manifestations but often all looks like its hung up.
     </para>
     <section xml:id="hadoop.hbase-0.94">
 	<title>Apache HBase 0.92 and 0.94</title>
