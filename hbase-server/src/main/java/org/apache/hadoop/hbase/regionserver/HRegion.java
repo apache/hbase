@@ -2196,6 +2196,14 @@ public class HRegion implements HeapSize { // , Writable{
       // ----------------------------------
       w = mvcc.beginMemstoreInsert();
 
+      // calling the pre CP hook for batch mutation
+      if (coprocessorHost != null) {
+        MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp = 
+          new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(batchOp.operations, 
+          batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
+        if (coprocessorHost.preBatchMutate(miniBatchOp)) return 0L;
+      }
+
       // ------------------------------------
       // STEP 3. Write back to memstore
       // Write to memstore. It is ok to write to memstore
@@ -2270,6 +2278,14 @@ public class HRegion implements HeapSize { // , Writable{
         syncOrDefer(txid);
       }
       walSyncSuccessful = true;
+      // calling the post CP hook for batch mutation
+      if (coprocessorHost != null) {
+        MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp = 
+          new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(batchOp.operations, 
+          batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
+        coprocessorHost.postBatchMutate(miniBatchOp);
+      }
+
       // ------------------------------------------------------------------
       // STEP 8. Advance mvcc. This will make this put visible to scanners and getters.
       // ------------------------------------------------------------------

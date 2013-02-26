@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -539,6 +541,29 @@ public interface RegionObserver extends Coprocessor {
   void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Delete delete, final WALEdit edit, final boolean writeToWAL)
     throws IOException;
+  
+  /**
+   * This will be called for every batch mutation operation happening at the server. This will be
+   * called after acquiring the locks on the mutating rows and after applying the proper timestamp
+   * for each Mutation at the server. The batch may contain Put/Delete. By setting OperationStatus
+   * of Mutations ({@link MiniBatchOperationInProgress#setOperationStatus(int, OperationStatus)}),
+   * {@link RegionObserver} can make HRegion to skip these Mutations.
+   * @param c the environment provided by the region server
+   * @param miniBatchOp batch of Mutations getting applied to region.
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void preBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException;
+
+  /**
+   * This will be called after applying a batch of Mutations on a region. The Mutations are added to
+   * memstore and WAL.
+   * @param c the environment provided by the region server
+   * @param miniBatchOp batch of Mutations applied to region.
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException;
 
   /**
    * Called before checkAndPut
