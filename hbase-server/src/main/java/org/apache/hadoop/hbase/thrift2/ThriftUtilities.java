@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.thrift2;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.thrift2.generated.*;
 
@@ -37,13 +38,13 @@ public class ThriftUtilities {
 
   /**
    * Creates a {@link Get} (HBase) from a {@link TGet} (Thrift).
-   * 
+   *
    * This ignores any timestamps set on {@link TColumn} objects.
-   * 
+   *
    * @param in the <code>TGet</code> to convert
-   * 
+   *
    * @return <code>Get</code> object
-   * 
+   *
    * @throws IOException if an invalid time range or max version parameter is given
    */
   public static Get getFromThrift(TGet in) throws IOException {
@@ -77,11 +78,11 @@ public class ThriftUtilities {
 
   /**
    * Converts multiple {@link TGet}s (Thrift) into a list of {@link Get}s (HBase).
-   * 
+   *
    * @param in list of <code>TGet</code>s to convert
-   * 
+   *
    * @return list of <code>Get</code> objects
-   * 
+   *
    * @throws IOException if an invalid time range or max version parameter is given
    * @see #getFromThrift(TGet)
    */
@@ -95,9 +96,9 @@ public class ThriftUtilities {
 
   /**
    * Creates a {@link TResult} (Thrift) from a {@link Result} (HBase).
-   * 
+   *
    * @param in the <code>Result</code> to convert
-   * 
+   *
    * @return converted result, returns an empty result if the input is <code>null</code>
    */
   public static TResult resultFromHBase(Result in) {
@@ -122,11 +123,11 @@ public class ThriftUtilities {
 
   /**
    * Converts multiple {@link Result}s (HBase) into a list of {@link TResult}s (Thrift).
-   * 
+   *
    * @param in array of <code>Result</code>s to convert
-   * 
+   *
    * @return list of converted <code>TResult</code>s
-   * 
+   *
    * @see #resultFromHBase(Result)
    */
   public static List<TResult> resultsFromHBase(Result[] in) {
@@ -139,9 +140,9 @@ public class ThriftUtilities {
 
   /**
    * Creates a {@link Put} (HBase) from a {@link TPut} (Thrift)
-   * 
+   *
    * @param in the <code>TPut</code> to convert
-   * 
+   *
    * @return converted <code>Put</code>
    */
   public static Put putFromThrift(TPut in) {
@@ -169,11 +170,11 @@ public class ThriftUtilities {
 
   /**
    * Converts multiple {@link TPut}s (Thrift) into a list of {@link Put}s (HBase).
-   * 
+   *
    * @param in list of <code>TPut</code>s to convert
-   * 
+   *
    * @return list of converted <code>Put</code>s
-   * 
+   *
    * @see #putFromThrift(TPut)
    */
   public static List<Put> putsFromThrift(List<TPut> in) {
@@ -186,9 +187,9 @@ public class ThriftUtilities {
 
   /**
    * Creates a {@link Delete} (HBase) from a {@link TDelete} (Thrift).
-   * 
+   *
    * @param in the <code>TDelete</code> to convert
-   * 
+   *
    * @return converted <code>Delete</code>
    */
   public static Delete deleteFromThrift(TDelete in) {
@@ -233,11 +234,11 @@ public class ThriftUtilities {
 
   /**
    * Converts multiple {@link TDelete}s (Thrift) into a list of {@link Delete}s (HBase).
-   * 
+   *
    * @param in list of <code>TDelete</code>s to convert
-   * 
+   *
    * @return list of converted <code>Delete</code>s
-   * 
+   *
    * @see #deleteFromThrift(TDelete)
    */
 
@@ -259,12 +260,14 @@ public class ThriftUtilities {
     }
 
     // Map<family, List<KeyValue>>
-    for (Map.Entry<byte[], List<KeyValue>> familyEntry : in.getFamilyMap().entrySet()) {
+    for (Map.Entry<byte[], List<? extends org.apache.hbase.Cell>> familyEntry:
+        in.getFamilyMap().entrySet()) {
       TColumn column = new TColumn(ByteBuffer.wrap(familyEntry.getKey()));
-      for (KeyValue keyValue : familyEntry.getValue()) {
-        byte[] family = keyValue.getFamily();
-        byte[] qualifier = keyValue.getQualifier();
-        long timestamp = keyValue.getTimestamp();
+      for (org.apache.hbase.Cell cell: familyEntry.getValue()) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+        byte[] family = kv.getFamily();
+        byte[] qualifier = kv.getQualifier();
+        long timestamp = kv.getTimestamp();
         if (family != null) {
           column.setFamily(family);
         }
@@ -272,7 +275,7 @@ public class ThriftUtilities {
           column.setQualifier(qualifier);
         }
         if (timestamp != HConstants.LATEST_TIMESTAMP) {
-          column.setTimestamp(keyValue.getTimestamp());
+          column.setTimestamp(kv.getTimestamp());
         }
       }
       columns.add(column);

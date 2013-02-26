@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -63,6 +64,7 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.Cell;
 
 /**
  * HTable interface to remote tables accessed via REST gateway
@@ -183,8 +185,9 @@ public class RemoteHTable implements HTableInterface {
   protected CellSetModel buildModelFromPut(Put put) {
     RowModel row = new RowModel(put.getRow());
     long ts = put.getTimeStamp();
-    for (List<KeyValue> kvs: put.getFamilyMap().values()) {
-      for (KeyValue kv: kvs) {
+    for (List<? extends Cell> cells: put.getFamilyMap().values()) {
+      for (Cell cell: cells) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         row.addCell(new CellModel(kv.getFamily(), kv.getQualifier(),
           ts != HConstants.LATEST_TIMESTAMP ? ts : kv.getTimestamp(),
           kv.getValue()));
@@ -388,25 +391,26 @@ public class RemoteHTable implements HTableInterface {
     // ignores the row specification in the URI
 
     // separate puts by row
-    TreeMap<byte[],List<KeyValue>> map =
-      new TreeMap<byte[],List<KeyValue>>(Bytes.BYTES_COMPARATOR);
+    TreeMap<byte[],List<Cell>> map =
+      new TreeMap<byte[],List<Cell>>(Bytes.BYTES_COMPARATOR);
     for (Put put: puts) {
       byte[] row = put.getRow();
-      List<KeyValue> kvs = map.get(row);
-      if (kvs == null) {
-        kvs = new ArrayList<KeyValue>();
-        map.put(row, kvs);
+      List<Cell> cells = map.get(row);
+      if (cells == null) {
+        cells = new ArrayList<Cell>();
+        map.put(row, cells);
       }
-      for (List<KeyValue> l: put.getFamilyMap().values()) {
-        kvs.addAll(l);
+      for (List<? extends Cell> l: put.getFamilyMap().values()) {
+        cells.addAll(l);
       }
     }
 
     // build the cell set
     CellSetModel model = new CellSetModel();
-    for (Map.Entry<byte[], List<KeyValue>> e: map.entrySet()) {
+    for (Map.Entry<byte[], List<Cell>> e: map.entrySet()) {
       RowModel row = new RowModel(e.getKey());
-      for (KeyValue kv: e.getValue()) {
+      for (Cell cell: e.getValue()) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         row.addCell(new CellModel(kv));
       }
       model.addRow(row);

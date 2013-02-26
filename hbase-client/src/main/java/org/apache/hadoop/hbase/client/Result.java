@@ -24,6 +24,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.Cell;
+import org.apache.hbase.CellScannable;
+import org.apache.hbase.CellScanner;
+import org.apache.hbase.CellUtil;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
@@ -38,7 +42,7 @@ import java.util.TreeMap;
 /**
  * Single row result of a {@link Get} or {@link Scan} query.<p>
  *
- * This class is NOT THREAD SAFE.<p>
+ * This class is <b>NOT THREAD SAFE</b>.<p>
  *
  * Convenience methods are available that return various {@link Map}
  * structures and values directly.<p>
@@ -61,13 +65,13 @@ import java.util.TreeMap;
  * Each KeyValue can then be accessed through
  * {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()},
  * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.<p>
- * 
+ *
  * If you need to overwrite a Result with another Result instance -- as in the old 'mapred' RecordReader next
  * invocations -- then create an empty Result with the null constructor and in then use {@link #copyFrom(Result)}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Result {
+public class Result implements CellScannable {
   private KeyValue [] kvs;
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
@@ -78,6 +82,7 @@ public class Result {
   // never use directly
   private static byte [] buffer = null;
   private static final int PAD_WIDTH = 128;
+  public static final Result EMPTY_RESULT = new Result();
 
   /**
    * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #raw()}.
@@ -105,7 +110,8 @@ public class Result {
    * are already sorted
    * @param kvs List of KeyValues
    */
-  public Result(List<KeyValue> kvs) {
+  public Result(List<? extends Cell> kvs) {
+    // TODO: Here we presume the passed in Cells are KVs.  One day this won't always be so.
     this(kvs.toArray(new KeyValue[kvs.size()]));
   }
 
@@ -678,7 +684,7 @@ public class Result {
    */
   public static void compareResults(Result res1, Result res2)
       throws Exception {
-    if (res2 == null) {  
+    if (res2 == null) {
       throw new Exception("There wasn't enough rows, we stopped at "
           + Bytes.toStringBinary(res1.getRow()));
     }
@@ -705,5 +711,10 @@ public class Result {
     this.row = null;
     this.familyMap = null;
     this.kvs = other.kvs;
+  }
+
+  @Override
+  public CellScanner cellScanner() {
+    return CellUtil.createCellScanner(this.kvs);
   }
 }

@@ -18,37 +18,33 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.util.Map;
-import java.util.List;
-import java.util.Random;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.classification.InterfaceAudience;
-
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.Cell;
 
 /**
  * This class runs performance benchmarks for {@link HLog}.
@@ -330,9 +326,11 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     return put;
   }
 
-  private void addFamilyMapToWALEdit(Map<byte[], List<KeyValue>> familyMap, WALEdit walEdit) {
-    for (List<KeyValue> edits : familyMap.values()) {
-      for (KeyValue kv : edits) {
+  private void addFamilyMapToWALEdit(Map<byte[], List<? extends Cell>> familyMap,
+      WALEdit walEdit) {
+    for (List<? extends Cell> edits : familyMap.values()) {
+      for (Cell cell : edits) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         walEdit.add(kv);
       }
     }

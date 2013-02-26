@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.Cell;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -111,7 +112,9 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @return this for invocation chaining
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   public Delete addDeleteMarker(KeyValue kv) throws IOException {
+    // TODO: Deprecate and rename 'add' so it matches how we add KVs to Puts.
     if (!kv.isDelete()) {
       throw new IOException("The recently added KeyValue is not of type "
           + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
@@ -124,11 +127,13 @@ public class Delete extends Mutation implements Comparable<Row> {
           + Bytes.toStringBinary(this.row));
     }
     byte [] family = kv.getFamily();
-    List<KeyValue> list = familyMap.get(family);
+    List<? extends Cell> list = familyMap.get(family);
     if (list == null) {
-      list = new ArrayList<KeyValue>();
+      list = new ArrayList<Cell>();
     }
-    list.add(kv);
+    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
+    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
+    ((List<KeyValue>)list).add(kv);
     familyMap.put(family, list);
     return this;
   }
@@ -156,14 +161,18 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param timestamp maximum version timestamp
    * @return this for invocation chaining
    */
+  @SuppressWarnings("unchecked")
   public Delete deleteFamily(byte [] family, long timestamp) {
-    List<KeyValue> list = familyMap.get(family);
+    List<? extends Cell> list = familyMap.get(family);
     if(list == null) {
-      list = new ArrayList<KeyValue>();
+      list = new ArrayList<Cell>();
     } else if(!list.isEmpty()) {
       list.clear();
     }
-    list.add(new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamily));
+    KeyValue kv = new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamily);
+    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
+    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
+    ((List<KeyValue>)list).add(kv);
     familyMap.put(family, list);
     return this;
   }
@@ -187,13 +196,16 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param timestamp maximum version timestamp
    * @return this for invocation chaining
    */
+  @SuppressWarnings("unchecked")
   public Delete deleteColumns(byte [] family, byte [] qualifier, long timestamp) {
-    List<KeyValue> list = familyMap.get(family);
+    List<? extends Cell> list = familyMap.get(family);
     if (list == null) {
-      list = new ArrayList<KeyValue>();
+      list = new ArrayList<Cell>();
     }
-    list.add(new KeyValue(this.row, family, qualifier, timestamp,
-      KeyValue.Type.DeleteColumn));
+    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
+    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
+    ((List<KeyValue>)list).add(new KeyValue(this.row, family, qualifier, timestamp,
+        KeyValue.Type.DeleteColumn));
     familyMap.put(family, list);
     return this;
   }
@@ -219,13 +231,16 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param timestamp version timestamp
    * @return this for invocation chaining
    */
+  @SuppressWarnings("unchecked")
   public Delete deleteColumn(byte [] family, byte [] qualifier, long timestamp) {
-    List<KeyValue> list = familyMap.get(family);
+    List<? extends Cell> list = familyMap.get(family);
     if(list == null) {
-      list = new ArrayList<KeyValue>();
+      list = new ArrayList<Cell>();
     }
-    list.add(new KeyValue(
-        this.row, family, qualifier, timestamp, KeyValue.Type.Delete));
+    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
+    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
+    KeyValue kv = new KeyValue(this.row, family, qualifier, timestamp, KeyValue.Type.Delete);
+    ((List<KeyValue>)list).add(kv);
     familyMap.put(family, list);
     return this;
   }

@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.Cell;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,13 +80,28 @@ public class Append extends Mutation {
    * @return this
    */
   public Append add(byte [] family, byte [] qualifier, byte [] value) {
-    List<KeyValue> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<KeyValue>();
+    KeyValue kv = new KeyValue(this.row, family, qualifier, this.ts, KeyValue.Type.Put, value);
+    return add(kv);
+  }
+
+  /**
+   * Add column and value to this Append operation.
+   * @param cell
+   * @return This instance
+   */
+  @SuppressWarnings("unchecked")
+  public Append add(final Cell cell) {
+    // Presume it is KeyValue for now.
+    KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+    byte [] family = kv.getFamily();
+    List<? extends Cell> list = this.familyMap.get(family);
+    if (list == null) {
+      list  = new ArrayList<Cell>();
     }
-    list.add(new KeyValue(
-        this.row, family, qualifier, this.ts, KeyValue.Type.Put, value));
-    familyMap.put(family, list);
+    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
+    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
+    ((List<KeyValue>)list).add(kv);
+    this.familyMap.put(family, list);
     return this;
   }
 }

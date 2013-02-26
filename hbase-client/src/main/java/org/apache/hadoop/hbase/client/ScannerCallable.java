@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -54,7 +56,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     = "hbase.client.log.scanner.latency.cutoff";
   public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
 
-  private static final Log LOG = LogFactory.getLog(ScannerCallable.class);
+  public static final Log LOG = LogFactory.getLog(ScannerCallable.class);
   private long scannerId = -1L;
   private boolean instantiated = false;
   private boolean closed = false;
@@ -135,9 +137,10 @@ public class ScannerCallable extends ServerCallable<Result[]> {
         this.scannerId = openScanner();
       } else {
         Result [] rrs = null;
+        ScanRequest request = null;
         try {
           incRPCcallsMetrics();
-          ScanRequest request =
+          request =
             RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           ScanResponse response = null;
           try {
@@ -174,8 +177,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           updateResultsMetrics(response);
         } catch (IOException e) {
           if (logScannerActivity) {
-            LOG.info("Got exception in fetching from scanner="
-              + scannerId, e);
+            LOG.info("Got exception making request " + TextFormat.shortDebugString(request), e);
           }
           IOException ioe = e;
           if (e instanceof RemoteException) {

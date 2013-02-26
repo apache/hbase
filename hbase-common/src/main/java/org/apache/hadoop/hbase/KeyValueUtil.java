@@ -201,7 +201,8 @@ public class KeyValueUtil {
    * @return <code>cell<code> if it is an instance of {@link KeyValue} else we will return a
    * new {@link KeyValue} instance made from <code>cell</code>
    */
-  public static Cell ensureKeyValue(final Cell cell) {
-    return cell instanceof KeyValue? cell: copyToNewKeyValue(cell);
+  public static KeyValue ensureKeyValue(final Cell cell) {
+    if (cell == null) return null;
+    return cell instanceof KeyValue? (KeyValue)cell: copyToNewKeyValue(cell);
   }
 }

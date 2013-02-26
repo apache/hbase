@@ -35,9 +35,11 @@ import java.util.TreeMap;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class MultiAction<R> {
+  // TODO: This class should not be visible outside of the client package.
 
   // map of regions to lists of puts/gets/deletes for that region.
-  public Map<byte[], List<Action<R>>> actions = new TreeMap<byte[], List<Action<R>>>(Bytes.BYTES_COMPARATOR);
+  public Map<byte[], List<Action<R>>> actions =
+    new TreeMap<byte[], List<Action<R>>>(Bytes.BYTES_COMPARATOR);
 
   public MultiAction() {
     super();

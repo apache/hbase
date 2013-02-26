@@ -3634,7 +3634,8 @@ public class TestFromClientSide {
     assertEquals(put.size(), 1);
     assertEquals(put.getFamilyMap().get(CONTENTS_FAMILY).size(), 1);
 
-    KeyValue kv = put.getFamilyMap().get(CONTENTS_FAMILY).get(0);
+    // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
+    KeyValue kv = (KeyValue)put.getFamilyMap().get(CONTENTS_FAMILY).get(0);
 
     assertTrue(Bytes.equals(kv.getFamily(), CONTENTS_FAMILY));
     // will it return null or an empty byte array?
@@ -4158,7 +4159,7 @@ public class TestFromClientSide {
     mrmBuilder.addMutationRequest(m2);
     MultiMutateRequest mrm = mrmBuilder.build();
     CoprocessorRpcChannel channel = t.coprocessorService(ROW);
-    MultiRowMutationService.BlockingInterface service = 
+    MultiRowMutationService.BlockingInterface service =
        MultiRowMutationService.newBlockingStub(channel);
     service.mutateRows(null, mrm);
     Get g = new Get(ROW);

@@ -19,20 +19,22 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hbase.Cell;
 
 /**
  * Used to perform Put operations for a single row.
@@ -44,11 +46,6 @@ import java.util.TreeMap;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Put extends Mutation implements HeapSize, Comparable<Row> {
-  private static final long OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + 2 * ClassSize.REFERENCE +
-      1 * Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN +
-      ClassSize.REFERENCE + ClassSize.TREEMAP);
-
   /**
    * Create a Put operation for the specified row.
    * @param row row key
@@ -77,10 +74,8 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    */
   public Put(Put putToCopy) {
     this(putToCopy.getRow(), putToCopy.ts);
-    this.familyMap =
-      new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
-    for(Map.Entry<byte [], List<KeyValue>> entry :
-      putToCopy.getFamilyMap().entrySet()) {
+    this.familyMap = new TreeMap<byte [], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
+    for(Map.Entry<byte [], List<? extends Cell>> entry: putToCopy.getFamilyMap().entrySet()) {
       this.familyMap.put(entry.getKey(), entry.getValue());
     }
     this.writeToWAL = putToCopy.writeToWAL;
@@ -106,10 +101,11 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param value column value
    * @return this
    */
+  @SuppressWarnings("unchecked")
   public Put add(byte [] family, byte [] qualifier, long ts, byte [] value) {
-    List<KeyValue> list = getKeyValueList(family);
+    List<? extends Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
-    list.add(kv);
+    ((List<KeyValue>)list).add(kv);
     familyMap.put(kv.getFamily(), list);
     return this;
   }
@@ -122,9 +118,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @return this
    * @throws java.io.IOException e
    */
+  @SuppressWarnings("unchecked")
   public Put add(KeyValue kv) throws IOException{
     byte [] family = kv.getFamily();
-    List<KeyValue> list = getKeyValueList(family);
+    List<? extends Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length,
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
@@ -134,20 +131,9 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
         kv.getRowLength()) + " doesn't match the original one " +
         Bytes.toStringBinary(this.row));
     }
-    list.add(kv);
+    ((List<KeyValue>)list).add(kv);
     familyMap.put(family, list);
     return this;
-  }
-
-  /*
-   * Create a KeyValue with this objects row key and the Put identifier.
-   *
-   * @return a KeyValue with this objects row key and the Put identifier.
-   */
-  private KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts,
-      byte[] value) {
-  return  new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put,
-      value);
   }
 
   /**
@@ -226,7 +212,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    */
   private boolean has(byte[] family, byte[] qualifier, long ts, byte[] value,
                       boolean ignoreTS, boolean ignoreValue) {
-    List<KeyValue> list = getKeyValueList(family);
+    List<? extends Cell> list = getCellList(family);
     if (list.size() == 0) {
       return false;
     }
@@ -236,7 +222,8 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     // F T => 2
     // F F => 1
     if (!ignoreTS && !ignoreValue) {
-      for (KeyValue kv : list) {
+      for (Cell cell : list) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         if (Arrays.equals(kv.getFamily(), family) &&
             Arrays.equals(kv.getQualifier(), qualifier) &&
             Arrays.equals(kv.getValue(), value) &&
@@ -245,21 +232,24 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
         }
       }
     } else if (ignoreValue && !ignoreTS) {
-      for (KeyValue kv : list) {
+      for (Cell cell : list) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
             && kv.getTimestamp() == ts) {
           return true;
         }
       }
     } else if (!ignoreValue && ignoreTS) {
-      for (KeyValue kv : list) {
+      for (Cell cell : list) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
             && Arrays.equals(kv.getValue(), value)) {
           return true;
         }
       }
     } else {
-      for (KeyValue kv : list) {
+      for (Cell cell : list) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         if (Arrays.equals(kv.getFamily(), family) &&
             Arrays.equals(kv.getQualifier(), qualifier)) {
           return true;
@@ -279,7 +269,8 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    */
   public List<KeyValue> get(byte[] family, byte[] qualifier) {
     List<KeyValue> filteredList = new ArrayList<KeyValue>();
-    for (KeyValue kv: getKeyValueList(family)) {
+    for (Cell cell: getCellList(family)) {
+      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
       if (Arrays.equals(kv.getQualifier(), qualifier)) {
         filteredList.add(kv);
       }
@@ -287,49 +278,8 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     return filteredList;
   }
 
-  /**
-   * Creates an empty list if one doesnt exist for the given column family
-   * or else it returns the associated list of KeyValue objects.
-   *
-   * @param family column family
-   * @return a list of KeyValue objects, returns an empty list if one doesnt exist.
-   */
-  private List<KeyValue> getKeyValueList(byte[] family) {
-    List<KeyValue> list = familyMap.get(family);
-    if(list == null) {
-      list = new ArrayList<KeyValue>(0);
-    }
-    return list;
-  }
-
-  //HeapSize
+  @Override
   public long heapSize() {
-    long heapsize = OVERHEAD;
-    //Adding row
-    heapsize += ClassSize.align(ClassSize.ARRAY + this.row.length);
-
-    //Adding map overhead
-    heapsize +=
-      ClassSize.align(this.familyMap.size() * ClassSize.MAP_ENTRY);
-    for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      //Adding key overhead
-      heapsize +=
-        ClassSize.align(ClassSize.ARRAY + entry.getKey().length);
-
-      //This part is kinds tricky since the JVM can reuse references if you
-      //store the same value, but have a good match with SizeOf at the moment
-      //Adding value overhead
-      heapsize += ClassSize.align(ClassSize.ARRAYLIST);
-      int size = entry.getValue().size();
-      heapsize += ClassSize.align(ClassSize.ARRAY +
-          size * ClassSize.REFERENCE);
-
-      for(KeyValue kv : entry.getValue()) {
-        heapsize += kv.heapSize();
-      }
-    }
-    heapsize += getAttributeSize();
-
-    return ClassSize.align((int)heapsize);
+    return ClassSize.align((int)super.heapSize());
   }
 }

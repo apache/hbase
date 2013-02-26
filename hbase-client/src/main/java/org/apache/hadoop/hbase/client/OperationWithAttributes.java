@@ -31,7 +31,7 @@ import java.util.Map;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class OperationWithAttributes extends Operation implements Attributes {
-  // a opaque blob of attributes
+  // An opaque blob of attributes
   private Map<String, byte[]> attributes;
 
   // used for uniquely identifying an operation

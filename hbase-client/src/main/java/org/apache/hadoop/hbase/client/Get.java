@@ -41,8 +41,7 @@ import java.util.TreeSet;
  * Used to perform Get operations on a single row.
  * <p>
  * To get everything for a row, instantiate a Get object with the row to get.
- * To further define the scope of what to get, perform additional methods as
- * outlined below.
+ * To further narrow the scope of what to Get, use the methods below.
  * <p>
  * To get all columns from specific families, execute {@link #addFamily(byte[]) addFamily}
  * for each family to retrieve.
@@ -59,7 +58,7 @@ import java.util.TreeSet;
  * To limit the number of versions of each column to be returned, execute
  * {@link #setMaxVersions(int) setMaxVersions}.
  * <p>
- * To add a filter, execute {@link #setFilter(Filter) setFilter}.
+ * To add a filter, call {@link #setFilter(Filter) setFilter}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

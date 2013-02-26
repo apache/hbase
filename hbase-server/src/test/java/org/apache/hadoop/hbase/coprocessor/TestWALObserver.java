@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hbase.Cell;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -52,8 +53,9 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 /**
- * Tests invocation of the {@link org.apache.hadoop.hbase.coprocessor.MasterObserver}
- * interface hooks at all appropriate times during normal HMaster operations.
+ * Tests invocation of the
+ * {@link org.apache.hadoop.hbase.coprocessor.MasterObserver} interface hooks at
+ * all appropriate times during normal HMaster operations.
  */
 @Category(MediumTests.class)
 public class TestWALObserver {
@@ -62,17 +64,11 @@ public class TestWALObserver {
 
   private static byte[] TEST_TABLE = Bytes.toBytes("observedTable");
   private static byte[][] TEST_FAMILY = { Bytes.toBytes("fam1"),
-    Bytes.toBytes("fam2"),
-    Bytes.toBytes("fam3"),
-  };
+      Bytes.toBytes("fam2"), Bytes.toBytes("fam3"), };
   private static byte[][] TEST_QUALIFIER = { Bytes.toBytes("q1"),
-    Bytes.toBytes("q2"),
-    Bytes.toBytes("q3"),
-  };
+      Bytes.toBytes("q2"), Bytes.toBytes("q3"), };
   private static byte[][] TEST_VALUE = { Bytes.toBytes("v1"),
-    Bytes.toBytes("v2"),
-    Bytes.toBytes("v3"),
-  };
+      Bytes.toBytes("v2"), Bytes.toBytes("v3"), };
   private static byte[] TEST_ROW = Bytes.toBytes("testRow");
 
   private Configuration conf;
@@ -94,8 +90,8 @@ public class TestWALObserver {
     conf.setInt("dfs.client.block.recovery.retries", 2);
 
     TEST_UTIL.startMiniCluster(1);
-    Path hbaseRootDir =
-      TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
+    Path hbaseRootDir = TEST_UTIL.getDFSCluster().getFileSystem()
+        .makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
     conf.set(HConstants.HBASE_DIR, hbaseRootDir.toString());
   }
@@ -108,11 +104,12 @@ public class TestWALObserver {
   @Before
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-    //this.cluster = TEST_UTIL.getDFSCluster();
+    // this.cluster = TEST_UTIL.getDFSCluster();
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
     this.hbaseRootDir = new Path(conf.get(HConstants.HBASE_DIR));
     this.dir = new Path(this.hbaseRootDir, TestWALObserver.class.getName());
-    this.oldLogDir = new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    this.oldLogDir = new Path(this.hbaseRootDir,
+        HConstants.HREGION_OLDLOGDIR_NAME);
     this.logDir = new Path(this.hbaseRootDir, HConstants.HREGION_LOGDIR_NAME);
     this.logName = HConstants.HREGION_LOGDIR_NAME;
 
@@ -127,21 +124,22 @@ public class TestWALObserver {
   }
 
   /**
-   * Test WAL write behavior with WALObserver. The coprocessor monitors
-   * a WALEdit written to WAL, and ignore, modify, and add KeyValue's for the
+   * Test WAL write behavior with WALObserver. The coprocessor monitors a
+   * WALEdit written to WAL, and ignore, modify, and add KeyValue's for the
    * WALEdit.
    */
   @Test
   public void testWALObserverWriteToWAL() throws Exception {
 
     HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(TEST_TABLE));
-    final HTableDescriptor htd = createBasic3FamilyHTD(Bytes.toString(TEST_TABLE));
+    final HTableDescriptor htd = createBasic3FamilyHTD(Bytes
+        .toString(TEST_TABLE));
 
     Path basedir = new Path(this.hbaseRootDir, Bytes.toString(TEST_TABLE));
     deleteDir(basedir);
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
 
-    HLog log = HLogFactory.createHLog(this.fs, hbaseRootDir, 
+    HLog log = HLogFactory.createHLog(this.fs, hbaseRootDir,
         TestWALObserver.class.getName(), this.conf);
     SampleRegionWALObserver cp = getCoprocessor(log);
 
@@ -149,8 +147,7 @@ public class TestWALObserver {
     // TEST_FAMILY[1] value shall be changed.
     // TEST_FAMILY[2] shall be added to WALEdit, although it's not in the put.
     cp.setTestValues(TEST_TABLE, TEST_ROW, TEST_FAMILY[0], TEST_QUALIFIER[0],
-        TEST_FAMILY[1], TEST_QUALIFIER[1],
-        TEST_FAMILY[2], TEST_QUALIFIER[2]);
+        TEST_FAMILY[1], TEST_QUALIFIER[1], TEST_FAMILY[2], TEST_QUALIFIER[2]);
 
     assertFalse(cp.isPreWALWriteCalled());
     assertFalse(cp.isPostWALWriteCalled());
@@ -160,7 +157,7 @@ public class TestWALObserver {
     // Use a Put to create familyMap.
     Put p = creatPutWith2Families(TEST_ROW);
 
-    Map<byte [], List<KeyValue>> familyMap = p.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap = p.getFamilyMap();
     WALEdit edit = new WALEdit();
     addFamilyMapToWALEdit(familyMap, edit);
 
@@ -224,9 +221,12 @@ public class TestWALObserver {
     // WAL replay is handled at HRegion::replayRecoveredEdits(), which is
     // ultimately called by HRegion::initialize()
     byte[] tableName = Bytes.toBytes("testWALCoprocessorReplay");
-    final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(Bytes.toString(tableName));
-    //final HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
-    //final HRegionInfo hri1 = createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
+    final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(Bytes
+        .toString(tableName));
+    // final HRegionInfo hri =
+    // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
+    // final HRegionInfo hri1 =
+    // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
     final HRegionInfo hri = new HRegionInfo(tableName, null, null);
 
     final Path basedir = new Path(this.hbaseRootDir, Bytes.toString(tableName));
@@ -235,19 +235,19 @@ public class TestWALObserver {
 
     final Configuration newConf = HBaseConfiguration.create(this.conf);
 
-    //HLog wal = new HLog(this.fs, this.dir, this.oldLogDir, this.conf);
+    // HLog wal = new HLog(this.fs, this.dir, this.oldLogDir, this.conf);
     HLog wal = createWAL(this.conf);
-    //Put p = creatPutWith2Families(TEST_ROW);
+    // Put p = creatPutWith2Families(TEST_ROW);
     WALEdit edit = new WALEdit();
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    //addFamilyMapToWALEdit(p.getFamilyMap(), edit);
+    // addFamilyMapToWALEdit(p.getFamilyMap(), edit);
     final int countPerFamily = 1000;
-    //for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
-          //addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
-          //EnvironmentEdgeManager.getDelegate(), wal);
+    // for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
+      // addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
+      // EnvironmentEdgeManager.getDelegate(), wal);
       addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
-      EnvironmentEdgeManager.getDelegate(), wal, htd);
+          EnvironmentEdgeManager.getDelegate(), wal, htd);
     }
     wal.append(hri, tableName, edit, now, htd);
     // sync to fs.
@@ -281,32 +281,34 @@ public class TestWALObserver {
   }
 
   /**
-   * Test to see CP loaded successfully or not. There is a duplication
-   * at TestHLog, but the purpose of that one is to see whether the loaded
-   * CP will impact existing HLog tests or not.
+   * Test to see CP loaded successfully or not. There is a duplication at
+   * TestHLog, but the purpose of that one is to see whether the loaded CP will
+   * impact existing HLog tests or not.
    */
   @Test
   public void testWALObserverLoaded() throws Exception {
     HLog log = HLogFactory.createHLog(fs, hbaseRootDir,
-                                      TestWALObserver.class.getName(), conf);
+        TestWALObserver.class.getName(), conf);
     assertNotNull(getCoprocessor(log));
   }
 
   private SampleRegionWALObserver getCoprocessor(HLog wal) throws Exception {
     WALCoprocessorHost host = wal.getCoprocessorHost();
-    Coprocessor c = host.findCoprocessor(SampleRegionWALObserver.class.getName());
-    return (SampleRegionWALObserver)c;
+    Coprocessor c = host.findCoprocessor(SampleRegionWALObserver.class
+        .getName());
+    return (SampleRegionWALObserver) c;
   }
 
   /*
    * Creates an HRI around an HTD that has <code>tableName</code> and three
    * column families named.
+   * 
    * @param tableName Name of table to use when we create HTableDescriptor.
    */
   private HRegionInfo createBasic3FamilyHRegionInfo(final String tableName) {
     HTableDescriptor htd = new HTableDescriptor(tableName);
 
-    for (int i = 0; i < TEST_FAMILY.length; i++ ) {
+    for (int i = 0; i < TEST_FAMILY.length; i++) {
       HColumnDescriptor a = new HColumnDescriptor(TEST_FAMILY[i]);
       htd.addFamily(a);
     }
@@ -326,27 +328,30 @@ public class TestWALObserver {
 
   private Put creatPutWith2Families(byte[] row) throws IOException {
     Put p = new Put(row);
-    for (int i = 0; i < TEST_FAMILY.length-1; i++ ) {
-      p.add(TEST_FAMILY[i], TEST_QUALIFIER[i],
-          TEST_VALUE[i]);
+    for (int i = 0; i < TEST_FAMILY.length - 1; i++) {
+      p.add(TEST_FAMILY[i], TEST_QUALIFIER[i], TEST_VALUE[i]);
     }
     return p;
   }
 
   /**
    * Copied from HRegion.
-   *
-   * @param familyMap map of family->edits
-   * @param walEdit the destination entry to append into
+   * 
+   * @param familyMap
+   *          map of family->edits
+   * @param walEdit
+   *          the destination entry to append into
    */
-  private void addFamilyMapToWALEdit(Map<byte[], List<KeyValue>> familyMap,
+  private void addFamilyMapToWALEdit(Map<byte[], List<? extends Cell>> familyMap,
       WALEdit walEdit) {
-    for (List<KeyValue> edits : familyMap.values()) {
-      for (KeyValue kv : edits) {
-        walEdit.add(kv);
+    for (List<? extends Cell> edits : familyMap.values()) {
+      for (Cell cell : edits) {
+        // KeyValue v1 expectation. Cast for now until we go all Cell all the time. TODO.
+        walEdit.add((KeyValue)cell);
       }
     }
   }
+
   private Path runWALSplit(final Configuration c) throws IOException {
     FileSystem fs = FileSystem.get(c);
     HLogSplitter logSplitter = HLogSplitter.createLogSplitter(c,
@@ -359,28 +364,31 @@ public class TestWALObserver {
     LOG.info("Split file=" + splits.get(0));
     return splits.get(0);
   }
+
   private HLog createWAL(final Configuration c) throws IOException {
     return HLogFactory.createHLog(FileSystem.get(c), hbaseRootDir, logName, c);
   }
-  private void addWALEdits (final byte [] tableName, final HRegionInfo hri,
-      final byte [] rowName, final byte [] family,
-      final int count, EnvironmentEdge ee, final HLog wal, final HTableDescriptor htd)
-  throws IOException {
+
+  private void addWALEdits(final byte[] tableName, final HRegionInfo hri,
+      final byte[] rowName, final byte[] family, final int count,
+      EnvironmentEdge ee, final HLog wal, final HTableDescriptor htd)
+      throws IOException {
     String familyStr = Bytes.toString(family);
     for (int j = 0; j < count; j++) {
       byte[] qualifierBytes = Bytes.toBytes(Integer.toString(j));
       byte[] columnBytes = Bytes.toBytes(familyStr + ":" + Integer.toString(j));
       WALEdit edit = new WALEdit();
-      edit.add(new KeyValue(rowName, family, qualifierBytes,
-        ee.currentTimeMillis(), columnBytes));
+      edit.add(new KeyValue(rowName, family, qualifierBytes, ee
+          .currentTimeMillis(), columnBytes));
       wal.append(hri, tableName, edit, ee.currentTimeMillis(), htd);
     }
   }
+
   private HTableDescriptor getBasic3FamilyHTableDescriptor(
       final String tableName) {
     HTableDescriptor htd = new HTableDescriptor(tableName);
 
-    for (int i = 0; i < TEST_FAMILY.length; i++ ) {
+    for (int i = 0; i < TEST_FAMILY.length; i++) {
       HColumnDescriptor a = new HColumnDescriptor(TEST_FAMILY[i]);
       htd.addFamily(a);
     }
@@ -398,7 +406,4 @@ public class TestWALObserver {
     return htd;
   }
 
-
 }
-
-

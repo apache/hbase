@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -69,6 +71,7 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hbase.Cell;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
@@ -154,11 +157,12 @@ public class AccessController extends BaseRegionObserver
    * table updates.
    */
   void updateACL(RegionCoprocessorEnvironment e,
-      final Map<byte[], List<KeyValue>> familyMap) {
+      final Map<byte[], List<? extends Cell>> familyMap) {
     Set<byte[]> tableSet = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte[], List<KeyValue>> f : familyMap.entrySet()) {
-      List<KeyValue> kvs = f.getValue();
-      for (KeyValue kv: kvs) {
+    for (Map.Entry<byte[], List<? extends Cell>> f : familyMap.entrySet()) {
+      List<? extends Cell> cells = f.getValue();
+      for (Cell cell: cells) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         if (Bytes.equals(kv.getBuffer(), kv.getFamilyOffset(),
             kv.getFamilyLength(), AccessControlLists.ACL_LIST_FAMILY, 0,
             AccessControlLists.ACL_LIST_FAMILY.length)) {
@@ -964,9 +968,15 @@ public class AccessController extends BaseRegionObserver
   public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment)
       throws IOException {
+    // Create a map of family to qualifiers.
     Map<byte[], Set<byte[]>> familyMap = Maps.newHashMap();
-    for (Map.Entry<byte[], ? extends Map<byte[], Long>> entry : increment.getFamilyMap().entrySet()) {
-      familyMap.put(entry.getKey(), entry.getValue().keySet());
+    for (Map.Entry<byte [], List<? extends Cell>> entry: increment.getFamilyMap().entrySet()) {
+      Set<byte []> qualifiers = new HashSet<byte []>(entry.getValue().size());
+      for (Cell cell: entry.getValue()) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+        qualifiers.add(kv.getQualifier());
+      }
+      familyMap.put(entry.getKey(), qualifiers);
     }
     requirePermission("increment", Permission.Action.WRITE, c.getEnvironment(), familyMap);
     return null;

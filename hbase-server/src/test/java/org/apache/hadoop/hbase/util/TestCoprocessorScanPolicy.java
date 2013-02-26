@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -55,12 +56,11 @@ import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.Cell;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -217,11 +217,13 @@ public class TestCoprocessorScanPolicy {
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
         final WALEdit edit, final boolean writeToWAL) throws IOException {
       if (put.getAttribute("ttl") != null) {
-        KeyValue kv = put.getFamilyMap().values().iterator().next().get(0);
+        Cell cell = put.getFamilyMap().values().iterator().next().get(0);
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         ttls.put(Bytes.toString(kv.getQualifier()), Bytes.toLong(kv.getValue()));
         c.bypass();
       } else if (put.getAttribute("versions") != null) {
-        KeyValue kv = put.getFamilyMap().values().iterator().next().get(0);
+        Cell cell = put.getFamilyMap().values().iterator().next().get(0);
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         versions.put(Bytes.toString(kv.getQualifier()), Bytes.toInt(kv.getValue()));
         c.bypass();
       }

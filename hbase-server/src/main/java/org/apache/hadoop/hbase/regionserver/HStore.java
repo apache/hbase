@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.Cell;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableCollection;
@@ -1820,10 +1821,10 @@ public class HStore implements Store {
   }
 
   @Override
-  public long upsert(Iterable<KeyValue> kvs, long readpoint) throws IOException {
+  public long upsert(Iterable<? extends Cell> cells, long readpoint) throws IOException {
     this.lock.readLock().lock();
     try {
-      return this.memstore.upsert(kvs, readpoint);
+      return this.memstore.upsert(cells, readpoint);
     } finally {
       this.lock.readLock().unlock();
     }

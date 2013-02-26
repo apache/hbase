@@ -25,10 +25,12 @@ import java.util.TreeSet;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.Cell;
 
 /**
  * Emits sorted Puts.
@@ -61,8 +63,9 @@ public class PutSortReducer extends
       // stop at the end or the RAM threshold
       while (iter.hasNext() && curSize < threshold) {
         Put p = iter.next();
-        for (List<KeyValue> kvs : p.getFamilyMap().values()) {
-          for (KeyValue kv : kvs) {
+        for (List<? extends Cell> cells: p.getFamilyMap().values()) {
+          for (Cell cell: cells) {
+            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             map.add(kv);
             curSize += kv.getLength();
           }

@@ -34,6 +34,7 @@ import java.util.Map;
 @InterfaceStability.Evolving
 public abstract class Operation {
   // TODO make this configurable
+  // TODO Do we need this anymore now we have protobuffed it all?
   private static final int DEFAULT_MAX_COLS = 5;
 
   /**
@@ -110,4 +111,3 @@ public abstract class Operation {
     return toString(DEFAULT_MAX_COLS);
   }
 }
-

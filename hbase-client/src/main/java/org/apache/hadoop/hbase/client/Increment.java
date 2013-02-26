@@ -18,16 +18,19 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
+import org.apache.hbase.Cell;
 
 /**
  * Used to perform Increment operations on a single row.
@@ -43,15 +46,8 @@ import java.util.TreeMap;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Increment implements Row {
-  private byte [] row = null;
-  private boolean writeToWAL = true;
+public class Increment extends Mutation implements Comparable<Row> {
   private TimeRange tr = new TimeRange();
-  private Map<byte [], NavigableMap<byte [], Long>> familyMap =
-    new TreeMap<byte [], NavigableMap<byte [], Long>>(Bytes.BYTES_COMPARATOR);
-
-  /** Constructor for Writable.  DO NOT USE */
-  public Increment() {}
 
   /**
    * Create a Increment operation for the specified row, using an existing row
@@ -61,10 +57,10 @@ public class Increment implements Row {
    * @param row row key
    */
   public Increment(byte [] row) {
-    if (row == null) {
-      throw new IllegalArgumentException("Cannot increment a null row");
+    if (row == null || row.length > HConstants.MAX_ROW_LENGTH) {
+      throw new IllegalArgumentException("Row key is invalid");
     }
-    this.row = row;
+    this.row = Arrays.copyOf(row, row.length);
   }
 
   /**
@@ -77,6 +73,7 @@ public class Increment implements Row {
    * @param amount amount to increment by
    * @return the Increment object
    */
+  @SuppressWarnings("unchecked")
   public Increment addColumn(byte [] family, byte [] qualifier, long amount) {
     if (family == null) {
       throw new IllegalArgumentException("family cannot be null");
@@ -84,40 +81,10 @@ public class Increment implements Row {
     if (qualifier == null) {
       throw new IllegalArgumentException("qualifier cannot be null");
     }
-    NavigableMap<byte [], Long> set = familyMap.get(family);
-    if(set == null) {
-      set = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
-    }
-    set.put(qualifier, amount);
-    familyMap.put(family, set);
-    return this;
-  }
-
-  /* Accessors */
-
-  /**
-   * Method for retrieving the increment's row
-   * @return row
-   */
-  public byte [] getRow() {
-    return this.row;
-  }
-
-  /**
-   * Method for retrieving whether WAL will be written to or not
-   * @return true if WAL should be used, false if not
-   */
-  public boolean getWriteToWAL() {
-    return this.writeToWAL;
-  }
-
-  /**
-   * Sets whether this operation should write to the WAL or not.
-   * @param writeToWAL true if WAL should be used, false if not
-   * @return this increment operation
-   */
-  public Increment setWriteToWAL(boolean writeToWAL) {
-    this.writeToWAL = writeToWAL;
+    List<? extends Cell> list = getCellList(family);
+    KeyValue kv = createPutKeyValue(family, qualifier, ts, Bytes.toBytes(amount));
+    ((List<KeyValue>)list).add(kv);
+    familyMap.put(kv.getFamily(), list);
     return this;
   }
 
@@ -150,14 +117,6 @@ public class Increment implements Row {
   }
 
   /**
-   * Method for retrieving the keys in the familyMap
-   * @return keys in the current familyMap
-   */
-  public Set<byte[]> familySet() {
-    return this.familyMap.keySet();
-  }
-
-  /**
    * Method for retrieving the number of families to increment from
    * @return number of families
    */
@@ -166,32 +125,11 @@ public class Increment implements Row {
   }
 
   /**
-   * Method for retrieving the number of columns to increment
-   * @return number of columns across all families
-   */
-  public int numColumns() {
-    if (!hasFamilies()) return 0;
-    int num = 0;
-    for (NavigableMap<byte [], Long> family : familyMap.values()) {
-      num += family.size();
-    }
-    return num;
-  }
-
-  /**
    * Method for checking if any families have been inserted into this Increment
    * @return true if familyMap is non empty false otherwise
    */
   public boolean hasFamilies() {
     return !this.familyMap.isEmpty();
-  }
-
-  /**
-   * Method for retrieving the increment's familyMap
-   * @return familyMap
-   */
-  public Map<byte[],NavigableMap<byte[], Long>> getFamilyMap() {
-    return this.familyMap;
   }
 
   /**
@@ -208,8 +146,7 @@ public class Increment implements Row {
     }
     sb.append(", families=");
     boolean moreThanOne = false;
-    for(Map.Entry<byte [], NavigableMap<byte[], Long>> entry :
-      this.familyMap.entrySet()) {
+    for(Map.Entry<byte [], List<? extends Cell>> entry: this.familyMap.entrySet()) {
       if(moreThanOne) {
         sb.append("), ");
       } else {
@@ -224,13 +161,14 @@ public class Increment implements Row {
       } else {
         sb.append("{");
         boolean moreThanOneB = false;
-        for(Map.Entry<byte [], Long> column : entry.getValue().entrySet()) {
+        for(Cell cell : entry.getValue()) {
           if(moreThanOneB) {
             sb.append(", ");
           } else {
             moreThanOneB = true;
           }
-          sb.append(Bytes.toStringBinary(column.getKey()) + "+=" + column.getValue());
+          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+          sb.append(Bytes.toStringBinary(kv.getKey()) + "+=" + Bytes.toLong(kv.getValue()));
         }
         sb.append("}");
       }

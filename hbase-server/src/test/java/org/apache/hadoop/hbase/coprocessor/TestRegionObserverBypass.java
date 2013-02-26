@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.apache.hbase.Cell;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -206,12 +207,10 @@ public class TestRegionObserverBypass {
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Put put, final WALEdit edit, final boolean writeToWAL)
         throws IOException {
-      Map<byte[], List<KeyValue>> familyMap = put.getFamilyMap();
+      Map<byte[], List<? extends Cell>> familyMap = put.getFamilyMap();
       if (familyMap.containsKey(test)) {
         e.bypass();
       }
     }
   }
-
 }
-

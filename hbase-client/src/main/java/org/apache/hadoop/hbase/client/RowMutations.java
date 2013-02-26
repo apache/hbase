@@ -38,9 +38,8 @@ import java.util.List;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class RowMutations implements Row {
-  private List<Mutation> mutations = new ArrayList<Mutation>();
+  private final List<Mutation> mutations = new ArrayList<Mutation>();
   private byte [] row;
-  private static final byte VERSION = (byte)0;
 
   /** Constructor for Writable. DO NOT USE */
   public RowMutations() {}

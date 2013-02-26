@@ -23,9 +23,9 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.Cell;
 import org.apache.hbase.CellComparator;
 import org.junit.Assert;
 import org.junit.Test;
@@ -1144,7 +1145,8 @@ public class TestHRegion extends HBaseTestCase {
       //testing existing family
       byte [] family = fam2;
       try {
-        Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
+        NavigableMap<byte[], List<? extends Cell>> deleteMap =
+          new TreeMap<byte[], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
         region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, true);
       } catch (Exception e) {
@@ -1155,7 +1157,8 @@ public class TestHRegion extends HBaseTestCase {
       boolean ok = false;
       family = fam4;
       try {
-        Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
+        NavigableMap<byte[], List<? extends Cell>> deleteMap =
+          new TreeMap<byte[], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
         region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, true);
       } catch (Exception e) {
@@ -1482,7 +1485,8 @@ public class TestHRegion extends HBaseTestCase {
       kvs.add(new KeyValue(row1, fam1, col2, null));
       kvs.add(new KeyValue(row1, fam1, col3, null));
 
-      Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
+      NavigableMap<byte[], List<? extends Cell>> deleteMap =
+        new TreeMap<byte[], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
       deleteMap.put(fam1, kvs);
       region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, true);
 

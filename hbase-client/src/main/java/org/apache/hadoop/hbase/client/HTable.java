@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.Cell;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -1098,8 +1100,10 @@ public class HTable implements HTableInterface {
       throw new IllegalArgumentException("No columns to insert");
     }
     if (maxKeyValueSize > 0) {
-      for (List<KeyValue> list : put.getFamilyMap().values()) {
-        for (KeyValue kv : list) {
+      for (List<? extends Cell> list : put.getFamilyMap().values()) {
+        for (Cell cell : list) {
+          // KeyValue v1 expectation.  Cast for now.
+          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
           if (kv.getLength() > maxKeyValueSize) {
             throw new IllegalArgumentException("KeyValue size too large");
           }

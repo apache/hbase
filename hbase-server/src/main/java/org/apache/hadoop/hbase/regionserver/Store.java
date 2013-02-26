@@ -36,8 +36,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-
-import com.google.common.collect.ImmutableList;
+import org.apache.hbase.Cell;
 
 /**
  * Interface for objects that hold a column family in a Region. Its a memstore and a set of zero or
@@ -102,12 +101,12 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * <p>
    * This operation is atomic on each KeyValue (row/family/qualifier) but not necessarily atomic
    * across all of them.
-   * @param kvs
+   * @param cells
    * @param readpoint readpoint below which we can safely remove duplicate KVs 
    * @return memstore size delta
    * @throws IOException
    */
-  public long upsert(Iterable<KeyValue> kvs, long readpoint) throws IOException;
+  public long upsert(Iterable<? extends Cell> cells, long readpoint) throws IOException;
 
   /**
    * Adds a value to the memstore

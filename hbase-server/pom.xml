@@ -50,8 +50,8 @@
       </testResource>
     </testResources>
     <plugins>
-      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running 
-        tests (this is needed for upstream projects whose tests need this jar simply for 
+      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
+        tests (this is needed for upstream projects whose tests need this jar simply for
         compilation) -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -62,8 +62,8 @@
               <mainClass>org/apache/hadoop/hbase/mapreduce/Driver</mainClass>
             </manifest>
           </archive>
-          <!-- Exclude these 2 packages, because their dependency _binary_ files 
-            include the sources, and Maven 2.2 appears to add them to the sources to compile, 
+          <!-- Exclude these 2 packages, because their dependency _binary_ files
+            include the sources, and Maven 2.2 appears to add them to the sources to compile,
             weird -->
           <excludes>
             <exclude>org/apache/jute/**</exclude>
@@ -200,9 +200,10 @@
     </plugins>
     <!-- General Resources -->
     <pluginManagement>
-      <plugins>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on 
-          the Maven build itself and needs to be kept in plugin management, not in the actual plugins. -->
+       <plugins>
+          <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no
+          influence on the Maven build itself and needs to be kept in plugin management, not in
+          the actual plugins. -->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
@@ -532,11 +533,13 @@
                 <configuration>
                   <target>
                     <mkdir dir="${project.build.directory}/native"/>
-                    <exec executable="cmake" dir="${project.build.directory}/native" 
+                    <exec executable="cmake" dir="${project.build.directory}/native"
                         failonerror="true">
-                      <arg line="${basedir}/src/main/native -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
+                      <arg
+                    line="${basedir}/src/main/native -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
                     </exec>
-                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
+                    <exec executable="make" dir="${project.build.directory}/native"
+                        failonerror="true">
                       <arg line="VERBOSE=1"/>
                     </exec>
                   </target>
@@ -550,8 +553,8 @@
     <!-- Profiles for building against different hadoop versions -->
     <!-- There are a lot of common dependencies used here, should investigate
     if we can combine these profiles somehow -->
-    <!-- profile against Hadoop 1.0.x: This is the default. It has to have the same 
-    activation property as the parent Hadoop 1.0.x profile to make sure it gets run at 
+    <!-- profile against Hadoop 1.0.x: This is the default. It has to have the same
+    activation property as the parent Hadoop 1.0.x profile to make sure it gets run at
     the same time. -->
     <profile>
       <id>hadoop-1.0</id>

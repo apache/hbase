@@ -29,32 +29,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Action<R> implements Comparable<R> {
-
+  // TODO: This class should not be visible outside of the client package.
   private Row action;
   private int originalIndex;
   private R result;
-
-  /**
-   * This constructor is replaced by {@link #Action(Row, int)}
-   */
-  @Deprecated
-  public Action(byte[] regionName, Row action, int originalIndex) {
-    this(action, originalIndex);
-  }
 
   public Action(Row action, int originalIndex) {
     super();
     this.action = action;
     this.originalIndex = originalIndex;    
-  }
-  
-  @Deprecated
-  public byte[] getRegionName() {
-    return null;
-  }
-
-  @Deprecated
-  public void setRegionName(byte[] regionName) {
   }
 
   public R getResult() {
@@ -73,6 +56,7 @@ public class Action<R> implements Comparable<R> {
     return originalIndex;
   }
 
+  @SuppressWarnings("rawtypes")
   @Override
   public int compareTo(Object o) {
     return action.compareTo(((Action) o).getAction());

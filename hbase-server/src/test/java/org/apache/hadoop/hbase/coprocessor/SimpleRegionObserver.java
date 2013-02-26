@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hbase.Cell;
 
 /**
  * A sample region observer that tests the RegionObserver interface.
@@ -310,27 +311,30 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Put put, final WALEdit edit,
       final boolean writeToWAL) throws IOException {
-    Map<byte[], List<KeyValue>> familyMap  = put.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(familyMap);
     if (Arrays.equals(e.getRegion().getTableDesc().getName(),
         TestRegionObserverInterface.TEST_TABLE)) {
-      List<KeyValue> kvs = familyMap.get(TestRegionObserverInterface.A);
-      assertNotNull(kvs);
-      assertNotNull(kvs.get(0));
-      assertTrue(Bytes.equals(kvs.get(0).getQualifier(),
+      List<? extends Cell> cells = familyMap.get(TestRegionObserverInterface.A);
+      assertNotNull(cells);
+      assertNotNull(cells.get(0));
+      KeyValue kv = (KeyValue)cells.get(0);
+      assertTrue(Bytes.equals(kv.getQualifier(),
           TestRegionObserverInterface.A));
-      kvs = familyMap.get(TestRegionObserverInterface.B);
-      assertNotNull(kvs);
-      assertNotNull(kvs.get(0));
-      assertTrue(Bytes.equals(kvs.get(0).getQualifier(),
+      cells = familyMap.get(TestRegionObserverInterface.B);
+      assertNotNull(cells);
+      assertNotNull(cells.get(0));
+      kv = (KeyValue)cells.get(0);
+      assertTrue(Bytes.equals(kv.getQualifier(),
           TestRegionObserverInterface.B));
-      kvs = familyMap.get(TestRegionObserverInterface.C);
-      assertNotNull(kvs);
-      assertNotNull(kvs.get(0));
-      assertTrue(Bytes.equals(kvs.get(0).getQualifier(),
+      cells = familyMap.get(TestRegionObserverInterface.C);
+      assertNotNull(cells);
+      assertNotNull(cells.get(0));
+      kv = (KeyValue)cells.get(0);
+      assertTrue(Bytes.equals(kv.getQualifier(),
           TestRegionObserverInterface.C));
     }
     hadPrePut = true;
@@ -340,28 +344,31 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Put put, final WALEdit edit,
       final boolean writeToWAL) throws IOException {
-    Map<byte[], List<KeyValue>> familyMap  = put.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(familyMap);
-    List<KeyValue> kvs = familyMap.get(TestRegionObserverInterface.A);
+    List<? extends Cell> cells = familyMap.get(TestRegionObserverInterface.A);
     if (Arrays.equals(e.getRegion().getTableDesc().getName(),
         TestRegionObserverInterface.TEST_TABLE)) {
-      assertNotNull(kvs);
-      assertNotNull(kvs.get(0));
-      assertTrue(Bytes.equals(kvs.get(0).getQualifier(),
-          TestRegionObserverInterface.A));
-      kvs = familyMap.get(TestRegionObserverInterface.B);
-      assertNotNull(kvs);
-      assertNotNull(kvs.get(0));
-      assertTrue(Bytes.equals(kvs.get(0).getQualifier(),
-          TestRegionObserverInterface.B));
-      kvs = familyMap.get(TestRegionObserverInterface.C);
-      assertNotNull(kvs);
-      assertNotNull(kvs.get(0));
-      assertTrue(Bytes.equals(kvs.get(0).getQualifier(),
-          TestRegionObserverInterface.C));
+      assertNotNull(cells);
+      assertNotNull(cells.get(0));
+      // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
+      KeyValue kv = (KeyValue)cells.get(0);
+      assertTrue(Bytes.equals(kv.getQualifier(), TestRegionObserverInterface.A));
+      cells = familyMap.get(TestRegionObserverInterface.B);
+      assertNotNull(cells);
+      assertNotNull(cells.get(0));
+      // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
+      kv = (KeyValue)cells.get(0);
+      assertTrue(Bytes.equals(kv.getQualifier(), TestRegionObserverInterface.B));
+      cells = familyMap.get(TestRegionObserverInterface.C);
+      assertNotNull(cells);
+      assertNotNull(cells.get(0));
+      // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
+      kv = (KeyValue)cells.get(0);
+      assertTrue(Bytes.equals(kv.getQualifier(), TestRegionObserverInterface.C));
     }
     hadPostPut = true;
   }
@@ -370,7 +377,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit,
       final boolean writeToWAL) throws IOException {
-    Map<byte[], List<KeyValue>> familyMap  = delete.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -384,7 +391,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit,
       final boolean writeToWAL) throws IOException {
-    Map<byte[], List<KeyValue>> familyMap  = delete.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());

@@ -213,10 +213,12 @@ public final class CellUtil {
    * inside Put, etc., keeping Cells organized by family.
    * @return CellScanner interface over <code>cellIterable</code>
    */
-  public static CellScanner createCellScanner(final NavigableMap<byte [], List<Cell>> map) {
+  public static CellScanner createCellScanner(final NavigableMap<byte [],
+      List<? extends Cell>> map) {
     return new CellScanner() {
-      private final Iterator<Entry<byte[], List<Cell>>> entries = map.entrySet().iterator();
-      private Iterator<Cell> currentIterator = null;
+      private final Iterator<Entry<byte[], List<? extends Cell>>> entries =
+          map.entrySet().iterator();
+      private Iterator<? extends Cell> currentIterator = null;
       private Cell currentCell;
 
       @Override

@@ -45,11 +45,11 @@ public class TestCellUtil {
   @Test
   public void testCreateCellScannerFamilyMap() {
     final int count = 3;
-    final NavigableMap<byte [], List<Cell>> map =
-      new TreeMap<byte [], List<Cell>>(Bytes.BYTES_COMPARATOR);
+    final NavigableMap<byte [], List<? extends Cell>> map =
+      new TreeMap<byte [], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < count; i++) {
       byte [] key = Bytes.toBytes(i);
-      Cell [] cs = getCells(count, key);
+      KeyValue [] cs = getCells(count, key);
       map.put(key, Arrays.asList(cs));
     }
     CellScanner scanner = CellUtil.createCellScanner(map);
@@ -60,8 +60,8 @@ public class TestCellUtil {
     assertEquals(count * count, i);
   }
 
-  static Cell [] getCells(final int howMany, final byte [] family) {
-    Cell [] cells = new Cell[howMany];
+  static KeyValue [] getCells(final int howMany, final byte [] family) {
+    KeyValue [] cells = new KeyValue[howMany];
     for (int i = 0; i < howMany; i++) {
       byte [] index = Bytes.toBytes(i);
       KeyValue kv = new KeyValue(index, family, index, index);

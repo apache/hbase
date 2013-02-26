@@ -23,26 +23,78 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hbase.Cell;
+import org.apache.hbase.CellScannable;
+import org.apache.hbase.CellScanner;
+import org.apache.hbase.CellUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public abstract class Mutation extends OperationWithAttributes implements Row {
+public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable {
+  static final long MUTATION_OVERHEAD = ClassSize.align(
+      // This
+      ClassSize.OBJECT +
+      // OperationWithAttributes map reference?  I don't know what the other reference is and if I
+      // remove it it breaks TestHeapSize so just leaving it.
+      2 * ClassSize.REFERENCE +
+      // Timestamp
+      1 * Bytes.SIZEOF_LONG +
+      // writeToWAL
+      Bytes.SIZEOF_BOOLEAN +
+      // familyMap
+      ClassSize.REFERENCE +
+      // familyMap
+      ClassSize.TREEMAP);
+
   // Attribute used in Mutations to indicate the originating cluster.
   private static final String CLUSTER_ID_ATTR = "_c.id_";
 
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected boolean writeToWAL = true;
-  protected Map<byte [], List<KeyValue>> familyMap =
-      new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
+  // A Map sorted by column family.
+  protected NavigableMap<byte [], List<? extends Cell>> familyMap =
+    new TreeMap<byte [], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
+
+  @Override
+  public CellScanner cellScanner() {
+    return CellUtil.createCellScanner(getFamilyMap());
+  }
+
+  /**
+   * Creates an empty list if one doesn't exist for the given column family
+   * or else it returns the associated list of Cell objects.
+   *
+   * @param family column family
+   * @return a list of Cell objects, returns an empty list if one doesn't exist.
+   */
+  List<? extends Cell> getCellList(byte[] family) {
+    List<? extends Cell> list = this.familyMap.get(family);
+    if (list == null) {
+      list = new ArrayList<Cell>();
+    }
+    return list;
+  }
+
+  /*
+   * Create a nnnnnnnn with this objects row key and the Put identifier.
+   *
+   * @return a KeyValue with this objects row key and the Put identifier.
+   */
+  KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts, byte[] value) {
+    return new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put, value);
+  }
 
   /**
    * Compile the column family (i.e. schema) information
@@ -57,9 +109,9 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
     // ideally, we would also include table information, but that information
     // is not stored in each Operation instance.
     map.put("families", families);
-    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
+    for (Map.Entry<byte [], List<? extends Cell>> entry : this.familyMap.entrySet()) {
       families.add(Bytes.toStringBinary(entry.getKey()));
-    } 
+    }
     return map;
   }
 
@@ -74,7 +126,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
   public Map<String, Object> toMap(int maxCols) {
     // we start with the fingerprint map and build on top of it.
     Map<String, Object> map = getFingerprint();
-    // replace the fingerprint's simple list of families with a 
+    // replace the fingerprint's simple list of families with a
     // map from column families to lists of qualifiers and kv details
     Map<String, List<Map<String, Object>>> columns =
       new HashMap<String, List<Map<String, Object>>>();
@@ -82,20 +134,21 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
     map.put("row", Bytes.toStringBinary(this.row));
     int colCount = 0;
     // iterate through all column families affected
-    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      // map from this family to details for each kv affected within the family
-      List<Map<String, Object>> qualifierDetails =
-        new ArrayList<Map<String, Object>>();
+    for (Map.Entry<byte [], List<? extends Cell>> entry : this.familyMap.entrySet()) {
+      // map from this family to details for each cell affected within the family
+      List<Map<String, Object>> qualifierDetails = new ArrayList<Map<String, Object>>();
       columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
       colCount += entry.getValue().size();
       if (maxCols <= 0) {
         continue;
       }
-      // add details for each kv
-      for (KeyValue kv : entry.getValue()) {
+      // add details for each cell
+      for (Cell cell: entry.getValue()) {
         if (--maxCols <= 0 ) {
           continue;
         }
+        // KeyValue v1 expectation.  Cast for now until we go all Cell all the time.
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         Map<String, Object> kvMap = kv.toStringMap();
         // row and family information are already available in the bigger map
         kvMap.remove("row");
@@ -131,14 +184,16 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
    * Method for retrieving the put's familyMap
    * @return familyMap
    */
-  public Map<byte [], List<KeyValue>> getFamilyMap() {
+  public NavigableMap<byte [], List<? extends Cell>> getFamilyMap() {
     return this.familyMap;
   }
 
   /**
    * Method for setting the put's familyMap
    */
-  public void setFamilyMap(Map<byte [], List<KeyValue>> map) {
+  public void setFamilyMap(NavigableMap<byte [], List<? extends Cell>> map) {
+    // TODO: Shut this down or move it up to be a Constructor.  Get new object rather than change
+    // this internal data member.
     this.familyMap = map;
   }
 
@@ -199,8 +254,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
    */
   public int size() {
     int size = 0;
-    for(List<KeyValue> kvList : this.familyMap.values()) {
-      size += kvList.size();
+    for (List<? extends Cell> cells : this.familyMap.values()) {
+      size += cells.size();
     }
     return size;
   }
@@ -210,5 +265,38 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
    */
   public int numFamilies() {
     return familyMap.size();
+  }
+
+  /**
+   * @return Calculate what Mutation adds to class heap size.
+   */
+  long heapSize() {
+    long heapsize = MUTATION_OVERHEAD;
+    // Adding row
+    heapsize += ClassSize.align(ClassSize.ARRAY + this.row.length);
+
+    // Adding map overhead
+    heapsize +=
+      ClassSize.align(this.familyMap.size() * ClassSize.MAP_ENTRY);
+    for(Map.Entry<byte [], List<? extends Cell>> entry : this.familyMap.entrySet()) {
+      //Adding key overhead
+      heapsize +=
+        ClassSize.align(ClassSize.ARRAY + entry.getKey().length);
+
+      //This part is kinds tricky since the JVM can reuse references if you
+      //store the same value, but have a good match with SizeOf at the moment
+      //Adding value overhead
+      heapsize += ClassSize.align(ClassSize.ARRAYLIST);
+      int size = entry.getValue().size();
+      heapsize += ClassSize.align(ClassSize.ARRAY +
+          size * ClassSize.REFERENCE);
+
+      for(Cell cell : entry.getValue()) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+        heapsize += kv.heapSize();
+      }
+    }
+    heapsize += getAttributeSize();
+    return heapsize;
   }
 }

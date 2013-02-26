@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Action;
@@ -118,7 +119,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NavigableMap;
 import java.util.NavigableSet;
 
 import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
@@ -747,16 +747,15 @@ public final class ProtobufUtil {
     }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[],NavigableMap<byte[], Long>>
-        family: increment.getFamilyMap().entrySet()) {
+   for (Map.Entry<byte[], List<? extends Cell>> family: increment.getFamilyMap().entrySet()) {
       columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
       columnBuilder.clearQualifierValue();
-      NavigableMap<byte[], Long> values = family.getValue();
+      List<? extends Cell> values = family.getValue();
       if (values != null && values.size() > 0) {
-        for (Map.Entry<byte[], Long> value: values.entrySet()) {
-          valueBuilder.setQualifier(ByteString.copyFrom(value.getKey()));
-          valueBuilder.setValue(ByteString.copyFrom(
-            Bytes.toBytes(value.getValue().longValue())));
+        for (Cell cell: values) {
+          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+          valueBuilder.setQualifier(ByteString.copyFrom(kv.getQualifier()));
+          valueBuilder.setValue(ByteString.copyFrom(kv.getValue()));
           columnBuilder.addQualifierValue(valueBuilder.build());
         }
       }
@@ -791,16 +790,16 @@ public final class ProtobufUtil {
     }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[],List<KeyValue>>
-        family: mutation.getFamilyMap().entrySet()) {
+    for (Map.Entry<byte[],List<? extends Cell>> family: mutation.getFamilyMap().entrySet()) {
       columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
       columnBuilder.clearQualifierValue();
-      for (KeyValue value: family.getValue()) {
-        valueBuilder.setQualifier(ByteString.copyFrom(value.getQualifier()));
-        valueBuilder.setValue(ByteString.copyFrom(value.getValue()));
-        valueBuilder.setTimestamp(value.getTimestamp());
+      for (Cell cell: family.getValue()) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+        valueBuilder.setQualifier(ByteString.copyFrom(kv.getQualifier()));
+        valueBuilder.setValue(ByteString.copyFrom(kv.getValue()));
+        valueBuilder.setTimestamp(kv.getTimestamp());
         if (mutateType == MutateType.DELETE) {
-          KeyValue.Type keyValueType = KeyValue.Type.codeToType(value.getType());
+          KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());
           valueBuilder.setDeleteType(toDeleteType(keyValueType));
         }
         columnBuilder.addQualifierValue(valueBuilder.build());
@@ -1765,8 +1764,8 @@ public final class ProtobufUtil {
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public static <T extends Message> 
-  T getParsedGenericInstance(Class<?> runtimeClass, int position, ByteString b) 
+  public static <T extends Message>
+  T getParsedGenericInstance(Class<?> runtimeClass, int position, ByteString b)
       throws IOException {
     Type type = runtimeClass.getGenericSuperclass();
     Type argType = ((ParameterizedType)type).getActualTypeArguments()[position];
