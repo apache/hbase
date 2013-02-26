@@ -19,7 +19,7 @@
 package org.apache.hbase.codec.prefixtree.scanner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hbase.Cell;
+import org.apache.hadoop.hbase.Cell;
 
 /**
  * Methods for seeking to a random {@link Cell} inside a sorted collection of cells. Indicates that

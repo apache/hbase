@@ -21,11 +21,11 @@ package org.apache.hbase.codec.prefixtree;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
-import org.apache.hbase.Cell;
-import org.apache.hbase.CellUtil;
 import org.apache.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
 import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;

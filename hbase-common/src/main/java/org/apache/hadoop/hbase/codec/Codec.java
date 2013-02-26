@@ -15,14 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hbase.codec;
+package org.apache.hadoop.hbase.codec;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
-import org.apache.hbase.CellScanner;
-import org.apache.hbase.io.CellOutputStream;
 
 /**
  * Encoder/Decoder for Cell.

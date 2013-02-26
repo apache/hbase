@@ -20,11 +20,11 @@ package org.apache.hbase.codec.prefixtree.row.data;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
-import org.apache.hbase.Cell;
-import org.apache.hbase.CellComparator;
 import org.apache.hbase.codec.prefixtree.row.BaseTestRowData;
 import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.scanner.CellSearcher;

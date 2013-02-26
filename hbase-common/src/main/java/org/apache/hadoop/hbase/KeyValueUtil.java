@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hbase.Cell;
-import org.apache.hbase.CellUtil;
 
 /**
  * static convenience methods for dealing with KeyValues and collections of KeyValues

@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.Cell;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;

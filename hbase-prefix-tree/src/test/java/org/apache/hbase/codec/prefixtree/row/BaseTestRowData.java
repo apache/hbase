@@ -20,8 +20,8 @@ package org.apache.hbase.codec.prefixtree.row;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hbase.CellComparator;
 import org.apache.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hbase.codec.prefixtree.scanner.CellSearcher;
 

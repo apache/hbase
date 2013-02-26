@@ -15,45 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hbase.codec;
+package org.apache.hadoop.hbase.codec;
 
 import java.io.IOException;
-import java.io.InputStream;
 
-import org.apache.hbase.Cell;
+public class CodecException extends IOException {
+  private static final long serialVersionUID = -2850095011686914405L;
 
-abstract class BaseDecoder implements Codec.Decoder {
-  final InputStream in;
-  private boolean hasNext = true;
-  private Cell current = null;
-
-  BaseDecoder(final InputStream in) {
-    this.in = in;
+  public CodecException() {
   }
 
-  @Override
-  public boolean advance() {
-    if (!this.hasNext) return this.hasNext;
-    try {
-      if (this.in.available() <= 0) {
-        this.hasNext = false;
-        return this.hasNext;
-      }
-      this.current = parseCell();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return this.hasNext;
+  public CodecException(String message) {
+    super(message);
   }
 
-  /**
-   * @return extract a Cell
-   * @throws IOException
-   */
-  abstract Cell parseCell() throws IOException;
+  public CodecException(Throwable t) {
+    super(t);
+  }
 
-  @Override
-  public Cell current() {
-    return this.current;
+  public CodecException(String message, Throwable t) {
+    super(message, t);
   }
 }

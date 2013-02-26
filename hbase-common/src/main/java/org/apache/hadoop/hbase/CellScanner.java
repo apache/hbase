@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hbase;
+package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hbase.Cell;
+import org.apache.hadoop.hbase.Cell;
 
 /**
  * An interface for iterating through a sequence of cells. Similar to Java's Iterator, but without
@@ -43,8 +43,8 @@ import org.apache.hbase.Cell;
  *   // do something
  * }
  * </pre>
- * <p>Often used reading {@link org.apache.hbase.Cell}s written by
- * {@link org.apache.hbase.io.CellOutputStream}.
+ * <p>Often used reading {@link org.apache.hadoop.hbase.Cell}s written by
+ * {@link org.apache.hadoop.hbase.io.CellOutputStream}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

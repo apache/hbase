@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hbase.codec;
+package org.apache.hadoop.hbase.codec;
 
 import static org.junit.Assert.*;
 
@@ -25,11 +25,13 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.codec.CellCodec;
+import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.Cell;
-import org.apache.hbase.CellComparator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

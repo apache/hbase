@@ -19,8 +19,8 @@
 package org.apache.hbase.codec.prefixtree.decode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hbase.Cell;
-import org.apache.hbase.CellUtil;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hbase.codec.prefixtree.scanner.CellSearcher;

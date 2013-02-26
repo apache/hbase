@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hbase;
+package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -27,7 +27,6 @@ import java.util.NavigableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.ByteRange;
-import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * Utility methods helpful slinging {@link Cell} instances.

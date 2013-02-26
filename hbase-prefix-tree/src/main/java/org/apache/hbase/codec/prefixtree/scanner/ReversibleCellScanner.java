@@ -19,7 +19,7 @@
 package org.apache.hbase.codec.prefixtree.scanner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellScanner;
 
 /**
  * An extension of CellScanner indicating the scanner supports iterating backwards through cells.

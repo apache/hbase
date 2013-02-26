@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hbase.io;
+package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hbase.Cell;
-import org.apache.hbase.CellScanner;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 
 /**
  * Accepts a stream of Cells. This can be used to build a block of cells during compactions

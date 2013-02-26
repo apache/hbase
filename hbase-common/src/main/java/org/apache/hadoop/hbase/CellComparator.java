@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hbase;
+package org.apache.hadoop.hbase;
 
 import java.io.Serializable;
 import java.util.Comparator;
