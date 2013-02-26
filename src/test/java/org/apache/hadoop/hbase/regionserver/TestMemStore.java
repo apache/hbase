@@ -25,6 +25,7 @@ import java.lang.management.MemoryMXBean;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -850,7 +851,26 @@ public class TestMemStore extends TestCase {
   }
 
   /**
-   * Adds {@link #ROW_COUNT} rows and {@link #QUALIFIER_COUNT}
+   * Add keyvalues with a fixed memstoreTs, and checks that memstore size is decreased
+   * as older keyvalues are deleted from the memstore.
+   * @throws Exception
+   */
+  public void testUpsertMemstoreSize() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    memstore = new MemStore(conf, KeyValue.COMPARATOR);
+    long oldSize = memstore.size.get();
+    
+    KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
+    this.memstore.upsert(Collections.singletonList(kv1));
+    long newSize = this.memstore.size.get();
+    assert(newSize > oldSize);
+    
+    KeyValue kv2 = KeyValueTestUtil.create("r", "f", "q", 101, "v");
+    this.memstore.upsert(Collections.singletonList(kv2));
+    assertEquals(newSize, this.memstore.size.get());
+  }
+
+  /**   * Adds {@link #ROW_COUNT} rows and {@link #QUALIFIER_COUNT}
    * @param hmc Instance to add rows to.
    * @return How many rows we added.
    * @throws IOException
