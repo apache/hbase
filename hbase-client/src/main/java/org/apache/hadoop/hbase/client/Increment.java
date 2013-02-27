@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -130,6 +132,29 @@ public class Increment extends Mutation implements Comparable<Row> {
    */
   public boolean hasFamilies() {
     return !this.familyMap.isEmpty();
+  }
+
+  /**
+   * Before 0.95, when you called {@link Increment#getFamilyMap()}}, you got back
+   * a map of families to a list of Longs.  Now, {@link #getFamilyMap()} returns
+   * families by list of Cells.  This method has been added so you can have the
+   * old behavior.
+   * @return Map of families to a Map of qualifers and their Long increments.
+   * @since 0.95.0
+   */
+  public Map<byte[], NavigableMap<byte [], Long>> getFamilyMapOfLongs() {
+    NavigableMap<byte[], List<? extends Cell>> map = super.getFamilyMap();
+    Map<byte [], NavigableMap<byte[], Long>> results =
+      new TreeMap<byte[], NavigableMap<byte [], Long>>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte [], List<? extends Cell>> entry: map.entrySet()) {
+      NavigableMap<byte [], Long> longs = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
+      for (Cell cell: entry.getValue()) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+        longs.put(kv.getQualifier(), Bytes.toLong(kv.getValue()));
+      }
+      results.put(entry.getKey(), longs);
+    }
+    return results;
   }
 
   /**
