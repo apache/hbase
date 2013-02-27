@@ -495,4 +495,38 @@ The HBase shell has been extended to provide simple commands for editing and upd
   </section>
 
 </section>  <!-- Access Control -->
+
+<section xml:id="hbase.secure.bulkload">
+    <title>Secure Bulk Load</title>
+    <para>
+	Bulk loading in secure mode is a bit more involved than normal setup, since the client has to transfer the ownership of the files generated from the mapreduce job to HBase. Secure bulk loading is implemented by a coprocessor, named <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html">SecureBulkLoadEndpoint</link>. SecureBulkLoadEndpoint uses a staging directory <code>"hbase.bulkload.staging.dir"</code>, which defaults to <code>/tmp/hbase-staging/</code>. The algorithm is as follows.
+	<itemizedlist>
+      <listitem>Create an hbase owned staging directory which is world traversable (<code>-rwx--x--x, 711</code>) <code>/tmp/hbase-staging</code>. </listitem>
+      <listitem>A user writes out data to his secure output directory: /user/foo/data </listitem>
+      <listitem>A call is made to hbase to create a secret staging directory
+  which is globally readable/writable (<code>-rwxrwxrwx, 777</code>): /tmp/hbase-staging/averylongandrandomdirectoryname</listitem>
+  <listitem>The user makes the data world readable and writable, then moves it
+  into the random staging directory, then calls bulkLoadHFiles()</listitem>
+  </itemizedlist>
+  </para>
+  <para>
+  Like delegation tokens the strength of the security lies in the length
+  and randomness of the secret directory.
+    </para>
+
+	<para>
+        You have to enable the secure bulk load to work properly. You can modify the <code>hbase-site.xml</code> file on every server machine in the cluster and add the SecureBulkLoadEndpoint class to the list of regionserver coprocessors:
+    </para>
+    <programlisting><![CDATA[
+      <property>
+        <name>hbase.bulkload.staging.dir</name>
+        <value>/tmp/hbase-staging</value>
+      </property>
+      <property>
+        <name>hbase.coprocessor.region.classes</name>
+        <value>org.apache.hadoop.hbase.security.token.TokenProvider,
+        org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
+      </property>
+    ]]></programlisting>
+</section>
 </chapter>
