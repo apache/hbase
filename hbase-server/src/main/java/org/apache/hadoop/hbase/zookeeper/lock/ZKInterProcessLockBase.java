@@ -143,11 +143,6 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
     this.fullyQualifiedZNode = ZKUtil.joinZNode(parentLockNode, childNode);
     this.metadata = metadata;
     this.handler = handler;
-    try {
-      ZKUtil.createWithParents(zkWatcher, parentLockNode);
-    } catch (KeeperException ex) {
-      LOG.warn("Failed to create znode:" + parentLockNode, ex);
-    }
   }
 
   /**
@@ -167,7 +162,12 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
     boolean hasTimeout = timeoutMs != -1;
     long waitUntilMs =
         hasTimeout ?EnvironmentEdgeManager.currentTimeMillis() + timeoutMs : -1;
-    String createdZNode = createLockZNode();
+    String createdZNode;
+    try {
+      createdZNode = createLockZNode();
+    } catch (KeeperException ex) {
+      throw new IOException("Failed to create znode: " + fullyQualifiedZNode, ex);
+    }
     while (true) {
       List<String> children;
       try {
@@ -221,13 +221,14 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
     return true;
   }
 
-  private String createLockZNode() {
+  private String createLockZNode() throws KeeperException {
     try {
       return ZKUtil.createNodeIfNotExistsNoWatch(zkWatcher, fullyQualifiedZNode,
           metadata, CreateMode.EPHEMERAL_SEQUENTIAL);
-    } catch (KeeperException ex) {
-      LOG.warn("Failed to create znode: " + fullyQualifiedZNode, ex);
-      return null;
+    } catch (KeeperException.NoNodeException nne) {
+      //create parents, retry
+      ZKUtil.createWithParents(zkWatcher, parentLockNode);
+      return createLockZNode();
     }
   }
 
