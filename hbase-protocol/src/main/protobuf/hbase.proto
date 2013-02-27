@@ -176,7 +176,7 @@ message ServerLoad {
 /**
  * A range of time. Both from and to are Java time
  * stamp in milliseconds. If you don't specify a time
- * range, it means all time.  By default, if not 
+ * range, it means all time.  By default, if not
  * specified, from = 0, and to = Long.MAX_VALUE
  */
 message TimeRange {
@@ -284,4 +284,8 @@ message EmptyMsg {
 message LongMsg {
   required int64 longMsg = 1;
 
+}
+
+message BigDecimalMsg {
+  required bytes bigdecimalMsg = 1;
 }
