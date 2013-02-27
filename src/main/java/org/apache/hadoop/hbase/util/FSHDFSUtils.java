@@ -103,6 +103,7 @@ public class FSHDFSUtils extends FSUtils{
         }
         if (ex != null || System.currentTimeMillis() - startWaiting > recoveryTimeout) {
           ex = null; // assume the following append() call would succeed
+          LOG.debug("recoverLease times out after " + recoveryTimeout + " ms. Calling append");
           FSDataOutputStream out = fs.append(p);
           out.close();
           recovered = true;
