@@ -38,6 +38,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -70,11 +72,12 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
-import org.apache.hadoop.hbase.util.HBaseFsck.PrintingErrorReporter;
-import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
+import org.apache.hadoop.hbase.util.HBaseFsck.PrintingErrorReporter;
+import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -409,7 +412,7 @@ public class TestHBaseFsck {
       deleteTable(table);
     }    
   }
-  
+
   @Test
   public void testHbckFixOrphanTable() throws Exception {
     String table = "tableInfo";
@@ -418,31 +421,31 @@ public class TestHBaseFsck {
     try {
       setupTable(table);
       HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-      
+
       Path hbaseTableDir = new Path(conf.get(HConstants.HBASE_DIR) + "/" + table );
       fs = hbaseTableDir.getFileSystem(conf);
       FileStatus status = FSTableDescriptors.getTableInfoPath(fs, hbaseTableDir);
       tableinfo = status.getPath();
       fs.rename(tableinfo, new Path("/.tableinfo"));
-      
+
       //to report error if .tableinfo is missing.
-      HBaseFsck hbck = doFsck(conf, false); 
+      HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NO_TABLEINFO_FILE });
-      
+
       // fix OrphanTable with default .tableinfo (htd not yet cached on master)
       hbck = doFsck(conf, true);
       assertNoErrors(hbck);
       status = null;
       status = FSTableDescriptors.getTableInfoPath(fs, hbaseTableDir);
       assertNotNull(status);
-      
+
       HTableDescriptor htd = admin.getTableDescriptor(table.getBytes());
       htd.setValue("NOT_DEFAULT", "true");
       admin.disableTable(table);
       admin.modifyTable(table.getBytes(), htd);
       admin.enableTable(table);
       fs.delete(status.getPath(), true);
-      
+
       // fix OrphanTable with cache
       htd = admin.getTableDescriptor(table.getBytes()); // warms up cached htd on master
       hbck = doFsck(conf, true);
@@ -1185,6 +1188,7 @@ public class TestHBaseFsck {
   @Test
   public void testLingeringSplitParent() throws Exception {
     String table = "testLingeringSplitParent";
+    HTable meta = null;
     try {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
@@ -1198,7 +1202,7 @@ public class TestHBaseFsck {
         Bytes.toBytes("C"), true, true, false);
 
       // Create a new meta entry to fake it as a split parent.
-      HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getName());
+      meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getName());
       HRegionInfo hri = location.getRegionInfo();
 
       HRegionInfo a = new HRegionInfo(tbl.getTableName(),
@@ -1256,6 +1260,119 @@ public class TestHBaseFsck {
       assertEquals(ROWKEYS.length, countRows());
     } finally {
       deleteTable(table);
+      IOUtils.closeQuietly(meta);
+    }
+  }
+
+  /**
+   * Tests that LINGERING_SPLIT_PARENT is not erroneously reported for
+   * valid cases where the daughters are there.
+   */
+  @Test
+  public void testValidLingeringSplitParent() throws Exception {
+    String table = "testLingeringSplitParent";
+    HTable meta = null;
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // make sure data in regions, if in hlog only there is no data loss
+      TEST_UTIL.getHBaseAdmin().flush(table);
+      HRegionLocation location = tbl.getRegionLocation("B");
+
+      meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getName());
+      HRegionInfo hri = location.getRegionInfo();
+
+      // do a regular split
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      byte[] regionName = location.getRegionInfo().getRegionName();
+      admin.split(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
+      TestEndToEndSplitTransaction.blockUntilRegionSplit(
+          TEST_UTIL.getConfiguration(), 60000, regionName, true);
+
+      // TODO: fixHdfsHoles does not work against splits, since the parent dir lingers on
+      // for some time until children references are deleted. HBCK erroneously sees this as
+      // overlapping regions
+      HBaseFsck hbck = doFsck(conf, true, true, false, false, false, true, true, true, null);
+      assertErrors(hbck, new ERROR_CODE[] {}); //no LINGERING_SPLIT_PARENT reported
+
+      // assert that the split META entry is still there.
+      Get get = new Get(hri.getRegionName());
+      Result result = meta.get(get);
+      assertNotNull(result);
+      assertNotNull(MetaReader.parseCatalogResult(result).getFirst());
+
+      assertEquals(ROWKEYS.length, countRows());
+
+      // assert that we still have the split regions
+      assertEquals(tbl.getStartKeys().length, SPLITS.length + 1 + 1); //SPLITS + 1 is # regions pre-split.
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      deleteTable(table);
+      IOUtils.closeQuietly(meta);
+    }
+  }
+
+  /**
+   * Split crashed after write to META finished for the parent region, but
+   * failed to write daughters (pre HBASE-7721 codebase)
+   */
+  @Test
+  public void testSplitDaughtersNotInMeta() throws Exception {
+    String table = "testSplitdaughtersNotInMeta";
+    HTable meta = null;
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // make sure data in regions, if in hlog only there is no data loss
+      TEST_UTIL.getHBaseAdmin().flush(table);
+      HRegionLocation location = tbl.getRegionLocation("B");
+
+      meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getName());
+      HRegionInfo hri = location.getRegionInfo();
+
+      // do a regular split
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      byte[] regionName = location.getRegionInfo().getRegionName();
+      admin.split(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
+      TestEndToEndSplitTransaction.blockUntilRegionSplit(
+          TEST_UTIL.getConfiguration(), 60000, regionName, true);
+
+      PairOfSameType<HRegionInfo> daughters = MetaReader.getDaughterRegions(meta.get(new Get(regionName)));
+
+      // Delete daughter regions from meta, but not hdfs, unassign it.
+      Map<HRegionInfo, ServerName> hris = tbl.getRegionLocations();
+      undeployRegion(admin, hris.get(daughters.getFirst()), daughters.getFirst());
+      undeployRegion(admin, hris.get(daughters.getSecond()), daughters.getSecond());
+
+      meta.delete(new Delete(daughters.getFirst().getRegionName()));
+      meta.delete(new Delete(daughters.getSecond().getRegionName()));
+      meta.flushCommits();
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+          ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN}); //no LINGERING_SPLIT_PARENT
+
+      // now fix it. The fix should not revert the region split, but add daughters to META
+      hbck = doFsck(conf, true, true, false, false, false, false, false, false, null);
+      assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+          ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // assert that the split META entry is still there.
+      Get get = new Get(hri.getRegionName());
+      Result result = meta.get(get);
+      assertNotNull(result);
+      assertNotNull(MetaReader.parseCatalogResult(result).getFirst());
+
+      assertEquals(ROWKEYS.length, countRows());
+
+      // assert that we still have the split regions
+      assertEquals(tbl.getStartKeys().length, SPLITS.length + 1 + 1); //SPLITS + 1 is # regions pre-split.
+      assertNoErrors(doFsck(conf, false)); //should be fixed by now
+    } finally {
+      deleteTable(table);
+      IOUtils.closeQuietly(meta);
     }
   }
 
