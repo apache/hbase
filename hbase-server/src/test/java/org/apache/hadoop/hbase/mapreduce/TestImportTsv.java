@@ -289,6 +289,8 @@ public class TestImportTsv {
         LOG.info("set the hbaseAdmin");
         ImportTsv.createHbaseAdmin(conf);
       }
+      // force use of combiner for testing purposes
+      conf.setInt("min.num.spills.for.combine", 1);
       Job job = ImportTsv.createSubmittableJob(conf, args);
       job.waitForCompletion(false);
       assertTrue(job.isSuccessful());

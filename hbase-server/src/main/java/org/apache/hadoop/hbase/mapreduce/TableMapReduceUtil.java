@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -133,6 +134,9 @@ public class TableMapReduceUtil {
     if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
     if (outputKeyClass != null) job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
+    if (Put.class.equals(outputValueClass)) {
+      job.setCombinerClass(PutCombiner.class);
+    }
     Configuration conf = job.getConfiguration();
     HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
     conf.set(TableInputFormat.INPUT_TABLE, table);
