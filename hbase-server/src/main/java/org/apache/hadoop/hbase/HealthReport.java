@@ -42,6 +42,11 @@ class HealthReport {
     return status;
   }
 
+  @Override
+  public String toString() {
+    return this.status + " " + this.healthReport;
+  }
+
   /**
    * Gets the health report of the region server.
    *
@@ -84,5 +89,4 @@ class HealthReport {
     }
     return true;
   }
-
 }
