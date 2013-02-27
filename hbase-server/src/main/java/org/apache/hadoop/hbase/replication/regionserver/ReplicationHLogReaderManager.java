@@ -123,15 +123,20 @@ public class ReplicationHLogReaderManager {
   public void closeReader() throws IOException {
     if (this.reader != null) {
       this.reader.close();
+      this.reader = null;
     }
   }
 
   /**
    * Tell the helper to reset internal state
    */
-  public void finishCurrentFile() {
+  void finishCurrentFile() {
     this.position = 0;
-    this.reader = null;
+    try {
+      this.closeReader();
+    } catch (IOException e) {
+      LOG.warn("Unable to close reader", e);
+    }
   }
 
 }
