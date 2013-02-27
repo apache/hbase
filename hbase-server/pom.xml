@@ -276,8 +276,7 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-prefix-tree</artifactId>
-      <!-- unfortunately, runtime scope causes eclipse to put it in the compile time classpath -->
-      <scope>runtime</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
