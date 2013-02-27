@@ -236,7 +236,7 @@ public class HBaseFsck extends Configured implements Tool {
    * When initially looking at HDFS, we attempt to find any orphaned data.
    */
   private List<HbckInfo> orphanHdfsDirs = Collections.synchronizedList(new ArrayList<HbckInfo>());
-  
+
   private Map<String, Set<String>> orphanTableDirs = new HashMap<String, Set<String>>();
 
   /**
@@ -395,7 +395,7 @@ public class HBaseFsck extends Configured implements Tool {
     if (!checkMetaOnly) {
       reportTablesInFlux();
     }
-    
+
     // get regions according to what is online on each RegionServer
     loadDeployedRegions();
 
@@ -800,19 +800,21 @@ public class HBaseFsck extends Configured implements Tool {
           if (!orphanTableDirs.containsKey(tableName)) {
             LOG.warn("Unable to read .tableinfo from " + hbaseRoot, ioe);
             //should only report once for each table
-            errors.reportError(ERROR_CODE.NO_TABLEINFO_FILE, 
+            errors.reportError(ERROR_CODE.NO_TABLEINFO_FILE,
                 "Unable to read .tableinfo from " + hbaseRoot + "/" + tableName);
             Set<String> columns = new HashSet<String>();
             orphanTableDirs.put(tableName, getColumnFamilyList(columns, hbi));
           }
         }
       }
-      modTInfo.addRegionInfo(hbi);
+      if (!hbi.isSkipChecks()) {
+        modTInfo.addRegionInfo(hbi);
+      }
     }
 
     return tablesInfo;
   }
-  
+
   /**
    * To get the column family list according to the column family dirs
    * @param columns
@@ -830,7 +832,7 @@ public class HBaseFsck extends Configured implements Tool {
     }
     return columns;
   }
-  
+
   /**
    * To fabricate a .tableinfo file with following contents<br>
    * 1. the correct tablename <br>
@@ -848,7 +850,7 @@ public class HBaseFsck extends Configured implements Tool {
     FSTableDescriptors.createTableDescriptor(htd, getConf(), true);
     return true;
   }
-  
+
   /**
    * To fix orphan table by creating a .tableinfo file under tableDir <br>
    * 1. if TableInfo is cached, to recover the .tableinfo accordingly <br>
@@ -1661,6 +1663,18 @@ public class HBaseFsck extends Configured implements Tool {
 
     // ========== Cases where the region is in META =============
     } else if (inMeta && inHdfs && !isDeployed && splitParent) {
+      // check whether this is an actual error, or just transient state where parent
+      // is not cleaned
+      if (hbi.metaEntry.splitA != null && hbi.metaEntry.splitB != null) {
+        // check that split daughters are there
+        HbckInfo infoA = this.regionInfoMap.get(hbi.metaEntry.splitA.getEncodedName());
+        HbckInfo infoB = this.regionInfoMap.get(hbi.metaEntry.splitB.getEncodedName());
+        if (infoA != null && infoB != null) {
+          // we already processed or will process daughters. Move on, nothing to see here.
+          hbi.setSkipChecks(true);
+          return;
+        }
+      }
       errors.reportError(ERROR_CODE.LINGERING_SPLIT_PARENT, "Region "
           + descriptiveName + " is a split parent in META, in HDFS, "
           + "and not deployed on any region server. This could be transient.");
@@ -1791,7 +1805,9 @@ public class HBaseFsck extends Configured implements Tool {
         modTInfo.addServer(server);
       }
 
-      modTInfo.addRegionInfo(hbi);
+      if (!hbi.isSkipChecks()) {
+        modTInfo.addRegionInfo(hbi);
+      }
 
       tablesInfo.put(tableName, modTInfo);
     }
@@ -2555,7 +2571,8 @@ public class HBaseFsck extends Configured implements Tool {
               || hri.isMetaRegion() || hri.isRootRegion())) {
             return true;
           }
-          MetaEntry m = new MetaEntry(hri, sn, ts);
+          PairOfSameType<HRegionInfo> daughters = MetaReader.getDaughterRegions(result);
+          MetaEntry m = new MetaEntry(hri, sn, ts, daughters.getFirst(), daughters.getSecond());
           HbckInfo hbInfo = new HbckInfo(m);
           HbckInfo previous = regionInfoMap.put(hri.getEncodedName(), hbInfo);
           if (previous != null) {
@@ -2594,11 +2611,19 @@ public class HBaseFsck extends Configured implements Tool {
   static class MetaEntry extends HRegionInfo {
     ServerName regionServer;   // server hosting this region
     long modTime;          // timestamp of most recent modification metadata
+    HRegionInfo splitA, splitB; //split daughters
 
     public MetaEntry(HRegionInfo rinfo, ServerName regionServer, long modTime) {
+      this(rinfo, regionServer, modTime, null, null);
+    }
+
+    public MetaEntry(HRegionInfo rinfo, ServerName regionServer, long modTime,
+        HRegionInfo splitA, HRegionInfo splitB) {
       super(rinfo);
       this.regionServer = regionServer;
       this.modTime = modTime;
+      this.splitA = splitA;
+      this.splitB = splitB;
     }
 
     public boolean equals(Object o) {
@@ -2647,6 +2672,7 @@ public class HBaseFsck extends Configured implements Tool {
     private HdfsEntry hdfsEntry = null; // info in HDFS
     private List<OnlineEntry> deployedEntries = Lists.newArrayList(); // on Region Server
     private List<ServerName> deployedOn = Lists.newArrayList(); // info on RS's
+    private boolean skipChecks = false; // whether to skip further checks to this region info.
 
     HbckInfo(MetaEntry metaEntry) {
       this.metaEntry = metaEntry;
@@ -2763,6 +2789,14 @@ public class HBaseFsck extends Configured implements Tool {
         return null;
       }
       return hdfsEntry.hri;
+    }
+
+    public void setSkipChecks(boolean skipChecks) {
+      this.skipChecks = skipChecks;
+    }
+
+    public boolean isSkipChecks() {
+      return skipChecks;
     }
   }
 
@@ -3239,15 +3273,15 @@ public class HBaseFsck extends Configured implements Tool {
   boolean shouldFixHdfsHoles() {
     return fixHdfsHoles;
   }
-  
+
   public void setFixTableOrphans(boolean shouldFix) {
     fixTableOrphans = shouldFix;
   }
-   
+
   boolean shouldFixTableOrphans() {
     return fixTableOrphans;
   }
-  
+
   public void setFixHdfsOverlaps(boolean shouldFix) {
     fixHdfsOverlaps = shouldFix;
   }

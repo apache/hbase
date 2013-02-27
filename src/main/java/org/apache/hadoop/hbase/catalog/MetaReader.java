@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -402,6 +403,8 @@ public class MetaReader {
     return Writables.getHRegionInfoOrNull(bytes);
   }
 
+
+
   /**
    * Checks if the specified table exists.  Looks at the META table hosted on
    * the specified server.
@@ -447,6 +450,21 @@ public class MetaReader {
     fullScan(catalogTracker, visitor, getTableStartRowForMeta(tableNameBytes));
     // If visitor has results >= 1 then table exists.
     return visitor.getResults().size() >= 1;
+  }
+
+  /**
+   * Returns the daughter regions by reading the corresponding columns of the catalog table
+   * Result.
+   * @param data a Result object from the catalog table scan
+   * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
+   * parent
+   */
+  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
+    HRegionInfo splitA = Writables.getHRegionInfoOrNull(data.getValue(HConstants.CATALOG_FAMILY,
+      HConstants.SPLITA_QUALIFIER));
+    HRegionInfo splitB = Writables.getHRegionInfoOrNull(data.getValue(HConstants.CATALOG_FAMILY,
+      HConstants.SPLITB_QUALIFIER));
+    return new PairOfSameType<HRegionInfo>(splitA, splitB);
   }
 
   /**
