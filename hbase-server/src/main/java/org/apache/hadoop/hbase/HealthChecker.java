@@ -65,12 +65,13 @@ class HealthChecker {
     execScript.add(healthCheckScript);
     this.shexec = new ShellCommandExecutor(execScript.toArray(new String[execScript.size()]), null,
         null, scriptTimeout);
-    LOG.info("HealthChecker initialized.");
+    LOG.info("HealthChecker initialized with script at " + this.healthCheckScript);
   }
 
   public HealthReport checkHealth() {
     HealthCheckerExitStatus status = HealthCheckerExitStatus.SUCCESS;
     try {
+      // Calling this execute leaves around running executor threads.
       shexec.execute();
     } catch (ExitCodeException e) {
       // ignore the exit code of the script

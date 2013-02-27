@@ -54,7 +54,7 @@ public class TestNodeHealthCheckChore {
     Path testDir = UTIL.getDataTestDir();
     FileSystem fs = UTIL.getTestFileSystem();
     fs.delete(testDir, true);
-    fs.mkdirs(testDir);
+    if (!fs.mkdirs(testDir)) throw new IOException("Failed mkdir " + testDir);
   }
 
   @Test
@@ -62,30 +62,30 @@ public class TestNodeHealthCheckChore {
     Configuration config = getConfForNodeHealthScript();
     config.addResource(healthScriptFile.getName());
     String location = healthScriptFile.getAbsolutePath();
-    long timeout = config.getLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 200);
-
+    long timeout = config.getLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 2000);
     HealthChecker checker = new HealthChecker();
     checker.init(location, timeout);
 
     String normalScript = "echo \"I am all fine\"";
     createScript(normalScript, true);
     HealthReport report = checker.checkHealth();
+    
+    LOG.info("Health Status:" + report.getHealthReport());
     assertEquals(HealthCheckerExitStatus.SUCCESS, report.getStatus());
-    LOG.info("Health Status:" + checker);
 
     String errorScript = "echo ERROR\n echo \"Server not healthy\"";
     createScript(errorScript, true);
     report = checker.checkHealth();
-    assertEquals(HealthCheckerExitStatus.FAILED, report.getStatus());
     LOG.info("Health Status:" + report.getHealthReport());
+    assertEquals(HealthCheckerExitStatus.FAILED, report.getStatus());
 
     String timeOutScript = "sleep 4\n echo\"I am fine\"";
     createScript(timeOutScript, true);
     report = checker.checkHealth();
-    assertEquals(HealthCheckerExitStatus.TIMED_OUT, report.getStatus());
     LOG.info("Health Status:" + report.getHealthReport());
+    assertEquals(HealthCheckerExitStatus.TIMED_OUT, report.getStatus());
 
-    healthScriptFile.delete();
+    this.healthScriptFile.delete();
   }
 
   @Test
@@ -95,31 +95,46 @@ public class TestNodeHealthCheckChore {
     String errorScript = "echo ERROR\n echo \"Server not healthy\"";
     createScript(errorScript, true);
     HealthCheckChore rsChore = new HealthCheckChore(100, stop, conf);
-    //Default threshold is three.
-    rsChore.chore();
-    rsChore.chore();
-    assertFalse("Stoppable must not be stopped.", stop.isStopped());
-    rsChore.chore();
-    assertTrue("Stoppable must have been stopped.", stop.isStopped());
+    try {
+      //Default threshold is three.
+      rsChore.chore();
+      rsChore.chore();
+      assertFalse("Stoppable must not be stopped.", stop.isStopped());
+      rsChore.chore();
+      assertTrue("Stoppable must have been stopped.", stop.isStopped());
+    } finally {
+      stop.stop("Finished w/ test");
+    }
   }
 
   private void createScript(String scriptStr, boolean setExecutable)
       throws Exception {
-    healthScriptFile.createNewFile();
+    if (!this.healthScriptFile.exists()) {
+      if (!healthScriptFile.createNewFile()) {
+        throw new IOException("Failed create of " + this.healthScriptFile);
+      }
+    }
     PrintWriter pw = new PrintWriter(new FileOutputStream(healthScriptFile));
-    pw.println(scriptStr);
-    pw.flush();
-    pw.close();
+    try {
+      pw.println(scriptStr);
+      pw.flush();
+    } finally {
+      pw.close();
+    }
     healthScriptFile.setExecutable(setExecutable);
+    LOG.info("Created " + this.healthScriptFile + ", executable=" + setExecutable);
   }
 
-  private Configuration getConfForNodeHealthScript() {
+  private Configuration getConfForNodeHealthScript() throws IOException {
     Configuration conf = UTIL.getConfiguration();
     File tempDir = new File(UTIL.getDataTestDir().toString());
-    tempDir.mkdirs();
+    if (!tempDir.exists()) {
+      if (!tempDir.mkdirs()) {
+        throw new IOException("Failed mkdirs " + tempDir);
+      }
+    }
     healthScriptFile = new File(tempDir.getAbsolutePath(), "HealthScript.sh");
-    conf.set(HConstants.HEALTH_SCRIPT_LOC,
-      healthScriptFile.getAbsolutePath());
+    conf.set(HConstants.HEALTH_SCRIPT_LOC, healthScriptFile.getAbsolutePath());
     conf.setLong(HConstants.HEALTH_FAILURE_THRESHOLD, 3);
     conf.setLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 200);
     return conf;
