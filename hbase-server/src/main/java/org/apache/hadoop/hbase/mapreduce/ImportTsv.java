@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.util.Base64;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -37,6 +35,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -283,6 +282,7 @@ public class ImportTsv {
       FileOutputFormat.setOutputPath(job, outputDir);
       job.setMapOutputKeyClass(ImmutableBytesWritable.class);
       job.setMapOutputValueClass(Put.class);
+      job.setCombinerClass(PutCombiner.class);
       HFileOutputFormat.configureIncrementalLoad(job, table);
     } else {
       // No reducers.  Just write straight to table.  Call initTableReducerJob

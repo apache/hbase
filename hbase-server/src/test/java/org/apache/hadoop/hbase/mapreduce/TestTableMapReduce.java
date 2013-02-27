@@ -29,7 +29,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -126,6 +128,15 @@ public class TestTableMapReduce {
   throws IOException, InterruptedException, ClassNotFoundException {
     runTestOnTable(new HTable(new Configuration(UTIL.getConfiguration()),
       MULTI_REGION_TABLE_NAME));
+  }
+
+  @Test
+  public void testCombiner()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    Configuration conf = new Configuration(UTIL.getConfiguration());
+    // force use of combiner for testing purposes
+    conf.setInt("min.num.spills.for.combine", 1);
+    runTestOnTable(new HTable(conf, MULTI_REGION_TABLE_NAME));
   }
 
   private void runTestOnTable(HTable table)
