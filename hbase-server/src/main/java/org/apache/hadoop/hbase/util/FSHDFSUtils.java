@@ -91,15 +91,13 @@ public class FSHDFSUtils extends FSUtils{
             throw (IOException) ite.getCause();
           }
         } catch (Exception e) {
-          // hdfs 2.0 may throw RecoveryInProgressException
-          if (!e.getClass().getName().contains("RecoveryInProgressException")) {
-            LOG.debug("Failed fs.recoverLease invocation, " + e.toString() +
-                ", trying fs.append instead");
-            ex = e;
-          }
+          LOG.debug("Failed fs.recoverLease invocation, " + e.toString() +
+              ", trying fs.append instead");
+          ex = e;
         }
         if (ex != null || System.currentTimeMillis() - startWaiting > recoveryTimeout) {
           ex = null; // assume the following append() call would succeed
+          LOG.debug("trying fs.append for " + p);
           FSDataOutputStream out = fs.append(p);
           out.close();
           recovered = true;
