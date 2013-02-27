@@ -255,7 +255,6 @@ public class TestWALReplay {
     HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
     Path basedir = new Path(hbaseRootDir, tableNameStr);
     deleteDir(basedir);
-    fs.mkdirs(new Path(basedir, hri.getEncodedName()));
 
     HTableDescriptor htd = createBasic3FamilyHTD(tableNameStr);
     HRegion region2 = HRegion.createHRegion(hri,
@@ -683,7 +682,7 @@ public class TestWALReplay {
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
     final Path basedir = new Path(hbaseRootDir, tableNameStr);
     deleteDir(basedir);
-    fs.mkdirs(new Path(basedir, hri.getEncodedName()));
+
     final HTableDescriptor htd = createBasic3FamilyHTD(tableNameStr);
     HRegion region2 = HRegion.createHRegion(hri,
             hbaseRootDir, this.conf, htd);

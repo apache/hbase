@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -717,7 +718,9 @@ public class HBaseFsck extends Configured implements Tool {
       // already loaded data
       return;
     }
-    HRegionInfo hri = HRegion.loadDotRegionInfoFileContent(FileSystem.get(getConf()), regionDir);
+
+    FileSystem fs = FileSystem.get(getConf());
+    HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
     LOG.debug("HRegionInfo read: " + hri.toString());
     hbi.hdfsEntry.hri = hri;
   }
@@ -1840,7 +1843,7 @@ public class HBaseFsck extends Configured implements Tool {
       Path src = cf.getPath();
       Path dst =  new Path(targetRegionDir, src.getName());
 
-      if (src.getName().equals(HRegion.REGIONINFO_FILE)) {
+      if (src.getName().equals(HRegionFileSystem.REGION_INFO_FILE)) {
         // do not copy the old .regioninfo file.
         continue;
       }
@@ -3121,7 +3124,7 @@ public class HBaseFsck extends Configured implements Tool {
 
             he.hdfsRegionDir = regionDir.getPath();
             he.hdfsRegionDirModTime = regionDir.getModificationTime();
-            Path regioninfoFile = new Path(he.hdfsRegionDir, HRegion.REGIONINFO_FILE);
+            Path regioninfoFile = new Path(he.hdfsRegionDir, HRegionFileSystem.REGION_INFO_FILE);
             he.hdfsRegioninfoFilePresent = fs.exists(regioninfoFile);
             // we add to orphan list when we attempt to read .regioninfo
 

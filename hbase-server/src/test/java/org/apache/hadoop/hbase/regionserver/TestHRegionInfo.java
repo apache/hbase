@@ -61,19 +61,20 @@ public class TestHRegionInfo {
     long modtime = getModTime(r);
     HRegion.closeHRegion(r);
     Thread.sleep(1001);
-    r = HRegion.createHRegion(hri, basedir, htu.getConfiguration(), HTableDescriptor.META_TABLEDESC);
+    r = HRegion.openHRegion(basedir, hri, HTableDescriptor.META_TABLEDESC,
+        null, htu.getConfiguration());
     // Ensure the file is not written for a second time.
     long modtime2 = getModTime(r);
     assertEquals(modtime, modtime2);
     // Now load the file.
-    HRegionInfo deserializedHri =
-      HRegion.loadDotRegionInfoFileContent(FileSystem.get(htu.getConfiguration()), r.getRegionDir());
+    HRegionInfo deserializedHri = HRegionFileSystem.loadRegionInfoFileContent(
+        FileSystem.get(htu.getConfiguration()), r.getRegionDir());
     assertTrue(hri.equals(deserializedHri));
   }
 
   long getModTime(final HRegion r) throws IOException {
     FileStatus [] statuses =
-      r.getFilesystem().listStatus(new Path(r.getRegionDir(), HRegion.REGIONINFO_FILE));
+      r.getFilesystem().listStatus(new Path(r.getRegionDir(), HRegionFileSystem.REGION_INFO_FILE));
     assertTrue(statuses != null && statuses.length == 1);
     return statuses[0].getModificationTime();
   }

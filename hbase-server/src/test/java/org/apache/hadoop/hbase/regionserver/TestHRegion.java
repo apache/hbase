@@ -3496,10 +3496,10 @@ public class TestHRegion extends HBaseTestCase {
     FileSystem fs = region.getFilesystem();
     HRegion.closeHRegion(region);
 
-    Path regionInfoFile = new Path(regionDir, HRegion.REGIONINFO_FILE);
+    Path regionInfoFile = new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE);
 
     // Verify that the .regioninfo file is present
-    assertTrue(HRegion.REGIONINFO_FILE + " should be present in the region dir",
+    assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
       fs.exists(regionInfoFile));
 
     // Try to open the region
@@ -3508,12 +3508,12 @@ public class TestHRegion extends HBaseTestCase {
     HRegion.closeHRegion(region);
 
     // Verify that the .regioninfo file is still there
-    assertTrue(HRegion.REGIONINFO_FILE + " should be present in the region dir",
+    assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
       fs.exists(regionInfoFile));
 
     // Remove the .regioninfo file and verify is recreated on region open
     fs.delete(regionInfoFile);
-    assertFalse(HRegion.REGIONINFO_FILE + " should be removed from the region dir",
+    assertFalse(HRegionFileSystem.REGION_INFO_FILE + " should be removed from the region dir",
       fs.exists(regionInfoFile));
 
     region = HRegion.openHRegion(rootDir, hri, htd, null, conf);
@@ -3521,8 +3521,8 @@ public class TestHRegion extends HBaseTestCase {
     HRegion.closeHRegion(region);
 
     // Verify that the .regioninfo file is still there
-    assertTrue(HRegion.REGIONINFO_FILE + " should be present in the region dir",
-      fs.exists(new Path(regionDir, HRegion.REGIONINFO_FILE)));
+    assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
+      fs.exists(new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE)));
   }
 
   /**

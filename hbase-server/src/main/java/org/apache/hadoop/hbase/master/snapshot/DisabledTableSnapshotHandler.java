@@ -34,9 +34,11 @@ import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.CopyRecoveredEditsTask;
 import org.apache.hadoop.hbase.snapshot.ReferenceRegionHFilesTask;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.TableInfoCopyTask;
 import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -75,6 +77,8 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
     try {
       timeoutInjector.start();
 
+      Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
+
       // 1. get all the regions hosting this table.
 
       // extract each pair to separate lists
@@ -90,14 +94,15 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
           + ClientSnapshotDescriptionUtils.toString(snapshot));
       for (HRegionInfo regionInfo : regions) {
         // 2.1 copy the regionInfo files to the snapshot
-        Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnapshotDirectory(snapshot, rootDir,
-          regionInfo.getEncodedName());
-        HRegion.writeRegioninfoOnFilesystem(regionInfo, snapshotRegionDir, fs, conf);
+        HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
+          snapshotDir, regionInfo);
+
         // check for error for each region
         monitor.rethrowException();
 
         // 2.2 for each region, copy over its recovered.edits directory
         Path regionDir = HRegion.getRegionDir(rootDir, regionInfo);
+        Path snapshotRegionDir = regionFs.getRegionDir();
         new CopyRecoveredEditsTask(snapshot, monitor, fs, regionDir, snapshotRegionDir).call();
         monitor.rethrowException();
 

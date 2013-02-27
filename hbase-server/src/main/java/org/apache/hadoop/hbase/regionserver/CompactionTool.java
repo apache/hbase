@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
@@ -194,13 +195,13 @@ public class CompactionTool extends Configured implements Tool {
     private static HRegion loadRegion(final FileSystem fs, final Configuration conf,
         final HTableDescriptor htd, final Path regionDir) throws IOException {
       Path rootDir = regionDir.getParent().getParent();
-      HRegionInfo hri = HRegion.loadDotRegionInfoFileContent(fs, regionDir);
+      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
       return HRegion.createHRegion(hri, rootDir, conf, htd, null, false, true);
     }
   }
 
   private static boolean isRegionDir(final FileSystem fs, final Path path) throws IOException {
-    Path regionInfo = new Path(path, HRegion.REGIONINFO_FILE);
+    Path regionInfo = new Path(path, HRegionFileSystem.REGION_INFO_FILE);
     return fs.exists(regionInfo);
   }
 

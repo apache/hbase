@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -196,8 +197,7 @@ public class SnapshotTestingUtils {
     for (HRegionInfo info : regions) {
       String regionName = info.getEncodedName();
       Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo snapshotRegionInfo = HRegion.loadDotRegionInfoFileContent(fs,
-          regionDir);
+      HRegionInfo snapshotRegionInfo = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
       assertEquals(info, snapshotRegionInfo);
 
       // check to make sure we have the family
