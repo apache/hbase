@@ -1106,13 +1106,12 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     StoreFile sf = null;
     try {
-      StoreFile.Writer writer =
-        this.compactor.compact(this, filesToCompact, cr.isMajor(), maxId);
+      StoreFile.Writer writer = this.compactor.compact(cr, maxId);
       // Move the compaction into place.
       if (this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
         sf = completeCompaction(filesToCompact, writer);
         if (region.getCoprocessorHost() != null) {
-          region.getCoprocessorHost().postCompact(this, sf);
+          region.getCoprocessorHost().postCompact(this, sf, cr);
         }
       } else {
         // Create storefile around what we wrote with a reader on it.
@@ -1175,12 +1174,12 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     try {
       // Ready to go. Have list of files to compact.
-      StoreFile.Writer writer =
-        this.compactor.compact(this, filesToCompact, isMajor, maxId);
+      StoreFile.Writer writer = this.compactor.compactForTesting(this, conf, filesToCompact,
+        isMajor, maxId);
       // Move the compaction into place.
       StoreFile sf = completeCompaction(filesToCompact, writer);
       if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().postCompact(this, sf);
+        region.getCoprocessorHost().postCompact(this, sf, null);
       }
     } finally {
       synchronized (filesCompacting) {
@@ -1331,16 +1330,16 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   public CompactionRequest requestCompaction() throws IOException {
-    return requestCompaction(NO_PRIORITY);
+    return requestCompaction(NO_PRIORITY, null);
   }
 
-  public CompactionRequest requestCompaction(int priority) throws IOException {
+  public CompactionRequest requestCompaction(int priority, CompactionRequest request)
+      throws IOException {
     // don't even select for compaction if writes are disabled
     if (!this.region.areWritesEnabled()) {
       return null;
     }
 
-    CompactionRequest ret = null;
     this.lock.readLock().lock();
     try {
       synchronized (filesCompacting) {
@@ -1357,8 +1356,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
         boolean override = false;
         if (region.getCoprocessorHost() != null) {
-          override = region.getCoprocessorHost().preCompactSelection(
-              this, candidates);
+          override = region.getCoprocessorHost().preCompactSelection(this, candidates, request);
         }
         CompactSelection filesToCompact;
         if (override) {
@@ -1370,7 +1368,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
         if (region.getCoprocessorHost() != null) {
           region.getCoprocessorHost().postCompactSelection(this,
-              ImmutableList.copyOf(filesToCompact.getFilesToCompact()));
+            ImmutableList.copyOf(filesToCompact.getFilesToCompact()), request);
         }
 
         // no files to compact
@@ -1396,15 +1394,24 @@ public class Store extends SchemaConfigured implements HeapSize {
 
         // everything went better than expected. create a compaction request
         int pri = getCompactPriority(priority);
-        ret = new CompactionRequest(region, this, filesToCompact, isMajor, pri);
+        //not a special compaction request, so we need to make one
+        if(request == null){
+          request = new CompactionRequest(region, this, filesToCompact, isMajor, pri);
+        } else {
+          // update the request with what the system thinks the request should be
+          // its up to the request if it wants to listen
+          request.setSelection(filesToCompact);
+          request.setIsMajor(isMajor);
+          request.setPriority(pri);
+        }
       }
     } finally {
       this.lock.readLock().unlock();
     }
-    if (ret != null) {
-      CompactionRequest.preRequest(ret);
+    if (request != null) {
+      CompactionRequest.preRequest(request);
     }
-    return ret;
+    return request;
   }
 
   public void finishRequest(CompactionRequest cr) {
