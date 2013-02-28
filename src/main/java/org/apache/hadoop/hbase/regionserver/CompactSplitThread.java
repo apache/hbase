@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -184,37 +186,51 @@ public class CompactSplitThread implements CompactionRequestor {
     }
   }
 
-  public synchronized void requestCompaction(final HRegion r,
-      final String why) throws IOException {
-    for(Store s : r.getStores().values()) {
-      requestCompaction(r, s, why, Store.NO_PRIORITY);
+  @Override
+  public synchronized List<CompactionRequest> requestCompaction(final HRegion r, final String why)
+      throws IOException {
+    return requestCompaction(r, why, null);
+  }
+
+  @Override
+  public synchronized List<CompactionRequest> requestCompaction(final HRegion r, final String why,
+      List<CompactionRequest> requests) throws IOException {
+    return requestCompaction(r, why, Store.NO_PRIORITY, requests);
+  }
+
+  @Override
+  public synchronized CompactionRequest requestCompaction(final HRegion r, final Store s,
+      final String why,
+      CompactionRequest request) throws IOException {
+    return requestCompaction(r, s, why, Store.NO_PRIORITY, request);
+  }
+
+  @Override
+  public synchronized List<CompactionRequest> requestCompaction(final HRegion r, final String why,
+      int pri, final List<CompactionRequest> requests) throws IOException {
+    List<CompactionRequest> ret;
+    // not a special compaction request, so make out own list
+    if (requests == null) {
+      ret = new ArrayList<CompactionRequest>(r.getStores().size());
+      for (Store s : r.getStores().values()) {
+        ret.add(requestCompaction(r, s, why, pri, null));
+      }
+    } else {
+      ret = new ArrayList<CompactionRequest>(requests.size());
+      for (CompactionRequest request : requests) {
+        ret.add(requestCompaction(r, request.getStore(), why, pri, request));
+      }
     }
+    return ret;
   }
 
-  public synchronized void requestCompaction(final HRegion r, final Store s,
-      final String why) throws IOException {
-    requestCompaction(r, s, why, Store.NO_PRIORITY);
-  }
-
-  public synchronized void requestCompaction(final HRegion r, final String why,
-      int p) throws IOException {
-    for(Store s : r.getStores().values()) {
-      requestCompaction(r, s, why, p);
-    }
-  }
-
-  /**
-   * @param r HRegion store belongs to
-   * @param s Store to request compaction on
-   * @param why Why compaction requested -- used in debug messages
-   * @param priority override the default priority (NO_PRIORITY == decide)
-   */
-  public synchronized void requestCompaction(final HRegion r, final Store s,
-      final String why, int priority) throws IOException {
+  @Override
+  public synchronized CompactionRequest requestCompaction(final HRegion r, final Store s,
+      final String why, int priority, CompactionRequest request) throws IOException {
     if (this.server.isStopped()) {
-      return;
+      return null;
     }
-    CompactionRequest cr = s.requestCompaction(priority);
+    CompactionRequest cr = s.requestCompaction(priority, request);
     if (cr != null) {
       cr.setServer(server);
       if (priority != Store.NO_PRIORITY) {
@@ -235,6 +251,7 @@ public class CompactSplitThread implements CompactionRequestor {
             " because compaction request was cancelled");
       }
     }
+    return cr;
   }
 
   /**

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
@@ -50,24 +51,45 @@ class Compactor extends Configured {
   }
 
   /**
-   * Do a minor/major compaction on an explicit set of storefiles from a Store.
-   *
-   * @param store Store the files belong to
-   * @param filesToCompact which files to compact
-   * @param majorCompaction true to major compact (prune all deletes, max versions, etc)
-   * @param maxId Readers maximum sequence id.
-   * @return Product of compaction or null if all cells expired or deleted and
-   * nothing made it through the compaction.
+   * Compact a list of files for testing. Creates a fake {@link CompactionRequest} to pass to the
+   * actual compaction method
+   * @param store store which should be compacted
+   * @param conf configuration to use when generating the compaction selection
+   * @param filesToCompact the files to compact. They are used a the compaction selection for the
+   *          generated {@link CompactionRequest}
+   * @param isMajor <tt>true</tt> to initiate a major compaction (prune all deletes, max versions,
+   *          etc)
+   * @param maxId maximum sequenceID == the last key of all files in the compaction
+   * @return product of the compaction or null if all cells expired or deleted and nothing made it
+   *         through the compaction.
    * @throws IOException
    */
-  StoreFile.Writer compact(final Store store,
+  public StoreFile.Writer compactForTesting(final Store store, Configuration conf,
       final Collection<StoreFile> filesToCompact,
-      final boolean majorCompaction, final long maxId)
-  throws IOException {
+      boolean isMajor, long maxId) throws IOException {
+    return compact(CompactionRequest.getRequestForTesting(store, conf, filesToCompact, isMajor),
+      maxId);
+  }
+
+  /**
+   * Do a minor/major compaction on an explicit set of storefiles from a Store.
+   * @param request the requested compaction that contains all necessary information to complete the
+   *          compaction (i.e. the store, the files, etc.)
+   * @return Product of compaction or null if all cells expired or deleted and nothing made it
+   *         through the compaction.
+   * @throws IOException
+   */
+  StoreFile.Writer compact(CompactionRequest request, long maxId) throws IOException {
     // Calculate maximum key count after compaction (for blooms)
     // Also calculate earliest put timestamp if major compaction
     int maxKeyCount = 0;
     long earliestPutTs = HConstants.LATEST_TIMESTAMP;
+
+    // pull out the interesting things from the CR for ease later
+    final Store store = request.getStore();
+    final boolean majorCompaction = request.isMajor();
+    final List<StoreFile> filesToCompact = request.getFiles();
+
     for (StoreFile file : filesToCompact) {
       StoreFile.Reader r = file.getReader();
       if (r == null) {
@@ -76,7 +98,8 @@ class Compactor extends Configured {
       }
       // NOTE: getFilterEntries could cause under-sized blooms if the user
       //       switches bloom type (e.g. from ROW to ROWCOL)
-      long keyCount = (r.getBloomFilterType() == store.getFamily().getBloomFilterType()) ?
+      long keyCount = (r.getBloomFilterType() == store.getFamily()
+          .getBloomFilterType()) ?
           r.getFilterEntries() : r.getEntries();
       maxKeyCount += keyCount;
       // For major compactions calculate the earliest put timestamp
@@ -130,7 +153,8 @@ class Compactor extends Configured {
           scanner = store.getHRegion()
               .getCoprocessorHost()
               .preCompactScannerOpen(store, scanners,
-                  majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT, earliestPutTs);
+                majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT, earliestPutTs,
+                request);
         }
         if (scanner == null) {
           Scan scan = new Scan();
@@ -142,7 +166,7 @@ class Compactor extends Configured {
         }
         if (store.getHRegion().getCoprocessorHost() != null) {
           InternalScanner cpScanner =
-            store.getHRegion().getCoprocessorHost().preCompact(store, scanner);
+            store.getHRegion().getCoprocessorHost().preCompact(store, scanner, request);
           // NULL scanner returned from coprocessor hooks means skip normal processing
           if (cpScanner == null) {
             return null;

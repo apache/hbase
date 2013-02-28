@@ -24,10 +24,12 @@ import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,9 +54,11 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -566,8 +570,12 @@ public class TestCompaction extends HBaseTestCase {
   }
 
   private void createStoreFile(final HRegion region) throws IOException {
+    createStoreFile(region, Bytes.toString(COLUMN_FAMILY));
+  }
+
+  private void createStoreFile(final HRegion region, String family) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
-    addContent(loader, Bytes.toString(COLUMN_FAMILY));
+    addContent(loader, family);
     loader.flushcache();
   }
 
@@ -589,8 +597,8 @@ public class TestCompaction extends HBaseTestCase {
     long maxId = StoreFile.getMaxSequenceIdInList(storeFiles);
     Compactor tool = new Compactor(this.conf);
 
-    StoreFile.Writer compactedFile =
-      tool.compact(store, storeFiles, false, maxId);
+    StoreFile.Writer compactedFile = tool.compactForTesting(store, this.conf, storeFiles, false,
+      maxId);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = FileSystem.get(conf);
@@ -628,7 +636,7 @@ public class TestCompaction extends HBaseTestCase {
     }
     store.triggerMajorCompaction();
 
-    CompactionRequest request = store.requestCompaction(Store.NO_PRIORITY);
+    CompactionRequest request = store.requestCompaction(Store.NO_PRIORITY, null);
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "System-requested major compaction should not occur if there are too many store files",
@@ -646,12 +654,96 @@ public class TestCompaction extends HBaseTestCase {
       createStoreFile(r);
     }
     store.triggerMajorCompaction();
-    CompactionRequest request = store.requestCompaction(Store.PRIORITY_USER);
+    CompactionRequest request = store.requestCompaction(Store.PRIORITY_USER, null);
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "User-requested major compaction should always occur, even if there are too many store files",
       true, 
       request.isMajor());
+  }
+
+  /**
+   * Create a custom compaction request and be sure that we can track it through the queue, knowing
+   * when the compaction is completed.
+   */
+  public void testTrackingCompactionRequest() throws Exception {
+    // setup a compact/split thread on a mock server
+    HRegionServer mockServer = Mockito.mock(HRegionServer.class);
+    Mockito.when(mockServer.getConfiguration()).thenReturn(r.getConf());
+    CompactSplitThread thread = new CompactSplitThread(mockServer);
+    Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
+    // simple stop for the metrics - we ignore any updates in the test
+    RegionServerMetrics mockMetrics = Mockito.mock(RegionServerMetrics.class);
+    Mockito.when(mockServer.getMetrics()).thenReturn(mockMetrics);
+
+    // setup a region/store with some files
+    Store store = r.getStore(COLUMN_FAMILY);
+    createStoreFile(r);
+    for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
+      createStoreFile(r);
+    }
+
+    CountDownLatch latch = new CountDownLatch(1);
+    TrackableCompactionRequest request = new TrackableCompactionRequest(r, store, latch);
+    thread.requestCompaction(r, store, "test custom comapction", Store.PRIORITY_USER, request);
+    // wait for the latch to complete.
+    latch.await();
+
+    thread.interruptIfNecessary();
+  }
+
+  public void testMultipleCustomCompactionRequests() throws Exception {
+    // setup a compact/split thread on a mock server
+    HRegionServer mockServer = Mockito.mock(HRegionServer.class);
+    Mockito.when(mockServer.getConfiguration()).thenReturn(r.getConf());
+    CompactSplitThread thread = new CompactSplitThread(mockServer);
+    Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
+    // simple stop for the metrics - we ignore any updates in the test
+    RegionServerMetrics mockMetrics = Mockito.mock(RegionServerMetrics.class);
+    Mockito.when(mockServer.getMetrics()).thenReturn(mockMetrics);
+
+    // setup a region/store with some files
+    int numStores = r.getStores().size();
+    List<CompactionRequest> requests = new ArrayList<CompactionRequest>(numStores);
+    CountDownLatch latch = new CountDownLatch(numStores);
+    // create some store files and setup requests for each store on which we want to do a
+    // compaction
+    for (Store store : r.getStores().values()) {
+      createStoreFile(r, store.getColumnFamilyName());
+      createStoreFile(r, store.getColumnFamilyName());
+      createStoreFile(r, store.getColumnFamilyName());
+      requests.add(new TrackableCompactionRequest(r, store, latch));
+    }
+
+    thread.requestCompaction(r, "test mulitple custom comapctions", Store.PRIORITY_USER,
+      Collections.unmodifiableList(requests));
+
+    // wait for the latch to complete.
+    latch.await();
+
+    thread.interruptIfNecessary();
+  }
+
+  /**
+   * Simple {@link CompactionRequest} on which you can wait until the requested compaction finishes.
+   */
+  public static class TrackableCompactionRequest extends CompactionRequest {
+    private CountDownLatch done;
+
+    /**
+     * Constructor for a custom compaction. Uses the setXXX methods to update the state of the
+     * compaction before being used.
+     */
+    public TrackableCompactionRequest(HRegion region, Store store, CountDownLatch finished) {
+      super(region, store, Store.PRIORITY_USER);
+      this.done = finished;
+    }
+
+    @Override
+    public void run() {
+      super.run();
+      this.done.countDown();
+    }
   }
 
   @org.junit.Rule

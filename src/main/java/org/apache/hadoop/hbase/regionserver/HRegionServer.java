@@ -1272,17 +1272,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           try {
             if (s.needsCompaction()) {
               // Queue a compaction. Will recognize if major is needed.
-              this.instance.compactSplitThread.requestCompaction(r, s,
-                getName() + " requests compaction");
+              this.instance.compactSplitThread.requestCompaction(r, s, getName()
+                  + " requests compaction", null);
             } else if (s.isMajorCompaction()) {
-              if (majorCompactPriority == DEFAULT_PRIORITY ||
-                  majorCompactPriority > r.getCompactPriority()) {
-                this.instance.compactSplitThread.requestCompaction(r, s,
-                    getName() + " requests major compaction; use default priority");
+              if (majorCompactPriority == DEFAULT_PRIORITY
+                  || majorCompactPriority > r.getCompactPriority()) {
+                this.instance.compactSplitThread.requestCompaction(r, s, getName()
+                    + " requests major compaction; use default priority", null);
               } else {
-               this.instance.compactSplitThread.requestCompaction(r, s,
-                  getName() + " requests major compaction; use configured priority",
-                  this.majorCompactPriority);
+                this.instance.compactSplitThread.requestCompaction(r, s, getName()
+                    + " requests major compaction; use configured priority",
+                  this.majorCompactPriority, null);
               }
             }
           } catch (IOException e) {
@@ -1705,7 +1705,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Do checks to see if we need to compact (references or too many files)
     for (Store s : r.getStores().values()) {
       if (s.hasReferences() || s.needsCompaction()) {
-        getCompactionRequester().requestCompaction(r, s, "Opening Region");
+        getCompactionRequester().requestCompaction(r, s, "Opening Region", null);
       }
     }
     // Update ZK, ROOT or META
@@ -3138,10 +3138,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     String log = "User-triggered " + (major ? "major " : "") + "compaction" + familyLogMsg;
     if (family != null) {
       compactSplitThread.requestCompaction(region, store, log,
-        Store.PRIORITY_USER);
+        Store.PRIORITY_USER, null);
     } else {
       compactSplitThread.requestCompaction(region, log,
-        Store.PRIORITY_USER);
+        Store.PRIORITY_USER, null);
     }
   }
 
@@ -3961,5 +3961,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private boolean isHealthCheckerConfigured() {
     String healthScriptLocation = this.conf.get(HConstants.HEALTH_SCRIPT_LOC);
     return org.apache.commons.lang.StringUtils.isNotBlank(healthScriptLocation);
+  }
+
+  /**
+   * @return the underlying {@link CompactSplitThread} for the servers
+   */
+  public CompactSplitThread getCompactSplitThread() {
+    return this.compactSplitThread;
   }
 }
