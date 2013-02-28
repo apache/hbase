@@ -247,7 +247,7 @@ public class TestCoprocessorScanPolicy {
       Scan scan = new Scan();
       scan.setMaxVersions(newVersions == null ? oldSI.getMaxVersions() : newVersions);
       return new StoreScanner(store, scanInfo, scan, Collections.singletonList(memstoreScanner),
-          ScanType.MINOR_COMPACT, store.getSmallestReadPoint(),
+          ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
           HConstants.OLDEST_TIMESTAMP);
     }
 

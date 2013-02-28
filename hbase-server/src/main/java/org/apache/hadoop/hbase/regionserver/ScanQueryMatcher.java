@@ -155,7 +155,7 @@ public class ScanQueryMatcher {
     // keep deleted cells: if compaction or raw scan
     this.keepDeletedCells = (scanInfo.getKeepDeletedCells() && !isUserScan) || scan.isRaw();
     // retain deletes: if minor compaction or raw scan
-    this.retainDeletesInOutput = scanType == ScanType.MINOR_COMPACT || scan.isRaw();
+    this.retainDeletesInOutput = scanType == ScanType.COMPACT_RETAIN_DELETES || scan.isRaw();
     // seePastDeleteMarker: user initiated scans
     this.seePastDeleteMarkers = scanInfo.getKeepDeletedCells() && isUserScan;
 

@@ -32,7 +32,7 @@ public class NoOpScanPolicyObserver extends BaseRegionObserver {
     Scan scan = new Scan();
     scan.setMaxVersions(oldSI.getMaxVersions());
     return new StoreScanner(store, scanInfo, scan, Collections.singletonList(memstoreScanner),
-        ScanType.MINOR_COMPACT, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
+        ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 
   /**

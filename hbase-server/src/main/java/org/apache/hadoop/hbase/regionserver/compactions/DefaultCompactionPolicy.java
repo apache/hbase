@@ -125,9 +125,7 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     }
     candidateSelection = removeExcessFiles(candidateSelection, isUserCompaction, majorCompaction);
     CompactionRequest result = new CompactionRequest(candidateSelection);
-    if (!majorCompaction && !candidateSelection.isEmpty()) {
-      result.setOffPeak(mayUseOffPeak);
-    }
+    result.setOffPeak(!candidateSelection.isEmpty() && !majorCompaction && mayUseOffPeak);
     return result;
   }
 
