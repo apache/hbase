@@ -50,8 +50,6 @@ public class FSHDFSUtils extends FSUtils{
    * in o.a.h.hdfs.protocol.HdfsConstants cause of HDFS-1620.
    */
   public static final long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
-  
-  public static final String TEST_TRIGGER_DFS_APPEND = "hbase.test.trigger.dfs.append";
 
   @Override
   public void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
@@ -70,23 +68,13 @@ public class FSHDFSUtils extends FSUtils{
 
     // Trying recovery
     boolean recovered = false;
-    long recoveryTimeout = conf.getInt("hbase.lease.recovery.timeout", 300000);
-    // conf parameter passed from unit test, indicating whether fs.append() should be triggered
-    boolean triggerAppend = conf.getBoolean(TEST_TRIGGER_DFS_APPEND, false);
-    Exception ex = null;    
     while (!recovered) {
       try {
         try {
           if (fs instanceof DistributedFileSystem) {
             DistributedFileSystem dfs = (DistributedFileSystem)fs;
-            if (triggerAppend) throw new IOException("recoverFileLease");
-            try {
-              recovered = (Boolean) DistributedFileSystem.class.getMethod(
-                "recoverLease", new Class[] { Path.class }).invoke(dfs, p);
-            } catch (InvocationTargetException ite) {
-              // function was properly called, but threw it's own exception
-              throw (IOException) ite.getCause();
-            }
+            DistributedFileSystem.class.getMethod("recoverLease",
+              new Class[] {Path.class}).invoke(dfs, p);
           } else {
             throw new Exception("Not a DistributedFileSystem");
           }
@@ -95,17 +83,11 @@ public class FSHDFSUtils extends FSUtils{
           throw (IOException) ite.getCause();
         } catch (Exception e) {
           LOG.debug("Failed fs.recoverLease invocation, " + e.toString() +
-              ", trying fs.append instead");
-          ex = e;
-        }
-        if (ex != null || System.currentTimeMillis() - startWaiting > recoveryTimeout) {
-          ex = null; // assume the following append() call would succeed
-          LOG.debug("recoverLease times out after " + recoveryTimeout + " ms. Calling append");
+            ", trying fs.append instead");
           FSDataOutputStream out = fs.append(p);
           out.close();
-          recovered = true;
         }
-        if (recovered) break;
+        recovered = true;
       } catch (IOException e) {
         e = RemoteExceptionHandler.checkIOException(e);
         if (e instanceof AlreadyBeingCreatedException) {
@@ -129,9 +111,9 @@ public class FSHDFSUtils extends FSUtils{
       }
       try {
         Thread.sleep(1000);
-      } catch (InterruptedException ie) {
+      } catch (InterruptedException ex) {
         InterruptedIOException iioe = new InterruptedIOException();
-        iioe.initCause(ie);
+        iioe.initCause(ex);
         throw iioe;
       }
     }
