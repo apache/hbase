@@ -325,6 +325,7 @@ public class ReplicationSource extends Thread
       }
 
       boolean gotIOE = false;
+      currentNbOperations = 0;
       currentNbEntries = 0;
       currentSize = 0;
       try {
