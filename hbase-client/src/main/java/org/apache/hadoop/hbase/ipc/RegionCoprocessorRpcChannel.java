@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -28,11 +27,12 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.IOException;
-
-import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
 
 /**
  * Provides clients with an RPC connection to call coprocessor endpoint {@link com.google.protobuf.Service}s
@@ -61,8 +61,8 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
   protected Message callExecService(Descriptors.MethodDescriptor method,
                                   Message request, Message responsePrototype)
       throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Call: "+method.getName()+", "+request.toString());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Call: "+method.getName()+", "+request.toString());
     }
 
     if (row == null) {
