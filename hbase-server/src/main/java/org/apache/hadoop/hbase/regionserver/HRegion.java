@@ -380,6 +380,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   private final MetricsRegion metricsRegion;
   private final MetricsRegionWrapperImpl metricsRegionWrapper;
+  private final boolean deferredLogSyncDisabled;
 
   /**
    * HRegion constructor. This constructor should only be used for testing and
@@ -484,7 +485,10 @@ public class HRegion implements HeapSize { // , Writable{
      */
     this.rowProcessorTimeout = conf.getLong(
         "hbase.hregion.row.processor.timeout", DEFAULT_ROW_PROCESSOR_TIMEOUT);
-
+    // When hbase.regionserver.optionallogflushinterval <= 0 , deferred log sync is disabled.
+    this.deferredLogSyncDisabled = conf.getLong("hbase.regionserver.optionallogflushinterval",
+        1 * 1000) <= 0;
+    
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -5381,7 +5385,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private void syncOrDefer(long txid) throws IOException {
     if (this.getRegionInfo().isMetaRegion() ||
-      !this.htableDescriptor.isDeferredLogFlush()) {
+      !this.htableDescriptor.isDeferredLogFlush() || this.deferredLogSyncDisabled) {
       this.log.sync(txid);
     }
   }
