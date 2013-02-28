@@ -30,16 +30,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.exceptions.TableExistsException;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.exceptions.RestoreSnapshotException;
+import org.apache.hadoop.hbase.exceptions.TableExistsException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.exceptions.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 
@@ -74,6 +74,12 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
 
     // Monitor
     this.monitor = new ForeignExceptionDispatcher();
+  }
+
+  @Override
+  public CloneSnapshotHandler prepare() throws NotAllMetaRegionsOnlineException,
+      TableExistsException, IOException {
+    return (CloneSnapshotHandler) super.prepare();
   }
 
   /**

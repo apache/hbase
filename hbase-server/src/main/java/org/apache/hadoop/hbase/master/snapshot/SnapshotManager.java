@@ -43,6 +43,13 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.exceptions.HBaseSnapshotException;
+import org.apache.hadoop.hbase.exceptions.RestoreSnapshotException;
+import org.apache.hadoop.hbase.exceptions.SnapshotCreationException;
+import org.apache.hadoop.hbase.exceptions.SnapshotDoesNotExistException;
+import org.apache.hadoop.hbase.exceptions.SnapshotExistsException;
+import org.apache.hadoop.hbase.exceptions.TablePartiallyOpenException;
+import org.apache.hadoop.hbase.exceptions.UnknownSnapshotException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -58,15 +65,8 @@ import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.exceptions.HBaseSnapshotException;
-import org.apache.hadoop.hbase.exceptions.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.exceptions.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.exceptions.SnapshotDoesNotExistException;
-import org.apache.hadoop.hbase.exceptions.SnapshotExistsException;
-import org.apache.hadoop.hbase.exceptions.TablePartiallyOpenException;
-import org.apache.hadoop.hbase.exceptions.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -620,7 +620,7 @@ public class SnapshotManager implements Stoppable {
 
     try {
       CloneSnapshotHandler handler =
-        new CloneSnapshotHandler(master, snapshot, hTableDescriptor);
+        new CloneSnapshotHandler(master, snapshot, hTableDescriptor).prepare();
       this.executorService.submit(handler);
       restoreHandlers.put(tableName, handler);
     } catch (Exception e) {
