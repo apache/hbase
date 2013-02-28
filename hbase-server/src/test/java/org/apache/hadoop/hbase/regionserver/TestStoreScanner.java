@@ -555,7 +555,7 @@ public class TestStoreScanner extends TestCase {
         KeyValue.COMPARATOR);
       StoreScanner scanner =
         new StoreScanner(scan, scanInfo,
-          ScanType.MAJOR_COMPACT, null, scanners,
+          ScanType.COMPACT_DROP_DELETES, null, scanners,
           HConstants.OLDEST_TIMESTAMP);
       List<KeyValue> results = new ArrayList<KeyValue>();
       results = new ArrayList<KeyValue>();

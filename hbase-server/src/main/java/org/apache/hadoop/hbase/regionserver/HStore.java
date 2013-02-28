@@ -817,7 +817,7 @@ public class HStore implements Store {
       Scan scan = new Scan();
       scan.setMaxVersions(scanInfo.getMaxVersions());
       scanner = new StoreScanner(this, scanInfo, scan,
-          Collections.singletonList(memstoreScanner), ScanType.MINOR_COMPACT,
+          Collections.singletonList(memstoreScanner), ScanType.COMPACT_RETAIN_DELETES,
           this.region.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
     }
     if (this.region.getCoprocessorHost() != null) {

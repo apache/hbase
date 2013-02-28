@@ -574,7 +574,7 @@ public class TestAccessController {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCompact(ObserverContext.createAndPrepare(RCP_ENV, null), null, null,
-          ScanType.MINOR_COMPACT);
+          ScanType.COMPACT_RETAIN_DELETES);
         return null;
       }
     };

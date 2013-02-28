@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public enum ScanType {
-  MAJOR_COMPACT,
-  MINOR_COMPACT,
+  COMPACT_DROP_DELETES,
+  COMPACT_RETAIN_DELETES,
   USER_SCAN
 }

@@ -71,6 +71,8 @@ public class DefaultCompactor extends Compactor {
     // Also calculate earliest put timestamp if major compaction
     int maxKeyCount = 0;
     long earliestPutTs = HConstants.LATEST_TIMESTAMP;
+    ScanType scanType = request.isMajor()
+        ? ScanType.COMPACT_DROP_DELETES : ScanType.COMPACT_RETAIN_DELETES;
     for (StoreFile file: filesToCompact) {
       StoreFile.Reader r = file.getReader();
       if (r == null) {
@@ -85,7 +87,7 @@ public class DefaultCompactor extends Compactor {
       // For major compactions calculate the earliest put timestamp of all
       // involved storefiles. This is used to remove family delete marker during
       // compaction.
-      if (majorCompaction) {
+      if (scanType == ScanType.COMPACT_DROP_DELETES) {
         byte [] tmp = r.loadFileInfo().get(StoreFile.EARLIEST_PUT_TS);
         if (tmp == null) {
           // There's a file with no information, must be an old one
@@ -131,13 +133,9 @@ public class DefaultCompactor extends Compactor {
       InternalScanner scanner = null;
       try {
         if (store.getCoprocessorHost() != null) {
-          scanner = store
-              .getCoprocessorHost()
-              .preCompactScannerOpen(store, scanners,
-                majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT, earliestPutTs,
-                request);
+          scanner = store.getCoprocessorHost()
+              .preCompactScannerOpen(store, scanners, scanType, earliestPutTs, request);
         }
-        ScanType scanType = majorCompaction? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT;
         if (scanner == null) {
           Scan scan = new Scan();
           scan.setMaxVersions(store.getFamily().getMaxVersions());
