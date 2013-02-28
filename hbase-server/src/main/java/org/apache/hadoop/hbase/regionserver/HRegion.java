@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
@@ -1291,13 +1292,9 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public void compactStores() throws IOException {
     for (Store s : getStores().values()) {
-      CompactionRequest cr = s.requestCompaction();
-      if(cr != null) {
-        try {
-          compact(cr);
-        } finally {
-          s.finishRequest(cr);
-        }
+      CompactionContext compaction = s.requestCompaction();
+      if (compaction != null) {
+        compact(compaction, s);
       }
     }
   }
@@ -1317,45 +1314,46 @@ public class HRegion implements HeapSize { // , Writable{
    * @return whether the compaction completed
    * @throws IOException e
    */
-  public boolean compact(CompactionRequest cr)
-  throws IOException {
-    if (cr == null) {
-      return false;
-    }
+  public boolean compact(CompactionContext compaction, Store store) throws IOException {
+    assert compaction != null && compaction.hasSelection();
+    assert !compaction.getRequest().getFiles().isEmpty();
     if (this.closing.get() || this.closed.get()) {
       LOG.debug("Skipping compaction on " + this + " because closing/closed");
+      store.cancelRequestedCompaction(compaction);
       return false;
     }
-    Preconditions.checkArgument(cr.getHRegion().equals(this));
     MonitoredTask status = null;
+    boolean didPerformCompaction = false;
     // block waiting for the lock for compaction
     lock.readLock().lock();
     try {
-      status = TaskMonitor.get().createStatus(
-        "Compacting " + cr.getStore() + " in " + this);
+      status = TaskMonitor.get().createStatus("Compacting " + store + " in " + this);
       if (this.closed.get()) {
-        LOG.debug("Skipping compaction on " + this + " because closed");
+        String msg = "Skipping compaction on " + this + " because closed";
+        LOG.debug(msg);
+        status.abort(msg);
         return false;
       }
-      boolean decr = true;
+      boolean wasStateSet = false;
       try {
         synchronized (writestate) {
           if (writestate.writesEnabled) {
+            wasStateSet = true;
             ++writestate.compacting;
           } else {
             String msg = "NOT compacting region " + this + ". Writes disabled.";
             LOG.info(msg);
             status.abort(msg);
-            decr = false;
             return false;
           }
         }
-        LOG.info("Starting compaction on " + cr.getStore() + " in region "
-            + this + (cr.getCompactSelection().isOffPeakCompaction()?" as an off-peak compaction":""));
+        LOG.info("Starting compaction on " + store + " in region " + this
+            + (compaction.getRequest().isOffPeak()?" as an off-peak compaction":""));
         doRegionCompactionPrep();
         try {
-          status.setStatus("Compacting store " + cr.getStore());
-          cr.getStore().compact(cr);
+          status.setStatus("Compacting store " + store);
+          didPerformCompaction = true;
+          store.compact(compaction);
         } catch (InterruptedIOException iioe) {
           String msg = "compaction interrupted";
           LOG.info(msg, iioe);
@@ -1363,7 +1361,7 @@ public class HRegion implements HeapSize { // , Writable{
           return false;
         }
       } finally {
-        if (decr) {
+        if (wasStateSet) {
           synchronized (writestate) {
             --writestate.compacting;
             if (writestate.compacting <= 0) {
@@ -1376,6 +1374,7 @@ public class HRegion implements HeapSize { // , Writable{
       return true;
     } finally {
       try {
+        if (!didPerformCompaction) store.cancelRequestedCompaction(compaction);
         if (status != null) status.cleanup();
       } finally {
         lock.readLock().unlock();

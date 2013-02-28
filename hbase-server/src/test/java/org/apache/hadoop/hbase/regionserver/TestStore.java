@@ -56,11 +56,11 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -224,17 +224,19 @@ public class TestStore extends TestCase {
     // by the compaction.
     for (int i = 1; i <= storeFileNum; i++) {
       // verify the expired store file.
-      CompactionRequest cr = this.store.requestCompaction();
+      CompactionContext compaction = this.store.requestCompaction();
+      CompactionRequest cr = compaction.getRequest();
       // the first is expired normally.
       // If not the first compaction, there is another empty store file,
+      List<StoreFile> files = new ArrayList<StoreFile>(cr.getFiles());
       assertEquals(Math.min(i, 2), cr.getFiles().size());
-      for (int j = 0; j < cr.getFiles().size(); j++) {
-        assertTrue(cr.getFiles().get(j).getReader().getMaxTimestamp() < (edge
+      for (int j = 0; j < files.size(); j++) {
+        assertTrue(files.get(j).getReader().getMaxTimestamp() < (edge
             .currentTimeMillis() - this.store.getScanInfo().getTtl()));
       }
       // Verify that the expired store file is compacted to an empty store file.
       // Default compaction policy creates just one and only one compacted file.
-      StoreFile compactedFile = this.store.compact(cr).get(0);
+      StoreFile compactedFile = this.store.compact(compaction).get(0);
       // It is an empty store file.
       assertEquals(0, compactedFile.getReader().getEntries());
 

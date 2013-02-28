@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.util.Pair;
 
 @InterfaceAudience.Private
 public interface CompactionRequestor {
@@ -47,7 +48,7 @@ public interface CompactionRequestor {
    * @throws IOException
    */
   public List<CompactionRequest> requestCompaction(final HRegion r, final String why,
-      List<CompactionRequest> requests)
+      List<Pair<CompactionRequest, Store>> requests)
       throws IOException;
 
   /**
@@ -74,7 +75,7 @@ public interface CompactionRequestor {
    * @throws IOException
    */
   public List<CompactionRequest> requestCompaction(final HRegion r, final String why, int pri,
-      List<CompactionRequest> requests) throws IOException;
+      List<Pair<CompactionRequest, Store>> requests) throws IOException;
 
   /**
    * @param r Region to compact

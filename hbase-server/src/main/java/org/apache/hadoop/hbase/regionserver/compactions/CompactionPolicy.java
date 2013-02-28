@@ -43,25 +43,6 @@ public abstract class CompactionPolicy {
   }
 
   /**
-   * This is called before coprocessor preCompactSelection and should filter the candidates
-   * for coprocessor; i.e. exclude the files that definitely cannot be compacted at this time.
-   * @param candidateFiles candidate files, ordered from oldest to newest
-   * @param filesCompacting files currently compacting
-   * @return the list of files that can theoretically be compacted.
-   */
-  public abstract List<StoreFile> preSelectCompaction(
-      List<StoreFile> candidateFiles, final List<StoreFile> filesCompacting);
-
-  /**
-   * @param candidateFiles candidate files, ordered from oldest to newest
-   * @return subset copy of candidate list that meets compaction criteria
-   * @throws java.io.IOException
-   */
-  public abstract CompactSelection selectCompaction(
-    final List<StoreFile> candidateFiles, final boolean isUserCompaction,
-    final boolean mayUseOffPeak, final boolean forceMajor) throws IOException;
-
-  /**
    * @param storeFiles Store files in the store.
    * @return The system compaction priority of the store, based on storeFiles.
    *         The priority range is as such - the smaller values are higher priority;

@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.exceptions.InvalidHFileException;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -154,8 +154,8 @@ public class HStore implements Store {
   // Comparing KeyValues
   private final KeyValue.KVComparator comparator;
 
-  final Compactor compactor;
-  
+  final StoreEngine<?, ?, ?> storeEngine;
+
   private OffPeakCompactions offPeakCompactions;
 
   private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
@@ -223,8 +223,11 @@ public class HStore implements Store {
           "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     }
 
-    StoreEngine engine = StoreEngine.create(this, this.conf, this.comparator);
-    this.storeFileManager = engine.getStoreFileManager();
+    storeEngine = StoreEngine.create(this, this.conf, this.comparator);
+    // Copy some things to local fields for convenience.
+    this.storeFileManager = storeEngine.getStoreFileManager();
+    this.compactionPolicy = storeEngine.getCompactionPolicy();
+
     this.storeFileManager.loadFiles(loadStoreFiles());
 
     // Initialize checksum type from name. The names are CRC32, CRC32C, etc.
@@ -243,9 +246,6 @@ public class HStore implements Store {
                 + HStore.flush_retries_number);
       }
     }
-    this.compactionPolicy = engine.getCompactionPolicy();
-    // Get the compaction tool instance for this policy
-    this.compactor = engine.getCompactor();
   }
 
   /**
@@ -1067,15 +1067,15 @@ public class HStore implements Store {
    * <p>We don't want to hold the structureLock for the whole time, as a compact()
    * can be lengthy and we want to allow cache-flushes during this period.
    *
-   * @param cr
-   *          compaction details obtained from requestCompaction()
+   * @param compaction compaction details obtained from requestCompaction()
    * @throws IOException
    * @return Storefile we compacted into or null if we failed or opted out early.
    */
-  List<StoreFile> compact(CompactionRequest cr) throws IOException {
-    if (cr == null || cr.getFiles().isEmpty()) return null;
-    Preconditions.checkArgument(cr.getStore().toString().equals(this.toString()));
-    List<StoreFile> filesToCompact = cr.getFiles();
+  public List<StoreFile> compact(CompactionContext compaction) throws IOException {
+    assert compaction != null && compaction.hasSelection();
+    CompactionRequest cr = compaction.getRequest();
+    Collection<StoreFile> filesToCompact = cr.getFiles();
+    assert !filesToCompact.isEmpty();
     synchronized (filesCompacting) {
       // sanity check: we're compacting files that this store knows about
       // TODO: change this to LOG.error() after more debugging
@@ -1091,16 +1091,20 @@ public class HStore implements Store {
     List<StoreFile> sfs = new ArrayList<StoreFile>();
     long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
-      List<Path> newFiles = this.compactor.compact(cr);
+      // Commence the compaction.
+      List<Path> newFiles = compaction.compact();
       // Move the compaction into place.
       if (this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
         for (Path newFile: newFiles) {
-          StoreFile sf = completeCompaction(filesToCompact, newFile);
+          assert newFile != null;
+          StoreFile sf = moveFileIntoPlace(newFile);
           if (region.getCoprocessorHost() != null) {
             region.getCoprocessorHost().postCompact(this, sf, cr);
           }
+          assert sf != null;
           sfs.add(sf);
         }
+        completeCompaction(filesToCompact, sfs);
       } else {
         for (Path newFile: newFiles) {
           // Create storefile around what we wrote with a reader on it.
@@ -1111,15 +1115,24 @@ public class HStore implements Store {
         }
       }
     } finally {
-      synchronized (filesCompacting) {
-        filesCompacting.removeAll(filesToCompact);
-      }
+      finishCompactionRequest(cr);
     }
+    logCompactionEndMessage(cr, sfs, compactionStartTime);
+    return sfs;
+  }
 
+  /**
+   * Log a very elaborate compaction completion message.
+   * @param cr Request.
+   * @param sfs Resulting files.
+   * @param compactionStartTime Start time.
+   */
+  private void logCompactionEndMessage(
+      CompactionRequest cr, List<StoreFile> sfs, long compactionStartTime) {
     long now = EnvironmentEdgeManager.currentTimeMillis();
     StringBuilder message = new StringBuilder(
       "Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
-      + filesToCompact.size() + " file(s) in " + this + " of "
+      + cr.getFiles().size() + " file(s) in " + this + " of "
       + this.region.getRegionInfo().getRegionNameAsString()
       + " into ");
     if (sfs.isEmpty()) {
@@ -1139,7 +1152,23 @@ public class HStore implements Store {
       .append(", and took ").append(StringUtils.formatTimeDiff(now, compactionStartTime))
       .append(" to execute.");
     LOG.info(message.toString());
-    return sfs;
+  }
+
+  // Package-visible for tests
+  StoreFile moveFileIntoPlace(Path newFile) throws IOException {
+    validateStoreFile(newFile);
+    // Move the file into the right spot
+    Path destPath = new Path(homedir, newFile.getName());
+    LOG.info("Renaming compacted file at " + newFile + " to " + destPath);
+    if (!fs.rename(newFile, destPath)) {
+      String err = "Failed move of compacted file " + newFile + " to " +  destPath;
+      LOG.error(err);
+      throw new IOException(err);
+    }
+    StoreFile result = new StoreFile(this.fs, destPath, this.conf, this.cacheConf,
+        this.family.getBloomFilterType(), this.dataBlockEncoder);
+    result.createReader();
+    return result;
   }
 
   /**
@@ -1181,13 +1210,17 @@ public class HStore implements Store {
 
     try {
       // Ready to go. Have list of files to compact.
-      List<Path> newFiles = this.compactor.compactForTesting(filesToCompact, isMajor);
+      List<Path> newFiles =
+          this.storeEngine.getCompactor().compactForTesting(filesToCompact, isMajor);
       for (Path newFile: newFiles) {
         // Move the compaction into place.
-        StoreFile sf = completeCompaction(filesToCompact, newFile);
+        StoreFile sf = moveFileIntoPlace(newFile);
         if (region.getCoprocessorHost() != null) {
           region.getCoprocessorHost().postCompact(this, sf, null);
         }
+        ArrayList<StoreFile> tmp = new ArrayList<StoreFile>();
+        tmp.add(sf);
+        completeCompaction(filesToCompact, tmp);
       }
     } finally {
       synchronized (filesCompacting) {
@@ -1203,7 +1236,7 @@ public class HStore implements Store {
 
   @Override
   public CompactionProgress getCompactionProgress() {
-    return this.compactor.getProgress();
+    return this.storeEngine.getCompactor().getProgress();
   }
 
   @Override
@@ -1219,100 +1252,102 @@ public class HStore implements Store {
   }
 
   @Override
-  public CompactionRequest requestCompaction() throws IOException {
+  public CompactionContext requestCompaction() throws IOException {
     return requestCompaction(Store.NO_PRIORITY, null);
   }
 
   @Override
-  public CompactionRequest requestCompaction(int priority, CompactionRequest request)
+  public CompactionContext requestCompaction(int priority, CompactionRequest baseRequest)
       throws IOException {
     // don't even select for compaction if writes are disabled
     if (!this.region.areWritesEnabled()) {
       return null;
     }
 
+    CompactionContext compaction = storeEngine.createCompaction();
     this.lock.readLock().lock();
     try {
-      List<StoreFile> candidates = Lists.newArrayList(storeFileManager.getStorefiles());
       synchronized (filesCompacting) {
-        // First we need to pre-select compaction, and then pre-compact selection!
-        candidates = compactionPolicy.preSelectCompaction(candidates, filesCompacting);
-        boolean override = false;
+        // First, see if coprocessor would want to override selection.
         if (region.getCoprocessorHost() != null) {
-          override = region.getCoprocessorHost().preCompactSelection(this, candidates, request);
-        }
-        CompactSelection filesToCompact;
-        if (override) {
-          // coprocessor is overriding normal file selection
-          filesToCompact = new CompactSelection(candidates);
-        } else {
-          boolean isUserCompaction = priority == Store.PRIORITY_USER;
-          boolean mayUseOffPeak = this.offPeakCompactions.tryStartOffPeakRequest();
-          filesToCompact = compactionPolicy.selectCompaction(candidates, isUserCompaction,
-              mayUseOffPeak, forceMajor && filesCompacting.isEmpty());
-          if (mayUseOffPeak && !filesToCompact.isOffPeakCompaction()) {
-            // Compaction policy doesn't want to do anything with off-peak.
-            this.offPeakCompactions.endOffPeakRequest();
+          List<StoreFile> candidatesForCoproc = compaction.preSelect(this.filesCompacting);
+          boolean override = region.getCoprocessorHost().preCompactSelection(
+              this, candidatesForCoproc, baseRequest);
+          if (override) {
+            // Coprocessor is overriding normal file selection.
+            compaction.forceSelect(new CompactionRequest(candidatesForCoproc));
           }
         }
 
+        // Normal case - coprocessor is not overriding file selection.
+        if (!compaction.hasSelection()) {
+          boolean isUserCompaction = priority == Store.PRIORITY_USER;
+          boolean mayUseOffPeak = this.offPeakCompactions.tryStartOffPeakRequest();
+          compaction.select(this.filesCompacting, isUserCompaction,
+              mayUseOffPeak, forceMajor && filesCompacting.isEmpty());
+          assert compaction.hasSelection();
+          if (mayUseOffPeak && !compaction.getRequest().isOffPeak()) {
+            // Compaction policy doesn't want to take advantage of off-peak.
+            this.offPeakCompactions.endOffPeakRequest();
+          }
+        }
         if (region.getCoprocessorHost() != null) {
-          region.getCoprocessorHost().postCompactSelection(this,
-            ImmutableList.copyOf(filesToCompact.getFilesToCompact()), request);
+          region.getCoprocessorHost().postCompactSelection(
+              this, ImmutableList.copyOf(compaction.getRequest().getFiles()), baseRequest);
         }
 
-        // no files to compact
-        if (filesToCompact.getFilesToCompact().isEmpty()) {
+        // Selected files; see if we have a compaction with some custom base request.
+        if (baseRequest != null) {
+          // Update the request with what the system thinks the request should be;
+          // its up to the request if it wants to listen.
+          compaction.forceSelect(
+              baseRequest.combineWith(compaction.getRequest()));
+        }
+
+        // Finally, we have the resulting files list. Check if we have any files at all.
+        final Collection<StoreFile> selectedFiles = compaction.getRequest().getFiles();
+        if (selectedFiles.isEmpty()) {
           return null;
         }
 
-        // basic sanity check: do not try to compact the same StoreFile twice.
-        if (!Collections.disjoint(filesCompacting, filesToCompact.getFilesToCompact())) {
+        // Update filesCompacting (check that we do not try to compact the same StoreFile twice).
+        if (!Collections.disjoint(filesCompacting, selectedFiles)) {
           // TODO: change this from an IAE to LOG.error after sufficient testing
           Preconditions.checkArgument(false, "%s overlaps with %s",
-              filesToCompact, filesCompacting);
+              selectedFiles, filesCompacting);
         }
-        filesCompacting.addAll(filesToCompact.getFilesToCompact());
+        filesCompacting.addAll(selectedFiles);
         Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
 
-        boolean isMajor =
-            (filesToCompact.getFilesToCompact().size() == this.getStorefilesCount());
-        if (isMajor) {
-          // since we're enqueuing a major, update the compaction wait interval
-          this.forceMajor = false;
-        }
+        // If we're enqueuing a major, clear the force flag.
+        boolean isMajor = selectedFiles.size() == this.getStorefilesCount();
+        this.forceMajor = this.forceMajor && !isMajor;
 
-        LOG.debug(getRegionInfo().getEncodedName() + " - " +
-            getColumnFamilyName() + ": Initiating " +
-            (isMajor ? "major" : "minor") + " compaction");
-
-        // everything went better than expected. create a compaction request
-        int pri = getCompactPriority(priority);
-        //not a special compaction request, so we need to make one
-        if(request == null){
-          request = new CompactionRequest(region, this, filesToCompact, isMajor, pri);
-        }else{
-          //update the request with what the system thinks the request should be
-          //its up to the request if it wants to listen
-          request.setSelection(filesToCompact);
-          request.setIsMajor(isMajor);
-          request.setPriority(pri);
-        }
+        // Set common request properties.
+        compaction.getRequest().setPriority(getCompactPriority(priority));
+        compaction.getRequest().setIsMajor(isMajor);
+        compaction.getRequest().setDescription(
+            region.getRegionNameAsString(), getColumnFamilyName());
       }
     } finally {
       this.lock.readLock().unlock();
     }
-    if (request != null) {
-      this.region.reportCompactionRequestStart(request.isMajor());
-    }
-    return request;
+
+    LOG.debug(getRegionInfo().getEncodedName() + " - " + getColumnFamilyName() + ": Initiating "
+        + (compaction.getRequest().isMajor() ? "major" : "minor") + " compaction");
+    this.region.reportCompactionRequestStart(compaction.getRequest().isMajor());
+    return compaction;
   }
 
-  public void finishRequest(CompactionRequest cr) {
+  public void cancelRequestedCompaction(CompactionContext compaction) {
+    finishCompactionRequest(compaction.getRequest());
+  }
+
+  private void finishCompactionRequest(CompactionRequest cr) {
     this.region.reportCompactionRequestEnd(cr.isMajor());
-    if (cr.getCompactSelection().isOffPeakCompaction()) {
+    if (cr.isOffPeak()) {
       this.offPeakCompactions.endOffPeakRequest();
-      cr.getCompactSelection().setOffPeak(false);
+      cr.setOffPeak(false);
     }
     synchronized (filesCompacting) {
       filesCompacting.removeAll(cr.getFiles());
@@ -1363,28 +1398,8 @@ public class HStore implements Store {
    * @return StoreFile created. May be null.
    * @throws IOException
    */
-  StoreFile completeCompaction(final Collection<StoreFile> compactedFiles,
-                                       final Path newFile)
-      throws IOException {
-    // 1. Moving the new files into place -- if there is a new file (may not
-    // be if all cells were expired or deleted).
-    StoreFile result = null;
-    if (newFile != null) {
-      validateStoreFile(newFile);
-      // Move the file into the right spot
-      Path destPath = new Path(homedir, newFile.getName());
-      LOG.info("Renaming compacted file at " + newFile + " to " + destPath);
-      if (!fs.rename(newFile, destPath)) {
-        LOG.error("Failed move of compacted file " + newFile + " to " +
-            destPath);
-        throw new IOException("Failed move of compacted file " + newFile +
-            " to " + destPath);
-      }
-      result = new StoreFile(this.fs, destPath, this.conf, this.cacheConf,
-          this.family.getBloomFilterType(), this.dataBlockEncoder);
-      result.createReader();
-    }
-
+  private void completeCompaction(final Collection<StoreFile> compactedFiles,
+      final Collection<StoreFile> result) throws IOException {
     try {
       this.lock.writeLock().lock();
       try {
@@ -1392,11 +1407,7 @@ public class HStore implements Store {
         // delete old store files until we have sent out notification of
         // change in case old files are still being accessed by outstanding
         // scanners.
-        List<StoreFile> results = new ArrayList<StoreFile>(1);
-        if (result != null) {
-          results.add(result);
-        }
-        this.storeFileManager.addCompactionResults(compactedFiles, results);
+        this.storeFileManager.addCompactionResults(compactedFiles, result);
         filesCompacting.removeAll(compactedFiles); // safe bc: lock.writeLock()
       } finally {
         // We need the lock, as long as we are updating the storeFiles
@@ -1418,8 +1429,8 @@ public class HStore implements Store {
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.error("Failed replacing compacted files in " + this +
-        ". Compacted file is " + (result == null? "none": result.toString()) +
-        ".  Files replaced " + compactedFiles.toString() +
+        ". Compacted files are " + (result == null? "none": result.toString()) +
+        ". Files replaced " + compactedFiles.toString() +
         " some of which may have been already removed", e);
     }
 
@@ -1435,7 +1446,6 @@ public class HStore implements Store {
       this.storeSize += r.length();
       this.totalUncompressedBytes += r.getTotalUncompressedBytes();
     }
-    return result;
   }
 
   /*

@@ -594,7 +594,7 @@ public class TestCompaction extends HBaseTestCase {
     HStore store = (HStore) r.getStore(COLUMN_FAMILY);
 
     Collection<StoreFile> storeFiles = store.getStorefiles();
-    Compactor tool = store.compactor;
+    Compactor tool = store.storeEngine.getCompactor();
 
     List<Path> newFiles = tool.compactForTesting(storeFiles, false);
 
@@ -611,7 +611,7 @@ public class TestCompaction extends HBaseTestCase {
     stream.close();
 
     try {
-      store.completeCompaction(storeFiles, origPath);
+      ((HStore)store).moveFileIntoPlace(origPath);
     } catch (Exception e) {
       // The complete compaction should fail and the corrupt file should remain
       // in the 'tmp' directory;
@@ -635,7 +635,7 @@ public class TestCompaction extends HBaseTestCase {
     }
     store.triggerMajorCompaction();
 
-    CompactionRequest request = store.requestCompaction(Store.NO_PRIORITY, null);
+    CompactionRequest request = store.requestCompaction(Store.NO_PRIORITY, null).getRequest();
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "System-requested major compaction should not occur if there are too many store files",
@@ -653,7 +653,7 @@ public class TestCompaction extends HBaseTestCase {
       createStoreFile(r);
     }
     store.triggerMajorCompaction();
-    CompactionRequest request = store.requestCompaction(Store.PRIORITY_USER, null);
+    CompactionRequest request = store.requestCompaction(Store.PRIORITY_USER, null).getRequest();
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "User-requested major compaction should always occur, even if there are too many store files",
@@ -680,7 +680,7 @@ public class TestCompaction extends HBaseTestCase {
     }
 
     CountDownLatch latch = new CountDownLatch(1);
-    TrackableCompactionRequest request = new TrackableCompactionRequest(r, (HStore) store, latch);
+    TrackableCompactionRequest request = new TrackableCompactionRequest(latch);
     thread.requestCompaction(r, store, "test custom comapction", Store.PRIORITY_USER, request);
     // wait for the latch to complete.
     latch.await();
@@ -698,16 +698,15 @@ public class TestCompaction extends HBaseTestCase {
      * Constructor for a custom compaction. Uses the setXXX methods to update the state of the
      * compaction before being used.
      */
-    public TrackableCompactionRequest(HRegion region, HStore store, CountDownLatch finished) {
-      super(region, store, Store.PRIORITY_USER);
+    public TrackableCompactionRequest(CountDownLatch finished) {
+      super();
       this.done = finished;
     }
 
     @Override
-    public void run() {
-      super.run();
+    public void afterExecute() {
+      super.afterExecute();
       this.done.countDown();
     }
   }
-
 }

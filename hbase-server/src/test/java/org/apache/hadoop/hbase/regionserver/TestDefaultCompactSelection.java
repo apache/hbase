@@ -39,7 +39,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -234,11 +235,11 @@ public class TestDefaultCompactSelection extends TestCase {
   throws IOException {
     store.forceMajor = forcemajor;
     //Test Default compactions
-    CompactSelection result = store.compactionPolicy
-        .selectCompaction(candidates, false, isOffPeak, forcemajor);
-    List<StoreFile> actual = result.getFilesToCompact();
+    CompactionRequest result = ((DefaultCompactionPolicy)store.compactionPolicy).selectCompaction(
+        candidates, new ArrayList<StoreFile>(), false, isOffPeak, forcemajor);
+    List<StoreFile> actual = new ArrayList<StoreFile>(result.getFiles());
     if (isOffPeak && !forcemajor) {
-      assertTrue(result.isOffPeakCompaction());
+      assertTrue(result.isOffPeak());
     }
     assertEquals(Arrays.toString(expected), Arrays.toString(getSizes(actual)));
     store.forceMajor = false;

@@ -60,7 +60,9 @@ public abstract class Compactor {
    */
   public List<Path> compactForTesting(final Collection<StoreFile> filesToCompact, boolean isMajor)
       throws IOException {
-    return compact(CompactionRequest.getRequestForTesting(filesToCompact, isMajor));
+    CompactionRequest cr = new CompactionRequest(filesToCompact);
+    cr.setIsMajor(isMajor);
+    return this.compact(cr);
   }
 
   public CompactionProgress getProgress() {
