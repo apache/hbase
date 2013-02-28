@@ -152,7 +152,8 @@ public abstract class FilterBase implements Filter {
    * @return whether column family is essential
    */
   public static boolean isFamilyEssential(Filter filter, byte[] name) {
-    return !(filter instanceof FilterBase) || ((FilterBase) filter).isFamilyEssential(name);
+    return (!(filter instanceof FilterBase) || ((FilterBase) filter).isFamilyEssential(name)) &&
+           (!(filter instanceof FilterList) || ((FilterList) filter).isFamilyEssential(name));
   }
 
   /**
