@@ -36,16 +36,17 @@ public enum DataBlockEncoding {
   /** Disable data block encoding. */
   NONE(0, null),
   // id 1 is reserved for the BITSET algorithm to be added later
-  PREFIX(2, createEncoder("org.apache.hadoop.hbase.io.encoding.PrefixKeyDeltaEncoder")),
-  DIFF(3, createEncoder("org.apache.hadoop.hbase.io.encoding.DiffKeyDeltaEncoder")),
-  FAST_DIFF(4, createEncoder("org.apache.hadoop.hbase.io.encoding.FastDiffDeltaEncoder")),
+  PREFIX(2, "org.apache.hadoop.hbase.io.encoding.PrefixKeyDeltaEncoder"),
+  DIFF(3, "org.apache.hadoop.hbase.io.encoding.DiffKeyDeltaEncoder"),
+  FAST_DIFF(4, "org.apache.hadoop.hbase.io.encoding.FastDiffDeltaEncoder"),
   // id 5 is reserved for the COPY_KEY algorithm for benchmarking
-  // COPY_KEY(5, createEncoder("org.apache.hadoop.hbase.io.encoding.CopyKeyDataBlockEncoder")),
-  PREFIX_TREE(6, createEncoder("org.apache.hbase.codec.prefixtree.PrefixTreeCodec"));
+  // COPY_KEY(5, "org.apache.hadoop.hbase.io.encoding.CopyKeyDataBlockEncoder"),
+  PREFIX_TREE(6, "org.apache.hbase.codec.prefixtree.PrefixTreeCodec");
 
   private final short id;
   private final byte[] idInBytes;
-  private final DataBlockEncoder encoder;
+  private DataBlockEncoder encoder;
+  private final String encoderCls;
 
   public static final int ID_SIZE = Bytes.SIZEOF_SHORT;
 
@@ -66,7 +67,7 @@ public enum DataBlockEncoding {
     }
   }
 
-  private DataBlockEncoding(int id, DataBlockEncoder encoder) {
+  private DataBlockEncoding(int id, String encoderClsName) {
     if (id < Short.MIN_VALUE || id > Short.MAX_VALUE) {
       throw new AssertionError(
           "Data block encoding algorithm id is out of range: " + id);
@@ -79,7 +80,7 @@ public enum DataBlockEncoding {
       throw new RuntimeException("Unexpected length of encoder ID byte " +
           "representation: " + Bytes.toStringBinary(idInBytes));
     }
-    this.encoder = encoder;
+    this.encoderCls = encoderClsName;
   }
 
   /**
@@ -122,6 +123,10 @@ public enum DataBlockEncoding {
    *         selected.
    */
   public DataBlockEncoder getEncoder() {
+    if (encoder == null && id != 0) {
+      // lazily create the encoder
+      encoder = createEncoder(encoderCls);
+    }
     return encoder;
   }
 
