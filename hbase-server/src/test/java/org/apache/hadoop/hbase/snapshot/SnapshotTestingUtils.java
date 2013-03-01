@@ -68,7 +68,7 @@ public class SnapshotTestingUtils {
    *           if the admin operation fails
    */
   public static void assertNoSnapshots(HBaseAdmin admin) throws IOException {
-    assertEquals("Have some previous snapshots", 0, admin.getCompletedSnapshots()
+    assertEquals("Have some previous snapshots", 0, admin.listSnapshots()
         .size());
   }
 
@@ -80,7 +80,7 @@ public class SnapshotTestingUtils {
       HBaseAdmin admin, String snapshotName, String tableName)
       throws IOException {
     // list the snapshot
-    List<SnapshotDescription> snapshots = admin.getCompletedSnapshots();
+    List<SnapshotDescription> snapshots = admin.listSnapshots();
 
     List<SnapshotDescription> returnedSnapshots = new ArrayList<SnapshotDescription>();
     for (SnapshotDescription sd : snapshots) {
@@ -109,7 +109,7 @@ public class SnapshotTestingUtils {
       HBaseAdmin admin, String snapshotName, String tableName)
       throws IOException {
     // list the snapshot
-    List<SnapshotDescription> snapshots = admin.getCompletedSnapshots();
+    List<SnapshotDescription> snapshots = admin.listSnapshots();
 
     assertEquals("Should only have 1 snapshot", 1, snapshots.size());
     assertEquals(snapshotName, snapshots.get(0).getName());

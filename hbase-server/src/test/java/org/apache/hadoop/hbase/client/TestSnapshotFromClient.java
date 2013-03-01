@@ -194,7 +194,7 @@ public class TestSnapshotFromClient {
       admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
 
     admin.deleteSnapshot(snapshot);
-    snapshots = admin.getCompletedSnapshots();
+    snapshots = admin.listSnapshots();
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 

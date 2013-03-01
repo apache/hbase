@@ -688,7 +688,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns a list of snapshots
     def list_snapshot
-      @admin.getCompletedSnapshots
+      @admin.listSnapshots
     end
 
     # Apply config specific to a table/column to its descriptor
