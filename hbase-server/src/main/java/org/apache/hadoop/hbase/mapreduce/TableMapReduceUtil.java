@@ -511,7 +511,6 @@ public class TableMapReduceUtil {
           org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.class, // hbase-protocol
           org.apache.hadoop.hbase.client.Put.class,                      // hbase-client
-          org.apache.hbase.codec.prefixtree.PrefixTreeCodec.class,       // hbase-prefix-tree
           org.apache.hadoop.hbase.CompatibilityFactory.class,            // hbase-hadoop-compat
           // pull necessary dependencies
           org.apache.zookeeper.ZooKeeper.class,
