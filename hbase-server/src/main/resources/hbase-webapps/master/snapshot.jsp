@@ -41,7 +41,7 @@
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
   String snapshotName = request.getParameter("name");
   SnapshotDescription snapshot = null;
-  for (SnapshotDescription snapshotDesc: hbadmin.getCompletedSnapshots()) {
+  for (SnapshotDescription snapshotDesc: hbadmin.listSnapshots()) {
     if (snapshotName.equals(snapshotDesc.getName())) {
       snapshot = snapshotDesc;
       break;
