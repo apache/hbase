@@ -358,6 +358,8 @@ public final class HConstants {
 
   /** delimiter used between portions of a region name */
   public static final int META_ROW_DELIMITER = ',';
+  
+  public static final byte[] META_ROW_DELIMITER_BYTES = Bytes.toBytes(",,");
 
   /** The catalog family as a string*/
   public static final String CATALOG_FAMILY_STR = "info";
