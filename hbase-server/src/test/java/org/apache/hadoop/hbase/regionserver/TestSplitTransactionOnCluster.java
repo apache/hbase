@@ -87,7 +87,7 @@ public class TestSplitTransactionOnCluster {
     LogFactory.getLog(TestSplitTransactionOnCluster.class);
   private HBaseAdmin admin = null;
   private MiniHBaseCluster cluster = null;
-  private static final int NB_SERVERS = 2;
+  private static final int NB_SERVERS = 3;
   private static CountDownLatch latch = new CountDownLatch(1);
   private static volatile boolean secondSplit = false;
   private static volatile boolean callRollBack = false;
@@ -421,23 +421,32 @@ public class TestSplitTransactionOnCluster {
       // Now split one of the daughters.
       regionCount = ProtobufUtil.getOnlineRegions(server).size();
       HRegionInfo daughter = daughters.get(0).getRegionInfo();
+      LOG.info("Daughter we are going to split: " + daughter);
       // Compact first to ensure we have cleaned up references -- else the split
       // will fail.
       this.admin.compact(daughter.getRegionName());
       daughters = cluster.getRegions(tableName);
       HRegion daughterRegion = null;
       for (HRegion r: daughters) {
-        if (r.getRegionInfo().equals(daughter)) daughterRegion = r;
+        if (r.getRegionInfo().equals(daughter)) {
+          daughterRegion = r;
+          LOG.info("Found matching HRI: " + daughterRegion);
+          break;
+        }
       }
       assertTrue(daughterRegion != null);
       for (int i=0; i<100; i++) {
         if (!daughterRegion.hasReferences()) break;
         Threads.sleep(100);
       }
-      assertFalse("Waiting for refereces to be compacted", daughterRegion.hasReferences());
+      assertFalse("Waiting for reference to be compacted", daughterRegion.hasReferences());
+      LOG.info("Daughter hri before split (has been compacted): " + daughter);
       split(daughter, server, regionCount);
       // Get list of daughters
       daughters = cluster.getRegions(tableName);
+      for (HRegion d: daughters) {
+        LOG.info("Regions before crash: " + d);
+      }
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
       waitUntilRegionServerDead();
@@ -447,7 +456,8 @@ public class TestSplitTransactionOnCluster {
       regions = cluster.getRegions(tableName);
       assertEquals(daughters.size(), regions.size());
       for (HRegion r: regions) {
-        assertTrue(daughters.contains(r));
+        LOG.info("Regions post crash " + r);
+        assertTrue("Missing region post crash " + r, daughters.contains(r));
       }
     } finally {
       admin.setBalancerRunning(true, false);
@@ -675,10 +685,9 @@ public class TestSplitTransactionOnCluster {
     t.put(p);
     admin.flush(tableName);
   }
-  
-  
+
   @Test
-  public void testShouldThrowIOExceptionIfStoreFileSizeIsEmptyAndSHouldSuccessfullyExecuteRollback()
+  public void testShouldThrowIOExceptionIfStoreFileSizeIsEmptyAndShouldSuccessfullyExecuteRollback()
       throws Exception {
     final byte[] tableName = Bytes.toBytes("testRollBackShudBeSuccessfulIfStoreFileIsEmpty");
     // Create table then get the single region for our new table.
@@ -864,11 +873,14 @@ public class TestSplitTransactionOnCluster {
   }
 
   private void removeDaughterFromMeta(final byte [] regionName) throws IOException {
-    HTable metaTable =
-      new HTable(TESTING_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
-    Delete d = new Delete(regionName);
-    LOG.info("Deleted " + Bytes.toString(regionName));
-    metaTable.delete(d);
+    HTable metaTable = new HTable(TESTING_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+    try {
+      Delete d = new Delete(regionName);
+      LOG.info("Deleted " + Bytes.toString(regionName));
+      metaTable.delete(d);
+    } finally {
+      metaTable.close();
+    }
   }
 
   /**
@@ -900,14 +912,13 @@ public class TestSplitTransactionOnCluster {
       HRegionServer hrs = getOtherRegionServer(cluster, metaRegionServer);
       assertNotNull(hrs);
       assertNotNull(hri);
-      LOG.
-        info("Moving " + hri.getRegionNameAsString() + " to " +
+      LOG.info("Moving " + hri.getRegionNameAsString() + " from " +
+        metaRegionServer.getServerName() + " to " +
         hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
-      admin.move(hri.getEncodedNameAsBytes(),
-        Bytes.toBytes(hrs.getServerName().toString()));
+      admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(hrs.getServerName().toString()));
     }
     // Wait till table region is up on the server that is NOT carrying .META..
-    for (int i=0; i<100; i++) {
+    for (int i = 0; i < 100; i++) {
       tableRegionIndex = cluster.getServerWith(hri.getRegionName());
       if (tableRegionIndex != -1 && tableRegionIndex != metaServerIndex) break;
       LOG.debug("Waiting on region move off the .META. server; current index " +
