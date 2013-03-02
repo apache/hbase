@@ -421,23 +421,32 @@ public class TestSplitTransactionOnCluster {
       // Now split one of the daughters.
       regionCount = ProtobufUtil.getOnlineRegions(server).size();
       HRegionInfo daughter = daughters.get(0).getRegionInfo();
+      LOG.info("Daughter we are going to split: " + daughter);
       // Compact first to ensure we have cleaned up references -- else the split
       // will fail.
       this.admin.compact(daughter.getRegionName());
       daughters = cluster.getRegions(tableName);
       HRegion daughterRegion = null;
       for (HRegion r: daughters) {
-        if (r.getRegionInfo().equals(daughter)) daughterRegion = r;
+        if (r.getRegionInfo().equals(daughter)) {
+          daughterRegion = r;
+          LOG.info("Found matching HRI: " + daughterRegion);
+          break;
+        }
       }
       assertTrue(daughterRegion != null);
       for (int i=0; i<100; i++) {
         if (!daughterRegion.hasReferences()) break;
         Threads.sleep(100);
       }
-      assertFalse("Waiting for refereces to be compacted", daughterRegion.hasReferences());
+      assertFalse("Waiting for reference to be compacted", daughterRegion.hasReferences());
+      LOG.info("Daughter hri before split (has been compacted): " + daughter);
       split(daughter, server, regionCount);
       // Get list of daughters
       daughters = cluster.getRegions(tableName);
+      for (HRegion d: daughters) {
+        LOG.info("Regions before crash: " + d);
+      }
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
       waitUntilRegionServerDead();
@@ -447,7 +456,8 @@ public class TestSplitTransactionOnCluster {
       regions = cluster.getRegions(tableName);
       assertEquals(daughters.size(), regions.size());
       for (HRegion r: regions) {
-        assertTrue(daughters.contains(r));
+        LOG.info("Regions post crash " + r);
+        assertTrue("Missing region post crash " + r, daughters.contains(r));
       }
     } finally {
       admin.setBalancerRunning(true, false);
