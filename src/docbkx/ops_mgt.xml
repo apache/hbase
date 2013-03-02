@@ -244,6 +244,10 @@ row10	c1	c2
 <programlisting>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar completebulkload &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
 </programlisting>
 	  </para>
+          <section xml:id="completebulkload.warning"><title>CompleteBulkLoad Warning</title>
+          <para>Data generated via MapReduce is often created with file permissions that are not compatible with the running HBase process. Assuming you're running HDFS with permissions enabled, those permissions will need to be updated before you run CompleteBulkLoad.
+          </para>
+          </section>
        <para>For more information about bulk-loading HFiles into HBase, see <xref linkend="arch.bulk.load"/>.
        </para>
     </section>
