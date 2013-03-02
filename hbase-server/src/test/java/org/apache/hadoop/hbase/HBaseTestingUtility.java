@@ -1895,9 +1895,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public void waitTableEnabled(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
-    LOG.debug("REMOVE table=" + Bytes.toString(table) + ", isTableAvailable=" +
-      getHBaseAdmin().isTableAvailable(table) +
-      ", isTableEnabled=" + getHBaseAdmin().isTableEnabled(table));
     while (!getHBaseAdmin().isTableAvailable(table) &&
            !getHBaseAdmin().isTableEnabled(table)) {
       assertTrue("Timed out waiting for table to become available and enabled " +
@@ -1905,6 +1902,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
          System.currentTimeMillis() - startWait < timeoutMillis);
       Thread.sleep(200);
     }
+    LOG.debug("REMOVE AFTER table=" + Bytes.toString(table) + ", isTableAvailable=" +
+        getHBaseAdmin().isTableAvailable(table) +
+        ", isTableEnabled=" + getHBaseAdmin().isTableEnabled(table));
   }
 
   /**
@@ -2414,7 +2414,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public void setFileSystemURI(String fsURI) {
     FS_URI = fsURI;
   }
-  
+
   /**
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, Predicate)}.
    */
