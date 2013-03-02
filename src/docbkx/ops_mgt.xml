@@ -190,7 +190,7 @@ input data.
 By default importtsv will load data directly into HBase. To instead generate
 HFiles of data to prepare for a bulk data load, pass the option:
   -Dimporttsv.bulk.output=/path/for/output
-  Note: if you do not use this option, then the target table must already exist in HBase
+  Note: the target table will be created with default column family descriptors if it does not already exist.
 
 Other options that may be specified with -D include:
   -Dimporttsv.skip.bad.lines=false - fail if encountering an invalid line
@@ -218,7 +218,7 @@ row10	c1	c2
          </para>
          <para>For ImportTsv to use this imput file, the command line needs to look like this:
  <programlisting>
- HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar importtsv -Dimporttsv.columns=HBASE_ROW_KEY,d:c1,d:c2 -Dimporttsv.bulk.output=hdfs://storefileoutput  datatsv hdfs://inputfile
+ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar importtsv -Dimporttsv.columns=HBASE_ROW_KEY,d:c1,d:c2 -Dimporttsv.bulk.output=hdfs://storefileoutput datatsv hdfs://inputfile
  </programlisting>
          ... and in this example the first column is the rowkey, which is why the HBASE_ROW_KEY is used.  The second and third columns in the file will be imported as "d:c1" and "d:c2", respectively.
          </para>
