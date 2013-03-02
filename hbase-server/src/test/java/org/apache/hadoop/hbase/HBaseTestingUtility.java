@@ -1895,6 +1895,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public void waitTableEnabled(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
+    LOG.debug("REMOVE table=" + Bytes.toString(table) + ", isTableAvailable=" +
+      getHBaseAdmin().isTableAvailable(table) +
+      ", isTableEnabled=" + getHBaseAdmin().isTableEnabled(table));
     while (!getHBaseAdmin().isTableAvailable(table) &&
            !getHBaseAdmin().isTableEnabled(table)) {
       assertTrue("Timed out waiting for table to become available and enabled " +
