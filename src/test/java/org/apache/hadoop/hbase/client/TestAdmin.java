@@ -345,39 +345,6 @@ public class TestAdmin {
            assertTrue(exceptionThrown);
        }
    }
-
-  @Test
-  public void testHBASE7928() throws Exception {
-    final byte[] tableName = Bytes.toBytes("a");
-    final byte[] tableName1 = Bytes.toBytes("b");
-    final byte[] tableName2 = Bytes.toBytes("c");
-    try {
-
-      TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-
-      TEST_UTIL.createTable(tableName1, HConstants.CATALOG_FAMILY).close();
-
-      TEST_UTIL.createTable(tableName2, HConstants.CATALOG_FAMILY).close();
-      while (!admin.isTableAvailable(tableName2)) {
-        Thread.sleep(1);
-      }
-      Scan s = new Scan();
-      s.setStartRow(Bytes.toBytes("a1"));
-      s.setStopRow(Bytes.toBytes("b1"));
-      HTable table = new HTable(admin.getConfiguration(), HConstants.META_TABLE_NAME);
-      ResultScanner scanner = table.getScanner(s);
-      Result[] result = scanner.next(5);
-      assertEquals("Only one row should be selected", 1, result.length);
-    } finally {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-      admin.disableTable(tableName1);
-      admin.deleteTable(tableName1);
-      admin.disableTable(tableName2);
-      admin.deleteTable(tableName2);
-    }
-  }
-  
   /**
    * Verify schema modification takes.
    * @throws IOException

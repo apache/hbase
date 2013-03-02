@@ -625,33 +625,11 @@ public class HTable implements HTableInterface {
     if (scan.getCaching() <= 0) {
       scan.setCaching(getScannerCaching());
     }
-    if (Bytes.equals(this.getTableName(), HConstants.META_TABLE_NAME)) {
-      changeStartAndStopRowIfMeta(scan);
-    }
-
-    return new ClientScanner(getConfiguration(), scan, getTableName(), this.connection);
+    return new ClientScanner(getConfiguration(), scan, getTableName(),
+        this.connection);
   }
 
-  private void changeStartAndStopRowIfMeta(final Scan scan) {
-    if (scan.getStartRow() != null && scan.getStartRow().length != 0
-        && !isValidMetaTableRow(scan.getStartRow())) {
-      scan.setStartRow(Bytes.add(scan.getStartRow(), HConstants.META_ROW_DELIMITER_BYTES,
-          Bytes.toBytes(HConstants.ZEROES)));
-    }
-    if (scan.getStopRow() != null && scan.getStopRow().length != 0
-        && !isValidMetaTableRow(scan.getStopRow())) {
-      scan.setStopRow(Bytes.add(scan.getStopRow(), HConstants.META_ROW_DELIMITER_BYTES,
-          Bytes.toBytes(HConstants.NINES)));
-    }
-  }
-
-  private boolean isValidMetaTableRow(byte[] metaRow) {
-    return (com.google.common.primitives.Bytes
-        .indexOf(metaRow, HConstants.META_ROW_DELIMITER_BYTES) != -1);
-  }
-
-
-/**
+  /**
    * {@inheritDoc}
    */
   @Override
