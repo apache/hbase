@@ -41,6 +41,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
@@ -66,7 +67,7 @@ public class TestZooKeeperScanPolicyObserver {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Ignore @Test
   public void testScanPolicyObserver() throws Exception {
     byte[] tableName = Bytes.toBytes("testScanPolicyObserver");
     HTableDescriptor desc = new HTableDescriptor(tableName);
