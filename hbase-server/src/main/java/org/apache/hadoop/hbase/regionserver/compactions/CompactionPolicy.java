@@ -43,16 +43,6 @@ public abstract class CompactionPolicy {
   }
 
   /**
-   * @param storeFiles Store files in the store.
-   * @return The system compaction priority of the store, based on storeFiles.
-   *         The priority range is as such - the smaller values are higher priority;
-   *         1 is user priority; only very important, blocking compactions should use
-   *         values lower than that. With default settings, depending on the number of
-   *         store files, the non-blocking priority will be in 2-6 range.
-   */
-  public abstract int getSystemCompactionPriority(final Collection<StoreFile> storeFiles);
-
-  /**
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
    */

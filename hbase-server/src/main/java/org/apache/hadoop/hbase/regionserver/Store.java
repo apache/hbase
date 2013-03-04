@@ -182,13 +182,6 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   public int getCompactPriority();
 
-  /**
-   * @param priority priority to check against. When priority is {@link Store#PRIORITY_USER},
-   *          {@link Store#PRIORITY_USER} is returned.
-   * @return The priority that this store has in the compaction queue.
-   */
-  public int getCompactPriority(int priority);
-
   public StoreFlusher getStoreFlusher(long cacheFlushId);
 
   // Split oriented methods

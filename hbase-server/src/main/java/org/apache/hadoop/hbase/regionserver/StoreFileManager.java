@@ -119,4 +119,9 @@ public interface StoreFileManager {
    * @throws IOException
    */
   public abstract byte[] getSplitPoint() throws IOException;
+
+  /**
+   * @return The store compaction priority.
+   */
+  public abstract int getStoreCompactionPriority();
 }

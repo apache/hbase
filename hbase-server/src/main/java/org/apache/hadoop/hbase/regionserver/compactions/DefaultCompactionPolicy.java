@@ -57,7 +57,6 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
     super(conf, storeConfigInfo);
   }
 
-
   private ArrayList<StoreFile> getCurrentEligibleFiles(
       ArrayList<StoreFile> candidateFiles, final List<StoreFile> filesCompacting) {
     // candidates = all storefiles not already in compaction queue
@@ -75,11 +74,6 @@ public class DefaultCompactionPolicy extends CompactionPolicy {
   public List<StoreFile> preSelectCompactionForCoprocessor(
       final Collection<StoreFile> candidates, final List<StoreFile> filesCompacting) {
     return getCurrentEligibleFiles(new ArrayList<StoreFile>(candidates), filesCompacting);
-  }
-
-  @Override
-  public int getSystemCompactionPriority(final Collection<StoreFile> storeFiles) {
-    return this.comConf.getBlockingStorefileCount() - storeFiles.size();
   }
 
   /**
