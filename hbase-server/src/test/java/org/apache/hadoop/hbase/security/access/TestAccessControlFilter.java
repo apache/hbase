@@ -27,6 +27,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -90,7 +91,14 @@ public class TestAccessControlFilter {
   @Test
   public void testQualifierAccess() throws Exception {
     final HTable table = TEST_UTIL.createTable(TABLE, FAMILY);
+    try {
+      doQualifierAccess(table);
+    } finally {
+      table.close();
+    }
+  }
 
+  private void doQualifierAccess(final HTable table) throws IOException, InterruptedException {
     // set permissions
     ADMIN.runAs(new PrivilegedExceptionAction<Object>() {
       @Override

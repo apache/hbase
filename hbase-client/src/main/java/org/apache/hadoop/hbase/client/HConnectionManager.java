@@ -869,18 +869,18 @@ public class HConnectionManager {
     }
 
     /*
-     * @param True if table is online
+     * @param enabled True if table is enabled
      */
-    private boolean testTableOnlineState(byte [] tableName, boolean online)
+    private boolean testTableOnlineState(byte [] tableName, boolean enabled)
     throws IOException {
       if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
         // The root region is always enabled
-        return online;
+        return enabled;
       }
       String tableNameStr = Bytes.toString(tableName);
       ZooKeeperKeepAliveConnection zkw = getKeepAliveZooKeeperWatcher();
       try {
-        if (online) {
+        if (enabled) {
           return ZKTableReadOnly.isEnabledTable(zkw, tableNameStr);
         }
         return ZKTableReadOnly.isDisabledTable(zkw, tableNameStr);
