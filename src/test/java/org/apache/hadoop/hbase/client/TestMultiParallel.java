@@ -57,6 +57,7 @@ public class TestMultiParallel {
     UTIL.startMiniCluster(slaves);
     HTable t = UTIL.createTable(Bytes.toBytes(TEST_TABLE), Bytes.toBytes(FAMILY));
     UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
+    UTIL.waitTableAvailable(Bytes.toBytes(TEST_TABLE), 15 * 1000);
     t.close();
   }
 
@@ -218,6 +219,11 @@ public class TestMultiParallel {
     doTestFlushCommits(false);
   }
 
+  /**
+   * Set table auto flush to false and test flushing commits
+   * @param doAbort true if abort one regionserver in the testing
+   * @throws Exception
+   */
   private void doTestFlushCommits(boolean doAbort) throws Exception {
     // Load the data
     LOG.info("get new table");
@@ -232,8 +238,24 @@ public class TestMultiParallel {
     }
     LOG.info("puts");
     table.flushCommits();
+    int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
+        .size();
+    assert liveRScount > 0;
+    JVMClusterUtil.RegionServerThread liveRS = UTIL.getMiniHBaseCluster()
+        .getLiveRegionServerThreads().get(0);
     if (doAbort) {
       LOG.info("Aborted=" + UTIL.getMiniHBaseCluster().abortRegionServer(0));
+
+      // If we waiting for no regions being online after we abort the server, we
+      // could ensure the master has re-assigned the regions on killed server
+      // after putting keys successfully, it means the server we abort is dead
+      // and detected by matser
+      while (liveRS.getRegionServer().getNumberOfOnlineRegions() != 0) {
+        Thread.sleep(100);
+      }
+      while (UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size() == liveRScount) {
+        Thread.sleep(100);
+      }
 
       // try putting more keys after the abort. same key/qual... just validating
       // no exceptions thrown
@@ -258,7 +280,7 @@ public class TestMultiParallel {
     }
     LOG.info("Count=" + count);
     Assert.assertEquals("Server count=" + count + ", abort=" + doAbort,
-      (doAbort ? 1 : 2), count);
+        (doAbort ? (liveRScount - 1) : liveRScount), count);
     for (JVMClusterUtil.RegionServerThread t: liveRSs) {
       int regions = t.getRegionServer().getOnlineRegions().size();
       Assert.assertTrue("Count of regions=" + regions, regions > 10);
@@ -279,7 +301,13 @@ public class TestMultiParallel {
     validateSizeAndEmpty(results, KEYS.length);
 
     if (true) {
-      UTIL.getMiniHBaseCluster().abortRegionServer(0);
+      int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
+          .size();
+      assert liveRScount > 0;
+      JVMClusterUtil.RegionServerThread liveRS = UTIL.getMiniHBaseCluster()
+          .getLiveRegionServerThreads().get(0);
+      liveRS.getRegionServer().abort("Aborting for tests",
+          new Exception("testBatchWithPut"));
 
       puts = constructPutRequests();
       results = table.batch(puts);
@@ -416,6 +444,7 @@ public class TestMultiParallel {
     validateResult(multiRes[1], QUAL4, Bytes.toBytes("xyz"));
     validateResult(multiRes[0], QUAL2, Bytes.toBytes(2L));
     validateResult(multiRes[0], QUAL3, Bytes.toBytes(1L));
+    table.close();
   }
 
   @Test(timeout=300000)
