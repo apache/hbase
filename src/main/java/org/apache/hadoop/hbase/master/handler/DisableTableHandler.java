@@ -170,6 +170,7 @@ public class DisableTableHandler extends EventHandler {
       while (!server.isStopped() && remaining > 0) {
         Thread.sleep(waitingTimeForEvents);
         regions = assignmentManager.getRegionsOfTable(tableName);
+        LOG.debug("Disable waiting until done; " + remaining + " ms remaining; " + regions);
         if (regions.isEmpty()) break;
         remaining = timeout - (System.currentTimeMillis() - startTime);
       }

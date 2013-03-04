@@ -581,15 +581,21 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return this.stats.getEvictedCount();
   }
 
+  EvictionThread getEvictionThread() {
+    return this.evictionThread;
+  }
+
   /*
    * Eviction thread.  Sits in waiting state until an eviction is triggered
    * when the cache size grows above the acceptable level.<p>
    *
    * Thread is triggered into action by {@link LruBlockCache#runEviction()}
    */
-  private static class EvictionThread extends HasThread {
+  static class EvictionThread extends HasThread {
     private WeakReference<LruBlockCache> cache;
     private boolean go = true;
+    // flag set after enter the run method, used for test
+    private boolean enteringRun = false;
 
     public EvictionThread(LruBlockCache cache) {
       super(Thread.currentThread().getName() + ".LruBlockCache.EvictionThread");
@@ -599,6 +605,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
     @Override
     public void run() {
+      enteringRun = true;
       while (this.go) {
         synchronized(this) {
           try {
@@ -620,6 +627,13 @@ public class LruBlockCache implements BlockCache, HeapSize {
     void shutdown() {
       this.go = false;
       interrupt();
+    }
+
+    /**
+     * Used for the test.
+     */
+    boolean isEnteringRun() {
+      return this.enteringRun;
     }
   }
 

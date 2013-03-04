@@ -360,7 +360,7 @@ public class TestHFileArchiving {
 
         try {
           // Try to archive the file
-          HFileArchiver.archiveRegion(conf, fs, rootDir,
+          HFileArchiver.archiveRegion(fs, rootDir,
               sourceRegionDir.getParent(), sourceRegionDir);
 
           // The archiver succeded, the file is no longer in the original location

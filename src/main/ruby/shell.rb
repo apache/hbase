@@ -290,6 +290,18 @@ Shell.load_command_group(
 )
 
 Shell.load_command_group(
+  'snapshot',
+  :full_name => 'CLUSTER SNAPSHOT TOOLS',
+  :commands => %w[
+    snapshot
+    clone_snapshot
+    restore_snapshot
+    delete_snapshot
+    list_snapshots
+  ]
+)
+
+Shell.load_command_group(
   'security',
   :full_name => 'SECURITY TOOLS',
   :comment => "NOTE: Above commands are only applicable if running with the AccessController coprocessor",

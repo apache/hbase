@@ -180,18 +180,18 @@ public class HFile {
   static final AtomicLong checksumFailures = new AtomicLong();
 
   // For getting more detailed stats on FS latencies
-  // If, for some reason, the metrics subsystem stops polling for latencies, 
+  // If, for some reason, the metrics subsystem stops polling for latencies,
   // I don't want data to pile up in a memory leak
   // so, after LATENCY_BUFFER_SIZE items have been enqueued for processing,
   // fs latency stats will be dropped (and this behavior will be logged)
   private static final int LATENCY_BUFFER_SIZE = 5000;
-  private static final BlockingQueue<Long> fsReadLatenciesNanos = 
+  private static final BlockingQueue<Long> fsReadLatenciesNanos =
       new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
-  private static final BlockingQueue<Long> fsWriteLatenciesNanos = 
+  private static final BlockingQueue<Long> fsWriteLatenciesNanos =
       new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
-  private static final BlockingQueue<Long> fsPreadLatenciesNanos = 
+  private static final BlockingQueue<Long> fsPreadLatenciesNanos =
       new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
-  
+
   public static final void offerReadLatency(long latencyNanos, boolean pread) {
     if (pread) {
       fsPreadLatenciesNanos.offer(latencyNanos); // might be silently dropped, if the queue is full
@@ -203,30 +203,30 @@ public class HFile {
       readOps.incrementAndGet();
     }
   }
-  
+
   public static final void offerWriteLatency(long latencyNanos) {
     fsWriteLatenciesNanos.offer(latencyNanos); // might be silently dropped, if the queue is full
-    
+
     writeTimeNano.addAndGet(latencyNanos);
     writeOps.incrementAndGet();
   }
-  
+
   public static final Collection<Long> getReadLatenciesNanos() {
-    final List<Long> latencies = 
+    final List<Long> latencies =
         Lists.newArrayListWithCapacity(fsReadLatenciesNanos.size());
     fsReadLatenciesNanos.drainTo(latencies);
     return latencies;
   }
 
   public static final Collection<Long> getPreadLatenciesNanos() {
-    final List<Long> latencies = 
+    final List<Long> latencies =
         Lists.newArrayListWithCapacity(fsPreadLatenciesNanos.size());
     fsPreadLatenciesNanos.drainTo(latencies);
     return latencies;
   }
-  
+
   public static final Collection<Long> getWriteLatenciesNanos() {
-    final List<Long> latencies = 
+    final List<Long> latencies =
         Lists.newArrayListWithCapacity(fsWriteLatenciesNanos.size());
     fsWriteLatenciesNanos.drainTo(latencies);
     return latencies;
@@ -572,7 +572,7 @@ public class HFile {
     HFileSystem hfs = null;
     FSDataInputStream fsdis = fs.open(path);
     FSDataInputStream fsdisNoFsChecksum = fsdis;
-    // If the fs is not an instance of HFileSystem, then create an 
+    // If the fs is not an instance of HFileSystem, then create an
     // instance of HFileSystem that wraps over the specified fs.
     // In this case, we will not be able to avoid checksumming inside
     // the filesystem.
@@ -589,6 +589,39 @@ public class HFile {
     return pickReaderVersion(path, fsdis, fsdisNoFsChecksum,
         fs.getFileStatus(path).getLen(), closeIStream, cacheConf,
         preferredEncodingInCache, hfs);
+  }
+
+  /**
+   * @param fs A file system
+   * @param path Path to HFile
+   * @param fsdis an open checksummed stream of path's file
+   * @param fsdisNoFsChecksum an open unchecksummed stream of path's file
+   * @param size max size of the trailer.
+   * @param cacheConf Cache configuration for hfile's contents
+   * @param preferredEncodingInCache Preferred in-cache data encoding algorithm.
+   * @param closeIStream boolean for closing file after the getting the reader version.
+   * @return A version specific Hfile Reader
+   * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
+   */
+  public static Reader createReaderWithEncoding(
+      FileSystem fs, Path path, FSDataInputStream fsdis,
+      FSDataInputStream fsdisNoFsChecksum, long size, CacheConfig cacheConf,
+      DataBlockEncoding preferredEncodingInCache, boolean closeIStream)
+      throws IOException {
+    HFileSystem hfs = null;
+
+    // If the fs is not an instance of HFileSystem, then create an
+    // instance of HFileSystem that wraps over the specified fs.
+    // In this case, we will not be able to avoid checksumming inside
+    // the filesystem.
+    if (!(fs instanceof HFileSystem)) {
+      hfs = new HFileSystem(fs);
+    } else {
+      hfs = (HFileSystem)fs;
+    }
+    return pickReaderVersion(path, fsdis, fsdisNoFsChecksum, size,
+                             closeIStream, cacheConf,
+                             preferredEncodingInCache, hfs);
   }
 
   /**

@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 import java.io.IOException;
 
@@ -289,4 +290,100 @@ public interface MasterObserver extends Coprocessor {
    */
   void postStartMaster(final ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException;
+
+  /**
+   * Called before a new snapshot is taken.
+   * Called as part of snapshot RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor for the snapshot
+   * @param hTableDescriptor the hTableDescriptor of the table to snapshot
+   * @throws IOException
+   */
+  void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException;
+
+  /**
+   * Called after the snapshot operation has been requested.
+   * Called as part of snapshot RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor for the snapshot
+   * @param hTableDescriptor the hTableDescriptor of the table to snapshot
+   * @throws IOException
+   */
+  void postSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException;
+
+  /**
+   * Called before a snapshot is cloned.
+   * Called as part of restoreSnapshot RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor for the snapshot
+   * @param hTableDescriptor the hTableDescriptor of the table to create
+   * @throws IOException
+   */
+  void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException;
+
+  /**
+   * Called after a snapshot clone operation has been requested.
+   * Called as part of restoreSnapshot RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor for the snapshot
+   * @param hTableDescriptor the hTableDescriptor of the table to create
+   * @throws IOException
+   */
+  void postCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException;
+
+  /**
+   * Called before a snapshot is restored.
+   * Called as part of restoreSnapshot RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor for the snapshot
+   * @param hTableDescriptor the hTableDescriptor of the table to restore
+   * @throws IOException
+   */
+  void preRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException;
+
+  /**
+   * Called after a snapshot restore operation has been requested.
+   * Called as part of restoreSnapshot RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor for the snapshot
+   * @param hTableDescriptor the hTableDescriptor of the table to restore
+   * @throws IOException
+   */
+  void postRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException;
+
+  /**
+   * Called before a snapshot is deleted.
+   * Called as part of deleteSnapshot RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor of the snapshot to delete
+   * @throws IOException
+   */
+  void preDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException;
+
+  /**
+   * Called after the delete snapshot operation has been requested.
+   * Called as part of deleteSnapshot RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor of the snapshot to delete
+   * @throws IOException
+   */
+  void postDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException;
 }

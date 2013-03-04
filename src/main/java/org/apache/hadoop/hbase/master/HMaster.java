@@ -44,6 +44,7 @@ import javax.management.ObjectName;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -92,13 +93,18 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -224,6 +230,9 @@ Server {
   // Time stamps for when a hmaster was started and when it became active
   private long masterStartTime;
   private long masterActiveTime;
+
+  // monitor for snapshot of hbase tables
+  private SnapshotManager snapshotManager;
 
   /**
    * MX Bean for MasterInfo
@@ -406,6 +415,7 @@ Server {
       if (this.serverManager != null) this.serverManager.stop();
       if (this.assignmentManager != null) this.assignmentManager.stop();
       if (this.fileSystemManager != null) this.fileSystemManager.stop();
+      if (this.snapshotManager != null) this.snapshotManager.stop("server shutting down.");
       this.zooKeeper.close();
     }
     LOG.info("HMaster main thread exiting");
@@ -467,6 +477,9 @@ Server {
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
         ", cluster-up flag was=" + wasUp);
+
+    // create the snapshot manager
+    this.snapshotManager = new SnapshotManager(this);
   }
 
   // Check if we should stop every second.
@@ -1989,4 +2002,125 @@ Server {
     String healthScriptLocation = this.conf.get(HConstants.HEALTH_SCRIPT_LOC);
     return org.apache.commons.lang.StringUtils.isNotBlank(healthScriptLocation);
   }
+
+  /**
+   * Exposed for TESTING!
+   * @return the underlying snapshot manager
+   */
+  public SnapshotManager getSnapshotManagerForTesting() {
+    return this.snapshotManager;
+   }
+
+
+  /**
+   * Triggers an asynchronous attempt to take a snapshot.
+   * {@inheritDoc}
+   */
+  @Override
+  public long snapshot(final HSnapshotDescription request) throws IOException {
+    LOG.debug("Submitting snapshot request for:" +
+        SnapshotDescriptionUtils.toString(request.getProto()));
+    try {
+      this.snapshotManager.checkSnapshotSupport();
+    } catch (UnsupportedOperationException e) {
+      throw new IOException(e);
+    }
+
+    // get the snapshot information
+    SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(request.getProto(),
+      this.conf);
+
+    snapshotManager.takeSnapshot(snapshot);
+
+    // send back the max amount of time the client should wait for the snapshot to complete
+    long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
+      SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
+    return waitTime;
+  }
+
+  /**
+   * List the currently available/stored snapshots. Any in-progress snapshots are ignored
+   */
+  @Override
+  public List<HSnapshotDescription> getCompletedSnapshots() throws IOException {
+    List<HSnapshotDescription> availableSnapshots = new ArrayList<HSnapshotDescription>();
+    List<SnapshotDescription> snapshots = snapshotManager.getCompletedSnapshots();
+
+    // convert to writables
+    for (SnapshotDescription snapshot: snapshots) {
+      availableSnapshots.add(new HSnapshotDescription(snapshot));
+    }
+
+    return availableSnapshots;
+  }
+
+  /**
+   * Execute Delete Snapshot operation.
+   * @throws ServiceException wrapping SnapshotDoesNotExistException if specified snapshot did not
+   * exist.
+   */
+  @Override
+  public void deleteSnapshot(final HSnapshotDescription request) throws IOException {
+    try {
+      this.snapshotManager.checkSnapshotSupport();
+    } catch (UnsupportedOperationException e) {
+      throw new IOException(e);
+    }
+
+    snapshotManager.deleteSnapshot(request.getProto());
+  }
+
+  /**
+   * Checks if the specified snapshot is done.
+   * @return true if the snapshot is in file system ready to use,
+   * false if the snapshot is in the process of completing
+   * @throws ServiceException wrapping UnknownSnapshotException if invalid snapshot, or
+   * a wrapped HBaseSnapshotException with progress failure reason.
+   */
+  @Override
+  public boolean isSnapshotDone(final HSnapshotDescription request) throws IOException {
+    LOG.debug("Checking to see if snapshot from request:" +
+      SnapshotDescriptionUtils.toString(request.getProto()) + " is done");
+    return snapshotManager.isSnapshotDone(request.getProto());
+  }
+
+  /**
+   * Execute Restore/Clone snapshot operation.
+   *
+   * <p>If the specified table exists a "Restore" is executed, replacing the table
+   * schema and directory data with the content of the snapshot.
+   * The table must be disabled, or a UnsupportedOperationException will be thrown.
+   *
+   * <p>If the table doesn't exist a "Clone" is executed, a new table is created
+   * using the schema at the time of the snapshot, and the content of the snapshot.
+   *
+   * <p>The restore/clone operation does not require copying HFiles. Since HFiles
+   * are immutable the table can point to and use the same files as the original one.
+   */
+  @Override
+  public void restoreSnapshot(final HSnapshotDescription request) throws IOException {
+    try {
+      this.snapshotManager.checkSnapshotSupport();
+    } catch (UnsupportedOperationException e) {
+      throw new IOException(e);
+    }
+
+    snapshotManager.restoreSnapshot(request.getProto());
+  }
+
+  /**
+   * Returns the status of the requested snapshot restore/clone operation.
+   * This method is not exposed to the user, it is just used internally by HBaseAdmin
+   * to verify if the restore is completed.
+   *
+   * No exceptions are thrown if the restore is not running, the result will be "done".
+   *
+   * @return done <tt>true</tt> if the restore/clone operation is completed.
+   * @throws RestoreSnapshotExcepton if the operation failed.
+   */
+  @Override
+  public boolean isRestoreSnapshotDone(final HSnapshotDescription request) throws IOException {
+    return !snapshotManager.isRestoringTable(request.getProto());
+  }
 }
+

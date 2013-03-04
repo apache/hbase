@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
@@ -111,12 +112,14 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.metrics.OperationMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -751,9 +754,32 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   private void checkRegioninfoOnFilesystem() throws IOException {
-    Path regioninfoPath = new Path(this.regiondir, REGIONINFO_FILE);
-    if (this.fs.exists(regioninfoPath) &&
-        this.fs.getFileStatus(regioninfoPath).getLen() > 0) {
+    checkRegioninfoOnFilesystem(this.regiondir);
+  }
+
+  /**
+   * Write out an info file under the region directory. Useful recovering mangled regions.
+   * @param regiondir directory under which to write out the region info
+   * @throws IOException
+   */
+  private void checkRegioninfoOnFilesystem(Path regiondir) throws IOException {
+    writeRegioninfoOnFilesystem(regionInfo, regiondir, getFilesystem(), conf);
+  }
+
+  /**
+   * Write out an info file under the region directory. Useful recovering mangled regions. If the
+   * regioninfo already exists on disk and there is information in the file, then we fast exit.
+   * @param regionInfo information about the region
+   * @param regiondir directory under which to write out the region info
+   * @param fs {@link FileSystem} on which to write the region info
+   * @param conf {@link Configuration} from which to extract specific file locations
+   * @throws IOException on unexpected error.
+   */
+  public static void writeRegioninfoOnFilesystem(HRegionInfo regionInfo, Path regiondir,
+      FileSystem fs, Configuration conf) throws IOException {
+    Path regioninfoPath = new Path(regiondir, REGIONINFO_FILE);
+    if (fs.exists(regioninfoPath) &&
+        fs.getFileStatus(regioninfoPath).getLen() > 0) {
       return;
     }
     // Create in tmpdir and then move into place in case we crash after
@@ -766,7 +792,7 @@ public class HRegion implements HeapSize { // , Writable{
         HConstants.DATA_FILE_UMASK_KEY);
 
     // and then create the file
-    Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
+    Path tmpPath = new Path(getTmpDir(regiondir), REGIONINFO_FILE);
 
     // if datanode crashes or if the RS goes down just before the close is called while trying to
     // close the created regioninfo file in the .tmp directory then on next
@@ -779,10 +805,10 @@ public class HRegion implements HeapSize { // , Writable{
     FSDataOutputStream out = FSUtils.create(fs, tmpPath, perms);
 
     try {
-      this.regionInfo.write(out);
+      regionInfo.write(out);
       out.write('\n');
       out.write('\n');
-      out.write(Bytes.toBytes(this.regionInfo.toString()));
+      out.write(Bytes.toBytes(regionInfo.toString()));
     } finally {
       out.close();
     }
@@ -1199,7 +1225,11 @@ public class HRegion implements HeapSize { // , Writable{
    * will have its contents removed when the region is reopened.
    */
   Path getTmpDir() {
-    return new Path(getRegionDir(), REGION_TEMP_SUBDIR);
+    return getTmpDir(getRegionDir());
+  }
+
+  static Path getTmpDir(Path regionDir) {
+    return new Path(regionDir, REGION_TEMP_SUBDIR);
   }
 
   void triggerMajorCompaction() {
@@ -2566,8 +2596,71 @@ public class HRegion implements HeapSize { // , Writable{
 
 
   /**
-   * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP}
-   * with the provided current timestamp.
+   * Complete taking the snapshot on the region. Writes the region info and adds references to the
+   * working snapshot directory.
+   *
+   * TODO for api consistency, consider adding another version with no {@link ForeignExceptionSnare}
+   * arg.  (In the future other cancellable HRegion methods could eventually add a
+   * {@link ForeignExceptionSnare}, or we could do something fancier).
+   *
+   * @param desc snasphot description object
+   * @param exnSnare ForeignExceptionSnare that captures external exeptions in case we need to
+   *   bail out.  This is allowed to be null and will just be ignored in that case.
+   * @throws IOException if there is an external or internal error causing the snapshot to fail
+   */
+  public void addRegionToSnapshot(SnapshotDescription desc,
+      ForeignExceptionSnare exnSnare) throws IOException {
+    // This should be "fast" since we don't rewrite store files but instead
+    // back up the store files by creating a reference
+    Path rootDir = FSUtils.getRootDir(this.rsServices.getConfiguration());
+    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnapshotDirectory(desc, rootDir,
+      regionInfo.getEncodedName());
+
+    // 1. dump region meta info into the snapshot directory
+    LOG.debug("Storing region-info for snapshot.");
+    checkRegioninfoOnFilesystem(snapshotRegionDir);
+
+    // 2. iterate through all the stores in the region
+    LOG.debug("Creating references for hfiles");
+
+    // This ensures that we have an atomic view of the directory as long as we have < ls limit
+    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
+    // batches and may miss files being added/deleted. This could be more robust (iteratively
+    // checking to see if we have all the files until we are sure), but the limit is currently 1000
+    // files/batch, far more than the number of store files under a single column family.
+    for (Store store : stores.values()) {
+      // 2.1. build the snapshot reference directory for the store
+      Path dstStoreDir = TakeSnapshotUtils.getStoreSnapshotDirectory(snapshotRegionDir,
+        Bytes.toString(store.getFamily().getName()));
+      List<StoreFile> storeFiles = store.getStorefiles();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
+      }
+
+      // 2.2. iterate through all the store's files and create "references".
+      int sz = storeFiles.size();
+      for (int i = 0; i < sz; i++) {
+        if (exnSnare != null) {
+          exnSnare.rethrowException();
+        }
+        Path file = storeFiles.get(i).getPath();
+        // create "reference" to this store file.  It is intentionally an empty file -- all
+        // necessary infomration is captured by its fs location and filename.  This allows us to
+        // only figure out what needs to be done via a single nn operation (instead of having to
+        // open and read the files as well).
+        LOG.debug("Creating reference for file (" + (i+1) + "/" + sz + ") : " + file);
+        Path referenceFile = new Path(dstStoreDir, file.getName());
+        boolean success = fs.createNewFile(referenceFile);
+        if (!success) {
+          throw new IOException("Failed to create reference file:" + referenceFile);
+        }
+      }
+    }
+  }
+
+  /**
+   * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP} with the provided current
+   * timestamp.
    */
   private void updateKVTimestamps(
       final Iterable<List<KeyValue>> keyLists, final byte[] now) {
@@ -4071,6 +4164,8 @@ public class HRegion implements HeapSize { // , Writable{
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
+    // Write HRI to a file in case we need to recover .META.
+    writeRegioninfoOnFilesystem(info, regionDir, fs, conf);
     HLog effectiveHLog = hlog;
     if (hlog == null && !ignoreHLog) {
       effectiveHLog = new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
@@ -4470,11 +4565,11 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     // delete out the 'A' region
-    HFileArchiver.archiveRegion(a.getConf(), fs, FSUtils.getRootDir(a.getConf()), a.getTableDir(),
-      a.getRegionDir());
+    HFileArchiver.archiveRegion(fs, FSUtils.getRootDir(a.getConf()),
+        a.getTableDir(), a.getRegionDir());
     // delete out the 'B' region
-    HFileArchiver.archiveRegion(b.getConf(), fs, FSUtils.getRootDir(b.getConf()), b.getTableDir(),
-      b.getRegionDir());
+    HFileArchiver.archiveRegion(fs, FSUtils.getRootDir(b.getConf()),
+        b.getTableDir(), b.getRegionDir());
 
     LOG.info("merge completed. New region is " + dstRegion);
 

@@ -1,0 +1,455 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hbase.io;
+
+import java.util.Collection;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.FileNotFoundException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.Seekable;
+
+/**
+ * The FileLink is a sort of hardlink, that allows to access a file given a set of locations.
+ *
+ * <p><b>The Problem:</b>
+ * <ul>
+ *  <li>
+ *    HDFS doesn't have support for hardlinks, and this make impossible to referencing
+ *    the same data blocks using different names.
+ *  </li>
+ *  <li>
+ *    HBase store files in one location (e.g. table/region/family/) and when the file is not
+ *    needed anymore (e.g. compaction, region deletetion, ...) moves it to an archive directory.
+ *  </li>
+ * </ul>
+ * If we want to create a reference to a file, we need to remember that it can be in its
+ * original location or in the archive folder.
+ * The FileLink class tries to abstract this concept and given a set of locations
+ * it is able to switch between them making this operation transparent for the user.
+ * More concrete implementations of the FileLink are the {@link HFileLink} and the {@link HLogLink}.
+ *
+ * <p><b>Back-references:</b>
+ * To help the {@link CleanerChore} to keep track of the links to a particular file,
+ * during the FileLink creation, a new file is placed inside a back-reference directory.
+ * There's one back-reference directory for each file that has links,
+ * and in the directory there's one file per link.
+ *
+ * <p>HFileLink Example
+ * <ul>
+ *  <li>
+ *      /hbase/table/region-x/cf/file-k
+ *      (Original File)
+ *  </li>
+ *  <li>
+ *      /hbase/table-cloned/region-y/cf/file-k.region-x.table
+ *     (HFileLink to the original file)
+ *  </li>
+ *  <li>
+ *      /hbase/table-2nd-cloned/region-z/cf/file-k.region-x.table
+ *      (HFileLink to the original file)
+ *  </li>
+ *  <li>
+ *      /hbase/.archive/table/region-x/.links-file-k/region-y.table-cloned
+ *      (Back-reference to the link in table-cloned)
+ *  </li>
+ *  <li>
+ *      /hbase/.archive/table/region-x/.links-file-k/region-z.table-cloned
+ *      (Back-reference to the link in table-2nd-cloned)
+ *  </li>
+ * </ul>
+ */
+@InterfaceAudience.Private
+public class FileLink {
+  private static final Log LOG = LogFactory.getLog(FileLink.class);
+
+  /** Define the Back-reference directory name prefix: .links-<hfile>/ */
+  public static final String BACK_REFERENCES_DIRECTORY_PREFIX = ".links-";
+
+  /**
+   * FileLink InputStream that handles the switch between the original path
+   * and the alternative locations, when the file is moved.
+   */
+  private static class FileLinkInputStream extends InputStream
+      implements Seekable, PositionedReadable {
+    private FSDataInputStream in = null;
+    private Path currentPath = null;
+    private long pos = 0;
+
+    private final FileLink fileLink;
+    private final int bufferSize;
+    private final FileSystem fs;
+
+    public FileLinkInputStream(final FileSystem fs, final FileLink fileLink)
+        throws IOException {
+      this(fs, fileLink, fs.getConf().getInt("io.file.buffer.size", 4096));
+    }
+
+    public FileLinkInputStream(final FileSystem fs, final FileLink fileLink, int bufferSize)
+        throws IOException {
+      this.bufferSize = bufferSize;
+      this.fileLink = fileLink;
+      this.fs = fs;
+
+      this.in = tryOpen();
+    }
+
+    @Override
+    public int read() throws IOException {
+      int res;
+      try {
+        res = in.read();
+      } catch (FileNotFoundException e) {
+        res = tryOpen().read();
+      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
+        res = tryOpen().read();
+      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
+        res = tryOpen().read();
+      }
+      if (res > 0) pos += 1;
+      return res;
+    }
+
+    @Override
+    public int read(byte b[]) throws IOException {
+       return read(b, 0, b.length);
+    }
+
+    @Override
+    public int read(byte b[], int off, int len) throws IOException {
+      int n;
+      try {
+        n = in.read(b, off, len);
+      } catch (FileNotFoundException e) {
+        n = tryOpen().read(b, off, len);
+      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
+        n = tryOpen().read(b, off, len);
+      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
+        n = tryOpen().read(b, off, len);
+      }
+      if (n > 0) pos += n;
+      assert(in.getPos() == pos);
+      return n;
+    }
+
+    @Override
+    public int read(long position, byte[] buffer, int offset, int length) throws IOException {
+      int n;
+      try {
+        n = in.read(position, buffer, offset, length);
+      } catch (FileNotFoundException e) {
+        n = tryOpen().read(position, buffer, offset, length);
+      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
+        n = tryOpen().read(position, buffer, offset, length);
+      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
+        n = tryOpen().read(position, buffer, offset, length);
+      }
+      return n;
+    }
+
+    @Override
+    public void readFully(long position, byte[] buffer) throws IOException {
+      readFully(position, buffer, 0, buffer.length);
+    }
+
+    @Override
+    public void readFully(long position, byte[] buffer, int offset, int length) throws IOException {
+      try {
+        in.readFully(position, buffer, offset, length);
+      } catch (FileNotFoundException e) {
+        tryOpen().readFully(position, buffer, offset, length);
+      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
+        tryOpen().readFully(position, buffer, offset, length);
+      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
+        tryOpen().readFully(position, buffer, offset, length);
+      }
+    }
+
+    @Override
+    public long skip(long n) throws IOException {
+      long skipped;
+
+      try {
+        skipped = in.skip(n);
+      } catch (FileNotFoundException e) {
+        skipped = tryOpen().skip(n);
+      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
+        skipped = tryOpen().skip(n);
+      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
+        skipped = tryOpen().skip(n);
+      }
+
+      if (skipped > 0) pos += skipped;
+      return skipped;
+    }
+
+    @Override
+    public int available() throws IOException {
+      try {
+        return in.available();
+      } catch (FileNotFoundException e) {
+        return tryOpen().available();
+      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
+        return tryOpen().available();
+      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
+        return tryOpen().available();
+      }
+    }
+
+    @Override
+    public void seek(long pos) throws IOException {
+      try {
+        in.seek(pos);
+      } catch (FileNotFoundException e) {
+        tryOpen().seek(pos);
+      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
+        tryOpen().seek(pos);
+      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
+        tryOpen().seek(pos);
+      }
+      this.pos = pos;
+    }
+
+    @Override
+    public long getPos() throws IOException {
+      return pos;
+    }
+
+    @Override
+    public boolean seekToNewSource(long targetPos) throws IOException {
+      boolean res;
+      try {
+        res = in.seekToNewSource(targetPos);
+      } catch (FileNotFoundException e) {
+        res = tryOpen().seekToNewSource(targetPos);
+      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
+        res = tryOpen().seekToNewSource(targetPos);
+      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
+        res = tryOpen().seekToNewSource(targetPos);
+      }
+      if (res) pos = targetPos;
+      return res;
+    }
+
+    @Override
+    public void close() throws IOException {
+      in.close();
+    }
+
+    @Override
+    public synchronized void mark(int readlimit) {
+    }
+
+    @Override
+    public synchronized void reset() throws IOException {
+      throw new IOException("mark/reset not supported");
+    }
+
+    @Override
+    public boolean markSupported() {
+      return false;
+    }
+
+    /**
+     * Try to open the file from one of the available locations.
+     *
+     * @return FSDataInputStream stream of the opened file link
+     * @throws IOException on unexpected error, or file not found.
+     */
+    private FSDataInputStream tryOpen() throws IOException {
+      for (Path path: fileLink.getLocations()) {
+        if (path.equals(currentPath)) continue;
+        try {
+          in = fs.open(path, bufferSize);
+          in.seek(pos);
+          assert(in.getPos() == pos) : "Link unable to seek to the right position=" + pos;
+          if (LOG.isTraceEnabled()) {
+            if (currentPath != null) {
+              LOG.debug("link open path=" + path);
+            } else {
+              LOG.trace("link switch from path=" + currentPath + " to path=" + path);
+            }
+          }
+          currentPath = path;
+          return(in);
+        } catch (FileNotFoundException e) {
+          // Try another file location
+        }
+      }
+      throw new FileNotFoundException("Unable to open link: " + fileLink);
+    }
+  }
+
+  private Path[] locations = null;
+
+  protected FileLink() {
+    this.locations = null;
+  }
+
+  /**
+   * @param originPath Original location of the file to link
+   * @param alternativePaths Alternative locations to look for the linked file
+   */
+  public FileLink(Path originPath, Path... alternativePaths) {
+    setLocations(originPath, alternativePaths);
+  }
+
+  /**
+   * @param locations locations to look for the linked file
+   */
+  public FileLink(final Collection<Path> locations) {
+    this.locations = locations.toArray(new Path[locations.size()]);
+  }
+
+  /**
+   * @return the locations to look for the linked file.
+   */
+  public Path[] getLocations() {
+    return locations;
+  }
+
+  public String toString() {
+    StringBuilder str = new StringBuilder(getClass().getName());
+    str.append(" locations=[");
+    int i = 0;
+    for (Path location: locations) {
+      if (i++ > 0) str.append(", ");
+      str.append(location.toString());
+    }
+    str.append("]");
+    return str.toString();
+  }
+
+  /**
+   * @return the path of the first available link.
+   */
+  public Path getAvailablePath(FileSystem fs) throws IOException {
+    for (Path path: locations) {
+      if (fs.exists(path)) {
+        return path;
+      }
+    }
+    throw new FileNotFoundException("Unable to open link: " + this);
+  }
+
+  /**
+   * Get the FileStatus of the referenced file.
+   *
+   * @param fs {@link FileSystem} on which to get the file status
+   * @return InputStream for the hfile link.
+   * @throws IOException on unexpected error.
+   */
+  public FileStatus getFileStatus(FileSystem fs) throws IOException {
+    for (Path path: locations) {
+      try {
+        return fs.getFileStatus(path);
+      } catch (FileNotFoundException e) {
+        // Try another file location
+      }
+    }
+    throw new FileNotFoundException("Unable to open link: " + this);
+  }
+
+  /**
+   * Open the FileLink for read.
+   * <p>
+   * It uses a wrapper of FSDataInputStream that is agnostic to the location
+   * of the file, even if the file switches between locations.
+   *
+   * @param fs {@link FileSystem} on which to open the FileLink
+   * @return InputStream for reading the file link.
+   * @throws IOException on unexpected error.
+   */
+  public FSDataInputStream open(final FileSystem fs) throws IOException {
+    return new FSDataInputStream(new FileLinkInputStream(fs, this));
+  }
+
+  /**
+   * Open the FileLink for read.
+   * <p>
+   * It uses a wrapper of FSDataInputStream that is agnostic to the location
+   * of the file, even if the file switches between locations.
+   *
+   * @param fs {@link FileSystem} on which to open the FileLink
+   * @param bufferSize the size of the buffer to be used.
+   * @return InputStream for reading the file link.
+   * @throws IOException on unexpected error.
+   */
+  public FSDataInputStream open(final FileSystem fs, int bufferSize) throws IOException {
+    return new FSDataInputStream(new FileLinkInputStream(fs, this, bufferSize));
+  }
+
+  /**
+   * NOTE: This method must be used only in the constructor!
+   * It creates a List with the specified locations for the link.
+   */
+  protected void setLocations(Path originPath, Path... alternativePaths) {
+    assert this.locations == null : "Link locations already set";
+    this.locations = new Path[1 + alternativePaths.length];
+    this.locations[0] = originPath;
+    for (int i = 0; i < alternativePaths.length; i++) {
+      this.locations[i + 1] = alternativePaths[i];
+    }
+  }
+
+  /**
+   * Get the directory to store the link back references
+   *
+   * <p>To simplify the reference count process, during the FileLink creation
+   * a back-reference is added to the back-reference directory of the specified file.
+   *
+   * @param storeDir Root directory for the link reference folder
+   * @param fileName File Name with links
+   * @return Path for the link back references.
+   */
+  public static Path getBackReferencesDir(final Path storeDir, final String fileName) {
+    return new Path(storeDir, BACK_REFERENCES_DIRECTORY_PREFIX + fileName);
+  }
+
+  /**
+   * Get the referenced file name from the reference link directory path.
+   *
+   * @param dirPath Link references directory path
+   * @return Name of the file referenced
+   */
+  public static String getBackReferenceFileName(final Path dirPath) {
+    return dirPath.getName().substring(BACK_REFERENCES_DIRECTORY_PREFIX.length());
+  }
+
+  /**
+   * Checks if the specified directory path is a back reference links folder.
+   *
+   * @param dirPath Directory path to verify
+   * @return True if the specified directory is a link references folder
+   */
+  public static boolean isBackReferencesDir(final Path dirPath) {
+    if (dirPath == null) return false;
+    return dirPath.getName().startsWith(BACK_REFERENCES_DIRECTORY_PREFIX);
+  }
+}
+

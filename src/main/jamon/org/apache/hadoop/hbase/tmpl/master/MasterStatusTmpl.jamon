@@ -43,6 +43,7 @@ org.apache.hadoop.hbase.client.HBaseAdmin;
 org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
+org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 </%import>
 <%if format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
@@ -123,6 +124,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 <%if (metaLocation != null) %>
 <& userTables &>
 </%if>
+<& userSnapshots &>
 <%if (servers != null) %>
 <& regionServers &>
 </%if>
@@ -169,7 +171,6 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 <%def userTables>
 <%java>
    HTableDescriptor[] tables = admin.listTables();
-   HConnectionManager.deleteConnection(admin.getConfiguration());
 </%java>
 <%if (tables != null && tables.length > 0)%>
 <table>
@@ -193,6 +194,32 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 </%for>
 
 <p> <% tables.length %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
+</table>
+</%if>
+</%def>
+
+<%def userSnapshots>
+<%java>
+   List<SnapshotDescription> snapshots = admin.listSnapshots();
+</%java>
+<%if (snapshots != null && snapshots.size() > 0)%>
+<table>
+<tr>
+    <th>Snapshot</th>
+    <th>Table</th>
+    <th>Creation Time</th>
+    <th>Type</th>
+</tr>
+<%for SnapshotDescription snapshotDesc : snapshots%>
+<tr>
+    <td><% snapshotDesc.getName() %></td>
+    <td><a href="table.jsp?name=<% snapshotDesc.getTable() %>"><% snapshotDesc.getTable() %></a></td>
+    <td><% new Date(snapshotDesc.getCreationTime()) %></td>
+    <td><% snapshotDesc.getType() %></td>
+</tr>
+</%for>
+
+<p> <% snapshots.size() %> snapshot(s) in set.</p>
 </table>
 </%if>
 </%def>
@@ -254,3 +281,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 </table>
 </%if>
 </%def>
+
+<%java>
+   HConnectionManager.deleteConnection(admin.getConfiguration(), false);
+</%java>

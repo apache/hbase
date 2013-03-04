@@ -82,7 +82,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     if (logCleaners != null) {
       for (String className : logCleaners) {
         T logCleaner = newFileCleaner(className, conf);
-        if (logCleaner != null) this.cleanersChain.add(logCleaner);
+        if (logCleaner != null) {
+          LOG.debug("initialize cleaner=" + className);
+          this.cleanersChain.add(logCleaner);
+        }
       }
     }
   }

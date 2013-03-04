@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
@@ -403,7 +404,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @throws IllegalArgumentException If not null and not a legitimate family
    * name: i.e. 'printable' and ends in a ':' (Null passes are allowed because
    * <code>b</code> can be null when deserializing).  Cannot start with a '.'
-   * either.
+   * either. Also Family can not be an empty value or equal "recovered.edits".
    */
   public static byte [] isLegalFamilyName(final byte [] b) {
     if (b == null) {
@@ -419,6 +420,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
           ">. Family names cannot contain control characters or colons: " +
           Bytes.toString(b));
       }
+    }
+    byte[] recoveredEdit = Bytes.toBytes(HLog.RECOVERED_EDITS_DIR);
+    if (Bytes.equals(recoveredEdit, b)) {
+      throw new IllegalArgumentException("Family name cannot be: " +
+          HLog.RECOVERED_EDITS_DIR);
     }
     return b;
   }

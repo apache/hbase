@@ -124,10 +124,10 @@ public class HLog implements Syncable {
    * Name of directory that holds recovered edits written by the wal log
    * splitting code, one per region
    */
-  private static final String RECOVERED_EDITS_DIR = "recovered.edits";
+  public static final String RECOVERED_EDITS_DIR = "recovered.edits";
   private static final Pattern EDITFILES_NAME_PATTERN =
     Pattern.compile("-?[0-9]+");
-  static final String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
+  public static final String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
   
   private final FileSystem fs;
   private final Path dir;
