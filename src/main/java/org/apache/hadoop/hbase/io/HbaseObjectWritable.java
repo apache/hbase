@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ProtoUtil;
 import org.apache.hadoop.io.MapWritable;
@@ -268,6 +269,10 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(Array.class, GENERIC_ARRAY_CODE);
     
     addToMap(FuzzyRowFilter.class, code++);
+
+    // we aren't going to bump the rpc version number.
+    // we don't want to cause incompatiblity with older 0.94/0.92 clients.
+    addToMap(HSnapshotDescription.class, code);
 
     // make sure that this is the last statement in this static block
     NEXT_CLASS_CODE = code;

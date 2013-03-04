@@ -28,16 +28,22 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.HalfStoreFileReader;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -53,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
@@ -92,8 +99,8 @@ public class TestStoreFile extends HBaseTestCase {
    * @throws Exception
    */
   public void testBasicHalfMapFile() throws Exception {
-    // Make up a directory hierarchy that has a regiondir and familyname.
-    Path outputDir = new Path(new Path(this.testDir, "regionname"),
+    // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
+    Path outputDir = new Path(new Path(this.testDir, "7e0102"),
         "familyname");
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
         this.fs, 2 * 1024)
@@ -107,6 +114,10 @@ public class TestStoreFile extends HBaseTestCase {
   private void writeStoreFile(final StoreFile.Writer writer) throws IOException {
     writeStoreFile(writer, Bytes.toBytes(getName()), Bytes.toBytes(getName()));
   }
+
+  // pick an split point (roughly halfway)
+  byte[] SPLITKEY = new byte[] { (LAST_CHAR-FIRST_CHAR)/2, FIRST_CHAR};
+
   /*
    * Writes HStoreKey and ImmutableBytes data to passed writer and
    * then closes it.
@@ -135,12 +146,12 @@ public class TestStoreFile extends HBaseTestCase {
    */
   public void testReference()
   throws IOException {
-    Path storedir = new Path(new Path(this.testDir, "regionname"), "familyname");
-    Path dir = new Path(storedir, "1234567890");
+    // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
+    Path storedir = new Path(new Path(this.testDir, "7e0102"), "familyname");
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
         this.fs, 8 * 1024)
-            .withOutputDir(dir)
+            .withOutputDir(storedir)
             .build();
     writeStoreFile(writer);
     StoreFile hsf = new StoreFile(this.fs, writer.getPath(), conf, cacheConf,
@@ -154,7 +165,7 @@ public class TestStoreFile extends HBaseTestCase {
     kv = KeyValue.createKeyValueFromKey(reader.getLastKey());
     byte [] finalRow = kv.getRow();
     // Make a reference
-    Path refPath = StoreFile.split(fs, dir, hsf, midRow, Range.top);
+    Path refPath = StoreFile.split(fs, storedir, hsf, midRow, Range.top);
     StoreFile refHsf = new StoreFile(this.fs, refPath, conf, cacheConf,
         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     // Now confirm that I can read from the reference and that it only gets
@@ -169,6 +180,147 @@ public class TestStoreFile extends HBaseTestCase {
       }
     }
     assertTrue(Bytes.equals(kv.getRow(), finalRow));
+  }
+
+  public void testHFileLink() throws IOException {
+    final String columnFamily = "f";
+
+    Configuration testConf = new Configuration(this.conf);
+    FSUtils.setRootDir(testConf, this.testDir);
+
+    HRegionInfo hri = new HRegionInfo(Bytes.toBytes("table-link"));
+    Path storedir = new Path(new Path(this.testDir,
+      new Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
+
+    // Make a store file and write data to it.
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(testConf, cacheConf,
+         this.fs, 8 * 1024)
+            .withOutputDir(storedir)
+            .build();
+    Path storeFilePath = writer.getPath();
+    writeStoreFile(writer);
+    writer.close();
+
+    Path dstPath = new Path(this.testDir, new Path("test-region", columnFamily));
+    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
+    Path linkFilePath = new Path(dstPath,
+                  HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
+
+    // Try to open store file from link
+    StoreFile hsf = new StoreFile(this.fs, linkFilePath, testConf, cacheConf,
+        StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+    assertTrue(hsf.isLink());
+
+    // Now confirm that I can read from the link
+    int count = 1;
+    HFileScanner s = hsf.createReader().getScanner(false, false);
+    s.seekTo();
+    while (s.next()) {
+      count++;
+    }
+    assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
+  }
+
+  /**
+   * Validate that we can handle valid tables with '.', '_', and '-' chars.
+   */
+  public void testStoreFileNames() {
+    String[] legalHFileLink = { "MyTable_02=abc012-def345", "MyTable_02.300=abc012-def345",
+      "MyTable_02-400=abc012-def345", "MyTable_02-400.200=abc012-def345",
+      "MyTable_02=abc012-def345_SeqId_1_", "MyTable_02=abc012-def345_SeqId_20_" };
+    for (String name: legalHFileLink) {
+      assertTrue("should be a valid link: " + name, HFileLink.isHFileLink(name));
+      assertTrue("should be a valid StoreFile" + name, StoreFile.validateStoreFileName(name));
+      assertFalse("should not be a valid reference: " + name, StoreFile.isReference(name));
+
+      String refName = name + ".6789";
+      assertTrue("should be a valid link reference: " + refName, StoreFile.isReference(refName));
+      assertTrue("should be a valid StoreFile" + refName, StoreFile.validateStoreFileName(refName));
+    }
+
+    String[] illegalHFileLink = { ".MyTable_02=abc012-def345", "-MyTable_02.300=abc012-def345",
+      "MyTable_02-400=abc0_12-def345", "MyTable_02-400.200=abc012-def345...." };
+    for (String name: illegalHFileLink) {
+      assertFalse("should not be a valid link: " + name, HFileLink.isHFileLink(name));
+    }
+  }
+
+  /**
+   * This test creates an hfile and then the dir structures and files to verify that references
+   * to hfilelinks (created by snapshot clones) can be properly interpreted.
+   */
+  public void testReferenceToHFileLink() throws IOException {
+    final String columnFamily = "f";
+
+    Path rootDir = FSUtils.getRootDir(conf);
+
+    String tablename = "_original-evil-name"; // adding legal table name chars to verify regex handles it.
+    HRegionInfo hri = new HRegionInfo(Bytes.toBytes(tablename));
+    // store dir = <root>/<tablename>/<rgn>/<cf>
+    Path storedir = new Path(new Path(rootDir,
+      new Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
+
+    // Make a store file and write data to it. <root>/<tablename>/<rgn>/<cf>/<file>
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
+         this.fs, 8 * 1024)
+            .withOutputDir(storedir)
+            .build();
+    Path storeFilePath = writer.getPath();
+    writeStoreFile(writer);
+    writer.close();
+
+    // create link to store file. <root>/clone/region/<cf>/<hfile>-<region>-<table>
+    String target = "clone";
+    Path dstPath = new Path(rootDir, new Path(new Path(target, "7e0102"), columnFamily));
+    HFileLink.create(conf, this.fs, dstPath, hri, storeFilePath.getName());
+    Path linkFilePath = new Path(dstPath,
+                  HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
+
+    // create splits of the link.
+    // <root>/clone/splitA/<cf>/<reftohfilelink>,
+    // <root>/clone/splitB/<cf>/<reftohfilelink>
+    Path splitDirA = new Path(new Path(rootDir,
+        new Path(target, "571A")), columnFamily);
+    Path splitDirB = new Path(new Path(rootDir,
+        new Path(target, "571B")), columnFamily);
+    StoreFile f = new StoreFile(fs, linkFilePath, conf, cacheConf, BloomType.NONE,
+        NoOpDataBlockEncoder.INSTANCE);
+    byte[] splitRow = SPLITKEY;
+    Path pathA = StoreFile.split(fs, splitDirA, f, splitRow, Range.top); // top
+    Path pathB = StoreFile.split(fs, splitDirB, f, splitRow, Range.bottom); // bottom
+
+    // OK test the thing
+    FSUtils.logFileSystemState(fs, rootDir, LOG);
+
+    // There is a case where a file with the hfilelink pattern is actually a daughter
+    // reference to a hfile link.  This code in StoreFile that handles this case.
+
+    // Try to open store file from link
+    StoreFile hsfA = new StoreFile(this.fs, pathA,  conf, cacheConf,
+        StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+
+    // Now confirm that I can read from the ref to link
+    int count = 1;
+    HFileScanner s = hsfA.createReader().getScanner(false, false);
+    s.seekTo();
+    while (s.next()) {
+      count++;
+    }
+    assertTrue(count > 0); // read some rows here
+
+    // Try to open store file from link
+    StoreFile hsfB = new StoreFile(this.fs, pathB,  conf, cacheConf,
+        StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+
+    // Now confirm that I can read from the ref to link
+    HFileScanner sB = hsfB.createReader().getScanner(false, false);
+    sB.seekTo();
+    while (sB.next()) {
+      count++;
+    }
+
+    // read the rest of the rows
+    assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
   }
 
   private void checkHalfHFile(final StoreFile f)
@@ -694,8 +846,8 @@ public class TestStoreFile extends HBaseTestCase {
     long[] timestamps = new long[] {20,10,5,1};
     Scan scan = new Scan();
 
-    Path storedir = new Path(new Path(this.testDir, "regionname"),
-    "familyname");
+    // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
+    Path storedir = new Path(new Path(this.testDir, "7e0102"), "familyname");
     Path dir = new Path(storedir, "1234567890");
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
         this.fs, 8 * 1024)
@@ -738,8 +890,8 @@ public class TestStoreFile extends HBaseTestCase {
   public void testCacheOnWriteEvictOnClose() throws Exception {
     Configuration conf = this.conf;
 
-    // Find a home for our files
-    Path baseDir = new Path(new Path(this.testDir, "regionname"),"twoCOWEOC");
+    // Find a home for our files (regiondir ("7e0102") and familyname).
+    Path baseDir = new Path(new Path(this.testDir, "7e0102"),"twoCOWEOC");
 
     // Grab the block cache and get the initial hit/miss counts
     BlockCache bc = new CacheConfig(conf).getBlockCache();
@@ -810,7 +962,7 @@ public class TestStoreFile extends HBaseTestCase {
       kv2 = scannerTwo.next();
       assertTrue(kv1.equals(kv2));
       assertTrue(Bytes.compareTo(
-          kv1.getBuffer(), kv1.getKeyOffset(), kv1.getKeyLength(), 
+          kv1.getBuffer(), kv1.getKeyOffset(), kv1.getKeyLength(),
           kv2.getBuffer(), kv2.getKeyOffset(), kv2.getKeyLength()) == 0);
       assertTrue(Bytes.compareTo(
           kv1.getBuffer(), kv1.getValueOffset(), kv1.getValueLength(),
@@ -891,7 +1043,8 @@ public class TestStoreFile extends HBaseTestCase {
    * file info.
    */
   public void testDataBlockEncodingMetaData() throws IOException {
-    Path dir = new Path(new Path(this.testDir, "regionname"), "familyname");
+    // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
+    Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
     Path path = new Path(dir, "1234567890");
 
     DataBlockEncoding dataBlockEncoderAlgo =
@@ -910,11 +1063,11 @@ public class TestStoreFile extends HBaseTestCase {
             .withBytesPerChecksum(CKBYTES)
             .build();
     writer.close();
-    
+
     StoreFile storeFile = new StoreFile(fs, writer.getPath(), conf,
         cacheConf, BloomType.NONE, dataBlockEncoder);
     StoreFile.Reader reader = storeFile.createReader();
-    
+
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
     byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);
 

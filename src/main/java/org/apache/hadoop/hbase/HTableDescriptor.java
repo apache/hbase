@@ -358,6 +358,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       Bytes.equals(tableName, HConstants.META_TABLE_NAME);
   }
 
+  // A non-capture group so that this can be embedded.
+  public static final String VALID_USER_TABLE_REGEX = "(?:[a-zA-Z_0-9][a-zA-Z_0-9.-]*)";
+
   /**
    * Check passed byte buffer, "tableName", is legal user-space table name.
    * @return Returns passed <code>tableName</code> param

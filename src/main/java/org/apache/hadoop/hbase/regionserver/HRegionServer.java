@@ -141,6 +141,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
+import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -459,6 +460,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     cacheConfig = new CacheConfig(conf);
   }
 
+  /** Handle all the snapshot requests to this server */
+  RegionServerSnapshotManager snapshotManager;
+
   /**
    * Run test on configured codecs to make sure supporting libs are in place.
    * @param c
@@ -631,6 +635,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Create the catalog tracker and start it;
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf, this);
     catalogTracker.start();
+
+    // watch for snapshots
+    try {
+      this.snapshotManager = new RegionServerSnapshotManager(this);
+    } catch (KeeperException e) {
+      this.abort("Failed to reach zk cluster when creating snapshot handler.");
+    }
   }
 
   /**
@@ -717,6 +728,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
       registerMBean();
 
+      // start the snapshot handler, since the server is ready to run
+      this.snapshotManager.start();
+
       // We registered with the Master.  Go into run mode.
       long lastMsg = 0;
       long oldRequestCount = -1;
@@ -796,6 +810,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       this.healthCheckChore.interrupt();
     }
 
+    try {
+      if (snapshotManager != null) snapshotManager.stop(this.abortRequested);
+    } catch (IOException e) {
+      LOG.warn("Failed to close snapshot handler cleanly", e);
+    }
+
     if (this.killed) {
       // Just skip out w/o closing regions.  Used when testing.
     } else if (abortRequested) {
@@ -811,6 +831,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta or root.
     if (this.catalogTracker != null) this.catalogTracker.stop();
+
+    // stop the snapshot handler, forcefully killing all running tasks
+    try {
+      if (snapshotManager != null) snapshotManager.stop(this.abortRequested || this.killed);
+    } catch (IOException e) {
+      LOG.warn("Failed to close snapshot handler cleanly", e);
+    }
 
     // Closing the compactSplit thread before closing meta regions
     if (!this.killed && containsMetaTableRegions()) {

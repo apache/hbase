@@ -597,8 +597,25 @@ public class FSTableDescriptors implements TableDescriptors {
   public static boolean createTableDescriptor(FileSystem fs, Path rootdir,
       HTableDescriptor htableDescriptor, boolean forceCreation)
   throws IOException {
-    FileStatus status =
-      getTableInfoPath(fs, rootdir, htableDescriptor.getNameAsString());
+    Path tabledir = FSUtils.getTablePath(rootdir, htableDescriptor.getNameAsString());
+    return createTableDescriptorForTableDirectory(fs, tabledir, htableDescriptor, forceCreation);
+  }
+
+  /**
+   * Create a new HTableDescriptor in HDFS in the specified table directory. Happens when we create
+   * a new table or snapshot a table.
+   * @param fs filesystem where the descriptor should be written
+   * @param tabledir directory under which we should write the file
+   * @param htableDescriptor description of the table to write
+   * @param forceCreation if <tt>true</tt>,then even if previous table descriptor is present it will
+   *          be overwritten
+   * @return <tt>true</tt> if the we successfully created the file, <tt>false</tt> if the file
+   *         already exists and we weren't forcing the descriptor creation.
+   * @throws IOException if a filesystem error occurs
+   */
+  public static boolean createTableDescriptorForTableDirectory(FileSystem fs, Path tabledir,
+      HTableDescriptor htableDescriptor, boolean forceCreation) throws IOException {
+    FileStatus status = getTableInfoPath(fs, tabledir);
     if (status != null) {
       LOG.info("Current tableInfoPath = " + status.getPath());
       if (!forceCreation) {
@@ -608,8 +625,7 @@ public class FSTableDescriptors implements TableDescriptors {
         }
       }
     }
-    Path p = writeTableDescriptor(fs, htableDescriptor,
-      FSUtils.getTablePath(rootdir, htableDescriptor.getNameAsString()), status);
+    Path p = writeTableDescriptor(fs, htableDescriptor, tabledir, status);
     return p != null;
   }
 }

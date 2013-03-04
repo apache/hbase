@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
@@ -28,18 +31,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache.EvictionThread;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.TestSchemaMetrics;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import org.junit.experimental.categories.Category;
-import static org.junit.Assert.*;
 
 /**
  * Tests the concurrent LruBlockCache.<p>
@@ -77,13 +79,20 @@ public class TestLruBlockCache {
 
   @Test
   public void testBackgroundEvictionThread() throws Exception {
-
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 9); // room for 9, will evict
 
     LruBlockCache cache = new LruBlockCache(maxSize, blockSize, TEST_UTIL.getConfiguration());
 
     CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
+
+    EvictionThread evictionThread = cache.getEvictionThread();
+    assertTrue(evictionThread != null);
+
+    // Make sure eviction thread has entered run method
+    while (!evictionThread.isEnteringRun()) {
+      Thread.sleep(1);
+    }
 
     // Add all the blocks
     for (CachedItem block : blocks) {

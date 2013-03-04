@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -730,6 +731,55 @@ public class AccessController extends BaseRegionObserver
     AccessControlLists.init(ctx.getEnvironment().getMasterServices());
   }
 
+  @Override
+  public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+    requirePermission("snapshot", Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void postSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+  }
+
+  @Override
+  public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+    requirePermission("cloneSnapshot", Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void postCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+  }
+
+  @Override
+  public void preRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+    requirePermission("restoreSnapshot", Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void postRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+  }
+
+  @Override
+  public void preDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException {
+    requirePermission("deleteSnapshot", Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void postDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException {
+  }
 
   /* ---- RegionObserver implementation ---- */
 

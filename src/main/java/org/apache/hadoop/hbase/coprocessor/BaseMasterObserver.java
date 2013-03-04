@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 import java.io.IOException;
 
@@ -184,5 +185,51 @@ public class BaseMasterObserver implements MasterObserver {
   public void postMove(ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo region, ServerName srcServer, ServerName destServer)
   throws IOException {
+  }
+
+  @Override
+  public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+  }
+
+  @Override
+  public void postSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+  }
+
+  @Override
+  public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+  }
+
+  @Override
+  public void postCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+  }
+
+  @Override
+  public void preRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+  }
+
+  @Override
+  public void postRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      throws IOException {
+  }
+
+  @Override
+  public void preDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException {
+  }
+
+  @Override
+  public void postDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException {
   }
 }

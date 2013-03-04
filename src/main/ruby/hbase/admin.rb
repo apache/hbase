@@ -586,5 +586,35 @@ module Hbase
       put.add(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY, org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER, org.apache.hadoop.hbase.util.Writables.getBytes(hri))
       meta.put(put)
     end
+
+    #----------------------------------------------------------------------------------------------
+    # Take a snapshot of specified table
+    def snapshot(table, snapshot_name)
+      @admin.snapshot(snapshot_name.to_java_bytes, table.to_java_bytes)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Restore specified snapshot
+    def restore_snapshot(snapshot_name)
+      @admin.restoreSnapshot(snapshot_name.to_java_bytes)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Create a new table by cloning the snapshot content
+    def clone_snapshot(snapshot_name, table)
+      @admin.cloneSnapshot(snapshot_name.to_java_bytes, table.to_java_bytes)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Delete specified snapshot
+    def delete_snapshot(snapshot_name)
+      @admin.deleteSnapshot(snapshot_name.to_java_bytes)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns a list of snapshots
+    def list_snapshot
+      @admin.listSnapshots
+    end
   end
 end
