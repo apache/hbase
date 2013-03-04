@@ -20,8 +20,10 @@
 
 package org.apache.hadoop.hbase.zookeeper;
 
-import java.util.Properties;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -41,18 +43,26 @@ public class ZooKeeperMainServerArg {
     Properties zkProps = ZKConfig.makeZKProps(c);
     String host = null;
     String clientPort = null;
+    List<String> hosts = new ArrayList<String>();
     for (Entry<Object, Object> entry: zkProps.entrySet()) {
       String key = entry.getKey().toString().trim();
       String value = entry.getValue().toString().trim();
-      if (key.startsWith("server.") && host == null) {
+      if (key.startsWith("server.")) {
         String[] parts = value.split(":");
-        host = parts[0];
+        hosts.add(parts[0]);
       } else if (key.endsWith("clientPort")) {
         clientPort = value;
       }
-      if (host != null && clientPort != null) break;
     }
-    return host != null && clientPort != null? host + ":" + clientPort: null;
+    if (hosts.isEmpty() || clientPort == null)
+      return null;
+    for (int i = 0; i < hosts.size(); i++) {
+      if (i > 0)
+        host += "," + hosts.get(i);
+      else
+        host = hosts.get(i);
+    }
+    return host != null ? host + ":" + clientPort : null;
   }
 
   /**
