@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
@@ -43,6 +44,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   static final Log LOG = LogFactory.getLog(DefaultStoreFileManager.class);
 
   private final KVComparator kvComparator;
+  private final Configuration conf;
 
   /**
    * List of store files inside this store. This is an immutable list that
@@ -50,8 +52,9 @@ class DefaultStoreFileManager implements StoreFileManager {
    */
   private volatile ImmutableList<StoreFile> storefiles = null;
 
-  public DefaultStoreFileManager(KVComparator kvComparator) {
+  public DefaultStoreFileManager(KVComparator kvComparator, Configuration conf) {
     this.kvComparator = kvComparator;
+    this.conf = conf;
   }
 
   @Override
@@ -124,9 +127,17 @@ class DefaultStoreFileManager implements StoreFileManager {
     return getStorefiles();
   }
 
+  @Override
+  public int getStoreCompactionPriority() {
+    int blockingFileCount = conf.getInt(
+        "hbase.hstore.blockingStoreFiles", HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
+    return blockingFileCount - storefiles.size();
+  }
+
   private void sortAndSetStoreFiles(List<StoreFile> storeFiles) {
     Collections.sort(storeFiles, StoreFile.Comparators.SEQ_ID);
     storefiles = ImmutableList.copyOf(storeFiles);
   }
+
 }
 

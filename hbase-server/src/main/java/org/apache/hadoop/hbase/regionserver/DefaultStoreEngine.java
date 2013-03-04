@@ -46,7 +46,7 @@ public class DefaultStoreEngine extends StoreEngine<
 
   @Override
   protected void createComponents() {
-    storeFileManager = new DefaultStoreFileManager(this.comparator);
+    storeFileManager = new DefaultStoreFileManager(this.comparator, this.conf);
 
     // TODO: compactor and policy may be separately pluggable, but must derive from default ones.
     compactor = new DefaultCompactor(this.conf, this.store);

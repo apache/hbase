@@ -1324,7 +1324,9 @@ public class HStore implements Store {
         this.forceMajor = this.forceMajor && !isMajor;
 
         // Set common request properties.
-        compaction.getRequest().setPriority(getCompactPriority(priority));
+        // Set priority, either override value supplied by caller or from store.
+        compaction.getRequest().setPriority(
+            (priority != Store.NO_PRIORITY) ? priority : getCompactPriority());
         compaction.getRequest().setIsMajor(isMajor);
         compaction.getRequest().setDescription(
             region.getRegionNameAsString(), getColumnFamilyName());
@@ -1755,18 +1757,9 @@ public class HStore implements Store {
     return this.memstore.heapSize();
   }
 
-  public int getCompactPriority() {
-    return getCompactPriority(Store.NO_PRIORITY);
-  }
-
   @Override
-  public int getCompactPriority(int priority) {
-    // If this is a user-requested compaction, leave this at the user priority
-    if (priority != Store.PRIORITY_USER) {
-      priority = this.compactionPolicy.getSystemCompactionPriority(
-        this.storeFileManager.getStorefiles());
-    }
-    return priority;
+  public int getCompactPriority() {
+    return this.storeFileManager.getStoreCompactionPriority();
   }
 
   @Override

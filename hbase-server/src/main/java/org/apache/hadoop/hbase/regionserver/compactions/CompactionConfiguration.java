@@ -62,7 +62,6 @@ public class CompactionConfiguration {
   boolean shouldDeleteExpired;
   long majorCompactionPeriod;
   float majorCompactionJitter;
-  int blockingStoreFileCount;
 
   CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
@@ -82,8 +81,6 @@ public class CompactionConfiguration {
     shouldDeleteExpired = conf.getBoolean("hbase.store.delete.expired.storefile", true);
     majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.20F);
-    blockingStoreFileCount =
-        conf.getInt("hbase.hstore.blockingStoreFiles", HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
 
     LOG.info("Compaction configuration " + this.toString());
   }
@@ -103,13 +100,6 @@ public class CompactionConfiguration {
       shouldDeleteExpired ? "" : " don't",
       majorCompactionPeriod,
       majorCompactionJitter);
-  }
-
-  /**
-   * @return store file count that will cause the memstore of this store to be blocked.
-   */
-  int getBlockingStorefileCount() {
-    return this.blockingStoreFileCount;
   }
 
   /**
