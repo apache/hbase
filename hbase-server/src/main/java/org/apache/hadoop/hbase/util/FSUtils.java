@@ -636,6 +636,23 @@ public abstract class FSUtils {
   }
 
   /**
+   * Checks for the presence of the root path (using the provided conf object) in the given path. If
+   * it exists, this method removes it and returns the String representation of remaining relative path.
+   * @param path
+   * @param conf
+   * @return String representation of the remaining relative path
+   * @throws IOException
+   */
+  public static String removeRootPath(Path path, final Configuration conf) throws IOException {
+    Path root = FSUtils.getRootDir(conf);
+    String pathStr = path.toString();
+    // check that the path is absolute... it has the root path in it.
+    if (!pathStr.startsWith(root.toString())) return pathStr;
+    // if not, return as it is.
+    return pathStr.substring(root.toString().length() + 1);// remove the "/" too.
+  }
+
+  /**
    * If DFS, check safe mode and if so, wait until we clear it.
    * @param conf configuration
    * @param wait Sleep between retries
