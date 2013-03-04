@@ -377,11 +377,11 @@ given the dependency tree).</para>
   then you will have run the command from the ROOT HBASE DIRECTORY. This will run the tests in the other
   modules, unless you specify to skip the tests in that module. For instance, to skip the tests in the hbase-server module,
   you would run:
-  <programlisting>mvn clean test -Dskip-server-tests</programlisting>
+  <programlisting>mvn clean test -PskipServerTests</programlisting>
   from the top level directory to run all the tests in modules other than hbase-server. Note that you
   can specify to skip tests in multiple modules as well as just for a single module. For example, to skip
   the tests in <classname>hbase-server</classname> and <classname>hbase-common</classname>, you would run:
-  <programlisting>mvn clean test -Dskip-server-tests -Dskip-common-tests</programlisting>
+  <programlisting>mvn clean test -PskipServerTests -PskipCommonTests</programlisting>
   <para>Also, keep in mind that if you are running tests in the <classname>hbase-server</classname> module you will need to
   apply the maven profiles discussed in <xref linkend="hbase.unittests.cmds"/> to get the tests to run properly.</para>
   </section>
