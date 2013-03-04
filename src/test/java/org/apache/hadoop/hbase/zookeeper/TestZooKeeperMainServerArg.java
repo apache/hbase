@@ -40,7 +40,8 @@ public class TestZooKeeperMainServerArg {
     c.set("hbase.zookeeper.quorum", "example.com");
     assertEquals("example.com:" + port, parser.parse(c));
     c.set("hbase.zookeeper.quorum", "example1.com,example2.com,example3.com");
-    assertTrue(port, parser.parse(c).matches("example[1-3]\\.com:" + port));
+    assertTrue(port,
+        parser.parse(c).matches("(example[1-3]\\.com,){2}example[1-3]\\.com:" + port));
   }
 
   @org.junit.Rule
