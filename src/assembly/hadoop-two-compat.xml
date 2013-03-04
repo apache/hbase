@@ -39,7 +39,11 @@
       <!-- Now, select which projects to include in this module-set. -->
       <!-- Just add future modules here assuming the wildcare doesn't match -->
       <includes>
+        <include>org.apache.hbase:hbase-prefix-tree</include>
+        <include>org.apache.hbase:hbase-it</include>
+        <include>org.apache.hbase:hbase-protocol</include>
         <include>org.apache.hbase:hbase-common</include>
+        <include>org.apache.hbase:hbase-client</include>
         <include>org.apache.hbase:hbase-hadoop-compat</include>
         <include>org.apache.hbase:hbase-server</include>
         <include>org.apache.hbase:hbase-hadoop2-compat</include>

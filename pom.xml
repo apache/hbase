@@ -41,7 +41,7 @@
   <packaging>pom</packaging>
   <!--Version is defined below in properties section so can be shared by all sub modules.
    -->
-  <version>${version}</version>
+  <version>0.97-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     Apache HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -857,8 +857,6 @@
      </plugins>
   </build>
   <properties>
-    <!--Set version.  Shared by parent and sub modules-->
-    <version>0.97-SNAPSHOT</version>
     <tar.name>${project.build.finalName}.tar.gz</tar.name>
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm
