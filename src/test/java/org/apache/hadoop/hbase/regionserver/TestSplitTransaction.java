@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.collect.ImmutableList;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -33,8 +31,18 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -44,6 +52,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Test the {@link SplitTransaction} class against an HRegion (as opposed to
@@ -182,11 +192,31 @@ public class TestSplitTransaction {
     assertFalse(st.prepare());
   }
 
+  @Test public void testWholesomeSplitWithHFileV1() throws IOException {
+    int defaultVersion = TEST_UTIL.getConfiguration().getInt(
+        HFile.FORMAT_VERSION_KEY, 2);
+    TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 1);
+    try {
+      for (Store store : this.parent.stores.values()) {
+        store.getFamily().setBloomFilterType(StoreFile.BloomType.ROW);
+      }
+      testWholesomeSplit();
+    } finally {
+      TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY,
+          defaultVersion);
+    }
+  }
+
   @Test public void testWholesomeSplit() throws IOException {
-    final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
+    final int rowcount = TEST_UTIL.loadRegion(this.parent, CF, true);
     assertTrue(rowcount > 0);
     int parentRowCount = countRows(this.parent);
     assertEquals(rowcount, parentRowCount);
+
+    // Pretend region's blocks are not in the cache, used for
+    // testWholesomeSplitWithHFileV1
+    CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
+    ((LruBlockCache) cacheConf.getBlockCache()).clearCache();
 
     // Start transaction.
     SplitTransaction st = prepareGOOD_SPLIT_ROW();

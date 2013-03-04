@@ -1056,6 +1056,19 @@ public class HBaseTestingUtility {
    */
   public int loadRegion(final HRegion r, final byte[] f)
   throws IOException {
+    return loadRegion(r, f, false);
+  }
+  
+  /**
+   * Load region with rows from 'aaa' to 'zzz'.
+   * @param r Region
+   * @param f Family
+   * @param flush flush the cache if true
+   * @return Count of rows loaded.
+   * @throws IOException
+   */
+  public int loadRegion(final HRegion r, final byte[] f, final boolean flush)
+      throws IOException {
     byte[] k = new byte[3];
     int rowCount = 0;
     for (byte b1 = 'a'; b1 <= 'z'; b1++) {
@@ -1070,6 +1083,9 @@ public class HBaseTestingUtility {
           r.put(put);
           rowCount++;
         }
+      }
+      if (flush) {
+        r.flushcache();
       }
     }
     return rowCount;
