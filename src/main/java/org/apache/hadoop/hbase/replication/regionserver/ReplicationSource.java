@@ -363,6 +363,7 @@ public class ReplicationSource extends Thread
         }
       } finally {
         try {
+          this.reader = null;
           this.repLogReader.closeReader();
         } catch (IOException e) {
           gotIOE = true;
