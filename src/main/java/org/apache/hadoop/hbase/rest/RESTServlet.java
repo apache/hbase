@@ -70,7 +70,8 @@ public class RESTServlet implements Constants {
    */
   RESTServlet(Configuration conf) throws IOException {
     this.conf = conf;
-    this.pool = new HTablePool(conf, 10);
+    int maxSize = conf.getInt("hbase.rest.htablepool.size", 10);
+    this.pool = new HTablePool(conf, maxSize);
     this.admin = new HBaseAdmin(conf);
   }
 
