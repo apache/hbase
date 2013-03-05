@@ -1871,11 +1871,25 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return HFileSystem.get(conf);
   }
 
+  /**
+   * Wait until all regions in a table have been assigned.  Waits default timeout before giving up
+   * (30 seconds).
+   * @param table Table to wait on.
+   * @throws InterruptedException
+   * @throws IOException
+   */
   public void waitTableAvailable(byte[] table)
       throws InterruptedException, IOException {
     waitTableAvailable(table, 30000);
   }
 
+  /**
+   * Wait until all regions in a table have been assigned
+   * @param table Table to wait on.
+   * @param timeoutMillis Timeout.
+   * @throws InterruptedException
+   * @throws IOException
+   */
   public void waitTableAvailable(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
@@ -1887,19 +1901,38 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
+  /**
+   * Waits for a table to be 'enabled'.  Enabled means that table is set as 'enabled' and the
+   * regions have been all assigned.  Will timeout after default period (30 seconds)
+   * @see #waitTableAvailable(byte[])
+   * @param table Table to wait on.
+   * @param table
+   * @throws InterruptedException
+   * @throws IOException
+   */
   public void waitTableEnabled(byte[] table)
       throws InterruptedException, IOException {
     waitTableEnabled(table, 30000);
   }
 
+  /**
+   * Waits for a table to be 'enabled'.  Enabled means that table is set as 'enabled' and the
+   * regions have been all assigned.
+   * @see #waitTableAvailable(byte[])
+   * @param table Table to wait on.
+   * @param timeoutMillis Time to wait on it being marked enabled.
+   * @throws InterruptedException
+   * @throws IOException
+   */
   public void waitTableEnabled(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
-    while (!getHBaseAdmin().isTableAvailable(table) &&
-           !getHBaseAdmin().isTableEnabled(table)) {
+    waitTableAvailable(table, timeoutMillis);
+    long remainder = System.currentTimeMillis() - startWait;
+    while (!getHBaseAdmin().isTableEnabled(table)) {
       assertTrue("Timed out waiting for table to become available and enabled " +
          Bytes.toStringBinary(table),
-         System.currentTimeMillis() - startWait < timeoutMillis);
+         System.currentTimeMillis() - remainder < timeoutMillis);
       Thread.sleep(200);
     }
     LOG.debug("REMOVE AFTER table=" + Bytes.toString(table) + ", isTableAvailable=" +
