@@ -41,6 +41,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
@@ -51,7 +52,7 @@ public class TestZooKeeperScanPolicyObserver {
   private static final byte[] Q = Bytes.toBytes("qual");
   private static final byte[] R = Bytes.toBytes("row");
 
-  @BeforeClass
+  @Ignore @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Test we can first start the ZK cluster by itself
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -61,12 +62,12 @@ public class TestZooKeeperScanPolicyObserver {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @Ignore @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Ignore @Test
   public void testScanPolicyObserver() throws Exception {
     byte[] tableName = Bytes.toBytes("testScanPolicyObserver");
     HTableDescriptor desc = new HTableDescriptor(tableName);

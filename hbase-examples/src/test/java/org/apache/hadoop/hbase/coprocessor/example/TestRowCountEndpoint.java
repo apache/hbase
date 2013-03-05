@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -53,7 +54,7 @@ public class TestRowCountEndpoint {
   private static HBaseTestingUtility TEST_UTIL = null;
   private static Configuration CONF = null;
 
-  @BeforeClass
+  @Ignore @BeforeClass
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
@@ -64,12 +65,12 @@ public class TestRowCountEndpoint {
     TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
   }
 
-  @AfterClass
+  @Ignore @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Ignore @Test
   public void testEndpoint() throws Throwable {
     HTable table = new HTable(CONF, TEST_TABLE);
 
