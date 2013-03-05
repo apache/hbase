@@ -65,14 +65,14 @@ public class TestBulkDeleteProtocol {
   private static final byte[] QUALIFIER3 = Bytes.toBytes("c3");
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @BeforeClass
+  @Ignore @BeforeClass
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         BulkDeleteEndpoint.class.getName());
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
+  @Ignore @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

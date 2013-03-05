@@ -52,7 +52,7 @@ public class TestZooKeeperScanPolicyObserver {
   private static final byte[] Q = Bytes.toBytes("qual");
   private static final byte[] R = Bytes.toBytes("row");
 
-  @BeforeClass
+  @Ignore @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Test we can first start the ZK cluster by itself
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -62,7 +62,7 @@ public class TestZooKeeperScanPolicyObserver {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @Ignore @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
