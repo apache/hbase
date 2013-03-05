@@ -2524,6 +2524,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
         requestCount.addAndGet(i);
         region.readRequestsCount.add(i);
+        region.setOpMetricsReadRequestCount(region.readRequestsCount.get());
       } finally {
         region.closeRegionOperation();
       }

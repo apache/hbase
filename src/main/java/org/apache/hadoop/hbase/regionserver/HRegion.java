@@ -1040,7 +1040,7 @@ public class HRegion implements HeapSize { // , Writable{
         status.setStatus("Running coprocessor post-close hooks");
         this.coprocessorHost.postClose(abort);
       }
-      this.opMetrics.closeMetrics();
+      this.opMetrics.closeMetrics(this.getRegionInfo().getEncodedName());
       status.markComplete("Closed");
       LOG.info("Closed " + this);
       return result;
@@ -1688,6 +1688,7 @@ public class HRegion implements HeapSize { // , Writable{
     checkRow(row, "getClosestRowBefore");
     startRegionOperation();
     this.readRequestsCount.increment();
+    this.opMetrics.setReadRequestCountMetrics(this.readRequestsCount.get());   
     try {
       Store store = getStore(family);
       // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
@@ -1734,6 +1735,7 @@ public class HRegion implements HeapSize { // , Writable{
       List<KeyValueScanner> additionalScanners) throws IOException {
     startRegionOperation();
     this.readRequestsCount.increment();
+    this.opMetrics.setReadRequestCountMetrics(this.readRequestsCount.get());
     try {
       // Verify families are all valid
       prepareScanner(scan);
@@ -1801,6 +1803,7 @@ public class HRegion implements HeapSize { // , Writable{
     Integer lid = null;
     startRegionOperation();
     this.writeRequestsCount.increment();
+    this.opMetrics.setWriteRequestCountMetrics(this.writeRequestsCount.get());
     try {
       byte [] row = delete.getRow();
       // If we did not pass an existing row lock, obtain a new one
@@ -1993,6 +1996,7 @@ public class HRegion implements HeapSize { // , Writable{
     checkResources();
     startRegionOperation();
     this.writeRequestsCount.increment();
+    this.opMetrics.setWriteRequestCountMetrics(this.writeRequestsCount.get());
     try {
       // We obtain a per-row lock, so other clients will block while one client
       // performs an update. The read lock is released by the client calling
@@ -2093,6 +2097,7 @@ public class HRegion implements HeapSize { // , Writable{
       try {
         if (!initialized) {
           this.writeRequestsCount.increment();
+          this.opMetrics.setWriteRequestCountMetrics(this.writeRequestsCount.get());
           doPreMutationHook(batchOp);
           initialized = true;
         }
@@ -2519,6 +2524,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     startRegionOperation();
     this.writeRequestsCount.increment();
+    this.opMetrics.setWriteRequestCountMetrics(this.writeRequestsCount.get());
     try {
       RowLock lock = isPut ? ((Put)w).getRowLock() : ((Delete)w).getRowLock();
       Get get = new Get(row, lock);
@@ -3341,6 +3347,7 @@ public class HRegion implements HeapSize { // , Writable{
   public Integer obtainRowLock(final byte [] row) throws IOException {
     startRegionOperation();
     this.writeRequestsCount.increment();
+    this.opMetrics.setWriteRequestCountMetrics( this.writeRequestsCount.get());
     try {
       return internalObtainRowLock(row, true);
     } finally {
@@ -3513,6 +3520,7 @@ public class HRegion implements HeapSize { // , Writable{
     startBulkRegionOperation(hasMultipleColumnFamilies(familyPaths));
     try {
       this.writeRequestsCount.increment();
+      this.opMetrics.setWriteRequestCountMetrics( this.writeRequestsCount.get());
 
       // There possibly was a split that happend between when the split keys
       // were gathered and before the HReiogn's write lock was taken.  We need
@@ -3737,6 +3745,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       startRegionOperation();
       readRequestsCount.increment();
+      opMetrics.setReadRequestCountMetrics(readRequestsCount.get());
       try {
 
         // This could be a new thread from the last time we called next().
@@ -4555,8 +4564,14 @@ public class HRegion implements HeapSize { // , Writable{
     }
     HRegion dstRegion = HRegion.newHRegion(tableDir, log, fs, conf,
         newRegionInfo, a.getTableDesc(), null);
-    dstRegion.readRequestsCount.set(a.readRequestsCount.get() + b.readRequestsCount.get());
-    dstRegion.writeRequestsCount.set(a.writeRequestsCount.get() + b.writeRequestsCount.get());
+    long totalReadRequestCount = a.readRequestsCount.get() + b.readRequestsCount.get();
+    dstRegion.readRequestsCount.set(totalReadRequestCount);
+    dstRegion.opMetrics.setReadRequestCountMetrics(totalReadRequestCount);
+    
+    long totalWriteRequestCount = a.writeRequestsCount.get() + b.writeRequestsCount.get();
+    dstRegion.writeRequestsCount.set(totalWriteRequestCount);
+    dstRegion.opMetrics.setWriteRequestCountMetrics(totalWriteRequestCount);
+    
     dstRegion.initialize();
     dstRegion.compactStores();
     if (LOG.isDebugEnabled()) {
@@ -4946,6 +4961,7 @@ public class HRegion implements HeapSize { // , Writable{
     // Lock row
     startRegionOperation();
     this.writeRequestsCount.increment();
+    this.opMetrics.setWriteRequestCountMetrics(this.writeRequestsCount.get());
     try {
       Integer lid = getLock(lockid, row, true);
       lock(this.updatesLock.readLock());
@@ -5116,6 +5132,7 @@ public class HRegion implements HeapSize { // , Writable{
     // Lock row
     startRegionOperation();
     this.writeRequestsCount.increment();
+    this.opMetrics.setWriteRequestCountMetrics(this.writeRequestsCount.get());
     try {
       Integer lid = getLock(lockid, row, true);
       lock(this.updatesLock.readLock());
@@ -5234,6 +5251,7 @@ public class HRegion implements HeapSize { // , Writable{
     long result = amount;
     startRegionOperation();
     this.writeRequestsCount.increment();
+    this.opMetrics.setWriteRequestCountMetrics(this.writeRequestsCount.get());
     try {
       Integer lid = obtainRowLock(row);
       lock(this.updatesLock.readLock());
@@ -5619,6 +5637,24 @@ public class HRegion implements HeapSize { // , Writable{
     return coprocessorHost;
   }
 
+  /*
+   * Set the read request count defined in opMetrics
+   * @param value absolute value of read request count
+   */
+  public void setOpMetricsReadRequestCount(long value)
+  {
+    this.opMetrics.setReadRequestCountMetrics(value);
+  }
+  
+  /*
+   * Set the write request count defined in opMetrics
+   * @param value absolute value of write request count
+   */
+  public void setOpMetricsWriteRequestCount(long value)
+  {
+    this.opMetrics.setWriteRequestCountMetrics(value);
+  }
+  
   /** @param coprocessorHost the new coprocessor host */
   public void setCoprocessorHost(final RegionCoprocessorHost coprocessorHost) {
     this.coprocessorHost = coprocessorHost;
