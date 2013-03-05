@@ -175,7 +175,7 @@ public class Threads {
       ThreadFactory threadFactory) {
     ThreadPoolExecutor boundedCachedThreadPool =
       new ThreadPoolExecutor(maxCachedThread, maxCachedThread, timeout,
-        TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), threadFactory);
+        unit, new LinkedBlockingQueue<Runnable>(), threadFactory);
     // allow the core pool threads timeout and terminate
     boundedCachedThreadPool.allowCoreThreadTimeOut(true);
     return boundedCachedThreadPool;
