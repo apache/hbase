@@ -171,7 +171,7 @@ public class TestSplitTransactionOnCluster {
 
       RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
       Map<String, RegionState> rit = regionStates.getRegionsInTransition();
-      
+
       for (int i=0; rit.containsKey(hri.getTableNameAsString()) && i<100; i++) {
         Thread.sleep(100);
       }
@@ -208,7 +208,7 @@ public class TestSplitTransactionOnCluster {
    * @throws InterruptedException
    * @throws NodeExistsException
    * @throws KeeperException
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   @Test (timeout = 300000) public void testRSSplitEphemeralsDisappearButDaughtersAreOnlinedAfterShutdownHandling()
   throws IOException, InterruptedException, NodeExistsException, KeeperException,
@@ -454,6 +454,9 @@ public class TestSplitTransactionOnCluster {
       // Assert daughters are online and ONLY the original daughters -- that
       // fixup didn't insert one during server shutdown recover.
       regions = cluster.getRegions(tableName);
+      for (HRegion d: daughters) {
+        LOG.info("Regions after crash: " + d);
+      }
       assertEquals(daughters.size(), regions.size());
       for (HRegion r: regions) {
         LOG.info("Regions post crash " + r);
@@ -465,16 +468,16 @@ public class TestSplitTransactionOnCluster {
       t.close();
     }
   }
-  
+
   /**
    * Verifies HBASE-5806.  When splitting is partially done and the master goes down
    * when the SPLIT node is in either SPLIT or SPLITTING state.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws NodeExistsException
    * @throws KeeperException
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   @Test(timeout = 300000)
   public void testMasterRestartWhenSplittingIsPartial()
@@ -503,7 +506,7 @@ public class TestSplitTransactionOnCluster {
       // it FAIL the processing of split.
       SplitRegionHandler.TEST_SKIP = true;
       // Now try splitting and it should work.
-      
+
       this.admin.split(hri.getRegionNameAsString());
       checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
@@ -525,7 +528,7 @@ public class TestSplitTransactionOnCluster {
 
       this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
 
-      // update the hri to be offlined and splitted. 
+      // update the hri to be offlined and splitted.
       hri.setOffline(true);
       hri.setSplit(true);
       ServerName regionServerOfRegion = master.getAssignmentManager()
@@ -572,7 +575,7 @@ public class TestSplitTransactionOnCluster {
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
-      
+
       this.admin.split(hri.getRegionNameAsString());
       checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
@@ -615,12 +618,12 @@ public class TestSplitTransactionOnCluster {
   }
 
   /**
-   * 
+   *
    * While transitioning node from RS_ZK_REGION_SPLITTING to
    * RS_ZK_REGION_SPLITTING during region split,if zookeper went down split always
-   * fails for the region. HBASE-6088 fixes this scenario. 
+   * fails for the region. HBASE-6088 fixes this scenario.
    * This test case is to test the znode is deleted(if created) or not in roll back.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
@@ -630,10 +633,10 @@ public class TestSplitTransactionOnCluster {
       InterruptedException, KeeperException {
     testSplitBeforeSettingSplittingInZKInternals();
   }
-  
+
   @Test(timeout = 20000)
   public void testTableExistsIfTheSpecifiedTableRegionIsSplitParent() throws Exception {
-    final byte[] tableName = 
+    final byte[] tableName =
         Bytes.toBytes("testTableExistsIfTheSpecifiedTableRegionIsSplitParent");
     HRegionServer regionServer = null;
     List<HRegion> regions = null;
@@ -738,7 +741,7 @@ public class TestSplitTransactionOnCluster {
         Thread.sleep(100);
       }
       assertTrue("Table not online", cluster.getRegions(tableName).size() != 0);
-        
+
       List<HRegion> regions = null;
       for (int i=0; i<100; i++) {
         regions = cluster.getRegions(tableName);
@@ -791,7 +794,7 @@ public class TestSplitTransactionOnCluster {
       }
     }
   }
-  
+
   public static class MockedSplitTransaction extends SplitTransaction {
 
     private HRegion currentRegion;
@@ -799,7 +802,7 @@ public class TestSplitTransactionOnCluster {
       super(r, splitrow);
       this.currentRegion = r;
     }
-    
+
     @Override
     void transitionZKNode(Server server, RegionServerServices services, HRegion a, HRegion b)
         throws IOException {
@@ -812,7 +815,7 @@ public class TestSplitTransactionOnCluster {
           }
         } catch (InterruptedException e) {
         }
-       
+
       }
       super.transitionZKNode(server, services, a, b);
       if (this.currentRegion.getRegionInfo().getTableNameAsString()
@@ -836,7 +839,7 @@ public class TestSplitTransactionOnCluster {
   }
 
   private List<HRegion> checkAndGetDaughters(byte[] tableName)
-      throws InterruptedException {    
+      throws InterruptedException {
     List<HRegion> daughters = null;
     // try up to 10s
     for (int i=0; i<100; i++) {
@@ -848,11 +851,11 @@ public class TestSplitTransactionOnCluster {
     return daughters;
   }
 
-  private MockMasterWithoutCatalogJanitor abortAndWaitForMaster() 
+  private MockMasterWithoutCatalogJanitor abortAndWaitForMaster()
   throws IOException, InterruptedException {
     cluster.abortMaster(0);
     cluster.waitOnMaster(0);
-    cluster.getConfiguration().setClass(HConstants.MASTER_IMPL, 
+    cluster.getConfiguration().setClass(HConstants.MASTER_IMPL,
     		MockMasterWithoutCatalogJanitor.class, HMaster.class);
     MockMasterWithoutCatalogJanitor master = null;
     master = (MockMasterWithoutCatalogJanitor) cluster.startMaster().getMaster();
@@ -983,7 +986,7 @@ public class TestSplitTransactionOnCluster {
       fail("Waiting too long for daughter regions");
     }
   }
-  
+
   private HTable createTableAndWait(byte[] tableName, byte[] cf) throws IOException,
       InterruptedException {
     HTable t = TESTING_UTIL.createTable(tableName, cf);
