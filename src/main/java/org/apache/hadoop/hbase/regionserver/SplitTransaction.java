@@ -700,8 +700,12 @@ public class SplitTransaction {
     HRegion r = HRegion.newHRegion(this.parent.getTableDir(),
       this.parent.getLog(), fs, this.parent.getConf(),
       hri, this.parent.getTableDesc(), rsServices);
-    r.readRequestsCount.set(this.parent.getReadRequestsCount() / 2);
-    r.writeRequestsCount.set(this.parent.getWriteRequestsCount() / 2);
+    long halfParentReadRequestCount = this.parent.getReadRequestsCount() / 2;
+    r.readRequestsCount.set(halfParentReadRequestCount);
+    r.setOpMetricsReadRequestCount(halfParentReadRequestCount);
+    long halfParentWriteRequest = this.parent.getWriteRequestsCount() / 2;
+    r.writeRequestsCount.set(halfParentWriteRequest);
+    r.setOpMetricsWriteRequestCount(halfParentWriteRequest);    
     HRegion.moveInitialFilesIntoPlace(fs, regionDir, r.getRegionDir());
     return r;
   }

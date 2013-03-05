@@ -46,6 +46,8 @@ public class OperationMetrics {
   private static final String MULTIPUT_KEY = "multiput_";
   private static final String MULTIDELETE_KEY = "multidelete_";
   private static final String APPEND_KEY = "append_";
+  private static final String READREQUESTCOUNT_KEY = "readrequestcount";
+  private static final String WRITEREQUESTCOUNT_KEY = "writerequestcount";
   
   /** Conf key controlling whether we should expose metrics.*/
   private static final String CONF_KEY =
@@ -98,6 +100,27 @@ public class OperationMetrics {
     this(null, null);
   }
 
+    /*
+     * This is used in set the read request count that is going to be exposed to 
+     * hadoop metric framework.
+     * @param value absolute value of read account
+     */
+    public void setReadRequestCountMetrics(long value) {
+      doSetNumericPersistentMetrics(READREQUESTCOUNT_KEY, value);
+    }
+
+    /*
+     * This is used in set the read request count that is going to be exposed to 
+     * hadoop metric framework.
+     * @param value absolute value of write account
+     */
+    public void setWriteRequestCountMetrics(long value) {
+      doSetNumericPersistentMetrics(WRITEREQUESTCOUNT_KEY, value);
+    }
+    
+    private void doSetNumericPersistentMetrics(String key, long value) {      
+       RegionMetricsStorage.setNumericPersistentMetric(this.regionMetrixPrefix+key, value); 
+    }    
 
   /**
    * Update the stats associated with {@link HTable#put(java.util.List)}.
@@ -190,11 +213,15 @@ public class OperationMetrics {
     doUpdateTimeVarying(columnFamilies, DELETE_KEY, value);
   }
   
+
+
   /**
-   * This deletes all old metrics this instance has ever created or updated.
+   * This deletes all old non-persistent metrics this instance has ever created or updated.
+   * for persistent metrics, only delete for the region to be closed
+   * @param regionEncodedName the region that is to be closed
    */
-  public void closeMetrics() {
-    RegionMetricsStorage.clear();
+  public void closeMetrics(String regionEncodedName) {
+    RegionMetricsStorage.clear(regionEncodedName);
   }
 
   /**

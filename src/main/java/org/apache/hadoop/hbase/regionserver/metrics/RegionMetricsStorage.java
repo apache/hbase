@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver.metrics;
 
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -88,6 +89,9 @@ public class RegionMetricsStorage {
     oldVal.getSecond().incrementAndGet(); // increment ops by 1
   }
 
+  public static void setNumericPersistentMetric(String key, long amount) {
+    numericPersistentMetrics.put(key, new AtomicLong(amount));
+  }
   public static void incrNumericPersistentMetric(String key, long amount) {
     AtomicLong oldVal = numericPersistentMetrics.get(key);
     if (oldVal == null) {
@@ -126,11 +130,18 @@ public class RegionMetricsStorage {
   }
 
   /**
-   * Clear all copies of the metrics this stores.
+   * Clear the timevarying and numeric metrics for all regions in this region server
+   * Clear the numericPersistentMerics for only the region being closed.
    */
-  public static void clear() {
+  public static void clear(String regionEncodedName) {
     timeVaryingMetrics.clear();
     numericMetrics.clear();
-    numericPersistentMetrics.clear();
+    for (Entry<String, AtomicLong> entry : RegionMetricsStorage.getNumericPersistentMetrics().entrySet()) {
+     if (entry.getKey().contains(regionEncodedName))
+     {
+       String keyName = entry.getKey();
+       numericPersistentMetrics.remove(keyName);
+     }
+    }
   }
 }
