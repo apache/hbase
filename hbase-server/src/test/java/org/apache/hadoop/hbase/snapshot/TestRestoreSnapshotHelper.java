@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -110,7 +110,7 @@ public class TestRestoreSnapshotHelper {
     String[] files = getHFiles(HTableDescriptor.getTableDir(rootDir, htdClone.getName()));
     assertEquals(2, files.length);
     assertTrue(files[0] + " should be a HFileLink", HFileLink.isHFileLink(files[0]));
-    assertTrue(files[1] + " should be a Referene", StoreFile.isReference(files[1]));
+    assertTrue(files[1] + " should be a Referene", StoreFileInfo.isReference(files[1]));
     assertEquals(sourceHtd.getNameAsString(), HFileLink.getReferencedTableName(files[0]));
     assertEquals(TEST_HFILE, HFileLink.getReferencedHFileName(files[0]));
     Path refPath = getReferredToFile(files[1]);
@@ -182,7 +182,7 @@ public class TestRestoreSnapshotHelper {
 
   private Path getReferredToFile(final String referenceName) {
     Path fakeBasePath = new Path(new Path("table", "region"), "cf");
-    return StoreFile.getReferredToFile(new Path(fakeBasePath, referenceName));
+    return StoreFileInfo.getReferredToFile(new Path(fakeBasePath, referenceName));
   }
 
   private String[] getHFiles(final Path tableDir) throws IOException {

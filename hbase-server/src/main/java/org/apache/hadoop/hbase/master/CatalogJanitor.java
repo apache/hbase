@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -301,14 +301,13 @@ class CatalogJanitor extends Chore {
     HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTableName());
 
     for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
-      Path p = HStore.getStoreHomedir(tabledir, daughter.getEncodedName(),
-        family.getName());
+      Path p = HStore.getStoreHomedir(tabledir, daughter, family.getName());
       if (!fs.exists(p)) continue;
       // Look for reference files.  Call listStatus with anonymous instance of PathFilter.
       FileStatus [] ps = FSUtils.listStatus(fs, p,
           new PathFilter () {
             public boolean accept(Path path) {
-              return StoreFile.isReference(path);
+              return StoreFileInfo.isReference(path);
             }
           }
       );

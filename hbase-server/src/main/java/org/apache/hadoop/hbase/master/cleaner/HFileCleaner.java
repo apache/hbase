@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 /**
  * This Chore, every time it runs, will clear the HFiles in the hfile archive
  * folder that are deletable for each HFile cleaner in the chain.
@@ -52,7 +52,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
     if (HFileLink.isBackReferencesDir(file) || HFileLink.isBackReferencesDir(file.getParent())) {
       return true;
     }
-    return StoreFile.validateStoreFileName(file.getName());
+    return StoreFileInfo.validateStoreFileName(file.getName());
   }
 
   /**

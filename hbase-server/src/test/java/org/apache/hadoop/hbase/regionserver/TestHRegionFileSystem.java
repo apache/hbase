@@ -24,6 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -68,6 +69,36 @@ public class TestHRegionFileSystem {
     // Delete the region
     HRegionFileSystem.deleteRegionFromFileSystem(conf, fs, rootDir, hri);
     assertFalse("The region folder should be removed", fs.exists(regionDir));
+
+    fs.delete(rootDir, true);
+  }
+
+  @Test
+  public void testTempAndCommit() throws IOException {
+    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS("testTempAndCommit");
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Configuration conf = TEST_UTIL.getConfiguration();
+
+    // Create a Region
+    String familyName = "cf";
+    HRegionInfo hri = new HRegionInfo(Bytes.toBytes("TestTable"));
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
+
+    // New region, no store files
+    Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName);
+    assertEquals(0, storeFiles != null ? storeFiles.size() : 0);
+
+    // Create a new file in temp (no files in the family)
+    Path buildPath = regionFs.createTempName();
+    fs.createNewFile(buildPath);
+    storeFiles = regionFs.getStoreFiles(familyName);
+    assertEquals(0, storeFiles != null ? storeFiles.size() : 0);
+
+    // commit the file
+    Path dstPath = regionFs.commitStoreFile(familyName, buildPath);
+    storeFiles = regionFs.getStoreFiles(familyName);
+    assertEquals(0, storeFiles != null ? storeFiles.size() : 0);
+    assertFalse(fs.exists(buildPath));
 
     fs.delete(rootDir, true);
   }

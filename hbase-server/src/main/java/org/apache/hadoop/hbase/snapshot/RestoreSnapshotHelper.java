@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
@@ -453,7 +453,7 @@ public class RestoreSnapshotHelper {
       final String hfileName) throws IOException {
     if (HFileLink.isHFileLink(hfileName)) {
       HFileLink.createFromHFileLink(conf, fs, familyDir, hfileName);
-    } else if (StoreFile.isReference(hfileName)) {
+    } else if (StoreFileInfo.isReference(hfileName)) {
       restoreReferenceFile(familyDir, regionInfo, hfileName);
     } else {
       HFileLink.create(conf, fs, familyDir, regionInfo, hfileName);
@@ -482,7 +482,7 @@ public class RestoreSnapshotHelper {
       final String hfileName) throws IOException {
     // Extract the referred information (hfile name and parent region)
     String tableName = snapshotDesc.getTable();
-    Path refPath = StoreFile.getReferredToFile(new Path(new Path(new Path(tableName,
+    Path refPath = StoreFileInfo.getReferredToFile(new Path(new Path(new Path(tableName,
         regionInfo.getEncodedName()), familyDir.getName()), hfileName));
     String snapshotRegionName = refPath.getParent().getParent().getName();
     String fileName = refPath.getName();

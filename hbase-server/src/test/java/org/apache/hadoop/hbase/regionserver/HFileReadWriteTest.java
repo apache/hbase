@@ -344,20 +344,10 @@ public class HFileReadWriteTest {
     columnDescriptor.setDataBlockEncoding(dataBlockEncoding);
     HRegionInfo regionInfo = new HRegionInfo();
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
-    HRegion region = new HRegion(outputDir, null, fs, conf, regionInfo, htd,
-        null);
-    HStore store = new HStore(outputDir, region, columnDescriptor, fs, conf);
+    HRegion region = new HRegion(outputDir, null, fs, conf, regionInfo, htd, null);
+    HStore store = new HStore(region, columnDescriptor, conf);
 
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf,
-        new CacheConfig(conf), fs, blockSize)
-            .withOutputDir(outputDir)
-            .withCompression(compression)
-            .withDataBlockEncoder(dataBlockEncoder)
-            .withBloomType(bloomType)
-            .withMaxKeyCount(maxKeyCount)
-            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
-            .withBytesPerChecksum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
-            .build();
+    StoreFile.Writer writer = store.createWriterInTmp(maxKeyCount, compression, false);
 
     StatisticsPrinter statsPrinter = new StatisticsPrinter();
     statsPrinter.startThread();

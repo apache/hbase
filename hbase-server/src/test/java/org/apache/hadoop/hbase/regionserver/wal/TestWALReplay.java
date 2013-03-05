@@ -574,9 +574,8 @@ public class TestWALReplay {
     HRegion region = new HRegion(basedir, wal, this.fs, this.conf, hri, htd,
         rsServices) {
       @Override
-      protected HStore instantiateHStore(Path tableDir, HColumnDescriptor c)
-          throws IOException {
-        return new HStore(tableDir, this, c, fs, conf) {
+      protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
+        return new HStore(this, family, conf) {
           @Override
           protected Path flushCache(final long logCacheFlushId,
               SortedSet<KeyValue> snapshot,

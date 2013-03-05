@@ -3426,8 +3426,7 @@ public class TestHRegion extends HBaseTestCase {
       // static method is used by load balancer or other components
       HDFSBlocksDistribution blocksDistribution2 =
         HRegion.computeHDFSBlocksDistribution(htu.getConfiguration(),
-        firstRegion.getTableDesc(),
-        firstRegion.getRegionInfo().getEncodedName());
+        firstRegion.getTableDesc(), firstRegion.getRegionInfo());
       long uniqueBlocksWeight2 =
         blocksDistribution2.getUniqueBlocksTotalWeight();
 

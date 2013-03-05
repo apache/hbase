@@ -165,7 +165,7 @@ public class TestCacheOnWriteInSchema {
     hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
 
     region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
-    store = new HStore(basedir, region, hcd, fs, conf);
+    store = new HStore(region, hcd, conf);
   }
 
   @After

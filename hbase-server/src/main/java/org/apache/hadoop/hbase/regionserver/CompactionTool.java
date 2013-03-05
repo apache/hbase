@@ -112,12 +112,12 @@ public class CompactionTool extends Configured implements Tool {
         Path regionDir = path.getParent();
         Path tableDir = regionDir.getParent();
         HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(fs, tableDir);
-        HRegion region = loadRegion(fs, conf, htd, regionDir);
-        compactStoreFiles(region, path, compactOnce);
+        HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+        compactStoreFiles(tableDir, htd, hri, path.getName(), compactOnce);
       } else if (isRegionDir(fs, path)) {
         Path tableDir = path.getParent();
         HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(fs, tableDir);
-        compactRegion(htd, path, compactOnce);
+        compactRegion(tableDir, htd, path, compactOnce);
       } else if (isTableDir(fs, path)) {
         compactTable(path, compactOnce);
       } else {
@@ -129,19 +129,16 @@ public class CompactionTool extends Configured implements Tool {
     private void compactTable(final Path tableDir, final boolean compactOnce)
         throws IOException {
       HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(fs, tableDir);
-      LOG.info("Compact table=" + htd.getNameAsString());
       for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
-        compactRegion(htd, regionDir, compactOnce);
+        compactRegion(tableDir, htd, regionDir, compactOnce);
       }
     }
 
-    private void compactRegion(final HTableDescriptor htd, final Path regionDir,
-        final boolean compactOnce) throws IOException {
-      HRegion region = loadRegion(fs, conf, htd, regionDir);
-      LOG.info("Compact table=" + htd.getNameAsString() +
-        " region=" + region.getRegionNameAsString());
+    private void compactRegion(final Path tableDir, final HTableDescriptor htd,
+        final Path regionDir, final boolean compactOnce) throws IOException {
+      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
       for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
-        compactStoreFiles(region, familyDir, compactOnce);
+        compactStoreFiles(tableDir, htd, hri, familyDir.getName(), compactOnce);
       }
     }
 
@@ -150,12 +147,13 @@ public class CompactionTool extends Configured implements Tool {
      * If the compact once flag is not specified, execute the compaction until
      * no more compactions are needed. Uses the Configuration settings provided.
      */
-    private void compactStoreFiles(final HRegion region, final Path familyDir,
-        final boolean compactOnce) throws IOException {
-      LOG.info("Compact table=" + region.getTableDesc().getNameAsString() +
-        " region=" + region.getRegionNameAsString() +
-        " family=" + familyDir.getName());
-      HStore store = getStore(region, familyDir);
+    private void compactStoreFiles(final Path tableDir, final HTableDescriptor htd,
+        final HRegionInfo hri, final String familyName, final boolean compactOnce)
+        throws IOException {
+      HStore store = getStore(conf, fs, tableDir, htd, hri, familyName, tmpDir);
+      LOG.info("Compact table=" + htd.getNameAsString() +
+        " region=" + hri.getRegionNameAsString() +
+        " family=" + familyName);
       do {
         CompactionContext compaction = store.requestCompaction();
         if (compaction == null) break;
@@ -174,29 +172,17 @@ public class CompactionTool extends Configured implements Tool {
      * Create a "mock" HStore that uses the tmpDir specified by the user and
      * the store dir to compact as source.
      */
-    private HStore getStore(final HRegion region, final Path storeDir) throws IOException {
-      byte[] familyName = Bytes.toBytes(storeDir.getName());
-      HColumnDescriptor hcd = region.getTableDesc().getFamily(familyName);
-      // Create a Store w/ check of hbase.rootdir blanked out and return our
-      // list of files instead of have Store search its home dir.
-      return new HStore(tmpDir, region, hcd, fs, conf) {
+    private static HStore getStore(final Configuration conf, final FileSystem fs,
+        final Path tableDir, final HTableDescriptor htd, final HRegionInfo hri,
+        final String familyName, final Path tempDir) throws IOException {
+      HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tableDir, hri) {
         @Override
-        public FileStatus[] getStoreFiles() throws IOException {
-          return this.fs.listStatus(getHomedir());
-        }
-
-        @Override
-        Path createStoreHomeDir(FileSystem fs, Path homedir) throws IOException {
-          return storeDir;
+        public Path getTempDir() {
+          return tempDir;
         }
       };
-    }
-
-    private static HRegion loadRegion(final FileSystem fs, final Configuration conf,
-        final HTableDescriptor htd, final Path regionDir) throws IOException {
-      Path rootDir = regionDir.getParent().getParent();
-      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-      return HRegion.createHRegion(hri, rootDir, conf, htd, null, false, true);
+      HRegion region = new HRegion(regionFs, null, conf, htd, null);
+      return new HStore(region, htd.getFamily(Bytes.toBytes(familyName)), conf);
     }
   }
 

@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -222,8 +223,11 @@ public class HFileArchiveTestingUtil {
    * @param store store that is archiving files
    * @return {@link Path} to the store archive directory for the given region
    */
-  public static Path getStoreArchivePath(Configuration conf, HRegion region, Store store) {
-    return HFileArchiveUtil.getStoreArchivePath(conf, region, store.getFamily().getName());
+  public static Path getStoreArchivePath(Configuration conf, HRegion region, Store store)
+      throws IOException {
+    HRegionInfo hri = region.getRegionInfo();
+    return HFileArchiveUtil.getStoreArchivePath(conf, hri.getTableNameAsString(), hri,
+        store.getFamily().getNameAsString());
   }
 
   public static Path getStoreArchivePath(HBaseTestingUtility util, String tableName,

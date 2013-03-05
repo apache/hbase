@@ -87,7 +87,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
@@ -619,7 +619,7 @@ public class HBaseFsck extends Configured implements Tool {
     for (Path path: allFiles.values()) {
       boolean isReference = false;
       try {
-        isReference = StoreFile.isReference(path);
+        isReference = StoreFileInfo.isReference(path);
       } catch (Throwable t) {
         // Ignore. Some files may not be store files at all.
         // For example, files under .oldlogs folder in .META.
@@ -628,7 +628,7 @@ public class HBaseFsck extends Configured implements Tool {
       }
       if (!isReference) continue;
 
-      Path referredToFile = StoreFile.getReferredToFile(path);
+      Path referredToFile = StoreFileInfo.getReferredToFile(path);
       if (fs.exists(referredToFile)) continue;  // good, expected
 
       // Found a lingering reference file

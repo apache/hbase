@@ -699,7 +699,7 @@ public class TestHFileOutputFormat  {
       // deep inspection: get the StoreFile dir
       final Path storePath = HStore.getStoreHomedir(
           HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), TABLE_NAME),
-          admin.getTableRegions(TABLE_NAME).get(0).getEncodedName(),
+          admin.getTableRegions(TABLE_NAME).get(0),
           FAMILIES[0]);
       assertEquals(0, fs.listStatus(storePath).length);
 
@@ -767,7 +767,7 @@ public class TestHFileOutputFormat  {
       // deep inspection: get the StoreFile dir
       final Path storePath = HStore.getStoreHomedir(
           HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), TABLE_NAME),
-          admin.getTableRegions(TABLE_NAME).get(0).getEncodedName(),
+          admin.getTableRegions(TABLE_NAME).get(0),
           FAMILIES[0]);
       assertEquals(0, fs.listStatus(storePath).length);
 
