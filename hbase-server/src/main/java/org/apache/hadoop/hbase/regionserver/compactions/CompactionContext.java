@@ -27,7 +27,8 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 
 
 /**
- * This class holds all "physical" details necessary to run a compaction.
+ * This class holds all "physical" details necessary to run a compaction,
+ * and abstracts away the details specific to a particular compaction.
  * It also has compaction request with all the logical details.
  * Hence, this class is basically the compaction.
  */
