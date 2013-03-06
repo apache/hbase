@@ -1,3 +1,5 @@
+
+
 /**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -457,9 +459,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     // Set this just-started cluster as our filesystem.
     FileSystem fs = this.dfsCluster.getFileSystem();
-    this.conf.set("fs.defaultFS", fs.getUri().toString());
-    // Do old style too just to be safe.
-    this.conf.set("fs.default.name", fs.getUri().toString());
+    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
 
     // Wait for the cluster to be totally up
     this.dfsCluster.waitClusterUp();
@@ -479,9 +479,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     // Set this just-started cluster as our filesystem.
     FileSystem fs = this.dfsCluster.getFileSystem();
-    this.conf.set("fs.defaultFS", fs.getUri().toString());
-    // Do old style too just to be safe.
-    this.conf.set("fs.default.name", fs.getUri().toString());
+    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
 
     // Wait for the cluster to be totally up
     this.dfsCluster.waitClusterUp();
@@ -573,8 +571,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       this.dfsCluster.shutdown();
       dfsCluster = null;
       dataTestDirOnTestFS = null;
-      this.conf.set("fs.defaultFS", "file:///");
-      this.conf.set("fs.default.name", "file:///");
+      FSUtils.setFsDefault(this.conf, new Path("file:///"));
     }
   }
 
@@ -923,7 +920,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public Path createRootDir() throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
     Path hbaseRootdir = getDefaultRootDirPath();
-    this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
+    FSUtils.setRootDir(this.conf, hbaseRootdir);
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
     return hbaseRootdir;

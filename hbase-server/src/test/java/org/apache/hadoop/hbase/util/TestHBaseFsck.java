@@ -268,7 +268,7 @@ public class TestHBaseFsck {
 
         if (regionInfoOnly) {
           LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
-          Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+          Path rootDir = FSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
           Path p = new Path(rootDir + "/" + htd.getNameAsString(), hri.getEncodedName());
           Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
@@ -277,7 +277,7 @@ public class TestHBaseFsck {
 
         if (hdfs) {
           LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
-          Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+          Path rootDir = FSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
           Path p = new Path(rootDir + "/" + htd.getNameAsString(), hri.getEncodedName());
           HBaseFsck.debugLsr(conf, p);
@@ -414,7 +414,8 @@ public class TestHBaseFsck {
       setupTable(table);
       HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
-      Path hbaseTableDir = new Path(conf.get(HConstants.HBASE_DIR) + "/" + table );
+      Path hbaseTableDir = HTableDescriptor.getTableDir(
+        FSUtils.getRootDir(conf), Bytes.toBytes(table));
       fs = hbaseTableDir.getFileSystem(conf);
       FileStatus status = FSTableDescriptors.getTableInfoPath(fs, hbaseTableDir);
       tableinfo = status.getPath();
@@ -1055,7 +1056,7 @@ public class TestHBaseFsck {
   @Test
   public void testNoVersionFile() throws Exception {
     // delete the hbase.version file
-    Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    Path rootDir = FSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
     Path versionFile = new Path(rootDir, HConstants.VERSION_FILE_NAME);
     fs.delete(versionFile, true);
@@ -1085,8 +1086,7 @@ public class TestHBaseFsck {
       ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
 
       FileSystem filesystem = FileSystem.get(conf);
-      Path rootdir = filesystem.makeQualified(new Path(conf
-          .get(HConstants.HBASE_DIR)));
+      Path rootdir = FSUtils.getRootDir(conf);
 
       byte[][] SPLIT_KEYS = new byte[][] { new byte[0], Bytes.toBytes("aaa"),
           Bytes.toBytes("bbb"), Bytes.toBytes("ccc"), Bytes.toBytes("ddd") };

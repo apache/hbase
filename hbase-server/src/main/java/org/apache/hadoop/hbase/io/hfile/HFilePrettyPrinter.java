@@ -169,11 +169,8 @@ public class HFilePrettyPrinter {
    */
   public int run(String[] args) {
     conf = HBaseConfiguration.create();
-    conf.set("fs.defaultFS",
-        conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
-    conf.set("fs.default.name",
-        conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
     try {
+      FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
       if (!parseOptions(args))
         return 1;
     } catch (IOException ex) {

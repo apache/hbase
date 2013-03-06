@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 /**
@@ -360,10 +361,8 @@ public class HLogPrettyPrinter {
     }
     // get configuration, file system, and process the given files
     Configuration conf = HBaseConfiguration.create();
-    conf.set("fs.defaultFS",
-        conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
-    conf.set("fs.default.name",
-        conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
+    FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
+
     // begin output
     printer.beginPersistentOutput();
     for (Object f : files) {

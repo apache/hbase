@@ -111,8 +111,8 @@ public class TestCatalogJanitor {
           HRegionInfo.FIRST_META_REGIONINFO);
       // Set hbase.rootdir into test dir.
       FileSystem fs = FileSystem.get(this.c);
-      Path rootdir = fs.makeQualified(new Path(this.c.get(HConstants.HBASE_DIR)));
-      this.c.set(HConstants.HBASE_DIR, rootdir.toString());
+      Path rootdir = FSUtils.getRootDir(this.c);
+      FSUtils.setRootDir(this.c, rootdir);
       this.ct = Mockito.mock(CatalogTracker.class);
       AdminProtocol hri = Mockito.mock(AdminProtocol.class);
       Mockito.when(this.ct.getConnection()).thenReturn(this.connection);
@@ -744,8 +744,8 @@ public class TestCatalogJanitor {
     Path testdir = htu.getDataTestDir(subdir);
     FileSystem fs = FileSystem.get(htu.getConfiguration());
     if (fs.exists(testdir)) assertTrue(fs.delete(testdir, true));
-    htu.getConfiguration().set(HConstants.HBASE_DIR, testdir.toString());
-    return htu.getConfiguration().get(HConstants.HBASE_DIR);
+    FSUtils.setRootDir(htu.getConfiguration(), testdir);
+    return FSUtils.getRootDir(htu.getConfiguration()).toString();
   }
 
   /**

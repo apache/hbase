@@ -699,21 +699,21 @@ public class TestHLog  {
 
   @Test
   public void testGetServerNameFromHLogDirectoryName() throws IOException {
-    String hl = conf.get(HConstants.HBASE_DIR) + "/"+
+    String hl = FSUtils.getRootDir(conf) + "/"+
         HLogUtil.getHLogDirectoryName(new ServerName("hn", 450, 1398).toString());
 
     // Must not throw exception
     Assert.assertNull(HLogUtil.getServerNameFromHLogDirectoryName(conf, null));
     Assert.assertNull(HLogUtil.getServerNameFromHLogDirectoryName(conf,
-        conf.get(HConstants.HBASE_DIR) + "/"));
+        FSUtils.getRootDir(conf).toUri().toString()));
     Assert.assertNull( HLogUtil.getServerNameFromHLogDirectoryName(conf, "") );
     Assert.assertNull( HLogUtil.getServerNameFromHLogDirectoryName(conf, "                  ") );
     Assert.assertNull( HLogUtil.getServerNameFromHLogDirectoryName(conf, hl) );
     Assert.assertNull( HLogUtil.getServerNameFromHLogDirectoryName(conf, hl+"qdf") );
     Assert.assertNull( HLogUtil.getServerNameFromHLogDirectoryName(conf, "sfqf"+hl+"qdf") );
 
-    Assert.assertNotNull( HLogUtil.getServerNameFromHLogDirectoryName(conf, conf.get(
-        HConstants.HBASE_DIR) +
+    Assert.assertNotNull( HLogUtil.getServerNameFromHLogDirectoryName(conf,
+      FSUtils.getRootDir(conf).toUri().toString() +
         "/.logs/localhost,32984,1343316388997/localhost%2C32984%2C1343316388997.1343316390417"
         ));
     Assert.assertNotNull( HLogUtil.getServerNameFromHLogDirectoryName(conf, hl+"/qdf") );

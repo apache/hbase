@@ -103,7 +103,7 @@ public class TestFlushSnapshotFromClient {
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-      ConstantSizeRegionSplitPolicy.class.getName());    
+      ConstantSizeRegionSplitPolicy.class.getName());
   }
 
   @Before
@@ -259,7 +259,7 @@ public class TestFlushSnapshotFromClient {
     String snapshotName = "flushSnapshotCreateListDestroy";
     // test creating the snapshot
     admin.snapshot(snapshotName, STRING_TABLE_NAME, SnapshotDescription.Type.FLUSH);
-    logFSTree(new Path(UTIL.getConfiguration().get(HConstants.HBASE_DIR)));
+    logFSTree(FSUtils.getRootDir(UTIL.getConfiguration()));
 
     // make sure we only have 1 matching snapshot
     List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
@@ -383,14 +383,14 @@ public class TestFlushSnapshotFromClient {
     }
 
     // dump for debugging
-    logFSTree(new Path(UTIL.getConfiguration().get(HConstants.HBASE_DIR)));
+    logFSTree(FSUtils.getRootDir(UTIL.getConfiguration()));
 
     List<SnapshotDescription> taken = admin.listSnapshots();
     int takenSize = taken.size();
     LOG.info("Taken " + takenSize + " snapshots:  " + taken);
     assertTrue("We expect at least 1 request to be rejected because of we concurrently" +
         " issued many requests", takenSize < ssNum && takenSize > 0);
-    // delete snapshots so subsequent tests are clean.  
+    // delete snapshots so subsequent tests are clean.
     for (SnapshotDescription ss : taken) {
       admin.deleteSnapshot(ss.getName());
     }

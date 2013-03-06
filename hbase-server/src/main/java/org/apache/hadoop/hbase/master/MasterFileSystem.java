@@ -115,9 +115,7 @@ public class MasterFileSystem {
     // Cover both bases, the old way of setting default fs and the new.
     // We're supposed to run on 0.20 and 0.21 anyways.
     this.fs = this.rootdir.getFileSystem(conf);
-    String fsUri = this.fs.getUri().toString();
-    conf.set("fs.default.name", fsUri);
-    conf.set("fs.defaultFS", fsUri);
+    FSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
     // make sure the fs has the same conf
     fs.setConf(conf);
     this.distributedLogSplitting =

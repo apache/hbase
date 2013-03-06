@@ -112,8 +112,7 @@ public abstract class HBaseTestCase extends TestCase {
           fs.delete(testDir, true);
         }
       } else {
-        this.testDir =
-          this.fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
+        this.testDir = FSUtils.getRootDir(conf);
       }
     } catch (Exception e) {
       LOG.fatal("error during setup", e);

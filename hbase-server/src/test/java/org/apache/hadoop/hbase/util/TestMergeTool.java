@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
@@ -125,9 +126,9 @@ public class TestMergeTool extends HBaseTestCase {
     this.dfsCluster = TEST_UTIL.startMiniDFSCluster(2);
     this.fs = this.dfsCluster.getFileSystem();
     System.out.println("fs=" + this.fs);
-    this.conf.set("fs.defaultFS", fs.getUri().toString());
+    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
     Path parentdir = fs.getHomeDirectory();
-    conf.set(HConstants.HBASE_DIR, parentdir.toString());
+    FSUtils.setRootDir(conf, parentdir);
     fs.mkdirs(parentdir);
     FSUtils.setVersion(fs, parentdir);
 
