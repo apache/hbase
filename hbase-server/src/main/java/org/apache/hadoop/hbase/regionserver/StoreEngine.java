@@ -39,14 +39,9 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 @InterfaceAudience.Private
 public abstract class StoreEngine<
   CP extends CompactionPolicy, C extends Compactor, SFM extends StoreFileManager> {
-  protected final Store store;
-  protected final Configuration conf;
-  protected final KVComparator comparator;
-
   protected CP compactionPolicy;
   protected C compactor;
   protected SFM storeFileManager;
-  private boolean isInitialized = false;
 
   /**
    * The name of the configuration parameter that specifies the class of
@@ -61,7 +56,6 @@ public abstract class StoreEngine<
    * @return Compaction policy to use.
    */
   public CompactionPolicy getCompactionPolicy() {
-    createComponentsOnce();
     return this.compactionPolicy;
   }
 
@@ -69,7 +63,6 @@ public abstract class StoreEngine<
    * @return Compactor to use.
    */
   public Compactor getCompactor() {
-    createComponentsOnce();
     return this.compactor;
   }
 
@@ -77,33 +70,27 @@ public abstract class StoreEngine<
    * @return Store file manager to use.
    */
   public StoreFileManager getStoreFileManager() {
-    createComponentsOnce();
     return this.storeFileManager;
   }
 
-  protected StoreEngine(Configuration conf, Store store, KVComparator comparator) {
-    this.store = store;
-    this.conf = conf;
-    this.comparator = comparator;
-  }
-
-  public CompactionContext createCompaction() {
-    createComponentsOnce();
-    return this.createCompactionContext();
-  }
-
-  protected abstract CompactionContext createCompactionContext();
+  /**
+   * Creates an instance of a compaction context specific to this engine.
+   * Doesn't actually select or start a compaction. See CompactionContext class comment.
+   * @return New CompactionContext object.
+   */
+  public abstract CompactionContext createCompaction() throws IOException;
 
   /**
    * Create the StoreEngine's components.
    */
-  protected abstract void createComponents();
+  protected abstract void createComponents(
+      Configuration conf, Store store, KVComparator kvComparator) throws IOException;
 
-  private void createComponentsOnce() {
-    if (isInitialized) return;
-    createComponents();
+  private void createComponentsOnce(
+      Configuration conf, Store store, KVComparator kvComparator) throws IOException {
+    assert compactor == null && compactionPolicy == null && storeFileManager == null;
+    createComponents(conf, store, kvComparator);
     assert compactor != null && compactionPolicy != null && storeFileManager != null;
-    isInitialized = true;
   }
 
   /**
@@ -114,13 +101,14 @@ public abstract class StoreEngine<
    * @param kvComparator KVComparator for storeFileManager.
    * @return StoreEngine to use.
    */
-  public static StoreEngine create(Store store, Configuration conf, KVComparator kvComparator)
-      throws IOException {
+  public static StoreEngine<?, ?, ?> create(
+      Store store, Configuration conf, KVComparator kvComparator) throws IOException {
     String className = conf.get(STORE_ENGINE_CLASS_KEY, DEFAULT_STORE_ENGINE_CLASS.getName());
     try {
-      return ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class, Store.class, KVComparator.class },
-          new Object[] { conf, store, kvComparator });
+      StoreEngine<?,?,?> se = ReflectionUtils.instantiateWithCustomCtor(
+          className, new Class[] { }, new Object[] { });
+      se.createComponentsOnce(conf, store, kvComparator);
+      return se;
     } catch (Exception e) {
       throw new IOException("Unable to load configured store engine '" + className + "'", e);
     }

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.security.User;
@@ -856,6 +858,23 @@ public class TestStore extends TestCase {
     init(getName() + "-hcd", conf, htd, hcd);
     assertTrue(store.throttleCompaction(anyValue + 1));
     assertFalse(store.throttleCompaction(anyValue));
+  }
+
+  public static class DummyStoreEngine extends DefaultStoreEngine {
+    public static DefaultCompactor lastCreatedCompactor = null;
+    @Override
+    protected void createComponents(
+        Configuration conf, Store store, KVComparator comparator) throws IOException {
+      super.createComponents(conf, store, comparator);
+      lastCreatedCompactor = this.compactor;
+    }
+  }
+
+  public void testStoreUsesSearchEngineOverride() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DummyStoreEngine.class.getName());
+    init(this.getName(), conf);
+    assertEquals(DummyStoreEngine.lastCreatedCompactor, this.store.storeEngine.getCompactor());
   }
 }
 

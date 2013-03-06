@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * Default StoreEngine creates the default compactor, policy, and store file manager, or
@@ -40,21 +41,40 @@ import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 public class DefaultStoreEngine extends StoreEngine<
   DefaultCompactionPolicy, DefaultCompactor, DefaultStoreFileManager> {
 
-  public DefaultStoreEngine(Configuration conf, Store store, KVComparator comparator) {
-    super(conf, store, comparator);
+  public static final String DEFAULT_COMPACTOR_CLASS_KEY =
+      "hbase.hstore.defaultengine.compactor.class";
+  public static final String DEFAULT_COMPACTION_POLICY_CLASS_KEY =
+      "hbase.hstore.defaultengine.compactionpolicy.class";
+
+  private static final Class<? extends DefaultCompactor>
+    DEFAULT_COMPACTOR_CLASS = DefaultCompactor.class;
+  private static final Class<? extends DefaultCompactionPolicy>
+    DEFAULT_COMPACTION_POLICY_CLASS = DefaultCompactionPolicy.class;
+
+  @Override
+  protected void createComponents(
+      Configuration conf, Store store, KVComparator kvComparator) throws IOException {
+    storeFileManager = new DefaultStoreFileManager(kvComparator, conf);
+    String className = conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
+    try {
+      compactor = ReflectionUtils.instantiateWithCustomCtor(className,
+          new Class[] { Configuration.class, Store.class }, new Object[] { conf, store });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured compactor '" + className + "'", e);
+    }
+    className = conf.get(
+        DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
+    try {
+      compactionPolicy = ReflectionUtils.instantiateWithCustomCtor(className,
+          new Class[] { Configuration.class, StoreConfigInformation.class },
+          new Object[] { conf, store });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured compaction policy '" + className + "'", e);
+    }
   }
 
   @Override
-  protected void createComponents() {
-    storeFileManager = new DefaultStoreFileManager(this.comparator, this.conf);
-
-    // TODO: compactor and policy may be separately pluggable, but must derive from default ones.
-    compactor = new DefaultCompactor(this.conf, this.store);
-    compactionPolicy = new DefaultCompactionPolicy(this.conf, this.store/*as StoreConfigInfo*/);
-  }
-
-  @Override
-  protected CompactionContext createCompactionContext() {
+  public CompactionContext createCompaction() {
     return new DefaultCompactionContext();
   }
 
