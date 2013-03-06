@@ -28,6 +28,7 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -986,29 +987,61 @@ public abstract class FSUtils {
   }
 
   /**
-   * A {@link PathFilter} that returns directories.
+   * Directory filter that doesn't include any of the directories in the specified blacklist
    */
-  public static class DirFilter implements PathFilter {
+  public static class BlackListDirFilter implements PathFilter {
     private final FileSystem fs;
+    private List<String> blacklist;
 
-    public DirFilter(final FileSystem fs) {
+    /**
+     * Create a filter on the give filesystem with the specified blacklist
+     * @param fs filesystem to filter
+     * @param directoryNameBlackList list of the names of the directories to filter. If
+     *          <tt>null</tt>, all directories are returned
+     */
+    @SuppressWarnings("unchecked")
+    public BlackListDirFilter(final FileSystem fs, final List<String> directoryNameBlackList) {
       this.fs = fs;
+      blacklist =
+        (List<String>) (directoryNameBlackList == null ? Collections.emptyList()
+          : directoryNameBlackList);
     }
 
     @Override
     public boolean accept(Path p) {
       boolean isValid = false;
       try {
-        if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p.toString())) {
+        if (blacklist.contains(p.getName().toString())) {
           isValid = false;
         } else {
           isValid = fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
-        LOG.warn("An error occurred while verifying if [" + p.toString() + 
-                 "] is a valid directory. Returning 'not valid' and continuing.", e);
+        LOG.warn("An error occurred while verifying if [" + p.toString()
+            + "] is a valid directory. Returning 'not valid' and continuing.", e);
       }
       return isValid;
+    }
+  }
+
+  /**
+   * A {@link PathFilter} that only allows directories.
+   */
+  public static class DirFilter extends BlackListDirFilter {
+
+    public DirFilter(FileSystem fs) {
+      super(fs, null);
+    }
+  }
+
+  /**
+   * A {@link PathFilter} that returns usertable directories. To get all directories use the
+   * {@link BlackListDirFilter} with a <tt>null</tt> blacklist
+   */
+  public static class UserTableDirFilter extends BlackListDirFilter {
+
+    public UserTableDirFilter(FileSystem fs) {
+      super(fs, HConstants.HBASE_NON_USER_TABLE_DIRS);
     }
   }
 
@@ -1077,14 +1110,10 @@ public abstract class FSUtils {
   public static List<Path> getTableDirs(final FileSystem fs, final Path rootdir)
   throws IOException {
     // presumes any directory under hbase.rootdir is a table
-    FileStatus [] dirs = fs.listStatus(rootdir, new DirFilter(fs));
+    FileStatus[] dirs = fs.listStatus(rootdir, new UserTableDirFilter(fs));
     List<Path> tabledirs = new ArrayList<Path>(dirs.length);
     for (FileStatus dir: dirs) {
-      Path p = dir.getPath();
-      String tableName = p.getName();
-      if (!HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tableName)) {
-        tabledirs.add(p);
-      }
+      tabledirs.add(dir.getPath());
     }
     return tabledirs;
   }
@@ -1255,18 +1284,13 @@ public abstract class FSUtils {
     // if this method looks similar to 'getTableFragmentation' that is because 
     // it was borrowed from it.
     
-    DirFilter df = new DirFilter(fs);
-    // presumes any directory under hbase.rootdir is a table
+    // only include the directory paths to tables
+    PathFilter df = new BlackListDirFilter(fs, HConstants.HBASE_NON_TABLE_DIRS);
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
     for (FileStatus tableDir : tableDirs) {
-      // Skip the .log and other non-table directories.  All others should be tables.
       // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
       // should be regions. 
-      Path d = tableDir.getPath();
-      if (HConstants.HBASE_NON_TABLE_DIRS.contains(d.getName())) {
-        continue;
-      }
-      FileStatus[] regionDirs = fs.listStatus(d, df);
+      FileStatus[] regionDirs = fs.listStatus(tableDir.getPath(), df);
       for (FileStatus regionDir : regionDirs) {
         Path dd = regionDir.getPath();
         if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
