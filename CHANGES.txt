@@ -1,6 +1,59 @@
 HBase Change Log
 
-Release 0.94.5 - 2/7/2012
+Release 0.94.6 - 3/5/2013
+Sub-task
+
+    [HBASE-7944] - Replication leaks file reader resource & not reset currentNbOperations
+
+Bug
+
+    [HBASE-6132] - ColumnCountGetFilter & PageFilter not working with FilterList
+    [HBASE-6347] - -ROOT- and .META. are stale in table.jsp if they moved
+    [HBASE-6748] - Endless recursive of deleteNode happened in SplitLogManager#DeleteAsyncCallback
+    [HBASE-7111] - hbase zkcli will not start if the zookeeper server chosen to connect to is unavailable
+    [HBASE-7507] - Make memstore flush be able to retry after exception
+    [HBASE-7521] - fix HBASE-6060 (regions stuck in opening state) in 0.94
+    [HBASE-7671] - Flushing memstore again after last failure could cause data loss
+    [HBASE-7700] - TestColumnSeeking is mathematically bound to fail
+    [HBASE-7723] - Remove NameNode URI from ZK splitlogs
+    [HBASE-7725] - Add ability to create custom compaction request
+    [HBASE-7761] - MemStore.USEMSLAB_DEFAULT is false, hbase-default.xml says it's true
+    [HBASE-7763] - Compactions not sorting based on size anymore.
+    [HBASE-7768] - zkcluster in local mode not seeing configurations in hbase-{site|default}.xml
+    [HBASE-7777] - HBCK check for lingering split parents should check for child regions
+    [HBASE-7813] - Bug in BulkDeleteEndpoint kills entire rows on COLUMN/VERSION Deletes
+    [HBASE-7814] - Port HBASE-6963 'unable to run hbck on a secure cluster' to 0.94
+    [HBASE-7829] - zookeeper kerberos conf keytab and principal parameters interchanged
+    [HBASE-7832] - Use User.getShortName() in FSUtils
+    [HBASE-7833] - 0.94 does not compile with Hadoop-0.20.205 and 0.22.0
+    [HBASE-7851] - Include the guava classes as a dependency for jobs using mapreduce.TableMapReduceUtil
+    [HBASE-7866] - TestSplitTransactionOnCluster.testSplitBeforeSettingSplittingInZK failed 3 times in a row
+    [HBASE-7867] - setPreallocSize is different with COMMENT in setupTestEnv in MiniZooKeeperCluster.java
+    [HBASE-7869] - Provide way to not start LogSyncer thread
+    [HBASE-7883] - Update memstore size when removing the entries in append operation
+    [HBASE-7884] - ByteBloomFilter's performance can be improved by avoiding multiplication when generating hash
+    [HBASE-7913] - Secure Rest server should login before getting an instance of Rest servlet
+    [HBASE-7914] - Port the fix of HBASE-6748 into 0.94 branch
+    [HBASE-7915] - Secure ThriftServer needs to login before calling HBaseHandler
+    [HBASE-7916] - HMaster uses wrong InetSocketAddress parameter to throw exception
+    [HBASE-7919] - Wrong key is used in ServerManager#getServerConnection() to retrieve from Map serverConnections
+    [HBASE-7920] - Move isFamilyEssential(byte[] name) out of Filter interface in 0.94
+    [HBASE-7945] - Remove flaky TestCatalogTrackerOnCluster
+    [HBASE-7986] - [REST] Make HTablePool size configurable
+    [HBASE-7991] - Backport HBASE-6479 'HFileReaderV1 caching the same parent META block could cause server abort when splitting' to 0.94
+    [HBASE-8007] - Adopt TestLoadAndVerify from BigTop
+
+Improvement
+
+    [HBASE-7818] - add region level metrics readReqeustCount and writeRequestCount
+
+New Feature
+
+    [HBASE-4210] - Allow coprocessor to interact with batches per region sent from a client
+    [HBASE-7360] - Snapshot 0.94 Backport
+
+
+Release 0.94.5 - 2/7/2013
 Sub-task
 
     [HBASE-2611] - Handle RS that fails while processing the failure of another one
@@ -93,7 +146,7 @@ Wish
     [HBASE-7705] - Make the method getCurrentPoolSize of HTablePool public
 
 
-Release 0.94.4 - 1/2/2012
+Release 0.94.4 - 1/2/2013
 Sub-task
 
     [HBASE-3776] - Add Bloom Filter Support to HFileOutputFormat
