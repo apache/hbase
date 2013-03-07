@@ -193,9 +193,9 @@ public class HLogSplitter {
 
     status = TaskMonitor.get().createStatus(
         "Splitting logs in " + srcDir);
-    
+
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
-    
+
     status.setStatus("Determining files to split...");
     List<Path> splits = null;
     if (!fs.exists(srcDir)) {
@@ -219,7 +219,7 @@ public class HLogSplitter {
     LOG.info(msg);
     return splits;
   }
-  
+
   private void logAndReport(String msg) {
     status.setStatus(msg);
     LOG.info(msg);
@@ -321,7 +321,7 @@ public class HLogSplitter {
         }
       }
       status.setStatus("Log splits complete. Checking for orphaned logs.");
-      
+
       if (fs.listStatus(srcDir).length > processedLogs.size()
           + corruptedLogs.size()) {
         throw new OrphanHLogAfterSplitException(
@@ -511,7 +511,12 @@ public class HLogSplitter {
     List<Path> corruptedLogs = new ArrayList<Path>();
     FileSystem fs;
     fs = rootdir.getFileSystem(conf);
-    Path logPath = new Path(logfile);
+    Path logPath = null;
+    if (FSUtils.isStartingWithPath(rootdir, logfile)) {
+      logPath = new Path(logfile);
+    } else {
+      logPath = new Path(rootdir, logfile);
+    }
     if (ZKSplitLog.isCorrupted(rootdir, logPath.getName(), fs)) {
       corruptedLogs.add(logPath);
     } else {
@@ -842,7 +847,7 @@ public class HLogSplitter {
           buffer = new RegionEntryBuffer(key.getTablename(), key.getEncodedRegionName());
           buffers.put(key.getEncodedRegionName(), buffer);
         }
-        incrHeap= buffer.appendEntry(entry);        
+        incrHeap= buffer.appendEntry(entry);
       }
 
       // If we crossed the chunk threshold, wait for more space to be available
@@ -1092,7 +1097,7 @@ public class HLogSplitter {
 
   /**
    * A class used in distributed log splitting
-   * 
+   *
    */
   class DistributedLogSplittingHelper {
     // Report progress, only used in distributed log splitting
@@ -1143,7 +1148,7 @@ public class HLogSplitter {
         new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR));
 
     private boolean closeAndCleanCompleted = false;
-    
+
     private boolean logWritersClosed  = false;
 
     private final int numThreads;
@@ -1171,7 +1176,7 @@ public class HLogSplitter {
     }
 
     /**
-     * 
+     *
      * @return null if failed to report progress
      * @throws IOException
      */
@@ -1303,7 +1308,7 @@ public class HLogSplitter {
       }
       return paths;
     }
-    
+
     private List<IOException> closeLogWriters(List<IOException> thrown)
         throws IOException {
       if (!logWritersClosed) {
