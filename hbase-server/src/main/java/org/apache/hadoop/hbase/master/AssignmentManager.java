@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -106,9 +107,9 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private CatalogTracker catalogTracker;
 
-  final TimeoutMonitor timeoutMonitor;
+  protected final TimeoutMonitor timeoutMonitor;
 
-  private TimerUpdater timerUpdater;
+  private final TimerUpdater timerUpdater;
 
   private LoadBalancer balancer;
 
@@ -141,8 +142,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * Contains the server which need to update timer, these servers will be
    * handled by {@link TimerUpdater}
    */
-  private final ConcurrentSkipListSet<ServerName> serversInUpdatingTimer =
-    new ConcurrentSkipListSet<ServerName>();
+  private final ConcurrentSkipListSet<ServerName> serversInUpdatingTimer;
 
   private final ExecutorService executorService;
 
@@ -182,6 +182,9 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   protected final AtomicBoolean failoverCleanupDone = new AtomicBoolean(false);
 
+  /** Is the TimeOutManagement activated **/
+  private final boolean tomActivated;
+
   /**
    * Constructs a new assignment manager.
    *
@@ -204,14 +207,22 @@ public class AssignmentManager extends ZooKeeperListener {
     this.regionsToReopen = Collections.synchronizedMap
                            (new HashMap<String, HRegionInfo> ());
     Configuration conf = server.getConfiguration();
-    this.timeoutMonitor = new TimeoutMonitor(
-      conf.getInt("hbase.master.assignment.timeoutmonitor.period", 30000),
-      server, serverManager,
-      conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 600000));
-    this.timerUpdater = new TimerUpdater(conf.getInt(
-      "hbase.master.assignment.timerupdater.period", 10000), server);
-    Threads.setDaemonThreadRunning(timerUpdater.getThread(),
-      server.getServerName() + ".timerUpdater");
+    this.tomActivated = conf.getBoolean("hbase.assignment.timeout.management", false);
+    if (tomActivated){
+      this.serversInUpdatingTimer =  new ConcurrentSkipListSet<ServerName>();
+      this.timeoutMonitor = new TimeoutMonitor(
+        conf.getInt("hbase.master.assignment.timeoutmonitor.period", 30000),
+        server, serverManager,
+        conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 600000));
+      this.timerUpdater = new TimerUpdater(conf.getInt(
+        "hbase.master.assignment.timerupdater.period", 10000), server);
+      Threads.setDaemonThreadRunning(timerUpdater.getThread(),
+        server.getServerName() + ".timerUpdater");
+    } else {
+      this.serversInUpdatingTimer =  null;
+      this.timeoutMonitor = null;
+      this.timerUpdater = null;
+    }
     this.zkTable = new ZKTable(this.watcher);
     this.maximumAttempts =
       this.server.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
@@ -235,8 +246,10 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   void startTimeOutMonitor() {
-    Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), server.getServerName()
-        + ".timeoutMonitor");
+    if (tomActivated) {
+      Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), server.getServerName()
+          + ".timeoutMonitor");
+    }
   }
 
   /**
@@ -1215,7 +1228,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param sn
    */
   private void addToServersInUpdatingTimer(final ServerName sn) {
-    this.serversInUpdatingTimer.add(sn);
+    if (tomActivated){
+      this.serversInUpdatingTimer.add(sn);
+    }
   }
 
   /**
@@ -1232,6 +1247,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param sn
    */
   private void updateTimers(final ServerName sn) {
+    Preconditions.checkState(tomActivated);
     if (sn == null) return;
 
     // This loop could be expensive.
@@ -1619,8 +1635,10 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       if (plan == null) {
         LOG.warn("Unable to determine a plan to assign " + region);
-        this.timeoutMonitor.setAllRegionServersOffline(true);
-        return; // Should get reassigned later when RIT times out.
+        if (tomActivated){
+          this.timeoutMonitor.setAllRegionServersOffline(true);
+        }
+        return;
       }
       if (setOfflineInZK && versionOfOfflineNode == -1) {
         // get the version of the znode after setting it to OFFLINE.
@@ -1752,7 +1770,9 @@ public class AssignmentManager extends ZooKeeperListener {
         RegionPlan newPlan = getRegionPlan(region, true);
 
         if (newPlan == null) {
-          this.timeoutMonitor.setAllRegionServersOffline(true);
+          if (tomActivated) {
+            this.timeoutMonitor.setAllRegionServersOffline(true);
+          }
           LOG.warn("Unable to find a viable location to assign region " +
               region.getRegionNameAsString());
           return;
@@ -2557,6 +2577,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
     @Override
     protected void chore() {
+      Preconditions.checkState(tomActivated);
       ServerName serverToUpdateTimer = null;
       while (!serversInUpdatingTimer.isEmpty() && !stopper.isStopped()) {
         if (serverToUpdateTimer == null) {
@@ -2606,6 +2627,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
     @Override
     protected void chore() {
+      Preconditions.checkState(tomActivated);
       boolean noRSAvailable = this.serverManager.createDestinationServersList().isEmpty();
 
       // Iterate all regions in transition checking for time outs
@@ -2861,8 +2883,10 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   public void stop() {
-    this.timeoutMonitor.interrupt();
-    this.timerUpdater.interrupt();
+    if (tomActivated){
+      this.timeoutMonitor.interrupt();
+      this.timerUpdater.interrupt();
+    }
   }
 
   /**
