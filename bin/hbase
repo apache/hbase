@@ -238,7 +238,7 @@ unset IFS
 
 #Set the right GC options based on the what we are running
 declare -a client_cmds=("shell" "hbck" "hlog" "hfile" "zkcli")
-for cmd in $client_cmds; do
+for cmd in ${client_cmds[@]}; do
 	if [[ $cmd == $COMMAND ]]; then
 		client=true
 		break
