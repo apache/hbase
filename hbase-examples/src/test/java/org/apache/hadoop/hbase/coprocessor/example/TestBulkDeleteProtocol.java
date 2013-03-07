@@ -65,19 +65,19 @@ public class TestBulkDeleteProtocol {
   private static final byte[] QUALIFIER3 = Bytes.toBytes("c3");
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Ignore @BeforeClass
+  // @Ignore @BeforeClass
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         BulkDeleteEndpoint.class.getName());
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @Ignore @AfterClass
+  // @Ignore @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Ignore @Test
+  // @Ignore @Test
   public void testBulkDeleteEndpoint() throws Throwable {
     byte[] tableName = Bytes.toBytes("testBulkDeleteEndpoint");
     HTable ht = createTable(tableName);
@@ -99,7 +99,7 @@ public class TestBulkDeleteProtocol {
     ht.close();
   }
 
-  @Ignore @Test
+  // @Ignore @Test
   public void testBulkDeleteEndpointWhenRowBatchSizeLessThanRowsToDeleteFromARegion()
       throws Throwable {
     byte[] tableName = Bytes
@@ -154,7 +154,7 @@ public class TestBulkDeleteProtocol {
     return noOfDeletedRows;
   }
 
-  @Ignore @Test
+  // @Ignore @Test
   public void testBulkDeleteWithConditionBasedDelete() throws Throwable {
     byte[] tableName = Bytes.toBytes("testBulkDeleteWithConditionBasedDelete");
     HTable ht = createTable(tableName);
@@ -184,7 +184,7 @@ public class TestBulkDeleteProtocol {
     ht.close();
   }
 
-  @Ignore @Test
+  // @Ignore @Test
   public void testBulkDeleteColumn() throws Throwable {
     byte[] tableName = Bytes.toBytes("testBulkDeleteColumn");
     HTable ht = createTable(tableName);
@@ -213,7 +213,7 @@ public class TestBulkDeleteProtocol {
     ht.close();
   }
 
-  @Ignore @Test
+  // @Ignore @Test
   public void testBulkDeleteFamily() throws Throwable {
     byte[] tableName = Bytes.toBytes("testBulkDeleteFamily");
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -244,7 +244,7 @@ public class TestBulkDeleteProtocol {
     ht.close();
   }
 
-  @Ignore @Test
+  // @Ignore @Test
   public void testBulkDeleteColumnVersion() throws Throwable {
     byte[] tableName = Bytes.toBytes("testBulkDeleteColumnVersion");
     HTable ht = createTable(tableName);
@@ -292,7 +292,7 @@ public class TestBulkDeleteProtocol {
     ht.close();
   }
 
-  @Ignore @Test
+  // @Ignore @Test
   public void testBulkDeleteColumnVersionBasedOnTS() throws Throwable {
     byte[] tableName = Bytes.toBytes("testBulkDeleteColumnVersionBasedOnTS");
     HTable ht = createTable(tableName);
@@ -339,7 +339,7 @@ public class TestBulkDeleteProtocol {
     ht.close();
   }
 
-  @Ignore @Test
+  // @Ignore @Test
   public void testBulkDeleteWithNumberOfVersions() throws Throwable {
     byte[] tableName = Bytes.toBytes("testBulkDeleteWithNumberOfVersions");
     HTable ht = createTable(tableName);
