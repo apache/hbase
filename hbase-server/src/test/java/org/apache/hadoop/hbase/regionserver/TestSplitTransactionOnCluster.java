@@ -710,10 +710,10 @@ public class TestSplitTransactionOnCluster {
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
     try {
-      HRegionServer server = cluster.getRegionServer(tableRegionIndex);
-      printOutRegions(server, "Initial regions: ");
+      printOutRegions(regionServer, "Initial regions: ");
 
-      // find a splittable region
+      // find a splittable region.  Refresh the regions list
+      regions = cluster.getRegions(tableName);
       final HRegion region = findSplittableRegion(regions);
       assertTrue("not able to find a splittable region", region != null);
 
