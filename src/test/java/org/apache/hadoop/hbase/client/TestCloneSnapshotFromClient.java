@@ -18,11 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,9 +31,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -46,10 +42,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test clone/restore snapshots from the client
+ * Test clone snapshots from the client
  */
 @Category(LargeTests.class)
-public class TestRestoreSnapshotFromClient {
+public class TestCloneSnapshotFromClient {
   final Log LOG = LogFactory.getLog(getClass());
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -147,99 +143,85 @@ public class TestRestoreSnapshotFromClient {
       new Path(mfs.getRootDir(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
   }
 
-  @Test
-  public void testRestoreSnapshot() throws IOException {
-    verifyRowCount(tableName, snapshot1Rows);
-
-    // Restore from snapshot-0
-    admin.disableTable(tableName);
-    admin.restoreSnapshot(snapshotName0);
-    admin.enableTable(tableName);
-    verifyRowCount(tableName, snapshot0Rows);
-
-    // Restore from emptySnapshot
-    admin.disableTable(tableName);
-    admin.restoreSnapshot(emptySnapshot);
-    admin.enableTable(tableName);
-    verifyRowCount(tableName, 0);
-
-    // Restore from snapshot-1
-    admin.disableTable(tableName);
-    admin.restoreSnapshot(snapshotName1);
-    admin.enableTable(tableName);
-    verifyRowCount(tableName, snapshot1Rows);
+  @Test(expected=SnapshotDoesNotExistException.class)
+  public void testCloneNonExistentSnapshot() throws IOException, InterruptedException {
+    String snapshotName = "random-snapshot-" + System.currentTimeMillis();
+    String tableName = "random-table-" + System.currentTimeMillis();
+    admin.cloneSnapshot(snapshotName, tableName);
   }
 
   @Test
-  public void testRestoreSchemaChange() throws IOException {
-    byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
-
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-
-    // Add one column family and put some data in it
-    admin.disableTable(tableName);
-    admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
-    admin.enableTable(tableName);
-    assertEquals(2, table.getTableDescriptor().getFamilies().size());
-    HTableDescriptor htd = admin.getTableDescriptor(tableName);
-    assertEquals(2, htd.getFamilies().size());
-    loadData(table, 500, TEST_FAMILY2);
-    long snapshot2Rows = snapshot1Rows + 500;
-    assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
-    assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
-    Set<String> fsFamilies = getFamiliesFromFS(tableName);
-    assertEquals(2, fsFamilies.size());
-    table.close();
-
-    // Take a snapshot
-    admin.disableTable(tableName);
-    admin.snapshot(snapshotName2, tableName);
-
-    // Restore the snapshot (without the cf)
-    admin.restoreSnapshot(snapshotName0);
-    assertEquals(1, table.getTableDescriptor().getFamilies().size());
-    admin.enableTable(tableName);
-    try {
-      TEST_UTIL.countRows(table, TEST_FAMILY2);
-      fail("family '" + Bytes.toString(TEST_FAMILY2) + "' should not exists");
-    } catch (NoSuchColumnFamilyException e) {
-      // expected
-    }
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
-    htd = admin.getTableDescriptor(tableName);
-    assertEquals(1, htd.getFamilies().size());
-    fsFamilies = getFamiliesFromFS(tableName);
-    assertEquals(1, fsFamilies.size());
-    table.close();
-
-    // Restore back the snapshot (with the cf)
-    admin.disableTable(tableName);
-    admin.restoreSnapshot(snapshotName2);
-    admin.enableTable(tableName);
-    htd = admin.getTableDescriptor(tableName);
-    assertEquals(2, htd.getFamilies().size());
-    assertEquals(2, table.getTableDescriptor().getFamilies().size());
-    assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
-    assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
-    fsFamilies = getFamiliesFromFS(tableName);
-    assertEquals(2, fsFamilies.size());
-    table.close();
-  }
-
-  @Test
-  public void testRestoreSnapshotOfCloned() throws IOException, InterruptedException {
+  public void testCloneSnapshot() throws IOException, InterruptedException {
     byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
+    testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
+    testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
+    testCloneSnapshot(clonedTableName, emptySnapshot, 0);
+  }
+
+  private void testCloneSnapshot(final byte[] tableName, final byte[] snapshotName,
+      int snapshotRows) throws IOException, InterruptedException {
+    // create a new table from snapshot
+    admin.cloneSnapshot(snapshotName, tableName);
+    verifyRowCount(tableName, snapshotRows);
+
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
+  }
+
+  /**
+   * Verify that tables created from the snapshot are still alive after source table deletion.
+   */
+  @Test
+  public void testCloneLinksAfterDelete() throws IOException, InterruptedException {
+    // Clone a table from the first snapshot
+    byte[] clonedTableName = Bytes.toBytes("clonedtb1-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(clonedTableName, snapshot0Rows);
+
+    // Take a snapshot of this cloned table.
     admin.disableTable(clonedTableName);
     admin.snapshot(snapshotName2, clonedTableName);
+
+    // Clone the snapshot of the cloned table
+    byte[] clonedTableName2 = Bytes.toBytes("clonedtb2-" + System.currentTimeMillis());
+    admin.cloneSnapshot(snapshotName2, clonedTableName2);
+    verifyRowCount(clonedTableName2, snapshot0Rows);
+    admin.disableTable(clonedTableName2);
+
+    // Remove the original table
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
+    waitCleanerRun();
+
+    // Verify the first cloned table
+    admin.enableTable(clonedTableName);
+    verifyRowCount(clonedTableName, snapshot0Rows);
+
+    // Verify the second cloned table
+    admin.enableTable(clonedTableName2);
+    verifyRowCount(clonedTableName2, snapshot0Rows);
+    admin.disableTable(clonedTableName2);
+
+    // Delete the first cloned table
+    admin.disableTable(clonedTableName);
     admin.deleteTable(clonedTableName);
     waitCleanerRun();
 
-    admin.cloneSnapshot(snapshotName2, clonedTableName);
-    verifyRowCount(clonedTableName, snapshot0Rows);
-    admin.disableTable(clonedTableName);
-    admin.deleteTable(clonedTableName);
+    // Verify the second cloned table
+    admin.enableTable(clonedTableName2);
+    verifyRowCount(clonedTableName2, snapshot0Rows);
+
+    // Clone a new table from cloned
+    byte[] clonedTableName3 = Bytes.toBytes("clonedtb3-" + System.currentTimeMillis());
+    admin.cloneSnapshot(snapshotName2, clonedTableName3);
+    verifyRowCount(clonedTableName3, snapshot0Rows);
+
+    // Delete the cloned tables
+    admin.disableTable(clonedTableName2);
+    admin.deleteTable(clonedTableName2);
+    admin.disableTable(clonedTableName3);
+    admin.deleteTable(clonedTableName3);
+    admin.deleteSnapshot(snapshotName2);
   }
 
   // ==========================================================================
@@ -277,18 +259,6 @@ public class TestRestoreSnapshotFromClient {
 
   private void waitCleanerRun() throws InterruptedException {
     TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
-  }
-
-  private Set<String> getFamiliesFromFS(final byte[] tableName) throws IOException {
-    MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    Set<String> families = new HashSet<String>();
-    Path tableDir = HTableDescriptor.getTableDir(mfs.getRootDir(), tableName);
-    for (Path regionDir: FSUtils.getRegionDirs(mfs.getFileSystem(), tableDir)) {
-      for (Path familyDir: FSUtils.getFamilyDirs(mfs.getFileSystem(), regionDir)) {
-        families.add(familyDir.getName());
-      }
-    }
-    return families;
   }
 
   private void verifyRowCount(final byte[] tableName, long expectedRows) throws IOException {
