@@ -34,12 +34,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -49,6 +49,33 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestFSUtils {
+  /**
+   * Test path compare and prefix checking.
+   * @throws IOException 
+   */
+  @Test
+  public void testMatchingTail() throws IOException {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    final FileSystem fs = htu.getTestFileSystem();
+    Path rootdir = htu.getDataTestDir();
+    assertTrue(rootdir.depth() > 1);
+    Path partPath = new Path("a", "b");
+    Path fullPath = new Path(rootdir, partPath);
+    Path fullyQualifiedPath = fs.makeQualified(fullPath);
+    assertFalse(FSUtils.isMatchingTail(fullPath, partPath));
+    assertFalse(FSUtils.isMatchingTail(fullPath, partPath.toString()));
+    assertTrue(FSUtils.isStartingWithPath(rootdir, fullPath.toString()));
+    assertTrue(FSUtils.isStartingWithPath(fullyQualifiedPath, fullPath.toString()));
+    assertFalse(FSUtils.isStartingWithPath(rootdir, partPath.toString()));
+    assertFalse(FSUtils.isMatchingTail(fullyQualifiedPath, partPath));
+    assertTrue(FSUtils.isMatchingTail(fullyQualifiedPath, fullPath));
+    assertTrue(FSUtils.isMatchingTail(fullyQualifiedPath, fullPath.toString()));
+    assertTrue(FSUtils.isMatchingTail(fullyQualifiedPath, fs.makeQualified(fullPath)));
+    assertTrue(FSUtils.isStartingWithPath(rootdir, fullyQualifiedPath.toString()));
+    assertFalse(FSUtils.isMatchingTail(fullPath, new Path("x")));
+    assertFalse(FSUtils.isMatchingTail(new Path("x"), fullPath));
+  }
+
   @Test
   public void testVersion() throws DeserializationException, IOException {
     HBaseTestingUtility htu = new HBaseTestingUtility();

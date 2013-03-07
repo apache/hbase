@@ -1159,23 +1159,27 @@ public class HRegionServer implements ClientProtocol,
   }
 
   private void closeWAL(final boolean delete) {
-    try {
-      if (this.hlogForMeta != null) {
-        //All hlogs (meta and non-meta) are in the same directory. Don't call 
-        //closeAndDelete here since that would delete all hlogs not just the 
-        //meta ones. We will just 'close' the hlog for meta here, and leave
-        //the directory cleanup to the follow-on closeAndDelete call.
+    if (this.hlogForMeta != null) {
+      // All hlogs (meta and non-meta) are in the same directory. Don't call
+      // closeAndDelete here since that would delete all hlogs not just the
+      // meta ones. We will just 'close' the hlog for meta here, and leave
+      // the directory cleanup to the follow-on closeAndDelete call.
+      try {
         this.hlogForMeta.close();
+      } catch (Throwable e) {
+        LOG.error("Metalog close and delete failed", RemoteExceptionHandler.checkThrowable(e));
       }
-      if (this.hlog != null) {
+    }
+    if (this.hlog != null) {
+      try {
         if (delete) {
           hlog.closeAndDelete();
         } else {
           hlog.close();
         }
+      } catch (Throwable e) {
+        LOG.error("Close and delete failed", RemoteExceptionHandler.checkThrowable(e));
       }
-    } catch (Throwable e) {
-      LOG.error("Close and delete failed", RemoteExceptionHandler.checkThrowable(e));
     }
   }
 

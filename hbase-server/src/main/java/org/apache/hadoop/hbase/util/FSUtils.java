@@ -86,6 +86,61 @@ public abstract class FSUtils {
     super();
   }
 
+  /**
+   * Compare of path component. Does not consider schema; i.e. if schemas different but <code>path
+   * <code> starts with <code>rootPath<code>, then the function returns true
+   * @param rootPath
+   * @param path 
+   * @return True if <code>path</code> starts with <code>rootPath</code>
+   */
+  public static boolean isStartingWithPath(final Path rootPath, final String path) {
+    String uriRootPath = rootPath.toUri().getPath();
+    String tailUriPath = (new Path(path)).toUri().getPath();
+    return tailUriPath.startsWith(uriRootPath);
+  }
+
+  /**
+   * Compare path component of the Path URI; e.g. if hdfs://a/b/c and /a/b/c, it will compare the
+   * '/a/b/c' part. Does not consider schema; i.e. if schemas different but path or subpath matches,
+   * the two will equate.
+   * @param pathToSearch Path we will be trying to match.
+   * @param pathTail
+   * @return True if <code>pathTail</code> is tail on the path of <code>pathToSearch</code>
+   */
+  public static boolean isMatchingTail(final Path pathToSearch, String pathTail) {
+    return isMatchingTail(pathToSearch, new Path(pathTail));
+  }
+
+  /**
+   * Compare path component of the Path URI; e.g. if hdfs://a/b/c and /a/b/c, it will compare the
+   * '/a/b/c' part. If you passed in 'hdfs://a/b/c and b/c, it would return true.  Does not consider
+   * schema; i.e. if schemas different but path or subpath matches, the two will equate.
+   * @param pathToSearch Path we will be trying to match.
+   * @param pathTail
+   * @return True if <code>pathTail</code> is tail on the path of <code>pathToSearch</code>
+   */
+  public static boolean isMatchingTail(final Path pathToSearch, final Path pathTail) {
+    if (pathToSearch.depth() != pathTail.depth()) return false;
+    Path tailPath = pathTail;
+    String tailName;
+    Path toSearch = pathToSearch;
+    String toSearchName;
+    boolean result = false;
+    do {
+      tailName = tailPath.getName();
+      if (tailName == null || tailName.length() <= 0) {
+        result = true;
+        break;
+      }
+      toSearchName = toSearch.getName();
+      if (toSearchName == null || toSearchName.length() <= 0) break;
+      // Move up a parent on each path for next go around.  Path doesn't let us go off the end.
+      tailPath = tailPath.getParent();
+      toSearch = toSearch.getParent();
+    } while(tailName.equals(toSearchName));
+    return result;
+  }
+
   public static FSUtils getInstance(FileSystem fs, Configuration conf) {
     String scheme = fs.getUri().getScheme();
     if (scheme == null) {
