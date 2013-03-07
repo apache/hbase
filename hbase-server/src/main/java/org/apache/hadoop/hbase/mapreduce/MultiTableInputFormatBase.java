@@ -116,47 +116,51 @@ public abstract class MultiTableInputFormatBase extends
       byte[] tableName = scan.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME);
       if (tableName == null) 
         throw new IOException("A scan object did not have a table name");
-      HTable table = new HTable(context.getConfiguration(), tableName);
-      Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
-      if (keys == null || keys.getFirst() == null ||
-          keys.getFirst().length == 0) {
-        throw new IOException("Expecting at least one region for table : "
-            + Bytes.toString(tableName));
-      }
-      int count = 0;
-      
-      byte[] startRow = scan.getStartRow();
-      byte[] stopRow = scan.getStopRow();
 
-      for (int i = 0; i < keys.getFirst().length; i++) {
-        if (!includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
-          continue;
+      HTable table = null;
+      try {
+        table = new HTable(context.getConfiguration(), tableName);
+        Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
+        if (keys == null || keys.getFirst() == null ||
+            keys.getFirst().length == 0) {
+          throw new IOException("Expecting at least one region for table : "
+              + Bytes.toString(tableName));
         }
-        String regionLocation =
-            table.getRegionLocation(keys.getFirst()[i], false).getHostname();
+        int count = 0;
+
+        byte[] startRow = scan.getStartRow();
+        byte[] stopRow = scan.getStopRow();
+
+        for (int i = 0; i < keys.getFirst().length; i++) {
+          if (!includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
+            continue;
+          }
+          String regionLocation =
+              table.getRegionLocation(keys.getFirst()[i], false).getHostname();
         
-        // determine if the given start and stop keys fall into the range
-        if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
-            Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
-            (stopRow.length == 0 ||
-                Bytes.compareTo(stopRow, keys.getFirst()[i]) > 0)) {
-          byte[] splitStart =
-              startRow.length == 0 ||
-                  Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ? keys
-                  .getFirst()[i] : startRow;
-          byte[] splitStop =
-              (stopRow.length == 0 || Bytes.compareTo(keys.getSecond()[i],
-                  stopRow) <= 0) && keys.getSecond()[i].length > 0 ? keys
-                  .getSecond()[i] : stopRow;
-          InputSplit split =
-              new TableSplit(tableName, scan, splitStart,
-                  splitStop, regionLocation);
-          splits.add(split);
-          if (LOG.isDebugEnabled())
-            LOG.debug("getSplits: split -> " + (count++) + " -> " + split);
+          // determine if the given start and stop keys fall into the range
+          if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
+              Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
+              (stopRow.length == 0 ||
+                  Bytes.compareTo(stopRow, keys.getFirst()[i]) > 0)) {
+            byte[] splitStart =
+                startRow.length == 0 ||
+                    Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ? keys
+                    .getFirst()[i] : startRow;
+            byte[] splitStop =
+                (stopRow.length == 0 || Bytes.compareTo(keys.getSecond()[i],
+                    stopRow) <= 0) && keys.getSecond()[i].length > 0 ? keys
+                    .getSecond()[i] : stopRow;
+            InputSplit split =
+                new TableSplit(tableName, scan, splitStart, splitStop, regionLocation);
+            splits.add(split);
+            if (LOG.isDebugEnabled())
+              LOG.debug("getSplits: split -> " + (count++) + " -> " + split);
+          }
         }
+      } finally {
+        if (null != table) table.close();
       }
-      table.close();
     }
     return splits;
   }
