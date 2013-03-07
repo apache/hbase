@@ -1,0 +1,264 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase;
+
+import java.io.Closeable;
+import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+
+/**
+ * This class defines methods that can help with managing HBase clusters
+ * from unit tests and system tests. There are 3 types of cluster deployments:
+ * <ul>
+ * <li><b>MiniHBaseCluster:</b> each server is run in the same JVM in separate threads,
+ * used by unit tests</li>
+ * <li><b>DistributedHBaseCluster:</b> the cluster is pre-deployed, system and integration tests can
+ * interact with the cluster. </li>
+ * <li><b>ProcessBasedLocalHBaseCluster:</b> each server is deployed locally but in separate
+ * JVMs. </li>
+ * </ul>
+ * <p>
+ * HBaseCluster unifies the way tests interact with the cluster, so that the same test can
+ * be run against a mini-cluster during unit test execution, or a distributed cluster having
+ * tens/hundreds of nodes during execution of integration tests.
+ *
+ * <p>
+ * HBaseCluster exposes client-side public interfaces to tests, so that tests does not assume
+ * running in a particular mode. Not all the tests are suitable to be run on an actual cluster,
+ * and some tests will still need to mock stuff and introspect internal state. For those use
+ * cases from unit tests, or if more control is needed, you can use the subclasses directly.
+ * In that sense, this class does not abstract away <strong>every</strong> interface that
+ * MiniHBaseCluster or DistributedHBaseCluster provide.
+ */
+@InterfaceAudience.Private
+public abstract class HBaseCluster implements Closeable, Configurable {
+  static final Log LOG = LogFactory.getLog(HBaseCluster.class.getName());
+  protected Configuration conf;
+
+  /** the status of the cluster before we begin */
+  protected ClusterStatus initialClusterStatus;
+
+  /**
+   * Construct an HBaseCluster
+   * @param conf Configuration to be used for cluster
+   */
+  public HBaseCluster(Configuration conf) {
+    setConf(conf);
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  /**
+   * Returns a ClusterStatus for this HBase cluster.
+   * @see #getInitialClusterStatus()
+   */
+  public abstract ClusterStatus getClusterStatus() throws IOException;
+
+  /**
+   * Returns a ClusterStatus for this HBase cluster as observed at the
+   * starting of the HBaseCluster
+   */
+  public ClusterStatus getInitialClusterStatus() throws IOException {
+    return initialClusterStatus;
+  }
+
+  /**
+   * Returns an {@link HmasterInterface} to the active master
+   */
+  public abstract HMasterInterface getMasterAdmin()
+      throws IOException;
+
+  /**
+   * Starts a new region server on the given hostname or if this is a mini/local cluster,
+   * starts a region server locally.
+   * @param hostname the hostname to start the regionserver on
+   * @throws IOException if something goes wrong
+   */
+  public abstract void startRegionServer(String hostname) throws IOException;
+
+  /**
+   * Kills the region server process if this is a distributed cluster, otherwise
+   * this causes the region server to exit doing basic clean up only.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void killRegionServer(ServerName serverName) throws IOException;
+
+  /**
+   * Stops the given region server, by attempting a gradual stop.
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong
+   */
+  public abstract void stopRegionServer(ServerName serverName) throws IOException;
+
+  /**
+   * Wait for the specified region server to join the cluster
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public void waitForRegionServerToStart(String hostname, long timeout)
+      throws IOException {
+    long start = System.currentTimeMillis();
+    while ((System.currentTimeMillis() - start) < timeout) {
+      for (ServerName server : getClusterStatus().getServers()) {
+        if (server.getHostname().equals(hostname)) {
+          return;
+        }
+      }
+      Threads.sleep(100);
+    }
+    throw new IOException("did timeout waiting for region server to start:" + hostname);
+  }
+
+  /**
+   * Wait for the specified region server to stop the thread / process.
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForRegionServerToStop(ServerName serverName, long timeout)
+      throws IOException;
+
+  /**
+   * Starts a new master on the given hostname or if this is a mini/local cluster,
+   * starts a master locally.
+   * @param hostname the hostname to start the master on
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong
+   */
+  public abstract void startMaster(String hostname) throws IOException;
+
+  /**
+   * Kills the master process if this is a distributed cluster, otherwise,
+   * this causes master to exit doing basic clean up only.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void killMaster(ServerName serverName) throws IOException;
+
+  /**
+   * Stops the given master, by attempting a gradual stop.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void stopMaster(ServerName serverName) throws IOException;
+
+  /**
+   * Wait for the specified master to stop the thread / process.
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForMasterToStop(ServerName serverName, long timeout)
+      throws IOException;
+
+  /**
+   * Blocks until there is an active master and that master has completed
+   * initialization.
+   *
+   * @return true if an active master becomes available.  false if there are no
+   *         masters left.
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public boolean waitForActiveAndReadyMaster()
+      throws IOException {
+    return waitForActiveAndReadyMaster(Long.MAX_VALUE);
+  }
+
+  /**
+   * Blocks until there is an active master and that master has completed
+   * initialization.
+   * @param timeout the timeout limit in ms
+   * @return true if an active master becomes available.  false if there are no
+   *         masters left.
+   */
+  public abstract boolean waitForActiveAndReadyMaster(long timeout)
+      throws IOException;
+
+  /**
+   * Wait for HBase Cluster to shut down.
+   */
+  public abstract void waitUntilShutDown() throws IOException;
+
+  /**
+   * Shut down the HBase cluster
+   */
+  public abstract void shutdown() throws IOException;
+
+  /**
+   * Restores the cluster to it's initial state if this is a real cluster,
+   * otherwise does nothing.
+   */
+  public void restoreInitialStatus() throws IOException {
+    restoreClusterStatus(getInitialClusterStatus());
+  }
+
+  /**
+   * Restores the cluster to given state if this is a real cluster,
+   * otherwise does nothing.
+   */
+  public void restoreClusterStatus(ClusterStatus desiredStatus) throws IOException {
+  }
+
+  /**
+   * Get the ServerName of region server serving ROOT region
+   */
+  public ServerName getServerHoldingRoot() throws IOException {
+    return getServerHoldingRegion(HRegionInfo.ROOT_REGIONINFO.getRegionName());
+  }
+
+  /**
+   * Get the ServerName of region server serving the first META region
+   */
+  public ServerName getServerHoldingMeta() throws IOException {
+    return getServerHoldingRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+  }
+
+  /**
+   * Get the ServerName of region server serving the specified region
+   * @param regionName Name of the region in bytes
+   * @return ServerName that hosts the region or null
+   */
+  public abstract ServerName getServerHoldingRegion(byte[] regionName) throws IOException;
+
+  /**
+   * @return whether we are interacting with a distributed cluster as opposed to an
+   * in-process mini/local cluster.
+   */
+  public boolean isDistributedCluster() {
+    return false;
+  }
+
+  /**
+   * Closes all the resources held open for this cluster. Note that this call does not shutdown
+   * the cluster.
+   * @see #shutdown()
+   */
+  @Override
+  public abstract void close() throws IOException;
+}
