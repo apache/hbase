@@ -52,8 +52,9 @@ public class TestZooKeeperScanPolicyObserver {
   private static final byte[] Q = Bytes.toBytes("qual");
   private static final byte[] R = Bytes.toBytes("row");
 
-  @Ignore @BeforeClass
+  // @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    System.out.println("HERE!!!!!!!!");
     // Test we can first start the ZK cluster by itself
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
@@ -62,12 +63,12 @@ public class TestZooKeeperScanPolicyObserver {
     TEST_UTIL.startMiniCluster();
   }
 
-  @Ignore @AfterClass
+  // @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Ignore @Test
+  // @Ignore @Test
   public void testScanPolicyObserver() throws Exception {
     byte[] tableName = Bytes.toBytes("testScanPolicyObserver");
     HTableDescriptor desc = new HTableDescriptor(tableName);
