@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.6 - 3/5/2013
+Release 0.94.6 - 3/6/2013
 Sub-task
 
     [HBASE-7944] - Replication leaks file reader resource & not reset currentNbOperations
@@ -11,6 +11,7 @@ Bug
     [HBASE-6347] - -ROOT- and .META. are stale in table.jsp if they moved
     [HBASE-6748] - Endless recursive of deleteNode happened in SplitLogManager#DeleteAsyncCallback
     [HBASE-7111] - hbase zkcli will not start if the zookeeper server chosen to connect to is unavailable
+    [HBASE-7153] - print gc option in hbase-env.sh affects hbase zkcli
     [HBASE-7507] - Make memstore flush be able to retry after exception
     [HBASE-7521] - fix HBASE-6060 (regions stuck in opening state) in 0.94
     [HBASE-7671] - Flushing memstore again after last failure could cause data loss
@@ -42,6 +43,7 @@ Bug
     [HBASE-7986] - [REST] Make HTablePool size configurable
     [HBASE-7991] - Backport HBASE-6479 'HFileReaderV1 caching the same parent META block could cause server abort when splitting' to 0.94
     [HBASE-8007] - Adopt TestLoadAndVerify from BigTop
+    [HBASE-8019] - Port HBASE-7779 '[snapshot 130201 merge] Fix TestMultiParallel' to 0.94
 
 Improvement
 
