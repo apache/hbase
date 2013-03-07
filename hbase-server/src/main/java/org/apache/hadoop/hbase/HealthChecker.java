@@ -65,7 +65,8 @@ class HealthChecker {
     execScript.add(healthCheckScript);
     this.shexec = new ShellCommandExecutor(execScript.toArray(new String[execScript.size()]), null,
         null, scriptTimeout);
-    LOG.info("HealthChecker initialized with script at " + this.healthCheckScript);
+    LOG.info("HealthChecker initialized with script at " + this.healthCheckScript +
+      ", timeout=" + timeout);
   }
 
   public HealthReport checkHealth() {
