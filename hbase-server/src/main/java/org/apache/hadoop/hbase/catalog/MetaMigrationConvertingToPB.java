@@ -164,7 +164,7 @@ public class MetaMigrationConvertingToPB {
   throws IOException {
     LOG.info("Starting update of ROOT");
     ConvertToPBMetaVisitor v = new ConvertToPBMetaVisitor(masterServices);
-    MetaReader.fullScan(masterServices.getCatalogTracker(), v, null, true);
+    MetaReader.fullScan(masterServices.getCatalogTracker(), v, null);
     LOG.info("Finished update of ROOT. Total rows updated:" + v.numMigratedRows);
     return v.numMigratedRows;
   }
@@ -177,7 +177,7 @@ public class MetaMigrationConvertingToPB {
     LOG.info("Starting update of META");
     ConvertToPBMetaVisitor v = new ConvertToPBMetaVisitor(masterServices);
     MetaReader.fullScan(masterServices.getCatalogTracker(), v);
-    updateRootWithMetaMigrationStatus(masterServices.getCatalogTracker());
+    //updateRootWithMetaMigrationStatus(masterServices.getCatalogTracker());
     LOG.info("Finished update of META. Total rows updated:" + v.numMigratedRows);
     return v.numMigratedRows;
   }
@@ -192,7 +192,8 @@ public class MetaMigrationConvertingToPB {
     Put p = new Put(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
     p.add(HConstants.CATALOG_FAMILY, HConstants.META_VERSION_QUALIFIER,
         Bytes.toBytes(HConstants.META_VERSION));
-    MetaEditor.putToRootTable(catalogTracker, p);
+    // TODO so wrong
+    //MetaEditor.putToRootTable(catalogTracker, p);
     LOG.info("Updated -ROOT- meta version=" + HConstants.META_VERSION);
   }
 
@@ -202,7 +203,7 @@ public class MetaMigrationConvertingToPB {
    * @throws IOException
    */
   static boolean isMetaHRIUpdated(final CatalogTracker catalogTracker) throws IOException {
-    List<Result> results = MetaReader.fullScanOfRoot(catalogTracker);
+    List<Result> results = MetaReader.fullScanOfMeta(catalogTracker);
     if (results == null || results.isEmpty()) {
       LOG.info(".META. is not migrated");
       return false;

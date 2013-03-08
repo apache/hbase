@@ -61,8 +61,7 @@ if (toRemove > 0) {
     Map.Entry<String, RegionState> e = it.next();
     if (HRegionInfo.FIRST_META_REGIONINFO.getEncodedName().equals(
           e.getKey()) ||
-        HRegionInfo.ROOT_REGIONINFO.getEncodedName().equals(
-          e.getKey()) || regionIDForOldestRIT.equals(e.getKey())) {
+         regionIDForOldestRIT.equals(e.getKey())) {
       // don't remove the meta & the oldest rit regions, they're too interesting!
       continue;
     } 

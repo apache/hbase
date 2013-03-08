@@ -88,13 +88,6 @@ public class ServerShutdownHandler extends EventHandler {
   }
 
   /**
-   * @return True if the server we are processing was carrying <code>-ROOT-</code>
-   */
-  boolean isCarryingRoot() {
-    return false;
-  }
-
-  /**
    * @return True if the server we are processing was carrying <code>.META.</code>
    */
   boolean isCarryingMeta() {
@@ -130,8 +123,8 @@ public class ServerShutdownHandler extends EventHandler {
           serverName + ", will retry", ioe);
       }
       // We don't want worker thread in the MetaServerShutdownHandler
-      // executor pool to block by waiting availability of -ROOT-
-      // and .META. server. Otherwise, it could run into the following issue:
+      // executor pool to block by waiting availability of .META.
+      // Otherwise, it could run into the following issue:
       // 1. The current MetaServerShutdownHandler instance For RS1 waits for the .META.
       //    to come online.
       // 2. The newly assigned .META. region server RS2 was shutdown right after
@@ -150,7 +143,7 @@ public class ServerShutdownHandler extends EventHandler {
       // If AssignmentManager hasn't finished rebuilding user regions,
       // we are not ready to assign dead regions either. So we re-queue up
       // the dead server for further processing too.
-      if (isCarryingRoot() || isCarryingMeta() // -ROOT- or .META.
+      if (isCarryingMeta() // .META.
           || !services.getAssignmentManager().isFailoverCleanupDone()) {
         this.services.getServerManager().processDeadServer(serverName);
         return;

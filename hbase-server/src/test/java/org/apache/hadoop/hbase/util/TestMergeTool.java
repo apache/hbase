@@ -137,8 +137,8 @@ public class TestMergeTool extends HBaseTestCase {
 
     super.setUp();
     try {
-      // Create root and meta regions
-      createRootAndMetaRegions();
+      // Create meta region
+      createMetaRegion();
       FSTableDescriptors.createTableDescriptor(this.fs, this.testDir, this.desc);
       /*
        * Create the regions we will merge
@@ -274,7 +274,7 @@ public class TestMergeTool extends HBaseTestCase {
     
     try {
        // Merge Region 0 and Region 1
-      HRegion merged = mergeAndVerify("merging regions 0 and 1",
+      HRegion merged = mergeAndVerify("merging regions 0 and 1 ",
         this.sourceRegions[0].getRegionNameAsString(),
         this.sourceRegions[1].getRegionNameAsString(), log, 2);
 

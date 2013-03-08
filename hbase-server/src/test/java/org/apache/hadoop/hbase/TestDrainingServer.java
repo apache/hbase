@@ -290,7 +290,7 @@ public class TestDrainingServer {
 
   private static boolean isAllRegionsOnline() {
     return TEST_UTIL.getMiniHBaseCluster().countServedRegions() ==
-        (COUNT_OF_REGIONS + 2 /*catalog regions*/);
+        (COUNT_OF_REGIONS + 1 /*catalog regions*/);
   }
 
 }

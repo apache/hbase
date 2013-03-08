@@ -468,7 +468,7 @@ public class RegionStates {
       } else {
         for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
           for (HRegionInfo hri: e.getValue()) {
-            if (hri.isMetaRegion() || hri.isRootRegion()) continue;
+            if (hri.isMetaRegion()) continue;
             String tablename = hri.getTableNameAsString();
             Map<ServerName, List<HRegionInfo>> svrToRegions = result.get(tablename);
             if (svrToRegions == null) {

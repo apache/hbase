@@ -949,7 +949,7 @@ public class ZKUtil {
       // Certain znodes are accessed directly by the client,
       // so they must be readable by non-authenticated clients
       if ((node.equals(zkw.baseZNode) == true) ||
-          (node.equals(zkw.rootServerZNode) == true) ||
+          (node.equals(zkw.metaServerZNode) == true) ||
           (node.equals(zkw.getMasterAddressZNode()) == true) ||
           (node.equals(zkw.clusterIdZNode) == true) ||
           (node.equals(zkw.rsZNode) == true) ||
@@ -1579,7 +1579,7 @@ public class ZKUtil {
                                               zkw.backupMasterAddressesZNode)) {
         sb.append("\n ").append(child);
       }
-      sb.append("\nRegion server holding ROOT: " + RootRegionTracker.getRootRegionLocation(zkw));
+      sb.append("\nRegion server holding .META.: " + MetaRegionTracker.getMetaRegionLocation(zkw));
       sb.append("\nRegion servers:");
       for (String child : listChildrenNoWatch(zkw, zkw.rsZNode)) {
         sb.append("\n ").append(child);
@@ -1685,7 +1685,7 @@ public class ZKUtil {
       (data == null? "null": data.length == 0? "empty": (
           znode.startsWith(zkw.assignmentZNode)?
             ZKAssign.toString(data): // We should not be doing this reaching into another class
-          znode.startsWith(zkw.rootServerZNode)?
+          znode.startsWith(zkw.metaServerZNode)?
             getServerNameOrEmptyString(data):
           znode.startsWith(zkw.backupMasterAddressesZNode)?
             getServerNameOrEmptyString(data):

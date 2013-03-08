@@ -60,7 +60,6 @@ public abstract class HBaseTestCase extends TestCase {
   private boolean localfs = false;
   protected static Path testDir = null;
   protected FileSystem fs = null;
-  protected HRegion root = null;
   protected HRegion meta = null;
   protected static final char FIRST_CHAR = 'a';
   protected static final char LAST_CHAR = 'z';
@@ -656,17 +655,13 @@ public abstract class HBaseTestCase extends TestCase {
    * method. It does cleanup.
    * @throws IOException
    */
-  protected void createRootAndMetaRegions() throws IOException {
-    root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, testDir,
-        conf, HTableDescriptor.ROOT_TABLEDESC);
+  protected void createMetaRegion() throws IOException {
     meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
         conf, HTableDescriptor.META_TABLEDESC);
-    HRegion.addRegionToMETA(root, meta);
   }
 
   protected void closeRootAndMeta() throws IOException {
     HRegion.closeHRegion(meta);
-    HRegion.closeHRegion(root);
   }
 
   public static void assertByteEquals(byte[] expected,

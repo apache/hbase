@@ -42,7 +42,6 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestStatusResource {
-  private static final byte[] ROOT_REGION_NAME = Bytes.toBytes("-ROOT-,,0");
   private static final byte[] META_REGION_NAME = Bytes.toBytes(".META.,,1");
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -59,20 +58,17 @@ public class TestStatusResource {
     assertNotNull(model.getLiveNodes());
     assertNotNull(model.getDeadNodes());
     assertFalse(model.getLiveNodes().isEmpty());
-    boolean foundRoot = false, foundMeta = false;
+    boolean foundMeta = false;
     for (StorageClusterStatusModel.Node node: model.getLiveNodes()) {
       assertNotNull(node.getName());
       assertTrue(node.getStartCode() > 0L);
       assertTrue(node.getRequests() >= 0);
       for (StorageClusterStatusModel.Node.Region region: node.getRegions()) {
-        if (Bytes.equals(region.getName(), ROOT_REGION_NAME)) {
-          foundRoot = true;
-        } else if (Bytes.equals(region.getName(), META_REGION_NAME)) {
+        if (Bytes.equals(region.getName(), META_REGION_NAME)) {
           foundMeta = true;
         }
       }
     }
-    assertTrue(foundRoot);
     assertTrue(foundMeta);
   }
 

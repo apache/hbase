@@ -260,7 +260,7 @@ public class TestDistributedLogSplitting {
     }
 
     start = EnvironmentEdgeManager.currentTimeMillis();
-    while (getAllOnlineRegions(cluster).size() < (NUM_REGIONS_TO_CREATE + 2)) {
+    while (getAllOnlineRegions(cluster).size() < (NUM_REGIONS_TO_CREATE + 1)) {
       if (EnvironmentEdgeManager.currentTimeMillis() - start > 60000) {
         assertTrue("Timedout", false);
       }
@@ -357,18 +357,18 @@ public class TestDistributedLogSplitting {
     blockUntilNoRIT(zkw, master);
     NavigableSet<String> regions = getAllOnlineRegions(cluster);
     LOG.debug("Verifying only catalog regions are assigned\n");
-    if (regions.size() != 2) {
+    if (regions.size() != 1) {
       for (String oregion : regions)
         LOG.debug("Region still online: " + oregion);
     }
-    assertEquals(2, regions.size());
+    assertEquals(1, regions.size());
     LOG.debug("Enabling table\n");
     TEST_UTIL.getHBaseAdmin().enableTable(table);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     LOG.debug("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = getAllOnlineRegions(cluster);
-    assertEquals(numRegions + 2, regions.size());
+    assertEquals(numRegions + 1, regions.size());
     return ht;
   }
 

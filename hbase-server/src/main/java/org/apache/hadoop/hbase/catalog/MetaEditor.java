@@ -90,17 +90,6 @@ public class MetaEditor {
   }
 
   /**
-   * Put the passed <code>p</code> to the <code>.META.</code> table.
-   * @param ct CatalogTracker on whose back we will ride the edit.
-   * @param p Put to add to .META.
-   * @throws IOException
-   */
-  static void putToRootTable(final CatalogTracker ct, final Put p)
-  throws IOException {
-    put(MetaReader.getRootHTable(ct), p);
-  }
-
-  /**
    * Put the passed <code>p</code> to a catalog table.
    * @param ct CatalogTracker on whose back we will ride the edit.
    * @param p Put to add
@@ -108,7 +97,7 @@ public class MetaEditor {
    */
   static void putToCatalogTable(final CatalogTracker ct, final Put p)
   throws IOException {
-    HTable t = MetaReader.getCatalogHTable(ct, p.getRow());
+    HTable t = MetaReader.getCatalogHTable(ct);
     put(t, p);
   }
 

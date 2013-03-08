@@ -20,7 +20,6 @@ limitations under the License.
 HMaster master;
 HBaseAdmin admin;
 Map<String, Integer> frags = null;
-ServerName rootLocation = null;
 ServerName metaLocation = null;
 List<ServerName> servers = null;
 Set<ServerName> deadServers = null;
@@ -159,7 +158,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
                         </%if>
                     </div>
                     <div class="tab-pane" id="tab_catalogTables">
-                        <%if (rootLocation != null) %>
+                        <%if (metaLocation != null) %>
                             <& catalogTables &>
                         </%if>
                     </div>
@@ -222,7 +221,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
                 <tr>
                     <td>Fragmentation</td>
                     <td><% frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td>
-                    <td>Overall fragmentation of all tables, including .META. and -ROOT-.</td>
+                    <td>Overall fragmentation of all tables, including .META.</td>
                 </tr>
                 </%if>
                 <tr>
@@ -266,13 +265,6 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
         <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
     </%if>
     <th>Description</th>
-</tr>
-<tr>
-    <td><a href="table.jsp?name=<% Bytes.toString(HConstants.ROOT_TABLE_NAME) %>"><% Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td>
-  <%if (frags != null)%>
-        <td align="center"><% frags.get("-ROOT-") != null ? frags.get("-ROOT-").intValue() + "%" : "n/a" %></td>
-  </%if>
-    <td>The -ROOT- table holds references to all .META. regions.</td>
 </tr>
   <%if (metaLocation != null) %>
 <tr>

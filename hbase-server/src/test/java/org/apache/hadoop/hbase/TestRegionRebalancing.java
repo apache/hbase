@@ -188,7 +188,7 @@ public class TestRegionRebalancing {
         if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop
             && serverLoad >= avgLoadMinusSlop)) {
           for (HRegionInfo hri : ProtobufUtil.getOnlineRegions(server)) {
-            if (hri.isMetaRegion() || hri.isRootRegion()) serverLoad--;
+            if (hri.isMetaRegion()) serverLoad--;
             // LOG.debug(hri.getRegionNameAsString());
           }
           if (!(serverLoad <= avgLoadPlusSlop && serverLoad >= avgLoadMinusSlop)) {
@@ -234,7 +234,7 @@ public class TestRegionRebalancing {
    * Wait until all the regions are assigned.
    */
   private void waitForAllRegionsAssigned() throws IOException {
-    int totalRegions = HBaseTestingUtility.KEYS.length+2;
+    int totalRegions = HBaseTestingUtility.KEYS.length+1;
     while (getRegionCount() < totalRegions) {
     // while (!cluster.getMaster().allRegionsAssigned()) {
       LOG.debug("Waiting for there to be "+ totalRegions +" regions, but there are " + getRegionCount() + " right now.");

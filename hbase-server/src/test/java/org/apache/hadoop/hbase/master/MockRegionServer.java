@@ -402,7 +402,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   public GetRegionInfoResponse getRegionInfo(RpcController controller,
       GetRegionInfoRequest request) throws ServiceException {
     GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-    builder.setRegionInfo(HRegionInfo.convert(HRegionInfo.ROOT_REGIONINFO));
+    builder.setRegionInfo(HRegionInfo.convert(HRegionInfo.FIRST_META_REGIONINFO));
     return builder.build();
   }
 

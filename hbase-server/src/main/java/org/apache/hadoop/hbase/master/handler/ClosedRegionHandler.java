@@ -44,9 +44,8 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
   private final ClosedPriority priority;
 
   private enum ClosedPriority {
-    ROOT (1),
-    META (2),
-    USER (3);
+    META (1),
+    USER (2);
 
     private final int value;
     ClosedPriority(int value) {
@@ -62,9 +61,7 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
     super(server, EventType.RS_ZK_REGION_CLOSED);
     this.assignmentManager = assignmentManager;
     this.regionInfo = regionInfo;
-    if(regionInfo.isRootRegion()) {
-      priority = ClosedPriority.ROOT;
-    } else if(regionInfo.isMetaRegion()) {
+    if(regionInfo.isMetaRegion()) {
       priority = ClosedPriority.META;
     } else {
       priority = ClosedPriority.USER;

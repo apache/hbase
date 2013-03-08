@@ -109,23 +109,10 @@ public class Merge extends Configured implements Tool {
     this.utils = new MetaUtils(getConf());
     this.rootdir = FSUtils.getRootDir(getConf());
     try {
-      if (isMetaTable) {
-        mergeTwoMetaRegions();
-      } else {
-        mergeTwoRegions();
-      }
+      mergeTwoRegions();
       return 0;
     } catch (Exception e) {
       LOG.fatal("Merge failed", e);
-      utils.scanMetaRegion(HRegionInfo.FIRST_META_REGIONINFO,
-          new MetaUtils.ScannerListener() {
-            public boolean processRow(HRegionInfo info) {
-              System.err.println(info.toString());
-              return true;
-            }
-          }
-      );
-
       return -1;
 
     } finally {
@@ -141,155 +128,56 @@ public class Merge extends Configured implements Tool {
   }
 
   /*
-   * Merge two meta regions. This is unlikely to be needed soon as we have only
-   * seend the meta table split once and that was with 64MB regions. With 256MB
-   * regions, it will be some time before someone has enough data in HBase to
-   * split the meta region and even less likely that a merge of two meta
-   * regions will be needed, but it is included for completeness.
-   */
-  private void mergeTwoMetaRegions() throws IOException {
-    HRegion rootRegion = utils.getRootRegion();
-    Get get = new Get(region1);
-    get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    Result result1 =  rootRegion.get(get);
-    Preconditions.checkState(!result1.isEmpty(), "First region cells can not be null");
-    HRegionInfo info1 = HRegionInfo.getHRegionInfo(result1);
-
-    get = new Get(region2);
-    get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    Result result2 =  rootRegion.get(get);
-    Preconditions.checkState(!result2.isEmpty(), "Second region cells can not be null");
-    HRegionInfo info2 = HRegionInfo.getHRegionInfo(result2);
-    HRegion merged = merge(HTableDescriptor.META_TABLEDESC, info1, rootRegion, info2, rootRegion);
-    LOG.info("Adding " + merged.getRegionInfo() + " to " +
-        rootRegion.getRegionInfo());
-    HRegion.addRegionToMETA(rootRegion, merged);
-    merged.close();
-  }
-
-  private static class MetaScannerListener
-  implements MetaUtils.ScannerListener {
-    private final byte [] region1;
-    private final byte [] region2;
-    private HRegionInfo meta1 = null;
-    private HRegionInfo meta2 = null;
-
-    MetaScannerListener(final byte [] region1, final byte [] region2) {
-      this.region1 = region1;
-      this.region2 = region2;
-    }
-
-    public boolean processRow(HRegionInfo info) {
-      if (meta1 == null && HRegion.rowIsInRange(info, region1)) {
-        meta1 = info;
-      }
-      if (region2 != null && meta2 == null &&
-          HRegion.rowIsInRange(info, region2)) {
-        meta2 = info;
-      }
-      return meta1 == null || (region2 != null && meta2 == null);
-    }
-
-    HRegionInfo getMeta1() {
-      return meta1;
-    }
-
-    HRegionInfo getMeta2() {
-      return meta2;
-    }
-  }
-
-  /*
    * Merges two regions from a user table.
    */
   private void mergeTwoRegions() throws IOException {
     LOG.info("Merging regions " + Bytes.toStringBinary(this.region1) + " and " +
         Bytes.toStringBinary(this.region2) + " in table " + Bytes.toString(this.tableName));
-    // Scan the root region for all the meta regions that contain the regions
-    // we're merging.
-    MetaScannerListener listener = new MetaScannerListener(region1, region2);
-    this.utils.scanRootRegion(listener);
-    HRegionInfo meta1 = listener.getMeta1();
-    if (meta1 == null) {
-      throw new IOException("Could not find meta region for " + Bytes.toStringBinary(region1));
-    }
-    HRegionInfo meta2 = listener.getMeta2();
-    if (meta2 == null) {
-      throw new IOException("Could not find meta region for " + Bytes.toStringBinary(region2));
-    }
-    LOG.info("Found meta for region1 " + Bytes.toStringBinary(meta1.getRegionName()) +
-      ", meta for region2 " + Bytes.toStringBinary(meta2.getRegionName()));
-    HRegion metaRegion1 = this.utils.getMetaRegion(meta1);
+    HRegion meta = this.utils.getMetaRegion();
     Get get = new Get(region1);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    Result result1 =  metaRegion1.get(get);
+    Result result1 =  meta.get(get);
     Preconditions.checkState(!result1.isEmpty(),
         "First region cells can not be null");
     HRegionInfo info1 = HRegionInfo.getHRegionInfo(result1);
     if (info1 == null) {
       throw new NullPointerException("info1 is null using key " +
-          Bytes.toStringBinary(region1) + " in " + meta1);
-    }
-
-    HRegion metaRegion2;
-    if (Bytes.equals(meta1.getRegionName(), meta2.getRegionName())) {
-      metaRegion2 = metaRegion1;
-    } else {
-      metaRegion2 = utils.getMetaRegion(meta2);
+          Bytes.toStringBinary(region1) + " in " + meta);
     }
     get = new Get(region2);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    Result result2 =  metaRegion2.get(get);
+    Result result2 =  meta.get(get);
     Preconditions.checkState(!result2.isEmpty(),
         "Second region cells can not be null");
     HRegionInfo info2 = HRegionInfo.getHRegionInfo(result2);
     if (info2 == null) {
-      throw new NullPointerException("info2 is null using key " + meta2);
+      throw new NullPointerException("info2 is null using key " + meta);
     }
     HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(FileSystem.get(getConf()),
       this.rootdir, this.tableName);
-    HRegion merged = merge(htd, info1, metaRegion1, info2, metaRegion2);
+    HRegion merged = merge(htd, meta, info1, info2);
 
-    // Now find the meta region which will contain the newly merged region
-
-    listener = new MetaScannerListener(merged.getRegionName(), null);
-    utils.scanRootRegion(listener);
-    HRegionInfo mergedInfo = listener.getMeta1();
-    if (mergedInfo == null) {
-      throw new IOException("Could not find meta region for " +
-          Bytes.toStringBinary(merged.getRegionName()));
-    }
-    HRegion mergeMeta;
-    if (Bytes.equals(mergedInfo.getRegionName(), meta1.getRegionName())) {
-      mergeMeta = metaRegion1;
-    } else if (Bytes.equals(mergedInfo.getRegionName(), meta2.getRegionName())) {
-      mergeMeta = metaRegion2;
-    } else {
-      mergeMeta = utils.getMetaRegion(mergedInfo);
-    }
     LOG.info("Adding " + merged.getRegionInfo() + " to " +
-        mergeMeta.getRegionInfo());
+        meta.getRegionInfo());
 
-    HRegion.addRegionToMETA(mergeMeta, merged);
+    HRegion.addRegionToMETA(meta, merged);
     merged.close();
   }
 
   /*
    * Actually merge two regions and update their info in the meta region(s)
-   * If the meta is split, meta1 may be different from meta2. (and we may have
-   * to scan the meta if the resulting merged region does not go in either)
    * Returns HRegion object for newly merged region
    */
-  private HRegion merge(final HTableDescriptor htd, HRegionInfo info1,
-      HRegion meta1, HRegionInfo info2, HRegion meta2)
+  private HRegion merge(final HTableDescriptor htd, HRegion meta,
+                        HRegionInfo info1, HRegionInfo info2)
   throws IOException {
     if (info1 == null) {
       throw new IOException("Could not find " + Bytes.toStringBinary(region1) + " in " +
-          Bytes.toStringBinary(meta1.getRegionName()));
+          Bytes.toStringBinary(meta.getRegionName()));
     }
     if (info2 == null) {
       throw new IOException("Cound not find " + Bytes.toStringBinary(region2) + " in " +
-          Bytes.toStringBinary(meta2.getRegionName()));
+          Bytes.toStringBinary(meta.getRegionName()));
     }
     HRegion merged = null;
     HLog log = utils.getLog();
@@ -312,8 +200,8 @@ public class Merge extends Configured implements Tool {
     // Remove the old regions from meta.
     // HRegion.merge has already deleted their files
 
-    removeRegionFromMeta(meta1, info1);
-    removeRegionFromMeta(meta2, info2);
+    removeRegionFromMeta(meta, info1);
+    removeRegionFromMeta(meta, info2);
 
     this.mergeInfo = merged.getRegionInfo();
     return merged;

@@ -33,8 +33,7 @@ import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
-import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -45,28 +44,26 @@ import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Tracks the availability of the catalog tables <code>-ROOT-</code> and
+ * Tracks the availability of the catalog tables
  * <code>.META.</code>.
  * 
  * This class is "read-only" in that the locations of the catalog tables cannot
  * be explicitly set.  Instead, ZooKeeper is used to learn of the availability
- * and location of <code>-ROOT-</code>.  <code>-ROOT-</code> is used to learn of
- * the location of <code>.META.</code>  If not available in <code>-ROOT-</code>,
- * ZooKeeper is used to monitor for a new location of <code>.META.</code>.
+ * and location of <code>.META.</code>.
  *
  * <p>Call {@link #start()} to start up operation.  Call {@link #stop()}} to
  * interrupt waits and close up shop.
  */
 @InterfaceAudience.Private
 public class CatalogTracker {
+  // TODO JDC 11/30 We don't even have ROOT anymore, revisit
   // TODO: This class needs a rethink.  The original intent was that it would be
-  // the one-stop-shop for root and meta locations and that it would get this
+  // the one-stop-shop for meta locations and that it would get this
   // info from reading and watching zk state.  The class was to be used by
-  // servers when they needed to know of root and meta movement but also by
-  // client-side (inside in HTable) so rather than figure root and meta
+  // servers when they needed to know of meta movement but also by
+  // client-side (inside in HTable) so rather than figure meta
   // locations on fault, the client would instead get notifications out of zk.
   // 
   // But this original intent is frustrated by the fact that this class has to
@@ -109,9 +106,7 @@ public class CatalogTracker {
   private static final Log LOG = LogFactory.getLog(CatalogTracker.class);
   private final HConnection connection;
   private final ZooKeeperWatcher zookeeper;
-  private final RootRegionTracker rootRegionTracker;
-  private final MetaNodeTracker metaNodeTracker;
-  private final AtomicBoolean metaAvailable = new AtomicBoolean(false);
+  private final MetaRegionTracker metaRegionTracker;
   private boolean instantiatedzkw = false;
   private Abortable abortable;
 
@@ -124,8 +119,6 @@ public class CatalogTracker {
 
   private boolean stopped = false;
 
-  static final byte [] ROOT_REGION_NAME =
-    HRegionInfo.ROOT_REGIONINFO.getRegionName();
   static final byte [] META_REGION_NAME =
     HRegionInfo.FIRST_META_REGIONINFO.getRegionName();
 
@@ -192,15 +185,7 @@ public class CatalogTracker {
     } else {
       this.zookeeper = zk;
     }
-    this.rootRegionTracker = new RootRegionTracker(zookeeper, throwableAborter);
-    final CatalogTracker ct = this;
-    // Override nodeDeleted so we get notified when meta node deleted
-    this.metaNodeTracker = new MetaNodeTracker(zookeeper, throwableAborter) {
-      public void nodeDeleted(String path) {
-        if (!path.equals(node)) return;
-        ct.resetMetaLocation();
-      }
-    };
+    this.metaRegionTracker = new MetaRegionTracker(zookeeper, throwableAborter);
   }
 
   /**
@@ -213,12 +198,11 @@ public class CatalogTracker {
   public void start() throws IOException, InterruptedException {
     LOG.debug("Starting catalog tracker " + this);
     try {
-      this.rootRegionTracker.start();
-      this.metaNodeTracker.start();
+      this.metaRegionTracker.start();
     } catch (RuntimeException e) {
       Throwable t = e.getCause();
       this.abortable.abort(e.getMessage(), t);
-      throw new IOException("Attempt to start root/meta tracker failed.", t);
+      throw new IOException("Attempt to start meta tracker failed.", t);
     }
   }
 
@@ -230,8 +214,7 @@ public class CatalogTracker {
     if (!this.stopped) {
       LOG.debug("Stopping catalog tracker " + this);
       this.stopped = true;
-      this.rootRegionTracker.stop();
-      this.metaNodeTracker.stop();
+      this.metaRegionTracker.stop();
       try {
         if (this.connection != null) {
           this.connection.close();
@@ -244,61 +227,34 @@ public class CatalogTracker {
       if (this.instantiatedzkw) {
         this.zookeeper.close();
       }
-      // Call this and it will interrupt any ongoing waits on meta.
-      synchronized (this.metaAvailable) {
-        this.metaAvailable.notifyAll();
-      }
     }
   }
 
   /**
-   * Gets the current location for <code>-ROOT-</code> or null if location is
+   * Gets the current location for <code>.META.</code> or null if location is
    * not currently available.
-   * @return {@link ServerName} for server hosting <code>-ROOT-</code> or null
+   * @return {@link ServerName} for server hosting <code>.META.</code> or null
    * if none available
    * @throws InterruptedException 
    */
-  public ServerName getRootLocation() throws InterruptedException {
-    return this.rootRegionTracker.getRootRegionLocation();
+  public ServerName getMetaLocation() throws InterruptedException {
+    return this.metaRegionTracker.getMetaRegionLocation();
   }
 
   /**
-   * @return {@link ServerName} for server hosting <code>.META.</code> or null
-   * if none available
-   */
-  public ServerName getMetaLocation() {
-    return this.metaLocation;
-  }
-
-  /**
-   * Method used by master on startup trying to figure state of cluster.
-   * Returns the current meta location unless its null.  In this latter case,
-   * it has not yet been set so go check whats up in <code>-ROOT-</code> and
-   * return that.
-   * @return {@link ServerName} for server hosting <code>.META.</code> or if null,
-   * we'll read the location that is up in <code>-ROOT-</code> table (which
-   * could be null or just plain stale).
-   * @throws IOException
-   */
-  public ServerName getMetaLocationOrReadLocationFromRoot() throws IOException {
-    ServerName sn = getMetaLocation();
-    return sn != null? sn: MetaReader.getMetaRegionLocation(this);
-  }
-
-  /**
-   * Gets the current location for <code>-ROOT-</code> if available and waits
+   * Gets the current location for <code>.META.</code> if available and waits
    * for up to the specified timeout if not immediately available.  Returns null
    * if the timeout elapses before root is available.
    * @param timeout maximum time to wait for root availability, in milliseconds
-   * @return {@link ServerName} for server hosting <code>-ROOT-</code> or null
+   * @return {@link ServerName} for server hosting <code>.META.</code> or null
    * if none available
    * @throws InterruptedException if interrupted while waiting
-   * @throws NotAllMetaRegionsOnlineException if root not available before
+   * @throws NotAllMetaRegionsOnlineException if meta not available before
    * timeout
    */
-  public ServerName waitForRoot(final long timeout)
+  public ServerName waitForMeta(final long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
-    ServerName sn = rootRegionTracker.waitRootRegionLocation(timeout);
+    ServerName sn = metaRegionTracker.waitMetaRegionLocation(timeout);
     if (sn == null) {
       throw new NotAllMetaRegionsOnlineException("Timed out; " + timeout + "ms");
     }
@@ -306,86 +262,35 @@ public class CatalogTracker {
   }
 
   /**
-   * Gets a connection to the server hosting root, as reported by ZooKeeper,
+   * Gets a connection to the server hosting meta, as reported by ZooKeeper,
    * waiting up to the specified timeout for availability.
-   * @param timeout How long to wait on root location
-   * @see #waitForRoot(long) for additional information
-   * @return connection to server hosting root
+   * @param timeout How long to wait on meta location
+   * @see #waitForMeta for additional information
+   * @return connection to server hosting meta
    * @throws InterruptedException
    * @throws NotAllMetaRegionsOnlineException if timed out waiting
    * @throws IOException
-   * @deprecated Use #getRootServerConnection(long)
+   * @deprecated Use #getMetaServerConnection(long)
    */
-  public AdminProtocol waitForRootServerConnection(long timeout)
+  public AdminProtocol waitForMetaServerConnection(long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
-    return getRootServerConnection(timeout);
+    return getMetaServerConnection(timeout);
   }
 
   /**
-   * Gets a connection to the server hosting root, as reported by ZooKeeper,
+   * Gets a connection to the server hosting meta, as reported by ZooKeeper,
    * waiting up to the specified timeout for availability.
    * <p>WARNING: Does not retry.  Use an {@link HTable} instead.
-   * @param timeout How long to wait on root location
-   * @see #waitForRoot(long) for additional information
-   * @return connection to server hosting root
+   * @param timeout How long to wait on meta location
+   * @see #waitForMeta for additional information
+   * @return connection to server hosting meta
    * @throws InterruptedException
    * @throws NotAllMetaRegionsOnlineException if timed out waiting
    * @throws IOException
    */
-  AdminProtocol getRootServerConnection(long timeout)
+  AdminProtocol getMetaServerConnection(long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
-    return getCachedConnection(waitForRoot(timeout));
-  }
-
-  /**
-   * Gets a connection to the server currently hosting <code>.META.</code> or
-   * null if location is not currently available.
-   * <p>
-   * If a location is known, a connection to the cached location is returned.
-   * If refresh is true, the cached connection is verified first before
-   * returning.  If the connection is not valid, it is reset and rechecked.
-   * <p>
-   * If no location for meta is currently known, method checks ROOT for a new
-   * location, verifies META is currently there, and returns a cached connection
-   * to the server hosting META.
-   *
-   * @return connection to server hosting meta, null if location not available
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  private AdminProtocol getMetaServerConnection()
-  throws IOException, InterruptedException {
-    synchronized (metaAvailable) {
-      if (metaAvailable.get()) {
-        AdminProtocol current = getCachedConnection(this.metaLocation);
-        // If we are to refresh, verify we have a good connection by making
-        // an invocation on it.
-        if (verifyRegionLocation(current, this.metaLocation, META_REGION_NAME)) {
-          return current;
-        }
-        resetMetaLocation();
-      }
-      // We got here because there is no meta available or because whats
-      // available is bad.
-
-      // Now read the current .META. content from -ROOT-.  Note: This goes via
-      // an HConnection.  It has its own way of figuring root and meta locations
-      // which we have to wait on.
-      ServerName newLocation = MetaReader.getMetaRegionLocation(this);
-      if (newLocation == null) return null;
-
-      AdminProtocol newConnection = getCachedConnection(newLocation);
-      if (verifyRegionLocation(newConnection, newLocation, META_REGION_NAME)) {
-        setMetaLocation(newLocation);
-        return newConnection;
-      } else {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("New .META. server: " + newLocation + " isn't valid." +
-            " Cached .META. server: " + this.metaLocation);
-        }
-      }
-      return null;
-    }
+    return getCachedConnection(waitForMeta(timeout));
   }
 
   /**
@@ -407,79 +312,6 @@ public class CatalogTracker {
       } catch (IOException e) {
         LOG.info("Retrying", e);
       }
-    }
-  }
-
-  /**
-   * Gets the current location for <code>.META.</code> if available and waits
-   * for up to the specified timeout if not immediately available.  Throws an
-   * exception if timed out waiting.  This method differs from {@link #waitForMeta()}
-   * in that it will go ahead and verify the location gotten from ZooKeeper and
-   * -ROOT- region by trying to use returned connection.
-   * @param timeout maximum time to wait for meta availability, in milliseconds
-   * @return {@link ServerName} for server hosting <code>.META.</code> or null
-   * if none available
-   * @throws InterruptedException if interrupted while waiting
-   * @throws IOException unexpected exception connecting to meta server
-   * @throws NotAllMetaRegionsOnlineException if meta not available before
-   * timeout
-   */
-  public ServerName waitForMeta(long timeout)
-  throws InterruptedException, IOException, NotAllMetaRegionsOnlineException {
-    long stop = timeout == 0 ? Long.MAX_VALUE : System.currentTimeMillis() + timeout;
-    long waitTime = Math.min(50, timeout);
-    synchronized (metaAvailable) {
-      while(!stopped && System.currentTimeMillis() < stop) {
-        if (getMetaServerConnection() != null) {
-          return metaLocation;
-        }
-        // perhaps -ROOT- region isn't available, let us wait a bit and retry.
-        metaAvailable.wait(waitTime);
-      }
-      if (getMetaServerConnection() == null) {
-        throw new NotAllMetaRegionsOnlineException("Timed out (" + timeout + "ms)");
-      }
-      return metaLocation;
-    }
-  }
-
-  /**
-   * Gets a connection to the server hosting meta, as reported by ZooKeeper,
-   * waiting up to the specified timeout for availability.
-   * @see #waitForMeta(long) for additional information
-   * @return connection to server hosting meta
-   * @throws InterruptedException
-   * @throws NotAllMetaRegionsOnlineException if timed out waiting
-   * @throws IOException
-   * @deprecated Does not retry; use an HTable instance instead.
-   */
-  public AdminProtocol waitForMetaServerConnection(long timeout)
-  throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
-    return getCachedConnection(waitForMeta(timeout));
-  }
-
-  /**
-   * Called when we figure current meta is off (called from zk callback).
-   */
-  public void resetMetaLocation() {
-    LOG.debug("Current cached META location, " + metaLocation +
-      ", is not valid, resetting");
-    synchronized(this.metaAvailable) {
-      this.metaAvailable.set(false);
-      this.metaAvailable.notifyAll();
-    }
-  }
-
-  /**
-   * @param metaLocation
-   */
-  void setMetaLocation(final ServerName metaLocation) {
-    LOG.debug("Set new cached META location: " + metaLocation);
-    synchronized (this.metaAvailable) {
-      this.metaLocation = metaLocation;
-      this.metaAvailable.set(true);
-      // no synchronization because these are private and already under lock
-      this.metaAvailable.notifyAll();
     }
   }
 
@@ -533,7 +365,7 @@ public class CatalogTracker {
    * Verify we can connect to <code>hostingServer</code> and that its carrying
    * <code>regionName</code>.
    * @param hostingServer Interface to the server hosting <code>regionName</code>
-   * @param serverName The servername that goes with the <code>metaServer</code>
+   * @param address The servername that goes with the <code>metaServer</code>
    * Interface.  Used logging.
    * @param regionName The regionname we are interested in.
    * @return True if we were able to verify the region located at other side of
@@ -579,37 +411,12 @@ public class CatalogTracker {
   }
 
   /**
-   * Verify <code>-ROOT-</code> is deployed and accessible.
-   * @param timeout How long to wait on zk for root address (passed through to
-   * the internal call to {@link #waitForRootServerConnection(long)}.
-   * @return True if the <code>-ROOT-</code> location is healthy.
+   * Verify <code>.META.</code> is deployed and accessible.
+   * @param timeout How long to wait on zk for meta address (passed through to
+   * the internal call to {@link #waitForMetaServerConnection(long)}.
+   * @return True if the <code>.META.</code> location is healthy.
    * @throws IOException
    * @throws InterruptedException 
-   */
-  public boolean verifyRootRegionLocation(final long timeout)
-  throws InterruptedException, IOException {
-    AdminProtocol connection = null;
-    try {
-      connection = waitForRootServerConnection(timeout);
-    } catch (NotAllMetaRegionsOnlineException e) {
-      // Pass
-    } catch (ServerNotRunningYetException e) {
-      // Pass -- remote server is not up so can't be carrying root
-    } catch (UnknownHostException e) {
-      // Pass -- server name doesn't resolve so it can't be assigned anything.
-    }
-    return (connection == null)? false:
-      verifyRegionLocation(connection,
-        this.rootRegionTracker.getRootRegionLocation(), ROOT_REGION_NAME);
-  }
-
-  /**
-   * Verify <code>.META.</code> is deployed and accessible.
-   * @param timeout How long to wait on zk for <code>.META.</code> address
-   * (passed through to the internal call to {@link #waitForMetaServerConnection(long)}.
-   * @return True if the <code>.META.</code> location is healthy.
-   * @throws IOException Some unexpected IOE.
-   * @throws InterruptedException
    */
   public boolean verifyMetaRegionLocation(final long timeout)
   throws InterruptedException, IOException {
@@ -619,19 +426,13 @@ public class CatalogTracker {
     } catch (NotAllMetaRegionsOnlineException e) {
       // Pass
     } catch (ServerNotRunningYetException e) {
-      // Pass -- remote server is not up so can't be carrying .META.
+      // Pass -- remote server is not up so can't be carrying root
     } catch (UnknownHostException e) {
       // Pass -- server name doesn't resolve so it can't be assigned anything.
-    } catch (RetriesExhaustedException e) {
-      // Pass -- failed after bunch of retries.
-      LOG.debug("Failed verify meta region location after retries", e);
     }
-    return connection != null;
-  }
-
-  // Used by tests.
-  MetaNodeTracker getMetaNodeTracker() {
-    return this.metaNodeTracker;
+    return (connection == null)? false:
+      verifyRegionLocation(connection,
+          this.metaRegionTracker.getMetaRegionLocation(), META_REGION_NAME);
   }
 
   public HConnection getConnection() {

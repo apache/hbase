@@ -376,7 +376,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       // If this is a special region we always try not to move it.
       // so clear out r.  try again
-      if (r.isMetaRegion() || r.isRootRegion() ) {
+      if (r.isMetaRegion()) {
         r = null;
       }
     }

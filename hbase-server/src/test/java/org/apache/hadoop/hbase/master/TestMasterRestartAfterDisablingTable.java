@@ -74,7 +74,7 @@ public class TestMasterRestartAfterDisablingTable {
     HTable ht = TEST_UTIL.createTable(table, family);
     int numRegions = TEST_UTIL.createMultiRegions(conf, ht, family,
         NUM_REGIONS_TO_CREATE);
-    numRegions += 2; // catalogs
+    numRegions += 1; // catalogs
     log("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     log("Disabling table\n");
@@ -83,7 +83,7 @@ public class TestMasterRestartAfterDisablingTable {
     NavigableSet<String> regions = getAllOnlineRegions(cluster);
     assertEquals(
         "The number of regions for the table tableRestart should be 0 and only"
-            + "the catalog tables should be present.", 2, regions.size());
+            + "the catalog tables should be present.", 1, regions.size());
 
     List<MasterThread> masterThreads = cluster.getMasterThreads();
     MasterThread activeMaster = null;
@@ -111,7 +111,7 @@ public class TestMasterRestartAfterDisablingTable {
     regions = getAllOnlineRegions(cluster);
     assertEquals(
         "The assigned regions were not onlined after master switch except for the catalog tables.",
-        6, regions.size());
+        5, regions.size());
     assertTrue("The table should be in enabled state", cluster.getMaster()
         .getAssignmentManager().getZKTable().isEnabledTable("tableRestart"));
     ht.close();

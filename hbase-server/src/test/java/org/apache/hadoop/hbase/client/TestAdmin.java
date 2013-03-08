@@ -1621,18 +1621,4 @@ public class TestAdmin {
       ct.stop();
     }
   }
-  
-  @Test
-  public void testRootTableSplit() throws Exception {
-    ServerName serverName = TEST_UTIL.getMiniHBaseCluster().getServerHoldingRoot();
-    Scan s = new Scan();
-    HTable rootTable = new HTable(TEST_UTIL.getConfiguration(), HConstants.ROOT_TABLE_NAME);
-    ResultScanner scanner = rootTable.getScanner(s);
-    Result metaEntry = scanner.next();
-    this.admin.split(HConstants.ROOT_TABLE_NAME, metaEntry.getRow());
-    Thread.sleep(1000);
-    List<HRegionInfo> onlineRegions = this.admin.getOnlineRegions(serverName);
-    assertTrue(onlineRegions != null && onlineRegions.contains(HRegionInfo.ROOT_REGIONINFO));
-  }
-
 }

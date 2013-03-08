@@ -60,8 +60,8 @@ public class MasterStatusServlet extends HttpServlet {
         
     Map<String, Integer> frags = getFragmentationInfo(master, conf);
     
-    ServerName rootLocation = getRootLocationOrNull(master);
-    ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
+    ServerName metaLocation = getMetaLocationOrNull(master);
+    //ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
     List<ServerName> servers = master.getServerManager().getOnlineServersList();
     Set<ServerName> deadServers = master.getServerManager().getDeadServers().copyServerNames();
 
@@ -71,7 +71,6 @@ public class MasterStatusServlet extends HttpServlet {
        tmpl = new MasterStatusTmpl()
       .setFrags(frags)
       .setShowAppendWarning(shouldShowAppendWarning(conf))
-      .setRootLocation(rootLocation)
       .setMetaLocation(metaLocation)
       .setServers(servers)
       .setDeadServers(deadServers)
@@ -88,11 +87,11 @@ public class MasterStatusServlet extends HttpServlet {
           master, admin);
   }
 
-  private ServerName getRootLocationOrNull(HMaster master) {
+  private ServerName getMetaLocationOrNull(HMaster master) {
     try {
-      return master.getCatalogTracker().getRootLocation();
+      return master.getCatalogTracker().getMetaLocation();
     } catch (InterruptedException e) {
-      LOG.warn("Unable to get root location", e);
+      LOG.warn("Unable to get meta location", e);
       return null;
     }
   }

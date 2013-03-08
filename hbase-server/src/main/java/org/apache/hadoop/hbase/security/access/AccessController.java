@@ -205,9 +205,9 @@ public class AccessController extends BaseRegionObserver
     HRegionInfo hri = e.getRegion().getRegionInfo();
     byte[] tableName = hri.getTableName();
 
-    // 1. All users need read access to .META. and -ROOT- tables.
+    // 1. All users need read access to .META. table.
     // this is a very common operation, so deal with it quickly.
-    if (hri.isRootRegion() || hri.isMetaRegion()) {
+    if (hri.isMetaRegion()) {
       if (permRequest == Permission.Action.READ) {
         return AuthResult.allow(request, "All users allowed", user,
           permRequest, tableName, families);
@@ -225,7 +225,7 @@ public class AccessController extends BaseRegionObserver
     // e.g. When a table is removed an entry is removed from .META. and _acl_
     // and the user need to be allowed to write on both tables.
     if (permRequest == Permission.Action.WRITE &&
-       (hri.isRootRegion() || hri.isMetaRegion() ||
+       (hri.isMetaRegion() ||
         Bytes.equals(tableName, AccessControlLists.ACL_GLOBAL_NAME)) &&
        (authManager.authorize(user, Permission.Action.CREATE) ||
         authManager.authorize(user, Permission.Action.ADMIN)))

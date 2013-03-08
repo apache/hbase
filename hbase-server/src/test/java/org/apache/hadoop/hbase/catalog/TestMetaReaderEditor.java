@@ -42,7 +42,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test {@link MetaReader}, {@link MetaEditor}, and {@link RootLocationEditor}.
+ * Test {@link MetaReader}, {@link MetaEditor}.
  */
 @Category(MediumTests.class)
 public class TestMetaReaderEditor {
@@ -218,8 +218,6 @@ public class TestMetaReaderEditor {
     assertTrue(regions.size() >= 1);
     assertTrue(MetaReader.getTableRegionsAndLocations(CT,
       Bytes.toString(HConstants.META_TABLE_NAME)).size() >= 1);
-    assertTrue(MetaReader.getTableRegionsAndLocations(CT,
-      Bytes.toString(HConstants.ROOT_TABLE_NAME)).size() == 1);
   }
 
   @Test public void testTableExists() throws IOException {
@@ -234,8 +232,6 @@ public class TestMetaReaderEditor {
     assertFalse(MetaReader.tableExists(CT, name));
     assertTrue(MetaReader.tableExists(CT,
       Bytes.toString(HConstants.META_TABLE_NAME)));
-    assertTrue(MetaReader.tableExists(CT,
-      Bytes.toString(HConstants.ROOT_TABLE_NAME)));
   }
 
   @Test public void testGetRegion() throws IOException, InterruptedException {
@@ -245,11 +241,6 @@ public class TestMetaReaderEditor {
     Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(CT, Bytes.toBytes("nonexistent-region"));
     assertNull(pair);
-    // Test it works getting a region from meta/root.
-    pair =
-      MetaReader.getRegion(CT, HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
-    assertEquals(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(),
-      pair.getFirst().getEncodedName());
     LOG.info("Finished " + name);
   }
 

@@ -73,7 +73,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -501,7 +501,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * This call is invoked only (1) master assign root and meta;
+   * This call is invoked only (1) master assign meta;
    * (2) during failover mode startup, zk assignment node processing.
    * The locker is set in the caller.
    *
@@ -2144,30 +2144,17 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Assigns the ROOT region.
-   * <p>
-   * Assumes that ROOT is currently closed and is not being actively served by
-   * any RegionServer.
-   * <p>
-   * Forcibly unsets the current root region location in ZooKeeper and assigns
-   * ROOT to a random RegionServer.
-   * @throws KeeperException
-   */
-  public void assignRoot() throws KeeperException {
-    RootRegionTracker.deleteRootLocation(this.watcher);
-    assign(HRegionInfo.ROOT_REGIONINFO, true);
-  }
-
-  /**
    * Assigns the META region.
    * <p>
    * Assumes that META is currently closed and is not being actively served by
    * any RegionServer.
    * <p>
-   * Forcibly assigns META to a random RegionServer.
+   * Forcibly unsets the current meta region location in ZooKeeper and assigns
+   * META to a random RegionServer.
+   * @throws KeeperException
    */
-  public void assignMeta() {
-    // Force assignment to a random server
+  public void assignMeta() throws KeeperException {
+    MetaRegionTracker.deleteMetaLocation(this.watcher);
     assign(HRegionInfo.FIRST_META_REGIONINFO, true);
   }
 
@@ -2745,10 +2732,6 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private void invokeUnassign(HRegionInfo regionInfo) {
     threadPoolExecutorService.submit(new UnAssignCallable(this, regionInfo));
-  }
-
-  public boolean isCarryingRoot(ServerName serverName) {
-    return isCarryingRegion(serverName, HRegionInfo.ROOT_REGIONINFO);
   }
 
   public boolean isCarryingMeta(ServerName serverName) {

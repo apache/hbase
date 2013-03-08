@@ -75,7 +75,6 @@ module Hbase
 
     define_test "list should not return meta tables" do
       assert(!admin.list.member?('.META.'))
-      assert(!admin.list.member?('-ROOT-'))
     end
 
     #-------------------------------------------------------------------------------

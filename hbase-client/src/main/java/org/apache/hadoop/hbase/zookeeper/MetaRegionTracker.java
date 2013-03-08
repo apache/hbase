@@ -19,46 +19,46 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Tracks the root region server location node in zookeeper.
- * Root region location is set by <code>RegionServerServices</code>.
- * This class has a watcher on the root location and notices changes.
+ * Tracks the meta region server location node in zookeeper.
+ * Meta region location is set by <code>RegionServerServices</code>.
+ * This class has a watcher on the meta location and notices changes.
  */
 @InterfaceAudience.Private
-public class RootRegionTracker extends ZooKeeperNodeTracker {
+public class MetaRegionTracker extends ZooKeeperNodeTracker {
   /**
-   * Creates a root region location tracker.
+   * Creates a meta region location tracker.
    *
    * <p>After construction, use {@link #start} to kick off tracking.
    *
    * @param watcher
    * @param abortable
    */
-  public RootRegionTracker(ZooKeeperWatcher watcher, Abortable abortable) {
-    super(watcher, watcher.rootServerZNode, abortable);
+  public MetaRegionTracker(ZooKeeperWatcher watcher, Abortable abortable) {
+    super(watcher, watcher.metaServerZNode, abortable);
   }
 
   /**
-   * Checks if the root region location is available.
-   * @return true if root region location is available, false if not
+   * Checks if the meta region location is available.
+   * @return true if meta region location is available, false if not
    */
   public boolean isLocationAvailable() {
     return super.getData(true) != null;
   }
 
   /**
-   * Gets the root region location, if available.  Does not block.  Sets a watcher.
+   * Gets the meta region location, if available.  Does not block.  Sets a watcher.
    * @return server name or null if we failed to get the data.
    * @throws InterruptedException
    */
-  public ServerName getRootRegionLocation() throws InterruptedException {
+  public ServerName getMetaRegionLocation() throws InterruptedException {
     try {
       return ServerName.parseFrom(super.getData(true));
     } catch (DeserializationException e) {
@@ -68,32 +68,32 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * Gets the root region location, if available.  Does not block.  Does not set
-   * a watcher (In this regard it differs from {@link #getRootRegionLocation()}.
+   * Gets the meta region location, if available.  Does not block.  Does not set
+   * a watcher (In this regard it differs from {@link #getMetaRegionLocation}.
    * @param zkw
    * @return server name or null if we failed to get the data.
    * @throws KeeperException
    */
-  public static ServerName getRootRegionLocation(final ZooKeeperWatcher zkw)
+  public static ServerName getMetaRegionLocation(final ZooKeeperWatcher zkw)
   throws KeeperException {
     try {
-      return ServerName.parseFrom(ZKUtil.getData(zkw, zkw.rootServerZNode));
+      return ServerName.parseFrom(ZKUtil.getData(zkw, zkw.metaServerZNode));
     } catch (DeserializationException e) {
       throw ZKUtil.convert(e);
     }
   }
 
   /**
-   * Gets the root region location, if available, and waits for up to the
+   * Gets the meta region location, if available, and waits for up to the
    * specified timeout if not immediately available.
    * Given the zookeeper notification could be delayed, we will try to
    * get the latest data.
    * @param timeout maximum time to wait, in millis
-   * @return server name for server hosting root region formatted as per
+   * @return server name for server hosting meta region formatted as per
    * {@link ServerName}, or null if none available
    * @throws InterruptedException if interrupted while waiting
    */
-  public ServerName waitRootRegionLocation(long timeout)
+  public ServerName waitMetaRegionLocation(long timeout)
   throws InterruptedException {
     if (false == checkIfBaseNodeAvailable()) {
       String errorMsg = "Check the value configured in 'zookeeper.znode.parent'. "
@@ -110,31 +110,31 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * Sets the location of <code>-ROOT-</code> in ZooKeeper to the
+   * Sets the location of <code>.META.</code> in ZooKeeper to the
    * specified server address.
    * @param zookeeper zookeeper reference
-   * @param location The server hosting <code>-ROOT-</code>
+   * @param location The server hosting <code>.META.</code>
    * @throws KeeperException unexpected zookeeper exception
    */
-  public static void setRootLocation(ZooKeeperWatcher zookeeper,
-      final ServerName location)
+  public static void setMetaLocation(ZooKeeperWatcher zookeeper,
+                                     final ServerName location)
   throws KeeperException {
-    LOG.info("Setting ROOT region location in ZooKeeper as " + location);
-    // Make the RootRegionServer pb and then get its bytes and save this as
+    LOG.info("Setting META region location in ZooKeeper as " + location);
+    // Make the MetaRegionServer pb and then get its bytes and save this as
     // the znode content.
     byte [] data = toByteArray(location);
     try {
-      ZKUtil.createAndWatch(zookeeper, zookeeper.rootServerZNode, data);
+      ZKUtil.createAndWatch(zookeeper, zookeeper.metaServerZNode, data);
     } catch(KeeperException.NodeExistsException nee) {
-      LOG.debug("ROOT region location already existed, updated location");
-      ZKUtil.setData(zookeeper, zookeeper.rootServerZNode, data);
+      LOG.debug("META region location already existed, updated location");
+      ZKUtil.setData(zookeeper, zookeeper.metaServerZNode, data);
     }
   }
 
   /**
    * Build up the znode content.
    * @param sn What to put into the znode.
-   * @return The content of the root-region-server znode
+   * @return The content of the meta-region-server znode
    */
   static byte [] toByteArray(final ServerName sn) {
     // ZNode content is a pb message preceeded by some pb magic.
@@ -147,23 +147,23 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * Deletes the location of <code>-ROOT-</code> in ZooKeeper.
+   * Deletes the location of <code>.META.</code> in ZooKeeper.
    * @param zookeeper zookeeper reference
    * @throws KeeperException unexpected zookeeper exception
    */
-  public static void deleteRootLocation(ZooKeeperWatcher zookeeper)
+  public static void deleteMetaLocation(ZooKeeperWatcher zookeeper)
   throws KeeperException {
-    LOG.info("Unsetting ROOT region location in ZooKeeper");
+    LOG.info("Unsetting META region location in ZooKeeper");
     try {
       // Just delete the node.  Don't need any watches.
-      ZKUtil.deleteNode(zookeeper, zookeeper.rootServerZNode);
+      ZKUtil.deleteNode(zookeeper, zookeeper.metaServerZNode);
     } catch(KeeperException.NoNodeException nne) {
       // Has already been deleted
     }
   }
 
   /**
-   * Wait until the root region is available.
+   * Wait until the meta region is available.
    * @param zkw
    * @param timeout
    * @return ServerName or null if we timed out.
@@ -172,7 +172,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
   public static ServerName blockUntilAvailable(final ZooKeeperWatcher zkw,
       final long timeout)
   throws InterruptedException {
-    byte [] data = ZKUtil.blockUntilAvailable(zkw, zkw.rootServerZNode, timeout);
+    byte [] data = ZKUtil.blockUntilAvailable(zkw, zkw.metaServerZNode, timeout);
     if (data == null) return null;
     try {
       return ServerName.parseFrom(data);

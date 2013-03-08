@@ -81,8 +81,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   // base znode for this cluster
   public String baseZNode;
-  // znode containing location of server hosting root region
-  public String rootServerZNode;
+  // znode containing location of server hosting meta region
+  public String metaServerZNode;
   // znode containing ephemeral nodes of the regionservers
   public String rsZNode;
   // znode containing ephemeral nodes of the draining regionservers
@@ -196,8 +196,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private void setNodeNames(Configuration conf) {
     baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    rootServerZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.rootserver", "root-region-server"));
+    metaServerZNode = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     rsZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.rs", "rs"));
     drainingZNode = ZKUtil.joinZNode(baseZNode,

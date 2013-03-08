@@ -60,12 +60,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Triple;
-import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.*;
+import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -107,7 +103,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * instance does not change its object identity).  Sharing {@link HConnection}
  * instances is usually what you want; all clients of the {@link HConnection}
  * instances share the HConnections' cache of Region locations rather than each
- * having to discover for itself the location of meta, root, etc.  It makes
+ * having to discover for itself the location of meta, etc.  It makes
  * sense for the likes of the pool of HTables class {@link HTablePool}, for
  * instance (If concerned that a single {@link HConnection} is insufficient
  * for sharing amongst clients in say an heavily-multithreaded environment,
@@ -873,10 +869,6 @@ public class HConnectionManager {
      */
     private boolean testTableOnlineState(byte [] tableName, boolean enabled)
     throws IOException {
-      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
-        // The root region is always enabled
-        return enabled;
-      }
       String tableNameStr = Bytes.toString(tableName);
       ZooKeeperKeepAliveConnection zkw = getKeepAliveZooKeeperWatcher();
       try {
@@ -946,27 +938,24 @@ public class HConnectionManager {
             "table name cannot be null or zero length");
       }
 
-      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+      if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
         ZooKeeperKeepAliveConnection zkw = getKeepAliveZooKeeperWatcher();
         try {
-          LOG.debug("Looking up root region location in ZK," +
+          LOG.debug("Looking up meta region location in ZK," +
             " connection=" + this);
           ServerName servername =
-            RootRegionTracker.blockUntilAvailable(zkw, this.rpcTimeout);
+            MetaRegionTracker.blockUntilAvailable(zkw, this.rpcTimeout);
 
-          LOG.debug("Looked up root region location, connection=" + this +
+          LOG.debug("Looked up meta region location, connection=" + this +
             "; serverName=" + ((servername == null) ? "null" : servername));
           if (servername == null) return null;
-          return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, servername, 0);
+          return new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, servername, 0);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           return null;
         } finally {
           zkw.close();
         }
-      } else if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
-        return locateRegionInMeta(HConstants.ROOT_TABLE_NAME, tableName, row,
-          useCache, metaRegionLock, retry);
       } else {
         // Region not in the cache - have to go to the meta RS
         return locateRegionInMeta(HConstants.META_TABLE_NAME, tableName, row,
@@ -1025,7 +1014,7 @@ public class HConnectionManager {
     }
 
     /*
-      * Search one of the meta tables (-ROOT- or .META.) for the HRegionLocation
+      * Search the .META. table for the HRegionLocation
       * info that contains the table and row we're seeking.
       */
     private HRegionLocation locateRegionInMeta(final byte [] parentTable,
@@ -1055,7 +1044,7 @@ public class HConnectionManager {
 
         HRegionLocation metaLocation = null;
         try {
-          // locate the root or meta region
+          // locate the meta region
           metaLocation = locateRegion(parentTable, metaKey, true, false);
           // If null still, go around again.
           if (metaLocation == null) continue;
@@ -1087,7 +1076,7 @@ public class HConnectionManager {
               forceDeleteCachedLocation(tableName, row);
             }
 
-            // Query the root or meta region for the location of the meta region
+            // Query the meta region for the location of the meta region
             regionInfoRow = ProtobufUtil.getRowOrBefore(server,
               metaLocation.getRegionInfo().getRegionName(), metaKey,
               HConstants.CATALOG_FAMILY);
@@ -2436,9 +2425,6 @@ public class HConnectionManager {
     public HTableDescriptor getHTableDescriptor(final byte[] tableName)
     throws IOException {
       if (tableName == null || tableName.length == 0) return null;
-      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
-        return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC);
-      }
       if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
         return HTableDescriptor.META_TABLEDESC;
       }

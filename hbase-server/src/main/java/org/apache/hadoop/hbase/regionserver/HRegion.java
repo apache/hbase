@@ -4078,13 +4078,14 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Inserts a new region's meta information into the passed
    * <code>meta</code> region. Used by the HMaster bootstrap code adding
-   * new table to ROOT table.
+   * new table to META table.
    *
    * @param meta META HRegion to be updated
    * @param r HRegion to add to <code>meta</code>
    *
    * @throws IOException
    */
+  // TODO remove since only test and merge use this
   public static void addRegionToMETA(HRegion meta, HRegion r)
   throws IOException {
     meta.checkResources();
@@ -5113,13 +5114,9 @@ public class HRegion implements HeapSize { // , Writable{
       final boolean majorCompact)
   throws IOException {
     HRegion region = null;
-    String rootStr = Bytes.toString(HConstants.ROOT_TABLE_NAME);
     String metaStr = Bytes.toString(HConstants.META_TABLE_NAME);
     // Currently expects tables have one region only.
-    if (p.getName().startsWith(rootStr)) {
-      region = HRegion.newHRegion(p, log, fs, c, HRegionInfo.ROOT_REGIONINFO,
-        HTableDescriptor.ROOT_TABLEDESC, null);
-    } else if (p.getName().startsWith(metaStr)) {
+    if (p.getName().startsWith(metaStr)) {
       region = HRegion.newHRegion(p, log, fs, c,
         HRegionInfo.FIRST_META_REGIONINFO, HTableDescriptor.META_TABLEDESC, null);
     } else {
@@ -5186,10 +5183,10 @@ public class HRegion implements HeapSize { // , Writable{
    * is based on the size of the store.
    */
   public byte[] checkSplit() {
-    // Can't split ROOT/META
+    // Can't split META
     if (this.getRegionInfo().isMetaTable()) {
       if (shouldForceSplit()) {
-        LOG.warn("Cannot split root/meta regions in HBase 0.20 and above");
+        LOG.warn("Cannot split meta region in HBase 0.20 and above");
       }
       return null;
     }

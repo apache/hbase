@@ -136,8 +136,8 @@ public class MasterFileSystem {
   /**
    * Create initial layout in filesystem.
    * <ol>
-   * <li>Check if the root region exists and is readable, if not create it.
-   * Create hbase.version and the -ROOT- directory if not one.
+   * <li>Check if the meta region exists and is readable, if not create it.
+   * Create hbase.version and the .META. directory if not one.
    * </li>
    * <li>Create a log archive directory for RS to put archived logs</li>
    * </ol>
@@ -438,14 +438,12 @@ public class MasterFileSystem {
     }
     clusterId = FSUtils.getClusterId(fs, rd);
 
-    // Make sure the root region directory exists!
-    if (!FSUtils.rootRegionExists(fs, rd)) {
+    // Make sure the meta region directory exists!
+    if (!FSUtils.metaRegionExists(fs, rd)) {
       bootstrap(rd, c);
     }
 
-    // Create tableinfo-s for ROOT and META if not already there. This also updates the
-    //descriptors if they are older versions.
-    FSTableDescriptors.createTableDescriptor(fs, rd, HTableDescriptor.ROOT_TABLEDESC, false);
+    // Create tableinfo-s for META if not already there.
     FSTableDescriptors.createTableDescriptor(fs, rd, HTableDescriptor.META_TABLEDESC, false);
 
     return rd;
@@ -479,43 +477,22 @@ public class MasterFileSystem {
 
   private static void bootstrap(final Path rd, final Configuration c)
   throws IOException {
-    LOG.info("BOOTSTRAP: creating ROOT and first META regions");
+    LOG.info("BOOTSTRAP: creating first META region");
     try {
       // Bootstrapping, make sure blockcache is off.  Else, one will be
       // created here in bootstap and it'll need to be cleaned up.  Better to
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
-      HRegionInfo rootHRI = new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
-      setInfoFamilyCachingForRoot(false);
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
       setInfoFamilyCachingForMeta(false);
-      HRegion root = HRegion.createHRegion(rootHRI, rd, c,
-          HTableDescriptor.ROOT_TABLEDESC);
       HRegion meta = HRegion.createHRegion(metaHRI, rd, c,
           HTableDescriptor.META_TABLEDESC);
-      setInfoFamilyCachingForRoot(true);
       setInfoFamilyCachingForMeta(true);
-      // Add first region from the META table to the ROOT region.
-      HRegion.addRegionToMETA(root, meta);
-      HRegion.closeHRegion(root);
       HRegion.closeHRegion(meta);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.error("bootstrap", e);
       throw e;
-    }
-  }
-
-  /**
-   * Enable in-memory caching for -ROOT-
-   */
-  public static void setInfoFamilyCachingForRoot(final boolean b) {
-    for (HColumnDescriptor hcd:
-        HTableDescriptor.ROOT_TABLEDESC.getColumnFamilies()) {
-       if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
-         hcd.setBlockCacheEnabled(b);
-         hcd.setInMemory(b);
-     }
     }
   }
 

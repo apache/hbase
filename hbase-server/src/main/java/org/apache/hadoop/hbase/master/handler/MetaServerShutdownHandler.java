@@ -37,16 +37,14 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class MetaServerShutdownHandler extends ServerShutdownHandler {
-  private final boolean carryingRoot;
   private final boolean carryingMeta;
   private static final Log LOG = LogFactory.getLog(MetaServerShutdownHandler.class);
   public MetaServerShutdownHandler(final Server server,
       final MasterServices services,
       final DeadServer deadServers, final ServerName serverName,
-      final boolean carryingRoot, final boolean carryingMeta) {
+      final boolean carryingMeta) {
     super(server, services, deadServers, serverName,
       EventType.M_META_SERVER_SHUTDOWN, true);
-    this.carryingRoot = carryingRoot;
     this.carryingMeta = carryingMeta;
   }
 
@@ -65,22 +63,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
     }
 
     // Assign root and meta if we were carrying them.
-    if (isCarryingRoot()) { // -ROOT-
-      // Check again: region may be assigned to other where because of RIT
-      // timeout
-      if (this.services.getAssignmentManager().isCarryingRoot(serverName)) {
-        LOG.info("Server " + serverName
-            + " was carrying ROOT. Trying to assign.");
-        this.services.getAssignmentManager().regionOffline(
-            HRegionInfo.ROOT_REGIONINFO);
-        verifyAndAssignRootWithRetries();
-      } else {
-        LOG.info("ROOT has been assigned to otherwhere, skip assigning.");
-      }
-    }
-
-    // Carrying meta?
-    if (isCarryingMeta()) {
+    if (isCarryingMeta()) { // .META.
       // Check again: region may be assigned to other where because of RIT
       // timeout
       if (this.services.getAssignmentManager().isCarryingMeta(serverName)) {
@@ -88,37 +71,37 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
             + " was carrying META. Trying to assign.");
         this.services.getAssignmentManager().regionOffline(
             HRegionInfo.FIRST_META_REGIONINFO);
-        this.services.getAssignmentManager().assignMeta();
+        verifyAndAssignMetaWithRetries();
       } else {
         LOG.info("META has been assigned to otherwhere, skip assigning.");
       }
-
     }
     super.process();
   }
+
   /**
-   * Before assign the ROOT region, ensure it haven't
+   * Before assign the META region, ensure it haven't
    *  been assigned by other place
    * <p>
-   * Under some scenarios, the ROOT region can be opened twice, so it seemed online
+   * Under some scenarios, the META region can be opened twice, so it seemed online
    * in two regionserver at the same time.
-   * If the ROOT region has been assigned, so the operation can be canceled.
+   * If the META region has been assigned, so the operation can be canceled.
    * @throws InterruptedException
    * @throws IOException
    * @throws KeeperException
    */
-  private void verifyAndAssignRoot()
-  throws InterruptedException, IOException, KeeperException {
+  private void verifyAndAssignMeta()
+      throws InterruptedException, IOException, KeeperException {
     long timeout = this.server.getConfiguration().
-      getLong("hbase.catalog.verification.timeout", 1000);
-    if (!this.server.getCatalogTracker().verifyRootRegionLocation(timeout)) {
-      this.services.getAssignmentManager().assignRoot();
-    } else if (serverName.equals(server.getCatalogTracker().getRootLocation())) {
+        getLong("hbase.catalog.verification.timeout", 1000);
+    if (!this.server.getCatalogTracker().verifyMetaRegionLocation(timeout)) {
+      this.services.getAssignmentManager().assignMeta();
+    } else if (serverName.equals(server.getCatalogTracker().getMetaLocation())) {
       throw new IOException("-ROOT- is onlined on the dead server "
           + serverName);
     } else {
       LOG.info("Skip assigning -ROOT-, because it is online on the "
-          + server.getCatalogTracker().getRootLocation());
+          + server.getCatalogTracker().getMetaLocation());
     }
   }
 
@@ -126,7 +109,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
    * Failed many times, shutdown processing
    * @throws IOException
    */
-  private void verifyAndAssignRootWithRetries() throws IOException {
+  private void verifyAndAssignMetaWithRetries() throws IOException {
     int iTimes = this.server.getConfiguration().getInt(
         "hbase.catalog.verification.retries", 10);
 
@@ -136,14 +119,14 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
     int iFlag = 0;
     while (true) {
       try {
-        verifyAndAssignRoot();
+        verifyAndAssignMeta();
         break;
       } catch (KeeperException e) {
-        this.server.abort("In server shutdown processing, assigning root", e);
+        this.server.abort("In server shutdown processing, assigning meta", e);
         throw new IOException("Aborting", e);
       } catch (Exception e) {
         if (iFlag >= iTimes) {
-          this.server.abort("verifyAndAssignRoot failed after" + iTimes
+          this.server.abort("verifyAndAssignMeta failed after" + iTimes
               + " times retries, aborting", e);
           throw new IOException("Aborting", e);
         }
@@ -157,10 +140,6 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
         iFlag++;
       }
     }
-  }
-
-  boolean isCarryingRoot() {
-    return this.carryingRoot;
   }
 
   boolean isCarryingMeta() {
