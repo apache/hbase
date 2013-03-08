@@ -73,7 +73,7 @@ public class TestHalfStoreFileReader {
    */
   @Test
   public void testHalfScanAndReseek() throws IOException {
-    String root_dir = TEST_UTIL.getDataTestDir("TestHalfStoreFile").toString();
+    String root_dir = TEST_UTIL.getDataTestDir().toString();
     Path p = new Path(root_dir, "test");
 
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -140,7 +140,7 @@ public class TestHalfStoreFileReader {
   // Tests the scanner on an HFile that is backed by HalfStoreFiles
   @Test
   public void testHalfScanner() throws IOException {
-      String root_dir = TEST_UTIL.getDataTestDir("TestHalfStoreFileScanBefore").toString();
+      String root_dir = TEST_UTIL.getDataTestDir().toString();
       Path p = new Path(root_dir, "test");
       Configuration conf = TEST_UTIL.getConfiguration();
       FileSystem fs = FileSystem.get(conf);
