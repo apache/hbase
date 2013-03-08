@@ -87,6 +87,7 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
@@ -1729,7 +1730,9 @@ public class TestHBaseFsck {
    * This creates a table and simulates the race situation where a concurrent compaction or split
    * has removed an colfam dir before the corruption checker got to it.
    */
-  @Test(timeout=120000)
+  // Disabled because fails sporadically.  Is this test right?  Timing-wise, there could be no
+  // files in a column family on initial creation -- as suggested by Matteo.
+  @Ignore @Test(timeout=120000)
   public void testQuarantineMissingFamdir() throws Exception {
     String table = name.getMethodName();
     ExecutorService exec = new ScheduledThreadPoolExecutor(10);
