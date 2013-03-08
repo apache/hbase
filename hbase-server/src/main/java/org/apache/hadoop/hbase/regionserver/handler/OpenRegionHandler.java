@@ -317,7 +317,7 @@ public class OpenRegionHandler extends EventHandler {
     public void run() {
       try {
         this.services.postOpenDeployTasks(this.region,
-          this.server.getCatalogTracker(), false);
+          this.server.getCatalogTracker());
       } catch (Exception e) {
         LOG.warn("Exception running postOpenDeployTasks; region=" +
           this.region.getRegionInfo().getEncodedName(), e);

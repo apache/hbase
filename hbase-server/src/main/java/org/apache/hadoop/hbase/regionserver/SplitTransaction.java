@@ -223,7 +223,7 @@ public class SplitTransaction {
     if (this.parent.getCoprocessorHost() != null) {
       this.parent.getCoprocessorHost().preSplit();
     }
-    
+
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
       this.parent.getCoprocessorHost().preSplit(this.splitrow);
@@ -289,7 +289,7 @@ public class SplitTransaction {
       throw new IOException(exceptionToThrow);
     }
 
-        
+
     if (hstoreFilesToSplit.size() == 0) {
       String errorMsg = "No store files to split for the region "+this.parent.getRegionInfo();
       LOG.error(errorMsg);
@@ -336,10 +336,14 @@ public class SplitTransaction {
     // HBase-4562).
     this.journal.add(JournalEntry.PONR);
 
-    // Edit parent in meta.  Offlines parent region and adds splita and splitb.
+    // Edit parent in meta.  Offlines parent region and adds splita and splitb
+    // as an atomic update. See HBASE-7721. This update to META makes the region
+    // will determine whether the region is split or not in case of failures.
+    // If it is successful, master will roll-forward, if not, master will rollback
+    // and assign the parent region.
     if (!testing) {
-      MetaEditor.offlineParentInMeta(server.getCatalogTracker(),
-        this.parent.getRegionInfo(), a.getRegionInfo(), b.getRegionInfo());
+      MetaEditor.splitRegion(server.getCatalogTracker(), parent.getRegionInfo(),
+          a.getRegionInfo(), b.getRegionInfo(), server.getServerName());
     }
     return new PairOfSameType<HRegion>(a, b);
   }
@@ -389,10 +393,10 @@ public class SplitTransaction {
       if (services != null) {
         try {
           // add 2nd daughter first (see HBASE-4335)
-          services.postOpenDeployTasks(b, server.getCatalogTracker(), true);
+          services.postOpenDeployTasks(b, server.getCatalogTracker());
           // Should add it to OnlineRegions
           services.addToOnlineRegions(b);
-          services.postOpenDeployTasks(a, server.getCatalogTracker(), true);
+          services.postOpenDeployTasks(a, server.getCatalogTracker());
           services.addToOnlineRegions(a);
         } catch (KeeperException ke) {
           throw new IOException(ke);
@@ -736,7 +740,7 @@ public class SplitTransaction {
     if (this.parent.getCoprocessorHost() != null) {
       this.parent.getCoprocessorHost().preRollBackSplit();
     }
-    
+
     boolean result = true;
     FileSystem fs = this.parent.getFilesystem();
     ListIterator<JournalEntry> iterator =

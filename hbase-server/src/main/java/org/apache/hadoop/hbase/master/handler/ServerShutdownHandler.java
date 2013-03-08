@@ -27,12 +27,10 @@ import java.util.NavigableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler;
@@ -43,8 +41,6 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -310,12 +306,9 @@ public class ServerShutdownHandler extends EventHandler {
       return false;
     }
     if (hri.isOffline() && hri.isSplit()) {
-      LOG.debug("Offlined and split region " + hri.getRegionNameAsString() +
-        "; checking daughter presence");
-      if (MetaReader.getRegion(catalogTracker, hri.getRegionName()) == null) {
-        return false;
-      }
-      fixupDaughters(result, assignmentManager, catalogTracker);
+      //HBASE-7721: Split parent and daughters are inserted into META as an atomic operation.
+      //If the meta scanner saw the parent split, then it should see the daughters as assigned
+      //to the dead server. We don't have to do anything.
       return false;
     }
     boolean disabling = assignmentManager.getZKTable().isDisablingTable(
@@ -326,125 +319,5 @@ public class ServerShutdownHandler extends EventHandler {
       return false;
     }
     return true;
-  }
-
-  /**
-   * Check that daughter regions are up in .META. and if not, add them.
-   * @param result The contents of the parent row in .META.
-   * @param assignmentManager
-   * @param catalogTracker
-   * @return the number of daughters missing and fixed
-   * @throws IOException
-   */
-  public static int fixupDaughters(final Result result,
-      final AssignmentManager assignmentManager,
-      final CatalogTracker catalogTracker)
-  throws IOException {
-    PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(result);
-    int fixedA = fixupDaughter(result, daughters.getFirst(),
-      assignmentManager, catalogTracker);
-    int fixedB = fixupDaughter(result, daughters.getSecond(),
-      assignmentManager, catalogTracker);
-    return fixedA + fixedB;
-  }
-
-  /**
-   * Check individual daughter is up in .META.; fixup if its not.
-   * @param result The contents of the parent row in .META. - not used
-   * @param daughter Which daughter to check for.
-   * @return 1 if the daughter is missing and fixed. Otherwise 0
-   * @throws IOException
-   */
-  static int fixupDaughter(final Result result, HRegionInfo daughter,
-      final AssignmentManager assignmentManager,
-      final CatalogTracker catalogTracker)
-  throws IOException {
-    if (daughter == null) return 0;
-    if (isDaughterMissing(catalogTracker, daughter)) {
-      LOG.info("Fixup; missing daughter " + daughter.getRegionNameAsString());
-      MetaEditor.addDaughter(catalogTracker, daughter, null, HConstants.NO_SEQNUM);
-
-      // TODO: Log WARN if the regiondir does not exist in the fs.  If its not
-      // there then something wonky about the split -- things will keep going
-      // but could be missing references to parent region.
-
-      // And assign it.
-      assignmentManager.assign(daughter, true, true);
-      return 1;
-    } else {
-      LOG.debug("Daughter " + daughter.getRegionNameAsString() + " present");
-    }
-    return 0;
-  }
-
-  /**
-   * Look for presence of the daughter OR of a split of the daughter in .META.
-   * Daughter could have been split over on regionserver before a run of the
-   * catalogJanitor had chance to clear reference from parent.
-   * @param daughter Daughter region to search for.
-   * @throws IOException
-   */
-  private static boolean isDaughterMissing(final CatalogTracker catalogTracker,
-      final HRegionInfo daughter) throws IOException {
-    FindDaughterVisitor visitor = new FindDaughterVisitor(daughter);
-    // Start the scan at what should be the daughter's row in the .META.
-    // We will either 1., find the daughter or some derivative split of the
-    // daughter (will have same table name and start row at least but will sort
-    // after because has larger regionid -- the regionid is timestamp of region
-    // creation), OR, we will not find anything with same table name and start
-    // row.  If the latter, then assume daughter missing and do fixup.
-    byte [] startrow = daughter.getRegionName();
-    MetaReader.fullScan(catalogTracker, visitor, startrow);
-    return !visitor.foundDaughter();
-  }
-
-  /**
-   * Looks for daughter.  Sets a flag if daughter or some progeny of daughter
-   * is found up in <code>.META.</code>.
-   */
-  static class FindDaughterVisitor implements MetaReader.Visitor {
-    private final HRegionInfo daughter;
-    private boolean found = false;
-
-    FindDaughterVisitor(final HRegionInfo daughter) {
-      this.daughter = daughter;
-    }
-
-    /**
-     * @return True if we found a daughter region during our visiting.
-     */
-    boolean foundDaughter() {
-      return this.found;
-    }
-
-    @Override
-    public boolean visit(Result r) throws IOException {
-      HRegionInfo hri =
-        HRegionInfo.getHRegionInfo(r);
-      if (hri == null) {
-        LOG.warn("No serialized HRegionInfo in " + r);
-        return true;
-      }
-      byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.SERVER_QUALIFIER);
-      // See if daughter is assigned to some server
-      if (value == null) return false;
-
-      // Now see if we have gone beyond the daughter's startrow.
-      if (!Bytes.equals(daughter.getTableName(),
-          hri.getTableName())) {
-        // We fell into another table.  Stop scanning.
-        return false;
-      }
-      // If our start rows do not compare, move on.
-      if (!Bytes.equals(daughter.getStartKey(), hri.getStartKey())) {
-        return false;
-      }
-      // Else, table name and start rows compare.  It means that the daughter
-      // or some derivative split of the daughter is up in .META.  Daughter
-      // exists.
-      this.found = true;
-      return false;
-    }
   }
 }

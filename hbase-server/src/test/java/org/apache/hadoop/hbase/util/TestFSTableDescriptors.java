@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,7 +33,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.exceptions.TableExistsException;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -264,6 +274,24 @@ public class TestFSTableDescriptors {
       LOG.debug("Correctly got error when reading a table descriptor from the archive directory: "
           + e.getMessage());
     }
+  }
+
+  @Test
+  public void testCreateTableDescriptorUpdatesIfExistsAlready() throws IOException {
+    Path testdir = UTIL.getDataTestDir("testCreateTableDescriptorUpdatesIfThereExistsAlready");
+    HTableDescriptor htd = new HTableDescriptor(
+        "testCreateTableDescriptorUpdatesIfThereExistsAlready");
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    assertTrue(FSTableDescriptors.createTableDescriptor(fs, testdir, htd));
+    assertFalse(FSTableDescriptors.createTableDescriptor(fs, testdir, htd));
+    htd.setValue(Bytes.toBytes("mykey"), Bytes.toBytes("myValue"));
+    assertTrue(FSTableDescriptors.createTableDescriptor(fs, testdir, htd)); //this will re-create
+    Path tableDir = FSUtils.getTablePath(testdir, htd.getName());
+    Path tmpTableDir = new Path(tableDir, ".tmp");
+    FileStatus[] statuses = fs.listStatus(tmpTableDir);
+    assertTrue(statuses.length == 0);
+
+    assertEquals(htd, FSTableDescriptors.getTableDescriptor(fs, tableDir));
   }
 
 }

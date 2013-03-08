@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 /**
  * Scanner class that contains the <code>.META.</code> table scanning logic
@@ -49,7 +48,7 @@ import java.util.TreeSet;
  *
  * <p> Note that during concurrent region splits, the scanner might not see
  * META changes across rows (for parent and daughter entries) consistently.
- * see HBASE-5986, and {@link BlockingMetaScannerVisitor} for details. </p>
+ * see HBASE-5986, and {@link DefaultMetaScannerVisitor} for details. </p>
  */
 @InterfaceAudience.Private
 public class MetaScanner {
@@ -276,7 +275,7 @@ public class MetaScanner {
   public static List<HRegionInfo> listAllRegions(Configuration conf, final boolean offlined)
   throws IOException {
     final List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
-    MetaScannerVisitor visitor = new BlockingMetaScannerVisitor(conf) {
+    MetaScannerVisitor visitor = new DefaultMetaScannerVisitor(conf) {
         @Override
         public boolean processRowInternal(Result result) throws IOException {
           if (result == null || result.isEmpty()) {
@@ -316,10 +315,7 @@ public class MetaScanner {
       public boolean processRowInternal(Result rowResult) throws IOException {
         HRegionInfo info = getHRegionInfo(rowResult);
         ServerName serverName = HRegionInfo.getServerName(rowResult);
-
-        if (!(info.isOffline() || info.isSplit())) {
-          regions.put(new UnmodifyableHRegionInfo(info), serverName);
-        }
+        regions.put(new UnmodifyableHRegionInfo(info), serverName);
         return true;
       }
     };
@@ -355,38 +351,16 @@ public class MetaScanner {
    * does not guarantee ordered traversal of meta entries, and can block until the
    * META entries for daughters are available during splits.
    */
-  public static abstract class BlockingMetaScannerVisitor
+  public static abstract class DefaultMetaScannerVisitor
     extends MetaScannerVisitorBase {
 
-    private static final int DEFAULT_BLOCKING_TIMEOUT = 10000;
-    private Configuration conf;
-    private TreeSet<byte[]> daughterRegions = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    private int blockingTimeout;
-    private HTable metaTable;
+    protected Configuration conf;
 
-    public BlockingMetaScannerVisitor(Configuration conf) {
+    public DefaultMetaScannerVisitor(Configuration conf) {
       this.conf = conf;
-      this.blockingTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-          DEFAULT_BLOCKING_TIMEOUT);
     }
 
     public abstract boolean processRowInternal(Result rowResult) throws IOException;
-
-    @Override
-    public void close() throws IOException {
-      super.close();
-      if (metaTable != null) {
-        metaTable.close();
-        metaTable = null;
-      }
-    }
-
-    public HTable getMetaTable() throws IOException {
-      if (metaTable == null) {
-        metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
-      }
-      return metaTable;
-    }
 
     @Override
     public boolean processRow(Result rowResult) throws IOException {
@@ -395,67 +369,11 @@ public class MetaScanner {
         return true;
       }
 
-      if (daughterRegions.remove(info.getRegionName())) {
-        return true; //we have already processed this row
+      //skip over offline and split regions
+      if (!(info.isOffline() || info.isSplit())) {
+        return processRowInternal(rowResult);
       }
-
-      if (info.isSplitParent()) {
-        /* we have found a parent region which was split. We have to ensure that it's daughters are
-         * seen by this scanner as well, so we block until they are added to the META table. Even
-         * though we are waiting for META entries, ACID semantics in HBase indicates that this
-         * scanner might not see the new rows. So we manually query the daughter rows */
-        PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(rowResult);
-        HRegionInfo splitA = daughters.getFirst();
-        HRegionInfo splitB = daughters.getSecond();
-
-        HTable metaTable = getMetaTable();
-        long start = System.currentTimeMillis();
-        Result resultA = getRegionResultBlocking(metaTable, blockingTimeout,
-            splitA.getRegionName());
-        if (resultA != null) {
-          processRow(resultA);
-          daughterRegions.add(splitA.getRegionName());
-        } else {
-          throw new RegionOfflineException("Split daughter region " +
-              splitA.getRegionNameAsString() + " cannot be found in META.");
-        }
-        long rem = blockingTimeout - (System.currentTimeMillis() - start);
-
-        Result resultB = getRegionResultBlocking(metaTable, rem,
-            splitB.getRegionName());
-        if (resultB != null) {
-          processRow(resultB);
-          daughterRegions.add(splitB.getRegionName());
-        } else {
-          throw new RegionOfflineException("Split daughter region " +
-              splitB.getRegionNameAsString() + " cannot be found in META.");
-        }
-      }
-
-      return processRowInternal(rowResult);
-    }
-
-    private Result getRegionResultBlocking(HTable metaTable, long timeout, byte[] regionName)
-        throws IOException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("blocking until region is in META: " + Bytes.toStringBinary(regionName));
-      }
-      long start = System.currentTimeMillis();
-      while (System.currentTimeMillis() - start < timeout) {
-        Get get = new Get(regionName);
-        Result result = metaTable.get(get);
-        HRegionInfo info = getHRegionInfo(result);
-        if (info != null) {
-          return result;
-        }
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException ex) {
-          Thread.currentThread().interrupt();
-          break;
-        }
-      }
-      return null;
+      return true;
     }
   }
 
@@ -465,7 +383,7 @@ public class MetaScanner {
    * does not guarantee ordered traversal of meta entries, and can block until the
    * META entries for daughters are available during splits.
    */
-  public static abstract class TableMetaScannerVisitor extends BlockingMetaScannerVisitor {
+  public static abstract class TableMetaScannerVisitor extends DefaultMetaScannerVisitor {
     private byte[] tableName;
 
     public TableMetaScannerVisitor(Configuration conf, byte[] tableName) {

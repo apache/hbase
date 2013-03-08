@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -34,25 +34,25 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
-import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
+import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
+import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -331,59 +331,6 @@ public class TestSplitTransactionOnCluster {
       // Get daughters
       checkAndGetDaughters(tableName);
       // OK, so split happened after we cleared the blocking node.
-    } finally {
-      admin.setBalancerRunning(true, false);
-      cluster.getMaster().setCatalogJanitorEnabled(true);
-      t.close();
-    }
-  }
-
-  /**
-   * Messy test that simulates case where SplitTransactions fails to add one
-   * of the daughters up into the .META. table before crash.  We're testing
-   * fact that the shutdown handler will fixup the missing daughter region
-   * adding it back into .META.
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  @Test (timeout = 300000) public void testShutdownSimpleFixup()
-  throws IOException, InterruptedException, ServiceException {
-    final byte [] tableName = Bytes.toBytes("testShutdownSimpleFixup");
-
-    // Create table then get the single region for our new table.
-    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
-    List<HRegion> regions = cluster.getRegions(tableName);
-    HRegionInfo hri = getAndCheckSingleTableRegion(regions);
-
-    int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
-
-    // Turn off balancer so it doesn't cut in and mess up our placements.
-    this.admin.setBalancerRunning(false, true);
-    // Turn off the meta scanner so it don't remove parent on us.
-    cluster.getMaster().setCatalogJanitorEnabled(false);
-    try {
-      // Add a bit of load up into the table so splittable.
-      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
-      // Get region pre-split.
-      HRegionServer server = cluster.getRegionServer(tableRegionIndex);
-      printOutRegions(server, "Initial regions: ");
-      int regionCount = ProtobufUtil.getOnlineRegions(server).size();
-      // Now split.
-      split(hri, server, regionCount);
-      // Get daughters
-      List<HRegion> daughters = checkAndGetDaughters(tableName);
-      // Remove one of the daughters from .META. to simulate failed insert of
-      // daughter region up into .META.
-      removeDaughterFromMeta(daughters.get(0).getRegionName());
-      // Now crash the server
-      cluster.abortRegionServer(tableRegionIndex);
-      waitUntilRegionServerDead();
-      awaitDaughters(tableName, daughters.size());
-      // Assert daughters are online.
-      regions = cluster.getRegions(tableName);
-      for (HRegion r: regions) {
-        assertTrue(daughters.contains(r));
-      }
     } finally {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);

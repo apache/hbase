@@ -34,7 +34,14 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiRowMutationService;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.protobuf.ServiceException;
 
 /**
  * Writes region and assignment information to <code>.META.</code>.
@@ -210,8 +217,8 @@ public class MetaEditor {
    * Adds a (single) META row for the specified new region and its daughters. Note that this does
    * not add its daughter's as different rows, but adds information about the daughters
    * in the same row as the parent. Use
-   * {@link #offlineParentInMeta(CatalogTracker, HRegionInfo, HRegionInfo, HRegionInfo)} and
-   * {@link #addDaughter(CatalogTracker, HRegionInfo, ServerName, long)}  if you want to do that.
+   * {@link #splitRegion(CatalogTracker, HRegionInfo, HRegionInfo, HRegionInfo, ServerName)}
+   * if you want to do that.
    * @param meta the HTable for META
    * @param regionInfo region information
    * @param splitA first split daughter of the parent regionInfo
@@ -246,32 +253,6 @@ public class MetaEditor {
   }
 
   /**
-   * Offline parent in meta.
-   * Used when splitting.
-   * @param catalogTracker
-   * @param parent
-   * @param a Split daughter region A
-   * @param b Split daughter region B
-   * @throws NotAllMetaRegionsOnlineException
-   * @throws IOException
-   */
-  public static void offlineParentInMeta(CatalogTracker catalogTracker,
-      HRegionInfo parent, final HRegionInfo a, final HRegionInfo b)
-  throws NotAllMetaRegionsOnlineException, IOException {
-    HRegionInfo copyOfParent = new HRegionInfo(parent);
-    copyOfParent.setOffline(true);
-    copyOfParent.setSplit(true);
-    HTable meta = MetaReader.getMetaHTable(catalogTracker);
-    try {
-      addRegionToMeta(meta, copyOfParent, a, b);
-      LOG.info("Offlined parent region " + parent.getRegionNameAsString() +
-          " in META");
-    } finally {
-      meta.close();
-    }
-  }
-
-  /**
    * Adds a daughter region entry to meta.
    * @param regionInfo the region to put
    * @param sn the location of the region
@@ -289,6 +270,60 @@ public class MetaEditor {
     LOG.info("Added daughter " + regionInfo.getRegionNameAsString() +
       (sn == null? ", serverName=null": ", serverName=" + sn.toString()));
   }
+
+  /**
+   * Splits the region into two in an atomic operation. Offlines the parent
+   * region with the information that it is split into two, and also adds
+   * the daughter regions. Does not add the location information to the daughter
+   * regions since they are not open yet.
+   * @param catalogTracker the catalog tracker
+   * @param parent the parent region which is split
+   * @param splitA Split daughter region A
+   * @param splitB Split daughter region A
+   * @param sn the location of the region
+   */
+  public static void splitRegion(final CatalogTracker catalogTracker,
+      HRegionInfo parent, HRegionInfo splitA, HRegionInfo splitB,
+      ServerName sn) throws IOException {
+    HTable meta = MetaReader.getMetaHTable(catalogTracker);
+    HRegionInfo copyOfParent = new HRegionInfo(parent);
+    copyOfParent.setOffline(true);
+    copyOfParent.setSplit(true);
+
+    //Put for parent
+    Put putParent = makePutFromRegionInfo(copyOfParent);
+    addDaughtersToPut(putParent, splitA, splitB);
+
+    //Puts for daughters
+    Put putA = makePutFromRegionInfo(splitA);
+    Put putB = makePutFromRegionInfo(splitB);
+
+    addLocation(putA, sn, 1); //these are new regions, openSeqNum = 1 is fine.
+    addLocation(putB, sn, 1);
+
+    byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
+    multiPut(meta, tableRow, putParent, putA, putB);
+  }
+
+  /**
+   * Performs an atomic multi-Put operation against the given table.
+   */
+  private static void multiPut(HTable table, byte[] row, Put... puts) throws IOException {
+    CoprocessorRpcChannel channel = table.coprocessorService(row);
+    MultiMutateRequest.Builder mmrBuilder = MultiMutateRequest.newBuilder();
+    for (Put put : puts) {
+      mmrBuilder.addMutationRequest(ProtobufUtil.toMutate(MutateType.PUT, put));
+    }
+
+    MultiRowMutationService.BlockingInterface service =
+        MultiRowMutationService.newBlockingStub(channel);
+    try {
+      service.mutateRows(null, mmrBuilder.build());
+    } catch (ServiceException ex) {
+      ProtobufUtil.toIOException(ex);
+    }
+  }
+
 
   /**
    * Updates the location of the specified META region in ROOT to be the

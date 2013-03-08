@@ -195,9 +195,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     // (namely the part that shows the set of loaded coprocessors).
     // In this test, there is only a single coprocessor (BuggyMasterObserver).
     assertTrue(master.getLoadedCoprocessors().
-      equals("[" +
-          TestMasterCoprocessorExceptionWithAbort.BuggyMasterObserver.class.getName() +
-          "]"));
+      contains(TestMasterCoprocessorExceptionWithAbort.BuggyMasterObserver.class.getName()));
 
     CreateTableThread createTableThread = new CreateTableThread(UTIL);
 

@@ -40,7 +40,7 @@ public interface RegionServerServices extends OnlineRegions {
    */
   public boolean isStopping();
 
-  /** @return the HLog for a particular region. Pass null for getting the 
+  /** @return the HLog for a particular region. Pass null for getting the
    * default (common) WAL */
   public HLog getWAL(HRegionInfo regionInfo) throws IOException;
 
@@ -62,15 +62,13 @@ public interface RegionServerServices extends OnlineRegions {
   /**
    * Tasks to perform after region open to complete deploy of region on
    * regionserver
-   * 
+   *
    * @param r Region to open.
    * @param ct Instance of {@link CatalogTracker}
-   * @param daughter True if this is daughter of a split
    * @throws KeeperException
    * @throws IOException
    */
-  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct,
-      final boolean daughter)
+  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
   throws KeeperException, IOException;
 
   /**

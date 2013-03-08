@@ -1692,12 +1692,10 @@ public class HRegionServer implements ClientProtocol,
   }
 
   @Override
-  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct,
-      final boolean daughter)
+  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
   throws KeeperException, IOException {
     checkOpen();
-    LOG.info("Post open deploy tasks for region=" + r.getRegionNameAsString() +
-      ", daughter=" + daughter);
+    LOG.info("Post open deploy tasks for region=" + r.getRegionNameAsString());
     // Do checks to see if we need to compact (references or too many files)
     for (Store s : r.getStores().values()) {
       if (s.hasReferences() || s.needsCompaction()) {
@@ -1718,17 +1716,11 @@ public class HRegionServer implements ClientProtocol,
       MetaEditor.updateMetaLocation(ct, r.getRegionInfo(),
         this.serverNameFromMasterPOV, openSeqNum);
     } else {
-      if (daughter) {
-        // If daughter of a split, update whole row, not just location.
-        MetaEditor.addDaughter(ct, r.getRegionInfo(),
-          this.serverNameFromMasterPOV, openSeqNum);
-      } else {
-        MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
-          this.serverNameFromMasterPOV, openSeqNum);
-      }
+      MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
+        this.serverNameFromMasterPOV, openSeqNum);
     }
     LOG.info("Done with post open deploy task for region=" +
-      r.getRegionNameAsString() + ", daughter=" + daughter);
+      r.getRegionNameAsString());
 
   }
 

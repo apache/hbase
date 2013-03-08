@@ -291,7 +291,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public void postOpenDeployTasks(HRegion r, CatalogTracker ct, boolean daughter)
+  public void postOpenDeployTasks(HRegion r, CatalogTracker ct)
       throws KeeperException, IOException {
     // TODO Auto-generated method stub
   }
