@@ -83,7 +83,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * group,family,qualifier   column qualifier level permissions for a group
  * </pre>
  * All values are encoded as byte arrays containing the codes from the
- * {@link org.apache.hadoop.hbase.security.access.TablePermission.Action} enum.
+ * org.apache.hadoop.hbase.security.access.TablePermission.Action enum.
  * </p>
  */
 public class AccessControlLists {
@@ -320,7 +320,7 @@ public class AccessControlLists {
 
     Map<byte[],ListMultimap<String,TablePermission>> allPerms =
         new TreeMap<byte[],ListMultimap<String,TablePermission>>(Bytes.BYTES_COMPARATOR);
-    
+
     // do a full scan of _acl_ table
 
     Scan scan = new Scan();
