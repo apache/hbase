@@ -18,23 +18,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.WritableComparable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -51,10 +34,28 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.WritableComparable;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
- * all the column families, is the table a catalog table, <code> -ROOT- </code> or 
- * <code> .META. </code>, is the table is read only, the maximum size of the memstore, 
+ * all the column families, is the table a catalog table, <code> -ROOT- </code> or
+ * <code> .META. </code>, if the table is read only, the maximum size of the memstore,
  * when the region split should occur, coprocessors associated with it etc...
  */
 @InterfaceAudience.Public
@@ -76,7 +77,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   private String nameAsString = "";
 
   /**
-   * A map which holds the metadata information of the table. This metadata 
+   * A map which holds the metadata information of the table. This metadata
    * includes values like IS_ROOT, IS_META, DEFERRED_LOG_FLUSH, SPLIT_POLICY,
    * MAX_FILE_SIZE, READONLY, MEMSTORE_FLUSHSIZE etc...
    */
@@ -93,10 +94,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
 
   /**
-   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata 
-   * attribute which denotes the maximum size of the store file after which 
+   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
+   * attribute which denotes the maximum size of the store file after which
    * a region split occurs
-   * 
+   *
    * @see #getMaxFileSize()
    */
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
@@ -108,9 +109,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     new ImmutableBytesWritable(Bytes.toBytes(OWNER));
 
   /**
-   * <em>INTERNAL</em> Used by rest interface to access this metadata 
+   * <em>INTERNAL</em> Used by rest interface to access this metadata
    * attribute which denotes if the table is Read Only
-   * 
+   *
    * @see #isReadOnly()
    */
   public static final String READONLY = "READONLY";
@@ -118,10 +119,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     new ImmutableBytesWritable(Bytes.toBytes(READONLY));
 
   /**
-   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata 
-   * attribute which represents the maximum size of the memstore after which 
+   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
+   * attribute which represents the maximum size of the memstore after which
    * its contents are flushed onto the disk
-   * 
+   *
    * @see #getMemStoreFlushSize()
    */
   public static final String MEMSTORE_FLUSHSIZE = "MEMSTORE_FLUSHSIZE";
@@ -129,9 +130,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     new ImmutableBytesWritable(Bytes.toBytes(MEMSTORE_FLUSHSIZE));
 
   /**
-   * <em>INTERNAL</em> Used by rest interface to access this metadata 
+   * <em>INTERNAL</em> Used by rest interface to access this metadata
    * attribute which denotes if the table is a -ROOT- region or not
-   * 
+   *
    * @see #isRootRegion()
    */
   public static final String IS_ROOT = "IS_ROOT";
@@ -139,10 +140,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     new ImmutableBytesWritable(Bytes.toBytes(IS_ROOT));
 
   /**
-   * <em>INTERNAL</em> Used by rest interface to access this metadata 
+   * <em>INTERNAL</em> Used by rest interface to access this metadata
    * attribute which denotes if it is a catalog table, either
    * <code> .META. </code> or <code> -ROOT- </code>
-   * 
+   *
    * @see #isMetaRegion()
    */
   public static final String IS_META = "IS_META";
@@ -150,7 +151,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     new ImmutableBytesWritable(Bytes.toBytes(IS_META));
 
   /**
-   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata 
+   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
    * attribute which denotes if the deferred log flush option is enabled
    */
   public static final String DEFERRED_LOG_FLUSH = "DEFERRED_LOG_FLUSH";
@@ -176,7 +177,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final boolean DEFAULT_READONLY = false;
 
   /**
-   * Constant that denotes the maximum default size of the memstore after which 
+   * Constant that denotes the maximum default size of the memstore after which
    * the contents are flushed to the store files
    */
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*128L;
@@ -313,9 +314,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /*
-   * Set meta flags on this table. 
+   * Set meta flags on this table.
    * IS_ROOT_KEY is set if its a -ROOT- table
-   * IS_META_KEY is set either if its a -ROOT- or a .META. table 
+   * IS_META_KEY is set either if its a -ROOT- or a .META. table
    * Called by constructors.
    * @param name
    */
@@ -327,8 +328,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Check if the descriptor represents a <code> -ROOT- </code> region.
-   * 
-   * @return true if this is a <code> -ROOT- </code> region 
+   *
+   * @return true if this is a <code> -ROOT- </code> region
    */
   public boolean isRootRegion() {
     if (this.root == null) {
@@ -338,11 +339,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * <em> INTERNAL </em> Used to denote if the current table represents 
-   * <code> -ROOT- </code> region. This is used internally by the 
-   * HTableDescriptor constructors 
-   * 
-   * @param isRoot true if this is the <code> -ROOT- </code> region 
+   * <em> INTERNAL </em> Used to denote if the current table represents
+   * <code> -ROOT- </code> region. This is used internally by the
+   * HTableDescriptor constructors
+   *
+   * @param isRoot true if this is the <code> -ROOT- </code> region
    */
   protected void setRootRegion(boolean isRoot) {
     // TODO: Make the value a boolean rather than String of boolean.
@@ -351,10 +352,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Checks if this table is either <code> -ROOT- </code> or <code> .META. </code>
-   * region. 
-   *  
-   * @return true if this is either a <code> -ROOT- </code> or <code> .META. </code> 
-   * region 
+   * region.
+   *
+   * @return true if this is either a <code> -ROOT- </code> or <code> .META. </code>
+   * region
    */
   public boolean isMetaRegion() {
     if (this.meta == null) {
@@ -379,31 +380,31 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * <em> INTERNAL </em> Used to denote if the current table represents 
-   * <code> -ROOT- </code> or <code> .META. </code> region. This is used 
-   * internally by the HTableDescriptor constructors 
-   * 
-   * @param isMeta true if its either <code> -ROOT- </code> or 
-   * <code> .META. </code> region 
+   * <em> INTERNAL </em> Used to denote if the current table represents
+   * <code> -ROOT- </code> or <code> .META. </code> region. This is used
+   * internally by the HTableDescriptor constructors
+   *
+   * @param isMeta true if its either <code> -ROOT- </code> or
+   * <code> .META. </code> region
    */
   protected void setMetaRegion(boolean isMeta) {
     setValue(IS_META_KEY, isMeta? TRUE: FALSE);
   }
 
-  /** 
-   * Checks if the table is a <code>.META.</code> table 
-   *  
+  /**
+   * Checks if the table is a <code>.META.</code> table
+   *
    * @return true if table is <code> .META. </code> region.
    */
   public boolean isMetaTable() {
     return isMetaRegion() && !isRootRegion();
   }
- 
+
   /**
-   * Checks of the tableName being passed represents either 
+   * Checks of the tableName being passed represents either
    * <code > -ROOT- </code> or <code> .META. </code>
-   *  
-   * @return true if a tablesName is either <code> -ROOT- </code> 
+   *
+   * @return true if a tablesName is either <code> -ROOT- </code>
    * or <code> .META. </code>
    */
   public static boolean isMetaTable(final byte [] tableName) {
@@ -441,7 +442,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
           + " conflicted with system reserved words");
     }
     for (int i = 0; i < tableName.length; i++) {
-      if (Character.isLetterOrDigit(tableName[i]) || tableName[i] == '_' || 
+      if (Character.isLetterOrDigit(tableName[i]) || tableName[i] == '_' ||
     		  tableName[i] == '-' || tableName[i] == '.') {
         continue;
       }
@@ -454,7 +455,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Getter for accessing the metadata associated with the key
-   *  
+   *
    * @param key The key.
    * @return The value.
    * @see #values
@@ -472,7 +473,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Getter for accessing the metadata associated with the key
-   *  
+   *
    * @param key The key.
    * @return The value.
    * @see #values
@@ -486,7 +487,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Getter for fetching an unmodifiable {@link #values} map.
-   *  
+   *
    * @return unmodifiable map {@link #values}.
    * @see #values
    */
@@ -497,7 +498,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Setter for storing metadata as a (key, value) pair in {@link #values} map
-   *  
+   *
    * @param key The key.
    * @param value The value.
    * @see #values
@@ -526,7 +527,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Setter for storing metadata as a (key, value) pair in {@link #values} map
-   *  
+   *
    * @param key The key.
    * @param value The value.
    * @see #values
@@ -538,10 +539,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       setValue(Bytes.toBytes(key), Bytes.toBytes(value));
     }
   }
-  
+
   /**
    * Remove metadata represented by the key from the {@link #values} map
-   * 
+   *
    * @param key Key whose key and value we're to remove from HTableDescriptor
    * parameters.
    */
@@ -560,9 +561,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Check if the readOnly flag of the table is set. If the readOnly flag is 
+   * Check if the readOnly flag of the table is set. If the readOnly flag is
    * set then the contents of the table can only be read from but not modified.
-   * 
+   *
    * @return true if all columns in the table should be read only
    */
   public boolean isReadOnly() {
@@ -571,9 +572,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Setting the table as read only sets all the columns in the table as read
-   * only. By default all tables are modifiable, but if the readOnly flag is 
+   * only. By default all tables are modifiable, but if the readOnly flag is
    * set to true then the contents of the table can only be read but not modified.
-   *  
+   *
    * @param readOnly True if all of the columns in the table should be read
    * only.
    */
@@ -582,10 +583,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Check if deferred log edits are enabled on the table.  
-   * 
+   * Check if deferred log edits are enabled on the table.
+   *
    * @return true if that deferred log flush is enabled on the table
-   * 
+   *
    * @see #setDeferredLogFlush(boolean)
    */
   public synchronized boolean isDeferredLogFlush() {
@@ -597,17 +598,17 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * This is used to defer the log edits syncing to the file system. Everytime 
-   * an edit is sent to the server it is first sync'd to the file system by the 
-   * log writer. This sync is an expensive operation and thus can be deferred so 
+   * This is used to defer the log edits syncing to the file system. Everytime
+   * an edit is sent to the server it is first sync'd to the file system by the
+   * log writer. This sync is an expensive operation and thus can be deferred so
    * that the edits are kept in memory for a specified period of time as represented
    * by <code> hbase.regionserver.optionallogflushinterval </code> and not flushed
    * for every edit.
    * <p>
    * NOTE:- This option might result in data loss if the region server crashes
-   * before these deferred edits in memory are flushed onto the filesystem. 
+   * before these deferred edits in memory are flushed onto the filesystem.
    * </p>
-   * 
+   *
    * @param isDeferredLogFlush
    */
   public synchronized void setDeferredLogFlush(final boolean isDeferredLogFlush) {
@@ -617,8 +618,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Get the name of the table as a byte array.
-   * 
-   * @return name of table 
+   *
+   * @return name of table
    */
   public byte [] getName() {
     return name;
@@ -626,18 +627,18 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * Get the name of the table as a String
-   * 
-   * @return name of table as a String 
+   *
+   * @return name of table as a String
    */
   public String getNameAsString() {
     return this.nameAsString;
   }
-  
+
   /**
-   * This get the class associated with the region split policy which 
+   * This get the class associated with the region split policy which
    * determines when a region split should occur.  The class used by
    * default is defined in {@link org.apache.hadoop.hbase.regionserver.RegionSplitPolicy}
-   * 
+   *
    * @return the class name of the region split policy for this table.
    * If this returns null, the default split policy is used.
    */
@@ -646,9 +647,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Set the name of the table. 
-   * 
-   * @param name name of table 
+   * Set the name of the table.
+   *
+   * @param name name of table
    */
   public void setName(byte[] name) {
     this.name = name;
@@ -656,7 +657,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     setMetaFlags(this.name);
   }
 
-  /** 
+  /**
    * Returns the maximum size upto which a region can grow to after which a region
    * split is triggered. The region size is represented by the size of the biggest
    * store file in that region.
@@ -672,19 +673,19 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     }
     return -1;
   }
-  
+
   /**
    * Sets the maximum size upto which a region can grow to after which a region
-   * split is triggered. The region size is represented by the size of the biggest 
-   * store file in that region, i.e. If the biggest store file grows beyond the 
-   * maxFileSize, then the region split is triggered. This defaults to a value of 
+   * split is triggered. The region size is represented by the size of the biggest
+   * store file in that region, i.e. If the biggest store file grows beyond the
+   * maxFileSize, then the region split is triggered. This defaults to a value of
    * 256 MB.
    * <p>
-   * This is not an absolute value and might vary. Assume that a single row exceeds 
+   * This is not an absolute value and might vary. Assume that a single row exceeds
    * the maxFileSize then the storeFileSize will be greater than maxFileSize since
-   * a single row cannot be split across multiple regions 
+   * a single row cannot be split across multiple regions
    * </p>
-   * 
+   *
    * @param maxFileSize The maximum file size that a store file can grow to
    * before a split is triggered.
    */
@@ -708,9 +709,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Represents the maximum size of the memstore after which the contents of the 
+   * Represents the maximum size of the memstore after which the contents of the
    * memstore are flushed to the filesystem. This defaults to a size of 64 MB.
-   * 
+   *
    * @param memstoreFlushSize memory cache flush size for each hregion
    */
   public void setMemStoreFlushSize(long memstoreFlushSize) {
@@ -857,12 +858,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Compare the contents of the descriptor with another one passed as a parameter. 
+   * Compare the contents of the descriptor with another one passed as a parameter.
    * Checks if the obj passed is an instance of HTableDescriptor, if yes then the
    * contents of the descriptors are compared.
-   * 
+   *
    * @return true if the contents of the the two descriptors exactly match
-   * 
+   *
    * @see java.lang.Object#equals(java.lang.Object)
    */
   @Override
@@ -897,7 +898,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface 
+   * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface
    * and is used for de-serialization of the HTableDescriptor over RPC
    * @deprecated Writables are going away.  Use pb {@link #parseFrom(byte[])} instead.
    */
@@ -944,7 +945,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface 
+   * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface
    * and is used for serialization of the HTableDescriptor over RPC
    * @deprecated Writables are going away.
    * Use {@link com.google.protobuf.MessageLite#toByteArray} instead.
@@ -980,9 +981,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * Compares the descriptor with another descriptor which is passed as a parameter.
    * This compares the content of the two descriptors and not the reference.
-   * 
-   * @return 0 if the contents of the descriptors are exactly matching, 
-   * 		 1 if there is a mismatch in the contents 
+   *
+   * @return 0 if the contents of the descriptors are exactly matching,
+   * 		 1 if there is a mismatch in the contents
    */
   @Override
   public int compareTo(final HTableDescriptor other) {
@@ -1022,59 +1023,59 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Returns an unmodifiable collection of all the {@link HColumnDescriptor} 
+   * Returns an unmodifiable collection of all the {@link HColumnDescriptor}
    * of all the column families of the table.
-   *  
+   *
    * @return Immutable collection of {@link HColumnDescriptor} of all the
-   * column families. 
+   * column families.
    */
   public Collection<HColumnDescriptor> getFamilies() {
     return Collections.unmodifiableCollection(this.families.values());
   }
 
   /**
-   * Returns all the column family names of the current table. The map of 
-   * HTableDescriptor contains mapping of family name to HColumnDescriptors. 
-   * This returns all the keys of the family map which represents the column 
-   * family names of the table. 
-   * 
+   * Returns all the column family names of the current table. The map of
+   * HTableDescriptor contains mapping of family name to HColumnDescriptors.
+   * This returns all the keys of the family map which represents the column
+   * family names of the table.
+   *
    * @return Immutable sorted set of the keys of the families.
    */
   public Set<byte[]> getFamiliesKeys() {
     return Collections.unmodifiableSet(this.families.keySet());
   }
 
-  /** 
-   * Returns an array all the {@link HColumnDescriptor} of the column families 
+  /**
+   * Returns an array all the {@link HColumnDescriptor} of the column families
    * of the table.
-   *  
-   * @return Array of all the HColumnDescriptors of the current table 
-   * 
+   *
+   * @return Array of all the HColumnDescriptors of the current table
+   *
    * @see #getFamilies()
    */
   public HColumnDescriptor[] getColumnFamilies() {
     Collection<HColumnDescriptor> hColumnDescriptors = getFamilies();
     return hColumnDescriptors.toArray(new HColumnDescriptor[hColumnDescriptors.size()]);
   }
-  
+
 
   /**
-   * Returns the HColumnDescriptor for a specific column family with name as 
+   * Returns the HColumnDescriptor for a specific column family with name as
    * specified by the parameter column.
-   * 
-   * @param column Column family name 
+   *
+   * @param column Column family name
    * @return Column descriptor for the passed family name or the family on
    * passed in column.
    */
   public HColumnDescriptor getFamily(final byte [] column) {
     return this.families.get(column);
   }
-  
+
 
   /**
-   * Removes the HColumnDescriptor with name specified by the parameter column 
+   * Removes the HColumnDescriptor with name specified by the parameter column
    * from the table descriptor
-   * 
+   *
    * @param column Name of the column family to be removed.
    * @return Column descriptor for the passed family name or the family on
    * passed in column.
@@ -1082,7 +1083,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public HColumnDescriptor removeFamily(final byte [] column) {
     return this.families.remove(column);
   }
-  
+
 
   /**
    * Add a table coprocessor to this table. The coprocessor
@@ -1098,7 +1099,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     addCoprocessor(className, null, Coprocessor.PRIORITY_USER, null);
   }
 
-  
+
   /**
    * Add a table coprocessor to this table. The coprocessor
    * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
@@ -1251,11 +1252,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     if (match != null)
       remove(match);
   }
-  
+
   /**
-   * Returns the {@link Path} object representing the table directory under 
-   * path rootdir 
-   * 
+   * Returns the {@link Path} object representing the table directory under
+   * path rootdir
+   *
    * @param rootdir qualified path of HBase root directory
    * @param tableName name of table
    * @return {@link Path} for table
@@ -1287,6 +1288,18 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               .setBlocksize(8 * 1024)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
       });
+
+  static {
+    try {
+      META_TABLEDESC.addCoprocessor(
+          "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
+          null, Coprocessor.PRIORITY_SYSTEM, null);
+    } catch (IOException ex) {
+      //LOG.warn("exception in loading coprocessor for the META table");
+      throw new RuntimeException(ex);
+    }
+  }
+
 
   @Deprecated
   public void setOwner(User owner) {
@@ -1326,7 +1339,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param bytes A pb serialized {@link HTableDescriptor} instance with pb magic prefix
    * @return An instance of {@link HTableDescriptor} made from <code>bytes</code>
    * @throws DeserializationException
-   * @throws IOException 
+   * @throws IOException
    * @see #toByteArray()
    */
   public static HTableDescriptor parseFrom(final byte [] bytes)

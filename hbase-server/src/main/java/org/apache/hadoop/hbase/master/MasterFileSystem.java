@@ -443,7 +443,8 @@ public class MasterFileSystem {
       bootstrap(rd, c);
     }
 
-    // Create tableinfo-s for ROOT and META if not already there.
+    // Create tableinfo-s for ROOT and META if not already there. This also updates the
+    //descriptors if they are older versions.
     FSTableDescriptors.createTableDescriptor(fs, rd, HTableDescriptor.ROOT_TABLEDESC, false);
     FSTableDescriptors.createTableDescriptor(fs, rd, HTableDescriptor.META_TABLEDESC, false);
 

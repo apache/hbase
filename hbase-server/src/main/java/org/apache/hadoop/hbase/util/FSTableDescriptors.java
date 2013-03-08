@@ -54,7 +54,7 @@ import com.google.common.primitives.Ints;
  * passed filesystem.  It expects descriptors to be in a file under the
  * table's directory in FS.  Can be read-only -- i.e. does not modify
  * the filesystem or can be read and write.
- * 
+ *
  * <p>Also has utility for keeping up the table descriptors tableinfo file.
  * The table schema file is kept under the table directory in the filesystem.
  * It has a {@link #TABLEINFO_NAME} prefix and then a suffix that is the
@@ -163,7 +163,7 @@ public class FSTableDescriptors implements TableDescriptors {
         return cachedtdm.getTableDescriptor();
       }
     }
-    
+
     TableDescriptorModtime tdmt = null;
     try {
       tdmt = getTableDescriptorModtime(this.fs, this.rootdir, tablename);
@@ -174,7 +174,7 @@ public class FSTableDescriptors implements TableDescriptors {
       LOG.debug("Exception during readTableDecriptor. Current table name = "
           + tablename, ioe);
     }
-    
+
     if (tdmt == null) {
       LOG.warn("The following folder is in HBase's root directory and " +
         "doesn't contain a table descriptor, " +
@@ -241,7 +241,7 @@ public class FSTableDescriptors implements TableDescriptors {
 
   /**
    * Checks if <code>.tableinfo<code> exists for given table
-   * 
+   *
    * @param fs file system
    * @param rootdir root directory of HBase installation
    * @param tableName name of table
@@ -488,7 +488,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param tableDir
    * @param status
    * @return Descriptor file or null if we failed write.
-   * @throws IOException 
+   * @throws IOException
    */
   private static Path writeTableDescriptor(final FileSystem fs,
       final HTableDescriptor hTableDescriptor, final Path tableDir,
@@ -554,7 +554,7 @@ public class FSTableDescriptors implements TableDescriptors {
 
   /**
    * Create new HTableDescriptor in HDFS. Happens when we are creating table.
-   * 
+   *
    * @param htableDescriptor
    * @param conf
    */
@@ -568,7 +568,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * Create new HTableDescriptor in HDFS. Happens when we are creating table. If
    * forceCreation is true then even if previous table descriptor is present it
    * will be overwritten
-   * 
+   *
    * @param htableDescriptor
    * @param conf
    * @param forceCreation True if we are to overwrite existing file.
@@ -597,7 +597,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * Create new HTableDescriptor in HDFS. Happens when we are creating table. If
    * forceCreation is true then even if previous table descriptor is present it
    * will be overwritten
-   * 
+   *
    * @param fs
    * @param htableDescriptor
    * @param rootdir
@@ -630,8 +630,10 @@ public class FSTableDescriptors implements TableDescriptors {
       LOG.info("Current tableInfoPath = " + status.getPath());
       if (!forceCreation) {
         if (fs.exists(status.getPath()) && status.getLen() > 0) {
-          LOG.info("TableInfo already exists.. Skipping creation");
-          return false;
+          if (getTableDescriptor(fs, status.getPath().getParent()).equals(htableDescriptor)) {
+            LOG.info("TableInfo already exists.. Skipping creation");
+            return false;
+          }
         }
       }
     }

@@ -27,7 +27,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -753,10 +752,6 @@ Server {
 
     this.balancer.setClusterStatus(getClusterStatus());
 
-    // Fixing up missing daughters if any
-    status.setStatus("Fixing up missing daughters");
-    fixupDaughters(status);
-
     if (!masterRecovery) {
       // Start balancer and meta catalog janitor after meta and regions have
       // been assigned.
@@ -941,41 +936,6 @@ Server {
   private void enableCatalogTables(String catalogTableName) {
     if (!this.assignmentManager.getZKTable().isEnabledTable(catalogTableName)) {
       this.assignmentManager.setEnabledTable(catalogTableName);
-    }
-  }
-
-  void fixupDaughters(final MonitoredTask status) throws IOException {
-    final Map<HRegionInfo, Result> offlineSplitParents =
-      new HashMap<HRegionInfo, Result>();
-    // This visitor collects offline split parents in the .META. table
-    MetaReader.Visitor visitor = new MetaReader.Visitor() {
-      @Override
-      public boolean visit(Result r) throws IOException {
-        if (r == null || r.isEmpty()) return true;
-        HRegionInfo info =
-          HRegionInfo.getHRegionInfo(r);
-        if (info == null) return true; // Keep scanning
-        if (info.isOffline() && info.isSplit()) {
-          offlineSplitParents.put(info, r);
-        }
-        // Returning true means "keep scanning"
-        return true;
-      }
-    };
-    // Run full scan of .META. catalog table passing in our custom visitor
-    MetaReader.fullScan(this.catalogTracker, visitor);
-    // Now work on our list of found parents. See if any we can clean up.
-    int fixups = 0;
-    for (Map.Entry<HRegionInfo, Result> e : offlineSplitParents.entrySet()) {
-      ServerName sn = HRegionInfo.getServerName(e.getValue());
-      if (!serverManager.isServerDead(sn)) { // Otherwise, let SSH take care of it
-        fixups += ServerShutdownHandler.fixupDaughters(
-          e.getValue(), assignmentManager, catalogTracker);
-      }
-    }
-    if (fixups != 0) {
-      LOG.info("Scanned the catalog and fixed up " + fixups +
-        " missing daughter region(s)");
     }
   }
 

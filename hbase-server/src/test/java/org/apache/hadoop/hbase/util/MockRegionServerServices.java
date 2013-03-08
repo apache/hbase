@@ -47,7 +47,7 @@ import org.apache.zookeeper.KeeperException;
 public class MockRegionServerServices implements RegionServerServices {
   private final Map<String, HRegion> regions = new HashMap<String, HRegion>();
   private boolean stopping = false;
-  private final ConcurrentSkipListMap<byte[], Boolean> rit = 
+  private final ConcurrentSkipListMap<byte[], Boolean> rit =
     new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
   private ZooKeeperWatcher zkw = null;
@@ -86,7 +86,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public void postOpenDeployTasks(HRegion r, CatalogTracker ct, boolean daughter)
+  public void postOpenDeployTasks(HRegion r, CatalogTracker ct)
       throws KeeperException, IOException {
     addToOnlineRegions(r);
   }
@@ -125,7 +125,7 @@ public class MockRegionServerServices implements RegionServerServices {
   public ZooKeeperWatcher getZooKeeper() {
     return zkw;
   }
-  
+
   public RegionServerAccounting getRegionServerAccounting() {
     return null;
   }
