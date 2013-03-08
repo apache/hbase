@@ -163,7 +163,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
                             <& catalogTables &>
                         </%if>
                     </div>
-                    <div class="tab-pane" id="userSnapshots">
+                    <div class="tab-pane" id="tab_userSnapshots">
                         <& userSnapshots &>
                     </div>
                 </div>
@@ -290,7 +290,6 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 <%def userTables>
 <%java>
    HTableDescriptor[] tables = admin.listTables();
-   HConnectionManager.deleteConnection(admin.getConfiguration());
 </%java>
 <%if (tables != null && tables.length > 0)%>
 <table class="table table-striped">
@@ -368,4 +367,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
     </tr>
 </table>
 </%if>
+<%java>
+   HConnectionManager.deleteConnection(admin.getConfiguration());
+</%java>
 </%def>
