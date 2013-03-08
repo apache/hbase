@@ -164,7 +164,7 @@ public class ServerManager {
    * For all the region servers in this set, HLog split is already completed.
    * <p>
    * ServerShutdownHandler processes a dead server submitted to the handler after
-   * the handler is enabled. It may not be able to complete the processing because root/meta
+   * the handler is enabled. It may not be able to complete the processing because meta
    * is not yet online or master is currently in startup mode.  In this case, the dead
    * server will be parked in this set temporarily.
    */
@@ -484,28 +484,26 @@ public class ServerManager {
       return;
     }
 
-    boolean carryingRoot = services.getAssignmentManager().isCarryingRoot(serverName);
     boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName);
-    if (carryingRoot || carryingMeta) {
+    if (carryingMeta) {
       this.services.getExecutorService().submit(new MetaServerShutdownHandler(this.master,
-        this.services, this.deadservers, serverName, carryingRoot, carryingMeta));
+        this.services, this.deadservers, serverName, carryingMeta));
     } else {
       this.services.getExecutorService().submit(new ServerShutdownHandler(this.master,
         this.services, this.deadservers, serverName, true));
     }
     LOG.debug("Added=" + serverName +
-      " to dead servers, submitted shutdown handler to be executed, root=" +
-        carryingRoot + ", meta=" + carryingMeta);
+      " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
   }
 
   public synchronized void processDeadServer(final ServerName serverName) {
     // When assignment manager is cleaning up the zookeeper nodes and rebuilding the
-    // in-memory region states, region servers could be down. Root/meta table can and
+    // in-memory region states, region servers could be down. Meta table can and
     // should be re-assigned, log splitting can be done too. However, it is better to
     // wait till the cleanup is done before re-assigning user regions.
     //
     // We should not wait in the server shutdown handler thread since it can clog
-    // the handler threads and root/meta table could not be re-assigned in case
+    // the handler threads and meta table could not be re-assigned in case
     // the corresponding server is down. So we queue them up here instead.
     if (!services.getAssignmentManager().isFailoverCleanupDone()) {
       requeuedDeadServers.add(serverName);
@@ -519,7 +517,7 @@ public class ServerManager {
 
   /**
    * Process the servers which died during master's initialization. It will be
-   * called after HMaster#assignRootAndMeta and AssignmentManager#joinCluster.
+   * called after HMaster#assignMeta and AssignmentManager#joinCluster.
    * */
   synchronized void processQueuedDeadServers() {
     if (!services.isServerShutdownHandlerEnabled()) {

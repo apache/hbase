@@ -167,18 +167,15 @@ public class TestRSKilledWhenMasterInitializing {
 
     // Second kill meta server
     int metaServerNum = cluster.getServerWithMeta();
-    int rootServerNum = cluster.getServerWith(HRegionInfo.ROOT_REGIONINFO
-        .getRegionName());
     HRegionServer metaRS = cluster.getRegionServer(metaServerNum);
-    LOG.debug("Killing metaRS and carryingRoot = "
-        + (metaServerNum == rootServerNum));
+    LOG.debug("Killing metaRS");
     metaRS.kill();
     metaRS.join();
 
     /*
      * Sleep double time of TestingMaster.sleep.duration, so we can ensure that
-     * master has already assigned ROOTandMETA or is blocking on assigning
-     * ROOTandMETA
+     * master has already assigned META or is blocking on assigning
+     * META
      */
     Thread.sleep(10000 * 2);
 
@@ -187,34 +184,7 @@ public class TestRSKilledWhenMasterInitializing {
     // Third check whether data is correct in meta region
     assertTrue(hbaseAdmin.isTableAvailable(TABLENAME));
 
-    /*
-     * NO.2 -ROOT- region correctness . If the .META. server killed in the NO.1
-     * is also carrying -ROOT- region, it is not needed
-     */
-    if (rootServerNum != metaServerNum) {
-      // First abort master
-      abortMaster(cluster);
-      master = startMasterAndWaitUntilLogSplit(cluster);
-
-      // Second kill meta server
-      HRegionServer rootRS = cluster.getRegionServer(rootServerNum);
-      LOG.debug("Killing rootRS");
-      rootRS.kill();
-      rootRS.join();
-
-      /*
-       * Sleep double time of TestingMaster.sleep.duration, so we can ensure
-       * that master has already assigned ROOTandMETA or is blocking on
-       * assigning ROOTandMETA
-       */
-      Thread.sleep(10000 * 2);
-      waitUntilMasterIsInitialized(master);
-
-      // Third check whether data is correct in meta region
-      assertTrue(hbaseAdmin.isTableAvailable(TABLENAME));
-    }
-
-    /* NO.3 data region correctness */
+    /* NO.2 data region correctness */
     ServerManager serverManager = cluster.getMaster().getServerManager();
     while (serverManager.areDeadServersInProgress()) {
       Thread.sleep(100);

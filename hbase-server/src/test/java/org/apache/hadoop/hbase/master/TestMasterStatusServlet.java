@@ -107,21 +107,12 @@ public class TestMasterStatusServlet {
     new MasterStatusTmpl().render(new StringWriter(),
         master, admin);
   }
-  
+
   @Test
-  public void testStatusTemplateRootAvailable() throws IOException {
-    new MasterStatusTmpl()
-      .setRootLocation(new ServerName("rootserver:123,12345"))
-      .render(new StringWriter(),
-        master, admin);
-  }
-  
-  @Test
-  public void testStatusTemplateRootAndMetaAvailable() throws IOException {
+  public void testStatusTemplateMetaAvailable() throws IOException {
     setupMockTables();
     
     new MasterStatusTmpl()
-      .setRootLocation(new ServerName("rootserver:123,12345"))
       .setMetaLocation(new ServerName("metaserver:123,12345"))
       .render(new StringWriter(),
         master, admin);
@@ -141,7 +132,6 @@ public class TestMasterStatusServlet {
     );
 
     new MasterStatusTmpl()
-      .setRootLocation(new ServerName("rootserver:123,12345"))
       .setMetaLocation(new ServerName("metaserver:123,12345"))
       .setServers(servers)
       .setDeadServers(deadServers)

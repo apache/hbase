@@ -62,21 +62,6 @@ public class MetaReader {
   }
 
   /**
-   * @param row
-   * @return True if <code>row</code> is row of <code>-ROOT-</code> table.
-   */
-  private static boolean isRootTableRow(final byte [] row) {
-    if (row.length < META_REGION_PREFIX.length + 2 /* ',', + '1' */) {
-      // Can't be meta table region.
-      return false;
-    }
-    // Compare the prefix of row.  If it matches META_REGION_PREFIX prefix,
-    // then this is row from -ROOT_ table.
-    return Bytes.equals(row, 0, META_REGION_PREFIX.length,
-      META_REGION_PREFIX, 0, META_REGION_PREFIX.length);
-  }
-
-  /**
    * Performs a full scan of <code>.META.</code>, skipping regions from any
    * tables in the specified set of disabled tables.
    * @param catalogTracker
@@ -143,14 +128,14 @@ public class MetaReader {
   }
 
   /**
-   * Performs a full scan of a <code>-ROOT-</code> table.
+   * Performs a full scan of a <code>.META.</code> table.
    * @return List of {@link Result}
    * @throws IOException
    */
-  public static List<Result> fullScanOfRoot(CatalogTracker catalogTracker)
+  public static List<Result> fullScanOfMeta(CatalogTracker catalogTracker)
   throws IOException {
     CollectAllVisitor v = new CollectAllVisitor();
-    fullScan(catalogTracker, v, null, true);
+    fullScan(catalogTracker, v, null);
     return v.getResults();
   }
 
@@ -164,21 +149,6 @@ public class MetaReader {
       final Visitor visitor)
   throws IOException {
     fullScan(catalogTracker, visitor, null);
-  }
-
-  /**
-   * Performs a full scan of <code>.META.</code>.
-   * @param catalogTracker
-   * @param visitor Visitor invoked against each row.
-   * @param startrow Where to start the scan. Pass null if want to begin scan
-   * at first row (The visitor will stop the Scan when its done so no need to
-   * pass a stoprow).
-   * @throws IOException
-   */
-  public static void fullScan(CatalogTracker catalogTracker,
-      final Visitor visitor, final byte [] startrow)
-  throws IOException {
-    fullScan(catalogTracker, visitor, startrow, false);
   }
 
   /**
@@ -201,16 +171,12 @@ public class MetaReader {
   /**
    * Callers should call close on the returned {@link HTable} instance.
    * @param catalogTracker
-   * @param row Row we are putting
    * @return
    * @throws IOException
    */
-  static HTable getCatalogHTable(final CatalogTracker catalogTracker,
-      final byte [] row)
+  static HTable getCatalogHTable(final CatalogTracker catalogTracker)
   throws IOException {
-    return isRootTableRow(row)?
-      getRootHTable(catalogTracker):
-      getMetaHTable(catalogTracker);
+    return getMetaHTable(catalogTracker);
   }
 
   /**
@@ -225,17 +191,6 @@ public class MetaReader {
   }
 
   /**
-   * Callers should call close on the returned {@link HTable} instance.
-   * @param ct
-   * @return An {@link HTable} for <code>-ROOT-</code>
-   * @throws IOException
-   */
-  static HTable getRootHTable(final CatalogTracker ct)
-  throws IOException {
-    return getHTable(ct, HConstants.ROOT_TABLE_NAME);
-  }
-
-  /**
    * @param t Table to use (will be closed when done).
    * @param g Get to run
    * @throws IOException
@@ -246,19 +201,6 @@ public class MetaReader {
     } finally {
       t.close();
     }
-  }
-
-  /**
-   * Gets the location of <code>.META.</code> region by reading content of
-   * <code>-ROOT-</code>.
-   * @param ct
-   * @return location of <code>.META.</code> region as a {@link ServerName} or
-   * null if not found
-   * @throws IOException
-   */
-  static ServerName getMetaRegionLocation(final CatalogTracker ct)
-  throws IOException {
-    return MetaReader.readRegionLocation(ct, CatalogTracker.META_REGION_NAME);
   }
 
   /**
@@ -287,7 +229,7 @@ public class MetaReader {
   throws IOException {
     Get get = new Get(regionName);
     get.addFamily(HConstants.CATALOG_FAMILY);
-    Result r = get(getCatalogHTable(catalogTracker, regionName), get);
+    Result r = get(getCatalogHTable(catalogTracker), get);
     return (r == null || r.isEmpty())? null: HRegionInfo.getHRegionInfoAndServerName(r);
   }
 
@@ -302,8 +244,7 @@ public class MetaReader {
   public static boolean tableExists(CatalogTracker catalogTracker,
       String tableName)
   throws IOException {
-    if (tableName.equals(HTableDescriptor.ROOT_TABLEDESC.getNameAsString()) ||
-        tableName.equals(HTableDescriptor.META_TABLEDESC.getNameAsString())) {
+    if (tableName.equals(HTableDescriptor.META_TABLEDESC.getNameAsString())) {
       // Catalog tables always exist.
       return true;
     }
@@ -451,13 +392,13 @@ public class MetaReader {
   getTableRegionsAndLocations(final CatalogTracker catalogTracker,
       final byte [] tableName, final boolean excludeOfflinedSplitParents)
   throws IOException, InterruptedException {
-    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
-      // If root, do a bit of special handling.
-      ServerName serverName = catalogTracker.getRootLocation();
+    if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+      // If meta, do a bit of special handling.
+      ServerName serverName = catalogTracker.getMetaLocation();
       List<Pair<HRegionInfo, ServerName>> list =
-        new ArrayList<Pair<HRegionInfo, ServerName>>();
-      list.add(new Pair<HRegionInfo, ServerName>(HRegionInfo.ROOT_REGIONINFO,
-        serverName));
+          new ArrayList<Pair<HRegionInfo, ServerName>>();
+      list.add(new Pair<HRegionInfo, ServerName>(HRegionInfo.FIRST_META_REGIONINFO,
+          serverName));
       return list;
     }
     // Make a version of CollectingVisitor that collects HRegionInfo and ServerAddress
@@ -487,8 +428,7 @@ public class MetaReader {
         this.results.add(this.current);
       }
     };
-    fullScan(catalogTracker, visitor, getTableStartRowForMeta(tableName),
-      Bytes.equals(tableName, HConstants.META_TABLE_NAME));
+    fullScan(catalogTracker, visitor, getTableStartRowForMeta(tableName));
     return visitor.getResults();
   }
 
@@ -546,23 +486,21 @@ public class MetaReader {
    * @param visitor Visitor invoked against each row.
    * @param startrow Where to start the scan. Pass null if want to begin scan
    * at first row.
-   * @param scanRoot True if we are to scan <code>-ROOT-</code> rather than
    * <code>.META.</code>, the default (pass false to scan .META.)
    * @throws IOException
    */
-  static void fullScan(CatalogTracker catalogTracker,
-    final Visitor visitor, final byte [] startrow, final boolean scanRoot)
+  public static void fullScan(CatalogTracker catalogTracker,
+    final Visitor visitor, final byte [] startrow)
   throws IOException {
     Scan scan = new Scan();
     if (startrow != null) scan.setStartRow(startrow);
-    if (startrow == null && !scanRoot) {
+    if (startrow == null) {
       int caching = catalogTracker.getConnection().getConfiguration()
           .getInt(HConstants.HBASE_META_SCANNER_CACHING, 100);
       scan.setCaching(caching);
     }
     scan.addFamily(HConstants.CATALOG_FAMILY);
-    HTable metaTable = scanRoot?
-      getRootHTable(catalogTracker): getMetaHTable(catalogTracker);
+    HTable metaTable = getMetaHTable(catalogTracker);
     ResultScanner scanner = metaTable.getScanner(scan);
     try {
       Result data;

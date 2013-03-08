@@ -46,7 +46,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
@@ -179,10 +178,8 @@ import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
-import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
-import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
@@ -202,11 +199,11 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.DNS;
@@ -312,7 +309,6 @@ public class HRegionServer implements ClientProtocol,
 
   protected final Configuration conf;
 
-  protected final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
   private boolean useHBaseChecksum; // verify hbase checksums?
   private Path rootDir;
 
@@ -567,7 +563,7 @@ public class HRegionServer implements ClientProtocol,
 
   /**
    * Utility used ensuring higher quality of service for priority rpcs; e.g.
-   * rpcs to .META. and -ROOT-, etc.
+   * rpcs to .META., etc.
    */
   class QosFunction implements Function<RpcRequestBody,Integer> {
     private final Map<String, Integer> annotatedQos;
@@ -968,7 +964,7 @@ public class HRegionServer implements ClientProtocol,
       LOG.info("stopping server " + this.serverNameFromMasterPOV);
     }
     // Interrupt catalog tracker here in case any regions being opened out in
-    // handlers are stuck waiting on meta or root.
+    // handlers are stuck waiting on meta.
     if (this.catalogTracker != null) this.catalogTracker.stop();
 
     // stop the snapshot handler, forcefully killing all running tasks
@@ -1027,8 +1023,7 @@ public class HRegionServer implements ClientProtocol,
   }
 
   private boolean containsMetaTableRegions() {
-    return onlineRegions.containsKey(HRegionInfo.ROOT_REGIONINFO.getEncodedName())
-        || onlineRegions.containsKey(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    return onlineRegions.containsKey(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
   }
 
   private boolean areAllUserRegionsOffline() {
@@ -1534,14 +1529,10 @@ public class HRegionServer implements ClientProtocol,
     this.service = new ExecutorService(getServerName().toString());
     this.service.startExecutorService(ExecutorType.RS_OPEN_REGION,
       conf.getInt("hbase.regionserver.executor.openregion.threads", 3));
-    this.service.startExecutorService(ExecutorType.RS_OPEN_ROOT,
-      conf.getInt("hbase.regionserver.executor.openroot.threads", 1));
     this.service.startExecutorService(ExecutorType.RS_OPEN_META,
       conf.getInt("hbase.regionserver.executor.openmeta.threads", 1));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_REGION,
       conf.getInt("hbase.regionserver.executor.closeregion.threads", 3));
-    this.service.startExecutorService(ExecutorType.RS_CLOSE_ROOT,
-      conf.getInt("hbase.regionserver.executor.closeroot.threads", 1));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_META,
       conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
     if (conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false)) {
@@ -1708,13 +1699,10 @@ public class HRegionServer implements ClientProtocol,
       LOG.error("No sequence number found when opening " + r.getRegionNameAsString());
       openSeqNum = 0;
     }
-    // Update ZK, ROOT or META
-    if (r.getRegionInfo().isRootRegion()) {
-      RootRegionTracker.setRootLocation(getZooKeeper(),
-       this.serverNameFromMasterPOV);
-    } else if (r.getRegionInfo().isMetaRegion()) {
-      MetaEditor.updateMetaLocation(ct, r.getRegionInfo(),
-        this.serverNameFromMasterPOV, openSeqNum);
+    // Update ZK, or META
+    if (r.getRegionInfo().isMetaRegion()) {
+      MetaRegionTracker.setMetaLocation(getZooKeeper(),
+          this.serverNameFromMasterPOV);
     } else {
       MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
         this.serverNameFromMasterPOV, openSeqNum);
@@ -1974,28 +1962,24 @@ public class HRegionServer implements ClientProtocol,
   }
 
   /**
-   * Close root and meta regions if we carry them
+   * Close meta region if we carry it
    * @param abort Whether we're running an abort.
    */
   void closeMetaTableRegions(final boolean abort) {
     HRegion meta = null;
-    HRegion root = null;
     this.lock.writeLock().lock();
     try {
       for (Map.Entry<String, HRegion> e: onlineRegions.entrySet()) {
         HRegionInfo hri = e.getValue().getRegionInfo();
-        if (hri.isRootRegion()) {
-          root = e.getValue();
-        } else if (hri.isMetaRegion()) {
+        if (hri.isMetaRegion()) {
           meta = e.getValue();
         }
-        if (meta != null && root != null) break;
+        if (meta != null) break;
       }
     } finally {
       this.lock.writeLock().unlock();
     }
     if (meta != null) closeRegionIgnoreErrors(meta.getRegionInfo(), abort);
-    if (root != null) closeRegionIgnoreErrors(root.getRegionInfo(), abort);
   }
 
   /**
@@ -2490,9 +2474,7 @@ public class HRegionServer implements ClientProtocol,
 
     CloseRegionHandler crh;
     final HRegionInfo hri = actualRegion.getRegionInfo();
-    if (hri.isRootRegion()) {
-      crh = new CloseRootHandler(this, this, hri, abort, zk, versionOfClosingNode);
-    } else if (hri.isMetaRegion()) {
+    if (hri.isMetaRegion()) {
       crh = new CloseMetaHandler(this, this, hri, abort, zk, versionOfClosingNode);
     } else {
       crh = new CloseRegionHandler(this, this, hri, abort, zk, versionOfClosingNode, sn);
@@ -3487,10 +3469,7 @@ public class HRegionServer implements ClientProtocol,
         if (previous == null) {
           // If there is no action in progress, we can submit a specific handler.
           // Need to pass the expected version in the constructor.
-          if (region.isRootRegion()) {
-            this.service.submit(new OpenRootHandler(this, this, region, htd,
-                versionOfOfflineNode));
-          } else if (region.isMetaRegion()) {
+          if (region.isMetaRegion()) {
             this.service.submit(new OpenMetaHandler(this, this, region, htd,
                 versionOfOfflineNode));
           } else {

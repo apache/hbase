@@ -93,7 +93,7 @@ import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
-import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.security.AccessControlException;
@@ -196,7 +196,7 @@ public class HBaseFsck extends Configured implements Tool {
   private boolean fixReferenceFiles = false; // fix lingering reference store file
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
-  // -ROOT- and .META. are always checked
+  // .META. are always checked
   private Set<String> tablesIncluded = new HashSet<String>();
   private int maxMerge = DEFAULT_MAX_MERGE; // maximum number of overlapping regions to merge
   private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE; // maximum number of overlapping regions to sideline
@@ -233,7 +233,7 @@ public class HBaseFsck extends Configured implements Tool {
    * If tablesIncluded is empty, this map contains all tables.
    * Otherwise, it contains only meta tables and tables in tablesIncluded,
    * unless checkMetaOnly is specified, in which case, it contains only
-   * the meta tables (.META. and -ROOT-).
+   * the meta table
    */
   private SortedMap<String, TableInfo> tablesInfo = new ConcurrentSkipListMap<String,TableInfo>();
 
@@ -257,7 +257,7 @@ public class HBaseFsck extends Configured implements Tool {
     errors = getErrorReporter(conf);
 
     int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
-    executor = new ScheduledThreadPoolExecutor(numThreads);
+    executor = new ScheduledThreadPoolExecutor(numThreads, Threads.newDaemonThreadFactory("hbasefsck"));
   }
 
   /**
@@ -691,8 +691,7 @@ public class HBaseFsck extends Configured implements Tool {
         String tableName = td.getNameAsString();
         errors.detail("  Table: " + tableName + "\t" +
                            (td.isReadOnly() ? "ro" : "rw") + "\t" +
-                           (td.isRootRegion() ? "ROOT" :
-                            (td.isMetaRegion() ? "META" : "    ")) + "\t" +
+                            (td.isMetaRegion() ? "META" : "    ") + "\t" +
                            " families: " + td.getFamilies().size());
       }
     }
@@ -915,23 +914,14 @@ public class HBaseFsck extends Configured implements Tool {
    *
    * @return an open .META. HRegion
    */
-  private HRegion createNewRootAndMeta() throws IOException {
-    Path rootdir = new Path(getConf().get(HConstants.HBASE_DIR));
+  private HRegion createNewMeta() throws IOException {
+    Path rootdir = FSUtils.getRootDir(getConf());
     Configuration c = getConf();
-    HRegionInfo rootHRI = new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
-    MasterFileSystem.setInfoFamilyCachingForRoot(false);
     HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
     MasterFileSystem.setInfoFamilyCachingForMeta(false);
-    HRegion root = HRegion.createHRegion(rootHRI, rootdir, c,
-        HTableDescriptor.ROOT_TABLEDESC);
     HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c,
         HTableDescriptor.META_TABLEDESC);
-    MasterFileSystem.setInfoFamilyCachingForRoot(true);
     MasterFileSystem.setInfoFamilyCachingForMeta(true);
-
-    // Add first region from the META table to the ROOT region.
-    HRegion.addRegionToMETA(root, meta);
-    HRegion.closeHRegion(root);
     return meta;
   }
 
@@ -947,9 +937,8 @@ public class HBaseFsck extends Configured implements Tool {
     for (Entry<String, TableInfo> e : tablesInfo.entrySet()) {
       String name = e.getKey();
 
-      // skip "-ROOT-" and ".META."
-      if (Bytes.compareTo(Bytes.toBytes(name), HConstants.ROOT_TABLE_NAME) == 0
-          || Bytes.compareTo(Bytes.toBytes(name), HConstants.META_TABLE_NAME) == 0) {
+      // skip ".META."
+      if (Bytes.compareTo(Bytes.toBytes(name), HConstants.META_TABLE_NAME) == 0) {
         continue;
       }
 
@@ -1029,24 +1018,24 @@ public class HBaseFsck extends Configured implements Tool {
       }
     }
 
-    // we can rebuild, move old root and meta out of the way and start
+    // we can rebuild, move old meta out of the way and start
     LOG.info("HDFS regioninfo's seems good.  Sidelining old .META.");
-    Path backupDir = sidelineOldRootAndMeta();
+    Path backupDir = sidelineOldMeta();
 
     LOG.info("Creating new .META.");
-    HRegion meta = createNewRootAndMeta();
+    HRegion meta = createNewMeta();
 
     // populate meta
     List<Put> puts = generatePuts(tablesInfo);
     if (puts == null) {
       LOG.fatal("Problem encountered when creating new .META. entries.  " +
-        "You may need to restore the previously sidelined -ROOT- and .META.");
+        "You may need to restore the previously sidelined .META.");
       return false;
     }
     meta.put(puts.toArray(new Put[0]));
     HRegion.closeHRegion(meta);
     LOG.info("Success! .META. table rebuilt.");
-    LOG.info("Old -ROOT- and .META. are moved into " + backupDir);
+    LOG.info("Old .META. is moved into " + backupDir);
     return true;
   }
 
@@ -1186,29 +1175,18 @@ public class HBaseFsck extends Configured implements Tool {
   /**
    * @return Path to backup of original directory
    */
-  Path sidelineOldRootAndMeta() throws IOException {
-    // put current -ROOT- and .META. aside.
+  Path sidelineOldMeta() throws IOException {
+    // put current .META. aside.
     Path hbaseDir = new Path(getConf().get(HConstants.HBASE_DIR));
     FileSystem fs = hbaseDir.getFileSystem(getConf());
     Path backupDir = getSidelineDir();
     fs.mkdirs(backupDir);
-
-    sidelineTable(fs, HConstants.ROOT_TABLE_NAME, hbaseDir, backupDir);
     try {
       sidelineTable(fs, HConstants.META_TABLE_NAME, hbaseDir, backupDir);
     } catch (IOException e) {
-      LOG.error("Attempt to sideline meta failed, attempt to revert...", e);
-      try {
-        // move it back.
-        sidelineTable(fs, HConstants.ROOT_TABLE_NAME, backupDir, hbaseDir);
-        LOG.warn("... revert succeed.  -ROOT- and .META. still in "
-            + "original state.");
-      } catch (IOException ioe) {
-        LOG.fatal("... failed to sideline root and meta and failed to restore "
-            + "prevoius state.  Currently in inconsistent state.  To restore "
-            + "try to rename -ROOT- in " + backupDir.getName() + " to "
-            + hbaseDir.getName() + ".", ioe);
-      }
+      LOG.fatal("... failed to sideline meta. Currently in inconsistent state.  To restore "
+      + "try to rename .META. in " + backupDir.getName() + " to "
+      + hbaseDir.getName() + ".", e);
       throw e; // throw original exception
     }
     return backupDir;
@@ -1265,7 +1243,6 @@ public class HBaseFsck extends Configured implements Tool {
         foundVersionFile = true;
       } else {
         if ((!checkMetaOnly && isTableIncluded(dirName)) ||
-            dirName.equals("-ROOT-") ||
             dirName.equals(".META.")) {
           tableDirs.add(file);
         }
@@ -1309,31 +1286,29 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   /**
-   * Record the location of the ROOT region as found in ZooKeeper,
-   * as if it were in a META table. This is so that we can check
-   * deployment of ROOT.
+   * Record the location of the META region as found in ZooKeeper.
    */
-  private boolean recordRootRegion() throws IOException {
-    HRegionLocation rootLocation = connection.locateRegion(
-      HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_START_ROW);
+  private boolean recordMetaRegion() throws IOException {
+    HRegionLocation metaLocation = connection.locateRegion(
+      HConstants.META_TABLE_NAME, HConstants.EMPTY_START_ROW);
 
-    // Check if Root region is valid and existing
-    if (rootLocation == null || rootLocation.getRegionInfo() == null ||
-        rootLocation.getHostname() == null) {
-      errors.reportError(ERROR_CODE.NULL_ROOT_REGION,
-        "Root Region or some of its attributes are null.");
+    // Check if Meta region is valid and existing
+    if (metaLocation == null || metaLocation.getRegionInfo() == null ||
+        metaLocation.getHostname() == null) {
+      errors.reportError(ERROR_CODE.NULL_META_REGION,
+        "META region or some of its attributes are null.");
       return false;
     }
     ServerName sn;
     try {
-      sn = getRootRegionServerName();
+      sn = getMetaRegionServerName();
     } catch (KeeperException e) {
       throw new IOException(e);
     }
     MetaEntry m =
-      new MetaEntry(rootLocation.getRegionInfo(), sn, System.currentTimeMillis());
+      new MetaEntry(metaLocation.getRegionInfo(), sn, System.currentTimeMillis());
     HbckInfo hbInfo = new HbckInfo(m);
-    regionInfoMap.put(rootLocation.getRegionInfo().getEncodedName(), hbInfo);
+    regionInfoMap.put(metaLocation.getRegionInfo().getEncodedName(), hbInfo);
     return true;
   }
 
@@ -1353,12 +1328,12 @@ public class HBaseFsck extends Configured implements Tool {
     });
   }
 
-  private ServerName getRootRegionServerName()
+  private ServerName getMetaRegionServerName()
   throws IOException, KeeperException {
     ZooKeeperWatcher zkw = createZooKeeperWatcher();
     ServerName sn = null;
     try {
-      sn = RootRegionTracker.getRootRegionLocation(zkw);
+      sn = MetaRegionTracker.getMetaRegionLocation(zkw);
     } finally {
       zkw.close();
     }
@@ -2521,14 +2496,14 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   /**
-   * Scan .META. and -ROOT-, adding all regions found to the regionInfo map.
+   * Scan .META., adding all regions found to the regionInfo map.
    * @throws IOException if an error is encountered
    */
   boolean loadMetaEntries() throws IOException {
 
     // get a list of all regions from the master. This involves
     // scanning the META table
-    if (!recordRootRegion()) {
+    if (!recordMetaRegion()) {
       // Will remove later if we can fix it
       errors.reportError("Fatal error: unable to get root region location. Exiting...");
       return false;
@@ -2560,7 +2535,7 @@ public class HBaseFsck extends Configured implements Tool {
           }
           HRegionInfo hri = pair.getFirst();
           if (!(isTableIncluded(hri.getTableNameAsString())
-              || hri.isMetaRegion() || hri.isRootRegion())) {
+              || hri.isMetaRegion())) {
             return true;
           }
           PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(result);
@@ -2583,11 +2558,6 @@ public class HBaseFsck extends Configured implements Tool {
         }
       }
     };
-
-    // Scan -ROOT- to pick up META regions
-    MetaScanner.metaScan(getConf(), visitor, null, null,
-      Integer.MAX_VALUE, HConstants.ROOT_TABLE_NAME);
-
     if (!checkMetaOnly) {
       // Scan .META. to pick up user regions
       MetaScanner.metaScan(getConf(), visitor);
@@ -2871,7 +2841,7 @@ public class HBaseFsck extends Configured implements Tool {
 
   public interface ErrorReporter {
     public static enum ERROR_CODE {
-      UNKNOWN, NO_META_REGION, NULL_ROOT_REGION, NO_VERSION_FILE, NOT_IN_META_HDFS, NOT_IN_META,
+      UNKNOWN, NO_META_REGION, NULL_META_REGION, NO_VERSION_FILE, NOT_IN_META_HDFS, NOT_IN_META,
       NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META, NOT_DEPLOYED,
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
@@ -3416,8 +3386,8 @@ public class HBaseFsck extends Configured implements Tool {
     out.println("   -sleepBeforeRerun <timeInSeconds> Sleep this many seconds" +
         " before checking if the fix worked if run with -fix");
     out.println("   -summary Print only summary of the tables and status.");
-    out.println("   -metaonly Only check the state of ROOT and META tables.");
-    out.println("   -sidelineDir <hdfs://> HDFS path to backup existing meta and root.");
+    out.println("   -metaonly Only check the state of the .META. table.");
+    out.println("   -sidelineDir <hdfs://> HDFS path to backup existing meta.");
 
     out.println("");
     out.println("  Metadata Repair options: (expert features, use with caution!)");

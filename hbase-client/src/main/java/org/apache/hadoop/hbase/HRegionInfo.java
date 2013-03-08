@@ -99,7 +99,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    *<p>
    * **NOTE**
    *
-   * ROOT, the first META region, and regions created by an older
+   * The first META region, and regions created by an older
    * version of HBase (0.20 or prior) will continue to use the
    * old region name format.
    */
@@ -142,7 +142,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
           regionName.length - MD5_HEX_LENGTH - 1,
           MD5_HEX_LENGTH);
     } else {
-      // old format region name. ROOT and first META region also
+      // old format region name. First META region also
       // use this format.EncodedName is the JenkinsHash value.
       int hashVal = Math.abs(JenkinsHash.getInstance().hash(regionName,
         regionName.length, 0));
@@ -154,14 +154,11 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   /**
    * Use logging.
    * @param encodedRegionName The encoded regionname.
-   * @return <code>-ROOT-</code> if passed <code>70236052</code> or
-   * <code>.META.</code> if passed </code>1028785192</code> else returns
+   * @return <code>.META.</code> if passed </code>1028785192</code> else returns
    * <code>encodedRegionName</code>
    */
   public static String prettyPrint(final String encodedRegionName) {
-    if (encodedRegionName.equals("70236052")) {
-      return encodedRegionName + "/-ROOT-";
-    } else if (encodedRegionName.equals("1028785192")) {
+    if (encodedRegionName.equals("1028785192")) {
       return encodedRegionName + "/.META.";
     }
     return encodedRegionName;
@@ -206,14 +203,14 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
 
   /**
-   * Private constructor used constructing HRegionInfo for the catalog root and
+   * Private constructor used constructing HRegionInfo for the
    * first meta regions
    */
   private HRegionInfo(long regionId, byte[] tableName) {
     super();
     this.regionId = regionId;
     this.tableName = tableName.clone();
-    // Note: Root & First Meta regions names are still in old format
+    // Note: First Meta regions names are still in old format
     this.regionName = createRegionName(tableName, null,
                                        regionId, false);
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
@@ -568,16 +565,11 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
        Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
   }
 
-  /** @return true if this is the root region */
-  public boolean isRootRegion() {
-    return Bytes.equals(tableName, HRegionInfo.ROOT_REGIONINFO.getTableName());
-  }
-
-  /** @return true if this region is from a table that is a meta table,
-   * either <code>.META.</code> or <code>-ROOT-</code>
+  /**
+   * @return true if this region is from .META.
    */
   public boolean isMetaTable() {
-    return isRootRegion() || isMetaRegion();
+    return isMetaRegion();
   }
 
   /** @return true if this region is a meta region */
@@ -804,7 +796,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return Comparator to use comparing {@link KeyValue}s.
    */
   public KVComparator getComparator() {
-    return isRootRegion()? KeyValue.ROOT_COMPARATOR: isMetaRegion()?
+    return isMetaRegion()?
       KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;
   }
 
@@ -848,9 +840,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   public static HRegionInfo convert(final RegionInfo proto) {
     if (proto == null) return null;
     byte [] tableName = proto.getTableName().toByteArray();
-    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
-      return ROOT_REGIONINFO;
-    } else if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+    if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
       return FIRST_META_REGIONINFO;
     }
     long regionId = proto.getRegionId();

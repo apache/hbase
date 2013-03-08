@@ -142,7 +142,6 @@ public class TestHRegionInfo {
 
   @Test
   public void testMetaTables() {
-    assertTrue(HRegionInfo.ROOT_REGIONINFO.isMetaTable());
     assertTrue(HRegionInfo.FIRST_META_REGIONINFO.isMetaTable());
   }
 

@@ -313,7 +313,6 @@ module Hbase
     def describe(table_name)
       tables = @admin.listTables.to_a
       tables << org.apache.hadoop.hbase.HTableDescriptor::META_TABLEDESC
-      tables << org.apache.hadoop.hbase.HTableDescriptor::ROOT_TABLEDESC
 
       tables.each do |t|
         # Found the table

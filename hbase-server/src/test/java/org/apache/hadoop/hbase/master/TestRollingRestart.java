@@ -79,7 +79,7 @@ public class  TestRollingRestart {
     HTable ht = TEST_UTIL.createTable(table, family);
     int numRegions = TEST_UTIL.createMultiRegions(conf, ht, family,
         NUM_REGIONS_TO_CREATE);
-    numRegions += 2; // catalogs
+    numRegions += 1; // catalogs
     log("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     log("Disabling table\n");
@@ -88,10 +88,10 @@ public class  TestRollingRestart {
     blockUntilNoRIT(zkw, master);
     NavigableSet<String> regions = getAllOnlineRegions(cluster);
     log("Verifying only catalog regions are assigned\n");
-    if (regions.size() != 2) {
+    if (regions.size() != 1) {
       for (String oregion : regions) log("Region still online: " + oregion);
     }
-    assertEquals(2, regions.size());
+    assertEquals(1, regions.size());
     log("Enabling table\n");
     TEST_UTIL.getHBaseAdmin().enableTable(table);
     log("Waiting for no more RIT\n");
@@ -195,15 +195,11 @@ public class  TestRollingRestart {
         i++;
       }
     }
-    log("Stopping server hosting ROOT");
-    rootServer.getRegionServer().stop("Stopping ROOT server");
     log("Stopping server hosting META #1");
     metaServer.getRegionServer().stop("Stopping META server");
-    cluster.hbaseCluster.waitOnRegionServer(rootServer);
-    log("Root server down");
     cluster.hbaseCluster.waitOnRegionServer(metaServer);
     log("Meta server down #1");
-    expectedNumRS -= 2;
+    expectedNumRS--;
     log("Waiting for meta server #1 RS shutdown to be handled by master");
     waitForRSShutdownToStartAndFinish(activeMaster,
         metaServer.getRegionServer().getServerName());
@@ -290,7 +286,7 @@ public class  TestRollingRestart {
         log("RS: " + rst.getRegionServer().getServerName());
       }
     }
-    assertEquals(1, cluster.getRegionServerThreads().size());
+    assertEquals(2, cluster.getRegionServerThreads().size());
 
 
     // TODO: Bring random 3 of 4 RS down at the same time

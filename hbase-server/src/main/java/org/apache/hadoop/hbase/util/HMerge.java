@@ -121,7 +121,7 @@ class HMerge {
         throw new IllegalStateException(
             "Can not compact META table if instance is on-line");
       }
-      new OfflineMerger(conf, fs).process();
+      // TODO reenable new OfflineMerger(conf, fs).process();
     } else {
       if(!masterIsRunning) {
         throw new IllegalStateException(
@@ -330,92 +330,6 @@ class HMerge {
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: "
             + Bytes.toStringBinary(newRegion.getRegionName()));
-      }
-    }
-  }
-
-  /** Instantiated to compact the meta region */
-  private static class OfflineMerger extends Merger {
-    private final List<HRegionInfo> metaRegions = new ArrayList<HRegionInfo>();
-    private final HRegion root;
-
-    OfflineMerger(Configuration conf, FileSystem fs)
-        throws IOException {
-      super(conf, fs, HConstants.META_TABLE_NAME);
-
-      Path rootDir = FSUtils.getRootDir(conf);
-
-      // Scan root region to find all the meta regions
-      root = HRegion.openHRegion(conf, fs, rootDir, HRegionInfo.ROOT_REGIONINFO,
-          HTableDescriptor.ROOT_TABLEDESC, hlog);
-
-      Scan scan = new Scan();
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-      InternalScanner rootScanner = root.getScanner(scan);
-
-      try {
-        List<KeyValue> results = new ArrayList<KeyValue>();
-        boolean hasMore;
-        do {
-          hasMore = rootScanner.next(results);
-          for(KeyValue kv: results) {
-            HRegionInfo info = HRegionInfo.parseFromOrNull(kv.getValue());
-            if (info != null) {
-              metaRegions.add(info);
-            }
-          }
-        } while (hasMore);
-      } finally {
-        rootScanner.close();
-        try {
-          root.close();
-
-        } catch(IOException e) {
-          LOG.error(e);
-        }
-      }
-    }
-
-    @Override
-    protected HRegionInfo[] next() {
-      HRegionInfo[] results = null;
-      if (metaRegions.size() > 0) {
-        results = metaRegions.toArray(new HRegionInfo[metaRegions.size()]);
-        metaRegions.clear();
-      }
-      return results;
-    }
-
-    @Override
-    protected void updateMeta(final byte [] oldRegion1,
-      final byte [] oldRegion2, HRegion newRegion)
-    throws IOException {
-      byte[][] regionsToDelete = {oldRegion1, oldRegion2};
-      for(int r = 0; r < regionsToDelete.length; r++) {
-        Delete delete = new Delete(regionsToDelete[r]);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.REGIONINFO_QUALIFIER);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.SERVER_QUALIFIER);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.STARTCODE_QUALIFIER);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.SPLITA_QUALIFIER);
-        delete.deleteColumns(HConstants.CATALOG_FAMILY,
-            HConstants.SPLITB_QUALIFIER);
-        root.delete(delete, true);
-
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: " + Bytes.toStringBinary(regionsToDelete[r]));
-        }
-      }
-      HRegionInfo newInfo = newRegion.getRegionInfo();
-      newInfo.setOffline(true);
-
-      Put put = MetaEditor.makePutFromRegionInfo(newInfo);
-      root.put(put);
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("updated columns in row: " + Bytes.toStringBinary(newRegion.getRegionName()));
       }
     }
   }

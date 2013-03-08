@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.MediumTests;
@@ -121,7 +121,7 @@ public class TestMasterNoCluster {
   throws IOException, KeeperException, InterruptedException {
     HMaster master = new HMaster(TESTUTIL.getConfiguration());
     master.start();
-    // Immediately have it stop.  We used hang in assigning root.
+    // Immediately have it stop.  We used hang in assigning meta.
     master.stopMaster();
     master.join();
   }
@@ -133,7 +133,7 @@ public class TestMasterNoCluster {
    * @throws KeeperException
    * @throws InterruptedException
    */
-  @Test
+  @Test (timeout=30000)
   public void testFailover()
   throws IOException, KeeperException, InterruptedException, ServiceException {
     final long now = System.currentTimeMillis();
@@ -148,14 +148,9 @@ public class TestMasterNoCluster {
     final MockRegionServer rs0 = new MockRegionServer(conf, sn0);
     final MockRegionServer rs1 = new MockRegionServer(conf, sn1);
     final MockRegionServer rs2 = new MockRegionServer(conf, sn2);
-    // Put some data into the servers.  Make it look like sn0 has the root
-    // w/ an entry that points to sn1 as the host of .META.  Put data into sn2
-    // so it looks like it has a few regions for a table named 't'.
-    RootRegionTracker.setRootLocation(rs0.getZooKeeper(), rs0.getServerName());
-    byte [] rootregion = Bytes.toBytes("-ROOT-,,0");
-    rs0.setGetResult(rootregion, HRegionInfo.FIRST_META_REGIONINFO.getRegionName(),
-      MetaMockingUtil.getMetaTableRowResult(HRegionInfo.FIRST_META_REGIONINFO,
-        rs1.getServerName()));
+    // Put some data into the servers.  Make it look like sn0 has the metaH
+    // Put data into sn2 so it looks like it has a few regions for a table named 't'.
+    MetaRegionTracker.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName());
     final byte [] tableName = Bytes.toBytes("t");
     Result [] results = new Result [] {
       MetaMockingUtil.getMetaTableRowResult(
@@ -243,7 +238,7 @@ public class TestMasterNoCluster {
    * @throws DeserializationException 
    * @throws ServiceException
    */
-  @Test
+  @Test (timeout=30000)
   public void testCatalogDeploys()
   throws IOException, KeeperException, InterruptedException, DeserializationException, ServiceException {
     final Configuration conf = TESTUTIL.getConfiguration();
@@ -292,7 +287,7 @@ public class TestMasterNoCluster {
         // of a connection will fail.
         HConnection connection =
           HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(),
-            rs0, rs0, rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
+            rs0, rs0, rs0.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
         return new CatalogTracker(zk, conf, connection, abortable);
       }
     };
@@ -320,38 +315,21 @@ public class TestMasterNoCluster {
       // Assert hostname is as expected.
       assertEquals(rs0.getServerName().getHostname(), rshostname);
       // Now master knows there is at least one regionserver checked in and so
-      // it'll wait a while to see if more and when none, will assign root and
-      // meta to this single server.  Will do an rpc open but we've
+      // it'll wait a while to see if more and when none, will assign meta
+      // to this single server.  Will do an rpc open but we've
       // mocked it above in our master override to return 'success'.  As part of
       // region open, master will have set an unassigned znode for the region up
       // into zk for the regionserver to transition.  Lets do that now to
       // complete fake of a successful open.
       Mocking.fakeRegionServerRegionOpenInZK(master, rs0.getZooKeeper(),
-        rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
+        rs0.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
       LOG.info("fakeRegionServerRegionOpenInZK has started");
 
-
-      // Need to set root location as r1.  Usually the regionserver does this
-      // when its figured it just opened the root region by setting the root
+      // Need to set meta location as r0.  Usually the regionserver does this
+      // when its figured it just opened the meta region by setting the meta
       // location up into zk.  Since we're mocking regionserver, need to do this
       // ourselves.
-      RootRegionTracker.setRootLocation(rs0.getZooKeeper(), rs0.getServerName());
-      // Do same transitions for .META. (presuming master has by now assigned
-      // .META. to rs1).
-      Mocking.fakeRegionServerRegionOpenInZK(master, rs0.getZooKeeper(),
-        rs0.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
-      // Now trigger our mock regionserver to start returning a row when we
-      // go to get .META. entry in -ROOT-.  We do it by setting into
-      // our MockRegionServer some data to be returned when there is a get on
-      // -ROOT- table (up to this its been returning null making master think
-      // nothing assigned, not even .META.). The region for -ROOT- table we
-      // hardcode below.  Its always the same, at least in tests.  We need to do
-      // this because CatalogTracker runs inside in Master initialization to
-      // confirm .META. has a server.
-      byte [] rootregion = Bytes.toBytes("-ROOT-,,0");
-      rs0.setGetResult(rootregion, HRegionInfo.FIRST_META_REGIONINFO.getRegionName(),
-        MetaMockingUtil.getMetaTableRowResult(HRegionInfo.FIRST_META_REGIONINFO,
-          rs0.getServerName()));
+      MetaRegionTracker.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName());
       // Master should now come up.
       while (!master.isInitialized()) {Threads.sleep(10);}
       assertTrue(master.isInitialized());
