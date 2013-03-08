@@ -584,8 +584,12 @@ Tests should not overlog. More than 100 lines/second makes the logs complex to r
 <listitem>
 Tests can be written with <classname>HBaseTestingUtility</classname>.
 This class offers helper functions to create a temp directory and do the cleanup, or to start a cluster.
-Categories and execution time
 </listitem>
+</itemizedlist>
+</section>
+<section xml:id="hbase.tests.categories">
+<title>Categories and execution time</title>
+<itemizedlist>
 <listitem>
 All tests must be categorized, if not they could be skipped.
 </listitem>
