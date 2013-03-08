@@ -678,6 +678,34 @@ runTests () {
 }
 
 ###############################################################################
+### Check docbook site xml
+checkSiteXml () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking Site generation"
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+
+  echo "$MVN clean compile site -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchSiteOutput.txt 2>&1"
+  export MAVEN_OPTS="${MAVEN_OPTS}"
+  $MVN clean compile site -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchSiteOutput.txt 2>&1
+  if [[ $? != 0 ]] ; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:red}-1 site{color}.  The patch appears to cause mvn site goal to fail."
+    return 1
+  fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+  {color:green}+1 site{color}.  The mvn site goal succeeds with this patch."
+  return 0
+}
+
+###############################################################################
 ### Run the inject-system-faults target
 checkInjectSystemFaults () {
   echo ""
@@ -817,6 +845,8 @@ checkReleaseAuditWarnings
 (( RESULT = RESULT + $? ))
 checkLineLengths
 (( RESULT = RESULT + $? ))
+checkSiteXml
+(( RESULT = RESULT + $?))
 ### Do not call these when run by a developer 
 if [[ $JENKINS == "true" ]] ; then
   runTests
