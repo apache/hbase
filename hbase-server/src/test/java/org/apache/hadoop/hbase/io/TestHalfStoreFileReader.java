@@ -36,11 +36,24 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestHalfStoreFileReader {
+  private static HBaseTestingUtility TEST_UTIL;
+
+  @BeforeClass
+  public static void setupBeforeClass() throws Exception {
+    TEST_UTIL = new HBaseTestingUtility();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.cleanupTestDir();
+  }
 
   /**
    * Test the scanner and reseek of a half hfile scanner. The scanner API
@@ -60,11 +73,10 @@ public class TestHalfStoreFileReader {
    */
   @Test
   public void testHalfScanAndReseek() throws IOException {
-    HBaseTestingUtility test_util = new HBaseTestingUtility();
-    String root_dir = test_util.getDataTestDir("TestHalfStoreFile").toString();
+    String root_dir = TEST_UTIL.getDataTestDir("TestHalfStoreFile").toString();
     Path p = new Path(root_dir, "test");
 
-    Configuration conf = test_util.getConfiguration();
+    Configuration conf = TEST_UTIL.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
 
@@ -128,10 +140,9 @@ public class TestHalfStoreFileReader {
   // Tests the scanner on an HFile that is backed by HalfStoreFiles
   @Test
   public void testHalfScanner() throws IOException {
-      HBaseTestingUtility test_util = new HBaseTestingUtility();
-      String root_dir = test_util.getDataTestDir("TestHalfStoreFileScanBefore").toString();
+      String root_dir = TEST_UTIL.getDataTestDir("TestHalfStoreFileScanBefore").toString();
       Path p = new Path(root_dir, "test");
-      Configuration conf = test_util.getConfiguration();
+      Configuration conf = TEST_UTIL.getConfiguration();
       FileSystem fs = FileSystem.get(conf);
       CacheConfig cacheConf = new CacheConfig(conf);
 
