@@ -2931,7 +2931,7 @@ from the file system. If the region metadata has proper table integrity, it side
 and meta table directories, and builds new ones with pointers to the region directories and their
 data.
 <programlisting>
-$ ./bin/hbase org.apache.hadoop.hbase.util.OfflineMetaRepair
+$ ./bin/hbase org.apache.hadoop.hbase.util.hbck.OfflineMetaRepair
 </programlisting>
 NOTE: This tool is not as clever as uberhbck but can be used to bootstrap repairs that uberhbck
 can complete.
