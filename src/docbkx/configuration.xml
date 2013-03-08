@@ -669,7 +669,7 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
     The generated file is a docbook section with a glossary
     in it-->
     <xi:include xmlns:xi="http://www.w3.org/2001/XInclude"
-      href="../../hbase-common/target/classes/hbase-default.xml" />
+        href="../../hbase-common/src/main/resources/hbase-default.xml" />
     </section>
 
       <section xml:id="hbase.env.sh">
