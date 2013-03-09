@@ -327,11 +327,12 @@ module Hbase
     def truncate(table_name, conf = @conf)
       h_table = org.apache.hadoop.hbase.client.HTable.new(conf, table_name)
       table_description = h_table.getTableDescriptor()
+      raise ArgumentError, "Table #{table_name} is not enabled. Enable it first.'" unless enabled?(table_name)
       yield 'Disabling table...' if block_given?
-      disable(table_name)
+      @admin.disableTable(table_name)
 
       yield 'Dropping table...' if block_given?
-      drop(table_name)
+      @admin.deleteTable(table_name)
 
       yield 'Creating table...' if block_given?
       @admin.createTable(table_description)
