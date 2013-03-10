@@ -127,6 +127,14 @@
       <organizationUrl>http://www.intel.com</organizationUrl>
     </developer>
     <developer>
+      <id>anoopsamjohn</id>
+      <name>Anoop Sam John</name>
+      <email>anoopsamjohn@apache.org</email>
+      <timezone>+5</timezone>
+      <organization>Huawei</organization>
+      <organizationUrl>http://www.huawei.com</organizationUrl>
+    </developer>
+    <developer>
       <id>ddas</id>
       <name>Devaraj Das</name>
       <email>ddas@apache.org</email>
