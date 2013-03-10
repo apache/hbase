@@ -354,6 +354,11 @@ checkHadoop20Compile () {
   echo ""
   echo ""
 
+  patchForHadoop2=`$GREP -c -i 'hadoop.profile=2.0' $PATCH_DIR/patch`
+  if [[ $patchForHadoop2 != 0 ]] ; then
+    return 0;
+  fi
+
   export MAVEN_OPTS="${MAVEN_OPTS}"
   # build core and tests
   $MVN clean test help:active-profiles -X -DskipTests -Dhadoop.profile=2.0 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk2.0JavacWarnings.txt 2>&1
