@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkPositionIndex;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -27,6 +31,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -1763,4 +1769,115 @@ public class Bytes {
     return byteArrays;
   }
 
+  /**
+   * Returns the index of the first appearance of the value {@code target} in
+   * {@code array}.
+   *
+   * @param array an array of {@code byte} values, possibly empty
+   * @param target a primitive {@code byte} value
+   * @return the least index {@code i} for which {@code array[i] == target}, or
+   *     {@code -1} if no such index exists.
+   */
+  public static int indexOf(byte[] array, byte target) {
+    for (int i = 0; i < array.length; i++) {
+      if (array[i] == target) {
+        return i;
+      }
+    }
+    return -1;
+  }
+  
+  /**
+   * Returns the start position of the first occurrence of the specified {@code
+   * target} within {@code array}, or {@code -1} if there is no such occurrence.
+   *
+   * <p>More formally, returns the lowest index {@code i} such that {@code
+   * java.util.Arrays.copyOfRange(array, i, i + target.length)} contains exactly
+   * the same elements as {@code target}.
+   *
+   * @param array the array to search for the sequence {@code target}
+   * @param target the array to search for as a sub-sequence of {@code array}
+   */
+  public static int indexOf(byte[] array, byte[] target) {
+    checkNotNull(array, "array");
+    checkNotNull(target, "target");
+    if (target.length == 0) {
+      return 0;
+    }
+
+    outer:
+    for (int i = 0; i < array.length - target.length + 1; i++) {
+      for (int j = 0; j < target.length; j++) {
+        if (array[i + j] != target[j]) {
+          continue outer;
+        }
+      }
+      return i;
+    }
+    return -1;
+  }
+  
+  /**
+   * @param array an array of {@code byte} values, possibly empty
+   * @param target a primitive {@code byte} value
+   * @return {@code true} if {@code target} is present as an element anywhere in {@code array}.
+   */
+  public static boolean contains(byte[] array, byte target) {
+    return indexOf(array, target) > -1;
+  }
+  
+  /**
+   * @param array an array of {@code byte} values, possibly empty
+   * @param target an array of {@code byte}
+   * @return {@code true} if {@code target} is present anywhere in {@code array}
+   */
+  public static boolean contains(byte[] array, byte[] target) {
+    return indexOf(array, target) > -1;
+  }
+  
+  /**
+   * Fill given array with zeros.
+   * @param b array which needs to be filled with zeros
+   */
+  public static void zero(byte[] b) {
+    zero(b, 0, b.length);
+  }
+
+  /**
+   * Fill given array with zeros at the specified position.
+   * @param b
+   * @param offset
+   * @param length
+   */
+  public static void zero(byte[] b, int offset, int length) {
+    checkPositionIndex(offset, b.length, "offset");
+    checkArgument(length > 0, "length must be greater than 0");
+    checkPositionIndex(offset + length, b.length, "offset + length");
+    Arrays.fill(b, offset, offset + length, (byte) 0);
+  }
+
+  private static final SecureRandom RNG = new SecureRandom();
+
+  /**
+   * Fill given array with random bytes.
+   * @param b array which needs to be filled with random bytes
+   */
+  public static void random(byte[] b) {
+    RNG.nextBytes(b);
+  }
+
+  /**
+   * Fill given array with random bytes at the specified position.
+   * @param b
+   * @param offset
+   * @param length
+   */
+  public static void random(byte[] b, int offset, int length) {
+    checkPositionIndex(offset, b.length, "offset");
+    checkArgument(length > 0, "length must be greater than 0");
+    checkPositionIndex(offset + length, b.length, "offset + length");
+    byte[] buf = new byte[length];
+    RNG.nextBytes(buf);
+    System.arraycopy(buf, 0, b, offset, length);
+  }
 }
