@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import junit.framework.Assert;
+import static org.junit.Assert.*;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.master.MetricsMasterWrapperImpl;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -30,9 +33,9 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestMasterMetricsWrapper {
+  private static final Log LOG = LogFactory.getLog(TestMasterMetricsWrapper.class);
 
-  private static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -44,31 +47,32 @@ public class TestMasterMetricsWrapper {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testInfo() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(master);
-    Assert.assertEquals(master.getAverageLoad(), info.getAverageLoad());
-    Assert.assertEquals(master.getClusterId(), info.getClusterId());
-    Assert.assertEquals(master.getMasterActiveTime(),
-        info.getActiveTime());
-    Assert.assertEquals(master.getMasterStartTime(),
-        info.getStartTime());
-    Assert.assertEquals(master.getCoprocessors().length,
-        info.getCoprocessors().length);
-    Assert.assertEquals(master.getServerManager().getOnlineServersList().size(),
-        info.getRegionServers());
-    Assert.assertTrue(info.getRegionServers() == 4);
+    assertEquals(master.getAverageLoad(), info.getAverageLoad(), 0);
+    assertEquals(master.getClusterId(), info.getClusterId());
+    assertEquals(master.getMasterActiveTime(), info.getActiveTime());
+    assertEquals(master.getMasterStartTime(), info.getStartTime());
+    assertEquals(master.getCoprocessors().length, info.getCoprocessors().length);
+    assertEquals(master.getServerManager().getOnlineServersList().size(), info.getRegionServers());
+    assertTrue(info.getRegionServers() == 4);
 
     String zkServers = info.getZookeeperQuorum();
-    Assert.assertEquals(zkServers.split(",").length,
-        TEST_UTIL.getZkCluster().getZooKeeperServerNum());
+    assertEquals(zkServers.split(",").length, TEST_UTIL.getZkCluster().getZooKeeperServerNum());
 
-    TEST_UTIL.getMiniHBaseCluster().stopRegionServer(3, false);
-    TEST_UTIL.getMiniHBaseCluster().waitOnRegionServer(3);
-    Assert.assertTrue(info.getRegionServers() == 3);
-    Assert.assertTrue(info.getDeadRegionServers() == 1);
-
+    final int index = 3;
+    LOG.info("Stopping " + TEST_UTIL.getMiniHBaseCluster().getRegionServer(index));
+    TEST_UTIL.getMiniHBaseCluster().stopRegionServer(index, false);
+    TEST_UTIL.getMiniHBaseCluster().waitOnRegionServer(index);
+    // We stopped the regionserver but could take a while for the master to notice it so hang here
+    // until it does... then move forward to see if metrics wrapper notices.
+    while (TEST_UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServers().size() !=
+        index) {
+      Threads.sleep(10);
+    }
+    assertTrue(info.getRegionServers() == 3);
+    assertTrue(info.getDeadRegionServers() == 1);
   }
-
 }
