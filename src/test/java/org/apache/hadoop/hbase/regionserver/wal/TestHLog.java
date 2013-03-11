@@ -485,6 +485,9 @@ public class TestHLog  {
     }
     assertEquals(total, count);
     reader.close();
+
+    // Reset the lease period
+    setLeasePeriod.invoke(cluster, new Object[]{new Long(60000), new Long(3600000)});
   }
 
   /**
