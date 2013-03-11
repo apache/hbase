@@ -18,38 +18,44 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.UnsupportedEncodingException;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.GenericOptionsParser;
-
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.ParsedLine;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Result;
-
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
-import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 @Category(MediumTests.class)
 public class TestImportTsv {
@@ -264,46 +270,39 @@ public class TestImportTsv {
     htu1.startMiniCluster();
     htu1.startMiniMapReduceCluster();
 
-    GenericOptionsParser opts = new GenericOptionsParser(htu1.getConfiguration(), args);
-    Configuration conf = opts.getConfiguration();
-    args = opts.getRemainingArgs();
+    Tool tool = new ImportTsv();
+    tool.setConf(htu1.getConfiguration());
 
     try {
-      FileSystem fs = FileSystem.get(conf);
+      FileSystem fs = FileSystem.get(tool.getConf());
       FSDataOutputStream op = fs.create(new Path(inputFile), true);
       if (data == null) {
         data = "KEY\u001bVALUE1\u001bVALUE2\n";
       }
       op.write(Bytes.toBytes(data));
       op.close();
+      LOG.debug(String.format("Wrote test data to file: %s", fs.makeQualified(new Path(inputFile))));
 
-      final byte[] FAM = Bytes.toBytes(family);
-      final byte[] TAB = Bytes.toBytes(tableName);
-      if (conf.get(ImportTsv.BULK_OUTPUT_CONF_KEY) == null) {
-        HTableDescriptor desc = new HTableDescriptor(TAB);
-        desc.addFamily(new HColumnDescriptor(FAM));
-        HBaseAdmin admin = new HBaseAdmin(conf);
+      if (tool.getConf().get(ImportTsv.BULK_OUTPUT_CONF_KEY) == null) {
+        HTableDescriptor desc = new HTableDescriptor(tableName);
+        desc.addFamily(new HColumnDescriptor(family));
+        HBaseAdmin admin = new HBaseAdmin(tool.getConf());
         admin.createTable(desc);
         admin.close();
-      } else { // set the hbaseAdmin as we are not going through main()
-        LOG.info("set the hbaseAdmin");
-        ImportTsv.createHbaseAdmin(conf);
       }
       // force use of combiner for testing purposes
-      conf.setInt("min.num.spills.for.combine", 1);
-      Job job = ImportTsv.createSubmittableJob(conf, args);
-      job.waitForCompletion(false);
-      assertTrue(job.isSuccessful());
+      tool.getConf().setInt("min.num.spills.for.combine", 1);
+      assertEquals(0, ToolRunner.run(tool, args));
       
-      HTable table = new HTable(new Configuration(conf), TAB);
+      HTable table = new HTable(tool.getConf(), tableName);
       boolean verified = false;
-      long pause = conf.getLong("hbase.client.pause", 5 * 1000);
-      int numRetries = conf.getInt("hbase.client.retries.number", 5);
+      long pause = tool.getConf().getLong("hbase.client.pause", 5 * 1000);
+      int numRetries = tool.getConf().getInt("hbase.client.retries.number", 5);
       for (int i = 0; i < numRetries; i++) {
         try {
           Scan scan = new Scan();
           // Scan entire family.
-          scan.addFamily(FAM);
+          scan.addFamily(Bytes.toBytes(family));
           ResultScanner resScanner = table.getScanner(scan);
           for (Result res : resScanner) {
             assertTrue(res.size() == 2);
