@@ -1059,9 +1059,9 @@ public class ThriftServerRunner implements Runnable {
         table = getTable(tableName);
         if (!puts.isEmpty())
           table.put(puts);
-        for (Delete del : deletes) {
-          table.delete(del);
-        }
+        if (!deletes.isEmpty())
+          table.delete(deletes);
+        
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
