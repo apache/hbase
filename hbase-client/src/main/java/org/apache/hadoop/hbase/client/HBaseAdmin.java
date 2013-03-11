@@ -1116,7 +1116,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void closeRegion(final String regionname, final String serverName)
   throws IOException {
-    closeRegion(Bytes.toBytes(regionname), serverName);
+    closeRegion(Bytes.toBytesBinary(regionname), serverName);
   }
 
   /**
@@ -1234,7 +1234,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void flush(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
-    flush(Bytes.toBytes(tableNameOrRegionName));
+    flush(Bytes.toBytesBinary(tableNameOrRegionName));
   }
 
   /**
@@ -1303,7 +1303,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void compact(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
-    compact(Bytes.toBytes(tableNameOrRegionName));
+    compact(Bytes.toBytesBinary(tableNameOrRegionName));
   }
 
   /**
@@ -1330,7 +1330,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void compact(String tableOrRegionName, String columnFamily)
     throws IOException,  InterruptedException {
-    compact(Bytes.toBytes(tableOrRegionName), Bytes.toBytes(columnFamily));
+    compact(Bytes.toBytesBinary(tableOrRegionName), Bytes.toBytes(columnFamily));
   }
 
   /**
@@ -1357,7 +1357,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void majorCompact(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
-    majorCompact(Bytes.toBytes(tableNameOrRegionName));
+    majorCompact(Bytes.toBytesBinary(tableNameOrRegionName));
   }
 
   /**
@@ -1664,7 +1664,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void split(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
-    split(Bytes.toBytes(tableNameOrRegionName));
+    split(Bytes.toBytesBinary(tableNameOrRegionName));
   }
 
   /**
@@ -1682,7 +1682,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   public void split(final String tableNameOrRegionName,
     final String splitPoint) throws IOException, InterruptedException {
-    split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
+    split(Bytes.toBytesBinary(tableNameOrRegionName), Bytes.toBytesBinary(splitPoint));
   }
 
   /**
