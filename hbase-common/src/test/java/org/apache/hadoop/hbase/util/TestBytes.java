@@ -425,5 +425,43 @@ public class TestBytes extends TestCase {
     int c2 = Bytes.toInt(Bytes.unsignedCopyAndIncrement(c), 0);
     Assert.assertTrue(c2==256);
   }
+  
+  public void testIndexOf() {
+    byte[] array = Bytes.toBytes("hello");
+    assertEquals(1, Bytes.indexOf(array, (byte) 'e'));
+    assertEquals(4, Bytes.indexOf(array, (byte) 'o'));
+    assertEquals(-1, Bytes.indexOf(array, (byte) 'a'));
+    assertEquals(0, Bytes.indexOf(array, Bytes.toBytes("hel")));
+    assertEquals(2, Bytes.indexOf(array, Bytes.toBytes("ll")));
+    assertEquals(-1, Bytes.indexOf(array, Bytes.toBytes("hll")));
+  }
+  
+  public void testContains() {
+    byte[] array = Bytes.toBytes("hello world");
+    assertTrue(Bytes.contains(array, (byte) 'e'));
+    assertTrue(Bytes.contains(array, (byte) 'd'));
+    assertFalse( Bytes.contains(array, (byte) 'a'));
+    assertTrue(Bytes.contains(array, Bytes.toBytes("world")));
+    assertTrue(Bytes.contains(array, Bytes.toBytes("ello")));
+    assertFalse(Bytes.contains(array, Bytes.toBytes("owo")));
+  }
+  
+  public void testZero() {
+    byte[] array = Bytes.toBytes("hello");
+    Bytes.zero(array);
+    for (int i = 0; i < array.length; i++) {
+      assertEquals(0, array[i]);
+    }
+    array = Bytes.toBytes("hello world");
+    Bytes.zero(array, 2, 7);
+    assertFalse(array[0] == 0);
+    assertFalse(array[1] == 0);
+    for (int i = 2; i < 9; i++) {
+      assertEquals(0, array[i]);
+    }
+    for (int i = 9; i < array.length; i++) {
+      assertFalse(array[i] == 0);
+    }
+  }
 }
 
