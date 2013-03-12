@@ -341,7 +341,8 @@ public class AssignmentManager extends ZooKeeperListener {
       MetaReader.getTableRegions(this.master.getCatalogTracker(), tableName);
     Integer pending = 0;
     for(HRegionInfo hri : hris) {
-      if(regionsToReopen.get(hri.getEncodedName()) != null) {
+      String name = hri.getEncodedName();
+      if (regionsToReopen.containsKey(name) || regionsInTransition.containsKey(name)) {
         pending++;
       }
     }
