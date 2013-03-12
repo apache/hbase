@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Strings;
 
 /**
   * Encapsulates per-region load metrics.
@@ -148,5 +149,58 @@ public class RegionLoad {
    */
   public long getCompleteSequenceId() {
     return regionLoadPB.getCompleteSequenceId();
+  }
+
+  /**
+   * @return the uncompressed size of the storefiles in MB.
+   */
+  public int getStoreUncompressedSizeMB() {
+    return regionLoadPB.getStoreUncompressedSizeMB();
+  }
+
+  /**
+   * @see java.lang.Object#toString()
+   */
+  @Override
+  public String toString() {
+    StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "numberOfStores",
+      Integer.valueOf(this.getStores()));
+    sb = Strings.appendKeyValue(sb, "numberOfStorefiles",
+      Integer.valueOf(this.getStorefiles()));
+    sb = Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
+      Integer.valueOf(this.getStoreUncompressedSizeMB()));
+    sb = Strings.appendKeyValue(sb, "storefileSizeMB",
+        Integer.valueOf(this.getStorefileSizeMB()));
+    if (this.getStoreUncompressedSizeMB() != 0) {
+      sb = Strings.appendKeyValue(sb, "compressionRatio",
+          String.format("%.4f", (float)this.getStorefileSizeMB()/
+              (float)this.getStoreUncompressedSizeMB()));
+    }
+    sb = Strings.appendKeyValue(sb, "memstoreSizeMB",
+      Integer.valueOf(this.getMemStoreSizeMB()));
+    sb = Strings.appendKeyValue(sb, "storefileIndexSizeMB",
+      Integer.valueOf(this.getStorefileIndexSizeMB()));
+    sb = Strings.appendKeyValue(sb, "readRequestsCount",
+        Long.valueOf(this.getReadRequestsCount()));
+    sb = Strings.appendKeyValue(sb, "writeRequestsCount",
+        Long.valueOf(this.getWriteRequestsCount()));
+    sb = Strings.appendKeyValue(sb, "rootIndexSizeKB",
+        Integer.valueOf(this.getRootIndexSizeKB()));
+    sb = Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
+        Integer.valueOf(this.getTotalStaticIndexSizeKB()));
+    sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
+      Integer.valueOf(this.getTotalStaticBloomSizeKB()));
+    sb = Strings.appendKeyValue(sb, "totalCompactingKVs",
+        Long.valueOf(this.getTotalCompactingKVs()));
+    sb = Strings.appendKeyValue(sb, "currentCompactedKVs",
+        Long.valueOf(this.getCurrentCompactedKVs()));
+    float compactionProgressPct = Float.NaN;
+    if( this.getTotalCompactingKVs() > 0 ) {
+      compactionProgressPct = Float.valueOf(
+          this.getCurrentCompactedKVs() / this.getTotalCompactingKVs());
+    }
+    sb = Strings.appendKeyValue(sb, "compactionProgressPct",
+        compactionProgressPct);
+    return sb.toString();
   }
 }
