@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -59,6 +60,7 @@ public abstract class TableEventHandler extends EventHandler {
   protected final MasterServices masterServices;
   protected final byte [] tableName;
   protected final String tableNameStr;
+  protected boolean isEventBeingHandled = false;
 
   public TableEventHandler(EventType eventType, byte [] tableName, Server server,
       MasterServices masterServices)
@@ -108,16 +110,27 @@ public abstract class TableEventHandler extends EventHandler {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
     } catch (KeeperException e) {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
+    } finally {
+      notifyEventBeingHandled();
     }
   }
 
   public boolean reOpenAllRegions(List<HRegionInfo> regions) throws IOException {
     boolean done = false;
+    HTable table = null;
+    TreeMap<ServerName, List<HRegionInfo>> serverToRegions = Maps.newTreeMap();
+    NavigableMap<HRegionInfo, ServerName> hriHserverMapping;
+
     LOG.info("Bucketing regions by region server...");
-    HTable table = new HTable(masterServices.getConfiguration(), tableName);
-    TreeMap<ServerName, List<HRegionInfo>> serverToRegions = Maps
-        .newTreeMap();
-    NavigableMap<HRegionInfo, ServerName> hriHserverMapping = table.getRegionLocations();
+
+    try {
+      table = new HTable(masterServices.getConfiguration(), tableName);
+      hriHserverMapping = table.getRegionLocations();
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+    }
     List<HRegionInfo> reRegions = new ArrayList<HRegionInfo>();
     for (HRegionInfo hri : regions) {
       ServerName rsLocation = hriHserverMapping.get(hri);
@@ -139,6 +152,7 @@ public abstract class TableEventHandler extends EventHandler {
     LOG.info("Reopening " + reRegions.size() + " regions on "
         + serverToRegions.size() + " region servers.");
     this.masterServices.getAssignmentManager().setRegionsToReopen(reRegions);
+    notifyEventBeingHandled();
     BulkReOpen bulkReopen = new BulkReOpen(this.server, serverToRegions,
         this.masterServices.getAssignmentManager());
     while (true) {
@@ -189,4 +203,26 @@ public abstract class TableEventHandler extends EventHandler {
 
   protected abstract void handleTableOperation(List<HRegionInfo> regions)
   throws IOException, KeeperException;
+
+  /**
+   * Table modifications are processed asynchronously, but provide an API for you to query their
+   * status.
+   * @throws IOException
+   */
+  public synchronized void waitForEventBeingHandled() throws IOException {
+    if (!this.isEventBeingHandled) {
+      try {
+        wait();
+      } catch (InterruptedException ie) {
+        throw (IOException) new InterruptedIOException().initCause(ie);
+      }
+    }
+  }
+
+  private synchronized void notifyEventBeingHandled() {
+    if (!this.isEventBeingHandled) {
+      isEventBeingHandled = true;
+      notify();
+    }
+  }
 }

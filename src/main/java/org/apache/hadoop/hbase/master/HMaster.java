@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
+import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -1387,7 +1388,10 @@ Server {
     if (cpHost != null) {
       cpHost.preModifyTable(tableName, htd);
     }
-    this.executorService.submit(new ModifyTableHandler(tableName, htd, this, this));
+    TableEventHandler tblHandler = new ModifyTableHandler(tableName, htd, this, this);
+    this.executorService.submit(tblHandler);
+    // prevent client from querying status even before the event is being handled.
+    tblHandler.waitForEventBeingHandled();
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, htd);
     }

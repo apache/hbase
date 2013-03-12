@@ -45,13 +45,10 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
-    // Update table descriptor in HDFS
-    HTableDescriptor htd =
-      this.masterServices.getMasterFileSystem().deleteColumn(tableName, familyName);
-    // Update in-memory descriptor cache
-    this.masterServices.getTableDescriptors().add(htd);
-    // Remove the column family from the file system
     MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
+    // Update table descriptor
+    mfs.deleteColumn(tableName, familyName);
+    // Remove the column family from the file system
     for (HRegionInfo hri : hris) {
       // Delete the family directory in FS for all the regions one by one
       mfs.deleteFamilyFromFS(hri, familyName);
