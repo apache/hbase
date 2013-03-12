@@ -1795,7 +1795,7 @@ public class StoreFile {
     }
 
     public long getMaxTimestamp() {
-      return timeRangeTracker.maximumTimestamp;
+      return timeRangeTracker == null ? Long.MAX_VALUE : timeRangeTracker.maximumTimestamp;
     }
   }
 
