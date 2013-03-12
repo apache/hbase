@@ -558,6 +558,11 @@ htable.put(put);
       answer that works for every use case.
       </para>
     </section>
+    <section xml:id="acid"><title>ACID</title>
+        <pre>See <link xlink:href="http://hbase.apache.org/acid-semantics.html">ACID Semantics</link>.
+            Lars Hofhansl has also written a note on
+            <link xlink:href="http://hadoop-hbase.blogspot.com/2012/03/acid-in-hbase.html">ACID in HBase</link>.</pre>
+    </section>
   </chapter>  <!-- data model -->
 
  <chapter xml:id="schema">

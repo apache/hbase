@@ -28,10 +28,10 @@
 -->
   <title>Apache HBase (TM) External APIs</title>
   This chapter will cover access to Apache HBase (TM) either through non-Java languages, or through custom protocols.
-  
+
   <section xml:id="nonjava.jvm">
     <title>Non-Java Languages Talking to the JVM</title>
-    <para>Currently the documentation on this topic in the 
+    <para>Currently the documentation on this topic in the
       <link xlink:href="http://wiki.apache.org/hadoop/Hbase">Apache HBase Wiki</link>.
       See also the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/thrift/package-summary.html#package_description">Thrift API Javadoc</link>.
     </para>
@@ -39,14 +39,16 @@
 
   <section xml:id="rest">
     <title>REST</title>
-    <para>Currently most of the documentation on REST exists in the 
-      <link xlink:href="http://wiki.apache.org/hadoop/Hbase/Stargate">Apache HBase Wiki on REST</link>.
+    <para>Currently most of the documentation on REST exists in the
+        <link xlink:href="http://wiki.apache.org/hadoop/Hbase/Stargate">Apache HBase Wiki on REST</link> (The REST gateway used to be
+        called 'Stargate').  There are also a nice set of blogs on <link xlink:href="http://blog.cloudera.com/blog/2013/03/how-to-use-the-apache-hbase-rest-interface-part-1/">How-to: Use the Apache HBase REST Interface</link>
+        by Jesse Anderson.
     </para>
   </section>   <!-- rest -->
 
   <section xml:id="thrift">
     <title>Thrift</title>
-      <para>Currently most of the documentation on Thrift exists in the 
+      <para>Currently most of the documentation on Thrift exists in the
       <link xlink:href="http://wiki.apache.org/hadoop/Hbase/ThriftApi">Apache HBase Wiki on Thrift</link>.
     </para>
           <section xml:id="thrift.filter-language"><title>Filter Language</title>
@@ -408,9 +410,9 @@
 
           </orderedlist>
         </section>
-        
+
         </section>
-    
+
   </section>  <!-- thrift -->
 
   <section xml:id="c">
