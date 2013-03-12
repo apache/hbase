@@ -1772,7 +1772,7 @@ public class StoreFile extends SchemaConfigured {
     }
 
     public long getMaxTimestamp() {
-      return timeRangeTracker.maximumTimestamp;
+      return timeRangeTracker == null ? Long.MAX_VALUE : timeRangeTracker.maximumTimestamp;
     }
 
     @Override
