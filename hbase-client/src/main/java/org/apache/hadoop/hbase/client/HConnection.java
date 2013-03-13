@@ -101,6 +101,20 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableAvailable(byte[] tableName) throws IOException;
+  
+  /**
+   * Use this api to check if the table has been created with the specified number of 
+   * splitkeys which was used while creating the given table.
+   * Note : If this api is used after a table's region gets splitted, the api may return
+   * false.
+   * @param tableName
+   *          tableName
+   * @param splitKeys
+   *          splitKeys used while creating table
+   * @throws IOException
+   *           if a remote or network exception occurs
+   */
+  public boolean isTableAvailable(byte[] tableName, byte[][] splitKeys) throws IOException;
 
   /**
    * List all the userspace tables.  In other words, scan the META table.

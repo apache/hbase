@@ -842,20 +842,64 @@ public class HConnectionManager {
         public boolean processRow(Result row) throws IOException {
           HRegionInfo info = MetaScanner.getHRegionInfo(row);
           if (info != null) {
-            if (Bytes.equals(tableName, info.getTableName())) {
+            if (Bytes.compareTo(tableName, info.getTableName()) == 0) {
               ServerName server = HRegionInfo.getServerName(row);
               if (server == null) {
                 available.set(false);
                 return false;
               }
               regionCount.incrementAndGet();
+            } else if (Bytes.compareTo(tableName, info.getTableName()) < 0) {
+              // Return if we are done with the current table
+              return false;
             }
           }
           return true;
         }
       };
-      MetaScanner.metaScan(conf, visitor);
+      MetaScanner.metaScan(conf, visitor, tableName);
       return available.get() && (regionCount.get() > 0);
+    }
+    
+    @Override
+    public boolean isTableAvailable(final byte[] tableName, final byte[][] splitKeys)
+        throws IOException {
+      final AtomicBoolean available = new AtomicBoolean(true);
+      final AtomicInteger regionCount = new AtomicInteger(0);
+      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
+        @Override
+        public boolean processRow(Result row) throws IOException {
+          HRegionInfo info = MetaScanner.getHRegionInfo(row);
+          if (info != null) {
+            if (Bytes.compareTo(tableName, info.getTableName()) == 0) {
+              ServerName server = HRegionInfo.getServerName(row);
+              if (server == null) {
+                available.set(false);
+                return false;
+              }
+              if (!Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
+                for (byte[] splitKey : splitKeys) {
+                  // Just check if the splitkey is available
+                  if (Bytes.equals(info.getStartKey(), splitKey)) {
+                    regionCount.incrementAndGet();
+                    break;
+                  }
+                }
+              } else {
+                // Always empty start row should be counted
+                regionCount.incrementAndGet();
+              }
+            } else if (Bytes.compareTo(tableName, info.getTableName()) < 0) {
+              // Return if we are done with the current table
+              return false;
+            }
+          }
+          return true;
+        }
+      };
+      MetaScanner.metaScan(conf, visitor, tableName);
+      // +1 needs to be added so that the empty start row is also taken into account
+      return available.get() && (regionCount.get() == splitKeys.length + 1);
     }
 
     /*
