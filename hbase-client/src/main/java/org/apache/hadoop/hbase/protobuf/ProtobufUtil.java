@@ -17,15 +17,22 @@
  */
 package org.apache.hadoop.hbase.protobuf;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
+import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
@@ -107,22 +114,15 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NavigableSet;
-
-import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 
 /**
  * Protobufs utility.
@@ -1021,37 +1021,43 @@ public final class ProtobufUtil {
    */
   public static <R> MultiResponse multi(final ClientProtocol client,
       final MultiAction<R> multi) throws IOException {
-    try {
-      MultiResponse response = new MultiResponse();
-      for (Map.Entry<byte[], List<Action<R>>> e: multi.actions.entrySet()) {
-        byte[] regionName = e.getKey();
-        int rowMutations = 0;
-        List<Action<R>> actions = e.getValue();
-        for (Action<R> action: actions) {
-          Row row = action.getAction();
-          if (row instanceof RowMutations) {
+    MultiResponse response = new MultiResponse();
+    for (Map.Entry<byte[], List<Action<R>>> e: multi.actions.entrySet()) {
+      byte[] regionName = e.getKey();
+      int rowMutations = 0;
+      List<Action<R>> actions = e.getValue();
+      for (Action<R> action: actions) {
+        Row row = action.getAction();
+        if (row instanceof RowMutations) {
+          try {
             MultiRequest request =
-              RequestConverter.buildMultiRequest(regionName, (RowMutations)row);
+                RequestConverter.buildMultiRequest(regionName, (RowMutations)row);
             client.multi(null, request);
             response.add(regionName, action.getOriginalIndex(), new Result());
-            rowMutations++;
+          } catch (ServiceException se) {
+            response.add(regionName, action.getOriginalIndex(), getRemoteException(se));
           }
-        }
-        if (actions.size() > rowMutations) {
-          MultiRequest request =
-            RequestConverter.buildMultiRequest(regionName, actions);
-          ClientProtos.MultiResponse proto = client.multi(null, request);
-          List<Object> results = ResponseConverter.getResults(proto);
-          for (int i = 0, n = results.size(); i < n; i++) {
-            int originalIndex = actions.get(i).getOriginalIndex();
-            response.add(regionName, originalIndex, results.get(i));
-          }
+          rowMutations++;
         }
       }
-      return response;
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
+      if (actions.size() > rowMutations) {
+        Exception ex = null;
+        List<Object> results = null;
+        try {
+          MultiRequest request =
+              RequestConverter.buildMultiRequest(regionName, actions);
+          ClientProtos.MultiResponse proto = client.multi(null, request);
+          results = ResponseConverter.getResults(proto);
+        } catch (ServiceException se) {
+          ex = getRemoteException(se);
+        }
+        for (int i = 0, n = actions.size(); i < n; i++) {
+          int originalIndex = actions.get(i).getOriginalIndex();
+          response.add(regionName, originalIndex, results == null ? ex : results.get(i));
+        }
+      }
     }
+    return response;
   }
 
   /**
