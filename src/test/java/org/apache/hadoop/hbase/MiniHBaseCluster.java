@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
@@ -452,7 +453,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     while (!(mts = getMasterThreads()).isEmpty()
         && (System.currentTimeMillis() - start) < timeout) {
       for (JVMClusterUtil.MasterThread mt : mts) {
-        if (mt.getMaster().isActiveMaster() && mt.getMaster().isInitialized()) {
+        ServerManager serverManager = mt.getMaster().getServerManager();
+        if (mt.getMaster().isActiveMaster() && mt.getMaster().isInitialized()
+            && !serverManager.areDeadServersInProgress()) {
           return true;
         }
       }

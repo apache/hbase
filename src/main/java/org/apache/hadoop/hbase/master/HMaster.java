@@ -41,9 +41,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.management.ObjectName;
 
-import com.google.common.collect.ClassToInstanceMap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.MutableClassToInstanceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -129,6 +126,10 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
+
+import com.google.common.collect.ClassToInstanceMap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.MutableClassToInstanceMap;
 
 /**
  * HMaster is the "master server" for HBase. An HBase cluster has one active
@@ -566,13 +567,36 @@ Server {
     if (!masterRecovery) {
       this.assignmentManager.startTimeOutMonitor();
     }
-    // TODO: Should do this in background rather than block master startup
-    status.setStatus("Splitting logs after master startup");
-    splitLogAfterStartup(this.fileSystemManager);
 
-    // Make sure root and meta assigned before proceeding.
-    assignRootAndMeta(status);
+    // get a list for previously failed RS which need recovery work
+    Set<ServerName> failedServers = this.fileSystemManager.getFailedServersFromLogFolders();
+    ServerName preRootServer = this.catalogTracker.getRootLocation();
+    if (preRootServer != null && failedServers.contains(preRootServer)) {
+      // create recovered edits file for _ROOT_ server
+      this.fileSystemManager.splitLog(preRootServer);
+      failedServers.remove(preRootServer);
+    }
+
+    // Make sure root assigned before proceeding.
+    assignRoot(status);
+
+    // log splitting for .META. server
+    ServerName preMetaServer = this.catalogTracker.getMetaLocationOrReadLocationFromRoot();
+    if (preMetaServer != null && failedServers.contains(preMetaServer)) {
+      // create recovered edits file for .META. server
+      this.fileSystemManager.splitLog(preMetaServer);
+      failedServers.remove(preMetaServer);
+    }
+    // Make sure meta assigned before proceeding.
+    assignMeta(status, preRootServer);
+
     enableServerShutdownHandler();
+
+    // handle other dead servers in SSH
+    status.setStatus("Submit log splitting work of non-meta region servers");
+    for (ServerName curServer : failedServers) {
+      this.serverManager.processDeadServer(curServer);
+    }
 
     // Update meta with new HRI if required. i.e migrate all HRI with HTD to
     // HRI with out HTD in meta and update the status in ROOT. This must happen
@@ -645,22 +669,13 @@ Server {
   }
 
   /**
-   * Override to change master's splitLogAfterStartup. Used testing
-   * @param mfs
-   */
-  protected void splitLogAfterStartup(final MasterFileSystem mfs) {
-    mfs.splitLogAfterStartup();
-  }
-
-  /**
-   * Check <code>-ROOT-</code> and <code>.META.</code> are assigned.  If not,
-   * assign them.
+   * Check <code>-ROOT-</code> is assigned. If not, assign it.
+   * @param status MonitoredTask
    * @throws InterruptedException
    * @throws IOException
    * @throws KeeperException
-   * @return Count of regions we assigned.
    */
-  int assignRootAndMeta(MonitoredTask status)
+  private void assignRoot(MonitoredTask status)
   throws InterruptedException, IOException, KeeperException {
     int assigned = 0;
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
@@ -691,16 +706,32 @@ Server {
     LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getRootLocation());
 
-    // Work on meta region
+    status.setStatus("ROOT assigned.");
+  }
+
+  /**
+   * Check <code>.META.</code> is assigned. If not, assign it.
+   * @param status MonitoredTask
+   * @param previousRootServer ServerName of previous root region server before current start up
+   * @return
+   * @throws InterruptedException
+   * @throws IOException
+   * @throws KeeperException
+   */
+  private void assignMeta(MonitoredTask status, ServerName previousRootServer)
+      throws InterruptedException,
+      IOException, KeeperException {
+    int assigned = 0;
+    long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
+
     status.setStatus("Assigning META region");
-    rit = this.assignmentManager.
-      processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
+    boolean rit =
+        this.assignmentManager
+            .processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
     boolean metaRegionLocation = this.catalogTracker.verifyMetaRegionLocation(timeout);
     if (!rit && !metaRegionLocation) {
-      ServerName currentMetaServer =
-        this.catalogTracker.getMetaLocationOrReadLocationFromRoot();
-      if (currentMetaServer != null
-          && !currentMetaServer.equals(currentRootServer)) {
+      ServerName currentMetaServer = this.catalogTracker.getMetaLocationOrReadLocationFromRoot();
+      if (currentMetaServer != null && !currentMetaServer.equals(previousRootServer)) {
         splitLogAndExpireIfOnline(currentMetaServer);
       }
       assignmentManager.assignMeta();
@@ -710,15 +741,14 @@ Server {
       enableSSHandWaitForMeta();
       assigned++;
     } else {
-      // Region already assigned.  We didnt' assign it.  Add to in-memory state.
+      // Region already assigned. We didnt' assign it. Add to in-memory state.
       this.assignmentManager.regionOnline(HRegionInfo.FIRST_META_REGIONINFO,
         this.catalogTracker.getMetaLocation());
     }
     enableCatalogTables(Bytes.toString(HConstants.META_TABLE_NAME));
-    LOG.info(".META. assigned=" + assigned + ", rit=" + rit +
-      ", location=" + catalogTracker.getMetaLocation());
-    status.setStatus("META and ROOT assigned.");
-    return assigned;
+    LOG.info(".META. assigned=" + assigned + ", rit=" + rit + ", location="
+        + catalogTracker.getMetaLocation());
+    status.setStatus("META assigned.");
   }
 
   private void enableSSHandWaitForMeta() throws IOException,
@@ -777,8 +807,7 @@ Server {
   }
 
   /**
-   * Split a server's log and expire it if we find it is one of the online
-   * servers.
+   * Expire a server if we find it is one of the online servers.
    * @param sn ServerName to check.
    * @throws IOException
    */
@@ -1643,12 +1672,23 @@ Server {
     }
     if (this.assignmentManager != null) this.assignmentManager.shutdown();
     if (this.serverManager != null) this.serverManager.shutdownCluster();
+
     try {
       if (this.clusterStatusTracker != null){
         this.clusterStatusTracker.setClusterDown();
       }
     } catch (KeeperException e) {
-      LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+      if (e instanceof KeeperException.SessionExpiredException) {
+        LOG.warn("ZK session expired. Retry a new connection...");
+        try {
+          this.zooKeeper.reconnectAfterExpiration();
+          this.clusterStatusTracker.setClusterDown();
+        } catch (Exception ex) {
+          LOG.warn("Retry setClusterDown failed", ex);
+        }
+      } else {
+        LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+      }
     }
   }
 
