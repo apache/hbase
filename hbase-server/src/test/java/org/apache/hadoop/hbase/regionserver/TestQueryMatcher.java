@@ -22,10 +22,15 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableSet;
+
+import static org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode.*;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
@@ -40,6 +45,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
   private byte[] row1;
   private byte[] row2;
+  private byte[] row3;
   private byte[] fam1;
   private byte[] fam2;
   private byte[] col1;
@@ -60,6 +66,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     super.setUp();
     row1 = Bytes.toBytes("row1");
     row2 = Bytes.toBytes("row2");
+    row3 = Bytes.toBytes("row3");
     fam1 = Bytes.toBytes("fam1");
     fam2 = Bytes.toBytes("fam2");
     col1 = Bytes.toBytes("col1");
@@ -283,5 +290,56 @@ public class TestQueryMatcher extends HBaseTestCase {
     }
   }
 
+  public void testMatch_PartialRangeDropDeletes() throws Exception {
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    ScanInfo scanInfo = new ScanInfo(fam2, 0, 1, ttl, false, 0, rowComparator);
+    NavigableSet<byte[]> cols = get.getFamilyMap().get(fam2);
+
+    // Some ranges.
+    testDropDeletes(
+        row2, row3, new byte[][] { row1, row2, row2, row3 }, INCLUDE, SKIP, SKIP, INCLUDE);
+    testDropDeletes(row2, row3, new byte[][] { row1, row1, row2 }, INCLUDE, INCLUDE, SKIP);
+    testDropDeletes(row2, row3, new byte[][] { row2, row3, row3 }, SKIP, INCLUDE, INCLUDE);
+    testDropDeletes(row1, row3, new byte[][] { row1, row2, row3 }, SKIP, SKIP, INCLUDE);
+    // Open ranges.
+    testDropDeletes(HConstants.EMPTY_START_ROW, row3,
+        new byte[][] { row1, row2, row3 }, SKIP, SKIP, INCLUDE);
+    testDropDeletes(row2, HConstants.EMPTY_END_ROW,
+        new byte[][] { row1, row2, row3 }, INCLUDE, SKIP, SKIP);
+    testDropDeletes(HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+        new byte[][] { row1, row2, row3, row3 }, SKIP, SKIP, SKIP, SKIP);
+
+    // No KVs in range.
+    testDropDeletes(row2, row3, new byte[][] { row1, row1, row3 }, INCLUDE, INCLUDE, INCLUDE);
+    testDropDeletes(row2, row3, new byte[][] { row3, row3 }, INCLUDE, INCLUDE);
+    testDropDeletes(row2, row3, new byte[][] { row1, row1 }, INCLUDE, INCLUDE);
+  }
+
+  private void testDropDeletes(
+      byte[] from, byte[] to, byte[][] rows, MatchCode... expected) throws IOException {
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    // Set time to purge deletes to negative value to avoid it ever happening.
+    ScanInfo scanInfo = new ScanInfo(fam2, 0, 1, ttl, false, -1L, rowComparator);
+    NavigableSet<byte[]> cols = get.getFamilyMap().get(fam2);
+
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, scanInfo, cols, Long.MAX_VALUE,
+        HConstants.OLDEST_TIMESTAMP, HConstants.OLDEST_TIMESTAMP, from, to);
+    List<ScanQueryMatcher.MatchCode> actual =
+        new ArrayList<ScanQueryMatcher.MatchCode>(rows.length);
+    byte[] prevRow = null;
+    for (byte[] row : rows) {
+      if (prevRow == null || !Bytes.equals(prevRow, row)) {
+        qm.setRow(row, 0, (short)row.length);
+        prevRow = row;
+      }
+      actual.add(qm.match(new KeyValue(row, fam2, null, now, Type.Delete)));
+    }
+
+    assertEquals(expected.length, actual.size());
+    for (int i = 0; i < expected.length; i++) {
+      if (PRINT) System.out.println("expected " + expected[i] + ", actual " + actual.get(i));
+      assertEquals(expected[i], actual.get(i));
+    }
+  }
 }
 
