@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValue.MetaKeyComparator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -1399,6 +1400,28 @@ public class StoreFile {
       }
 
       return true;
+    }
+
+    /**
+     * Checks whether the given scan rowkey range overlaps with the current storefile's
+     * @param scan the scan specification. Used to determine the rowkey range.
+     * @return true if there is overlap, false otherwise
+     */
+    boolean passesKeyRangeFilter(Scan scan) {
+      if (this.getFirstKey() == null || this.getLastKey() == null) {
+        // the file is empty
+        return false;
+      }
+      if (Bytes.equals(scan.getStartRow(), HConstants.EMPTY_START_ROW)
+          && Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
+        return true;
+      }
+      KeyValue startKeyValue = KeyValue.createFirstOnRow(scan.getStartRow());
+      KeyValue stopKeyValue = KeyValue.createLastOnRow(scan.getStopRow());
+      boolean nonOverLapping = (getComparator().compare(this.getFirstKey(),
+        stopKeyValue.getKey()) > 0 && !Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW))
+          || getComparator().compare(this.getLastKey(), startKeyValue.getKey()) < 0;
+      return !nonOverLapping;
     }
 
     public Map<byte[], byte[]> loadFileInfo() throws IOException {
