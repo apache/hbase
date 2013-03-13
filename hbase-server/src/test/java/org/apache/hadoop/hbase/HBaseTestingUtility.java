@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -2441,7 +2442,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public void setFileSystemURI(String fsURI) {
     FS_URI = fsURI;
   }
-  
+
   /**
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, Predicate)}.
    */
@@ -2465,4 +2466,19 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       boolean failIfTimeout, Predicate<E> predicate) throws E {
     return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
   }
+
+  /**
+   * Returns a {@link Predicate} for checking that there are no regions in transition in master
+   */
+  public Waiter.Predicate<Exception> predicateNoRegionsInTransition() {
+    return new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        final RegionStates regionStates = getMiniHBaseCluster().getMaster()
+            .getAssignmentManager().getRegionStates();
+        return !regionStates.isRegionsInTransition();
+      }
+    };
+  }
+
 }

@@ -35,10 +35,9 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.HBaseClient;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -85,16 +84,13 @@ public class TestMultiParallel {
     if (UTIL.ensureSomeRegionServersAvailable(slaves)) {
       // Distribute regions
       UTIL.getMiniHBaseCluster().getMaster().balance();
+
       // Wait until completing balance
-      final RegionStates regionStates = UTIL.getMiniHBaseCluster().getMaster()
-          .getAssignmentManager().getRegionStates();
-      UTIL.waitFor(15 * 1000, new Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return !regionStates.isRegionsInTransition();
-        }
-      });
+      UTIL.waitFor(15 * 1000, UTIL.predicateNoRegionsInTransition());
     }
+    HConnection conn = HConnectionManager.getConnection(UTIL.getConfiguration());
+    conn.clearRegionCache();
+    conn.close();
     LOG.info("before done");
   }
 
@@ -143,7 +139,7 @@ public class TestMultiParallel {
    * @throws NoSuchFieldException
    * @throws SecurityException
    */
-  @Test(timeout=300000) 
+  @Test(timeout=300000)
   public void testActiveThreadsCount() throws Exception{
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
     List<Row> puts = constructPutRequests(); // creates a Put for every region
@@ -155,7 +151,7 @@ public class TestMultiParallel {
     table.close();
   }
 
-  @Test(timeout=300000) 
+  @Test(timeout=300000)
   public void testBatchWithGet() throws Exception {
     LOG.info("test=testBatchWithGet");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
@@ -237,7 +233,7 @@ public class TestMultiParallel {
    *
    * @throws Exception
    */
-  @Test (timeout=300000) 
+  @Test (timeout=300000)
   public void testFlushCommitsWithAbort() throws Exception {
     LOG.info("test=testFlushCommitsWithAbort");
     doTestFlushCommits(true);
@@ -262,7 +258,7 @@ public class TestMultiParallel {
     }
     LOG.info("puts");
     table.flushCommits();
-    int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
+    final int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
         .size();
     assert liveRScount > 0;
     JVMClusterUtil.RegionServerThread liveRS = UTIL.getMiniHBaseCluster()
@@ -304,6 +300,18 @@ public class TestMultiParallel {
       int regions = ProtobufUtil.getOnlineRegions(t.getRegionServer()).size();
       // Assert.assertTrue("Count of regions=" + regions, regions > 10);
     }
+    if (doAbort) {
+      UTIL.getMiniHBaseCluster().waitOnRegionServer(0);
+      UTIL.waitFor(15 * 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return UTIL.getMiniHBaseCluster().getMaster()
+              .getClusterStatus().getServersSize() == (liveRScount - 1);
+        }
+      });
+      UTIL.waitFor(15 * 1000, UTIL.predicateNoRegionsInTransition());
+    }
+
     table.close();
     LOG.info("done");
   }
@@ -337,7 +345,7 @@ public class TestMultiParallel {
     table.close();
   }
 
-  @Test(timeout=300000) 
+  @Test(timeout=300000)
   public void testBatchWithDelete() throws Exception {
     LOG.info("test=testBatchWithDelete");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
