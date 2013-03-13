@@ -33,6 +33,8 @@ import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
+import com.google.common.base.Preconditions;
+
 /**
  * A query matcher that is specifically designed for the scan case.
  */
@@ -64,7 +66,8 @@ public class ScanQueryMatcher {
    *    marker to reach deleted rows.
    */
   /** whether to retain delete markers */
-  private final boolean retainDeletesInOutput;
+  private boolean retainDeletesInOutput;
+
   /** whether to return deleted rows */
   private final boolean keepDeletedCells;
   /** whether time range queries can see rows "behind" a delete */
@@ -96,6 +99,8 @@ public class ScanQueryMatcher {
 
   /** readPoint over which the KVs are unconditionally included */
   protected long maxReadPointToTrackVersions;
+
+  private byte[] dropDeletesFromRow = null, dropDeletesToRow = null;
 
   /**
    * This variable shows whether there is an null column in the query. There
@@ -177,6 +182,27 @@ public class ScanQueryMatcher {
       this.columns = new ExplicitColumnTracker(columns,
           scanInfo.getMinVersions(), maxVersions, oldestUnexpiredTS);
     }
+  }
+
+  /**
+   * Construct a QueryMatcher for a scan that drop deletes from a limited range of rows.
+   * @param scan
+   * @param scanInfo The store's immutable scan info
+   * @param columns
+   * @param earliestPutTs Earliest put seen in any of the store files.
+   * @param oldestUnexpiredTS the oldest timestamp we are interested in,
+   *  based on TTL
+   * @param dropDeletesFromRow The inclusive left bound of the range; can be EMPTY_START_ROW.
+   * @param dropDeletesToRow The exclusive right bound of the range; can be EMPTY_END_ROW.
+   */
+  public ScanQueryMatcher(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
+      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
+      byte[] dropDeletesFromRow, byte[] dropDeletesToRow) {
+    this(scan, scanInfo, columns, ScanType.COMPACT_RETAIN_DELETES, readPointToUse, earliestPutTs,
+        oldestUnexpiredTS);
+    Preconditions.checkArgument((dropDeletesFromRow != null) && (dropDeletesToRow != null));
+    this.dropDeletesFromRow = dropDeletesFromRow;
+    this.dropDeletesToRow = dropDeletesToRow;
   }
 
   /*
@@ -372,6 +398,33 @@ public class ScanQueryMatcher {
 
   }
 
+  /** Handle partial-drop-deletes. As we match keys in order, when we have a range from which
+   * we can drop deletes, we can set retainDeletesInOutput to false for the duration of this
+   * range only, and maintain consistency. */
+  private void checkPartialDropDeleteRange(byte [] row, int offset, short length) {
+    // If partial-drop-deletes are used, initially, dropDeletesFromRow and dropDeletesToRow
+    // are both set, and the matcher is set to retain deletes. We assume ordered keys. When
+    // dropDeletesFromRow is leq current kv, we start dropping deletes and reset
+    // dropDeletesFromRow; thus the 2nd "if" starts to apply.
+    if ((dropDeletesFromRow != null)
+        && ((dropDeletesFromRow == HConstants.EMPTY_START_ROW)
+          || (Bytes.compareTo(row, offset, length,
+              dropDeletesFromRow, 0, dropDeletesFromRow.length) >= 0))) {
+      retainDeletesInOutput = false;
+      dropDeletesFromRow = null;
+    }
+    // If dropDeletesFromRow is null and dropDeletesToRow is set, we are inside the partial-
+    // drop-deletes range. When dropDeletesToRow is leq current kv, we stop dropping deletes,
+    // and reset dropDeletesToRow so that we don't do any more compares.
+    if ((dropDeletesFromRow == null)
+        && (dropDeletesToRow != null) && (dropDeletesToRow != HConstants.EMPTY_END_ROW)
+        && (Bytes.compareTo(row, offset, length,
+            dropDeletesToRow, 0, dropDeletesToRow.length) >= 0)) {
+      retainDeletesInOutput = true;
+      dropDeletesToRow = null;
+    }
+  }
+
   public boolean moreRowsMayExistAfter(KeyValue kv) {
     if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
         rowComparator.compareRows(kv.getBuffer(),kv.getRowOffset(),
@@ -389,6 +442,7 @@ public class ScanQueryMatcher {
    * @param row
    */
   public void setRow(byte [] row, int offset, short length) {
+    checkPartialDropDeleteRange(row, offset, length);
     this.row = row;
     this.rowOffset = offset;
     this.rowLength = length;

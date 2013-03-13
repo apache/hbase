@@ -171,7 +171,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   }
 
   /**
-   * Used for major compactions.<p>
+   * Used for compactions.<p>
    *
    * Opens a scanner across specified StoreFiles.
    * @param store who we scan
@@ -183,10 +183,39 @@ public class StoreScanner extends NonLazyKeyValueScanner
   public StoreScanner(Store store, ScanInfo scanInfo, Scan scan,
       List<? extends KeyValueScanner> scanners, ScanType scanType,
       long smallestReadPoint, long earliestPutTs) throws IOException {
+    this(store, scanInfo, scan, scanners, scanType, smallestReadPoint, earliestPutTs, null, null);
+  }
+
+  /**
+   * Used for compactions that drop deletes from a limited range of rows.<p>
+   *
+   * Opens a scanner across specified StoreFiles.
+   * @param store who we scan
+   * @param scan the spec
+   * @param scanners ancillary scanners
+   * @param smallestReadPoint the readPoint that we should use for tracking versions
+   * @param dropDeletesFromRow The inclusive left bound of the range; can be EMPTY_START_ROW.
+   * @param dropDeletesToRow The exclusive right bound of the range; can be EMPTY_END_ROW.
+   */
+  public StoreScanner(Store store, ScanInfo scanInfo, Scan scan,
+      List<? extends KeyValueScanner> scanners, long smallestReadPoint, long earliestPutTs,
+      byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
+    this(store, scanInfo, scan, scanners, ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint,
+        earliestPutTs, dropDeletesFromRow, dropDeletesToRow);
+  }
+
+  private StoreScanner(Store store, ScanInfo scanInfo, Scan scan,
+      List<? extends KeyValueScanner> scanners, ScanType scanType, long smallestReadPoint,
+      long earliestPutTs, byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
     this(store, false, scan, null, scanInfo.getTtl(),
         scanInfo.getMinVersions());
-    matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType,
-        smallestReadPoint, earliestPutTs, oldestUnexpiredTS);
+    if (dropDeletesFromRow == null) {
+      matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType,
+          smallestReadPoint, earliestPutTs, oldestUnexpiredTS);
+    } else {
+      matcher = new ScanQueryMatcher(scan, scanInfo, null, smallestReadPoint,
+          earliestPutTs, oldestUnexpiredTS, dropDeletesFromRow, dropDeletesToRow);
+    }
 
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
     scanners = selectScannersFrom(scanners);
@@ -380,6 +409,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
         assert prevKV == null || comparator == null || comparator.compare(prevKV, kv) <= 0 :
           "Key " + prevKV + " followed by a " + "smaller key " + kv + " in cf " + store;
         prevKV = kv;
+
         ScanQueryMatcher.MatchCode qcode = matcher.match(kv);
         switch(qcode) {
           case INCLUDE:
