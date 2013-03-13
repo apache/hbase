@@ -109,6 +109,11 @@ h4 {
   background-repeat: repeat-x;
 }
 
+.section {
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
 /*
 #leftColumn {
   display: none !important

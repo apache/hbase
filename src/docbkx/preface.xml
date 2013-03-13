@@ -33,7 +33,7 @@
   Herein you will find either the definitive documentation on an HBase topic
   as of its standing when the referenced HBase version shipped, or it
   will point to the location in <link
-  xlink:href="http://hbase.apache.org/docs/current/api/index.html">javadoc</link>,
+  xlink:href="http://hbase.apache.org/apidocs/index.html">javadoc</link>,
   <link xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>
   or <link xlink:href="http://wiki.apache.org/hadoop/Hbase">wiki</link> where
   the pertinent information can be found.</para>

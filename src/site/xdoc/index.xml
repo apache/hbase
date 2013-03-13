@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2010 The Apache Software Foundation
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,24 +17,23 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>HBase Home</title>
+    <title>Apache HBase&#153; Home</title>
     <link rel="shortcut icon" href="/images/favicon.ico" />
   </properties>
-  
+
   <body>
-    <section name="Welcome to Apache HBase!">
-    <p>HBase is the <a href="http://hadoop.apache.org">Hadoop</a> database.  Think of it as a distributed scalable Big Data store.
+    <section name="Welcome to Apache HBase&#153;">
+        <p><a href="http://www.apache.org/">Apache</a> HBase&#153; is the <a href="http://hadoop.apache.org">Hadoop</a> database, a distributed, scalable, big data store.
     </p>
-    <h4>When Would I Use HBase?</h4>
+    <h4>When Would I Use Apache HBase?</h4>
     <p>
-    Use HBase when you need random, realtime read/write access to your Big Data.
+    Use Apache HBase when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.
-HBase is an open-source, distributed, versioned, column-oriented store modeled after Google's <a href="http://research.google.com/archive/bigtable.html">Bigtable: A Distributed Storage System for Structured Data</a> by Chang et al.
- Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
+Apache HBase is an open-source, distributed, versioned, column-oriented store modeled after Google's <a href="http://research.google.com/archive/bigtable.html">Bigtable: A Distributed Storage System for Structured Data</a> by Chang et al.
+ Just as Bigtable leverages the distributed data storage provided by the Google File System, Apache HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
     </p>
     <h4>Features</h4>
     <p>
-HBase provides:
 <ul>
     <li>Linear and modular scalability.
 </li>
@@ -45,7 +43,7 @@ HBase provides:
 </li>
     <li>Automatic failover support between RegionServers.
 </li>
-    <li>Convenient base classes for backing Hadoop MapReduce jobs with HBase tables.
+    <li>Convenient base classes for backing Hadoop MapReduce jobs with Apache HBase tables.
 </li>
     <li>Easy to use Java API for client access.
 </li>
@@ -67,19 +65,18 @@ HBase provides:
    </p>
  </section>
      <section name="News">
-            <p>May 22nd, 2012 <a href="http://www.hbasecon.com">HBaseCon2012</a> in San Francisco</p>
-            <p>January 23rd, 2012 HBase 0.92.0 released. <a href="http://www.apache.org/dyn/closer.cgi/hbase/">Download it!</a></p>
-            <p>January 19th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/46702842/">Meetup @ EBay</a></p>
-            <p>December 23rd, 2011 HBase 0.90.5 released. <a href="http://www.apache.org/dyn/closer.cgi/hbase/">Download it!</a></p>
-            <p>November 29th, 2011 <a href="http://www.meetup.com/hackathon/events/41025972/">Developer Pow-Wow in SF</a> at Salesforce HQ</p>
-            <p>November 7th, 2011 <a href="http://www.meetup.com/hbaseusergroup/events/35682812/">HBase Meetup in NYC (6PM)</a> at the AppNexus office</p>
-            <p>August 22nd, 2011 <a href="http://www.meetup.com/hbaseusergroup/events/28518471/">HBase Hackathon (11AM) and Meetup (6PM)</a> at FB in PA</p>
-            <p>June 30th, 2011 <a href="http://www.meetup.com/hbaseusergroup/events/20572251/">HBase Contributor Day</a>, the day after the <a href="http://developer.yahoo.com/events/hadoopsummit2011/">Hadoop Summit</a> hosted by Y!</p>
-            <p>June 8th, 2011 <a href="http://berlinbuzzwords.de/wiki/hbase-hackathon">HBase Hackathon</a> in Berlin to coincide with <a href="http://berlinbuzzwords.de/">Berlin Buzzwords</a></p>
-            <p>May 19th, 2011 HBase 0.90.3 released. <a href="http://www.apache.org/dyn/closer.cgi/hbase/">Download it!</a></p>
-            <p>April 12th, 2011 HBase 0.90.2 released. <a href="http://www.apache.org/dyn/closer.cgi/hbase/">Download it!</a></p>
+         <p>June 13th, 2013 <a href="http://www.hbasecon.com/">HBaseCon2013</a> in San Francisco.  Submit an Abstract!</p>
+         <p>April 11th, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/103587852/">HBase Meetup at AdRoll</a> in San Francisco</p>
+         <p>February 28th, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/96584102/">HBase Meetup at Intel Mission Campus</a></p>
+         <p>February 19th, 2013 <a href="http://www.meetup.com/hackathon/events/103633042/">Developers PowWow</a> at HortonWorks' new digs</p>
+         <p>January 23rd, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/91381312/">HBase Meetup at WibiData World HQ!</a></p>
+            <p>December 4th, 2012 <a href="http://www.meetup.com/hackathon/events/90536432/">0.96 Bug Squashing and Testing Hackathon</a> at Cloudera, SF.</p>
+            <p>October 29th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/82791572/">HBase User Group Meetup</a> at Wize Commerce in San Mateo.</p>
+            <p>October 25th, 2012 <a href="http://www.meetup.com/HBase-NYC/events/81728932/">Strata/Hadoop World HBase Meetup.</a> in NYC</p>
+            <p>September 11th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/80621872/">Contributor's Pow-Wow at HortonWorks HQ.</a></p>
+
       <p><small><a href="old_news.html">Old News</a></small></p>
     </section>
   </body>
-  
+
 </document>

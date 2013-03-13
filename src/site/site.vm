@@ -481,6 +481,20 @@
       #end
     #end
     ## $headContent
+<!--Google Analytics-->
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-30210968-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
   </head>
   <body class="composite">
     <div id="banner">
@@ -521,7 +535,10 @@
       <hr/>
     </div>
     <div id="footer">
-      <div class="xright"> #publishDate( "right" $decoration.publishDate $decoration.version )&nbsp;| Copyright &#169;#copyright()All Rights Reserved.  </div>
+       <div class="xright">#publishDate( "right" $decoration.publishDate $decoration.version )&nbsp;
+        </div>
+        <div class="xright">Copyright &#169;<a href="http://www.apache.org">#copyright()</a>All Rights Reserved.  Apache Hadoop, Hadoop, HDFS, HBase and the HBase project logo are trademarks of the Apache Software Foundation.
+        </div>
       <div class="clear">
         <hr/>
       </div>
