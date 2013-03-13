@@ -142,13 +142,6 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   }
 
   @Override
-  public void update() {
-    // no-op, shouldn't even be called
-    throw new UnsupportedOperationException(
-        "ScanWildcardColumnTracker.update should never be called!");
-  }
-
-  @Override
   public void reset() {
     columnBuffer = null;
     resetTSAndType();

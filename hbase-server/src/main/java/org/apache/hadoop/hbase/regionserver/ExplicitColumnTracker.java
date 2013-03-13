@@ -39,11 +39,15 @@ import org.apache.hadoop.hbase.util.Bytes;
  * between rows.
  *
  * <p>
- * This class is utilized by {@link ScanQueryMatcher} through two methods:
+ * This class is utilized by {@link ScanQueryMatcher} mainly through two methods:
  * <ul><li>{@link #checkColumn} is called when a Put satisfies all other
- * conditions of the query.  This method returns a {@link org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode} to define
- * what action should be taken.
- * <li>{@link #update} is called at the end of every StoreFile or memstore.
+ * conditions of the query.
+ * <ul><li>{@link #getNextRowOrNextColumn} is called whenever ScanQueryMatcher
+ * believes that the current column should be skipped (by timestamp, filter etc.)
+ * <p>
+ * These two methods returns a 
+ * {@link org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode}
+ * to define what action should be taken.
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded
  */
@@ -59,7 +63,6 @@ public class ExplicitColumnTracker implements ColumnTracker {
   * column have been returned.
   */
   private final List<ColumnCount> columns;
-  private final List<ColumnCount> columnsToReuse;
   private int index;
   private ColumnCount column;
   /** Keeps track of the latest timestamp included for current column.
@@ -81,9 +84,8 @@ public class ExplicitColumnTracker implements ColumnTracker {
     this.minVersions = minVersions;
     this.oldestStamp = oldestUnexpiredTS;
     this.columns = new ArrayList<ColumnCount>(columns.size());
-    this.columnsToReuse = new ArrayList<ColumnCount>(columns.size());
     for(byte [] column : columns) {
-      this.columnsToReuse.add(new ColumnCount(column));
+      this.columns.add(new ColumnCount(column));
     }
     reset();
   }
@@ -92,7 +94,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * Done when there are no more columns to match against.
    */
   public boolean done() {
-    return this.columns.size() == 0;
+    return this.index >= this.columns.size();
   }
 
   public ColumnCount getColumnHint() {
@@ -110,7 +112,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
     assert !KeyValue.isDelete(type);
     do {
       // No more columns left, we are done with this query
-      if(this.columns.size() == 0) {
+      if(done()) {
         return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
       }
 
@@ -136,14 +138,9 @@ public class ExplicitColumnTracker implements ColumnTracker {
         int count = this.column.increment();
         if(count >= maxVersions || (count >= minVersions && isExpired(timestamp))) {
           // Done with versions for this column
-          // Note: because we are done with this column, and are removing
-          // it from columns, we don't do a ++this.index. The index stays
-          // the same but the columns have shifted within the array such
-          // that index now points to the next column we are interested in.
-          this.columns.remove(this.index);
-
+          ++this.index;
           resetTS();
-          if (this.columns.size() == this.index) {
+          if (done()) {
             // We have served all the requested columns.
             this.column = null;
             return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
@@ -172,7 +169,8 @@ public class ExplicitColumnTracker implements ColumnTracker {
       // of interest. Advance the ExplicitColumnTracker state to next
       // column of interest, and check again.
       if (ret <= -1) {
-        if (++this.index >= this.columns.size()) {
+        ++this.index;
+        if (done()) {
           // No more to match, do not include, done with this row.
           return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
         }
@@ -182,24 +180,13 @@ public class ExplicitColumnTracker implements ColumnTracker {
     } while(true);
   }
 
-  /**
-   * Called at the end of every StoreFile or memstore.
-   */
-  public void update() {
-    if(this.columns.size() != 0) {
-      this.index = 0;
-      this.column = this.columns.get(this.index);
-    } else {
-      this.index = -1;
-      this.column = null;
-    }
-  }
-
   // Called between every row.
   public void reset() {
-    buildColumnList();
     this.index = 0;
     this.column = this.columns.get(this.index);
+    for(ColumnCount col : this.columns) {
+      col.setCount(0);
+    }
     resetTS();
   }
 
@@ -219,14 +206,6 @@ public class ExplicitColumnTracker implements ColumnTracker {
     return timestamp < oldestStamp;
   }
 
-  private void buildColumnList() {
-    this.columns.clear();
-    this.columns.addAll(this.columnsToReuse);
-    for(ColumnCount col : this.columns) {
-      col.setCount(0);
-    }
-  }
-
   /**
    * This method is used to inform the column tracker that we are done with
    * this column. We may get this information from external filters or
@@ -241,24 +220,18 @@ public class ExplicitColumnTracker implements ColumnTracker {
       int compare = Bytes.compareTo(column.getBuffer(), column.getOffset(),
           column.getLength(), bytes, offset, length);
       resetTS();
-      if (compare == 0) {
-        this.columns.remove(this.index);
-        if (this.columns.size() == this.index) {
+      if (compare <= 0) {
+        ++this.index;
+        if (done()) {
           // Will not hit any more columns in this storefile
           this.column = null;
         } else {
           this.column = this.columns.get(this.index);
         }
-        return;
-      } else if ( compare <= -1) {
-        if(++this.index != this.columns.size()) {
-          this.column = this.columns.get(this.index);
-        } else {
-          this.column = null;
-        }
-      } else {
-        return;
+        if (compare <= -1)
+          continue;
       }
+      return;
     }
   }
 

@@ -31,12 +31,18 @@ import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
  * Currently there are two different types of Store/Family-level queries.
  * <ul><li>{@link ExplicitColumnTracker} is used when the query specifies
  * one or more column qualifiers to return in the family.
+ * <ul><li>{@link ScanWildcardColumnTracker} is used when no columns are
+ * explicitly specified.
  * <p>
- * This class is utilized by {@link ScanQueryMatcher} through two methods:
+ * This class is utilized by {@link ScanQueryMatcher} mainly through two methods:
  * <ul><li>{@link #checkColumn} is called when a Put satisfies all other
- * conditions of the query.  This method returns a {@link org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode} to define
- * what action should be taken.
- * <li>{@link #update} is called at the end of every StoreFile or memstore.
+ * conditions of the query.
+ * <ul><li>{@link #getNextRowOrNextColumn} is called whenever ScanQueryMatcher
+ * believes that the current column should be skipped (by timestamp, filter etc.)
+ * <p>
+ * These two methods returns a 
+ * {@link org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode}
+ * to define what action should be taken.
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded
  */
@@ -59,11 +65,6 @@ public interface ColumnTracker {
   public ScanQueryMatcher.MatchCode checkColumn(byte[] bytes, int offset,
       int length, long ttl, byte type, boolean ignoreCount)
       throws IOException;
-
-  /**
-   * Updates internal variables in between files
-   */
-  public void update();
 
   /**
    * Resets the Matcher
