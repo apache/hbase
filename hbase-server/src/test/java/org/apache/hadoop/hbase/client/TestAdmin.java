@@ -558,6 +558,9 @@ public class TestAdmin {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
+    
+    boolean tableAvailable = admin.isTableAvailable(Bytes.toString(tableName), splitKeys);
+    assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
     Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
@@ -707,6 +710,21 @@ public class TestAdmin {
       // Expected
     }
     ladmin.close();
+  }
+  
+  @Test
+  public void testTableAvailableWithRandomSplitKeys() throws Exception {
+    byte[] tableName = Bytes.toBytes("testTableAvailableWithRandomSplitKeys");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor("col"));
+    byte[][] splitKeys = new byte[1][];
+    splitKeys = new byte [][] {
+        new byte [] { 1, 1, 1 },
+        new byte [] { 2, 2, 2 }
+    };
+    admin.createTable(desc);
+    boolean tableAvailable = admin.isTableAvailable(Bytes.toString(tableName), splitKeys);
+    assertFalse("Table should be created with 1 row in META", tableAvailable);
   }
   
   @Test
