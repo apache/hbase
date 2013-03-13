@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.SocketFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.security.User;
 
@@ -48,7 +49,7 @@ public class RandomTimeoutRpcEngine extends ProtobufRpcClientEngine {
   private static AtomicInteger invokations = new AtomicInteger();
 
   public RandomTimeoutRpcEngine(Configuration conf) {
-    super(conf);
+    super(conf, HConstants.CLUSTER_ID_DEFAULT);
   }
 
   @Override

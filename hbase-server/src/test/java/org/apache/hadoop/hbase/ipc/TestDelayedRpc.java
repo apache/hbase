@@ -30,6 +30,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg;
@@ -73,7 +74,8 @@ public class TestDelayedRpc {
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
-    ProtobufRpcClientEngine clientEngine = new ProtobufRpcClientEngine(conf);
+    ProtobufRpcClientEngine clientEngine =
+        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       TestRpc client = clientEngine.getProxy(TestRpc.class,
           rpcServer.getListenerAddress(), conf, 1000);
@@ -142,7 +144,8 @@ public class TestDelayedRpc {
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
-    ProtobufRpcClientEngine clientEngine = new ProtobufRpcClientEngine(conf);
+    ProtobufRpcClientEngine clientEngine =
+        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       TestRpc client = clientEngine.getProxy(TestRpc.class,
           rpcServer.getListenerAddress(), conf, 1000);
@@ -261,7 +264,8 @@ public class TestDelayedRpc {
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
-    ProtobufRpcClientEngine clientEngine = new ProtobufRpcClientEngine(conf);
+    ProtobufRpcClientEngine clientEngine =
+        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       TestRpc client = clientEngine.getProxy(TestRpc.class,
           rpcServer.getListenerAddress(), conf, 1000);

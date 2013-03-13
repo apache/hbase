@@ -84,7 +84,7 @@ public class TestClusterId {
 
     String clusterId = ZKClusterId.readClusterIdZNode(TEST_UTIL.getZooKeeperWatcher());
     assertNotNull(clusterId);
-    assertEquals(clusterId, rst.getRegionServer().getConfiguration().get(HConstants.CLUSTER_ID));
+    assertEquals(clusterId, rst.getRegionServer().getClusterId());
   }
 }
 

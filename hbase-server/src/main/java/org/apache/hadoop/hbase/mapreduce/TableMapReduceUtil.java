@@ -290,6 +290,13 @@ public class TableMapReduceUtil {
   public static void initCredentials(Job job) throws IOException {
     if (User.isHBaseSecurityEnabled(job.getConfiguration())) {
       try {
+        // init credentials for remote cluster
+        String quorumAddress = job.getConfiguration().get(TableOutputFormat.QUORUM_ADDRESS);
+        if (quorumAddress != null) {
+          Configuration peerConf = HBaseConfiguration.create(job.getConfiguration());
+          ZKUtil.applyClusterKeyToConf(peerConf, quorumAddress);
+          User.getCurrent().obtainAuthTokenForJob(peerConf, job);
+        }
         User.getCurrent().obtainAuthTokenForJob(job.getConfiguration(), job);
       } catch (InterruptedException ie) {
         LOG.info("Interrupted obtaining user authentication token");

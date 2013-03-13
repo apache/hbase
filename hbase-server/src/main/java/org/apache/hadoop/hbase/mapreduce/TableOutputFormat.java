@@ -182,14 +182,17 @@ implements Configurable {
   @Override
   public void setConf(Configuration otherConf) {
     this.conf = HBaseConfiguration.create(otherConf);
+
     String tableName = this.conf.get(OUTPUT_TABLE);
     if(tableName == null || tableName.length() <= 0) {
       throw new IllegalArgumentException("Must specify table name");
     }
+
     String address = this.conf.get(QUORUM_ADDRESS);
-    int zkClientPort = conf.getInt(QUORUM_PORT, 0);
+    int zkClientPort = this.conf.getInt(QUORUM_PORT, 0);
     String serverClass = this.conf.get(REGION_SERVER_CLASS);
     String serverImpl = this.conf.get(REGION_SERVER_IMPL);
+
     try {
       if (address != null) {
         ZKUtil.applyClusterKeyToConf(this.conf, address);
@@ -198,7 +201,7 @@ implements Configurable {
         this.conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
       }
       if (zkClientPort != 0) {
-        conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
+        this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
       this.table = new HTable(this.conf, tableName);
       this.table.setAutoFlush(false);

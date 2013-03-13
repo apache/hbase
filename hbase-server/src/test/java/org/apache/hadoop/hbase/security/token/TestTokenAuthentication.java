@@ -363,9 +363,8 @@ public class TestTokenAuthentication {
     testuser.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws Exception {
         Configuration c = server.getConfiguration();
-        c.set(HConstants.CLUSTER_ID, clusterId.toString());
         ProtobufRpcClientEngine rpcClient =
-            new ProtobufRpcClientEngine(c);
+            new ProtobufRpcClientEngine(c, clusterId.toString());
         try {
           AuthenticationProtos.AuthenticationService.BlockingInterface proxy =
               HBaseClientRPC.waitForProxy(rpcClient, BlockingAuthenticationService.class,

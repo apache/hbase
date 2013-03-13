@@ -51,7 +51,8 @@ public class TestHMasterRPCException {
 
     ServerName sm = hm.getServerName();
     InetSocketAddress isa = new InetSocketAddress(sm.getHostname(), sm.getPort());
-    ProtobufRpcClientEngine engine = new ProtobufRpcClientEngine(conf);
+    ProtobufRpcClientEngine engine =
+        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       int i = 0;
       //retry the RPC a few times; we have seen SocketTimeoutExceptions if we

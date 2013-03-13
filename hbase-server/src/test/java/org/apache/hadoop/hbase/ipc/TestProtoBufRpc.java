@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
@@ -101,7 +102,8 @@ public class TestProtoBufRpc {
 
   @Test
   public void testProtoBufRpc() throws Exception {
-    ProtobufRpcClientEngine clientEngine = new ProtobufRpcClientEngine(conf);
+    ProtobufRpcClientEngine clientEngine =
+        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       TestRpcService client = clientEngine.getProxy(TestRpcService.class, addr, conf, 10000);
       // Test ping method
