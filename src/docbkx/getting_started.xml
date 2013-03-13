@@ -32,9 +32,8 @@
     <title>Introduction</title>
 
     <para><xref linkend="quickstart" /> will get you up and
-    running on a single-node instance of HBase using the local filesystem. 
-    <xref linkend="configuration" /> describes setup
-    of HBase in distributed mode running on top of HDFS.</para>
+    running on a single-node instance of HBase using the local filesystem.
+    </para>
   </section>
 
   <section xml:id="quickstart">
@@ -45,17 +44,31 @@
     rows via the HBase <command>shell</command>, and then cleaning
     up and shutting down your standalone HBase instance. The below exercise
     should take no more than ten minutes (not including download time).</para>
+    <para>Before we proceed, make sure you are good on the below loopback prerequisite.</para>
+    <note xml:id="loopback.ip.getting.started">
+        <title>Loopback IP</title>
+        <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
+        for example, will default to 127.0.1.1 and this will cause problems for you.
+        </para>
+        <para><filename>/etc/hosts</filename> should look something like this:
+<programlisting>
+            127.0.0.1 localhost
+            127.0.0.1 ubuntu.ubuntu-domain ubuntu
+</programlisting>
+        </para>
+       </note>
+
 
     <section>
       <title>Download and unpack the latest stable release.</title>
 
       <para>Choose a download site from this list of <link
       xlink:href="http://www.apache.org/dyn/closer.cgi/hbase/">Apache Download
-      Mirrors</link>. Click on suggested top link. This will take you to a
+      Mirrors</link>. Click on the suggested top link. This will take you to a
       mirror of <emphasis>HBase Releases</emphasis>. Click on the folder named
       <filename>stable</filename> and then download the file that ends in
       <filename>.tar.gz</filename> to your local filesystem; e.g.
-      <filename>hbase-<?eval ${project.version}?>.tar.gz</filename>.</para>
+      <filename>hbase-0.94.2.tar.gz</filename>.</para>
 
       <para>Decompress and untar your download and then change into the
       unpacked directory.</para>
@@ -65,24 +78,27 @@ $ cd hbase-<?eval ${project.version}?>
 </programlisting></para>
 
       <para>At this point, you are ready to start HBase. But before starting
-      it, you might want to edit <filename>conf/hbase-site.xml</filename> and
-      set the directory you want HBase to write to,
-      <varname>hbase.rootdir</varname>. <programlisting>
-
-&lt;?xml version="1.0"?&gt;
+      it, edit <filename>conf/hbase-site.xml</filename>, the file you write
+      your site-specific configurations into. Set
+      <varname>hbase.rootdir</varname>, the directory HBase writes data to,
+      and <varname>hbase.zookeeper.property.dataDir</varname>, the director
+      ZooKeeper writes its data too:
+<programlisting>&lt;?xml version="1.0"?&gt;
 &lt;?xml-stylesheet type="text/xsl" href="configuration.xsl"?&gt;
 &lt;configuration&gt;
   &lt;property&gt;
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
     &lt;value&gt;file:///DIRECTORY/hbase&lt;/value&gt;
   &lt;/property&gt;
-&lt;/configuration&gt;
-
-</programlisting> Replace <varname>DIRECTORY</varname> in the above with a
-      path to a directory where you want HBase to store its data. By default,
-      <varname>hbase.rootdir</varname> is set to
-      <filename>/tmp/hbase-${user.name}</filename> which means you'll lose all
-      your data whenever your server reboots (Most operating systems clear
+  &lt;property&gt;
+    &lt;name&gt;hbase.zookeeper.property.dataDir&lt;/name&gt;
+    &lt;value&gt;/DIRECTORY/zookeeper&lt;/value&gt;
+  &lt;/property&gt;
+&lt;/configuration&gt;</programlisting> Replace <varname>DIRECTORY</varname> in the above with the
+      path to the directory you would have HBase and ZooKeeper write their data. By default,
+      <varname>hbase.rootdir</varname> is set to <filename>/tmp/hbase-${user.name}</filename>
+      and similarly so for the default ZooKeeper data location which means you'll lose all
+      your data whenever your server reboots unless you change it (Most operating systems clear
       <filename>/tmp</filename> on restart).</para>
     </section>
 
@@ -96,19 +112,19 @@ starting Master, logging to logs/hbase-user-master-example.org.out</programlisti
       standalone mode, HBase runs all daemons in the the one JVM; i.e. both
       the HBase and ZooKeeper daemons. HBase logs can be found in the
       <filename>logs</filename> subdirectory. Check them out especially if
-      HBase had trouble starting.</para>
+      it seems HBase had trouble starting.</para>
 
       <note>
         <title>Is <application>java</application> installed?</title>
 
         <para>All of the above presumes a 1.6 version of Oracle
         <application>java</application> is installed on your machine and
-        available on your path; i.e. when you type
+        available on your path (See <xref linkend="java" />); i.e. when you type
         <application>java</application>, you see output that describes the
         options the java program takes (HBase requires java 6). If this is not
         the case, HBase will not start. Install java, edit
         <filename>conf/hbase-env.sh</filename>, uncommenting the
-        <envar>JAVA_HOME</envar> line pointing it to your java install. Then,
+        <envar>JAVA_HOME</envar> line pointing it to your java install, then,
         retry the steps above.</para>
       </note>
     </section>
@@ -154,9 +170,7 @@ hbase(main):006:0&gt; put 'test', 'row3', 'cf:c', 'value3'
       <varname>cf</varname> in this example -- followed by a colon and then a
       column qualifier suffix (<varname>a</varname> in this case).</para>
 
-      <para>Verify the data insert.</para>
-
-      <para>Run a scan of the table by doing the following</para>
+      <para>Verify the data insert by running a scan of the table as follows</para>
 
       <para><programlisting>hbase(main):007:0&gt; scan 'test'
 ROW        COLUMN+CELL
@@ -165,7 +179,7 @@ row2       column=cf:b, timestamp=1288380738440, value=value2
 row3       column=cf:c, timestamp=1288380747365, value=value3
 3 row(s) in 0.0590 seconds</programlisting></para>
 
-      <para>Get a single row as follows</para>
+      <para>Get a single row</para>
 
       <para><programlisting>hbase(main):008:0&gt; get 'test', 'row1'
 COLUMN      CELL
@@ -198,9 +212,9 @@ stopping hbase...............</programlisting></para>
       <title>Where to go next</title>
 
       <para>The above described standalone setup is good for testing and
-          experiments only. Next move on to <xref linkend="configuration" /> where we'll go into
-      depth on the different HBase run modes, requirements and critical
-      configurations needed setting up a distributed HBase deploy.</para>
+          experiments only. In the next chapter, <xref linkend="configuration" />,
+      we'll go into depth on the different HBase run modes, system requirements
+      running HBase, and critical configurations setting up a distributed HBase deploy.</para>
     </section>
   </section>
 
