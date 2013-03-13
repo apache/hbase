@@ -53,11 +53,6 @@ public class StoreFileScanner implements KeyValueScanner {
 
   private boolean enforceMVCC = false;
 
-  //The variable, realSeekDone, may cheat on store file scanner for the
-  // multi-column bloom-filter optimization.
-  // So this flag shows whether this storeFileScanner could do a reseek.
-  private boolean isReseekable = false;
-
   private static final AtomicLong seekCount = new AtomicLong();
 
   private ScanQueryMatcher matcher;
@@ -148,7 +143,6 @@ public class StoreFileScanner implements KeyValueScanner {
           return false;
         }
 
-        this.isReseekable = true;
         cur = hfs.getKeyValue();
 
         return skipKVsNewerThanReadpoint();
@@ -242,6 +236,12 @@ public class StoreFileScanner implements KeyValueScanner {
     //This function is similar to seekAtOrAfter function
     int result = s.reseekTo(k.getBuffer(), k.getKeyOffset(), k.getKeyLength());
     if (result <= 0) {
+      // If up to now scanner is not seeked yet, this means passed KV is smaller
+      // than first KV in file, and it is the first time we seek on this file.
+      // So we also need to work from the start of file.
+      if (!s.isSeeked()) {
+        return  s.seekTo();
+      }
       return true;
     } else {
       // passed KV is larger than current KV in file, if there is a next
@@ -346,7 +346,7 @@ public class StoreFileScanner implements KeyValueScanner {
     if (realSeekDone)
       return;
 
-    if (delayedReseek && this.isReseekable) {
+    if (delayedReseek) {
       reseek(delayedSeekKV);
     } else {
       seek(delayedSeekKV);
