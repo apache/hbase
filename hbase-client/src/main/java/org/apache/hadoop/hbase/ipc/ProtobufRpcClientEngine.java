@@ -44,8 +44,8 @@ public class ProtobufRpcClientEngine implements RpcClientEngine {
 
   protected HBaseClient client;
 
-  public ProtobufRpcClientEngine(Configuration conf) {
-    this.client = new HBaseClient(conf);
+  public ProtobufRpcClientEngine(Configuration conf, String clusterId) {
+    this.client = new HBaseClient(conf, clusterId);
   }
 
   @Override

@@ -34,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
@@ -83,8 +84,7 @@ public class TestIPC {
     rpcServer.start();
 
     HBaseClient client = new HBaseClient(
-        conf,
-        spyFactory);
+        conf, HConstants.CLUSTER_ID_DEFAULT, spyFactory);
     InetSocketAddress address = rpcServer.getListenerAddress();
 
     try {

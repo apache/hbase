@@ -1156,7 +1156,7 @@ public class HBaseClient {
    * @param conf configuration
    * @param factory socket factory
    */
-  public HBaseClient(Configuration conf, SocketFactory factory) {
+  public HBaseClient(Configuration conf, String clusterId, SocketFactory factory) {
     this.maxIdleTime =
       conf.getInt("hbase.ipc.client.connection.maxidletime", 10000); //10s
     this.maxRetries = conf.getInt("hbase.ipc.client.connect.max.retries", 0);
@@ -1169,7 +1169,7 @@ public class HBaseClient {
     }
     this.conf = conf;
     this.socketFactory = factory;
-    this.clusterId = conf.get(HConstants.CLUSTER_ID, "default");
+    this.clusterId = clusterId != null ? clusterId : HConstants.CLUSTER_ID_DEFAULT;
     this.connections = new PoolMap<ConnectionId, Connection>(
         getPoolType(conf), getPoolSize(conf));
     this.failedServers = new FailedServers(conf);
@@ -1179,8 +1179,8 @@ public class HBaseClient {
    * Construct an IPC client with the default SocketFactory
    * @param conf configuration
    */
-  public HBaseClient(Configuration conf) {
-    this(conf, NetUtils.getDefaultSocketFactory(conf));
+  public HBaseClient(Configuration conf, String clusterId) {
+    this(conf, clusterId, NetUtils.getDefaultSocketFactory(conf));
   }
 
   /**

@@ -406,6 +406,11 @@ public class HRegionServer implements ClientProtocol,
   private final long startcode;
 
   /**
+   * Unique identifier for the cluster we are a part of.
+   */
+  private String clusterId;
+
+  /**
    * MX Bean for RegionServerInfo
    */
   private ObjectName mxBean = null;
@@ -540,7 +545,7 @@ public class HRegionServer implements ClientProtocol,
   }
 
   String getClusterId() {
-    return this.conf.get(HConstants.CLUSTER_ID);
+    return this.clusterId;
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -759,11 +764,10 @@ public class HRegionServer implements ClientProtocol,
     // Since cluster status is now up
     // ID should have already been set by HMaster
     try {
-      String clusterId = ZKClusterId.readClusterIdZNode(this.zooKeeper);
+      clusterId = ZKClusterId.readClusterIdZNode(this.zooKeeper);
       if (clusterId == null) {
         this.abort("Cluster ID has not been set");
       }
-      this.conf.set(HConstants.CLUSTER_ID, clusterId);
       LOG.info("ClusterId : "+clusterId);
     } catch (KeeperException e) {
       this.abort("Failed to retrieve Cluster ID",e);
@@ -833,7 +837,7 @@ public class HRegionServer implements ClientProtocol,
     movedRegionsCleaner = MovedRegionsCleaner.createAndStart(this);
 
     // Setup RPC client for master communication
-    rpcClientEngine = new ProtobufRpcClientEngine(conf);
+    rpcClientEngine = new ProtobufRpcClientEngine(conf, clusterId);
   }
 
   /**

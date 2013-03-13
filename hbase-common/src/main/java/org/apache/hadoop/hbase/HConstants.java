@@ -327,8 +327,8 @@ public final class HConstants {
   /** name of the file for unique cluster ID */
   public static final String CLUSTER_ID_FILE_NAME = "hbase.id";
 
-  /** Configuration key storing the cluster ID */
-  public static final String CLUSTER_ID = "hbase.cluster.id";
+  /** Default value for cluster ID */
+  public static final String CLUSTER_ID_DEFAULT = "default-cluster";
 
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
