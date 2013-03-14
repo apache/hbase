@@ -803,7 +803,7 @@ public class ReplicationZookeeper implements Closeable {
     List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
     try {
       peerIdsToProcess = ZKUtil.listChildrenNoWatch(this.zookeeper, deadRSZnodePath);
-      if (peerIdsToProcess == null) return null; // node already processed
+      if (peerIdsToProcess == null) return queues; // node already processed
       for (String peerId : peerIdsToProcess) {
         String newPeerId = peerId + "-" + znode;
         String newPeerZnode = ZKUtil.joinZNode(this.rsServerNameZnode, newPeerId);
@@ -838,6 +838,7 @@ public class ReplicationZookeeper implements Closeable {
     } catch (KeeperException e) {
       // Multi call failed; it looks like some other regionserver took away the logs.
       LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);
+      queues.clear();
     }
     return queues;
   }
