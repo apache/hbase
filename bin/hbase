@@ -237,18 +237,18 @@ fi
 unset IFS
 
 #Set the right GC options based on the what we are running
-declare -a client_cmds=("shell" "hbck" "hlog" "hfile" "zkcli")
-for cmd in ${client_cmds[@]}; do
+declare -a server_cmds=("master" "regionserver" "thrift" "thrift2" "rest" "avro" "zookeeper")
+for cmd in ${server_cmds[@]}; do
 	if [[ $cmd == $COMMAND ]]; then
-		client=true
+		server=true
 		break
 	fi
 done
 
-if [[ $client ]]; then
-	HBASE_OPTS="$HBASE_OPTS $CLIENT_GC_OPTS"
-else
+if [[ $server ]]; then
 	HBASE_OPTS="$HBASE_OPTS $SERVER_GC_OPTS"
+else
+	HBASE_OPTS="$HBASE_OPTS $CLIENT_GC_OPTS"
 fi
 
 # figure out which class to run
