@@ -1693,10 +1693,16 @@ public class AssignmentManager extends ZooKeeperListener {
       try {
         LOG.debug("Assigning region " + state.getRegion().getRegionNameAsString() +
           " to " + plan.getDestination().toString());
+        long currentOfflineTimeStamp = state.getStamp();
         RegionOpeningState regionOpenState = serverManager.sendRegionOpen(plan.getDestination(),
             state.getRegion(), versionOfOfflineNode);
         if (regionOpenState == RegionOpeningState.OPENED) {
           // Transition RegionState to PENDING_OPEN
+          // Check if already the offline state has been updated due to a
+          // failure in prev assign
+          if (state.isOffline() && currentOfflineTimeStamp != state.getStamp()) {
+            return;
+          }
           if (state.isOffline() && !state.isOpening()) {
             state.update(RegionState.State.PENDING_OPEN,
                 System.currentTimeMillis(), plan.getDestination());

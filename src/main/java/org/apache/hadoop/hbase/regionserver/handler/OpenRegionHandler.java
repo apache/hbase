@@ -100,6 +100,7 @@ public class OpenRegionHandler extends EventHandler {
       region = openRegion();
       if (region == null) {
         tryTransitionToFailedOpen(regionInfo);
+        transitionToFailedOpen = true;
         return;
       }
       boolean failed = true;
