@@ -339,21 +339,16 @@ public class Bytes {
    */
   public static String toStringBinary(final byte [] b, int off, int len) {
     StringBuilder result = new StringBuilder();
-    try {
-      String first = new String(b, off, len, "ISO-8859-1");
-      for (int i = 0; i < first.length() ; ++i ) {
-        int ch = first.charAt(i) & 0xFF;
-        if ( (ch >= '0' && ch <= '9')
-            || (ch >= 'A' && ch <= 'Z')
-            || (ch >= 'a' && ch <= 'z')
-            || " `~!@#$%^&*()-_=+[]{}\\|;:'\",.<>/?".indexOf(ch) >= 0 ) {
-          result.append(first.charAt(i));
-        } else {
-          result.append(String.format("\\x%02X", ch));
-        }
+    for (int i = off; i < off + len ; ++i ) { 
+      int ch = b[i] & 0xFF;
+      if ( (ch >= '0' && ch <= '9')      
+          || (ch >= 'A' && ch <= 'Z')
+          || (ch >= 'a' && ch <= 'z')
+          || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0 ) {
+          result.append((char)ch);
+      } else {
+        result.append(String.format("\\x%02X", ch));
       }
-    } catch (UnsupportedEncodingException e) {
-      LOG.error("ISO-8859-1 not supported?", e);
     }
     return result.toString();
   }
