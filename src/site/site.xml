@@ -62,6 +62,11 @@
       <item name="HBase on Windows"      href="cygwin.html" />
       <item name="Cluster replication"      href="replication.html" />
     </menu>
+    <menu name="0.94 Documentation">
+        <item name="API" href="0.94/apidocs/index.html" />
+        <item name="X-Ref" href="0.94/xref/index.html" />
+        <item name="Ref Guide (single-page)"      href="0.94/book.html" />
+    </menu>
     <menu name="ASF">
         <item name="Apache Software Foundation"      href="http://www.apache.org/foundation/" />
         <item name="How Apache Works"      href="http://www.apache.org/foundation/how-it-works.html" />
