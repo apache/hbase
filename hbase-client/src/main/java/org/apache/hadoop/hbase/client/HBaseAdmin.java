@@ -982,9 +982,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * splitkeys which was used while creating the given table.
    * Note : If this api is used after a table's region gets splitted, the api may return
    * false.
-   * @param table
+   * @param tableName
    *          name of table to check
-   * @param split
+   * @param splitKeys
    *          keys to check if the table has been created with all split keys
    * @throws IOException
    *           if a remote or network excpetion occurs
@@ -998,9 +998,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * splitkeys which was used while creating the given table.
    * Note : If this api is used after a table's region gets splitted, the api may return
    * false.
-   * @param table
+   * @param tableName
    *          name of table to check
-   * @param split
+   * @param splitKeys
    *          keys to check if the table has been created with all split keys
    * @throws IOException
    *           if a remote or network excpetion occurs
