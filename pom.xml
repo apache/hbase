@@ -383,7 +383,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
-          <version>2.0.1</version>
+          <version>3.2</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -566,6 +566,14 @@
     </testResources>
 
     <plugins>
+      <plugin>
+        <artifactId>maven-site-plugin</artifactId>
+        <configuration>
+          <inputEncoding>UTF-8</inputEncoding>
+          <outputEncoding>UTF-8</outputEncoding>
+          <templateFile>src/site/site.vm</templateFile>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro-maven-plugin</artifactId>
@@ -2433,7 +2441,7 @@ MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
     <plugins>
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>2.1.2</version>
+        <version>2.6</version>
         <reportSets>
           <reportSet>
             <reports>
@@ -2448,15 +2456,6 @@ MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
           </reportSet>
         </reportSets>
 
-      </plugin>
-      <plugin>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>2.0.1</version>
-        <configuration>
-          <inputEncoding>UTF-8</inputEncoding>
-          <outputEncoding>UTF-8</outputEncoding>
-          <templateFile>src/site/site.vm</templateFile>
-        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
