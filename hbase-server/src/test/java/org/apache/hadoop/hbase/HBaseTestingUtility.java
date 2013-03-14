@@ -315,7 +315,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * @return Where to write test data on the test filesystem; Returns working directory
-   * for the test filesytem by default
+   * for the test filesystem by default
    * @see #setupDataTestDirOnTestFS()
    * @see #getTestFileSystem()
    */
@@ -396,6 +396,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     FileSystem fs = getTestFileSystem();
     if (fs.getUri().getScheme().equals(FileSystem.getLocal(conf).getUri().getScheme())) {
       File dataTestDir = new File(getDataTestDir().toString());
+      dataTestDir.deleteOnExit();
       dataTestDirOnTestFS = new Path(dataTestDir.getAbsolutePath());
     } else {
       Path base = getBaseTestDirOnTestFS();
@@ -404,6 +405,29 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       fs.deleteOnExit(dataTestDirOnTestFS);
     }
   }
+
+  /**
+   * Cleans the test data directory on the test filesystem.
+   * @return True if we removed the test dirs
+   * @throws IOException
+   */
+  public boolean cleanupDataTestDirOnTestFS() throws IOException {
+    boolean ret = getTestFileSystem().delete(dataTestDirOnTestFS, true);
+    if (ret)
+      dataTestDirOnTestFS = null;
+    return ret;
+  }
+
+  /**
+   * Cleans a subdirectory under the test data directory on the test filesystem.
+   * @return True if we removed child
+   * @throws IOException
+   */
+  public boolean cleanupDataTestDirOnTestFS(String subdirName) throws IOException {
+    Path cpath = getDataTestDirOnTestFS(subdirName);
+    return getTestFileSystem().delete(cpath, true);
+  }
+
   /**
    * Start a minidfscluster.
    * @param servers How many DNs to start.
@@ -959,6 +983,33 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getMiniHBaseCluster().compact(tableName, major);
   }
 
+  /**
+   * Create a table.
+   * @param tableName
+   * @param family
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(String tableName, String family)
+  throws IOException{
+    return createTable(tableName, new String[] { family });
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(String tableName, String[] families)
+  throws IOException {
+    List<byte[]> fams = new ArrayList<byte[]>(families.length);
+    for (String family : families) {
+      fams.add(Bytes.toBytes(family));
+    }
+    return createTable(Bytes.toBytes(tableName), fams.toArray(new byte[0][]));
+  }
 
   /**
    * Create a table.
@@ -1115,6 +1166,14 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     getHBaseAdmin().createTable(desc);
     return new HTable(new Configuration(getConfiguration()), tableName);
+  }
+
+  /**
+   * Drop an existing table
+   * @param tableName existing table
+   */
+  public void deleteTable(String tableName) throws IOException {
+    deleteTable(Bytes.toBytes(tableName));
   }
 
   /**
