@@ -28,9 +28,11 @@
     <src>images/hbase_logo.png</src>
     <href>http://hbase.apache.org/</href>
   </bannerLeft>
-  <bannerRight />
+  <bannerRight>
+      <name>Version 0.94</name>
+  </bannerRight>
   <version position="right" />
-  <publishDate position="right" />
+  <publishDate position="right"/>
   <body>
     <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
@@ -46,7 +48,7 @@
       <item name="Blog" href="http://blogs.apache.org/hbase/" />
       <item name="Other resources" href="resources.html" />
     </menu>
-    <menu name="Documentation">
+    <menu name="0.94 Documentation">
         <item name="Getting Started" href="book/quickstart.html" />
       <item name="API" href="apidocs/index.html" />
       <item name="X-Ref" href="xref/index.html" />

@@ -89,11 +89,9 @@
         #if ( $banner.alt )
             #set ( $alt = $banner.alt )
         #else
-            #set ( $alt = $banner.name )
         #end
         <img src="$src" alt="$alt" />
     #else
-        $banner.name
     #end
 ##
     #if( $banner.href )
