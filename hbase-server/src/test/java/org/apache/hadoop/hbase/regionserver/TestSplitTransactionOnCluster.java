@@ -641,51 +641,6 @@ public class TestSplitTransactionOnCluster {
     admin.flush(tableName);
   }
 
-  @Test
-  public void testShouldThrowIOExceptionIfStoreFileSizeIsEmptyAndShouldSuccessfullyExecuteRollback()
-      throws Exception {
-    final byte[] tableName = Bytes.toBytes("testRollBackShudBeSuccessfulIfStoreFileIsEmpty");
-    // Create table then get the single region for our new table.
-    createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
-    List<HRegion> regions = cluster.getRegions(tableName);
-    HRegionInfo hri = getAndCheckSingleTableRegion(regions);
-    int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
-    int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
-    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
-    // Turn off balancer so it doesn't cut in and mess up our placements.
-    this.admin.setBalancerRunning(false, true);
-    // Turn off the meta scanner so it don't remove parent on us.
-    cluster.getMaster().setCatalogJanitorEnabled(false);
-    try {
-      printOutRegions(regionServer, "Initial regions: ");
-
-      // find a splittable region.  Refresh the regions list
-      regions = cluster.getRegions(tableName);
-      final HRegion region = findSplittableRegion(regions);
-      assertTrue("not able to find a splittable region", region != null);
-
-      // Now split.
-      SplitTransaction st = new MockedSplitTransaction(region, Bytes.toBytes("row2"));
-      try {
-        st.prepare();
-        st.execute(regionServer, regionServer);
-      } catch (IOException e) {
-        List<HRegion> daughters = cluster.getRegions(tableName);
-        assertTrue(daughters.size() == 1);
-
-        String node = ZKAssign.getNodeName(regionServer.getZooKeeper(),
-            region.getRegionInfo().getEncodedName());
-        assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
-        assertTrue(st.rollback(regionServer, regionServer));
-        assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
-      }
-    } finally {
-      admin.setBalancerRunning(true, false);
-      cluster.getMaster().setCatalogJanitorEnabled(true);
-    }
-
-  }
-
   private void testSplitBeforeSettingSplittingInZKInternals() throws Exception {
     final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
     try {

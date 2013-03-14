@@ -288,13 +288,6 @@ public class SplitTransaction {
       if (exceptionToThrow instanceof IOException) throw (IOException)exceptionToThrow;
       throw new IOException(exceptionToThrow);
     }
-
-
-    if (hstoreFilesToSplit.size() == 0) {
-      String errorMsg = "No store files to split for the region "+this.parent.getRegionInfo();
-      LOG.error(errorMsg);
-      throw new IOException(errorMsg);
-    }
     if (!testing) {
       services.removeFromOnlineRegions(this.parent, null);
     }
@@ -608,6 +601,10 @@ public class SplitTransaction {
     // there's files to split. It then fires up everything, waits for
     // completion and finally checks for any exception
     int nbFiles = hstoreFilesToSplit.size();
+    if (nbFiles == 0) {
+      // no file needs to be splitted.
+      return;
+    }
     ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
     builder.setNameFormat("StoreFileSplitter-%1$d");
     ThreadFactory factory = builder.build();
