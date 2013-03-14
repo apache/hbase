@@ -45,7 +45,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
   /** Used to abort if a fatal error occurs */
   protected final Abortable abortable;
 
-  private volatile boolean stopped = false;
+  private boolean stopped = false;
 
   /**
    * Constructs a new ZK node tracker.
