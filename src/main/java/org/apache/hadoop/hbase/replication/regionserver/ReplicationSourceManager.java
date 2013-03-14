@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -89,6 +90,9 @@ public class ReplicationSourceManager {
   private final long sleepBeforeFailover;
   // Homemade executer service for replication
   private final ThreadPoolExecutor executor;
+  
+  private final Random rand;
+
 
   /**
    * Creates a replication manager and sets the watch on all the other
@@ -135,6 +139,7 @@ public class ReplicationSourceManager {
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setNameFormat("ReplicationExecutor-%d");
     this.executor.setThreadFactory(tfb.build());
+    this.rand = new Random();
   }
 
   /**
@@ -572,7 +577,7 @@ public class ReplicationSourceManager {
       // Wait a bit before transferring the queues, we may be shutting down.
       // This sleep may not be enough in some cases.
       try {
-        Thread.sleep(sleepBeforeFailover);
+        Thread.sleep(sleepBeforeFailover + (long) (rand.nextFloat() * sleepBeforeFailover));
       } catch (InterruptedException e) {
         LOG.warn("Interrupted while waiting before transferring a queue.");
         Thread.currentThread().interrupt();
@@ -597,7 +602,7 @@ public class ReplicationSourceManager {
         zkHelper.deleteRsQueues(rsZnode);
       }
       // process of copying over the failed queue is completed.
-      if (newQueues.size() == 0) {
+      if (newQueues.isEmpty()) {
         return;
       }
 
