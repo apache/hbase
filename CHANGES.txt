@@ -25,7 +25,6 @@ Bug
     [HBASE-7777] - HBCK check for lingering split parents should check for child regions
     [HBASE-7813] - Bug in BulkDeleteEndpoint kills entire rows on COLUMN/VERSION Deletes
     [HBASE-7814] - Port HBASE-6963 'unable to run hbck on a secure cluster' to 0.94
-    [HBASE-7824] - Improve master start up time when there is log splitting work
     [HBASE-7829] - zookeeper kerberos conf keytab and principal parameters interchanged
     [HBASE-7832] - Use User.getShortName() in FSUtils
     [HBASE-7833] - 0.94 does not compile with Hadoop-0.20.205 and 0.22.0

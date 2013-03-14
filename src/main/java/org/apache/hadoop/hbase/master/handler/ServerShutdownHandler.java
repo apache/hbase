@@ -179,10 +179,6 @@ public class ServerShutdownHandler extends EventHandler {
   public void process() throws IOException {
     final ServerName serverName = this.serverName;
     try {
-      if (this.server.isStopped()) {
-        throw new IOException("Server is stopped");
-      }
-
       try {
         if (this.shouldSplitHlog) {
           LOG.info("Splitting logs for " + serverName);
