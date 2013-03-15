@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -28,7 +27,6 @@ import java.util.TreeMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -52,17 +50,47 @@ public class Increment extends Mutation implements Comparable<Row> {
   private TimeRange tr = new TimeRange();
 
   /**
-   * Create a Increment operation for the specified row, using an existing row
-   * lock.
+   * Create a Increment operation for the specified row.
    * <p>
    * At least one column must be incremented.
-   * @param row row key
+   * @param row row key (we will make a copy of this).
    */
   public Increment(byte [] row) {
-    if (row == null || row.length > HConstants.MAX_ROW_LENGTH) {
-      throw new IllegalArgumentException("Row key is invalid");
+    this(row, 0, row.length);
+  }
+
+  /**
+   * Create a Increment operation for the specified row.
+   * <p>
+   * At least one column must be incremented.
+   * @param row row key (we will make a copy of this).
+   */
+  public Increment(final byte [] row, final int offset, final int length) {
+    checkRow(row, offset, length);
+    this.row = Bytes.copy(row, offset, length);
+  }
+
+  /**
+   * Add the specified KeyValue to this operation.
+   * @param cell individual Cell
+   * @return this
+   * @throws java.io.IOException e
+   */
+  @SuppressWarnings("unchecked")
+  public Increment add(Cell cell) throws IOException{
+    KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+    byte [] family = kv.getFamily();
+    List<? extends Cell> list = getCellList(family);
+    //Checking that the row of the kv is the same as the put
+    int res = Bytes.compareTo(this.row, 0, row.length,
+        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
+    if (res != 0) {
+      throw new WrongRowIOException("The row in " + kv.toString() +
+        " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
-    this.row = Arrays.copyOf(row, row.length);
+    ((List<KeyValue>)list).add(kv);
+    familyMap.put(family, list);
+    return this;
   }
 
   /**
@@ -204,11 +232,20 @@ public class Increment extends Mutation implements Comparable<Row> {
 
   @Override
   public int compareTo(Row i) {
+    // TODO: This is wrong.  Can't have two the same just because on same row.
     return Bytes.compareTo(this.getRow(), i.getRow());
   }
 
   @Override
+  public int hashCode() {
+    // TODO: This is wrong.  Can't have two gets the same just because on same row.  But it
+    // matches how equals works currently and gets rid of the findbugs warning.
+    return Bytes.hashCode(this.getRow());
+  }
+
+  @Override
   public boolean equals(Object obj) {
+    // TODO: This is wrong.  Can't have two the same just because on same row.
     if (this == obj) {
       return true;
     }

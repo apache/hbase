@@ -137,6 +137,13 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         .compareTo(impl.regionWrapper.getRegionName());
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) return true;
+    if (!(obj instanceof MetricsRegionSourceImpl)) return false;
+    return compareTo((MetricsRegionSourceImpl)obj) == 0;
+  }
+
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
     if (closed) return;
 

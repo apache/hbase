@@ -183,7 +183,6 @@ public class DemoClient {
         client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(valid), mutations, dummyAttributes);
 
         // non-utf8 is now allowed in row names because HBase stores values as binary
-        ByteBuffer bf = ByteBuffer.wrap(invalid);
 
         mutations = new ArrayList<Mutation>();
         mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid), writeToWal));

@@ -164,8 +164,9 @@ public class TestMemStore extends TestCase {
   /**
    * A simple test which verifies the 3 possible states when scanning across snapshot.
    * @throws IOException
+   * @throws CloneNotSupportedException 
    */
-  public void testScanAcrossSnapshot2() throws IOException {
+  public void testScanAcrossSnapshot2() throws IOException, CloneNotSupportedException {
     // we are going to the scanning across snapshot with two kvs
     // kv1 should always be returned before kv2
     final byte[] one = Bytes.toBytes(1);

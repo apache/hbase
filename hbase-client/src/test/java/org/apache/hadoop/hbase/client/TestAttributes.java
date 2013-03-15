@@ -29,9 +29,10 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestAttributes {
+  private static final byte [] ROW = new byte [] {'r'};
   @Test
   public void testPutAttributes() {
-    Put put = new Put(new byte [] {});
+    Put put = new Put(ROW);
     Assert.assertTrue(put.getAttributesMap().isEmpty());
     Assert.assertNull(put.getAttribute("absent"));
 
@@ -79,7 +80,7 @@ public class TestAttributes {
 
   @Test
   public void testDeleteAttributes() {
-    Delete del = new Delete(new byte [] {});
+    Delete del = new Delete(new byte [] {'r'});
     Assert.assertTrue(del.getAttributesMap().isEmpty());
     Assert.assertNull(del.getAttribute("absent"));
 
@@ -126,7 +127,7 @@ public class TestAttributes {
 
   @Test
   public void testGetId() {
-    Get get = new Get(null);
+    Get get = new Get(ROW);
     Assert.assertNull("Make sure id is null if unset", get.toMap().get("id"));
     get.setId("myId");
     Assert.assertEquals("myId", get.toMap().get("id"));
@@ -134,7 +135,7 @@ public class TestAttributes {
 
   @Test
   public void testAppendId() {
-    Append append = new Append(Bytes.toBytes("testRow"));
+    Append append = new Append(ROW);
     Assert.assertNull("Make sure id is null if unset", append.toMap().get("id"));
     append.setId("myId");
     Assert.assertEquals("myId", append.toMap().get("id"));
@@ -142,7 +143,7 @@ public class TestAttributes {
 
   @Test
   public void testDeleteId() {
-    Delete delete = new Delete(new byte [] {});
+    Delete delete = new Delete(ROW);
     Assert.assertNull("Make sure id is null if unset", delete.toMap().get("id"));
     delete.setId("myId");
     Assert.assertEquals("myId", delete.toMap().get("id"));
@@ -150,7 +151,7 @@ public class TestAttributes {
 
   @Test
   public void testPutId() {
-    Put put = new Put(new byte [] {});
+    Put put = new Put(ROW);
     Assert.assertNull("Make sure id is null if unset", put.toMap().get("id"));
     put.setId("myId");
     Assert.assertEquals("myId", put.toMap().get("id"));
@@ -163,6 +164,4 @@ public class TestAttributes {
     scan.setId("myId");
     Assert.assertEquals("myId", scan.toMap().get("id"));
   }
-
 }
-

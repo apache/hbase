@@ -51,7 +51,6 @@ import org.apache.thrift.TException;
  * thrift server dies or is shut down before everything in the queue is drained.
  *
  */
-
 public class IncrementCoalescer implements IncrementCoalescerMBean {
 
   /**

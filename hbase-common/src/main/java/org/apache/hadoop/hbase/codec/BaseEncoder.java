@@ -22,7 +22,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.Cell;
 
-abstract class BaseEncoder implements Codec.Encoder {
+public abstract class BaseEncoder implements Codec.Encoder {
   protected final OutputStream out;
   // This encoder is 'done' once flush has been called.
   protected boolean flushed = false;
@@ -34,7 +34,7 @@ abstract class BaseEncoder implements Codec.Encoder {
   @Override
   public abstract void write(Cell cell) throws IOException;
 
-  void checkFlushed() throws CodecException {
+  protected void checkFlushed() throws CodecException {
     if (this.flushed) throw new CodecException("Flushed; done");
   }
 

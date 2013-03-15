@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.exceptions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 
 /**
  * This exception is thrown when attempts to read an HFile fail due to corruption or truncation

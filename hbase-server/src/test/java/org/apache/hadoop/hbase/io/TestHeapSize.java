@@ -20,10 +20,12 @@
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.TreeMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -44,14 +46,11 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.junit.experimental.categories.Category;
 import org.junit.BeforeClass;
-import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
+import org.junit.experimental.categories.Category;
 
 /**
  * Testing the sizing that HeapSize offers and compares to the size given by
@@ -252,10 +251,10 @@ public class TestHeapSize extends TestCase {
     cl = Put.class;
     expected = ClassSize.estimateBase(cl, false);
     //The actual TreeMap is not included in the above calculation
-    expected += ClassSize.TREEMAP;
-    Put put = new Put(Bytes.toBytes(""));
+    expected += ClassSize.align(ClassSize.TREEMAP + ClassSize.REFERENCE);
+    Put put = new Put(new byte [] {'0'});
     actual = put.heapSize();
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }

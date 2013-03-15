@@ -477,7 +477,10 @@ public class TestEndToEndSplitTransaction {
     HTable table = new HTable(conf, hri.getTableName());
 
     try {
-      Get get = new Get(hri.getStartKey());
+      byte [] row = hri.getStartKey();
+      // Check for null/empty row.  If we find one, use a key that is likely to be in first region.
+      if (row == null || row.length <= 0) row = new byte [] {'0'};
+      Get get = new Get(row);
       while (System.currentTimeMillis() - start < timeout) {
         try {
           table.get(get);

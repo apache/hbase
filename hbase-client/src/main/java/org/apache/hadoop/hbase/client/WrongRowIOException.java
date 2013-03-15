@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,27 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.exceptions;
+package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.HBaseIOException;
 
-/**
- * Reports a problem with a lease
- */
-@InterfaceAudience.Private
-public class LeaseException extends DoNotRetryIOException {
+public class WrongRowIOException extends HBaseIOException {
+  private static final long serialVersionUID = -5849522209440123059L;
 
-  private static final long serialVersionUID = 8179703995292418650L;
-
-  /** default constructor */
-  public LeaseException() {
-    super();
-  }
-
-  /**
-   * @param message
-   */
-  public LeaseException(String message) {
-    super(message);
+  public WrongRowIOException(final String msg) {
+    super(msg);
   }
 }

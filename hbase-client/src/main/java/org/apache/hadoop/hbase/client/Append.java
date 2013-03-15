@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Performs Append operations on a single row.
@@ -66,10 +65,22 @@ public class Append extends Mutation {
    * Create a Append operation for the specified row.
    * <p>
    * At least one column must be appended to.
-   * @param row row key
+   * @param row row key; makes a local copy of passed in array.
    */
   public Append(byte[] row) {
-    this.row = Arrays.copyOf(row, row.length);
+    this(row, 0, row.length);
+  }
+
+  /** Create a Append operation for the specified row.
+   * <p>
+   * At least one column must be appended to.
+   * @param rowArray Makes a copy out of this buffer.
+   * @param rowOffset
+   * @param rowLength
+   */
+  public Append(final byte [] rowArray, final int rowOffset, final int rowLength) {
+    checkRow(rowArray, rowOffset, rowLength);
+    this.row = Bytes.copy(rowArray, rowOffset, rowLength);
   }
 
   /**

@@ -63,6 +63,11 @@ public class Action<R> implements Comparable<R> {
   }
 
   @Override
+  public int hashCode() {
+    return this.action.hashCode();
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (this == obj) return true;
     if (obj == null || getClass() != obj.getClass()) return false;

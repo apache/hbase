@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
-import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 
 /**
  * Exception thrown by access-related methods.

@@ -46,7 +46,7 @@ public enum AuthMethod {
   private static final int FIRST_CODE = values()[0].code;
 
   /** Return the object represented by the code. */
-  private static AuthMethod valueOf(byte code) {
+  public static AuthMethod valueOf(byte code) {
     final int i = (code & 0xff) - FIRST_CODE;
     return i < 0 || i >= values().length ? null : values()[i];
   }

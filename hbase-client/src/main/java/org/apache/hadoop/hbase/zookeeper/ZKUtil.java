@@ -1587,7 +1587,7 @@ public class ZKUtil {
       try {
         getReplicationZnodesDump(zkw, sb);
       } catch (KeeperException ke) {
-        LOG.warn("Couldn't get the replication znode dump." + ke.getStackTrace());
+        LOG.warn("Couldn't get the replication znode dump", ke);
       }
       sb.append("\nQuorum Server Statistics:");
       String[] servers = zkw.getQuorum().split(",");

@@ -57,14 +57,23 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   /**
    * Create a Put operation for the specified row, using a given timestamp.
    *
-   * @param row row key
+   * @param row row key; we make a copy of what we are passed to keep local.
    * @param ts timestamp
    */
   public Put(byte[] row, long ts) {
-    if(row == null || row.length > HConstants.MAX_ROW_LENGTH) {
-      throw new IllegalArgumentException("Row key is invalid");
-    }
-    this.row = Arrays.copyOf(row, row.length);
+    this(row, 0, row.length, ts);
+  }
+
+  /**
+   * We make a copy of the passed in row key to keep local.
+   * @param rowArray
+   * @param rowOffset
+   * @param rowLength
+   * @param ts
+   */
+  public Put(byte [] rowArray, int rowOffset, int rowLength, long ts) {
+    checkRow(rowArray, rowOffset, rowLength);
+    this.row = Bytes.copy(rowArray, rowOffset, rowLength);
     this.ts = ts;
   }
 
@@ -125,11 +134,9 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length,
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
-    if(res != 0) {
-      throw new IOException("The row in the recently added KeyValue " +
-          Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(),
-        kv.getRowLength()) + " doesn't match the original one " +
-        Bytes.toStringBinary(this.row));
+    if (res != 0) {
+      throw new WrongRowIOException("The row in " + kv.toString() +
+        " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
     ((List<KeyValue>)list).add(kv);
     familyMap.put(family, list);

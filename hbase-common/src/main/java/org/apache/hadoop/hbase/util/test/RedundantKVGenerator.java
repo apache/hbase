@@ -34,6 +34,9 @@ import com.google.common.primitives.Bytes;
  * Generate list of key values which are very useful to test data block encoding
  * and compression.
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="RV_ABSOLUTE_VALUE_OF_RANDOM_INT",
+    justification="Should probably fix")
 public class RedundantKVGenerator {
   // row settings
   static byte[] DEFAULT_COMMON_PREFIX = new byte[0];

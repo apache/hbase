@@ -19,17 +19,17 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Used to perform Delete operations on a single row.
@@ -91,8 +91,27 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param timestamp maximum version timestamp (only for delete row)
    */
   public Delete(byte [] row, long timestamp) {
-    this.row = row;
-    this.ts = timestamp;
+    this(row, 0, row.length, timestamp);
+  }
+
+  /**
+   * Create a Delete operation for the specified row and timestamp.<p>
+   *
+   * If no further operations are done, this will delete all columns in all
+   * families of the specified row with a timestamp less than or equal to the
+   * specified timestamp.<p>
+   *
+   * This timestamp is ONLY used for a delete row operation.  If specifying
+   * families or columns, you must specify each timestamp individually.
+   * @param rowArray We make a local copy of this passed in row.
+   * @param rowOffset
+   * @param rowLength
+   * @param ts maximum version timestamp (only for delete row)
+   */
+  public Delete(final byte [] rowArray, final int rowOffset, final int rowLength, long ts) {
+    checkRow(rowArray, rowOffset, rowLength);
+    this.row = Bytes.copy(rowArray, rowOffset, rowLength);
+    this.ts = ts;
   }
 
   /**
@@ -121,10 +140,8 @@ public class Delete extends Mutation implements Comparable<Row> {
     }
     if (Bytes.compareTo(this.row, 0, row.length, kv.getBuffer(),
         kv.getRowOffset(), kv.getRowLength()) != 0) {
-      throw new IOException("The row in the recently added KeyValue "
-          + Bytes.toStringBinary(kv.getBuffer(), kv.getRowOffset(),
-              kv.getRowLength()) + " doesn't match the original one "
-          + Bytes.toStringBinary(this.row));
+      throw new WrongRowIOException("The row in " + kv.toString() +
+        " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
     byte [] family = kv.getFamily();
     List<? extends Cell> list = familyMap.get(family);
