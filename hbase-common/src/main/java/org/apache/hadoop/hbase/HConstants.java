@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.io.hfile.BlockType.MAGIC_LENGTH;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -29,8 +31,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import static org.apache.hadoop.hbase.io.hfile.BlockType.MAGIC_LENGTH;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -73,14 +73,6 @@ public final class HConstants {
   public static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HFILEBLOCK_HEADER_SIZE];
 
   //End HFileBlockConstants.
-
-  private static byte[] toBytes(String target) {
-    return target.getBytes(UTF8_CHARSET);
-  }
-
-  private static String toString(byte[] target) {
-    return new String(target, UTF8_CHARSET);
-  }
 
   /**
    * Status codes used for return values of bulk operations.
@@ -351,10 +343,10 @@ public final class HConstants {
   // should go down.
 
   /** The root table's name.*/
-  public static final byte [] ROOT_TABLE_NAME = toBytes("-ROOT-");
+  public static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
 
   /** The META table's name. */
-  public static final byte [] META_TABLE_NAME = toBytes(".META.");
+  public static final byte [] META_TABLE_NAME = Bytes.toBytes(".META.");
 
   /** delimiter used between portions of a region name */
   public static final int META_ROW_DELIMITER = ',';
@@ -363,36 +355,35 @@ public final class HConstants {
   public static final String CATALOG_FAMILY_STR = "info";
 
   /** The catalog family */
-  public static final byte [] CATALOG_FAMILY = toBytes(CATALOG_FAMILY_STR);
+  public static final byte [] CATALOG_FAMILY = Bytes.toBytes(CATALOG_FAMILY_STR);
 
   /** The RegionInfo qualifier as a string */
   public static final String REGIONINFO_QUALIFIER_STR = "regioninfo";
 
   /** The regioninfo column qualifier */
-  public static final byte [] REGIONINFO_QUALIFIER =
-    toBytes(REGIONINFO_QUALIFIER_STR);
+  public static final byte [] REGIONINFO_QUALIFIER = Bytes.toBytes(REGIONINFO_QUALIFIER_STR);
 
   /** The server column qualifier */
-  public static final byte [] SERVER_QUALIFIER = toBytes("server");
+  public static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
 
   /** The startcode column qualifier */
-  public static final byte [] STARTCODE_QUALIFIER = toBytes("serverstartcode");
+  public static final byte [] STARTCODE_QUALIFIER = Bytes.toBytes("serverstartcode");
 
   /** The open seqnum column qualifier */
-  public static final byte [] SEQNUM_QUALIFIER = toBytes("seqnumDuringOpen");
+  public static final byte [] SEQNUM_QUALIFIER = Bytes.toBytes("seqnumDuringOpen");
 
   /** The lower-half split region column qualifier */
-  public static final byte [] SPLITA_QUALIFIER = toBytes("splitA");
+  public static final byte [] SPLITA_QUALIFIER = Bytes.toBytes("splitA");
 
   /** The upper-half split region column qualifier */
-  public static final byte [] SPLITB_QUALIFIER = toBytes("splitB");
+  public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
 
   /**
    * The meta table version column qualifier.
    * We keep current version of the meta table in this column in <code>-ROOT-</code>
    * table: i.e. in the 'info:v' column.
    */
-  public static final byte [] META_VERSION_QUALIFIER = toBytes("v");
+  public static final byte [] META_VERSION_QUALIFIER = Bytes.toBytes("v");
 
   /**
    * The current version of the meta table.
@@ -761,7 +752,7 @@ public final class HConstants {
    * The byte array represents for NO_NEXT_INDEXED_KEY;
    * The actual value is irrelevant because this is always compared by reference.
    */
-  public static final byte [] NO_NEXT_INDEXED_KEY = toBytes("NO_NEXT_INDEXED_KEY");
+  public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
   public static final String HBASE_CONFIG_READ_ZOOKEEPER_CONFIG =
@@ -801,7 +792,7 @@ public final class HConstants {
   /** Directories that are not HBase user table directories */
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =
     Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
-      new String[] { toString(META_TABLE_NAME), toString(ROOT_TABLE_NAME) },
+      new String[] { Bytes.toString(META_TABLE_NAME), Bytes.toString(ROOT_TABLE_NAME) },
       HBASE_NON_TABLE_DIRS.toArray())));
 
   /** Health script related settings. */
