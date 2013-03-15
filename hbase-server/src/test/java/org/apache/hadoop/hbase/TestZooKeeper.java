@@ -261,8 +261,9 @@ public class TestZooKeeper {
       HTable ipMeta = new HTable(otherConf, HConstants.META_TABLE_NAME);
 
       // dummy, just to open the connection
-      localMeta.exists(new Get(HConstants.LAST_ROW));
-      ipMeta.exists(new Get(HConstants.LAST_ROW));
+      final byte [] row = new byte [] {'r'};
+      localMeta.exists(new Get(row));
+      ipMeta.exists(new Get(row));
 
       // make sure they aren't the same
       ZooKeeperWatcher z1 =
@@ -359,8 +360,26 @@ public class TestZooKeeper {
       "testMasterAddressManagerFromZK", null);
 
     // Save the previous ACL
-    Stat s =  new Stat();
-    List<ACL> oldACL =  zk.getACL("/", s);
+    Stat s =  null;
+    List<ACL> oldACL = null;
+    while (true) {
+      try {
+        s = new Stat();
+        oldACL = zk.getACL("/", s);
+        break;
+      } catch (KeeperException e) {
+        switch (e.code()) {
+          case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
+          case OPERATIONTIMEOUT:
+            LOG.warn("Possibly transient ZooKeeper exception", e);
+            Threads.sleep(100);
+            break;
+         default:
+            throw e;
+        }
+      }
+    }
 
     // I set this acl after the attempted creation of the cluster home node.
     // Add retries in case of retryable zk exceptions.

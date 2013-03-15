@@ -22,12 +22,12 @@ import java.io.InputStream;
 
 import org.apache.hadoop.hbase.Cell;
 
-abstract class BaseDecoder implements Codec.Decoder {
-  final InputStream in;
+public abstract class BaseDecoder implements Codec.Decoder {
+  protected final InputStream in;
   private boolean hasNext = true;
   private Cell current = null;
 
-  BaseDecoder(final InputStream in) {
+  public BaseDecoder(final InputStream in) {
     this.in = in;
   }
 
@@ -50,7 +50,7 @@ abstract class BaseDecoder implements Codec.Decoder {
    * @return extract a Cell
    * @throws IOException
    */
-  abstract Cell parseCell() throws IOException;
+  protected abstract Cell parseCell() throws IOException;
 
   @Override
   public Cell current() {

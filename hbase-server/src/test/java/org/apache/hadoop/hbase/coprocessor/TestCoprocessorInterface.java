@@ -318,7 +318,12 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     // now have all Environments fail
     for (int i = 0; i < regions.length; i++) {
       try {
-        Get g = new Get(regions[i].getStartKey());
+        byte [] r = regions[i].getStartKey();
+        if (r == null || r.length <= 0) {
+          // Its the start row.  Can't ask for null.  Ask for minimal key instead.
+          r = new byte [] {0};
+        }
+        Get g = new Get(r);
         regions[i].get(g);
         fail();
       } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException xc) {
@@ -342,7 +347,8 @@ public class TestCoprocessorInterface extends HBaseTestCase {
         findCoprocessor(CoprocessorII.class.getName());
     // new map and object created, hence the reference is different
     // hence the old entry was indeed removed by the GC and new one has been created
-    assertFalse(((CoprocessorII)c2).getSharedData().get("test2") == o2);
+    Object o3 = ((CoprocessorII)c2).getSharedData().get("test2");
+    assertFalse(o3 == o2);
   }
 
   public void testCoprocessorInterface() throws IOException {

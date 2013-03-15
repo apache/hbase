@@ -34,6 +34,7 @@ import org.junit.experimental.categories.Category;
 // TODO: cover more test cases
 @Category(SmallTests.class)
 public class TestGet {
+  private static final byte [] ROW = new byte [] {'r'};
   @Test
   public void testAttributesSerialization() throws IOException {
     Get get = new Get(Bytes.toBytes("row"));
@@ -53,7 +54,7 @@ public class TestGet {
 
   @Test
   public void testGetAttributes() {
-    Get get = new Get(null);
+    Get get = new Get(ROW);
     Assert.assertTrue(get.getAttributesMap().isEmpty());
     Assert.assertNull(get.getAttribute("absent"));
 
@@ -100,11 +101,10 @@ public class TestGet {
 
   @Test
   public void testNullQualifier() {
-    Get get = new Get(null);
+    Get get = new Get(ROW);
     byte[] family = Bytes.toBytes("family");
     get.addColumn(family, null);
     Set<byte[]> qualifiers = get.getFamilyMap().get(family);
     Assert.assertEquals(1, qualifiers.size());
   }
 }
-

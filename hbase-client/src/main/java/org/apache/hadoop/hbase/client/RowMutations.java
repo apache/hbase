@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Performs multiple mutations atomically on a single row.
@@ -34,6 +34,9 @@ import java.util.List;
  *
  * The mutations are performed in the order in which they
  * were added.
+ * 
+ * <p>We compare and equate mutations based off their row so be careful putting RowMutations
+ * into Sets or using them as keys in Maps.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -86,6 +89,16 @@ public class RowMutations implements Row {
   @Override
   public int compareTo(Row i) {
     return Bytes.compareTo(this.getRow(), i.getRow());
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) return true;
+    if (obj instanceof RowMutations) {
+      RowMutations other = (RowMutations)obj;
+      return compareTo(other) == 0;
+    }
+    return false;
   }
 
   @Override

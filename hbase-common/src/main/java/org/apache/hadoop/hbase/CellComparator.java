@@ -34,6 +34,9 @@ import com.google.common.primitives.Longs;
  * regionname, from row.  See KeyValue for how it has a special comparator to do .META. cells
  * and yet another for -ROOT-.
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="UNKNOWN",
+    justification="Findbugs doesn't like the way we are negating the result of a compare in below")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CellComparator implements Comparator<Cell>, Serializable{

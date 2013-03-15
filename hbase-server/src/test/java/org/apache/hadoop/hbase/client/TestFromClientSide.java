@@ -4306,6 +4306,8 @@ public class TestFromClientSide {
       fail("Should have thrown IllegalArgumentException");
     } catch (IllegalArgumentException iax) {
       // success
+    } catch (NullPointerException npe) {
+      // success
     }
     // try null family
     try {

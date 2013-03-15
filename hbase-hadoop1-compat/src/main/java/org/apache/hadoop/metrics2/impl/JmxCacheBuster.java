@@ -36,6 +36,9 @@ import java.util.concurrent.TimeUnit;
  * This class need to be in the o.a.h.metrics2.impl namespace as many of the variables/calls used
  * are package private.
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="LI_LAZY_INIT_STATIC",
+    justification="Yeah, its weird but its what we want")
 public class JmxCacheBuster {
   private static final Log LOG = LogFactory.getLog(JmxCacheBuster.class);
   private static Object lock = new Object();

@@ -19,14 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,6 +28,14 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Used to perform Get operations on a single row.
@@ -83,6 +83,7 @@ public class Get extends OperationWithAttributes
    * @param row row key
    */
   public Get(byte [] row) {
+    Mutation.checkRow(row);
     this.row = row;
   }
 
@@ -388,7 +389,15 @@ public class Get extends OperationWithAttributes
   //Row
   @Override
   public int compareTo(Row other) {
+    // TODO: This is wrong.  Can't have two gets the same just because on same row.
     return Bytes.compareTo(this.getRow(), other.getRow());
+  }
+
+  @Override
+  public int hashCode() {
+    // TODO: This is wrong.  Can't have two gets the same just because on same row.  But it
+    // matches how equals works currently and gets rid of the findbugs warning.
+    return Bytes.hashCode(this.getRow());
   }
 
   @Override
@@ -400,6 +409,7 @@ public class Get extends OperationWithAttributes
       return false;
     }
     Row other = (Row) obj;
+    // TODO: This is wrong.  Can't have two gets the same just because on same row.
     return compareTo(other) == 0;
   }
 }

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -388,20 +389,19 @@ public class TestFromClientSide3 {
     table.put(put);
     table.flushCommits();
 
-    //Try getting the row with an empty row key and make sure the other base cases work as well
-    Result res = table.get(new Get(new byte[0]));
-    assertTrue(res.isEmpty() == true);
+    //Try getting the row with an empty row key
+    Result res = null;
+    try {
+      res = table.get(new Get(new byte[0]));
+      fail();
+    } catch (IllegalArgumentException e) {
+      // Expected.
+    }
+    assertTrue(res == null);
     res = table.get(new Get(Bytes.toBytes("r1-not-exist")));
     assertTrue(res.isEmpty() == true);
     res = table.get(new Get(ROW_BYTES));
     assertTrue(Arrays.equals(res.getValue(FAMILY, COL_QUAL), VAL_BYTES));
-
-    //Now actually put in a row with an empty row key    
-    put = new Put(new byte[0]);
-    put.add(FAMILY, COL_QUAL, VAL_BYTES);
-    table.put(put);
-    table.flushCommits();
-    res = table.get(new Get(new byte[0]));
-    assertTrue(Arrays.equals(res.getValue(FAMILY, COL_QUAL), VAL_BYTES));
+    table.close();
   }
 }

@@ -250,6 +250,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
+   * Number of KeyValues carried by this Mutation.
    * @return the total number of KeyValues
    */
   public int size() {
@@ -298,5 +299,37 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     }
     heapsize += getAttributeSize();
     return heapsize;
+  }
+
+  /**
+   * @param row Row to check
+   * @throws IllegalArgumentException Thrown if <code>row</code> is empty or null or
+   * &gt; {@link HConstants#MAX_ROW_LENGTH}
+   * @return <code>row</code>
+   */
+  static byte [] checkRow(final byte [] row) {
+    return checkRow(row, 0, row == null? 0: row.length);
+  }
+
+  /**
+   * @param row Row to check
+   * @param offset
+   * @param length
+   * @throws IllegalArgumentException Thrown if <code>row</code> is empty or null or
+   * &gt; {@link HConstants#MAX_ROW_LENGTH}
+   * @return <code>row</code>
+   */
+  static byte [] checkRow(final byte [] row, final int offset, final int length) {
+    if (row == null) {
+      throw new IllegalArgumentException("Row buffer is null");
+    }
+    if (length == 0) {
+      throw new IllegalArgumentException("Row length is 0");
+    }
+    if (length > HConstants.MAX_ROW_LENGTH) {
+      throw new IllegalArgumentException("Row length " + length + " is > " +
+        HConstants.MAX_ROW_LENGTH);
+    }
+    return row;
   }
 }

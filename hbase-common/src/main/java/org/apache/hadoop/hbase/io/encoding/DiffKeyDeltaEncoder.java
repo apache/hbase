@@ -209,8 +209,9 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       state.familyNameWithSize =
           new byte[(state.familyLength & 0xff) + KeyValue.FAMILY_LENGTH_SIZE];
       state.familyNameWithSize[0] = state.familyLength;
-      source.read(state.familyNameWithSize, KeyValue.FAMILY_LENGTH_SIZE,
+      int read = source.read(state.familyNameWithSize, KeyValue.FAMILY_LENGTH_SIZE,
           state.familyLength);
+      assert read == state.familyLength;
     }
 
     // read flag

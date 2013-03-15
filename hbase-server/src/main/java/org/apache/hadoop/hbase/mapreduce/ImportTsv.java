@@ -100,9 +100,9 @@ public class ImportTsv extends Configured implements Tool {
 
     private int timestampKeyColumnIndex = DEFAULT_TIMESTAMP_COLUMN_INDEX;
 
-    public static String ROWKEY_COLUMN_SPEC = "HBASE_ROW_KEY";
+    public static final String ROWKEY_COLUMN_SPEC = "HBASE_ROW_KEY";
 
-    public static String TIMESTAMPKEY_COLUMN_SPEC = "HBASE_TS_KEY";
+    public static final String TIMESTAMPKEY_COLUMN_SPEC = "HBASE_TS_KEY";
 
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated.

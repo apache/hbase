@@ -1673,6 +1673,21 @@ public class Bytes {
   }
 
   /**
+   * Copy the byte array given in parameter and return an instance 
+   * of a new byte array with the same length and the same content.
+   * @param bytes the byte array to copy from
+   * @return a copy of the given designated byte array 
+   * @param offset
+   * @param length
+   */
+  public static byte [] copy(byte [] bytes, final int offset, final int length) {
+    if (bytes == null) return null;
+    byte [] result = new byte[length];
+    System.arraycopy(bytes, offset, result, 0, length);
+    return result;
+  }
+
+  /**
    * Search sorted array "a" for byte "key". I can't remember if I wrote this or copied it from
    * somewhere. (mcorgan)
    * @param a Array to search. Entries must be sorted and unique.

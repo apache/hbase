@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.regionserver.MetricsRegionSourceImpl;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
@@ -136,6 +137,13 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     MetricsRegionSourceImpl impl = (MetricsRegionSourceImpl) source;
     return this.regionWrapper.getRegionName()
         .compareTo(impl.regionWrapper.getRegionName());
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) return true;
+    if (!(obj instanceof MetricsRegionSourceImpl)) return false;
+    return compareTo((MetricsRegionSourceImpl)obj) == 0;
   }
 
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {

@@ -23,6 +23,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 
 /**
@@ -48,6 +49,11 @@ public class NullComparator extends ByteArrayComparable {
   }
 
   @Override
+  public int hashCode() {
+    return 0;
+  }
+
+  @Override
   public int compareTo(byte[] value, int offset, int length) {
     throw new UnsupportedOperationException();
   }
@@ -69,9 +75,9 @@ public class NullComparator extends ByteArrayComparable {
    */
   public static NullComparator parseFrom(final byte [] pbBytes)
   throws DeserializationException {
-    ComparatorProtos.NullComparator proto;
     try {
-      proto = ComparatorProtos.NullComparator.parseFrom(pbBytes);
+      @SuppressWarnings("unused")
+      ComparatorProtos.NullComparator proto = ComparatorProtos.NullComparator.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }

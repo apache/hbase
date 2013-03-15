@@ -48,7 +48,7 @@ import java.net.UnknownHostException;
 /**
  * Tracks the availability of the catalog tables
  * <code>.META.</code>.
- * 
+ *
  * This class is "read-only" in that the locations of the catalog tables cannot
  * be explicitly set.  Instead, ZooKeeper is used to learn of the availability
  * and location of <code>.META.</code>.
@@ -65,7 +65,7 @@ public class CatalogTracker {
   // servers when they needed to know of meta movement but also by
   // client-side (inside in HTable) so rather than figure meta
   // locations on fault, the client would instead get notifications out of zk.
-  // 
+  //
   // But this original intent is frustrated by the fact that this class has to
   // read an hbase table, the -ROOT- table, to figure out the .META. region
   // location which means we depend on an HConnection.  HConnection will do
@@ -110,13 +110,6 @@ public class CatalogTracker {
   private boolean instantiatedzkw = false;
   private Abortable abortable;
 
-  /*
-   * Do not clear this address once set.  Its needed when we do
-   * server shutdown processing -- we need to know who had .META. last.  If you
-   * want to know if the address is good, rely on {@link #metaAvailable} value.
-   */
-  private ServerName metaLocation;
-
   private boolean stopped = false;
 
   static final byte [] META_REGION_NAME =
@@ -147,7 +140,7 @@ public class CatalogTracker {
    * @param abortable If fatal exception we'll call abort on this.  May be null.
    * If it is we'll use the Connection associated with the passed
    * {@link Configuration} as our Abortable.
-   * @throws IOException 
+   * @throws IOException
    */
   public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
       Abortable abortable)
@@ -193,7 +186,7 @@ public class CatalogTracker {
    * Determines current availability of catalog tables and ensures all further
    * transitions of either region are tracked.
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void start() throws IOException, InterruptedException {
     LOG.debug("Starting catalog tracker " + this);
@@ -235,7 +228,7 @@ public class CatalogTracker {
    * not currently available.
    * @return {@link ServerName} for server hosting <code>.META.</code> or null
    * if none available
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public ServerName getMetaLocation() throws InterruptedException {
     return this.metaRegionTracker.getMetaRegionLocation();
@@ -309,8 +302,6 @@ public class CatalogTracker {
           LOG.info(".META. still not available, sleeping and retrying." +
           " Reason: " + e.getMessage());
         }
-      } catch (IOException e) {
-        LOG.info("Retrying", e);
       }
     }
   }
@@ -356,7 +347,7 @@ public class CatalogTracker {
       } else {
         throw ioe;
       }
-      
+
     }
     return protocol;
   }
@@ -406,7 +397,7 @@ public class CatalogTracker {
       }
     }
     LOG.info("Failed verification of " + Bytes.toStringBinary(regionName) +
-      " at address=" + address + "; " + t);
+      " at address=" + address + ", exception=" + t);
     return false;
   }
 
@@ -416,7 +407,7 @@ public class CatalogTracker {
    * the internal call to {@link #waitForMetaServerConnection(long)}.
    * @return True if the <code>.META.</code> location is healthy.
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public boolean verifyMetaRegionLocation(final long timeout)
   throws InterruptedException, IOException {

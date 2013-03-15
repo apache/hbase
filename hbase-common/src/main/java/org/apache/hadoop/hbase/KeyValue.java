@@ -872,9 +872,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * Clones a KeyValue.  This creates a copy, re-allocating the buffer.
    * @return Fully copied clone of this KeyValue
+   * @throws CloneNotSupportedException 
    */
   @Override
-  public KeyValue clone() {
+  public KeyValue clone() throws CloneNotSupportedException {
+    super.clone();
     byte [] b = new byte[this.length];
     System.arraycopy(this.bytes, this.offset, b, 0, this.length);
     KeyValue ret = new KeyValue(b, 0, b.length);
@@ -883,15 +885,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     // new entries
     ret.setMemstoreTS(memstoreTS);
     return ret;
-  }
-
-  /**
-   * Creates a deep copy of this KeyValue, re-allocating the buffer.
-   * Same function as {@link #clone()}.  Added for clarity vs shallowCopy()
-   * @return Deep copy of this KeyValue
-   */
-  public KeyValue deepCopy() {
-    return clone();
   }
 
   /**
