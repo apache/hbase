@@ -172,7 +172,7 @@ public class TestSnapshotCloneIndependence {
   }
 
   private static void waitOnSplit(final HTable t, int originalCount) throws Exception {
-    for (int i = 0; i < 45; i++) {
+    for (int i = 0; i < 200; i++) {
       try {
         Thread.sleep(50);
       } catch (InterruptedException e) {
