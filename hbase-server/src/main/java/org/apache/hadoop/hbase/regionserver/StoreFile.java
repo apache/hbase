@@ -107,6 +107,9 @@ public class StoreFile {
   public static final byte[] DELETE_FAMILY_COUNT =
       Bytes.toBytes("DELETE_FAMILY_COUNT");
 
+  /** See {@link #getEstimatedDiskDataSize()}. */
+  public static final byte[] DISK_DATA_SIZE_KEY = Bytes.toBytes("DISK_DATA_SIZE");
+
   /** Last Bloom filter key in FileInfo */
   private static final byte[] LAST_BLOOM_KEY = Bytes.toBytes("LAST_BLOOM_KEY");
 
@@ -148,6 +151,12 @@ public class StoreFile {
   // If true, this file was product of a major compaction.  Its then set
   // whenever you get a Reader.
   private AtomicBoolean majorCompaction = null;
+
+  /** See {@link #getEstimatedDiskDataSize()}. */
+  private long diskDataSize;
+
+  /** See {@link #getEstimatedDiskDataSize()}. */
+  private static double DATA_SIZE_FRACTION_ESTIMATE = 0.98;
 
   // If true, this file should not be included in minor compactions.
   // It's set whenever you get a Reader.
@@ -285,6 +294,15 @@ public class StoreFile {
 
   public long getModificationTimeStamp() {
     return modificationTimeStamp;
+  }
+
+  /**
+   * @return Estimated number of bytes taken by the data blocks of this file. Either the exact
+   * number written into the file metadata ({@link #DISK_DATA_SIZE_KEY}); or estimated as
+   * {@link #DATA_SIZE_FRACTION_ESTIMATE} of the file, if there's no such field (old files).
+   */
+  public long getEstimatedDiskDataSize() {
+    return diskDataSize;
   }
 
   /**
@@ -446,6 +464,12 @@ public class StoreFile {
           "proceeding without", e);
       this.reader.timeRangeTracker = null;
     }
+
+    b = metadataMap.get(DISK_DATA_SIZE_KEY);
+    // Estimate which fraction of the file is data if the file doesn't have this field.
+    this.diskDataSize = (b != null)
+        ? Bytes.toLong(b) : (long)(this.reader.length() * DATA_SIZE_FRACTION_ESTIMATE);
+
     return this.reader;
   }
 
@@ -1073,6 +1097,12 @@ public class StoreFile {
     }
 
     public void close() throws IOException {
+      // Estimate data size in this file before blooms and the HFile tail blocks.
+      long currentSize = writer.getCurrentSize();
+      if (currentSize >= 0) {
+        writer.appendFileInfo(DISK_DATA_SIZE_KEY, Bytes.toBytes(currentSize));
+      }
+
       boolean hasGeneralBloom = this.closeGeneralBloomFilter();
       boolean hasDeleteFamilyBloom = this.closeDeleteFamilyBloomFilter();
 
@@ -1094,6 +1124,10 @@ public class StoreFile {
      */
     HFile.Writer getHFileWriter() {
       return writer;
+    }
+
+    public long getCurrentSize() throws IOException {
+      return writer.getCurrentSize();
     }
   }
 
