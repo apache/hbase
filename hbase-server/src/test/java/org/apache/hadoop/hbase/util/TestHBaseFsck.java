@@ -1309,7 +1309,7 @@ public class TestHBaseFsck {
       // TODO: fixHdfsHoles does not work against splits, since the parent dir lingers on
       // for some time until children references are deleted. HBCK erroneously sees this as
       // overlapping regions
-      HBaseFsck hbck = doFsck(conf, true, true, false, false, false, true, true, true, null);
+      HBaseFsck hbck = doFsck(conf, true, true, false, false, false, true, true, true, false, null);
       assertErrors(hbck, new ERROR_CODE[] {}); //no LINGERING_SPLIT_PARENT reported
 
       // assert that the split META entry is still there.
@@ -1371,7 +1371,7 @@ public class TestHBaseFsck {
           ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN}); //no LINGERING_SPLIT_PARENT
 
       // now fix it. The fix should not revert the region split, but add daughters to META
-      hbck = doFsck(conf, true, true, false, false, false, false, false, false, null);
+      hbck = doFsck(conf, true, true, false, false, false, false, false, false, false, null);
       assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
           ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN});
 
@@ -1822,6 +1822,44 @@ public class TestHBaseFsck {
       deleteTable(table);
     }
   }
+
+  /**
+   * Test mission REGIONINFO_QUALIFIER in .META.
+   */
+  @Test
+  public void testMissingRegionInfoQualifier() throws Exception {
+    String table = "testMissingRegionInfoQualifier";
+    try {
+      setupTable(table);
+
+      // Mess it up by removing the RegionInfo for one region.
+      HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getName());
+      ResultScanner scanner = meta.getScanner(new Scan());
+      Result result = scanner.next();
+      Delete delete = new Delete (result.getRow());
+      delete.deleteColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      meta.delete(delete);
+
+      // Mess it up by creating a fake META entry with no associated RegionInfo
+      meta.put(new Put(Bytes.toBytes(table + ",,1361911384013.810e28f59a57da91c66")).add(
+        HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes.toBytes("node1:60020")));
+      meta.put(new Put(Bytes.toBytes(table + ",,1361911384013.810e28f59a57da91c66")).add(
+        HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, Bytes.toBytes(1362150791183L)));
+      meta.close();
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertTrue(hbck.getErrors().getErrorList().contains(ERROR_CODE.EMPTY_META_CELL));
+
+      // fix reference file
+      hbck = doFsck(conf, true);
+
+      // check that reference file fixed
+      assertFalse(hbck.getErrors().getErrorList().contains(ERROR_CODE.EMPTY_META_CELL));
+    } finally {
+      deleteTable(table);
+    }
+  }
+
 
   /**
    * Test pluggable error reporter. It can be plugged in
