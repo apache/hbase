@@ -19,8 +19,6 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -485,7 +483,7 @@ public class AccessController extends BaseRegionObserver
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
     Set<byte[]> families = desc.getFamiliesKeys();
-    HashMap<byte[], Set<byte[]>> familyMap = Maps.newHashMapWithExpectedSize(families.size());
+    Map<byte[], Set<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
     for (byte[] family: families) {
       familyMap.put(family, null);
     }
@@ -969,9 +967,9 @@ public class AccessController extends BaseRegionObserver
       final Increment increment)
       throws IOException {
     // Create a map of family to qualifiers.
-    Map<byte[], Set<byte[]>> familyMap = Maps.newHashMap();
+    Map<byte[], Set<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte [], List<? extends Cell>> entry: increment.getFamilyMap().entrySet()) {
-      Set<byte []> qualifiers = new HashSet<byte []>(entry.getValue().size());
+      Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
       for (Cell cell: entry.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         qualifiers.add(kv.getQualifier());
@@ -1257,10 +1255,12 @@ public class AccessController extends BaseRegionObserver
                   Bytes.toString(tperm.getTable())));
             }
 
-            HashMap<byte[], Set<byte[]>> familyMap = Maps.newHashMapWithExpectedSize(1);
+            Map<byte[], Set<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
             if (tperm.getFamily() != null) {
               if (tperm.getQualifier() != null) {
-                familyMap.put(tperm.getFamily(), Sets.newHashSet(tperm.getQualifier()));
+                Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
+                qualifiers.add(tperm.getQualifier());
+                familyMap.put(tperm.getFamily(), qualifiers);
               } else {
                 familyMap.put(tperm.getFamily(), null);
               }
@@ -1345,7 +1345,7 @@ public class AccessController extends BaseRegionObserver
       return null;
     }
 
-    Map<byte[], Collection<byte[]>> familyMap = Maps.newHashMapWithExpectedSize(1);
+    Map<byte[], Collection<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
     familyMap.put(family, qualifier != null ? ImmutableSet.of(qualifier) : null);
     return familyMap;
   }

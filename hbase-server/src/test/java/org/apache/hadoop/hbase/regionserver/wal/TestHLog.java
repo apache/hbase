@@ -22,7 +22,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
 
@@ -317,7 +317,7 @@ public class TestHLog  {
    */
   @Test
   public void testFindMemstoresWithEditsEqualOrOlderThan() throws IOException {
-    Map<byte [], Long> regionsToSeqids = new HashMap<byte [], Long>();
+    Map<byte [], Long> regionsToSeqids = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < 10; i++) {
       Long l = Long.valueOf(i);
       regionsToSeqids.put(l.toString().getBytes(), l);

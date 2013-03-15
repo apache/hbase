@@ -27,7 +27,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -172,7 +172,8 @@ class FSHLog implements HLog, Syncable {
    * contains the regions that are currently flushing. That way we can store two numbers for
    * flushing and non-flushing (oldestUnflushedSeqNums) memstore for the same region.
    */
-  private final Map<byte[], Long> oldestFlushingSeqNums = new HashMap<byte[], Long>();
+  private final Map<byte[], Long> oldestFlushingSeqNums =
+    new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
 
   private volatile boolean closed = false;
 

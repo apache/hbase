@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Reducer;
 
 /**
@@ -54,7 +55,7 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
     // flush could result in multiple Puts for a single rowkey. That is
     // acceptable because Combiner is run as an optimization and it's not
     // critical that all Puts are grouped perfectly.
-    Map<byte[], Put> puts = new HashMap<byte[], Put>();
+    Map<byte[], Put> puts = new TreeMap<byte[], Put>(Bytes.BYTES_COMPARATOR);
     for (Put p : vals) {
       cnt++;
       if (!puts.containsKey(p.getRow())) {
