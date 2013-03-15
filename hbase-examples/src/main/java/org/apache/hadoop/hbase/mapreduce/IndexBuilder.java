@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -74,7 +74,7 @@ public class IndexBuilder {
   public static class Map extends
       Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Put> {
     private byte[] family;
-    private HashMap<byte[], ImmutableBytesWritable> indexes;
+    private TreeMap<byte[], ImmutableBytesWritable> indexes;
 
     @Override
     protected void map(ImmutableBytesWritable rowKey, Result result, Context context)
@@ -101,7 +101,7 @@ public class IndexBuilder {
       String[] fields = configuration.getStrings("index.fields");
       String familyName = configuration.get("index.familyname");
       family = Bytes.toBytes(familyName);
-      indexes = new HashMap<byte[], ImmutableBytesWritable>();
+      indexes = new TreeMap<byte[], ImmutableBytesWritable>(Bytes.BYTES_COMPARATOR);
       for(String field : fields) {
         // if the table is "people" and the field to index is "email", then the
         // index table will be called "people-email"

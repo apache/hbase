@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import java.io.IOException;
@@ -38,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -89,7 +91,7 @@ public class HTableMultiplexer {
     this.serverToBufferQueueMap = new ConcurrentHashMap<HRegionLocation,
       LinkedBlockingQueue<PutStatus>>();
     this.serverToFlushWorkerMap = new ConcurrentHashMap<HRegionLocation, HTableFlushWorker>();
-    this.tableNameToHTableMap = new ConcurrentHashMap<byte[], HTable>();
+    this.tableNameToHTableMap = new ConcurrentSkipListMap<byte[], HTable>(Bytes.BYTES_COMPARATOR);
     this.retryNum = conf.getInt("hbase.client.retries.number", 10);
     this.perRegionServerBufferQueueSize = perRegionServerBufferQueueSize;
   }
