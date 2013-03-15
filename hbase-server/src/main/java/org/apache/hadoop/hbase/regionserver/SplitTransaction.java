@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -34,9 +35,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -46,7 +44,6 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -90,7 +87,6 @@ public class SplitTransaction {
   private final HRegion parent;
   private HRegionInfo hri_a;
   private HRegionInfo hri_b;
-  private Path splitdir;
   private long fileSplitTimeout = 30000;
   private int znodeVersion = -1;
 
@@ -150,7 +146,6 @@ public class SplitTransaction {
   public SplitTransaction(final HRegion r, final byte [] splitrow) {
     this.parent = r;
     this.splitrow = splitrow;
-    this.splitdir = getSplitDir(this.parent);
   }
 
   /**
@@ -174,10 +169,8 @@ public class SplitTransaction {
       return false;
     }
     long rid = getDaughterRegionIdTimestamp(hri);
-    this.hri_a = new HRegionInfo(hri.getTableName(), startKey, this.splitrow,
-      false, rid);
-    this.hri_b = new HRegionInfo(hri.getTableName(), this.splitrow, endKey,
-      false, rid);
+    this.hri_a = new HRegionInfo(hri.getTableName(), startKey, this.splitrow, false, rid);
+    this.hri_b = new HRegionInfo(hri.getTableName(), this.splitrow, endKey, false, rid);
     return true;
   }
 
@@ -206,7 +199,8 @@ public class SplitTransaction {
    * @param server Hosting server instance.  Can be null when testing (won't try
    * and update in zk if a null server)
    * @param services Used to online/offline regions.
-   * @throws IOException If thrown, transaction failed. Call {@link #rollback(Server, RegionServerServices)}
+   * @throws IOException If thrown, transaction failed.
+   *    Call {@link #rollback(Server, RegionServerServices)}
    * @return Regions created
    */
   /* package */PairOfSameType<HRegion> createDaughters(final Server server,
@@ -216,7 +210,8 @@ public class SplitTransaction {
         (services != null && services.isStopping())) {
       throw new IOException("Server is stopped or stopping");
     }
-    assert !this.parent.lock.writeLock().isHeldByCurrentThread(): "Unsafe to hold write lock while performing RPCs";
+    assert !this.parent.lock.writeLock().isHeldByCurrentThread():
+      "Unsafe to hold write lock while performing RPCs";
 
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
@@ -253,7 +248,8 @@ public class SplitTransaction {
         // Master will get the callback for node change only if the transition is successful.
         // Note that if the transition fails then the rollback will delete the created znode
         // as the journal entry SET_SPLITTING_IN_ZK is added.
-        // TODO : May be we can add some new state to znode and handle the new state incase of success/failure
+        // TODO : May be we can add some new state to znode and handle the new state incase
+        //        of success/failure
         this.znodeVersion = transitionNodeSplitting(server.getZooKeeper(),
             this.parent.getRegionInfo(), server.getServerName(), -1);
       } catch (KeeperException e) {
@@ -262,10 +258,10 @@ public class SplitTransaction {
       }
     }
 
-    createSplitDir(this.parent.getFilesystem(), this.splitdir);
+    this.parent.getRegionFileSystem().createSplitsDir();
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
 
-    List<StoreFile> hstoreFilesToSplit = null;
+    Map<byte[], List<StoreFile>> hstoreFilesToSplit = null;
     Exception exceptionToThrow = null;
     try{
       hstoreFilesToSplit = this.parent.close(false);
@@ -298,18 +294,18 @@ public class SplitTransaction {
     // splitStoreFiles creates daughter region dirs under the parent splits dir
     // Nothing to unroll here if failure -- clean up of CREATE_SPLIT_DIR will
     // clean this up.
-    splitStoreFiles(this.splitdir, hstoreFilesToSplit);
+    splitStoreFiles(hstoreFilesToSplit);
 
     // Log to the journal that we are creating region A, the first daughter
     // region.  We could fail halfway through.  If we do, we could have left
     // stuff in fs that needs cleanup -- a storefile or two.  Thats why we
     // add entry to journal BEFORE rather than AFTER the change.
     this.journal.add(JournalEntry.STARTED_REGION_A_CREATION);
-    HRegion a = createDaughterRegion(this.hri_a);
+    HRegion a = this.parent.createDaughterRegionFromSplits(this.hri_a);
 
     // Ditto
     this.journal.add(JournalEntry.STARTED_REGION_B_CREATION);
-    HRegion b = createDaughterRegion(this.hri_b);
+    HRegion b = this.parent.createDaughterRegionFromSplits(this.hri_b);
 
     // This is the point of no return.  Adding subsequent edits to .META. as we
     // do below when we do the daughter opens adding each to .META. can fail in
@@ -347,7 +343,8 @@ public class SplitTransaction {
    * @param services Used to online/offline regions.
    * @param a first daughter region
    * @param a second daughter region
-   * @throws IOException If thrown, transaction failed. Call {@link #rollback(Server, RegionServerServices)}
+   * @throws IOException If thrown, transaction failed.
+   *          Call {@link #rollback(Server, RegionServerServices)}
    */
   /* package */void openDaughters(final Server server,
       final RegionServerServices services, HRegion a, HRegion b)
@@ -404,7 +401,8 @@ public class SplitTransaction {
    * @param services Used to online/offline regions.
    * @param a first daughter region
    * @param a second daughter region
-   * @throws IOException If thrown, transaction failed. Call {@link #rollback(Server, RegionServerServices)}
+   * @throws IOException If thrown, transaction failed.
+   *          Call {@link #rollback(Server, RegionServerServices)}
    */
   /* package */void transitionZKNode(final Server server,
       final RegionServerServices services, HRegion a, HRegion b)
@@ -456,7 +454,8 @@ public class SplitTransaction {
    * @param server Hosting server instance.  Can be null when testing (won't try
    * and update in zk if a null server)
    * @param services Used to online/offline regions.
-   * @throws IOException If thrown, transaction failed. Call {@link #rollback(Server, RegionServerServices)}
+   * @throws IOException If thrown, transaction failed.
+   *          Call {@link #rollback(Server, RegionServerServices)}
    * @return Regions created
    * @throws IOException
    * @see #rollback(Server, RegionServerServices)
@@ -542,56 +541,8 @@ public class SplitTransaction {
     }
   }
 
-  private static Path getSplitDir(final HRegion r) {
-    return new Path(r.getRegionDir(), HRegionFileSystem.REGION_SPLITS_DIR);
-  }
-
-  /**
-   * @param fs Filesystem to use
-   * @param splitdir Directory to store temporary split data in
-   * @throws IOException If <code>splitdir</code> already exists or we fail
-   * to create it.
-   * @see #cleanupSplitDir(FileSystem, Path)
-   */
-  private static void createSplitDir(final FileSystem fs, final Path splitdir)
-  throws IOException {
-    if (fs.exists(splitdir)) {
-      LOG.info("The " + splitdir
-          + " directory exists.  Hence deleting it to recreate it");
-      if (!fs.delete(splitdir, true)) {
-        throw new IOException("Failed deletion of " + splitdir
-            + " before creating them again.");
-      }
-    }
-    if (!fs.mkdirs(splitdir)) throw new IOException("Failed create of " + splitdir);
-  }
-
-  private static void cleanupSplitDir(final FileSystem fs, final Path splitdir)
-  throws IOException {
-    // Splitdir may have been cleaned up by reopen of the parent dir.
-    deleteDir(fs, splitdir, false);
-  }
-
-  /**
-   * @param fs Filesystem to use
-   * @param dir Directory to delete
-   * @param mustPreExist If true, we'll throw exception if <code>dir</code>
-   * does not preexist, else we'll just pass.
-   * @throws IOException Thrown if we fail to delete passed <code>dir</code>
-   */
-  private static void deleteDir(final FileSystem fs, final Path dir,
-      final boolean mustPreExist)
-  throws IOException {
-    if (!fs.exists(dir)) {
-      if (mustPreExist) throw new IOException(dir.toString() + " does not exist!");
-    } else if (!fs.delete(dir, true)) {
-      throw new IOException("Failed delete of " + dir);
-    }
-  }
-
-  private void splitStoreFiles(final Path splitdir,
-    final List<StoreFile> hstoreFilesToSplit)
-  throws IOException {
+  private void splitStoreFiles(final Map<byte[], List<StoreFile>> hstoreFilesToSplit)
+      throws IOException {
     if (hstoreFilesToSplit == null) {
       // Could be null because close didn't succeed -- for now consider it fatal
       throw new IOException("Close returned empty list of StoreFiles");
@@ -611,11 +562,12 @@ public class SplitTransaction {
       (ThreadPoolExecutor) Executors.newFixedThreadPool(nbFiles, factory);
     List<Future<Void>> futures = new ArrayList<Future<Void>>(nbFiles);
 
-     // Split each store file.
-    for (StoreFile sf: hstoreFilesToSplit) {
-      //splitStoreFile(sf, splitdir);
-      StoreFileSplitter sfs = new StoreFileSplitter(sf, splitdir);
-      futures.add(threadPool.submit(sfs));
+    // Split each store file.
+    for (Map.Entry<byte[], List<StoreFile>> entry: hstoreFilesToSplit.entrySet()) {
+      for (StoreFile sf: entry.getValue()) {
+        StoreFileSplitter sfs = new StoreFileSplitter(entry.getKey(), sf);
+        futures.add(threadPool.submit(sfs));
+      }
     }
     // Shutdown the pool
     threadPool.shutdown();
@@ -652,14 +604,11 @@ public class SplitTransaction {
     }
   }
 
-  private void splitStoreFile(final StoreFile sf, final Path splitdir)
-  throws IOException {
-    FileSystem fs = this.parent.getFilesystem();
-    byte [] family = sf.getFamily();
-    Path storedir = HStore.getStoreHomedir(splitdir, this.hri_a, family);
-    StoreFile.split(fs, storedir, sf, this.splitrow, false);
-    storedir = HStore.getStoreHomedir(splitdir, this.hri_b, family);
-    StoreFile.split(fs, storedir, sf, this.splitrow, true);
+  private void splitStoreFile(final byte[] family, final StoreFile sf) throws IOException {
+    HRegionFileSystem fs = this.parent.getRegionFileSystem();
+    String familyName = Bytes.toString(family);
+    fs.splitStoreFile(this.hri_a, familyName, sf, this.splitrow, false);
+    fs.splitStoreFile(this.hri_b, familyName, sf, this.splitrow, true);
   }
 
   /**
@@ -667,58 +616,23 @@ public class SplitTransaction {
    * in parallel instead of sequentially.
    */
   class StoreFileSplitter implements Callable<Void> {
-
+    private final byte[] family;
     private final StoreFile sf;
-    private final Path splitdir;
 
     /**
      * Constructor that takes what it needs to split
+     * @param family Family that contains the store file
      * @param sf which file
-     * @param splitdir where the splitting is done
      */
-    public StoreFileSplitter(final StoreFile sf, final Path splitdir) {
+    public StoreFileSplitter(final byte[] family, final StoreFile sf) {
       this.sf = sf;
-      this.splitdir = splitdir;
+      this.family = family;
     }
 
     public Void call() throws IOException {
-      splitStoreFile(sf, splitdir);
+      splitStoreFile(family, sf);
       return null;
     }
-  }
-
-  /**
-   * @param hri Spec. for daughter region to open.
-   * @param rsServices RegionServerServices this region should use.
-   * @return Created daughter HRegion.
-   * @throws IOException
-   * @see #cleanupDaughterRegion(FileSystem, Path, String)
-   */
-  HRegion createDaughterRegion(final HRegionInfo hri) throws IOException {
-    // Package private so unit tests have access.
-    Path regionDir = getSplitDirForDaughter(this.splitdir, hri);
-    return this.parent.createDaughterRegion(hri, regionDir);
-  }
-
-  private static void cleanupDaughterRegion(final FileSystem fs,
-    final Path tabledir, final String encodedName)
-  throws IOException {
-    Path regiondir = HRegion.getRegionDir(tabledir, encodedName);
-    // Dir may not preexist.
-    deleteDir(fs, regiondir, false);
-  }
-
-  /*
-   * Get the daughter directories in the splits dir.  The splits dir is under
-   * the parent regions' directory.
-   * @param splitdir
-   * @param hri
-   * @return Path to daughter split dir.
-   * @throws IOException
-   */
-  private static Path getSplitDirForDaughter(final Path splitdir, final HRegionInfo hri)
-      throws IOException {
-    return new Path(splitdir, hri.getEncodedName());
   }
 
   /**
@@ -736,7 +650,6 @@ public class SplitTransaction {
     }
 
     boolean result = true;
-    FileSystem fs = this.parent.getFilesystem();
     ListIterator<JournalEntry> iterator =
       this.journal.listIterator(this.journal.size());
     // Iterate in reverse.
@@ -751,8 +664,8 @@ public class SplitTransaction {
         break;
 
       case CREATE_SPLIT_DIR:
-    	this.parent.writestate.writesEnabled = true;
-        cleanupSplitDir(fs, this.splitdir);
+        this.parent.writestate.writesEnabled = true;
+        this.parent.getRegionFileSystem().cleanupSplitsDir();
         break;
 
       case CLOSED_PARENT_REGION:
@@ -771,13 +684,11 @@ public class SplitTransaction {
         break;
 
       case STARTED_REGION_A_CREATION:
-        cleanupDaughterRegion(fs, this.parent.getTableDir(),
-          this.hri_a.getEncodedName());
+        this.parent.getRegionFileSystem().cleanupDaughterRegion(this.hri_a);
         break;
 
       case STARTED_REGION_B_CREATION:
-        cleanupDaughterRegion(fs, this.parent.getTableDir(),
-          this.hri_b.getEncodedName());
+        this.parent.getRegionFileSystem().cleanupDaughterRegion(this.hri_b);
         break;
 
       case OFFLINED_PARENT:
@@ -808,39 +719,6 @@ public class SplitTransaction {
 
   HRegionInfo getSecondDaughter() {
     return hri_b;
-  }
-
-  // For unit testing.
-  Path getSplitDir() {
-    return this.splitdir;
-  }
-
-  /**
-   * Clean up any split detritus that may have been left around from previous
-   * split attempts.
-   * Call this method on initial region deploy.  Cleans up any mess
-   * left by previous deploys of passed <code>r</code> region.
-   * @param r
-   * @throws IOException
-   */
-  static void cleanupAnySplitDetritus(final HRegion r) throws IOException {
-    Path splitdir = getSplitDir(r);
-    FileSystem fs = r.getFilesystem();
-    if (!fs.exists(splitdir)) return;
-    // Look at the splitdir.  It could have the encoded names of the daughter
-    // regions we tried to make.  See if the daughter regions actually got made
-    // out under the tabledir.  If here under splitdir still, then the split did
-    // not complete.  Try and do cleanup.  This code WILL NOT catch the case
-    // where we successfully created daughter a but regionserver crashed during
-    // the creation of region b.  In this case, there'll be an orphan daughter
-    // dir in the filesystem.  TOOD: Fix.
-    FileStatus [] daughters = fs.listStatus(splitdir, new FSUtils.DirFilter(fs));
-    for (int i = 0; i < daughters.length; i++) {
-      cleanupDaughterRegion(fs, r.getTableDir(),
-        daughters[i].getPath().getName());
-    }
-    cleanupSplitDir(r.getFilesystem(), splitdir);
-    LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
   }
 
   private static void cleanZK(final Server server, final HRegionInfo hri) {

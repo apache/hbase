@@ -330,7 +330,7 @@ public class RestoreSnapshotHelper {
           Path hfile = new Path(familyDir, hfileName);
           LOG.trace("Removing hfile=" + hfile +
             " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
-          HFileArchiver.archiveStoreFile(fs, regionInfo, conf, tableDir, family, hfile);
+          HFileArchiver.archiveStoreFile(conf, fs, regionInfo, tableDir, family, hfile);
         }
       } else {
         // Family doesn't exists in the snapshot

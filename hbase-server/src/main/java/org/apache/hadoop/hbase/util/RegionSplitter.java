@@ -43,7 +43,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -57,8 +56,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
-import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -123,7 +121,8 @@ import com.google.common.collect.Sets;
  * <p>
  * The more complicated answer is that this depends upon the largest storefile
  * in your region. With a growing data size, this will get larger over time. You
- * want the largest region to be just big enough that the {@link HStore} compact
+ * want the largest region to be just big enough that the
+ * {@link org.apache.hadoop.hbase.regionserver.HStore} compact
  * selection algorithm only compacts it due to a timed major. If you don't, your
  * cluster can be prone to compaction storms as the algorithm decides to run
  * major compactions on a large series of regions all at once. Note that
@@ -628,9 +627,10 @@ public class RegionSplitter {
     LinkedList<Pair<byte[], byte[]>> physicalSplitting = Lists.newLinkedList();
 
     // get table info
-    Path hbDir = new Path(table.getConfiguration().get(HConstants.HBASE_DIR));
-    Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
+    Path rootDir = FSUtils.getRootDir(table.getConfiguration());
+    Path tableDir = HTableDescriptor.getTableDir(rootDir, table.getTableName());
     FileSystem fs = tableDir.getFileSystem(table.getConfiguration());
+    HTableDescriptor htd = table.getTableDescriptor();
 
     // clear the cache to forcibly refresh region information
     table.clearRegionCache();
@@ -661,25 +661,22 @@ public class RegionSplitter {
         check.add(table.getRegionLocation(start).getRegionInfo());
         check.add(table.getRegionLocation(split).getRegionInfo());
         for (HRegionInfo hri : check.toArray(new HRegionInfo[] {})) {
-          boolean refFound = false;
           byte[] sk = hri.getStartKey();
           if (sk.length == 0)
             sk = splitAlgo.firstRow();
           String startKey = splitAlgo.rowToStr(sk);
-          HTableDescriptor htd = table.getTableDescriptor();
+
+          HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
+              table.getConfiguration(), fs, tableDir, hri, true);
+
           // check every Column Family for that region
+          boolean refFound = false;
           for (HColumnDescriptor c : htd.getFamilies()) {
-            Path cfDir = HStore.getStoreHomedir(tableDir, hri, c.getName());
-            if (fs.exists(cfDir)) {
-              for (FileStatus file : fs.listStatus(cfDir)) {
-                refFound |= StoreFileInfo.isReference(file.getPath());
-                if (refFound)
-                  break;
-              }
-            }
-            if (refFound)
+            if ((refFound = regionFs.hasReferences(htd.getNameAsString()))) {
               break;
+            }
           }
+
           // compaction is completed when all reference files are gone
           if (!refFound) {
             check.remove(hri);
@@ -691,8 +688,7 @@ public class RegionSplitter {
           physicalSplitting.add(region);
         }
       } catch (NoServerForRegionException nsfre) {
-        LOG.debug("No Server Exception thrown for: "
-            + splitAlgo.rowToStr(start));
+        LOG.debug("No Server Exception thrown for: " + splitAlgo.rowToStr(start));
         physicalSplitting.add(region);
         table.clearRegionCache();
       }

@@ -530,8 +530,7 @@ public class TestWALReplay {
     for (HColumnDescriptor hcd: htd.getFamilies()) {
       cf_count++;
       if (cf_count == 2) {
-        this.fs.delete(new Path(region.getRegionDir(), Bytes.toString(hcd.getName()))
-            , true);
+        region.getRegionFileSystem().deleteFamily(hcd.getNameAsString());
       }
     }
 

@@ -30,10 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,10 +41,8 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 
@@ -226,10 +222,8 @@ class CatalogJanitor extends Chore {
     boolean result = false;
     // Run checks on each daughter split.
     PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(rowContent);
-    Pair<Boolean, Boolean> a =
-      checkDaughterInFs(parent, daughters.getFirst());
-    Pair<Boolean, Boolean> b =
-      checkDaughterInFs(parent, daughters.getSecond());
+    Pair<Boolean, Boolean> a = checkDaughterInFs(parent, daughters.getFirst());
+    Pair<Boolean, Boolean> b = checkDaughterInFs(parent, daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
@@ -284,45 +278,35 @@ class CatalogJanitor extends Chore {
    */
   Pair<Boolean, Boolean> checkDaughterInFs(final HRegionInfo parent, final HRegionInfo daughter)
   throws IOException {
-    boolean references = false;
-    boolean exists = false;
     if (daughter == null)  {
       return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
     }
+
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
-    Path tabledir = new Path(rootdir, daughter.getTableNameAsString());
-    Path regiondir = new Path(tabledir, daughter.getEncodedName());
-    exists = fs.exists(regiondir);
-    if (!exists) {
-      LOG.warn("Daughter regiondir does not exist: " + regiondir.toString());
-      return new Pair<Boolean, Boolean>(exists, Boolean.FALSE);
+    Path tabledir = HTableDescriptor.getTableDir(rootdir, daughter.getTableName());
+
+    HRegionFileSystem regionFs = null;
+    try {
+      regionFs = HRegionFileSystem.openRegionFromFileSystem(
+          this.services.getConfiguration(), fs, tabledir, daughter, true);
+    } catch (IOException e) {
+      LOG.warn("Daughter region does not exist: " + daughter.getEncodedName());
+      return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
     }
-    HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTableName());
 
+    boolean references = false;
+    HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTableNameAsString());
     for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
-      Path p = HStore.getStoreHomedir(tabledir, daughter, family.getName());
-      if (!fs.exists(p)) continue;
-      // Look for reference files.  Call listStatus with anonymous instance of PathFilter.
-      FileStatus [] ps = FSUtils.listStatus(fs, p,
-          new PathFilter () {
-            public boolean accept(Path path) {
-              return StoreFileInfo.isReference(path);
-            }
-          }
-      );
-
-      if (ps != null && ps.length > 0) {
-        references = true;
+      if ((references = regionFs.hasReferences(family.getNameAsString()))) {
         break;
       }
     }
-    return new Pair<Boolean, Boolean>(Boolean.valueOf(exists),
-      Boolean.valueOf(references));
+    return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.valueOf(references));
   }
 
-  private HTableDescriptor getTableDescriptor(byte[] tableName)
-  throws FileNotFoundException, IOException {
-    return this.services.getTableDescriptors().get(Bytes.toString(tableName));
+  private HTableDescriptor getTableDescriptor(final String tableName)
+      throws FileNotFoundException, IOException {
+    return this.services.getTableDescriptors().get(tableName);
   }
 }

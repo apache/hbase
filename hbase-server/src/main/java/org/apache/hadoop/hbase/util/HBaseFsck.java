@@ -555,7 +555,7 @@ public class HBaseFsck extends Configured implements Tool {
     HRegionInfo hri = new HRegionInfo(template.getName(), orphanRegionRange.getFirst(), orphanRegionRange.getSecond());
     LOG.info("Creating new region : " + hri);
     HRegion region = HBaseFsckRepair.createHDFSRegionDir(getConf(), hri, template);
-    Path target = region.getRegionDir();
+    Path target = region.getRegionFileSystem().getRegionDir();
 
     // rename all the data to new region
     mergeRegionDirs(target, hi);
@@ -2183,11 +2183,11 @@ public class HBaseFsck extends Configured implements Tool {
         HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
         LOG.info("Created new empty container region: " +
             newRegion + " to contain regions: " + Joiner.on(",").join(overlap));
-        debugLsr(region.getRegionDir());
+        debugLsr(region.getRegionFileSystem().getRegionDir());
 
         // all target regions are closed, should be able to safely cleanup.
         boolean didFix= false;
-        Path target = region.getRegionDir();
+        Path target = region.getRegionFileSystem().getRegionDir();
         for (HbckInfo contained : overlap) {
           LOG.info("Merging " + contained  + " into " + target );
           int merges = mergeRegionDirs(target, contained);

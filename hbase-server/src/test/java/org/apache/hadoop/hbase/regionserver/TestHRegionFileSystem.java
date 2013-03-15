@@ -63,7 +63,7 @@ public class TestHRegionFileSystem {
     assertEquals(hri, hriVerify);
 
     // Open the region
-    regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs, rootDir, hri);
+    regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs, rootDir, hri, false);
     assertEquals(regionDir, regionFs.getRegionDir());
 
     // Delete the region
