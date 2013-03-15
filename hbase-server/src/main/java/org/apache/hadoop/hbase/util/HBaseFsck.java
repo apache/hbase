@@ -22,6 +22,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -194,6 +195,7 @@ public class HBaseFsck extends Configured implements Tool {
   private boolean fixVersionFile = false; // fix missing hbase.version file in hdfs
   private boolean fixSplitParents = false; // fix lingering split parents
   private boolean fixReferenceFiles = false; // fix lingering reference store file
+  private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
   // .META. are always checked
@@ -396,6 +398,14 @@ public class HBaseFsck extends Configured implements Tool {
       return -2;
     }
 
+    // Empty cells in .META.?
+    reportEmptyMetaCells();
+
+    // Check if we have to cleanup empty REGIONINFO_QUALIFIER rows from .META.
+    if (shouldFixEmptyMetaCells()) {
+      fixEmptyMetaCells();
+    }
+
     // get a list of all tables that have not changed recently.
     if (!checkMetaOnly) {
       reportTablesInFlux();
@@ -409,9 +419,6 @@ public class HBaseFsck extends Configured implements Tool {
       loadHdfsRegionDirs();
       loadHdfsRegionInfos();
     }
-
-    // Empty cells in .META.?
-    reportEmptyMetaCells();
 
     // Get disabled tables from ZooKeeper
     loadDisabledTables();
@@ -846,6 +853,21 @@ public class HBaseFsck extends Configured implements Tool {
     }
     FSTableDescriptors.createTableDescriptor(htd, getConf(), true);
     return true;
+  }
+
+  /**
+   * To fix the empty REGIONINFO_QUALIFIER rows from .META. <br>
+   * @throws IOException
+   */
+  public void fixEmptyMetaCells() throws IOException {
+    if (shouldFixEmptyMetaCells() && !emptyRegionInfoQualifiers.isEmpty()) {
+      LOG.info("Trying to fix empty REGIONINFO_QUALIFIER .META. rows.");
+      for (Result region : emptyRegionInfoQualifiers) {
+        deleteMetaRegion(region.getRow());
+        errors.getErrorList().remove(ERROR_CODE.EMPTY_META_CELL);
+      }
+      emptyRegionInfoQualifiers.clear();
+    }
   }
 
   /**
@@ -1406,10 +1428,17 @@ public class HBaseFsck extends Configured implements Tool {
    * Deletes region from meta table
    */
   private void deleteMetaRegion(HbckInfo hi) throws IOException {
-    Delete d = new Delete(hi.metaEntry.getRegionName());
+    deleteMetaRegion(hi.metaEntry.getRegionName());
+  }
+
+  /**
+   * Deletes region from meta table
+   */
+  private void deleteMetaRegion(byte[] metaKey) throws IOException {
+    Delete d = new Delete(metaKey);
     meta.delete(d);
     meta.flushCommits();
-    LOG.info("Deleted " + hi.metaEntry.getRegionNameAsString() + " from META" );
+    LOG.info("Deleted " + Bytes.toString(metaKey) + " from META" );
   }
 
   /**
@@ -2527,6 +2556,8 @@ public class HBaseFsck extends Configured implements Tool {
           Pair<HRegionInfo, ServerName> pair = HRegionInfo.getHRegionInfoAndServerName(result);
           if (pair == null || pair.getFirst() == null) {
             emptyRegionInfoQualifiers.add(result);
+            errors.reportError(ERROR_CODE.EMPTY_META_CELL, 
+              "Empty REGIONINFO_QUALIFIER found in .META.");
             return true;
           }
           ServerName sn = null;
@@ -2599,6 +2630,21 @@ public class HBaseFsck extends Configured implements Tool {
         return false;
       }
       return (modTime == me.modTime);
+    }
+
+    @Override
+    public int hashCode() {
+      int hash = Arrays.hashCode(getRegionName());
+      hash ^= getRegionId();
+      hash ^= Arrays.hashCode(getStartKey());
+      hash ^= Arrays.hashCode(getEndKey());
+      hash ^= Boolean.valueOf(isOffline()).hashCode();
+      hash ^= Arrays.hashCode(getTableName());
+      if (regionServer != null) {
+        hash ^= regionServer.hashCode();
+      }
+      hash ^= modTime;
+      return hash;
     }
   }
 
@@ -2847,7 +2893,7 @@ public class HBaseFsck extends Configured implements Tool {
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      WRONG_USAGE
+      WRONG_USAGE, EMPTY_META_CELL
     }
     public void clear();
     public void report(String message);
@@ -3221,6 +3267,14 @@ public class HBaseFsck extends Configured implements Tool {
     return fixMeta;
   }
 
+  public void setFixEmptyMetaCells(boolean shouldFix) {
+    fixEmptyMetaCells = shouldFix;
+  }
+
+  boolean shouldFixEmptyMetaCells() {
+    return fixEmptyMetaCells;
+  }
+
   public void setCheckHdfs(boolean checking) {
     checkHdfs = checking;
   }
@@ -3407,6 +3461,8 @@ public class HBaseFsck extends Configured implements Tool {
     out.println("   -fixSplitParents  Try to force offline split parents to be online.");
     out.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
     out.println("   -fixReferenceFiles  Try to offline lingering reference store files");
+    out.println("   -fixEmptyMetaCells  Try to fix .META. entries not referencing any region"
+        + " (empty REGIONINFO_QUALIFIER rows)");
 
     out.println("");
     out.println("  Datafile Repair options: (expert features, use with caution!)");
@@ -3529,6 +3585,8 @@ public class HBaseFsck extends Configured implements Tool {
         sidelineCorruptHFiles = true;
       } else if (cmd.equals("-fixReferenceFiles")) {
         setFixReferenceFiles(true);
+      } else if (cmd.equals("-fixEmptyMetaCells")) {
+        setFixEmptyMetaCells(true);
       } else if (cmd.equals("-repair")) {
         // this attempts to merge overlapping hdfs regions, needs testing
         // under load
