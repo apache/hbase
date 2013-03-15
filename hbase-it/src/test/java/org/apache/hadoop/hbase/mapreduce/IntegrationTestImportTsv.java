@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Set;
@@ -15,6 +16,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -25,6 +27,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -137,6 +140,18 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
     }
   }
 
+  /**
+   * Confirm the absence of the {@link TotalOrderPartitioner} partitions file.
+   */
+  protected static void validateDeletedPartitionsFile(Configuration conf) throws IOException {
+    if (!conf.getBoolean(IntegrationTestingUtility.IS_DISTRIBUTED_CLUSTER, false))
+      return;
+
+    FileSystem fs = FileSystem.get(conf);
+    Path partitionsFile = new Path(TotalOrderPartitioner.getPartitionFile(conf));
+    assertFalse("Failed to clean up partitions file.", fs.exists(partitionsFile));
+  }
+
   @Test
   public void testGenerateAndLoad() throws Exception {
     String table = NAME + "-" + UUID.randomUUID();
@@ -155,8 +170,13 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
 
     // run the job, complete the load.
     util.createTable(table, cf);
-    TestImportTsv.doMROnTableTest(util, cf, simple_tsv, args);
+    Tool t = TestImportTsv.doMROnTableTest(util, cf, simple_tsv, args);
     doLoadIncrementalHFiles(hfiles, table);
+
+    // validate post-conditions
+    validateDeletedPartitionsFile(t.getConf());
+
+    // clean up after ourselves.
     util.deleteTable(table);
     util.cleanupDataTestDirOnTestFS(table);
   }
