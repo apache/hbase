@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Text;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -107,6 +108,13 @@ public class TestTablePermissions {
     UTIL.shutdownMiniCluster();
   }
 
+  @After
+  public void tearDown() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    AccessControlLists.removeTablePermissions(conf, TEST_TABLE);
+    AccessControlLists.removeTablePermissions(conf, TEST_TABLE2);
+    AccessControlLists.removeTablePermissions(conf, AccessControlLists.ACL_TABLE_NAME);
+  }
 
   /**
    * Test we can read permissions serialized with Writables.
