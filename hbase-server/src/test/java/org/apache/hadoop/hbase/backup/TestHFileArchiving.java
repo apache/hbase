@@ -77,6 +77,9 @@ public class TestHFileArchiving {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster();
+
+    // We don't want the cleaner to remove files. The tests do that.
+    UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().interrupt();
   }
 
   private static void setupConf(Configuration conf) {
