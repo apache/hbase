@@ -266,10 +266,4 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
         HConstants.DATA_FILE_UMASK_KEY);
     return FSUtils.create(fs, path, perms);
   }
-
-  @Override
-  public long getCurrentSize() throws IOException {
-    if (this.outputStream == null) return -1;
-    return this.outputStream.getPos();
-  }
 }

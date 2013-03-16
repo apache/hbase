@@ -319,11 +319,6 @@ public class HFile {
      * HFile V2.
      */
     void addDeleteFamilyBloomFilter(BloomFilterWriter bfw) throws IOException;
-
-    /**
-     * @return Currently written raw data size on disk.
-     */
-    long getCurrentSize() throws IOException;
   }
 
   /**
