@@ -22,6 +22,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.annotation.Annotation;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,7 +34,6 @@ import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
-import org.apache.hadoop.io.compress.DoNotPool;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -349,8 +349,13 @@ public final class Compression {
     public void returnDecompressor(Decompressor decompressor) {
       if (decompressor != null) {
         CodecPool.returnDecompressor(decompressor);
-        if (decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
-          decompressor.end();
+        Annotation[] annotations = decompressor.getClass().getAnnotations();
+        if (annotations != null) {
+          for (Annotation annotation : annotations) {
+            if (annotation.getClass().getSimpleName().equals("DoNotPool")) {
+              decompressor.end();              
+            }
+          }
         }
       }
     }
