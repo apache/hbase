@@ -691,6 +691,13 @@ Server {
       this.serverManager = createServerManager(this, this);
     }
 
+    //Initialize table lock manager, and ensure that all write locks held previously
+    //are invalidated
+    this.tableLockManager = TableLockManager.createTableLockManager(conf, zooKeeper, serverName);
+    if (!masterRecovery) {
+      this.tableLockManager.reapAllTableWriteLocks();
+    }
+
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
 
@@ -705,13 +712,6 @@ Server {
       // start up all service threads.
       status.setStatus("Initializing master service threads");
       startServiceThreads();
-    }
-
-    //Initialize table lock manager, and ensure that all write locks held previously
-    //are invalidated
-    this.tableLockManager = TableLockManager.createTableLockManager(conf, zooKeeper, serverName);
-    if (!masterRecovery) {
-      this.tableLockManager.reapAllTableWriteLocks();
     }
 
     // Wait for region servers to report in.
