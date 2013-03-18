@@ -99,6 +99,20 @@ public class ClassSize {
   /** Overhead for CopyOnWriteArrayList */
   public static final int COPYONWRITE_ARRAYLIST;
 
+  /* Are we running on jdk7? */
+  private static final boolean JDK7;
+  static {
+    final String version = System.getProperty("java.version");
+    // Verify String looks like this: 1.6.0_29
+    if (!version.matches("\\d\\.\\d\\..*")) {
+      throw new RuntimeException("Unexpected version format: " + version);
+    }
+    // Convert char to int
+    int major = (int) (version.charAt(0) - '0');
+    int minor = (int) (version.charAt(2) - '0');
+    JDK7 = major == 1 && minor == 7;
+  }
+
   /**
    * Method for reading the arc settings and setting overheads according
    * to 32-bit or 64-bit architecture.
@@ -129,14 +143,10 @@ public class ClassSize {
 
     TREEMAP = align(OBJECT + (2 * Bytes.SIZEOF_INT) + align(7 * REFERENCE));
 
-    // STRING is different size in jdk6 and jdk7. Just use what we estimate as size rather than
-    // have a conditional on whether jdk7.
-    STRING = (int) estimateBase(String.class, false);
+    STRING = align(OBJECT + ARRAY + REFERENCE + ((JDK7? 2: 3) * Bytes.SIZEOF_INT));
 
-    // CONCURRENT_HASHMAP is different size in jdk6 and jdk7; it looks like its different between
-    // 23.6-b03 and 23.0-b21. Just use what we estimate as size rather than have a conditional on
-    // whether jdk7.
-    CONCURRENT_HASHMAP = (int) estimateBase(ConcurrentHashMap.class, false);
+    CONCURRENT_HASHMAP = align(((JDK7? 3: 2) * Bytes.SIZEOF_INT) + ARRAY +
+        (6 * REFERENCE) + OBJECT);
 
     CONCURRENT_HASHMAP_ENTRY = align(REFERENCE + OBJECT + (3 * REFERENCE) +
         (2 * Bytes.SIZEOF_INT));
