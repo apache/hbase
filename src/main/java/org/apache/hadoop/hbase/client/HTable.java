@@ -114,7 +114,6 @@ public class HTable implements HTableInterface {
   private ExecutorService pool;  // For Multi
   private boolean closed;
   private int operationTimeout;
-  private static final int DOPUT_WB_CHECK = 10;    // i.e., doPut checks the writebuffer every X Puts.
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
 
@@ -803,7 +802,10 @@ public class HTable implements HTableInterface {
    */
   @Override
   public void put(final Put put) throws IOException {
-    doPut(Arrays.asList(put));
+    doPut(put);
+    if (autoFlush) {
+      flushCommits();
+    }
   }
 
   /**
@@ -811,23 +813,19 @@ public class HTable implements HTableInterface {
    */
   @Override
   public void put(final List<Put> puts) throws IOException {
-    doPut(puts);
+    for (Put put : puts) {
+      doPut(put);
+    }
+    if (autoFlush) {
+      flushCommits();
+    }
   }
 
-  private void doPut(final List<Put> puts) throws IOException {
-    int n = 0;
-    for (Put put : puts) {
-      validatePut(put);
-      writeBuffer.add(put);
-      currentWriteBufferSize += put.heapSize();
-     
-      // we need to periodically see if the writebuffer is full instead of waiting until the end of the List
-      n++;
-      if (n % DOPUT_WB_CHECK == 0 && currentWriteBufferSize > writeBufferSize) {
-        flushCommits();
-      }
-    }
-    if (autoFlush || currentWriteBufferSize > writeBufferSize) {
+  private void doPut(Put put) throws IOException{
+    validatePut(put);
+    writeBuffer.add(put);
+    currentWriteBufferSize += put.heapSize();
+    if (currentWriteBufferSize > writeBufferSize) {
       flushCommits();
     }
   }
