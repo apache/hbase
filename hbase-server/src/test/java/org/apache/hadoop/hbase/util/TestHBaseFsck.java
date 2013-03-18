@@ -1085,7 +1085,7 @@ public class TestHBaseFsck {
   }
 
   /**
-   * the region is not deployed when the table is disabled.
+   * The region is not deployed when the table is disabled.
    */
   @Test
   public void testRegionShouldNotBeDeployed() throws Exception {
@@ -1126,16 +1126,32 @@ public class TestHBaseFsck {
       ZKTable zkTable = cluster.getMaster().getAssignmentManager().getZKTable();
       zkTable.setEnabledTable(table);
       HRegionInfo region = disabledRegions.remove(0);
+      byte[] regionName = region.getRegionName();
+
+      // The region should not be assigned currently
+      assertTrue(cluster.getServerWith(regionName) == -1);
       ZKAssign.createNodeOffline(zkw, region, serverName);
       ProtobufUtil.openRegion(hrs, region);
 
       int iTimes = 0;
-      byte[] regionName = region.getRegionName();
       while (true) {
         if (cluster.getServerWith(regionName) != -1) {
-          // Now, region is deployed, reset the table state back
-          zkTable.setDisabledTable(table);
-          break;
+          List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+          boolean found = false;
+          for (HRegionInfo hri: regions) {
+            if (Bytes.equals(hri.getRegionName(), regionName)) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            LOG.info("Region was deployed but not in online " +
+              "region list. This should be transient. Waiting longer");
+          } else {
+            // Now, region is deployed, reset the table state back
+            zkTable.setDisabledTable(table);
+            break;
+          }
         }
         Thread.sleep(100);
         iTimes++;
