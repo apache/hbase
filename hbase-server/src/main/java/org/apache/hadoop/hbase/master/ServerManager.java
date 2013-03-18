@@ -487,7 +487,7 @@ public class ServerManager {
     boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName);
     if (carryingMeta) {
       this.services.getExecutorService().submit(new MetaServerShutdownHandler(this.master,
-        this.services, this.deadservers, serverName, carryingMeta));
+        this.services, this.deadservers, serverName));
     } else {
       this.services.getExecutorService().submit(new ServerShutdownHandler(this.master,
         this.services, this.deadservers, serverName, true));
