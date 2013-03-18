@@ -32,6 +32,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -44,7 +46,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.io.BytesWritable;
 import org.junit.experimental.categories.Category;
-import org.mortbay.log.Log;
 
 /**
  * test the performance for seek.
@@ -56,6 +57,7 @@ import org.mortbay.log.Log;
  */
 @Category(MediumTests.class)
 public class TestHFileSeek extends TestCase {
+  private static final Log LOG = LogFactory.getLog(TestHFileSeek.class);
   private static final boolean USE_PREAD = true;
   private MyOptions options;
   private Configuration conf;
@@ -529,7 +531,7 @@ public class TestHFileSeek extends TestCase {
 
     testCase.options = options;
     for (int i = 0; i < options.trialCount; i++) {
-      Log.info("Beginning trial " + (i+1));
+      LOG.info("Beginning trial " + (i+1));
       testCase.setUp();
       testCase.testSeeks();
       testCase.tearDown();
