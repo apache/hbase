@@ -49,170 +49,62 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public class DefaultCompactor extends Compactor {
   private static final Log LOG = LogFactory.getLog(DefaultCompactor.class);
-  private final Store store;
 
   public DefaultCompactor(final Configuration conf, final Store store) {
-    super(conf);
-    this.store = store;
+    super(conf, store);
   }
 
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
    */
-  @SuppressWarnings("deprecation")
-  @Override
   public List<Path> compact(final CompactionRequest request) throws IOException {
-    final Collection<StoreFile> filesToCompact = request.getFiles();
-    boolean majorCompaction = request.isMajor();
-    // Max-sequenceID is the last key in the files we're compacting
-    long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
+    FileDetails fd = getFileDetails(request.getFiles(), request.isMajor());
+    this.progress = new CompactionProgress(fd.maxKeyCount);
 
-    // Calculate maximum key count after compaction (for blooms)
-    // Also calculate earliest put timestamp if major compaction
-    int maxKeyCount = 0;
-    long earliestPutTs = HConstants.LATEST_TIMESTAMP;
-    ScanType scanType = request.isMajor()
-        ? ScanType.COMPACT_DROP_DELETES : ScanType.COMPACT_RETAIN_DELETES;
-    for (StoreFile file: filesToCompact) {
-      StoreFile.Reader r = file.getReader();
-      if (r == null) {
-        LOG.warn("Null reader for " + file.getPath());
-        continue;
-      }
-      // NOTE: getFilterEntries could cause under-sized blooms if the user
-      // switches bloom type (e.g. from ROW to ROWCOL)
-      long keyCount = (r.getBloomFilterType() == store.getFamily().getBloomFilterType())?
-        r.getFilterEntries() : r.getEntries();
-      maxKeyCount += keyCount;
-      // For major compactions calculate the earliest put timestamp of all
-      // involved storefiles. This is used to remove family delete marker during
-      // compaction.
-      if (scanType == ScanType.COMPACT_DROP_DELETES) {
-        byte [] tmp = r.loadFileInfo().get(StoreFile.EARLIEST_PUT_TS);
-        if (tmp == null) {
-          // There's a file with no information, must be an old one
-          // assume we have very old puts
-          earliestPutTs = HConstants.OLDEST_TIMESTAMP;
-        } else {
-          earliestPutTs = Math.min(earliestPutTs, Bytes.toLong(tmp));
-        }
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Compacting " + file +
-          ", keycount=" + keyCount +
-          ", bloomtype=" + r.getBloomFilterType().toString() +
-          ", size=" + StringUtils.humanReadableInt(r.length()) +
-          ", encoding=" + r.getHFileReader().getEncodingOnDisk() +
-          (majorCompaction? ", earliestPutTs=" + earliestPutTs: ""));
-      }
-    }
+    List<StoreFileScanner> scanners = createFileScanners(request.getFiles());
 
-    // keep track of compaction progress
-    this.progress = new CompactionProgress(maxKeyCount);
-
-    // For each file, obtain a scanner:
-    List<StoreFileScanner> scanners = StoreFileScanner
-      .getScannersForStoreFiles(filesToCompact, false, false, true);
-
-    // Get some configs
-    int compactionKVMax = this.conf.getInt(HConstants.COMPACTION_KV_MAX, 10);
-    Compression.Algorithm compression = store.getFamily().getCompression();
-    // Avoid overriding compression setting for major compactions if the user
-    // has not specified it separately
-    Compression.Algorithm compactionCompression =
-      (store.getFamily().getCompactionCompression() != Compression.Algorithm.NONE) ?
-      store.getFamily().getCompactionCompression(): compression;
-    // Make the instantiation lazy in case compaction produces no product; i.e.
-    // where all source cells are expired or deleted.
     StoreFile.Writer writer = null;
     List<Path> newFiles = new ArrayList<Path>();
     // Find the smallest read point across all the Scanners.
-    long smallestReadPoint = store.getSmallestReadPoint();
-    MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);
+    long smallestReadPoint = setSmallestReadPoint();
     try {
       InternalScanner scanner = null;
       try {
-        if (store.getCoprocessorHost() != null) {
-          scanner = store.getCoprocessorHost()
-              .preCompactScannerOpen(store, scanners, scanType, earliestPutTs, request);
-        }
+        /* Include deletes, unless we are doing a major compaction */
+        ScanType scanType =
+            request.isMajor() ? ScanType.COMPACT_DROP_DELETES : ScanType.COMPACT_RETAIN_DELETES;
+        scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners);
         if (scanner == null) {
-          Scan scan = new Scan();
-          scan.setMaxVersions(store.getFamily().getMaxVersions());
-          /* Include deletes, unless we are doing a major compaction */
-          scanner = new StoreScanner(store, store.getScanInfo(), scan, scanners,
-            scanType, smallestReadPoint, earliestPutTs);
+          scanner = createScanner(store, scanners, scanType, smallestReadPoint, fd.earliestPutTs);
         }
-        if (store.getCoprocessorHost() != null) {
-          InternalScanner cpScanner = store.getCoprocessorHost().preCompact(store, scanner,
-            scanType, request);
-          // NULL scanner returned from coprocessor hooks means skip normal processing
-          if (cpScanner == null) {
-            return newFiles; // an empty list
-          }
-          scanner = cpScanner;
+        scanner = postCreateCoprocScanner(request, scanType, scanner);
+        if (scanner == null) {
+          // NULL scanner returned from coprocessor hooks means skip normal processing.
+          return newFiles;
         }
-
-        int bytesWritten = 0;
-        // Since scanner.next() can return 'false' but still be delivering data,
-        // we have to use a do/while loop.
-        List<KeyValue> kvs = new ArrayList<KeyValue>();
-        // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
-        int closeCheckInterval = HStore.getCloseCheckInterval();
-        boolean hasMore;
-        do {
-          hasMore = scanner.next(kvs, compactionKVMax);
-          // Create the writer even if no kv(Empty store file is also ok),
-          // because we need record the max seq id for the store file, see
-          // HBASE-6059
-          if (writer == null) {
-            writer = store.createWriterInTmp(maxKeyCount, compactionCompression, true);
-          }
-          if (writer != null) {
-            // output to writer:
-            for (KeyValue kv : kvs) {
-              if (kv.getMemstoreTS() <= smallestReadPoint) {
-                kv.setMemstoreTS(0);
-              }
-              writer.append(kv);
-              // update progress per key
-              ++progress.currentCompactedKVs;
-
-              // check periodically to see if a system stop is requested
-              if (closeCheckInterval > 0) {
-                bytesWritten += kv.getLength();
-                if (bytesWritten > closeCheckInterval) {
-                  bytesWritten = 0;
-                  isInterrupted(store, writer);
-                }
-              }
-            }
-          }
-          kvs.clear();
-        } while (hasMore);
-      } finally {
-        if (scanner != null) {
-          scanner.close();
-        }
+        // Create the writer even if no kv(Empty store file is also ok),
+        // because we need record the max seq id for the store file, see HBASE-6059
+        writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true);
+        boolean finished = performCompaction(scanner, writer, smallestReadPoint);
+        if (!finished) {
+          abortWriter(writer);
+          writer = null;
+          throw new InterruptedIOException( "Aborting compaction of store " + store +
+              " in region " + store.getRegionInfo().getRegionNameAsString() +
+              " because it was interrupted.");
+         }
+       } finally {
+         if (scanner != null) {
+           scanner.close();
+         }
       }
     } finally {
       if (writer != null) {
-        writer.appendMetadata(maxId, majorCompaction);
+        writer.appendMetadata(fd.maxSeqId, request.isMajor());
         writer.close();
         newFiles.add(writer.getPath());
       }
     }
     return newFiles;
-  }
-
-  void isInterrupted(final Store store, final StoreFile.Writer writer)
-  throws IOException {
-    if (store.areWritesEnabled()) return;
-    // Else cleanup.
-    writer.close();
-    store.getFileSystem().delete(writer.getPath(), false);
-    throw new InterruptedIOException( "Aborting compaction of store " + store +
-      " in region " + store.getRegionInfo().getRegionNameAsString() +
-      " because it was interrupted.");
   }
 }
