@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mortbay.log.Log;
 
 import com.google.common.collect.Lists;
 
@@ -74,7 +73,6 @@ public class TestTreeDepth {
   }
 
   protected void testInternal(List<String> inputs, int expectedTreeDepth) {
-    Log.warn("init logger");
     Tokenizer builder = new Tokenizer();
     for (String s : inputs) {
       ByteRange b = new ByteRange(Bytes.toBytes(s));

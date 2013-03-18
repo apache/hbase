@@ -28,6 +28,8 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,7 +43,6 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mortbay.log.Log;
 
 /**
  * Test that delayed RPCs work. Fire up three calls, the first of which should
@@ -50,6 +51,8 @@ import org.mortbay.log.Log;
  */
 @Category(MediumTests.class) // Fails sometimes with small tests
 public class TestDelayedRpc {
+  private static final Log LOG = LogFactory.getLog(TestDelayedRpc.class);
+
   public static RpcServer rpcServer;
 
   public static final int UNDELAYED = 0;
@@ -287,7 +290,7 @@ public class TestDelayedRpc {
         if (e.getCause().getMessage().contains(
             "java.lang.Exception: Something went wrong"))
           caughtException = true;
-        Log.warn(e);
+        LOG.warn(e);
       }
       assertTrue(caughtException);
     } finally {
