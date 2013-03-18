@@ -441,6 +441,23 @@ public interface MasterObserver extends Coprocessor {
       final HRegionInfo regionInfo, final boolean force) throws IOException;
 
   /**
+   * Called prior to marking a given region as offline. <code>ctx.bypass()</code> will not have any
+   * impact on this hook.
+   * @param ctx the environment to interact with the framework and master
+   * @param regionInfo
+   */
+  void preRegionOffline(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo regionInfo) throws IOException;
+
+  /**
+   * Called after the region has been marked offline.
+   * @param ctx the environment to interact with the framework and master
+   * @param regionInfo
+   */
+  void postRegionOffline(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo regionInfo) throws IOException;
+
+  /**
    * Called prior to requesting rebalancing of the cluster regions, though after
    * the initial checks for regions in transition and the balance switch flag.
    * @param ctx the environment to interact with the framework and master

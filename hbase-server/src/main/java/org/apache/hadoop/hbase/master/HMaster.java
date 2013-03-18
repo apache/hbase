@@ -2252,7 +2252,11 @@ Server {
   }
 
   /**
-   * Special method, only used by hbck.
+   * Offline specified region from master's in-memory state. It will not attempt to
+   * reassign the region as in unassign.
+   *  
+   * This is a special method that should be used by experts or hbck.
+   * 
    */
   @Override
   public OfflineRegionResponse offlineRegion(RpcController controller, OfflineRegionRequest request)
@@ -2269,7 +2273,13 @@ Server {
         MetaReader.getRegion(this.catalogTracker, regionName);
       if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
       HRegionInfo hri = pair.getFirst();
+      if (cpHost != null) {
+        cpHost.preRegionOffline(hri);
+      }
       this.assignmentManager.regionOffline(hri);
+      if (cpHost != null) {
+        cpHost.postRegionOffline(hri);
+      }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

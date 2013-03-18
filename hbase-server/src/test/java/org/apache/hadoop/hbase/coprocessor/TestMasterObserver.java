@@ -90,6 +90,8 @@ public class TestMasterObserver {
     private boolean postAssignCalled;
     private boolean preUnassignCalled;
     private boolean postUnassignCalled;
+    private boolean preRegionOfflineCalled;
+    private boolean postRegionOfflineCalled;
     private boolean preBalanceCalled;
     private boolean postBalanceCalled;
     private boolean preBalanceSwitchCalled;
@@ -151,6 +153,8 @@ public class TestMasterObserver {
       postAssignCalled = false;
       preUnassignCalled = false;
       postUnassignCalled = false;
+      preRegionOfflineCalled = false;
+      postRegionOfflineCalled = false;
       preBalanceCalled = false;
       postBalanceCalled = false;
       preBalanceSwitchCalled = false;
@@ -439,6 +443,26 @@ public class TestMasterObserver {
 
     public boolean preUnassignCalledOnly() {
       return preUnassignCalled && !postUnassignCalled;
+    }
+
+    @Override
+    public void preRegionOffline(ObserverContext<MasterCoprocessorEnvironment> env,
+        final HRegionInfo regionInfo) throws IOException {
+      preRegionOfflineCalled = true;
+    }
+
+    @Override
+    public void postRegionOffline(ObserverContext<MasterCoprocessorEnvironment> env,
+        final HRegionInfo regionInfo) throws IOException {
+      postRegionOfflineCalled = true;
+    }
+
+    public boolean wasRegionOfflineCalled() {
+      return preRegionOfflineCalled && postRegionOfflineCalled;
+    }
+
+    public boolean preRegionOfflineCalledOnly() {
+      return preRegionOfflineCalled && !postRegionOfflineCalled;
     }
 
     @Override

@@ -675,6 +675,17 @@ public class AccessController extends BaseRegionObserver
       HRegionInfo regionInfo, boolean force) throws IOException {}
 
   @Override
+  public void preRegionOffline(ObserverContext<MasterCoprocessorEnvironment> c,
+      HRegionInfo regionInfo) throws IOException {
+    requirePermission("regionOffline", regionInfo.getTableName(), null, null, Action.ADMIN);
+  }
+
+  @Override
+  public void postRegionOffline(ObserverContext<MasterCoprocessorEnvironment> c,
+      HRegionInfo regionInfo) throws IOException {
+  }
+
+  @Override
   public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c)
       throws IOException {
     requirePermission("balance", Permission.Action.ADMIN);
