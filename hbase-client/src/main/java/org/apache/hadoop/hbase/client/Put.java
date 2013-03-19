@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
  * Used to perform Put operations for a single row.
@@ -283,10 +282,5 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
       }
     }
     return filteredList;
-  }
-
-  @Override
-  public long heapSize() {
-    return ClassSize.align((int)super.heapSize());
   }
 }

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
  * Used to perform Increment operations on a single row.
@@ -47,6 +48,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Increment extends Mutation implements Comparable<Row> {
+  private static final long HEAP_OVERHEAD =  ClassSize.REFERENCE + ClassSize.TIMERANGE;
+
   private TimeRange tr = new TimeRange();
 
   /**
@@ -254,5 +257,9 @@ public class Increment extends Mutation implements Comparable<Row> {
     }
     Row other = (Row) obj;
     return compareTo(other) == 0;
+  }
+
+  protected long extraHeapSize(){
+    return HEAP_OVERHEAD;
   }
 }

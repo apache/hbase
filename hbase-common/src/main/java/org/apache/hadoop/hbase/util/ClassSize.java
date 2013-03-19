@@ -103,6 +103,9 @@ public class ClassSize {
   /** Overhead for CopyOnWriteArrayList */
   public static final int COPYONWRITE_ARRAYLIST;
 
+  /** Overhead for timerange */
+  public static final int TIMERANGE;
+
   /* Are we running on jdk7? */
   private static final boolean JDK7;
   static {
@@ -179,6 +182,8 @@ public class ClassSize {
     COPYONWRITE_ARRAYSET = align(OBJECT + REFERENCE);
 
     COPYONWRITE_ARRAYLIST = align(OBJECT + (2 * REFERENCE) + ARRAY);
+
+    TIMERANGE = align(ClassSize.OBJECT + Bytes.SIZEOF_LONG * 2 + Bytes.SIZEOF_BOOLEAN);
   }
 
   /**
