@@ -11037,7 +11037,7 @@ public final class FilterProtos {
   public interface TimestampsFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated int64 timestamps = 1;
+    // repeated int64 timestamps = 1 [packed = true];
     java.util.List<java.lang.Long> getTimestampsList();
     int getTimestampsCount();
     long getTimestamps(int index);
@@ -11070,7 +11070,7 @@ public final class FilterProtos {
       return org.apache.hadoop.hbase.protobuf.generated.FilterProtos.internal_static_TimestampsFilter_fieldAccessorTable;
     }
     
-    // repeated int64 timestamps = 1;
+    // repeated int64 timestamps = 1 [packed = true];
     public static final int TIMESTAMPS_FIELD_NUMBER = 1;
     private java.util.List<java.lang.Long> timestamps_;
     public java.util.List<java.lang.Long>
@@ -11083,6 +11083,7 @@ public final class FilterProtos {
     public long getTimestamps(int index) {
       return timestamps_.get(index);
     }
+    private int timestampsMemoizedSerializedSize = -1;
     
     private void initFields() {
       timestamps_ = java.util.Collections.emptyList();;
@@ -11099,8 +11100,12 @@ public final class FilterProtos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
+      if (getTimestampsList().size() > 0) {
+        output.writeRawVarint32(10);
+        output.writeRawVarint32(timestampsMemoizedSerializedSize);
+      }
       for (int i = 0; i < timestamps_.size(); i++) {
-        output.writeInt64(1, timestamps_.get(i));
+        output.writeInt64NoTag(timestamps_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -11118,7 +11123,12 @@ public final class FilterProtos {
             .computeInt64SizeNoTag(timestamps_.get(i));
         }
         size += dataSize;
-        size += 1 * getTimestampsList().size();
+        if (!getTimestampsList().isEmpty()) {
+          size += 1;
+          size += com.google.protobuf.CodedOutputStream
+              .computeInt32SizeNoTag(dataSize);
+        }
+        timestampsMemoizedSerializedSize = dataSize;
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -11394,7 +11404,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // repeated int64 timestamps = 1;
+      // repeated int64 timestamps = 1 [packed = true];
       private java.util.List<java.lang.Long> timestamps_ = java.util.Collections.emptyList();;
       private void ensureTimestampsIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -12573,12 +12583,13 @@ public final class FilterProtos {
       "compareOp\030\003 \002(\0162\014.CompareType\022\037\n\ncompara" +
       "tor\030\004 \002(\0132\013.Comparator\022\027\n\017filterIfMissin" +
       "g\030\005 \001(\010\022\031\n\021latestVersionOnly\030\006 \001(\010\"%\n\nSk" +
-      "ipFilter\022\027\n\006filter\030\001 \002(\0132\007.Filter\"&\n\020Tim" +
-      "estampsFilter\022\022\n\ntimestamps\030\001 \003(\003\"4\n\013Val",
-      "ueFilter\022%\n\rcompareFilter\030\001 \002(\0132\016.Compar" +
-      "eFilter\"+\n\020WhileMatchFilter\022\027\n\006filter\030\001 " +
-      "\002(\0132\007.FilterBB\n*org.apache.hadoop.hbase." +
-      "protobuf.generatedB\014FilterProtosH\001\210\001\001\240\001\001"
+      "ipFilter\022\027\n\006filter\030\001 \002(\0132\007.Filter\"*\n\020Tim" +
+      "estampsFilter\022\026\n\ntimestamps\030\001 \003(\003B\002\020\001\"4\n",
+      "\013ValueFilter\022%\n\rcompareFilter\030\001 \002(\0132\016.Co" +
+      "mpareFilter\"+\n\020WhileMatchFilter\022\027\n\006filte" +
+      "r\030\001 \002(\0132\007.FilterBB\n*org.apache.hadoop.hb" +
+      "ase.protobuf.generatedB\014FilterProtosH\001\210\001" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
