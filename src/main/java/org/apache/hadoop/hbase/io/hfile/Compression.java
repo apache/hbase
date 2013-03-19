@@ -352,7 +352,8 @@ public final class Compression {
         Annotation[] annotations = decompressor.getClass().getAnnotations();
         if (annotations != null) {
           for (Annotation annotation : annotations) {
-            if (annotation.getClass().getSimpleName().equals("DoNotPool")) {
+            String annoName = annotation.annotationType().getSimpleName();
+            if (annoName.equals("DoNotPool")) {
               decompressor.end();              
             }
           }
