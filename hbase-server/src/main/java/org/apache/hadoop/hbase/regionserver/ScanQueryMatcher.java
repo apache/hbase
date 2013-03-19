@@ -472,7 +472,7 @@ public class ScanQueryMatcher {
     return this.filter;
   }
 
-  public KeyValue getNextKeyHint(KeyValue kv) {
+  public KeyValue getNextKeyHint(KeyValue kv) throws IOException {
     if (filter == null) {
       return null;
     } else {

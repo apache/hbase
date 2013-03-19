@@ -910,7 +910,7 @@ public final class ProtobufUtil {
    * @param filter the Filter to convert
    * @return the converted protocol buffer Filter
    */
-  public static HBaseProtos.Filter toFilter(Filter filter) {
+  public static HBaseProtos.Filter toFilter(Filter filter) throws IOException {
     HBaseProtos.Filter.Builder builder = HBaseProtos.Filter.newBuilder();
     builder.setName(filter.getClass().getName());
     builder.setSerializedFilter(ByteString.copyFrom(filter.toByteArray()));

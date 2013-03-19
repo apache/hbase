@@ -19,7 +19,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
@@ -27,7 +28,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.io.IOException;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A wrapper filter that filters an entire row if any of the KeyValue checks do
@@ -62,7 +63,8 @@ public class SkipFilter extends FilterBase {
     return filter;
   }
 
-  public void reset() {
+  @Override
+  public void reset() throws IOException {
     filter.reset();
     filterRow = false;
   }
@@ -71,14 +73,15 @@ public class SkipFilter extends FilterBase {
     filterRow = filterRow || value;
   }
 
-  public ReturnCode filterKeyValue(KeyValue v) {
+  @Override
+  public ReturnCode filterKeyValue(KeyValue v) throws IOException {
     ReturnCode c = filter.filterKeyValue(v);
     changeFR(c != ReturnCode.INCLUDE);
     return c;
   }
 
   @Override
-  public KeyValue transform(KeyValue v) {
+  public KeyValue transform(KeyValue v) throws IOException {
     return filter.transform(v);
   }
 
@@ -93,7 +96,7 @@ public class SkipFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
-  public byte [] toByteArray() {
+  public byte[] toByteArray() throws IOException {
     FilterProtos.SkipFilter.Builder builder =
       FilterProtos.SkipFilter.newBuilder();
     builder.setFilter(ProtobufUtil.toFilter(this.filter));
@@ -134,7 +137,7 @@ public class SkipFilter extends FilterBase {
     return getFilter().areSerializedFieldsEqual(other.getFilter());
   }
 
-  public boolean isFamilyEssential(byte[] name) {
+  public boolean isFamilyEssential(byte[] name) throws IOException {
     return filter.isFamilyEssential(name);
   }
 

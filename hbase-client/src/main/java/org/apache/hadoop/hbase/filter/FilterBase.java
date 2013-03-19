@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Abstract base class to help you implement new Filters.  Common "ignore" or NOOP type
@@ -44,7 +45,7 @@ public abstract class FilterBase extends Filter {
    * @inheritDoc
    */
   @Override
-  public void reset() {
+  public void reset() throws IOException {
   }
 
   /**
@@ -54,7 +55,7 @@ public abstract class FilterBase extends Filter {
    * @inheritDoc
    */
   @Override
-  public boolean filterRowKey(byte [] buffer, int offset, int length) {
+  public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException {
     return false;
   }
 
@@ -65,7 +66,7 @@ public abstract class FilterBase extends Filter {
    * @inheritDoc
    */
   @Override
-  public boolean filterAllRemaining() {
+  public boolean filterAllRemaining() throws IOException {
     return false;
   }
 
@@ -76,7 +77,7 @@ public abstract class FilterBase extends Filter {
    * @inheritDoc
    */
   @Override
-  public ReturnCode filterKeyValue(KeyValue ignored) {
+  public ReturnCode filterKeyValue(KeyValue ignored) throws IOException {
     return ReturnCode.INCLUDE;
   }
 
@@ -86,7 +87,7 @@ public abstract class FilterBase extends Filter {
    * @inheritDoc
    */
   @Override
-  public KeyValue transform(KeyValue v) {
+  public KeyValue transform(KeyValue v) throws IOException {
     return v;
   }
 
@@ -97,7 +98,7 @@ public abstract class FilterBase extends Filter {
    * @inheritDoc
    */
   @Override
-  public void filterRow(List<KeyValue> ignored) {
+  public void filterRow(List<KeyValue> ignored) throws IOException {
   }
 
   /**
@@ -119,7 +120,7 @@ public abstract class FilterBase extends Filter {
    * @inheritDoc
    */
   @Override
-  public boolean filterRow() {
+  public boolean filterRow() throws IOException {
     return false;
   }
 
@@ -129,7 +130,7 @@ public abstract class FilterBase extends Filter {
    *
    * @inheritDoc
    */
-  public KeyValue getNextKeyHint(KeyValue currentKV) {
+  public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
     return null;
   }
 
@@ -139,7 +140,7 @@ public abstract class FilterBase extends Filter {
    *
    * @inheritDoc
    */
-  public boolean isFamilyEssential(byte[] name) {
+  public boolean isFamilyEssential(byte[] name) throws IOException {
     return true;
   }
 
@@ -163,7 +164,7 @@ public abstract class FilterBase extends Filter {
   /**
    * Return length 0 byte array for Filters that don't require special serialization
    */
-  public byte [] toByteArray() {
+  public byte[] toByteArray() throws IOException {
     return new byte[0];
   }
 

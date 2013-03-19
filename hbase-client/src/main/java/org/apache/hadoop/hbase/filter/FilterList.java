@@ -18,7 +18,11 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -29,10 +33,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Implementation of {@link Filter} that represents an ordered List of Filters
@@ -141,14 +142,14 @@ public class FilterList extends Filter {
   }
 
   @Override
-  public void reset() {
+  public void reset() throws IOException {
     for (Filter filter : filters) {
       filter.reset();
     }
   }
 
   @Override
-  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
+  public boolean filterRowKey(byte[] rowKey, int offset, int length) throws IOException {
     for (Filter filter : filters) {
       if (this.operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining() ||
@@ -166,7 +167,7 @@ public class FilterList extends Filter {
   }
 
   @Override
-  public boolean filterAllRemaining() {
+  public boolean filterAllRemaining() throws IOException {
     for (Filter filter : filters) {
       if (filter.filterAllRemaining()) {
         if (operator == Operator.MUST_PASS_ALL) {
@@ -182,7 +183,7 @@ public class FilterList extends Filter {
   }
 
   @Override
-  public KeyValue transform(KeyValue v) {
+  public KeyValue transform(KeyValue v) throws IOException {
     KeyValue current = v;
     for (Filter filter : filters) {
       current = filter.transform(current);
@@ -191,7 +192,7 @@ public class FilterList extends Filter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v) throws IOException {
     ReturnCode rc = operator == Operator.MUST_PASS_ONE?
         ReturnCode.SKIP: ReturnCode.INCLUDE;
     for (Filter filter : filters) {
@@ -242,7 +243,7 @@ public class FilterList extends Filter {
   }
 
   @Override
-  public void filterRow(List<KeyValue> kvs) {
+  public void filterRow(List<KeyValue> kvs) throws IOException {
     for (Filter filter : filters) {
       filter.filterRow(kvs);
     }
@@ -259,7 +260,7 @@ public class FilterList extends Filter {
   }
 
   @Override
-  public boolean filterRow() {
+  public boolean filterRow() throws IOException {
     for (Filter filter : filters) {
       if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterRow()) {
@@ -277,7 +278,7 @@ public class FilterList extends Filter {
   /**
    * @return The filter serialized using pb
    */
-  public byte [] toByteArray() {
+  public byte[] toByteArray() throws IOException {
     FilterProtos.FilterList.Builder builder =
       FilterProtos.FilterList.newBuilder();
     builder.setOperator(FilterProtos.FilterList.Operator.valueOf(operator.name()));
@@ -329,7 +330,7 @@ public class FilterList extends Filter {
   }
 
   @Override
-  public KeyValue getNextKeyHint(KeyValue currentKV) {
+  public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
     KeyValue keyHint = null;
     for (Filter filter : filters) {
       KeyValue curKeyHint = filter.getNextKeyHint(currentKV);
@@ -359,7 +360,7 @@ public class FilterList extends Filter {
   }
 
   @Override
-  public boolean isFamilyEssential(byte[] name) {
+  public boolean isFamilyEssential(byte[] name) throws IOException {
     for (Filter filter : filters) {
       if (filter.isFamilyEssential(name)) {
         return true;

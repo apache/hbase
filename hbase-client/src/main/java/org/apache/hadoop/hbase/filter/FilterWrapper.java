@@ -19,7 +19,9 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
@@ -27,8 +29,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.io.IOException;
-import java.util.List;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This is a Filter wrapper class which is used in the server side. Some filter
@@ -53,7 +54,7 @@ public class FilterWrapper extends Filter {
   /**
    * @return The filter serialized using pb
    */
-  public byte [] toByteArray() {
+  public byte[] toByteArray() throws IOException {
     FilterProtos.FilterWrapper.Builder builder =
       FilterProtos.FilterWrapper.newBuilder();
     builder.setFilter(ProtobufUtil.toFilter(this.filter));
@@ -82,37 +83,37 @@ public class FilterWrapper extends Filter {
   }
 
   @Override
-  public void reset() {
+  public void reset() throws IOException {
     this.filter.reset();
   }
 
   @Override
-  public boolean filterAllRemaining() {
+  public boolean filterAllRemaining() throws IOException {
     return this.filter.filterAllRemaining();
   }
 
   @Override
-  public boolean filterRow() {
+  public boolean filterRow() throws IOException {
     return this.filter.filterRow();
   }
 
   @Override
-  public KeyValue getNextKeyHint(KeyValue currentKV) {
+  public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
     return this.filter.getNextKeyHint(currentKV);
   }
 
   @Override
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
+  public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException {
     return this.filter.filterRowKey(buffer, offset, length);
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(KeyValue v) throws IOException {
     return this.filter.filterKeyValue(v);
   }
 
   @Override
-  public KeyValue transform(KeyValue v) {
+  public KeyValue transform(KeyValue v) throws IOException {
     return this.filter.transform(v);
   }
 
@@ -122,7 +123,7 @@ public class FilterWrapper extends Filter {
   }
 
   @Override
-  public void filterRow(List<KeyValue> kvs) {
+  public void filterRow(List<KeyValue> kvs) throws IOException {
     //To fix HBASE-6429, 
     //Filter with filterRow() returning true is incompatible with scan with limit
     //1. hasFilterRow() returns true, if either filterRow() or filterRow(kvs) is implemented.
@@ -135,9 +136,9 @@ public class FilterWrapper extends Filter {
   }
 
   @Override
-  public boolean isFamilyEssential(byte[] name) {
+  public boolean isFamilyEssential(byte[] name) throws IOException {
     return filter.isFamilyEssential(name);
-  };
+  }
 
   /**
    * @param other
