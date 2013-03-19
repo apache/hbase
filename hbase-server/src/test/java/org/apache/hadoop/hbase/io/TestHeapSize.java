@@ -35,12 +35,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
@@ -50,21 +50,24 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Testing the sizing that HeapSize offers and compares to the size given by
  * ClassSize.
  */
 @Category(SmallTests.class)
-public class TestHeapSize extends TestCase {
+public class TestHeapSize  {
   static final Log LOG = LogFactory.getLog(TestHeapSize.class);
   // List of classes implementing HeapSize
   // BatchOperation, BatchUpdate, BlockIndex, Entry, Entry<K,V>, HStoreKey
   // KeyValue, LruBlockCache, LruHashMap<K,V>, Put, HLogKey
   
   @BeforeClass
-  public void beforeClass() throws Exception {
+  public static void beforeClass() throws Exception {
     // Print detail on jvm so we know what is different should below test fail.
     RuntimeMXBean b = ManagementFactory.getRuntimeMXBean();
     LOG.info("name=" + b.getName()); 
@@ -80,11 +83,11 @@ public class TestHeapSize extends TestCase {
   /**
    * Test our hard-coded sizing of native java objects
    */
+  @Test
   public void testNativeSizes() throws IOException {
-    @SuppressWarnings("rawtypes")
-    Class cl = null;
-    long expected = 0L;
-    long actual = 0L;
+    Class<?> cl;
+    long expected;
+    long actual;
 
     // ArrayList
     cl = ArrayList.class;
@@ -231,11 +234,11 @@ public class TestHeapSize extends TestCase {
    * TestHFile since it is a non public class
    * @throws IOException
    */
+  @Test
   public void testSizes() throws IOException {
-    @SuppressWarnings("rawtypes")
-    Class cl = null;
-    long expected = 0L;
-    long actual = 0L;
+    Class<?> cl;
+    long expected;
+    long actual;
 
     //KeyValue
     cl = KeyValue.class;
@@ -243,18 +246,6 @@ public class TestHeapSize extends TestCase {
     KeyValue kv = new KeyValue();
     actual = kv.heapSize();
     if(expected != actual) {
-      ClassSize.estimateBase(cl, true);
-      assertEquals(expected, actual);
-    }
-
-    //Put
-    cl = Put.class;
-    expected = ClassSize.estimateBase(cl, false);
-    //The actual TreeMap is not included in the above calculation
-    expected += ClassSize.align(ClassSize.TREEMAP + ClassSize.REFERENCE);
-    Put put = new Put(new byte [] {'0'});
-    actual = put.heapSize();
-    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -346,6 +337,52 @@ public class TestHeapSize extends TestCase {
     // accounted for.  But we have satisfied our two core requirements.
     // Sizing is quite accurate now, and our tests will throw errors if
     // any of these classes are modified without updating overhead sizes.
+  }
+
+  @Test
+  public void testMutations(){
+    Class<?> cl;
+    long expected;
+    long actual;
+
+    cl = TimeRange.class;
+    actual = ClassSize.TIMERANGE;
+    expected  = ClassSize.estimateBase(cl, false);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
+
+    cl = Put.class;
+    actual = new Put(new byte[]{0}).heapSize();
+    expected = ClassSize.estimateBase(cl, false);
+    //The actual TreeMap is not included in the above calculation
+    expected += ClassSize.align(ClassSize.TREEMAP + ClassSize.REFERENCE);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
+
+
+    cl = Delete.class;
+    actual = new Delete(new byte[]{0}).heapSize();
+    expected  = ClassSize.estimateBase(cl, false);
+    //The actual TreeMap is not included in the above calculation
+    expected += ClassSize.align(ClassSize.TREEMAP + ClassSize.REFERENCE);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
+
+    cl = Increment.class;
+    actual = new Increment(new byte[]{0}).heapSize();
+    expected  = ClassSize.estimateBase(cl, false);
+    //The actual TreeMap and TimeRange are not included in the above calculation
+    expected += ClassSize.align(ClassSize.TREEMAP + ClassSize.REFERENCE + ClassSize.TIMERANGE);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      assertEquals(expected, actual);
+    }
   }
 
 }

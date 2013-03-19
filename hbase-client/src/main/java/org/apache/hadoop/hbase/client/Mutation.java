@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -41,7 +42,8 @@ import java.util.UUID;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable {
+public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable,
+    HeapSize {
   static final long MUTATION_OVERHEAD = ClassSize.align(
       // This
       ClassSize.OBJECT +
@@ -271,7 +273,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   /**
    * @return Calculate what Mutation adds to class heap size.
    */
-  long heapSize() {
+  @Override
+  public long heapSize() {
     long heapsize = MUTATION_OVERHEAD;
     // Adding row
     heapsize += ClassSize.align(ClassSize.ARRAY + this.row.length);
@@ -298,8 +301,18 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       }
     }
     heapsize += getAttributeSize();
-    return heapsize;
+    heapsize += extraHeapSize();
+    return ClassSize.align(heapsize);
   }
+
+  /**
+   * Subclasses should override this method to add the heap size of their own fields.
+   * @return the heap size to add (will be aligned).
+   */
+  protected long extraHeapSize(){
+    return 0L;
+  }
+
 
   /**
    * @param row Row to check
