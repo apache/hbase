@@ -695,9 +695,9 @@ checkSiteXml () {
   echo ""
   echo ""
 
-  echo "$MVN clean compile site -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchSiteOutput.txt 2>&1"
+  echo "$MVN compile site -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchSiteOutput.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN clean compile site -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchSiteOutput.txt 2>&1
+  $MVN compile site -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchSiteOutput.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
