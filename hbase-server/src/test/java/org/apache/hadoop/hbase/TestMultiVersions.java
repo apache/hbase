@@ -74,7 +74,7 @@ public class TestMultiVersions {
 
   @Before
   public void before()
-  throws MasterNotRunningException, ZooKeeperConnectionException {
+  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     this.admin = new HBaseAdmin(UTIL.getConfiguration());
   }
 

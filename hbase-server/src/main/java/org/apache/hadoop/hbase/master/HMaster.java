@@ -305,6 +305,7 @@ Server {
   private LoadBalancer balancer;
   private Thread balancerChore;
   private Thread clusterStatusChore;
+  private ClusterStatusPublisher clusterStatusPublisherChore = null;
 
   private CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
@@ -429,12 +430,23 @@ Server {
     if (isHealthCheckerConfigured()) {
       healthCheckChore = new HealthCheckChore(sleepTime, this, getConfiguration());
     }
+
+    // Do we publish the status?
+    Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
+        conf.getClass(ClusterStatusPublisher.STATUS_PUBLISHER_CLASS,
+            ClusterStatusPublisher.DEFAULT_STATUS_PUBLISHER_CLASS,
+            ClusterStatusPublisher.Publisher.class);
+
+    if (publisherClass != null) {
+      clusterStatusPublisherChore = new ClusterStatusPublisher(this, conf, publisherClass);
+      Threads.setDaemonThreadRunning(clusterStatusPublisherChore.getThread());
+    }
   }
 
   /**
    * Stall startup if we are designated a backup master; i.e. we want someone
    * else to become the master before proceeding.
-   * @param c
+   * @param c configuration
    * @param amm
    * @throws InterruptedException
    */
@@ -841,7 +853,7 @@ Server {
     // Work on .META. region.  Is it in zk in transition?
     status.setStatus("Assigning META region");
     assignmentManager.getRegionStates().createRegionState(
-      HRegionInfo.FIRST_META_REGIONINFO);
+        HRegionInfo.FIRST_META_REGIONINFO);
     boolean rit = this.assignmentManager.
       processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
     ServerName currentMetaServer = null;
@@ -1079,6 +1091,9 @@ Server {
     }
     if (this.catalogJanitorChore != null) {
       this.catalogJanitorChore.interrupt();
+    }
+    if (this.clusterStatusPublisherChore != null){
+      clusterStatusPublisherChore.interrupt();
     }
   }
 
@@ -2529,7 +2544,7 @@ Server {
    * No exceptions are thrown if the restore is not running, the result will be "done".
    *
    * @return done <tt>true</tt> if the restore/clone operation is completed.
-   * @throws RestoreSnapshotExcepton if the operation failed.
+   * @throws ServiceException if the operation failed.
    */
   @Override
   public IsRestoreSnapshotDoneResponse isRestoreSnapshotDone(RpcController controller,

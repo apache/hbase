@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -53,6 +55,8 @@ import java.util.concurrent.Callable;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class ServerCallable<T> implements Callable<T> {
+  static final Log LOG = LogFactory.getLog(ServerCallable.class);
+
   protected final HConnection connection;
   protected final byte [] tableName;
   protected final byte [] row;
@@ -62,6 +66,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
   protected long globalStartTime;
   protected long startTime, endTime;
   protected final static int MIN_RPC_TIMEOUT = 2000;
+  protected final static int MIN_WAIT_DEAD_SERVER = 10000;
 
   /**
    * @param connection Connection to use.
@@ -154,32 +159,46 @@ public abstract class ServerCallable<T> implements Callable<T> {
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
       new ArrayList<RetriesExhaustedException.ThrowableWithExtraContext>();
     this.globalStartTime = EnvironmentEdgeManager.currentTimeMillis();
-    for (int tries = 0; tries < numRetries; tries++) {
+    for (int tries = 0;; tries++) {
+      long expectedSleep = 0;
       try {
         beforeCall();
-        connect(tries != 0);
+        connect(tries != 0); // if called with false, check table status on ZK
         return call();
       } catch (Throwable t) {
+        LOG.warn("Received exception, tries=" + tries + ", numRetries=" + numRetries +
+            " message=" + t.getMessage());
+
         t = translateException(t);
+        // translateException throws an exception when we should not retry, i.e. when it's the
+        //  request that is bad.
+
         if (t instanceof SocketTimeoutException ||
             t instanceof ConnectException ||
-            t instanceof RetriesExhaustedException) {
+            t instanceof RetriesExhaustedException ||
+            getConnection().isDeadServer(location.getServerName())) {
           // if thrown these exceptions, we clear all the cache entries that
           // map to that slow/dead server; otherwise, let cache miss and ask
           // .META. again to find the new location
-          HRegionLocation hrl = location;
-          if (hrl != null) {
-            getConnection().clearCaches(hrl.getHostnamePort());
-          }
+          getConnection().clearCaches(location.getServerName());
         }
+
         RetriesExhaustedException.ThrowableWithExtraContext qt =
           new RetriesExhaustedException.ThrowableWithExtraContext(t,
               EnvironmentEdgeManager.currentTimeMillis(), toString());
         exceptions.add(qt);
-        if (tries == numRetries - 1) {
+        if (tries >= numRetries - 1) {
           throw new RetriesExhaustedException(tries, exceptions);
         }
-        long expectedSleep = ConnectionUtils.getPauseTime(pause, tries);
+
+        // If the server is dead, we need to wait a little before retrying, to give
+        //  a chance to the regions to be
+        expectedSleep = ConnectionUtils.getPauseTime(pause, tries);
+        if (expectedSleep < MIN_WAIT_DEAD_SERVER &&
+            getConnection().isDeadServer(location.getServerName())){
+          expectedSleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
+        }
+
         // If, after the planned sleep, there won't be enough time left, we stop now.
         if (((this.endTime - this.globalStartTime) + MIN_RPC_TIMEOUT + expectedSleep) >
             this.callTimeout) {
@@ -193,13 +212,12 @@ public abstract class ServerCallable<T> implements Callable<T> {
         afterCall();
       }
       try {
-        Thread.sleep(ConnectionUtils.getPauseTime(pause, tries));
+        Thread.sleep(expectedSleep);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw new IOException("Interrupted after tries=" + tries, e);
+        throw new IOException("Interrupted after " + tries + " tries  on " + numRetries, e);
       }
     }
-    return null;
   }
 
   /**
@@ -210,6 +228,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
    */
   public T withoutRetries()
   throws IOException, RuntimeException {
+    // The code of this method should be shared with withRetries.
     this.globalStartTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
       beforeCall();
@@ -217,6 +236,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
       return call();
     } catch (Throwable t) {
       Throwable t2 = translateException(t);
+      // It would be nice to clear the location cache here.
       if (t2 instanceof IOException) {
         throw (IOException)t2;
       } else {
@@ -227,7 +247,13 @@ public abstract class ServerCallable<T> implements Callable<T> {
     }
   }
 
-  protected static Throwable translateException(Throwable t) throws IOException {
+  /**
+   * Get the good or the remote exception if any, throws the DoNotRetryIOException.
+   * @param t the throwable to analyze
+   * @return the translated exception, if it's not a DoNotRetryIOException
+   * @throws DoNotRetryIOException - if we find it, we throw it instead of translating.
+   */
+  protected static Throwable translateException(Throwable t) throws DoNotRetryIOException {
     if (t instanceof UndeclaredThrowableException) {
       t = t.getCause();
     }

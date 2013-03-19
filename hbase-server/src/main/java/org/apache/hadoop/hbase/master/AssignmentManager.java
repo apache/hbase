@@ -1898,7 +1898,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
       if (existingPlan != null && existingPlan.getDestination() != null) {
         LOG.debug("Found an existing plan for " + region.getRegionNameAsString()
-          + " destination server is " + existingPlan.getDestination());
+          + " destination server is " + existingPlan.getDestination() +
+            " accepted as a dest server = " + destServers.contains(existingPlan.getDestination()));
       }
 
       if (forceNewPlan
@@ -1918,7 +1919,8 @@ public class AssignmentManager extends ZooKeeperListener {
         " so generated a random one; " + randomPlan + "; " +
         serverManager.countOfRegionServers() +
                " (online=" + serverManager.getOnlineServers().size() +
-               ", available=" + destServers.size() + ") available servers");
+               ", available=" + destServers.size() + ") available servers" +
+               ", forceNewPlan=" + forceNewPlan);
         return randomPlan;
       }
     LOG.debug("Using pre-existing plan for region " +

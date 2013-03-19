@@ -163,6 +163,8 @@ public class TestFilterWithScanLimits {
       assertNull("Master is not running", e);
     } catch (ZooKeeperConnectionException e) {
       assertNull("Cannot connect to Zookeeper", e);
+    } catch (IOException e) {
+      assertNull("IOException", e);
     }
     createTable();
     prepareData();

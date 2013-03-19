@@ -155,7 +155,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param c Configuration object. Copied internally.
    */
   public HBaseAdmin(Configuration c)
-  throws MasterNotRunningException, ZooKeeperConnectionException {
+  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     // Will not leak connections, as the new implementation of the constructor
     // does not throw exceptions anymore.
     this(HConnectionManager.getConnection(new Configuration(c)));
@@ -554,8 +554,6 @@ public class HBaseAdmin implements Abortable, Closeable {
     });
 
     // Wait until all regions deleted
-    ClientProtocol server =
-      connection.getClient(firstMetaServer.getServerName());
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       try {
 
@@ -565,6 +563,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           firstMetaServer.getRegionInfo().getRegionName(), scan, 1, true);
         Result[] values = null;
         // Get a batch at a time.
+        ClientProtocol server = connection.getClient(firstMetaServer.getServerName());
         try {
           ScanResponse response = server.scan(null, request);
           values = ResponseConverter.getResults(response);
@@ -1934,7 +1933,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public static void checkHBaseAvailable(Configuration conf)
-    throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException {
+    throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException, IOException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
 
     // We set it to make it fail as soon as possible if HBase is not available
@@ -2435,7 +2434,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Execute Restore/Clone snapshot and wait for the server to complete (blocking).
    * To check if the cloned table exists, use {@link #isTableAvailable} -- it is not safe to
    * create an HTable instance to this table before it is available.
-   * @param snapshot snapshot to restore
+   * @param snapshotName snapshot to restore
    * @param tableName table name to restore the snapshot on
    * @throws IOException if a remote or network exception occurs
    * @throws RestoreSnapshotException if snapshot failed to be restored

@@ -183,6 +183,9 @@ public class HMasterCommandLine extends ServerCommandLine {
     } catch (ZooKeeperConnectionException e) {
       LOG.error("ZooKeeper not available");
       return -1;
+    } catch (IOException e) {
+      LOG.error("Got IOException: " +e.getMessage(), e);
+      return -1;
     }
     try {
       adm.shutdown();

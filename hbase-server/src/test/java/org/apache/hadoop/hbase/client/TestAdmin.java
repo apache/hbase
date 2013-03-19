@@ -1592,6 +1592,7 @@ public class TestAdmin {
     } catch (MasterNotRunningException ignored) {
     } catch (ZooKeeperConnectionException ignored) {
     } catch (ServiceException ignored) {
+    } catch (IOException ignored) {
     }
     long end = System.currentTimeMillis();
 

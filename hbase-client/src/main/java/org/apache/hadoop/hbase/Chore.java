@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Sleeper;
 
@@ -48,8 +49,20 @@ public abstract class Chore extends HasThread {
    */
   public Chore(String name, final int p, final Stoppable stopper) {
     super(name);
+    if (stopper == null){
+      throw new NullPointerException("stopper cannot be null");
+    }
     this.sleeper = new Sleeper(p, stopper);
     this.stopper = stopper;
+  }
+
+  /**
+   * This constructor is for test only. It allows to create an object and to call chore() on
+   *  it. There is no sleeper nor stoppable.
+   */
+  protected Chore(){
+    sleeper = null;
+    stopper = null;
   }
 
   /**
@@ -60,7 +73,7 @@ public abstract class Chore extends HasThread {
     try {
       boolean initialChoreComplete = false;
       while (!this.stopper.isStopped()) {
-        long startTime = System.currentTimeMillis();
+        long startTime = EnvironmentEdgeManager.currentTimeMillis();
         try {
           if (!initialChoreComplete) {
             initialChoreComplete = initialChore();
