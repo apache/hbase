@@ -487,6 +487,29 @@ public class TestAccessController {
   }
 
   @Test
+  public void testRegionOffline() throws Exception {
+    Map<HRegionInfo, ServerName> regions;
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE);
+    try {
+      regions = table.getRegionLocations();
+    } finally {
+      table.close();
+    }
+    final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
+
+    PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preRegionOffline(ObserverContext.createAndPrepare(CP_ENV, null),
+          firstRegion.getKey());
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
   public void testBalance() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
       public Object run() throws Exception {

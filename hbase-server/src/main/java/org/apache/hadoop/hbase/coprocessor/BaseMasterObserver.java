@@ -233,6 +233,16 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preRegionOffline(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    HRegionInfo regionInfo) throws IOException {
+  }
+
+  @Override
+  public void postRegionOffline(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    HRegionInfo regionInfo) throws IOException {
+  }
+
+  @Override
   public void preBalance(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
   }
