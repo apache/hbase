@@ -37,10 +37,10 @@ public interface RegionScanner extends InternalScanner {
   public HRegionInfo getRegionInfo();
 
   /**
-   * @return True if a filter indicates that this scanner will return no
-   *         further rows.
+   * @return True if a filter indicates that this scanner will return no further rows.
+   * @throws IOException in case of I/O failure on a filter.
    */
-  public boolean isFilterDone();
+  public boolean isFilterDone() throws IOException;
 
   /**
    * Do a reseek to the required row. Should not be used to seek to a key which

@@ -3385,10 +3385,13 @@ public class HRegion implements HeapSize { // , Writable{
     public long getMvccReadPoint() {
       return this.readPt;
     }
+    
     /**
      * Reset both the filter and the old filter.
+     * 
+     * @throws IOException in case a filter raises an I/O exception.
      */
-    protected void resetFilters() {
+    protected void resetFilters() throws IOException {
       if (filter != null) {
         filter.reset();
       }
@@ -3504,7 +3507,7 @@ public class HRegion implements HeapSize { // , Writable{
     /*
      * @return True if a filter rules the scanner is over, done.
      */
-    public synchronized boolean isFilterDone() {
+    public synchronized boolean isFilterDone() throws IOException {
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
@@ -3633,7 +3636,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
 
-    private boolean filterRowKey(byte[] row, int offset, short length) {
+    private boolean filterRowKey(byte[] row, int offset, short length) throws IOException {
       return filter != null
           && filter.filterRowKey(row, offset, length);
     }

@@ -18,16 +18,15 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 
 import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 /**
  * Tests for the page filter
@@ -66,7 +65,7 @@ public class TestPageFilter {
     testFiltersBeyondPageSize(f, ROW_LIMIT);
   }
 
-  private void testFiltersBeyondPageSize(final Filter f, final int pageSize) {
+  private void testFiltersBeyondPageSize(final Filter f, final int pageSize) throws IOException {
     int count = 0;
     for (int i = 0; i < (pageSize * 2); i++) {
       boolean filterOut = f.filterRow();

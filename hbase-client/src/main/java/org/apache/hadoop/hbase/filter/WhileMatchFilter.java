@@ -19,7 +19,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
@@ -27,7 +28,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.io.IOException;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon
@@ -51,7 +52,7 @@ public class WhileMatchFilter extends FilterBase {
     return filter;
   }
 
-  public void reset() {
+  public void reset() throws IOException {
     this.filter.reset();
   }
 
@@ -59,33 +60,38 @@ public class WhileMatchFilter extends FilterBase {
     filterAllRemaining = filterAllRemaining || value;
   }
 
-  public boolean filterAllRemaining() {
+  @Override
+  public boolean filterAllRemaining() throws IOException {
     return this.filterAllRemaining || this.filter.filterAllRemaining();
   }
 
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
+  @Override
+  public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException {
     boolean value = filter.filterRowKey(buffer, offset, length);
     changeFAR(value);
     return value;
   }
 
-  public ReturnCode filterKeyValue(KeyValue v) {
+  @Override
+  public ReturnCode filterKeyValue(KeyValue v) throws IOException {
     ReturnCode c = filter.filterKeyValue(v);
     changeFAR(c != ReturnCode.INCLUDE);
     return c;
   }
 
   @Override
-  public KeyValue transform(KeyValue v) {
+  public KeyValue transform(KeyValue v) throws IOException {
     return filter.transform(v);
   }
 
-  public boolean filterRow() {
+  @Override
+  public boolean filterRow() throws IOException {
     boolean filterRow = this.filter.filterRow();
     changeFAR(filterRow);
     return filterRow;
   }
   
+  @Override
   public boolean hasFilterRow() {
     return true;
   }
@@ -93,7 +99,7 @@ public class WhileMatchFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
-  public byte [] toByteArray() {
+  public byte[] toByteArray() throws IOException {
     FilterProtos.WhileMatchFilter.Builder builder =
       FilterProtos.WhileMatchFilter.newBuilder();
     builder.setFilter(ProtobufUtil.toFilter(this.filter));
@@ -134,7 +140,7 @@ public class WhileMatchFilter extends FilterBase {
     return getFilter().areSerializedFieldsEqual(other.getFilter());
   }
 
-  public boolean isFamilyEssential(byte[] name) {
+  public boolean isFamilyEssential(byte[] name) throws IOException {
     return filter.isFamilyEssential(name);
   }
 
