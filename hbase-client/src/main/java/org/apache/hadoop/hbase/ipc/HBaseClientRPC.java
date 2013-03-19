@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
@@ -108,7 +109,8 @@ public class HBaseClientRPC {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ie) {
-        // IGNORE
+        Thread.interrupted();
+        throw new InterruptedIOException();
       }
     }
   }

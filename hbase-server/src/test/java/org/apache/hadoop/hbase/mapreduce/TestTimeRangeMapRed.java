@@ -90,7 +90,7 @@ public class TestTimeRangeMapRed {
   }
 
   @Before
-  public void before() throws MasterNotRunningException, ZooKeeperConnectionException {
+  public void before() throws Exception {
     this.admin = new HBaseAdmin(UTIL.getConfiguration());
   }
 

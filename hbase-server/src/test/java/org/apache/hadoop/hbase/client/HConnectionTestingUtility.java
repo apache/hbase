@@ -131,7 +131,7 @@ public class HConnectionTestingUtility {
    * {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
    */
   public static HConnection getSpiedConnection(final Configuration conf)
-  throws ZooKeeperConnectionException {
+  throws IOException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
     synchronized (HConnectionManager.HBASE_INSTANCES) {
       HConnectionImplementation connection =

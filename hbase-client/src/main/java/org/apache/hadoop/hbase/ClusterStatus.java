@@ -34,12 +34,13 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Re
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionedWritable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
+
 
 /**
  * Status information on the HBase cluster.
@@ -82,7 +83,7 @@ public class ClusterStatus extends VersionedWritable {
   private Map<String, RegionState> intransition;
   private String clusterId;
   private String[] masterCoprocessors;
-  private boolean balancerOn;
+  private Boolean balancerOn;
 
   /**
    * Constructor, for Writable
@@ -100,7 +101,7 @@ public class ClusterStatus extends VersionedWritable {
       final Collection<ServerName> backupMasters,
       final Map<String, RegionState> rit,
       final String[] masterCoprocessors,
-      final boolean balancerOn) {
+      final Boolean balancerOn) {
     this.hbaseVersion = hbaseVersion;
 
     this.liveServers = servers;
@@ -261,53 +262,81 @@ public class ClusterStatus extends VersionedWritable {
     return clusterId;
   }
 
-   public String[] getMasterCoprocessors() {
-     return masterCoprocessors;
+  public String[] getMasterCoprocessors() {
+    return masterCoprocessors;
   }
 
 
   public boolean isBalancerOn() {
+    return balancerOn != null && balancerOn;
+  }
+
+  public Boolean getBalancerOn(){
     return balancerOn;
   }
 
    /**
-    * Convert a ClutserStatus to a protobuf ClusterStatus
+    * Convert a ClusterStatus to a protobuf ClusterStatus
     *
     * @return the protobuf ClusterStatus
     */
   public ClusterStatusProtos.ClusterStatus convert() {
-    ClusterStatusProtos.ClusterStatus.Builder builder = ClusterStatusProtos.ClusterStatus.newBuilder();
+    ClusterStatusProtos.ClusterStatus.Builder builder =
+        ClusterStatusProtos.ClusterStatus.newBuilder();
     builder.setHbaseVersion(HBaseVersionFileContent.newBuilder().setVersion(getHBaseVersion()));
 
-    for (Map.Entry<ServerName, ServerLoad> entry : liveServers.entrySet()) {
-      LiveServerInfo.Builder lsi =
-        LiveServerInfo.newBuilder().setServer(ProtobufUtil.toServerName(entry.getKey()));
-      lsi.setServerLoad(entry.getValue().obtainServerLoadPB());
-      builder.addLiveServers(lsi.build());
+    if (liveServers != null){
+      for (Map.Entry<ServerName, ServerLoad> entry : liveServers.entrySet()) {
+        LiveServerInfo.Builder lsi =
+          LiveServerInfo.newBuilder().setServer(ProtobufUtil.toServerName(entry.getKey()));
+        lsi.setServerLoad(entry.getValue().obtainServerLoadPB());
+        builder.addLiveServers(lsi.build());
+      }
     }
-    for (ServerName deadServer : getDeadServerNames()) {
-      builder.addDeadServers(ProtobufUtil.toServerName(deadServer));
-    }
-    for (Map.Entry<String, RegionState> rit : getRegionsInTransition().entrySet()) {
-      ClusterStatusProtos.RegionState rs = rit.getValue().convert();
-      RegionSpecifier.Builder spec =
-        RegionSpecifier.newBuilder().setType(RegionSpecifierType.REGION_NAME);
-      spec.setValue(ByteString.copyFrom(Bytes.toBytes(rit.getKey())));
 
-      RegionInTransition pbRIT =
-        RegionInTransition.newBuilder().setSpec(spec.build()).setRegionState(rs).build();
-      builder.addRegionsInTransition(pbRIT);
+    if (deadServers != null){
+      for (ServerName deadServer : deadServers) {
+        builder.addDeadServers(ProtobufUtil.toServerName(deadServer));
+      }
     }
-    builder.setClusterId(new ClusterId(getClusterId()).convert());
-    for (String coprocessor : getMasterCoprocessors()) {
-      builder.addMasterCoprocessors(HBaseProtos.Coprocessor.newBuilder().setName(coprocessor));
+
+    if (intransition != null) {
+      for (Map.Entry<String, RegionState> rit : getRegionsInTransition().entrySet()) {
+        ClusterStatusProtos.RegionState rs = rit.getValue().convert();
+        RegionSpecifier.Builder spec =
+            RegionSpecifier.newBuilder().setType(RegionSpecifierType.REGION_NAME);
+        spec.setValue(ByteString.copyFrom(Bytes.toBytes(rit.getKey())));
+
+        RegionInTransition pbRIT =
+            RegionInTransition.newBuilder().setSpec(spec.build()).setRegionState(rs).build();
+        builder.addRegionsInTransition(pbRIT);
+      }
     }
-    builder.setMaster(
-      ProtobufUtil.toServerName(getMaster()));
-    for (ServerName backup : getBackupMasters()) {
-      builder.addBackupMasters(ProtobufUtil.toServerName(backup));
+
+    if (clusterId != null) {
+      builder.setClusterId(new ClusterId(clusterId).convert());
     }
-    builder.setBalancerOn(balancerOn);
+
+    if (masterCoprocessors != null) {
+      for (String coprocessor : masterCoprocessors) {
+        builder.addMasterCoprocessors(HBaseProtos.Coprocessor.newBuilder().setName(coprocessor));
+      }
+    }
+
+    if (master != null){
+      builder.setMaster(ProtobufUtil.toServerName(getMaster()));
+    }
+
+    if (backupMasters != null) {
+      for (ServerName backup : backupMasters) {
+        builder.addBackupMasters(ProtobufUtil.toServerName(backup));
+      }
+    }
+
+    if (balancerOn != null){
+      builder.setBalancerOn(balancerOn);
+    }
+
     return builder.build();
   }
 
@@ -318,29 +347,51 @@ public class ClusterStatus extends VersionedWritable {
    * @return the converted ClusterStatus
    */
   public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
-    Map<ServerName, ServerLoad> servers = new HashMap<ServerName, ServerLoad>();
-    for (LiveServerInfo lsi : proto.getLiveServersList()) {
-      servers.put(ProtobufUtil.toServerName(lsi.getServer()), new ServerLoad(lsi.getServerLoad()));
+
+    Map<ServerName, ServerLoad> servers = null;
+    if (proto.getLiveServersList() != null) {
+      servers = new HashMap<ServerName, ServerLoad>(proto.getLiveServersList().size());
+      for (LiveServerInfo lsi : proto.getLiveServersList()) {
+        servers.put(ProtobufUtil.toServerName(
+            lsi.getServer()), new ServerLoad(lsi.getServerLoad()));
+      }
     }
-    Collection<ServerName> deadServers = new LinkedList<ServerName>();
-    for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
-      deadServers.add(ProtobufUtil.toServerName(sn));
+
+    Collection<ServerName> deadServers = null;
+    if (proto.getDeadServersList() != null) {
+      deadServers = new ArrayList<ServerName>(proto.getDeadServersList().size());
+      for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
+        deadServers.add(ProtobufUtil.toServerName(sn));
+      }
     }
-    Collection<ServerName> backupMasters = new LinkedList<ServerName>();
-    for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
-      backupMasters.add(ProtobufUtil.toServerName(sn));
+
+    Collection<ServerName> backupMasters = null;
+    if (proto.getBackupMastersList() != null) {
+      backupMasters = new ArrayList<ServerName>(proto.getBackupMastersList().size());
+      for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
+        backupMasters.add(ProtobufUtil.toServerName(sn));
+      }
     }
-    final Map<String, RegionState> rit = new HashMap<String, RegionState>();
-    for (RegionInTransition region : proto.getRegionsInTransitionList()) {
-      String key = new String(region.getSpec().getValue().toByteArray());
-      RegionState value = RegionState.convert(region.getRegionState());
-      rit.put(key,value);
+
+    Map<String, RegionState> rit = null;
+    if (proto.getRegionsInTransitionList() != null) {
+      rit = new HashMap<String, RegionState>(proto.getRegionsInTransitionList().size());
+      for (RegionInTransition region : proto.getRegionsInTransitionList()) {
+        String key = new String(region.getSpec().getValue().toByteArray());
+        RegionState value = RegionState.convert(region.getRegionState());
+        rit.put(key, value);
+      }
     }
-    final int numMasterCoprocessors = proto.getMasterCoprocessorsCount();
-    final String[] masterCoprocessors = new String[numMasterCoprocessors];
-    for (int i = 0; i < numMasterCoprocessors; i++) {
-      masterCoprocessors[i] = proto.getMasterCoprocessors(i).getName();
+
+    String[] masterCoprocessors = null;
+    if (proto.getMasterCoprocessorsList() != null) {
+      final int numMasterCoprocessors = proto.getMasterCoprocessorsCount();
+      masterCoprocessors = new String[numMasterCoprocessors];
+      for (int i = 0; i < numMasterCoprocessors; i++) {
+        masterCoprocessors[i] = proto.getMasterCoprocessors(i).getName();
+      }
     }
+
     return new ClusterStatus(proto.getHbaseVersion().getVersion(),
       ClusterId.convert(proto.getClusterId()).toString(),servers,deadServers,
       ProtobufUtil.toServerName(proto.getMaster()),backupMasters,rit,masterCoprocessors,

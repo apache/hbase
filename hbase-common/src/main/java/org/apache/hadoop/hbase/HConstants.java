@@ -808,6 +808,23 @@ public final class HConstants {
       "hbase.node.health.failure.threshold";
   public static final int DEFAULT_HEALTH_FAILURE_THRESHOLD = 3;
 
+
+  /**
+   * IP to use for the multicast status messages between the master and the clients.
+   * The default address is chosen as one among others within the ones suitable for multicast
+   * messages.
+   */
+  public static final String STATUS_MULTICAST_ADDRESS = "hbase.status.multicast.address.ip";
+  public static final String DEFAULT_STATUS_MULTICAST_ADDRESS = "226.1.1.3";
+
+  /**
+   * The port to use for the multicast messages.
+   */
+  public static final String STATUS_MULTICAST_PORT = "hbase.status.multicast.port";
+  public static final int DEFAULT_STATUS_MULTICAST_PORT = 60100;
+
+
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

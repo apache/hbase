@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IpcProtocol;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException;
@@ -184,7 +185,6 @@ public class HBaseClient {
 
       return false;
     }
-
   }
 
   public static class FailedServerException extends IOException {
@@ -1337,6 +1337,30 @@ public class HBaseClient {
            "Call to " + addr + " failed on local exception: " + exception)
                                  .initCause(exception);
 
+    }
+  }
+
+  /**
+   * Interrupt the connections to the given ip:port server. This should be called if the server
+   *  is known as actually dead. This will not prevent current operation to be retried, and,
+   *  depending on their own behavior, they may retry on the same server. This can be a feature,
+   *  for example at startup. In any case, they're likely to get connection refused (if the
+   *  process died) or no route to host: i.e. there next retries should be faster and with a
+   *  safe exception.
+   */
+  public void cancelConnections(String hostname, int port, IOException ioe) {
+    synchronized (connections) {
+      for (Connection connection : connections.values()) {
+        if (connection.isAlive() &&
+            connection.getRemoteAddress().getPort() == port &&
+            connection.getRemoteAddress().getHostName().equals(hostname)) {
+          LOG.info("The server on " + hostname + ":" + port +
+              " is dead - stopping the connection " + connection.remoteId);
+          connection.closeConnection();
+          // We could do a connection.interrupt(), but it's safer not to do it, as the
+          //  interrupted exception behavior is not defined nor enforced enough.
+        }
+      }
     }
   }
 

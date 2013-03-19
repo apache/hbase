@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -44,13 +45,17 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionKey;
+import org.apache.hadoop.hbase.exceptions.RegionServerStoppedException;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.master.ClusterStatusPublisher;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -77,6 +82,10 @@ public class TestHCM {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setClass(ClusterStatusPublisher.STATUS_PUBLISHER_CLASS,
+        ClusterStatusPublisher.MulticastPublisher.class, ClusterStatusPublisher.Publisher.class);
+    TEST_UTIL.getConfiguration().setClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
+        ClusterStatusListener.MultiCastListener.class, ClusterStatusListener.Listener.class);
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -88,7 +97,7 @@ public class TestHCM {
 
   public static void createNewConfigurations() throws SecurityException,
   IllegalArgumentException, NoSuchFieldException,
-  IllegalAccessException, InterruptedException, ZooKeeperConnectionException {
+  IllegalAccessException, InterruptedException, ZooKeeperConnectionException, IOException {
     HConnection last = null;
     for (int i = 0; i <= (HConnectionManager.MAX_CACHED_HBASE_INSTANCES * 2); i++) {
       // set random key to differentiate the connection from previous ones
@@ -115,6 +124,61 @@ public class TestHCM {
 
   private static int getHConnectionManagerCacheSize(){
     return HConnectionTestingUtility.getConnectionCount();
+  }
+
+  @Test(expected = RegionServerStoppedException.class)
+  public void testClusterStatus() throws Exception {
+    byte[] tn = "testClusterStatus".getBytes();
+    byte[] cf = "cf".getBytes();
+    byte[] rk = "rk1".getBytes();
+
+    JVMClusterUtil.RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
+    rs.waitForServerOnline();
+    final ServerName sn = rs.getRegionServer().getServerName();
+
+    HTable t = TEST_UTIL.createTable(tn, cf);
+    TEST_UTIL.waitTableAvailable(tn);
+
+    while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+        getRegionStates().isRegionsInTransition()){
+      Thread.sleep(1);
+    }
+    final HConnectionImplementation hci =  (HConnectionImplementation)t.getConnection();
+    while (t.getRegionLocation(rk).getPort() != sn.getPort()){
+      TEST_UTIL.getHBaseAdmin().move(t.getRegionLocation(rk).getRegionInfo().
+          getEncodedNameAsBytes(), sn.getVersionedBytes());
+      while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+          getRegionStates().isRegionsInTransition()){
+        Thread.sleep(1);
+      }
+      hci.clearRegionCache(tn);
+    }
+    Assert.assertNotNull(hci.clusterStatusListener);
+    TEST_UTIL.assertRegionOnServer(t.getRegionLocation(rk).getRegionInfo(), sn, 20000);
+
+    Put p1 = new Put(rk);
+    p1.add(cf, "qual".getBytes(), "val".getBytes());
+    t.put(p1);
+
+    rs.getRegionServer().abort("I'm dead");
+
+    // We want the status to be updated. That's a least 10 second
+    TEST_UTIL.waitFor(40000, 1000, true, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return TEST_UTIL.getHBaseCluster().getMaster().getServerManager().
+            getDeadServers().isDeadServer(sn);
+      }
+    });
+
+    TEST_UTIL.waitFor(40000, 1000, true, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return hci.clusterStatusListener.isDeadServer(sn);
+      }
+    });
+
+    hci.getClient(sn);  // will throw an exception: RegionServerStoppedException
   }
 
   @Test

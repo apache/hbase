@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.exceptions.RegionServerStoppedException;
 import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
@@ -202,7 +203,7 @@ public class HConnectionManager {
    * @throws ZooKeeperConnectionException
    */
   public static HConnection getConnection(Configuration conf)
-  throws ZooKeeperConnectionException {
+  throws IOException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
     synchronized (HBASE_INSTANCES) {
       HConnectionImplementation connection = HBASE_INSTANCES.get(connectionKey);
@@ -230,7 +231,7 @@ public class HConnectionManager {
    * @throws ZooKeeperConnectionException
    */
   public static HConnection createConnection(Configuration conf)
-  throws ZooKeeperConnectionException {
+  throws IOException {
     return new HConnectionImplementation(conf, false);
   }
 
@@ -260,7 +261,6 @@ public class HConnectionManager {
 
   /**
    * Delete information for all connections.
-   * @throws IOException
    */
   public static void deleteAllConnections() {
     synchronized (HBASE_INSTANCES) {
@@ -520,6 +520,9 @@ public class HConnectionManager {
     private volatile boolean closed;
     private volatile boolean aborted;
 
+    // package protected for the tests
+    ClusterStatusListener clusterStatusListener;
+
     private final Object metaRegionLock = new Object();
     private final Object userRegionLock = new Object();
 
@@ -558,8 +561,8 @@ public class HConnectionManager {
     // entry in cachedRegionLocations that map to this server; but the absence
     // of a server in this map guarentees that there is no entry in cache that
     // maps to the absent server.
-    private final Set<String> cachedServers =
-        new HashSet<String>();
+    // The access to this attribute must be protected by a lock on cachedRegionLocations
+    private final Set<ServerName> cachedServers = new HashSet<ServerName>();
 
     // region cache prefetch is enabled by default. this set contains all
     // tables whose region cache prefetch are disabled.
@@ -575,8 +578,7 @@ public class HConnectionManager {
      * @param conf Configuration object
      */
     @SuppressWarnings("unchecked")
-    public HConnectionImplementation(Configuration conf, boolean managed)
-    throws ZooKeeperConnectionException {
+    public HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
       this.conf = conf;
       this.managed = managed;
       String adminClassName = conf.get(REGION_PROTOCOL_CLASS,
@@ -613,10 +615,29 @@ public class HConnectionManager {
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
       retrieveClusterId();
+
       // ProtobufRpcClientEngine is the main RpcClientEngine implementation,
       // but we maintain access through an interface to allow overriding for tests
       // RPC engine setup must follow obtaining the cluster ID for token authentication to work
       this.rpcEngine = new ProtobufRpcClientEngine(this.conf, this.clusterId);
+
+
+      // Do we publish the status?
+      Class<? extends ClusterStatusListener.Listener> listenerClass =
+          conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
+              ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
+              ClusterStatusListener.Listener.class);
+
+      if (listenerClass != null) {
+        clusterStatusListener = new ClusterStatusListener(
+            new ClusterStatusListener.DeadServerHandler() {
+              @Override
+              public void newDead(ServerName sn) {
+                clearCaches(sn);
+                rpcEngine.getClient().cancelConnections(sn.getHostname(), sn.getPort(), null);
+              }
+            }, conf, listenerClass);
+      }
     }
 
     /**
@@ -755,7 +776,7 @@ public class HConnectionManager {
             // tries at this point is 1 or more; decrement to start from 0.
             long pauseTime = ConnectionUtils.getPauseTime(this.pause, tries - 1);
             LOG.info("getMaster attempt " + tries + " of " + numRetries +
-              " failed; retrying after sleep of " +pauseTime, exceptionCaught);
+              " failed; retrying after sleep of " +pauseTime + ", exception=" + exceptionCaught);
 
             try {
               Thread.sleep(pauseTime);
@@ -922,10 +943,20 @@ public class HConnectionManager {
       }
     }
 
+
     @Override
     public HRegionLocation locateRegion(final byte[] regionName) throws IOException {
       return locateRegion(HRegionInfo.getTableName(regionName),
           HRegionInfo.getStartKey(regionName), false, true);
+    }
+
+    @Override
+    public boolean isDeadServer(ServerName sn) {
+      if (clusterStatusListener == null) {
+        return false;
+      } else {
+        return clusterStatusListener.isDeadServer(sn);
+      }
     }
 
     @Override
@@ -1087,10 +1118,9 @@ public class HConnectionManager {
           metaLocation = locateRegion(parentTable, metaKey, true, false);
           // If null still, go around again.
           if (metaLocation == null) continue;
-          ClientProtocol server =
-            getClient(metaLocation.getServerName());
+          ClientProtocol server = getClient(metaLocation.getServerName());
 
-          Result regionInfoRow = null;
+          Result regionInfoRow;
           // This block guards against two threads trying to load the meta
           // region at the same time. The first will load the meta region and
           // the second will use the value that the first one found.
@@ -1155,6 +1185,12 @@ public class HConnectionManager {
               "in " + Bytes.toString(parentTable) + " for region " +
               regionInfo.getRegionNameAsString() + " containing row " +
               Bytes.toStringBinary(row));
+          }
+
+          if (isDeadServer(serverName)){
+            throw new RegionServerStoppedException(".META. says the region "+
+                regionInfo.getRegionNameAsString()+" is managed by the server " + serverName +
+                ", but it is dead.");
           }
 
           // Instantiate the location
@@ -1269,41 +1305,33 @@ public class HConnectionManager {
       if ((rl != null) && LOG.isDebugEnabled()) {
         LOG.debug("Removed " + rl.getHostname() + ":" + rl.getPort()
           + " as a location of " + rl.getRegionInfo().getRegionNameAsString() +
-          " for tableName=" + Bytes.toString(tableName) +
-          " from cache to make sure we don't use cache for " + Bytes.toStringBinary(row));
+          " for tableName=" + Bytes.toString(tableName) + " from cache");
       }
-    }
-
-    @Override
-    public void clearCaches(String sn) {
-      clearCachedLocationForServer(sn);
     }
 
     /*
      * Delete all cached entries of a table that maps to a specific location.
-     *
-     * @param tablename
-     * @param server
      */
-    private void clearCachedLocationForServer(final String server) {
+    @Override
+    public void clearCaches(final ServerName serverName){
       boolean deletedSomething = false;
       synchronized (this.cachedRegionLocations) {
-        if (!cachedServers.contains(server)) {
+        if (!cachedServers.contains(serverName)) {
           return;
         }
         for (Map<byte[], HRegionLocation> tableLocations :
-          cachedRegionLocations.values()) {
+            cachedRegionLocations.values()) {
           for (Entry<byte[], HRegionLocation> e : tableLocations.entrySet()) {
-            if (e.getValue().getHostnamePort().equals(server)) {
+            if (serverName.equals(e.getValue().getServerName())) {
               tableLocations.remove(e.getKey());
               deletedSomething = true;
             }
           }
         }
-        cachedServers.remove(server);
+        cachedServers.remove(serverName);
       }
       if (deletedSomething && LOG.isDebugEnabled()) {
-        LOG.debug("Removed all cached region locations that map to " + server);
+        LOG.debug("Removed all cached region locations that map to " + serverName);
       }
     }
 
@@ -1359,7 +1387,7 @@ public class HConnectionManager {
       boolean isStaleUpdate = false;
       HRegionLocation oldLocation = null;
       synchronized (this.cachedRegionLocations) {
-        cachedServers.add(location.getHostnamePort());
+        cachedServers.add(location.getServerName());
         oldLocation = tableLocations.get(startKey);
         isNewCacheEntry = (oldLocation == null);
         // If the server in cache sends us a redirect, assume it's always valid.
@@ -1414,6 +1442,9 @@ public class HConnectionManager {
     @Override
     public ClientProtocol getClient(final ServerName serverName)
         throws IOException {
+      if (isDeadServer(serverName)){
+        throw new RegionServerStoppedException("The server " + serverName + " is dead.");
+      }
       return (ClientProtocol)
           getProtocol(serverName.getHostname(), serverName.getPort(), clientClass);
     }
@@ -1429,6 +1460,9 @@ public class HConnectionManager {
     @Override
     public AdminProtocol getAdmin(final ServerName serverName, final boolean master)
         throws IOException {
+      if (isDeadServer(serverName)){
+        throw new RegionServerStoppedException("The server " + serverName + " is dead.");
+      }
       return (AdminProtocol)getProtocol(
           serverName.getHostname(), serverName.getPort(), adminClass);
     }
@@ -1997,7 +2031,7 @@ public class HConnectionManager {
           if (LOG.isTraceEnabled() && (sleepTime > 0)) {
             StringBuilder sb = new StringBuilder();
             for (Action<R> action : e.getValue().allActions()) {
-              sb.append(Bytes.toStringBinary(action.getAction().getRow()) + ";");
+              sb.append(Bytes.toStringBinary(action.getAction().getRow())).append(';');
             }
             LOG.trace("Sending requests to [" + e.getKey().getHostnamePort()
               + "] with delay of [" + sleepTime + "] for rows [" + sb.toString() + "]");
@@ -2391,6 +2425,9 @@ public class HConnectionManager {
       closeZooKeeperWatcher();
       this.servers.clear();
       this.rpcEngine.close();
+      if (clusterStatusListener != null) {
+        clusterStatusListener.close();
+      }
       this.closed = true;
     }
 

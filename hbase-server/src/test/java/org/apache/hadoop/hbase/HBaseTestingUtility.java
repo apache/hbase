@@ -2354,6 +2354,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   private static final int MIN_RANDOM_PORT = 0xc000;
   private static final int MAX_RANDOM_PORT = 0xfffe;
+  private static Random random = new Random();
 
   /**
    * Returns a random port. These ports cannot be registered with IANA and are
@@ -2361,7 +2362,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public static int randomPort() {
     return MIN_RANDOM_PORT
-        + new Random().nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
+        + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
   }
 
   /**
@@ -2386,6 +2387,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     } while (port == 0);
     return port;
   }
+
+
+  public static String randomMultiCastAddress() {
+    return "226.1.1." + random.nextInt(254);
+  }
+
+
 
   public static void waitForHostPort(String host, int port)
       throws IOException {

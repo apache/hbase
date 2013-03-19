@@ -89,8 +89,7 @@ class MemStoreFlusher implements FlushRequester {
   private long blockingWaitTime;
   private final Counter updatesBlockedMsHighWater = new Counter();
 
-  private FlushHandler[] flushHandlers = null;
-  private int handlerCount;
+  private final FlushHandler[] flushHandlers;
 
   /**
    * @param conf
@@ -116,7 +115,8 @@ class MemStoreFlusher implements FlushRequester {
       conf.getInt("hbase.hstore.blockingStoreFiles", HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
-    this.handlerCount = conf.getInt("hbase.hstore.flusher.count", 1);
+    int handlerCount = conf.getInt("hbase.hstore.flusher.count", 1);
+    this.flushHandlers = new FlushHandler[handlerCount];
     LOG.info("globalMemStoreLimit=" +
       StringUtils.humanReadableInt(this.globalMemStoreLimit) +
       ", globalMemStoreLimitLowMark=" +
@@ -350,7 +350,6 @@ class MemStoreFlusher implements FlushRequester {
   synchronized void start(UncaughtExceptionHandler eh) {
     ThreadFactory flusherThreadFactory = Threads.newDaemonThreadFactory(
         server.getServerName().toString() + "-MemStoreFlusher", eh);
-    flushHandlers = new FlushHandler[handlerCount];
     for (int i = 0; i < flushHandlers.length; i++) {
       flushHandlers[i] = new FlushHandler();
       flusherThreadFactory.newThread(flushHandlers[i]);
@@ -607,7 +606,7 @@ class MemStoreFlusher implements FlushRequester {
     }
 
     /**
-     * @return Count of times {@link #resetDelay()} was called; i.e this is
+     * @return Count of times {@link #requeue(long)} was called; i.e this is
      * number of times we've been requeued.
      */
     public int getRequeueCount() {

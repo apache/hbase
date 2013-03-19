@@ -177,12 +177,12 @@ public class ServerManager {
    * @throws ZooKeeperConnectionException
    */
   public ServerManager(final Server master, final MasterServices services)
-      throws ZooKeeperConnectionException {
+      throws IOException {
     this(master, services, true);
   }
 
   ServerManager(final Server master, final MasterServices services,
-      final boolean connect) throws ZooKeeperConnectionException {
+      final boolean connect) throws IOException {
     this.master = master;
     this.services = services;
     Configuration c = master.getConfiguration();

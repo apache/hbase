@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.thrift.TException;
 
@@ -168,7 +169,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
     LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>();
     pool =
         new ThreadPoolExecutor(CORE_POOL_SIZE, CORE_POOL_SIZE, 50, TimeUnit.MILLISECONDS, queue,
-            new DaemonThreadFactory());
+            Threads.newDaemonThreadFactory("IncrementCoalescer"));
 
     MBeanUtil.registerMBean("thrift", "Thrift", this);
   }

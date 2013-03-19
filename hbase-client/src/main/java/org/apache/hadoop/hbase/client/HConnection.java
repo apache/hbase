@@ -403,11 +403,12 @@ public interface HConnection extends Abortable, Closeable {
    */
   public boolean isClosed();
 
+
   /**
    * Clear any caches that pertain to server name <code>sn</code>
-   * @param sn A server name as hostname:port
+   * @param sn A server name
    */
-  public void clearCaches(final String sn);
+  public void clearCaches(final ServerName sn);
 
   /**
    * This function allows HBaseAdminProtocol and potentially others to get a shared MasterMonitor
@@ -425,5 +426,11 @@ public interface HConnection extends Abortable, Closeable {
    * @throws MasterNotRunningException
    */
   public MasterAdminKeepAliveConnection getKeepAliveMasterAdmin() throws MasterNotRunningException;
+
+  /**
+   * @param serverName
+   * @return true if the server is known as dead, false otherwise.
+   */
+  public boolean isDeadServer(ServerName serverName);
 }
 
