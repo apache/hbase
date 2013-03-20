@@ -856,9 +856,6 @@ public class ZKUtil {
    * Set data into node creating node if it doesn't yet exist.
    * Does not set watch.
    *
-   * WARNING: this is not atomic -- it is possible to get a 0-byte data value in the znode before
-   * data is written
-   *
    * @param zkw zk reference
    * @param znode path of node
    * @param data data to set for node
@@ -868,9 +865,10 @@ public class ZKUtil {
       final byte [] data)
   throws KeeperException {
     if (checkExists(zkw, znode) == -1) {
-      ZKUtil.createWithParents(zkw, znode);
+      ZKUtil.createWithParents(zkw, znode, data);
+    } else {
+      ZKUtil.setData(zkw, znode, data);
     }
-    ZKUtil.setData(zkw, znode, data);
   }
 
   /**
