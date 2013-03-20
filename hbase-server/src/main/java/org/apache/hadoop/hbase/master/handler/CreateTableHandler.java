@@ -166,6 +166,15 @@ public class CreateTableHandler extends EventHandler {
    * @param exception null if process() is successful or not null if something has failed.
    */
   protected void completed(final Throwable exception) {
+    releaseTableLock();
+    if (exception != null) {
+      // Try deleting the enabling node in case of error
+      // If this does not happen then if the client tries to create the table
+      // again with the same Active master
+      // It will block the creation saying TableAlreadyExists.
+      this.assignmentManager.getZKTable().removeEnablingTable(
+          this.hTableDescriptor.getNameAsString());
+    }
   }
 
   /**
@@ -222,8 +231,6 @@ public class CreateTableHandler extends EventHandler {
     } catch (KeeperException e) {
       throw new IOException("Unable to ensure that " + tableName + " will be" +
         " enabled because of a ZooKeeper issue", e);
-    } finally {
-      releaseTableLock();
     }
   }
 
