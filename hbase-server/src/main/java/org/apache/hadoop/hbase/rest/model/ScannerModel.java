@@ -61,6 +61,7 @@ import com.sun.jersey.api.json.JSONUnmarshaller;
  *   &lt;attribute name="startRow" type="base64Binary"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="endRow" type="base64Binary"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="batch" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="caching" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="startTime" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="endTime" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="maxVersions" type="int"&gt;&lt;/attribute&gt;
@@ -81,6 +82,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private long endTime = Long.MAX_VALUE;
   private String filter = null;
   private int maxVersions = Integer.MAX_VALUE;
+  private int caching = -1;
 
   @XmlRootElement
   static class FilterModel {
@@ -472,7 +474,11 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     model.setEndTime(scan.getTimeRange().getMax());
     int caching = scan.getCaching();
     if (caching > 0) {
-      model.setBatch(caching);
+      model.setCaching(caching);
+    }
+    int batch = scan.getBatch();
+    if (batch > 0) {
+      model.setBatch(batch);
     }
     int maxVersions = scan.getMaxVersions();
     if (maxVersions > 0) {
@@ -496,18 +502,20 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
    * @param endRow the end key of the row-range
    * @param columns the columns to scan
    * @param batch the number of values to return in batch
+   * @param caching the number of rows that the scanner will fetch at once
    * @param endTime the upper bound on timestamps of values of interest
    * @param maxVersions the maximum number of versions to return
    * @param filter a filter specification
    * (values with timestamps later than this are excluded)
    */
   public ScannerModel(byte[] startRow, byte[] endRow, List<byte[]> columns,
-      int batch, long endTime, int maxVersions, String filter) {
+      int batch, int caching, long endTime, int maxVersions, String filter) {
     super();
     this.startRow = startRow;
     this.endRow = endRow;
     this.columns = columns;
     this.batch = batch;
+    this.caching = caching;
     this.endTime = endTime;
     this.maxVersions = maxVersions;
     this.filter = filter;
@@ -519,6 +527,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
    * @param endRow the end key of the row-range
    * @param columns the columns to scan
    * @param batch the number of values to return in batch
+   * @param caching the number of rows that the scanner will fetch at once
    * @param startTime the lower bound on timestamps of values of interest
    * (values with timestamps earlier than this are excluded)
    * @param endTime the upper bound on timestamps of values of interest
@@ -526,12 +535,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
    * @param filter a filter specification
    */
   public ScannerModel(byte[] startRow, byte[] endRow, List<byte[]> columns,
-      int batch, long startTime, long endTime, String filter) {
+      int batch, int caching, long startTime, long endTime, String filter) {
     super();
     this.startRow = startRow;
     this.endRow = endRow;
     this.columns = columns;
     this.batch = batch;
+    this.caching = caching;
     this.startTime = startTime;
     this.endTime = endTime;
     this.filter = filter;
@@ -582,13 +592,21 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   public List<byte[]> getColumns() {
     return columns;
   }
-  
+
   /**
    * @return the number of cells to return in batch
    */
   @XmlAttribute
   public int getBatch() {
     return batch;
+  }
+
+  /**
+   * @return the number of rows that the scanner to fetch at once
+   */
+  @XmlAttribute
+  public int getCaching() {
+    return caching;
   }
 
   /**
@@ -652,6 +670,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
+   * @param caching the number of rows to fetch at once
+   */
+  public void setCaching(int caching) {
+    this.caching = caching;
+  }
+
+  /**
    * @param maxVersions maximum number of versions to return
    */
   public void setMaxVersions(int maxVersions) {
@@ -698,6 +723,9 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
       builder.setEndTime(endTime);
     }
     builder.setBatch(getBatch());
+    if (caching > 0) {
+      builder.setCaching(caching);
+    }
     builder.setMaxVersions(maxVersions);
     if (filter != null) {
       builder.setFilter(filter);
@@ -721,6 +749,9 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
     if (builder.hasBatch()) {
       batch = builder.getBatch();
+    }
+    if (builder.hasCaching()) {
+      caching = builder.getCaching();
     }
     if (builder.hasStartTime()) {
       startTime = builder.getStartTime();

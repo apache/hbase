@@ -89,7 +89,7 @@ public class ScannerResource extends ResourceBase {
       Filter filter = ScannerResultGenerator.buildFilterFromModel(model);
       String tableName = tableResource.getName();
       ScannerResultGenerator gen =
-        new ScannerResultGenerator(tableName, spec, filter);
+        new ScannerResultGenerator(tableName, spec, filter, model.getCaching());
       String id = gen.getID();
       ScannerInstanceResource instance =
         new ScannerInstanceResource(tableName, id, gen, model.getBatch());
