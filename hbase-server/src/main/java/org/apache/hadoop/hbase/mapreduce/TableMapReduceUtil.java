@@ -226,7 +226,7 @@ public class TableMapReduceUtil {
       initTableMapperJob(table, scan, mapper, outputKeyClass,
               outputValueClass, job, addDependencyJars, TableInputFormat.class);
   }
-  
+
   /**
    * Use this before submitting a Multi TableMap job. It will appropriately set
    * up the job.
@@ -523,6 +523,8 @@ public class TableMapReduceUtil {
           // pull necessary dependencies
           org.apache.zookeeper.ZooKeeper.class,
           com.google.protobuf.Message.class,
+          com.google.common.collect.Lists.class,
+          org.cloudera.htrace.Trace.class,
           // pull job classes
           job.getMapOutputKeyClass(),
           job.getMapOutputValueClass(),

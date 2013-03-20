@@ -38,6 +38,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -149,7 +150,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
 
   private static final String TABLE_NAME_KEY = "IntegrationTestBigLinkedList.table";
 
-  private static final String DEFAULT_TABLE_NAME = "ci";
+  private static final String DEFAULT_TABLE_NAME = "IntegrationTestBigLinkedList";
 
   private static byte[] FAMILY_NAME = Bytes.toBytes("meta");
 
@@ -466,6 +467,8 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
       job.setOutputFormatClass(NullOutputFormat.class);
 
       job.getConfiguration().setBoolean("mapred.map.tasks.speculative.execution", false);
+      TableMapReduceUtil.addDependencyJars(job);
+      TableMapReduceUtil.initCredentials(job);
 
       boolean success = job.waitForCompletion(true);
 
@@ -992,7 +995,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    int ret = ToolRunner.run(new IntegrationTestBigLinkedList(), args);
+    int ret = ToolRunner.run(HBaseConfiguration.create(), new IntegrationTestBigLinkedList(), args);
     System.exit(ret);
   }
 }
