@@ -20,17 +20,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,10 +41,8 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -148,6 +136,15 @@ public class CreateTableHandler extends EventHandler {
    * @param exception null if process() is successful or not null if something has failed.
    */
   protected void completed(final Throwable exception) {
+    // Try deleting the enabling node
+    // If this does not happen then if the client tries to create the table
+    // again with the same Active master
+    // It will block the creation saying TableAlreadyExists.
+    if (exception != null) {
+      this.assignmentManager.getZKTable().removeEnablingTable(
+          this.hTableDescriptor.getNameAsString());
+    }
+
   }
 
   /**
@@ -181,7 +178,7 @@ public class CreateTableHandler extends EventHandler {
       throw new IOException("Unable to move table from temp=" + tempTableDir +
         " to hbase root=" + tableDir);
     }
-
+    
     if (regionInfos != null && regionInfos.size() > 0) {
       // 4. Add regions to META
       MetaEditor.addRegionsToMeta(this.catalogTracker, regionInfos);

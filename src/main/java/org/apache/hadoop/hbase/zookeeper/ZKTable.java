@@ -177,6 +177,20 @@ public class ZKTable {
       return true;
     }
   }
+  
+  /**
+   * If the table is found in ENABLING state the inmemory state is removed.
+   * This helps in cases where CreateTable is to be retried by the client incase of failures
+   * @param tableName
+   */
+  public void removeEnablingTable(final String tableName) {
+    synchronized (this.cache) {
+      if (isEnablingTable(tableName)) {
+        this.cache.remove(tableName);
+      }
+
+    }
+  }
 
   /**
    * Sets the specified table as ENABLING in zookeeper atomically
