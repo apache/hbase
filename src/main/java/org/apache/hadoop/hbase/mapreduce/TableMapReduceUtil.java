@@ -514,6 +514,7 @@ public class TableMapReduceUtil {
           org.apache.zookeeper.ZooKeeper.class,
           com.google.protobuf.Message.class,
           com.google.common.collect.ImmutableSet.class,
+          org.apache.hadoop.hbase.util.Bytes.class, //one class from hbase.jar
           job.getMapOutputKeyClass(),
           job.getMapOutputValueClass(),
           job.getInputFormatClass(),
