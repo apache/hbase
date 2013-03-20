@@ -44,6 +44,8 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.protobuf.ServiceException;
+
 /**
  * Test that delayed RPCs work. Fire up three calls, the first of which should
  * be delayed. Check that the last two, which are undelayed, return before the
@@ -100,8 +102,7 @@ public class TestDelayedRpc {
 
       assertEquals(UNDELAYED, results.get(0).intValue());
       assertEquals(UNDELAYED, results.get(1).intValue());
-      assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :
-          0xDEADBEEF);
+      assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :  0xDEADBEEF);
     } finally {
       clientEngine.close();
     }
@@ -182,7 +183,7 @@ public class TestDelayedRpc {
   }
 
   public interface TestRpc extends IpcProtocol {
-    TestResponse test(TestArg delay);
+    TestResponse test(final Object rpcController, TestArg delay) throws ServiceException;
   }
 
   private static class TestRpcImpl implements TestRpc {
@@ -201,7 +202,8 @@ public class TestDelayedRpc {
     }
 
     @Override
-    public TestResponse test(final TestArg testArg) {
+    public TestResponse test(final Object rpcController, final TestArg testArg)
+    throws ServiceException {
       boolean delay = testArg.getDelay();
       TestResponse.Builder responseBuilder = TestResponse.newBuilder();
       if (!delay) {
@@ -243,9 +245,8 @@ public class TestDelayedRpc {
     @Override
     public void run() {
       try {
-        Integer result = 
-            new Integer(server.test(TestArg.newBuilder()
-                .setDelay(delay).build()).getResponse());
+        Integer result = new Integer(server.test(null, TestArg.newBuilder().setDelay(delay).
+          build()).getResponse());
         if (results != null) {
           synchronized (results) {
             results.add(result);
@@ -276,7 +277,7 @@ public class TestDelayedRpc {
       int result = 0xDEADBEEF;
 
       try {
-        result = client.test(TestArg.newBuilder().setDelay(false).build()).getResponse();
+        result = client.test(null, TestArg.newBuilder().setDelay(false).build()).getResponse();
       } catch (Exception e) {
         fail("No exception should have been thrown.");
       }
@@ -284,7 +285,7 @@ public class TestDelayedRpc {
 
       boolean caughtException = false;
       try {
-        result = client.test(TestArg.newBuilder().setDelay(true).build()).getResponse();
+        result = client.test(null, TestArg.newBuilder().setDelay(true).build()).getResponse();
       } catch(Exception e) {
         // Exception thrown by server is enclosed in a RemoteException.
         if (e.getCause().getMessage().contains(
@@ -303,7 +304,7 @@ public class TestDelayedRpc {
    */
   private static class FaultyTestRpc implements TestRpc {
     @Override
-    public TestResponse test(TestArg arg) {
+    public TestResponse test(Object rpcController, TestArg arg) {
       if (!arg.getDelay())
         return TestResponse.newBuilder().setResponse(UNDELAYED).build();
       Delayable call = HBaseServer.getCurrentCall();

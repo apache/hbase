@@ -19,24 +19,50 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.Message;
-import com.google.protobuf.Message.Builder;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+import javax.net.SocketFactory;
+import javax.security.sasl.SaslException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IpcProtocol;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
+import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo;
 import org.apache.hadoop.hbase.security.AuthMethod;
@@ -52,6 +78,7 @@ import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -62,54 +89,23 @@ import org.apache.hadoop.security.token.TokenSelector;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 
-import javax.net.SocketFactory;
-import javax.security.sasl.SaslException;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.FilterInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.reflect.Method;
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
-import java.security.PrivilegedExceptionAction;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
+import com.google.protobuf.Message;
+import com.google.protobuf.Message.Builder;
+import com.google.protobuf.TextFormat;
 
 
-/** A client for an IPC service.  IPC calls take a single Protobuf message as a
- * parameter, and return a single Protobuf message as their value.  A service runs on
+/**
+ * A client for an IPC service.  IPC calls take a single Protobuf message as a
+ * request and returns a single Protobuf message as result.  A service runs on
  * a port and is defined by a parameter class and a value class.
  *
- * <p>This is the org.apache.hadoop.ipc.Client renamed as HBaseClient and
- * moved into this package so can access package-private methods.
- *
- * See HBaseServer
+ * <p>See HBaseServer
  */
 @InterfaceAudience.Private
 public class HBaseClient {
-
-  public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
+  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
   protected final PoolMap<ConnectionId, Connection> connections;
-  private static final Map<String, Method> methodInstances =
-      new ConcurrentHashMap<String, Method>();
+  private ReflectionCache reflectionCache = new ReflectionCache();
 
   protected int counter;                            // counter for call ids
   protected final AtomicBoolean running = new AtomicBoolean(true); // if client runs
@@ -123,6 +119,9 @@ public class HBaseClient {
   protected int pingInterval; // how often sends ping to the server in msecs
   protected int socketTimeout; // socket timeout
   protected FailedServers failedServers;
+  private final Codec codec;
+  private final CompressionCodec compressor;
+  private final IPCUtil ipcUtil;
 
   protected final SocketFactory socketFactory;           // how to create sockets
   protected String clusterId;
@@ -187,9 +186,8 @@ public class HBaseClient {
     }
   }
 
+  @SuppressWarnings("serial")
   public static class FailedServerException extends IOException {
-    private static final long serialVersionUID = -4744376109431464127L;
-
     public FailedServerException(String s) {
       super(s);
     }
@@ -201,6 +199,8 @@ public class HBaseClient {
    * @param conf Configuration
    * @param pingInterval the ping interval
    */
+  // Any reason we couldn't just do tcp keepalive instead of this pingery?
+  // St.Ack 20130121
   public static void setPingInterval(Configuration conf, int pingInterval) {
     conf.setInt(PING_INTERVAL_NAME, pingInterval);
   }
@@ -235,18 +235,32 @@ public class HBaseClient {
   /** A call waiting for a value. */
   protected class Call {
     final int id;                                 // call id
-    final RpcRequestBody param;                   // rpc request object
-    Message value;                                // value, null if error
+    final Message param;                          // rpc request method param object
+    /**
+     * Optionally has cells when making call.  Optionally has cells set on response.  Used
+     * passing cells to the rpc and receiving the response.
+     */
+    CellScanner cells;
+    Message response;                             // value, null if error
     IOException error;                            // exception, null if value
     boolean done;                                 // true when call is done
     long startTime;
+    final Method method;
 
-    protected Call(RpcRequestBody param) {
+    protected Call(final Method method, Message param, final CellScanner cells) {
       this.param = param;
+      this.method = method;
+      this.cells = cells;
       this.startTime = System.currentTimeMillis();
       synchronized (HBaseClient.this) {
         this.id = counter++;
       }
+    }
+
+    @Override
+    public String toString() {
+      return "callId: " + this.id + " methodName: " + this.method.getName() + " param {" +
+        (this.param != null? TextFormat.shortDebugString(this.param): "") + "}";
     }
 
     /** Indicate when the call is complete and the
@@ -269,10 +283,12 @@ public class HBaseClient {
     /** Set the return value when there is no error.
      * Notify the caller the call is done.
      *
-     * @param value return value of the call.
+     * @param response return value of the call.
+     * @param cells Can be null
      */
-    public synchronized void setValue(Message value) {
-      this.value = value;
+    public synchronized void setResponse(Message response, final CellScanner cells) {
+      this.response = response;
+      this.cells = cells;
       callComplete();
     }
 
@@ -281,7 +297,7 @@ public class HBaseClient {
     }
   }
 
-  protected static Map<String,TokenSelector<? extends TokenIdentifier>> tokenHandlers =
+  protected final static Map<String,TokenSelector<? extends TokenIdentifier>> tokenHandlers =
       new HashMap<String,TokenSelector<? extends TokenIdentifier>>();
   static {
     tokenHandlers.put(AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE.toString(),
@@ -292,8 +308,10 @@ public class HBaseClient {
    * Creates a connection. Can be overridden by a subclass for testing.
    * @param remoteId - the ConnectionId to use for the connection creation.
    */
-  protected Connection createConnection(ConnectionId remoteId) throws IOException {
-    return new Connection(remoteId);
+  protected Connection createConnection(ConnectionId remoteId, final Codec codec,
+      final CompressionCodec compressor)
+  throws IOException {
+    return new Connection(remoteId, codec, compressor);
   }
 
   /** Thread that reads responses and notifies callers.  Each connection owns a
@@ -312,6 +330,8 @@ public class HBaseClient {
     private Token<? extends TokenIdentifier> token;
     private HBaseSaslRpcClient saslRpcClient;
     private int reloginMaxBackoff; // max pause before relogin on sasl failure
+    private final Codec codec;
+    private final CompressionCodec compressor;
 
     // currently active calls
     protected final ConcurrentSkipListMap<Integer, Call> calls =
@@ -322,12 +342,14 @@ public class HBaseClient {
       new AtomicBoolean();  // indicate if the connection is closed
     protected IOException closeException; // close reason
 
-    Connection(ConnectionId remoteId) throws IOException {
+    Connection(ConnectionId remoteId, final Codec codec, final CompressionCodec compressor)
+    throws IOException {
       if (remoteId.getAddress().isUnresolved()) {
-        throw new UnknownHostException("unknown host: " +
-                                       remoteId.getAddress().getHostName());
+        throw new UnknownHostException("unknown host: " + remoteId.getAddress().getHostName());
       }
       this.server = remoteId.getAddress();
+      this.codec = codec;
+      this.compressor = compressor;
 
       UserGroupInformation ticket = remoteId.getTicket().getUGI();
       Class<?> protocol = remoteId.getProtocol();
@@ -368,29 +390,33 @@ public class HBaseClient {
         authMethod = AuthMethod.KERBEROS;
       }
 
-      if (LOG.isDebugEnabled())
+      if (LOG.isDebugEnabled()) {
         LOG.debug("Use " + authMethod + " authentication for protocol "
             + protocol.getSimpleName());
-
+      }
       reloginMaxBackoff = conf.getInt("hbase.security.relogin.maxbackoff", 5000);
       this.remoteId = remoteId;
 
       ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
       builder.setProtocol(protocol == null ? "" : protocol.getName());
       UserInformation userInfoPB;
-      if ((userInfoPB = getUserInfoPB(ticket)) != null) {
+      if ((userInfoPB = getUserInfo(ticket)) != null) {
         builder.setUserInfo(userInfoPB);
+      }
+      builder.setCellBlockCodecClass(this.codec.getClass().getCanonicalName());
+      if (this.compressor != null) {
+        builder.setCellBlockCompressorClass(this.compressor.getClass().getCanonicalName());
       }
       this.header = builder.build();
 
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
         remoteId.getAddress().toString() +
-        ((ticket==null)?" from an unknown user": (" from " 
+        ((ticket==null)?" from an unknown user": (" from "
         + ticket.getUserName())));
       this.setDaemon(true);
     }
 
-    private UserInformation getUserInfoPB(UserGroupInformation ugi) {
+    private UserInformation getUserInfo(UserGroupInformation ugi) {
       if (ugi == null || authMethod == AuthMethod.DIGEST) {
         // Don't send user for token auth
         return null;
@@ -582,8 +608,7 @@ public class HBaseClient {
      */
     protected synchronized boolean waitForWork() {
       if (calls.isEmpty() && !shouldCloseConnection.get()  && running.get())  {
-        long timeout = maxIdleTime-
-              (System.currentTimeMillis()-lastActivity.get());
+        long timeout = maxIdleTime - (System.currentTimeMillis()-lastActivity.get());
         if (timeout>0) {
           try {
             wait(timeout);
@@ -613,6 +638,7 @@ public class HBaseClient {
      * since last I/O activity is equal to or greater than the ping interval
      */
     protected synchronized void sendPing() throws IOException {
+      // Can we do tcp keepalive instead of this pinging?
       long curTime = System.currentTimeMillis();
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
@@ -626,24 +652,23 @@ public class HBaseClient {
 
     @Override
     public void run() {
-      if (LOG.isDebugEnabled())
-        LOG.debug(getName() + ": starting, having connections "
-            + connections.size());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(getName() + ": starting, connections " + connections.size());
+      }
 
       try {
         while (waitForWork()) {//wait here for work - read or close connection
-          receiveResponse();
+          readResponse();
         }
       } catch (Throwable t) {
-        LOG.warn("Unexpected exception receiving call responses", t);
+        LOG.warn(getName() + ": unexpected exception receiving call responses", t);
         markClosed(new IOException("Unexpected exception receiving call responses", t));
       }
 
       close();
 
       if (LOG.isDebugEnabled())
-        LOG.debug(getName() + ": stopped, remaining connections "
-            + connections.size());
+        LOG.debug(getName() + ": stopped, connections " + connections.size());
     }
 
     private synchronized void disposeSasl() {
@@ -691,7 +716,7 @@ public class HBaseClient {
      * method. In case when the user doesn't have valid credentials, we don't
      * need to retry (from cache or ticket). In such cases, it is prudent to
      * throw a runtime exception when we receive a SaslException from the
-     * underlying authentication implementation, so there is no retry from 
+     * underlying authentication implementation, so there is no retry from
      * other high level (for eg, HCM or HBaseAdmin).
      * </p>
      */
@@ -766,7 +791,7 @@ public class HBaseClient {
 
       try {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Connecting to "+server);
+          LOG.debug("Connecting to " + server);
         }
         short numRetries = 0;
         final short MAX_RETRIES = 5;
@@ -775,7 +800,8 @@ public class HBaseClient {
           setupConnection();
           InputStream inStream = NetUtils.getInputStream(socket);
           OutputStream outStream = NetUtils.getOutputStream(socket);
-          writeRpcHeader(outStream);
+          // Write out the preamble -- MAGIC, version, and auth to use.
+          writeConnectionHeaderPreamble(outStream);
           if (useSasl) {
             final InputStream in2 = inStream;
             final OutputStream out2 = outStream;
@@ -787,19 +813,22 @@ public class HBaseClient {
             }
             boolean continueSasl = false;
             try {
-              continueSasl =
-                ticket.doAs(new PrivilegedExceptionAction<Boolean>() {
-                  @Override
-                  public Boolean run() throws IOException {
-                    return setupSaslConnection(in2, out2);
-                  }
-                });
+              if (ticket == null) {
+                throw new NullPointerException("ticket is null");
+              } else {
+                continueSasl =
+                  ticket.doAs(new PrivilegedExceptionAction<Boolean>() {
+                    @Override
+                    public Boolean run() throws IOException {
+                      return setupSaslConnection(in2, out2);
+                    }
+                  });
+              }
             } catch (Exception ex) {
               if (rand == null) {
                 rand = new Random();
               }
-              handleSaslConnectionFailure(numRetries++, MAX_RETRIES, ex, rand,
-                   ticket);
+              handleSaslConnectionFailure(numRetries++, MAX_RETRIES, ex, rand, ticket);
               continue;
             }
             if (continueSasl) {
@@ -812,11 +841,10 @@ public class HBaseClient {
               useSasl = false;
             }
           }
-          this.in = new DataInputStream(new BufferedInputStream
-              (new PingInputStream(inStream)));
-          this.out = new DataOutputStream
-          (new BufferedOutputStream(outStream));
-          writeHeader();
+          this.in = new DataInputStream(new BufferedInputStream(new PingInputStream(inStream)));
+          this.out = new DataOutputStream(new BufferedOutputStream(outStream));
+          // Now write out the connection header
+          writeConnectionHeader();
 
           // update last activity time
           touch();
@@ -840,30 +868,38 @@ public class HBaseClient {
       }
     }
 
-    /* Write the RPC header */
-    private void writeRpcHeader(OutputStream outStream) throws IOException {
-      DataOutputStream out = new DataOutputStream(new BufferedOutputStream(outStream));
-      // Write out the header, version and authentication method
-      out.write(HConstants.RPC_HEADER.array());
-      out.write(HConstants.CURRENT_VERSION);
-      authMethod.write(out);
-      out.flush();
+    /**
+     * Write the RPC header: <MAGIC WORD -- 'HBas'> <ONEBYTE_VERSION> <ONEBYTE_AUTH_TYPE>
+     */
+    private void writeConnectionHeaderPreamble(OutputStream outStream) throws IOException {
+      // Assemble the preamble up in a buffer first and then send it.  Writing individual elements,
+      // they are getting sent across piecemeal according to wireshark and then server is messing
+      // up the reading on occasion (the passed in stream is not buffered yet).
+
+      // Preamble is six bytes -- 'HBas' + VERSION + AUTH_CODE
+      int rpcHeaderLen = HConstants.RPC_HEADER.array().length;
+      byte [] preamble = new byte [rpcHeaderLen + 2];
+      System.arraycopy(HConstants.RPC_HEADER.array(), 0, preamble, 0, rpcHeaderLen);
+      preamble[rpcHeaderLen] = HConstants.RPC_CURRENT_VERSION;
+      preamble[rpcHeaderLen + 1] = authMethod.code;
+      outStream.write(preamble);
+      outStream.flush();
     }
 
     /**
-     * Write the protocol header for each connection
+     * Write the connection header.
      * Out is not synchronized because only the first thread does this.
      */
-    private void writeHeader() throws IOException {
-      // Write out the ConnectionHeader
-      out.writeInt(header.getSerializedSize());
-      header.writeTo(out);
+    private void writeConnectionHeader() throws IOException {
+      this.out.writeInt(this.header.getSerializedSize());
+      this.header.writeTo(this.out);
+      this.out.flush();
     }
 
     /** Close the connection. */
     protected synchronized void close() {
       if (!shouldCloseConnection.get()) {
-        LOG.error("The connection is not in the closed state");
+        LOG.error(getName() + ": the connection is not in the closed state");
         return;
       }
 
@@ -883,8 +919,7 @@ public class HBaseClient {
       // clean up all calls
       if (closeException == null) {
         if (!calls.isEmpty()) {
-          LOG.warn(
-              "A connection is closed for no cause and calls are not empty. " +
+          LOG.warn(getName() + ": connection is closed for no cause and calls are not empty. " +
               "#Calls: " + calls.size());
 
           // clean up calls anyway
@@ -894,7 +929,7 @@ public class HBaseClient {
       } else {
         // log the info
         if (LOG.isDebugEnabled()) {
-          LOG.debug("closing ipc connection to " + server + ": " +
+          LOG.debug(getName() + ": closing ipc connection to " + server + ": " +
               closeException.getMessage(),closeException);
         }
 
@@ -905,126 +940,100 @@ public class HBaseClient {
         LOG.debug(getName() + ": closed");
     }
 
-    /* Initiates a call by sending the parameter to the remote server.
+    /**
+     * Initiates a call by sending the parameter to the remote server.
      * Note: this is not called from the Connection thread, but by other
      * threads.
+     * @param call
+     * @see #readResponse()
      */
-    protected void sendParam(Call call) {
-      if (shouldCloseConnection.get()) {
-        return;
-      }
+    protected void writeRequest(Call call) {
+      if (shouldCloseConnection.get()) return;
       try {
-        if (LOG.isDebugEnabled())
-          LOG.debug(getName() + " sending #" + call.id);
-
-        RpcRequestHeader.Builder headerBuilder = RPCProtos.RpcRequestHeader.newBuilder();
-        headerBuilder.setCallId(call.id);
-
+        RequestHeader.Builder builder = RequestHeader.newBuilder();
+        builder.setCallId(call.id);
         if (Trace.isTracing()) {
           Span s = Trace.currentTrace();
-          headerBuilder.setTinfo(RPCTInfo.newBuilder()
-              .setParentId(s.getSpanId())
-              .setTraceId(s.getTraceId()));
+          builder.setTraceInfo(RPCTInfo.newBuilder().
+            setParentId(s.getSpanId()).setTraceId(s.getTraceId()));
         }
-
+        builder.setMethodName(call.method.getName());
+        builder.setRequestParam(call.param != null);
+        ByteBuffer cellBlock = ipcUtil.buildCellBlock(this.codec, this.compressor, call.cells);
+        if (cellBlock != null) {
+          CellBlockMeta.Builder cellBlockBuilder = CellBlockMeta.newBuilder();
+          cellBlockBuilder.setLength(cellBlock.limit());
+          builder.setCellBlockMeta(cellBlockBuilder.build());
+        }
         //noinspection SynchronizeOnNonFinalField
+        RequestHeader header = builder.build();
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
-          RpcRequestHeader header = headerBuilder.build();
-          int serializedHeaderSize = header.getSerializedSize();
-          int requestSerializedSize = call.param.getSerializedSize();
-          this.out.writeInt(serializedHeaderSize +
-              CodedOutputStream.computeRawVarint32Size(serializedHeaderSize) +
-              requestSerializedSize +
-              CodedOutputStream.computeRawVarint32Size(requestSerializedSize));
-          header.writeDelimitedTo(this.out);
-          call.param.writeDelimitedTo(this.out);
-          this.out.flush();
+          IPCUtil.write(this.out, header, call.param, cellBlock);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(getName() + ": wrote request header " + TextFormat.shortDebugString(header));
         }
       } catch(IOException e) {
         markClosed(e);
       }
     }
 
-
-    private Method getMethod(Class<? extends IpcProtocol> protocol,
-        String methodName) {
-      Method method = methodInstances.get(methodName);
-      if (method != null) {
-        return method;
-      }
-      Method[] methods = protocol.getMethods();
-      for (Method m : methods) {
-        if (m.getName().equals(methodName)) {
-          m.setAccessible(true);
-          methodInstances.put(methodName, m);
-          return m;
-        }
-      }
-      return null;
-    }
-
     /* Receive a response.
      * Because only one receiver, so no synchronization on in.
      */
-    protected void receiveResponse() {
-      if (shouldCloseConnection.get()) {
-        return;
-      }
+    protected void readResponse() {
+      if (shouldCloseConnection.get()) return;
       touch();
-
       try {
         // See HBaseServer.Call.setResponse for where we write out the response.
-        // It writes the call.id (int), a boolean signifying any error (and if 
-        // so the exception name/trace), and the response bytes
 
-        // Read the call id.
-        RpcResponseHeader response = RpcResponseHeader.parseDelimitedFrom(in);
-        if (response == null) {
-          // When the stream is closed, protobuf doesn't raise an EOFException,
-          // instead, it returns a null message object. 
-          throw new EOFException();
+        // Total size of the response.  Unused.  But have to read it in anyways.
+        /*int totalSize =*/ in.readInt();
+
+        // Read the header
+        ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(in);
+        int id = responseHeader.getCallId();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(getName() + ": got response header " +
+            TextFormat.shortDebugString(responseHeader));
         }
-        int id = response.getCallId();
-
-        if (LOG.isDebugEnabled())
-          LOG.debug(getName() + " got value #" + id);
         Call call = calls.get(id);
-
-        Status status = response.getStatus();
-        if (status == Status.SUCCESS) {
+        if (responseHeader.hasException()) {
+          ExceptionResponse exceptionResponse = responseHeader.getException();
+          RemoteException re = createRemoteException(exceptionResponse);
+          if (isFatalConnectionException(exceptionResponse)) {
+            markClosed(re);
+          } else {
+            if (call != null) call.setException(re);
+          }
+        } else {
           Message rpcResponseType;
           try {
-            rpcResponseType = ProtobufRpcClientEngine.Invoker.getReturnProtoType(
-                getMethod(remoteId.getProtocol(),
-                          call.param.getMethodName()));
+            // TODO: Why pb engine pollution in here in this class?  FIX.
+            rpcResponseType =
+              ProtobufRpcClientEngine.Invoker.getReturnProtoType(
+                reflectionCache.getMethod(remoteId.getProtocol(), call.method.getName()));
           } catch (Exception e) {
             throw new RuntimeException(e); //local exception
           }
-          Builder builder = rpcResponseType.newBuilderForType();
-          builder.mergeDelimitedFrom(in);
-          Message value = builder.build();
+          Message value = null;
+          if (rpcResponseType != null) {
+            Builder builder = rpcResponseType.newBuilderForType();
+            builder.mergeDelimitedFrom(in);
+            value = builder.build();
+          }
+          CellScanner cellBlockScanner = null;
+          if (responseHeader.hasCellBlockMeta()) {
+            int size = responseHeader.getCellBlockMeta().getLength();
+            byte [] cellBlock = new byte[size];
+            IOUtils.readFully(this.in, cellBlock, 0, cellBlock.length);
+            cellBlockScanner = ipcUtil.createCellScanner(this.codec, this.compressor, cellBlock);
+          }
           // it's possible that this call may have been cleaned up due to a RPC
           // timeout, so check if it still exists before setting the value.
-          if (call != null) {
-            call.setValue(value);
-          }
-          calls.remove(id);
-        } else if (status == Status.ERROR) {
-          RpcException exceptionResponse = RpcException.parseDelimitedFrom(in);
-          if (call != null) {
-            //noinspection ThrowableInstanceNeverThrown
-            call.setException(new RemoteException(
-                exceptionResponse.getExceptionName(),
-                exceptionResponse.getStackTrace()));
-            calls.remove(id);
-          }
-        } else if (status == Status.FATAL) {
-          RpcException exceptionResponse = RpcException.parseDelimitedFrom(in);
-          // Close the connection
-          markClosed(new RemoteException(
-              exceptionResponse.getExceptionName(),
-              exceptionResponse.getStackTrace()));
+          if (call != null) call.setResponse(value, cellBlockScanner);
         }
+        if (call != null) calls.remove(id);
       } catch (IOException e) {
         if (e instanceof SocketTimeoutException && remoteId.rpcTimeout > 0) {
           // Clean up open calls but don't treat this as a fatal condition,
@@ -1041,6 +1050,30 @@ public class HBaseClient {
           cleanupCalls(remoteId.rpcTimeout);
         }
       }
+    }
+
+    /**
+     * @param e
+     * @return True if the exception is a fatal connection exception.
+     */
+    private boolean isFatalConnectionException(final ExceptionResponse e) {
+      return e.getExceptionClassName().
+        equals(FatalConnectionException.class.getName());
+    }
+
+    /**
+     * @param e
+     * @return RemoteException made from passed <code>e</code>
+     */
+    private RemoteException createRemoteException(final ExceptionResponse e) {
+      String innerExceptionClassName = e.getExceptionClassName();
+      boolean doNotRetry = e.getDoNotRetry();
+      return e.hasHostname()?
+        // If a hostname then add it to the RemoteWithExtrasException
+        new RemoteWithExtrasException(innerExceptionClassName,
+          e.getStackTrace(), e.getHostname(), e.getPort(), doNotRetry):
+        new RemoteWithExtrasException(innerExceptionClassName,
+          e.getStackTrace(), doNotRetry);
     }
 
     protected synchronized void markClosed(IOException e) {
@@ -1103,50 +1136,10 @@ public class HBaseClient {
   /**
    * Client-side call timeout
    */
+  @SuppressWarnings("serial")
   public static class CallTimeoutException extends IOException {
     public CallTimeoutException(final String msg) {
       super(msg);
-    }
-  }
-
-  /** Call implementation used for parallel calls. */
-  protected class ParallelCall extends Call {
-    private final ParallelResults results;
-    protected final int index;
-
-    public ParallelCall(RpcRequestBody param, ParallelResults results, int index) {
-      super(param);
-      this.results = results;
-      this.index = index;
-    }
-
-    /** Deliver result to result collector. */
-    @Override
-    protected void callComplete() {
-      results.callComplete(this);
-    }
-  }
-
-  /** Result collector for parallel calls. */
-  protected static class ParallelResults {
-    protected final Message[] values;
-    protected int size;
-    protected int count;
-
-    public ParallelResults(int size) {
-      this.values = new RpcResponseBody[size];
-      this.size = size;
-    }
-
-    /*
-     * Collect a result.
-     */
-    synchronized void callComplete(ParallelCall call) {
-      // FindBugs IS2_INCONSISTENT_SYNC
-      values[call.index] = call.value;            // store the value
-      count++;                                    // count it
-      if (count == size)                          // if all values are in
-        notify();                                 // then notify waiting caller
     }
   }
 
@@ -1165,14 +1158,46 @@ public class HBaseClient {
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
     this.pingInterval = getPingInterval(conf);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("The ping interval is" + this.pingInterval + "ms.");
+      LOG.debug("Ping interval: " + this.pingInterval + "ms.");
     }
+    this.ipcUtil = new IPCUtil(conf);
     this.conf = conf;
+    this.codec = getCodec(conf);
+    this.compressor = getCompressor(conf);
     this.socketFactory = factory;
     this.clusterId = clusterId != null ? clusterId : HConstants.CLUSTER_ID_DEFAULT;
     this.connections = new PoolMap<ConnectionId, Connection>(
         getPoolType(conf), getPoolSize(conf));
     this.failedServers = new FailedServers(conf);
+  }
+
+  /**
+   * Encapsulate the ugly casting and RuntimeException conversion in private method.
+   * @param conf
+   * @return Codec to use on this client.
+   */
+  private static Codec getCodec(final Configuration conf) {
+    String className = conf.get("hbase.client.rpc.codec", KeyValueCodec.class.getCanonicalName());
+    try {
+        return (Codec)Class.forName(className).newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException("Failed getting codec " + className, e);
+    }
+  }
+
+  /**
+   * Encapsulate the ugly casting and RuntimeException conversion in private method.
+   * @param conf
+   * @return The compressor to use on this client.
+   */
+  private static CompressionCodec getCompressor(final Configuration conf) {
+    String className = conf.get("hbase.client.rpc.compressor", null);
+    if (className == null || className.isEmpty()) return null;
+    try {
+        return (CompressionCodec)Class.forName(className).newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException("Failed getting compressor " + className, e);
+    }
   }
 
   /**
@@ -1250,36 +1275,30 @@ public class HBaseClient {
   }
 
   /** Make a call, passing <code>param</code>, to the IPC server running at
-   * <code>address</code>, returning the value.  Throws exceptions if there are
-   * network problems or if the remote code threw an exception.
-   * @param param RpcRequestBody parameter
-   * @param address network address
-   * @return Message
-   * @throws IOException e
-   */
-  public Message call(RpcRequestBody param, InetSocketAddress address)
-  throws IOException, InterruptedException {
-      return call(param, address, null, 0);
-  }
-
-  public Message call(RpcRequestBody param, InetSocketAddress addr,
-                       User ticket, int rpcTimeout)
-                       throws IOException, InterruptedException {
-    return call(param, addr, null, ticket, rpcTimeout);
-  }
-
-  /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code> which is servicing the <code>protocol</code> protocol,
    * with the <code>ticket</code> credentials, returning the value.
    * Throws exceptions if there are network problems or if the remote code
-   * threw an exception. */
-  public Message call(RpcRequestBody param, InetSocketAddress addr,
-                       Class<? extends IpcProtocol> protocol,
-                       User ticket, int rpcTimeout)
+   * threw an exception.
+   * @param method
+   * @param param
+   * @param cells
+   * @param addr
+   * @param protocol
+   * @param ticket Be careful which ticket you pass.  A new user will mean a new Connection.
+   * {@link User#getCurrent()} makes a new instance of User each time so will be a new Connection
+   * each time.
+   * @param rpcTimeout
+   * @return A pair with the Message response and the Cell data (if any).
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  public Pair<Message, CellScanner> call(Method method, Message param, CellScanner cells,
+      InetSocketAddress addr, Class<? extends IpcProtocol> protocol, User ticket, int rpcTimeout)
       throws InterruptedException, IOException {
-    Call call = new Call(param);
-    Connection connection = getConnection(addr, protocol, ticket, rpcTimeout, call);
-    connection.sendParam(call);                 // send the parameter
+    Call call = new Call(method, param, cells);
+    Connection connection =
+      getConnection(addr, protocol, ticket, rpcTimeout, call, this.codec, this.compressor);
+    connection.writeRequest(call);                 // send the parameter
     boolean interrupted = false;
     //noinspection SynchronizationOnLocalVariableOrMethodParameter
     synchronized (call) {
@@ -1305,7 +1324,7 @@ public class HBaseClient {
         // local exception
         throw wrapException(addr, call.error);
       }
-      return call.value;
+      return new Pair<Message, CellScanner>(call.response, call.cells);
     }
   }
 
@@ -1329,14 +1348,11 @@ public class HBaseClient {
            "Call to " + addr + " failed on connection exception: " + exception)
                     .initCause(exception);
     } else if (exception instanceof SocketTimeoutException) {
-      return (SocketTimeoutException)new SocketTimeoutException(
-           "Call to " + addr + " failed on socket timeout exception: "
-                      + exception).initCause(exception);
+      return (SocketTimeoutException)new SocketTimeoutException("Call to " + addr +
+        " failed on socket timeout exception: " + exception).initCause(exception);
     } else {
-      return (IOException)new IOException(
-           "Call to " + addr + " failed on local exception: " + exception)
-                                 .initCause(exception);
-
+      return (IOException)new IOException("Call to " + addr + " failed on local exception: " +
+        exception).initCause(exception);
     }
   }
 
@@ -1364,51 +1380,11 @@ public class HBaseClient {
     }
   }
 
-  /** Makes a set of calls in parallel.  Each parameter is sent to the
-   * corresponding address.  When all values are available, or have timed out
-   * or errored, the collected results are returned in an array.  The array
-   * contains nulls for calls that timed out or errored.  */
-  public Message[] call(RpcRequestBody[] params, InetSocketAddress[] addresses,
-                         Class<? extends IpcProtocol> protocol,
-                         User ticket)
-      throws IOException, InterruptedException {
-    if (addresses.length == 0) return new RpcResponseBody[0];
-
-    ParallelResults results = new ParallelResults(params.length);
-    // TODO this synchronization block doesnt make any sense, we should possibly fix it
-    //noinspection SynchronizationOnLocalVariableOrMethodParameter
-    synchronized (results) {
-      for (int i = 0; i < params.length; i++) {
-        ParallelCall call = new ParallelCall(params[i], results, i);
-        try {
-          Connection connection =
-              getConnection(addresses[i], protocol, ticket, 0, call);
-          connection.sendParam(call);             // send each parameter
-        } catch (IOException e) {
-          // log errors
-          LOG.info("Calling "+addresses[i]+" caught: " +
-                   e.getMessage(),e);
-          results.size--;                         //  wait for one fewer result
-        }
-      }
-      while (results.count != results.size) {
-        try {
-          results.wait();                    // wait for all results
-        } catch (InterruptedException ignored) {}
-      }
-
-      return results.values;
-    }
-  }
-
   /* Get a connection from the pool, or create a new one and add it to the
    * pool.  Connections to a given host/port are reused. */
-  protected Connection getConnection(InetSocketAddress addr,
-                                   Class<? extends IpcProtocol> protocol,
-                                   User ticket,
-                                   int rpcTimeout,
-                                   Call call)
-                                   throws IOException, InterruptedException {
+  protected Connection getConnection(InetSocketAddress addr, Class<? extends IpcProtocol> protocol,
+      User ticket, int rpcTimeout, Call call, final Codec codec, final CompressionCodec compressor)
+  throws IOException, InterruptedException {
     if (!running.get()) {
       // the client is stopped
       throw new IOException("The client is stopped");
@@ -1422,7 +1398,7 @@ public class HBaseClient {
     synchronized (connections) {
       connection = connections.get(remoteId);
       if (connection == null) {
-        connection = createConnection(remoteId);
+        connection = createConnection(remoteId, this.codec, this.compressor);
         connections.put(remoteId, connection);
       }
     }
@@ -1472,6 +1448,12 @@ public class HBaseClient {
     }
 
     @Override
+    public String toString() {
+      return this.address.toString() + "/" + this.protocol + "/" + this.ticket + "/" +
+        this.rpcTimeout;
+    }
+
+    @Override
     public boolean equals(Object obj) {
      if (obj instanceof ConnectionId) {
        ConnectionId id = (ConnectionId) obj;
@@ -1484,9 +1466,9 @@ public class HBaseClient {
 
     @Override  // simply use the default Object#hashcode() ?
     public int hashCode() {
-      return (address.hashCode() + PRIME * (
-                  PRIME * System.identityHashCode(protocol) ^
-             (ticket == null ? 0 : ticket.hashCode()) )) ^ rpcTimeout;
+      int hashcode = (address.hashCode() + PRIME * (PRIME * System.identityHashCode(protocol) ^
+        (ticket == null ? 0 : ticket.hashCode()) )) ^ rpcTimeout;
+      return hashcode;
     }
   }
 }

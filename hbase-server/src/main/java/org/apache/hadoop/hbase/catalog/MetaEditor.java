@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiRowMutationService;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -301,7 +301,7 @@ public class MetaEditor {
     CoprocessorRpcChannel channel = table.coprocessorService(row);
     MultiMutateRequest.Builder mmrBuilder = MultiMutateRequest.newBuilder();
     for (Put put : puts) {
-      mmrBuilder.addMutationRequest(ProtobufUtil.toMutate(MutateType.PUT, put));
+      mmrBuilder.addMutationRequest(ProtobufUtil.toMutation(MutationType.PUT, put));
     }
 
     MultiRowMutationService.BlockingInterface service =

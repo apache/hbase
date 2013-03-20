@@ -248,6 +248,8 @@ public class TestThriftServer {
 
     Thread.sleep(1000);
     long lv = handler.get(tableAname, rowAname, columnAname, null).get(0).value.getLong();
+    // Wait on all increments being flushed
+    while (handler.coalescer.getQueueSize() != 0) Threads.sleep(10);
     assertEquals((100 + (2 * numIncrements)), lv );
 
 

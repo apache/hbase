@@ -25,8 +25,8 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.Serializer;
@@ -57,7 +57,7 @@ public class MutationSerialization implements Serialization<Mutation> {
 
     @Override
     public Mutation deserialize(Mutation mutation) throws IOException {
-      Mutate proto = Mutate.parseDelimitedFrom(in);
+      MutationProto proto = MutationProto.parseDelimitedFrom(in);
       return ProtobufUtil.toMutation(proto);
     }
 
@@ -82,15 +82,15 @@ public class MutationSerialization implements Serialization<Mutation> {
 
     @Override
     public void serialize(Mutation mutation) throws IOException {
-      MutateType type;
+      MutationType type;
       if (mutation instanceof Put) {
-        type = MutateType.PUT;
+        type = MutationType.PUT;
       } else if (mutation instanceof Delete) {
-        type = MutateType.DELETE;
+        type = MutationType.DELETE;
       } else {
         throw new IllegalArgumentException("Only Put and Delete are supported");
       }
-      ProtobufUtil.toMutate(type, mutation).writeDelimitedTo(out);
+      ProtobufUtil.toMutation(type, mutation).writeDelimitedTo(out);
     }
   }
 }

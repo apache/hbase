@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.protobuf;
 
+
 import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
 
 import java.io.ByteArrayOutputStream;
@@ -34,7 +35,21 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
+
+
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,20 +57,15 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.MultiAction;
-import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -88,12 +98,11 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
@@ -113,16 +122,6 @@ import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 
 /**
  * Protobufs utility.
@@ -342,42 +341,74 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer Mutate to a Put
+   * Convert a protocol buffer Mutate to a Put.
    *
-   * @param proto the protocol buffer Mutate to convert
-   * @return the converted client Put
-   * @throws DoNotRetryIOException
+   * @param proto The protocol buffer MutationProto to convert
+   * @return A client Put.
+   * @throws IOException
    */
-  public static Put toPut(
-      final Mutate proto) throws DoNotRetryIOException {
-    MutateType type = proto.getMutateType();
-    assert type == MutateType.PUT : type.name();
-    byte[] row = proto.getRow().toByteArray();
-    long timestamp = HConstants.LATEST_TIMESTAMP;
-    if (proto.hasTimestamp()) {
-      timestamp = proto.getTimestamp();
+  public static Put toPut(final MutationProto proto)
+  throws IOException {
+    return toPut(proto, null);
+  }
+
+  /**
+   * Convert a protocol buffer Mutate to a Put.
+   *
+   * @param proto The protocol buffer MutationProto to convert
+   * @param cellScanner If non-null, the Cell data that goes with this proto.
+   * @return A client Put.
+   * @throws IOException
+   */
+  public static Put toPut(final MutationProto proto, final CellScanner cellScanner)
+  throws IOException {
+    // TODO: Server-side at least why do we convert back to the Client types?  Why not just pb it?
+    MutationType type = proto.getMutateType();
+    assert type == MutationType.PUT: type.name();
+    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
+    long timestamp = proto.hasTimestamp()? proto.getTimestamp(): HConstants.LATEST_TIMESTAMP;
+    Put put = null;
+    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
+    if (cellCount > 0) {
+      // The proto has metadata only and the data is separate to be found in the cellScanner.
+      if (cellScanner == null) {
+        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
+          TextFormat.shortDebugString(proto));
+      }
+      for (int i = 0; i < cellCount; i++) {
+        if (!cellScanner.advance()) {
+          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
+            " no cell returned: " + TextFormat.shortDebugString(proto));
+        }
+        Cell cell = cellScanner.current();
+        if (put == null) {
+          put = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
+        }
+        put.add(KeyValueUtil.ensureKeyValue(cell));
+      }
+    } else {
+      put = new Put(row, timestamp);
+      // The proto has the metadata and the data itself
+      for (ColumnValue column: proto.getColumnValueList()) {
+        byte[] family = column.getFamily().toByteArray();
+        for (QualifierValue qv: column.getQualifierValueList()) {
+          byte[] qualifier = qv.getQualifier().toByteArray();
+          if (!qv.hasValue()) {
+            throw new DoNotRetryIOException(
+                "Missing required field: qualifer value");
+          }
+          byte[] value = qv.getValue().toByteArray();
+          long ts = timestamp;
+          if (qv.hasTimestamp()) {
+            ts = qv.getTimestamp();
+          }
+          put.add(family, qualifier, ts, value);
+        }
+      }
     }
-    Put put = new Put(row, timestamp);
     put.setWriteToWAL(proto.getWriteToWAL());
     for (NameBytesPair attribute: proto.getAttributeList()) {
-      put.setAttribute(attribute.getName(),
-        attribute.getValue().toByteArray());
-    }
-    for (ColumnValue column: proto.getColumnValueList()) {
-      byte[] family = column.getFamily().toByteArray();
-      for (QualifierValue qv: column.getQualifierValueList()) {
-        byte[] qualifier = qv.getQualifier().toByteArray();
-        if (!qv.hasValue()) {
-          throw new DoNotRetryIOException(
-            "Missing required field: qualifer value");
-        }
-        byte[] value = qv.getValue().toByteArray();
-        long ts = timestamp;
-        if (qv.hasTimestamp()) {
-          ts = qv.getTimestamp();
-        }
-        put.add(family, qualifier, ts, value);
-      }
+      put.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     return put;
   }
@@ -387,74 +418,130 @@ public final class ProtobufUtil {
    *
    * @param proto the protocol buffer Mutate to convert
    * @return the converted client Delete
+   * @throws IOException
    */
-  public static Delete toDelete(final Mutate proto) {
-    MutateType type = proto.getMutateType();
-    assert type == MutateType.DELETE : type.name();
-    byte[] row = proto.getRow().toByteArray();
+  public static Delete toDelete(final MutationProto proto)
+  throws IOException {
+    return toDelete(proto, null);
+  }
+
+  /**
+   * Convert a protocol buffer Mutate to a Delete
+   *
+   * @param proto the protocol buffer Mutate to convert
+   * @param cellScanner if non-null, the data that goes with this delete.
+   * @return the converted client Delete
+   * @throws IOException
+   */
+  public static Delete toDelete(final MutationProto proto, final CellScanner cellScanner)
+  throws IOException {
+    MutationType type = proto.getMutateType();
+    assert type == MutationType.DELETE : type.name();
+    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
     long timestamp = HConstants.LATEST_TIMESTAMP;
     if (proto.hasTimestamp()) {
       timestamp = proto.getTimestamp();
     }
-    Delete delete = new Delete(row, timestamp);
-    delete.setWriteToWAL(proto.getWriteToWAL());
-    for (NameBytesPair attribute: proto.getAttributeList()) {
-      delete.setAttribute(attribute.getName(),
-        attribute.getValue().toByteArray());
-    }
-    for (ColumnValue column: proto.getColumnValueList()) {
-      byte[] family = column.getFamily().toByteArray();
-      for (QualifierValue qv: column.getQualifierValueList()) {
-        DeleteType deleteType = qv.getDeleteType();
-        byte[] qualifier = null;
-        if (qv.hasQualifier()) {
-          qualifier = qv.getQualifier().toByteArray();
+    Delete delete = null;
+    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
+    if (cellCount > 0) {
+      // The proto has metadata only and the data is separate to be found in the cellScanner.
+      if (cellScanner == null) {
+        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
+          TextFormat.shortDebugString(proto));
+      }
+      for (int i = 0; i < cellCount; i++) {
+        if (!cellScanner.advance()) {
+          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
+            " no cell returned: " + TextFormat.shortDebugString(proto));
         }
-        long ts = HConstants.LATEST_TIMESTAMP;
-        if (qv.hasTimestamp()) {
-          ts = qv.getTimestamp();
+        Cell cell = cellScanner.current();
+        if (delete == null) {
+          delete =
+            new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
         }
-        if (deleteType == DeleteType.DELETE_ONE_VERSION) {
-          delete.deleteColumn(family, qualifier, ts);
-        } else if (deleteType == DeleteType.DELETE_MULTIPLE_VERSIONS) {
-          delete.deleteColumns(family, qualifier, ts);
-        } else {
-          delete.deleteFamily(family, ts);
+        delete.addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
+      }
+    } else {
+      delete = new Delete(row, timestamp);
+      for (ColumnValue column: proto.getColumnValueList()) {
+        byte[] family = column.getFamily().toByteArray();
+        for (QualifierValue qv: column.getQualifierValueList()) {
+          DeleteType deleteType = qv.getDeleteType();
+          byte[] qualifier = null;
+          if (qv.hasQualifier()) {
+            qualifier = qv.getQualifier().toByteArray();
+          }
+          long ts = HConstants.LATEST_TIMESTAMP;
+          if (qv.hasTimestamp()) {
+            ts = qv.getTimestamp();
+          }
+          if (deleteType == DeleteType.DELETE_ONE_VERSION) {
+            delete.deleteColumn(family, qualifier, ts);
+          } else if (deleteType == DeleteType.DELETE_MULTIPLE_VERSIONS) {
+            delete.deleteColumns(family, qualifier, ts);
+          } else {
+            delete.deleteFamily(family, ts);
+          }
         }
       }
+    }
+    delete.setWriteToWAL(proto.getWriteToWAL());
+    for (NameBytesPair attribute: proto.getAttributeList()) {
+      delete.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     return delete;
   }
 
   /**
    * Convert a protocol buffer Mutate to an Append
-   *
+   * @param cellScanner
    * @param proto the protocol buffer Mutate to convert
    * @return the converted client Append
    * @throws DoNotRetryIOException
    */
-  public static Append toAppend(
-      final Mutate proto) throws DoNotRetryIOException {
-    MutateType type = proto.getMutateType();
-    assert type == MutateType.APPEND : type.name();
-    byte[] row = proto.getRow().toByteArray();
-    Append append = new Append(row);
+  public static Append toAppend(final MutationProto proto, final CellScanner cellScanner)
+  throws DoNotRetryIOException {
+    MutationType type = proto.getMutateType();
+    assert type == MutationType.APPEND : type.name();
+    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
+    Append append = null;
+    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
+    if (cellCount > 0) {
+      // The proto has metadata only and the data is separate to be found in the cellScanner.
+      if (cellScanner == null) {
+        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
+          TextFormat.shortDebugString(proto));
+      }
+      for (int i = 0; i < cellCount; i++) {
+        if (!cellScanner.advance()) {
+          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
+            " no cell returned: " + TextFormat.shortDebugString(proto));
+        }
+        Cell cell = cellScanner.current();
+        if (append == null) {
+          append = new Append(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+        }
+        append.add(KeyValueUtil.ensureKeyValue(cell));
+      }
+    } else {
+      append = new Append(row);
+      for (ColumnValue column: proto.getColumnValueList()) {
+        byte[] family = column.getFamily().toByteArray();
+        for (QualifierValue qv: column.getQualifierValueList()) {
+          byte[] qualifier = qv.getQualifier().toByteArray();
+          if (!qv.hasValue()) {
+            throw new DoNotRetryIOException(
+              "Missing required field: qualifer value");
+          }
+          byte[] value = qv.getValue().toByteArray();
+          append.add(family, qualifier, value);
+        }
+      }
+    }
     append.setWriteToWAL(proto.getWriteToWAL());
     for (NameBytesPair attribute: proto.getAttributeList()) {
-      append.setAttribute(attribute.getName(),
-        attribute.getValue().toByteArray());
-    }
-    for (ColumnValue column: proto.getColumnValueList()) {
-      byte[] family = column.getFamily().toByteArray();
-      for (QualifierValue qv: column.getQualifierValueList()) {
-        byte[] qualifier = qv.getQualifier().toByteArray();
-        if (!qv.hasValue()) {
-          throw new DoNotRetryIOException(
-            "Missing required field: qualifer value");
-        }
-        byte[] value = qv.getValue().toByteArray();
-        append.add(family, qualifier, value);
-      }
+      append.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     return append;
   }
@@ -466,18 +553,18 @@ public final class ProtobufUtil {
    * @return the converted Mutation
    * @throws IOException
    */
-  public static Mutation toMutation(final Mutate proto) throws IOException {
-    MutateType type = proto.getMutateType();
-    if (type == MutateType.APPEND) {
-      return toAppend(proto);
+  public static Mutation toMutation(final MutationProto proto) throws IOException {
+    MutationType type = proto.getMutateType();
+    if (type == MutationType.APPEND) {
+      return toAppend(proto, null);
     }
-    if (type == MutateType.DELETE) {
-      return toDelete(proto);
+    if (type == MutationType.DELETE) {
+      return toDelete(proto, null);
     }
-    if (type == MutateType.PUT) {
-      return toPut(proto);
+    if (type == MutationType.PUT) {
+      return toPut(proto, null);
     }
-    throw new IOException("Not an understood mutate type " + type);
+    throw new IOException("Unknown mutation type " + type);
   }
 
   /**
@@ -487,13 +574,44 @@ public final class ProtobufUtil {
    * @return the converted client Increment
    * @throws IOException
    */
-  public static Increment toIncrement(
-      final Mutate proto) throws IOException {
-    MutateType type = proto.getMutateType();
-    assert type == MutateType.INCREMENT : type.name();
-    byte[] row = proto.getRow().toByteArray();
-    Increment increment = new Increment(row);
-    increment.setWriteToWAL(proto.getWriteToWAL());
+  public static Increment toIncrement(final MutationProto proto, final CellScanner cellScanner)
+  throws IOException {
+    MutationType type = proto.getMutateType();
+    assert type == MutationType.INCREMENT : type.name();
+    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
+    Increment increment = null;
+    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
+    if (cellCount > 0) {
+      // The proto has metadata only and the data is separate to be found in the cellScanner.
+      if (cellScanner == null) {
+        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
+          TextFormat.shortDebugString(proto));
+      }
+      for (int i = 0; i < cellCount; i++) {
+        if (!cellScanner.advance()) {
+          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
+            " no cell returned: " + TextFormat.shortDebugString(proto));
+        }
+        Cell cell = cellScanner.current();
+        if (increment == null) {
+          increment = new Increment(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+        }
+        increment.add(KeyValueUtil.ensureKeyValue(cell));
+      }
+    } else {
+      increment = new Increment(row);
+      for (ColumnValue column: proto.getColumnValueList()) {
+        byte[] family = column.getFamily().toByteArray();
+        for (QualifierValue qv: column.getQualifierValueList()) {
+          byte[] qualifier = qv.getQualifier().toByteArray();
+          if (!qv.hasValue()) {
+            throw new DoNotRetryIOException("Missing required field: qualifer value");
+          }
+          long value = Bytes.toLong(qv.getValue().toByteArray());
+          increment.addColumn(family, qualifier, value);
+        }
+      }
+    }
     if (proto.hasTimeRange()) {
       HBaseProtos.TimeRange timeRange = proto.getTimeRange();
       long minStamp = 0;
@@ -506,18 +624,7 @@ public final class ProtobufUtil {
       }
       increment.setTimeRange(minStamp, maxStamp);
     }
-    for (ColumnValue column: proto.getColumnValueList()) {
-      byte[] family = column.getFamily().toByteArray();
-      for (QualifierValue qv: column.getQualifierValueList()) {
-        byte[] qualifier = qv.getQualifier().toByteArray();
-        if (!qv.hasValue()) {
-          throw new DoNotRetryIOException(
-            "Missing required field: qualifer value");
-        }
-        long value = Bytes.toLong(qv.getValue().toByteArray());
-        increment.addColumn(family, qualifier, value);
-      }
-    }
+    increment.setWriteToWAL(proto.getWriteToWAL());
     return increment;
   }
 
@@ -733,10 +840,10 @@ public final class ProtobufUtil {
    * @param increment
    * @return the converted mutate
    */
-  public static Mutate toMutate(final Increment increment) {
-    Mutate.Builder builder = Mutate.newBuilder();
+  public static MutationProto toMutation(final Increment increment) {
+    MutationProto.Builder builder = MutationProto.newBuilder();
     builder.setRow(ByteString.copyFrom(increment.getRow()));
-    builder.setMutateType(MutateType.INCREMENT);
+    builder.setMutateType(MutationType.INCREMENT);
     builder.setWriteToWAL(increment.getWriteToWAL());
     TimeRange timeRange = increment.getTimeRange();
     if (!timeRange.isAllTime()) {
@@ -768,27 +875,14 @@ public final class ProtobufUtil {
   /**
    * Create a protocol buffer Mutate based on a client Mutation
    *
-   * @param mutateType
+   * @param type
    * @param mutation
-   * @return a mutate
+   * @return a protobuf'd Mutation
    * @throws IOException
    */
-  public static Mutate toMutate(final MutateType mutateType,
-      final Mutation mutation) throws IOException {
-    Mutate.Builder mutateBuilder = Mutate.newBuilder();
-    mutateBuilder.setRow(ByteString.copyFrom(mutation.getRow()));
-    mutateBuilder.setMutateType(mutateType);
-    mutateBuilder.setWriteToWAL(mutation.getWriteToWAL());
-    mutateBuilder.setTimestamp(mutation.getTimeStamp());
-    Map<String, byte[]> attributes = mutation.getAttributesMap();
-    if (!attributes.isEmpty()) {
-      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
-        attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
-        mutateBuilder.addAttribute(attributeBuilder.build());
-      }
-    }
+  public static MutationProto toMutation(final MutationType type, final Mutation mutation)
+  throws IOException {
+    MutationProto.Builder builder = getMutationBuilderAndSetCommonFields(type, mutation);
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
     for (Map.Entry<byte[],List<? extends Cell>> family: mutation.getFamilyMap().entrySet()) {
@@ -799,15 +893,56 @@ public final class ProtobufUtil {
         valueBuilder.setQualifier(ByteString.copyFrom(kv.getQualifier()));
         valueBuilder.setValue(ByteString.copyFrom(kv.getValue()));
         valueBuilder.setTimestamp(kv.getTimestamp());
-        if (mutateType == MutateType.DELETE) {
+        if (type == MutationType.DELETE) {
           KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());
           valueBuilder.setDeleteType(toDeleteType(keyValueType));
         }
         columnBuilder.addQualifierValue(valueBuilder.build());
       }
-      mutateBuilder.addColumnValue(columnBuilder.build());
+      builder.addColumnValue(columnBuilder.build());
     }
-    return mutateBuilder.build();
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer MutationProto based on a client Mutation.  Does NOT include data.
+   * Understanding is that the Cell will be transported other than via protobuf.
+   * @param type
+   * @param mutation
+   * @return a protobuf'd Mutation
+   * @throws IOException
+   */
+  public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation)
+  throws IOException {
+    MutationProto.Builder builder = getMutationBuilderAndSetCommonFields(type, mutation);
+    builder.setAssociatedCellCount(mutation.size());
+    return builder.build();
+  }
+
+  /**
+   * Code shared by {@link #toMutation(MutationType, Mutation)} and
+   * {@link #toMutationNoData(MutationType, Mutation)}
+   * @param type
+   * @param mutation
+   * @return A partly-filled out protobuf'd Mutation.
+   */
+  private static MutationProto.Builder getMutationBuilderAndSetCommonFields(final MutationType type,
+      final Mutation mutation) {
+    MutationProto.Builder builder = MutationProto.newBuilder();
+    builder.setRow(ByteString.copyFrom(mutation.getRow()));
+    builder.setMutateType(type);
+    builder.setWriteToWAL(mutation.getWriteToWAL());
+    builder.setTimestamp(mutation.getTimeStamp());
+    Map<String, byte[]> attributes = mutation.getAttributesMap();
+    if (!attributes.isEmpty()) {
+      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
+      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
+        attributeBuilder.setName(attribute.getKey());
+        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
+        builder.addAttribute(attributeBuilder.build());
+      }
+    }
+    return builder;
   }
 
   /**
@@ -821,9 +956,22 @@ public final class ProtobufUtil {
     Cell [] cells = result.raw();
     if (cells != null) {
       for (Cell c : cells) {
-        builder.addKeyValue(toKeyValue(c));
+        builder.addCell(toCell(c));
       }
     }
+    return builder.build();
+  }
+
+  /**
+   * Convert a client Result to a protocol buffer Result.
+   * The pb Result does not include the Cell data.  That is for transport otherwise.
+   *
+   * @param result the client Result to convert
+   * @return the converted protocol buffer Result
+   */
+  public static ClientProtos.Result toResultNoData(final Result result) {
+    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
+    builder.setAssociatedCellCount(result.size());
     return builder.build();
   }
 
@@ -834,12 +982,40 @@ public final class ProtobufUtil {
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto) {
-    List<HBaseProtos.KeyValue> values = proto.getKeyValueList();
-    List<KeyValue> keyValues = new ArrayList<KeyValue>(values.size());
-    for (HBaseProtos.KeyValue kv: values) {
-      keyValues.add(toKeyValue(kv));
+    List<HBaseProtos.Cell> values = proto.getCellList();
+    List<Cell> cells = new ArrayList<Cell>(values.size());
+    for (HBaseProtos.Cell c: values) {
+      cells.add(toCell(c));
     }
-    return new Result(keyValues);
+    return new Result(cells);
+  }
+
+  /**
+   * Convert a protocol buffer Result to a client Result
+   *
+   * @param proto the protocol buffer Result to convert
+   * @param scanner Optional cell scanner.
+   * @return the converted client Result
+   * @throws IOException
+   */
+  public static Result toResult(final ClientProtos.Result proto, final CellScanner scanner)
+  throws IOException {
+    // TODO: Unit test that has some Cells in scanner and some in the proto.
+    List<Cell> cells = null;
+    if (proto.hasAssociatedCellCount()) {
+      int count = proto.getAssociatedCellCount();
+      cells = new ArrayList<Cell>(count);
+      for (int i = 0; i < count; i++) {
+        if (!scanner.advance()) throw new IOException("Failed get " + i + " of " + count);
+        cells.add(scanner.current());
+      }
+    }
+    List<HBaseProtos.Cell> values = proto.getCellList();
+    if (cells == null) cells = new ArrayList<Cell>(values.size());
+    for (HBaseProtos.Cell c: values) {
+      cells.add(toCell(c));
+    }
+    return new Result(cells);
   }
 
   /**
@@ -1009,55 +1185,6 @@ public final class ProtobufUtil {
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
-  }
-
-  /**
-   * A helper to invoke a multi action using client protocol.
-   *
-   * @param client
-   * @param multi
-   * @return a multi response
-   * @throws IOException
-   */
-  public static <R> MultiResponse multi(final ClientProtocol client,
-      final MultiAction<R> multi) throws IOException {
-    MultiResponse response = new MultiResponse();
-    for (Map.Entry<byte[], List<Action<R>>> e: multi.actions.entrySet()) {
-      byte[] regionName = e.getKey();
-      int rowMutations = 0;
-      List<Action<R>> actions = e.getValue();
-      for (Action<R> action: actions) {
-        Row row = action.getAction();
-        if (row instanceof RowMutations) {
-          try {
-            MultiRequest request =
-                RequestConverter.buildMultiRequest(regionName, (RowMutations)row);
-            client.multi(null, request);
-            response.add(regionName, action.getOriginalIndex(), new Result());
-          } catch (ServiceException se) {
-            response.add(regionName, action.getOriginalIndex(), getRemoteException(se));
-          }
-          rowMutations++;
-        }
-      }
-      if (actions.size() > rowMutations) {
-        Exception ex = null;
-        List<Object> results = null;
-        try {
-          MultiRequest request =
-              RequestConverter.buildMultiRequest(regionName, actions);
-          ClientProtos.MultiResponse proto = client.multi(null, request);
-          results = ResponseConverter.getResults(proto);
-        } catch (ServiceException se) {
-          ex = getRemoteException(se);
-        }
-        for (int i = 0, n = actions.size(); i < n; i++) {
-          int originalIndex = actions.get(i).getOriginalIndex();
-          response.add(regionName, originalIndex, results == null ? ex : results.get(i));
-        }
-      }
-    }
-    return response;
   }
 
   /**
@@ -1731,33 +1858,31 @@ public final class ProtobufUtil {
     throw new IOException(se);
   }
 
-  public static HBaseProtos.KeyValue toKeyValue(final Cell kv) {
+  public static HBaseProtos.Cell toCell(final Cell kv) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
-    // TODO: Do a Cell version
-    HBaseProtos.KeyValue.Builder kvbuilder = HBaseProtos.KeyValue.newBuilder();
+    HBaseProtos.Cell.Builder kvbuilder = HBaseProtos.Cell.newBuilder();
     kvbuilder.setRow(ByteString.copyFrom(kv.getRowArray(), kv.getRowOffset(),
       kv.getRowLength()));
     kvbuilder.setFamily(ByteString.copyFrom(kv.getFamilyArray(),
       kv.getFamilyOffset(), kv.getFamilyLength()));
     kvbuilder.setQualifier(ByteString.copyFrom(kv.getQualifierArray(),
       kv.getQualifierOffset(), kv.getQualifierLength()));
-    kvbuilder.setKeyType(HBaseProtos.KeyType.valueOf(kv.getTypeByte()));
+    kvbuilder.setCellType(HBaseProtos.CellType.valueOf(kv.getTypeByte()));
     kvbuilder.setTimestamp(kv.getTimestamp());
     kvbuilder.setValue(ByteString.copyFrom(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
     return kvbuilder.build();
   }
 
-  public static KeyValue toKeyValue(final HBaseProtos.KeyValue kv) {
+  public static Cell toCell(final HBaseProtos.Cell cell) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
-    // TODO: Do a Cell version
-    return new KeyValue(kv.getRow().toByteArray(),
-      kv.getFamily().toByteArray(),
-      kv.getQualifier().toByteArray(),
-      kv.getTimestamp(),
-      KeyValue.Type.codeToType((byte)kv.getKeyType().getNumber()),
-      kv.getValue().toByteArray());
+    return CellUtil.createCell(cell.getRow().toByteArray(),
+      cell.getFamily().toByteArray(),
+      cell.getQualifier().toByteArray(),
+      cell.getTimestamp(),
+      (byte)cell.getCellType().getNumber(),
+      cell.getValue().toByteArray());
   }
 
   /**

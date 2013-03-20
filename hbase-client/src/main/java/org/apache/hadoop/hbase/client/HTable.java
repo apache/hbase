@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -728,9 +729,11 @@ public class HTable implements HTableInterface {
             try {
               MutateRequest request = RequestConverter.buildMutateRequest(
                 location.getRegionInfo().getRegionName(), append);
-              MutateResponse response = server.mutate(null, request);
+              PayloadCarryingRpcController rpcController =
+                new PayloadCarryingRpcController();
+              MutateResponse response = server.mutate(rpcController, request);
               if (!response.hasResult()) return null;
-              return ProtobufUtil.toResult(response.getResult());
+              return ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());
             } catch (ServiceException se) {
               throw ProtobufUtil.getRemoteException(se);
             }
@@ -752,8 +755,9 @@ public class HTable implements HTableInterface {
             try {
               MutateRequest request = RequestConverter.buildMutateRequest(
                 location.getRegionInfo().getRegionName(), increment);
-              MutateResponse response = server.mutate(null, request);
-              return ProtobufUtil.toResult(response.getResult());
+              PayloadCarryingRpcController rpcContoller = new PayloadCarryingRpcController();
+              MutateResponse response = server.mutate(rpcContoller, request);
+              return ProtobufUtil.toResult(response.getResult(), rpcContoller.cellScanner());
             } catch (ServiceException se) {
               throw ProtobufUtil.getRemoteException(se);
             }
@@ -796,8 +800,10 @@ public class HTable implements HTableInterface {
               MutateRequest request = RequestConverter.buildMutateRequest(
                 location.getRegionInfo().getRegionName(), row, family,
                 qualifier, amount, writeToWAL);
-              MutateResponse response = server.mutate(null, request);
-              Result result = ProtobufUtil.toResult(response.getResult());
+              PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
+              MutateResponse response = server.mutate(rpcController, request);
+              Result result =
+                ProtobufUtil.toResult(response.getResult(), rpcController.cellScanner());
               return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
             } catch (ServiceException se) {
               throw ProtobufUtil.getRemoteException(se);

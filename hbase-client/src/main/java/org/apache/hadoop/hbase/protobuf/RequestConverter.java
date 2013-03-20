@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.protobuf;
 
-import com.google.protobuf.ByteString;
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -58,11 +61,11 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiGetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -92,8 +95,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLa
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
-import java.io.IOException;
-import java.util.List;
+import com.google.protobuf.ByteString;
 
 /**
  * Helper utility to build protocol buffer requests,
@@ -206,9 +208,9 @@ public final class RequestConverter {
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
 
-    Mutate.Builder mutateBuilder = Mutate.newBuilder();
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFrom(row));
-    mutateBuilder.setMutateType(MutateType.INCREMENT);
+    mutateBuilder.setMutateType(MutationType.INCREMENT);
     mutateBuilder.setWriteToWAL(writeToWAL);
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     columnBuilder.setFamily(ByteString.copyFrom(family));
@@ -217,8 +219,7 @@ public final class RequestConverter {
     valueBuilder.setQualifier(ByteString.copyFrom(qualifier));
     columnBuilder.addQualifierValue(valueBuilder.build());
     mutateBuilder.addColumnValue(columnBuilder.build());
-
-    builder.setMutate(mutateBuilder.build());
+    builder.setMutation(mutateBuilder.build());
     return builder.build();
   }
 
@@ -245,7 +246,7 @@ public final class RequestConverter {
     builder.setRegion(region);
     Condition condition = buildCondition(
       row, family, qualifier, comparator, compareType);
-    builder.setMutate(ProtobufUtil.toMutate(MutateType.PUT, put));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.PUT, put));
     builder.setCondition(condition);
     return builder.build();
   }
@@ -273,7 +274,7 @@ public final class RequestConverter {
     builder.setRegion(region);
     Condition condition = buildCondition(
       row, family, qualifier, comparator, compareType);
-    builder.setMutate(ProtobufUtil.toMutate(MutateType.DELETE, delete));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, delete));
     builder.setCondition(condition);
     return builder.build();
   }
@@ -292,7 +293,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutate(ProtobufUtil.toMutate(MutateType.PUT, put));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.PUT, put));
     return builder.build();
   }
 
@@ -310,7 +311,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutate(ProtobufUtil.toMutate(MutateType.APPEND, append));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.APPEND, append));
     return builder.build();
   }
 
@@ -327,7 +328,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutate(ProtobufUtil.toMutate(increment));
+    builder.setMutation(ProtobufUtil.toMutation(increment));
     return builder.build();
   }
 
@@ -345,7 +346,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutate(ProtobufUtil.toMutate(MutateType.DELETE, delete));
+    builder.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, delete));
     return builder.build();
   }
 
@@ -358,27 +359,62 @@ public final class RequestConverter {
    * @throws IOException
    */
   public static MultiRequest buildMultiRequest(final byte[] regionName,
-      final RowMutations rowMutations) throws IOException {
-    MultiRequest.Builder builder = MultiRequest.newBuilder();
-    RegionSpecifier region = buildRegionSpecifier(
-      RegionSpecifierType.REGION_NAME, regionName);
-    builder.setRegion(region);
-    builder.setAtomic(true);
+      final RowMutations rowMutations)
+  throws IOException {
+    MultiRequest.Builder builder = getMultiRequestBuilderWithRegionAndAtomicSet(regionName, true);
     for (Mutation mutation: rowMutations.getMutations()) {
-      MutateType mutateType = null;
+      MutationType mutateType = null;
       if (mutation instanceof Put) {
-        mutateType = MutateType.PUT;
+        mutateType = MutationType.PUT;
       } else if (mutation instanceof Delete) {
-        mutateType = MutateType.DELETE;
+        mutateType = MutationType.DELETE;
       } else {
-        throw new DoNotRetryIOException(
-          "RowMutations supports only put and delete, not "
-            + mutation.getClass().getName());
+        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
+          mutation.getClass().getName());
       }
-      Mutate mutate = ProtobufUtil.toMutate(mutateType, mutation);
-      builder.addAction(MultiAction.newBuilder().setMutate(mutate).build());
+      MutationProto mp = ProtobufUtil.toMutation(mutateType, mutation);
+      builder.addAction(MultiAction.newBuilder().setMutation(mp).build());
     }
     return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer MultiRequest for row mutations that does not hold data.  Data/Cells
+   * are carried outside of protobuf.  Return references to the Cells in <code>cells</code> param
+   *
+   * @param regionName
+   * @param rowMutations
+   * @param cells Return in here a list of Cells as CellIterable.
+   * @return a multi request minus data
+   * @throws IOException
+   */
+  public static MultiRequest buildNoDataMultiRequest(final byte[] regionName,
+      final RowMutations rowMutations, final List<CellScannable> cells)
+  throws IOException {
+    MultiRequest.Builder builder = getMultiRequestBuilderWithRegionAndAtomicSet(regionName, true);
+    for (Mutation mutation: rowMutations.getMutations()) {
+      MutationType type = null;
+      if (mutation instanceof Put) {
+        type = MutationType.PUT;
+      } else if (mutation instanceof Delete) {
+        type = MutationType.DELETE;
+      } else {
+        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
+          mutation.getClass().getName());
+      }
+      MutationProto mp = ProtobufUtil.toMutationNoData(type, mutation);
+      cells.add(mutation);
+      builder.addAction(MultiAction.newBuilder().setMutation(mp).build());
+    }
+    return builder.build();
+  }
+
+  private static MultiRequest.Builder getMultiRequestBuilderWithRegionAndAtomicSet(final byte [] regionName,
+      final boolean atomic) {
+    MultiRequest.Builder builder = MultiRequest.newBuilder();
+    RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
+    builder.setRegion(region);
+    return builder.setAtomic(atomic);
   }
 
   /**
@@ -475,30 +511,89 @@ public final class RequestConverter {
    * @throws IOException
    */
   public static <R> MultiRequest buildMultiRequest(final byte[] regionName,
-      final List<Action<R>> actions) throws IOException {
-    MultiRequest.Builder builder = MultiRequest.newBuilder();
-    RegionSpecifier region = buildRegionSpecifier(
-      RegionSpecifierType.REGION_NAME, regionName);
-    builder.setRegion(region);
+      final List<Action<R>> actions)
+  throws IOException {
+    MultiRequest.Builder builder = getMultiRequestBuilderWithRegionAndAtomicSet(regionName, false);
     for (Action<R> action: actions) {
       MultiAction.Builder protoAction = MultiAction.newBuilder();
-
       Row row = action.getAction();
       if (row instanceof Get) {
         protoAction.setGet(ProtobufUtil.toGet((Get)row));
       } else if (row instanceof Put) {
-        protoAction.setMutate(ProtobufUtil.toMutate(MutateType.PUT, (Put)row));
+        protoAction.setMutation(ProtobufUtil.toMutation(MutationType.PUT, (Put)row));
       } else if (row instanceof Delete) {
-        protoAction.setMutate(ProtobufUtil.toMutate(MutateType.DELETE, (Delete)row));
+        protoAction.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, (Delete)row));
       } else if (row instanceof Append) {
-        protoAction.setMutate(ProtobufUtil.toMutate(MutateType.APPEND, (Append)row));
+        protoAction.setMutation(ProtobufUtil.toMutation(MutationType.APPEND, (Append)row));
       } else if (row instanceof Increment) {
-        protoAction.setMutate(ProtobufUtil.toMutate((Increment)row));
+        protoAction.setMutation(ProtobufUtil.toMutation((Increment)row));
       } else if (row instanceof RowMutations) {
         continue; // ignore RowMutations
       } else {
         throw new DoNotRetryIOException(
           "multi doesn't support " + row.getClass().getName());
+      }
+      builder.addAction(protoAction.build());
+    }
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer multirequest with NO data for a list of actions (data is carried
+   * otherwise than via protobuf).  This means it just notes attributes, whether to write the
+   * WAL, etc., and the presence in protobuf serves as place holder for the data which is
+   * coming along otherwise.  Note that Get is different.  It does not contain 'data' and is always
+   * carried by protobuf.  We return references to the data by adding them to the passed in
+   * <code>data</code> param.
+   *
+   * RowMutations in the list (if any) will be ignored.
+   *
+   * @param regionName
+   * @param actions
+   * @param cells Place to stuff references to actual data.
+   * @return a multi request that does not carry any data.
+   * @throws IOException
+   */
+  public static <R> MultiRequest buildNoDataMultiRequest(final byte[] regionName,
+      final List<Action<R>> actions, final List<CellScannable> cells)
+  throws IOException {
+    MultiRequest.Builder builder = getMultiRequestBuilderWithRegionAndAtomicSet(regionName, false);
+    for (Action<R> action: actions) {
+      MultiAction.Builder protoAction = MultiAction.newBuilder();
+      Row row = action.getAction();
+      if (row instanceof Get) {
+        // Gets are carried by protobufs.
+        protoAction.setGet(ProtobufUtil.toGet((Get)row));
+      } else if (row instanceof Put) {
+        Put p = (Put)row;
+        cells.add(p);
+        protoAction.setMutation(ProtobufUtil.toMutationNoData(MutationType.PUT, p));
+      } else if (row instanceof Delete) {
+        Delete d = (Delete)row;
+        int size = d.size();
+        // Note that a legitimate Delete may have a size of zero; i.e. a Delete that has nothing
+        // in it but the row to delete.  In this case, the current implementation does not make
+        // a KeyValue to represent a delete-of-all-the-row until we serialize... For such cases
+        // where the size returned is zero, we will send the Delete fully pb'd rather than have
+        // metadata only in the pb and then send the kv along the side in cells.
+        if (size > 0) {
+          cells.add(d);
+          protoAction.setMutation(ProtobufUtil.toMutationNoData(MutationType.DELETE, d));
+        } else {
+          protoAction.setMutation(ProtobufUtil.toMutation(MutationType.DELETE, d));
+        }
+      } else if (row instanceof Append) {
+        Append a = (Append)row;
+        cells.add(a);
+        protoAction.setMutation(ProtobufUtil.toMutationNoData(MutationType.APPEND, a));
+      } else if (row instanceof Increment) {
+        Increment i = (Increment)row;
+        cells.add(i);
+        protoAction.setMutation(ProtobufUtil.toMutationNoData(MutationType.INCREMENT, i));
+      } else if (row instanceof RowMutations) {
+        continue; // ignore RowMutations
+      } else {
+        throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
       builder.addAction(protoAction.build());
     }

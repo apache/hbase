@@ -24,6 +24,33 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 /**
+ * The type of the key in a Cell
+ */
+enum CellType {
+    MINIMUM = 0;
+    PUT = 4;
+
+    DELETE = 8;
+    DELETE_COLUMN = 12;
+    DELETE_FAMILY = 14;
+
+    // MAXIMUM is used when searching; you look from maximum on down.
+    MAXIMUM = 255;
+}
+
+/**
+ * Protocol buffer version of Cell.
+ */
+message Cell {
+  optional bytes row = 1;
+  optional bytes family = 2;
+  optional bytes qualifier = 3;
+  optional uint64 timestamp = 4;
+  optional CellType cellType = 5;
+  optional bytes value = 6;
+}
+
+/**
  * Table Schema
  * Inspired by the rest TableSchema
  */
@@ -201,21 +228,6 @@ enum CompareType {
 }
 
 /**
- * The type of the key in a KeyValue.
- */
-enum KeyType {
-    MINIMUM = 0;
-    PUT = 4;
-
-    DELETE = 8;
-    DELETE_COLUMN = 12;
-    DELETE_FAMILY = 14;
-
-    // MAXIMUM is used when searching; you look from maximum on down.
-    MAXIMUM = 255;
-}
-
-/**
  * Protocol buffer version of KeyValue.
  * It doesn't have those transient parameters
  */
@@ -224,7 +236,7 @@ message KeyValue {
   required bytes family = 2;
   required bytes qualifier = 3;
   optional uint64 timestamp = 4;
-  optional KeyType keyType = 5;
+  optional CellType keyType = 5;
   optional bytes value = 6;
 }
 

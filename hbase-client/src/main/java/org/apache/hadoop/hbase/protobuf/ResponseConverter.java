@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.protobuf;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcController;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Result;
@@ -42,9 +45,8 @@ import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.util.StringUtils;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.RpcController;
 
 /**
  * Helper utility to build protocol buffer responses,
@@ -78,11 +80,13 @@ public final class ResponseConverter {
    * Get the results from a protocol buffer MultiResponse
    *
    * @param proto the protocol buffer MultiResponse to convert
-   * @return the results in the MultiResponse
+   * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
+   * @return the results that were in the MultiResponse (a Result or an Exception).
    * @throws IOException
    */
-  public static List<Object> getResults(
-      final ClientProtos.MultiResponse proto) throws IOException {
+  public static List<Object> getResults(final ClientProtos.MultiResponse proto,
+      final CellScanner cells)
+  throws IOException {
     List<Object> results = new ArrayList<Object>();
     List<ActionResult> resultList = proto.getResultList();
     for (int i = 0, n = resultList.size(); i < n; i++) {
@@ -90,13 +94,8 @@ public final class ResponseConverter {
       if (result.hasException()) {
         results.add(ProtobufUtil.toException(result.getException()));
       } else if (result.hasValue()) {
-        ClientProtos.Result r = result.getValue();
-        Object value = ProtobufUtil.toResult(r);
-        if (value instanceof ClientProtos.Result) {
-          results.add(ProtobufUtil.toResult((ClientProtos.Result)value));
-        } else {
-          results.add(value);
-        }
+        ClientProtos.Result value = result.getValue();
+        results.add(ProtobufUtil.toResult(value, cells));
       } else {
         results.add(new Result());
       }

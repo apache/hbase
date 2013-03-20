@@ -28,58 +28,56 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Get;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
-import org.apache.hadoop.hbase.regionserver.HRegionServer.QosFunction;
-import org.junit.BeforeClass;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.util.Pair;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 /**
  * Tests that verify certain RPCs get a higher QoS.
  */
 @Category(MediumTests.class)
 public class TestPriorityRpc {
-  static HRegionServer regionServer = null;
-  static QosFunction qosFunction = null;
-  @BeforeClass
-  public static void onetimeSetup() {
+  private HRegionServer regionServer = null;
+  private QosFunction qosFunction = null;
+
+  @Before
+  public void setup() {
     Configuration conf = HBaseConfiguration.create();
-    regionServer =
-        HRegionServer.constructRegionServer(HRegionServer.class, conf);
+    regionServer = HRegionServer.constructRegionServer(HRegionServer.class, conf);
     qosFunction = regionServer.getQosFunction();
   }
+
   @Test
   public void testQosFunctionForMeta() throws IOException {
     qosFunction = regionServer.getQosFunction();
-    RpcRequestBody.Builder rpcRequestBuilder = RpcRequestBody.newBuilder();
+    RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
     //create a rpc request that has references to META region and also
     //uses one of the known argument classes (known argument classes are
     //listed in HRegionServer.QosFunction.knownArgumentClasses)
-    rpcRequestBuilder = RpcRequestBody.newBuilder();
-    rpcRequestBuilder.setMethodName("foo");
+    headerBuilder.setMethodName("foo");
 
     GetRequest.Builder getRequestBuilder = GetRequest.newBuilder();
     RegionSpecifier.Builder regionSpecifierBuilder = RegionSpecifier.newBuilder();
     regionSpecifierBuilder.setType(RegionSpecifierType.REGION_NAME);
-    ByteString name =
-        ByteString.copyFrom(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+    ByteString name = ByteString.copyFrom(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
     regionSpecifierBuilder.setValue(name);
     RegionSpecifier regionSpecifier = regionSpecifierBuilder.build();
     getRequestBuilder.setRegion(regionSpecifier);
     Get.Builder getBuilder = Get.newBuilder();
     getBuilder.setRow(ByteString.copyFrom("somerow".getBytes()));
     getRequestBuilder.setGet(getBuilder.build());
-    rpcRequestBuilder.setRequest(getRequestBuilder.build().toByteString());
-    rpcRequestBuilder.setRequestClassName(GetRequest.class.getCanonicalName());
-    RpcRequestBody rpcRequest = rpcRequestBuilder.build();
+    GetRequest getRequest = getRequestBuilder.build();
+    RequestHeader header = headerBuilder.build();
     HRegion mockRegion = Mockito.mock(HRegion.class);
     HRegionServer mockRS = Mockito.mock(HRegionServer.class);
     HRegionInfo mockRegionInfo = Mockito.mock(HRegionInfo.class);
@@ -87,7 +85,8 @@ public class TestPriorityRpc {
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRegionInfo.isMetaTable()).thenReturn(true);
     qosFunction.setRegionServer(mockRS);
-    assertTrue (qosFunction.apply(rpcRequest) == HConstants.HIGH_QOS);
+    assertTrue (qosFunction.apply(new Pair<RequestHeader, Message>(header, getRequest)) ==
+      HConstants.HIGH_QOS);
   }
 
   @Test
@@ -96,51 +95,53 @@ public class TestPriorityRpc {
     //known argument classes (it uses one random request class)
     //(known argument classes are listed in
     //HRegionServer.QosFunction.knownArgumentClasses)
-    RpcRequestBody.Builder rpcRequestBuilder = RpcRequestBody.newBuilder();
-    rpcRequestBuilder.setMethodName("foo");
-    rpcRequestBuilder.setRequestClassName(GetOnlineRegionRequest.class.getCanonicalName());
-    RpcRequestBody rpcRequest = rpcRequestBuilder.build();
+    RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
+    headerBuilder.setMethodName("foo");
+    RequestHeader header = headerBuilder.build();
     QosFunction qosFunc = regionServer.getQosFunction();
-    assertTrue (qosFunc.apply(rpcRequest) == HConstants.NORMAL_QOS);
+    assertTrue (qosFunc.apply(new Pair<RequestHeader, Message>(header, null)) ==
+      HConstants.NORMAL_QOS);
   }
 
   @Test
   public void testQosFunctionForScanMethod() throws IOException {
-    RpcRequestBody.Builder rpcRequestBuilder = RpcRequestBody.newBuilder();
-    rpcRequestBuilder.setMethodName("scan");
+    RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
+    headerBuilder.setMethodName("scan");
+    RequestHeader header = headerBuilder.build();
 
     //build an empty scan request
     ScanRequest.Builder scanBuilder = ScanRequest.newBuilder();
-    ByteString requestBody = scanBuilder.build().toByteString();
-    rpcRequestBuilder.setRequest(requestBody);
-    RpcRequestBody rpcRequest = rpcRequestBuilder.build();
-    assertTrue (qosFunction.apply(rpcRequest) == HConstants.NORMAL_QOS);
+    ScanRequest scanRequest = scanBuilder.build();
+    HRegion mockRegion = Mockito.mock(HRegion.class);
+    HRegionServer mockRS = Mockito.mock(HRegionServer.class);
+    HRegionInfo mockRegionInfo = Mockito.mock(HRegionInfo.class);
+    Mockito.when(mockRS.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
+    Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
+    Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(false);
+    qosFunction.setRegionServer(mockRS);
+    int qos = qosFunction.apply(new Pair<RequestHeader, Message>(header, scanRequest));
+    assertTrue ("" + qos, qos == HConstants.NORMAL_QOS);
 
     //build a scan request with scannerID
     scanBuilder = ScanRequest.newBuilder();
     scanBuilder.setScannerId(12345);
-    requestBody = scanBuilder.build().toByteString();
-    rpcRequestBuilder.setRequest(requestBody);
-    rpcRequestBuilder.setRequestClassName(ScanRequest.class.getCanonicalName());
-    rpcRequest = rpcRequestBuilder.build();
+    scanRequest = scanBuilder.build();
     //mock out a high priority type handling and see the QoS returned
-    HRegionServer mockRS = Mockito.mock(HRegionServer.class);
     RegionScanner mockRegionScanner = Mockito.mock(RegionScanner.class);
-    HRegionInfo mockRegionInfo = Mockito.mock(HRegionInfo.class);
-    HRegion mockRegion = Mockito.mock(HRegion.class);
     Mockito.when(mockRS.getScanner(12345)).thenReturn(mockRegionScanner);
     Mockito.when(mockRegionScanner.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRS.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
-    Mockito.when(mockRegionInfo.isMetaTable()).thenReturn(true);
+    Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(true);
 
     qosFunction.setRegionServer(mockRS);
 
-    assertTrue (qosFunction.apply(rpcRequest) == HConstants.HIGH_QOS);
+    assertTrue (qosFunction.apply(new Pair<RequestHeader, Message>(header, scanRequest)) ==
+      HConstants.HIGH_QOS);
 
     //the same as above but with non-meta region
-    Mockito.when(mockRegionInfo.isMetaTable()).thenReturn(false);
-    assertTrue (qosFunction.apply(rpcRequest) == HConstants.NORMAL_QOS);
+    Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(false);
+    assertTrue (qosFunction.apply(new Pair<RequestHeader, Message>(header, scanRequest)) ==
+      HConstants.NORMAL_QOS);
   }
-
 }

@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.Serializer;
@@ -45,43 +45,41 @@ public class KeyValueSerialization implements Serialization<KeyValue> {
   }
 
   public static class KeyValueDeserializer implements Deserializer<KeyValue> {
-    private InputStream is;
+    private DataInputStream dis;
 
     @Override
     public void close() throws IOException {
-      this.is.close();
+      this.dis.close();
     }
 
     @Override
     public KeyValue deserialize(KeyValue ignore) throws IOException {
       // I can't overwrite the passed in KV, not from a proto kv, not just yet.  TODO
-      HBaseProtos.KeyValue proto =
-        HBaseProtos.KeyValue.parseDelimitedFrom(this.is);
-      return ProtobufUtil.toKeyValue(proto);
+      return KeyValue.create(this.dis);
     }
 
     @Override
     public void open(InputStream is) throws IOException {
-      this.is = is;
+      this.dis = new DataInputStream(is);
     }
   }
 
   public static class KeyValueSerializer implements Serializer<KeyValue> {
-    private OutputStream os;
+    private DataOutputStream dos;
 
     @Override
     public void close() throws IOException {
-      this.os.close();
+      this.dos.close();
     }
 
     @Override
     public void open(OutputStream os) throws IOException {
-      this.os = os;
+      this.dos = new DataOutputStream(os);
     }
 
     @Override
     public void serialize(KeyValue kv) throws IOException {
-      ProtobufUtil.toKeyValue(kv).writeDelimitedTo(this.os);
+      KeyValue.write(kv, this.dos);
     }
   }
 }

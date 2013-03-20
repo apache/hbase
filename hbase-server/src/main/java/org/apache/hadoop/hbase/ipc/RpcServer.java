@@ -19,16 +19,19 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.common.base.Function;
-import com.google.protobuf.Message;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.util.Pair;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
+import com.google.common.base.Function;
+import com.google.protobuf.Message;
 
 @InterfaceAudience.Private
 public interface RpcServer {
@@ -47,18 +50,18 @@ public interface RpcServer {
   InetSocketAddress getListenerAddress();
 
   /** Called for each call.
+   * @param method Method to invoke.
    * @param param parameter
    * @param receiveTime time
-   * @return Message Protobuf response Message
+   * @param status
+   * @return Message Protobuf response Message and optionally the Cells that make up the response.
    * @throws java.io.IOException e
    */
-  Message call(Class<? extends IpcProtocol> protocol,
-      RpcRequestBody param, long receiveTime, MonitoredRPCHandler status)
-      throws IOException;
+  Pair<Message, CellScanner> call(Class<? extends IpcProtocol> protocol, Method method,
+    Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
+  throws IOException;
 
   void setErrorHandler(HBaseRPCErrorHandler handler);
-
-  void setQosFunction(Function<RpcRequestBody, Integer> newFunc);
 
   void openServer();
 
@@ -68,4 +71,6 @@ public interface RpcServer {
    * Returns the metrics instance for reporting RPC call statistics
    */
   MetricsHBaseServer getMetrics();
+
+  public void setQosFunction(Function<Pair<RequestHeader, Message>, Integer> newFunc);
 }

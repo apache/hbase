@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.ShutdownHook;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Utility used running a cluster all in the one JVM.
@@ -201,13 +203,22 @@ public class JVMClusterUtil {
     // Wait for an active master to be initialized (implies being master)
     //  with this, when we return the cluster is complete
     startTime = System.currentTimeMillis();
+    final int maxwait = 200000;
     while (true) {
       JVMClusterUtil.MasterThread t = findActiveMaster(masters);
       if (t != null && t.master.isInitialized()) {
         return t.master.getServerName().toString();
       }
-      if (System.currentTimeMillis() > startTime + 200000) {
-        throw new RuntimeException("Master not initialized after 200 seconds");
+      // REMOVE
+      if (System.currentTimeMillis() > startTime + 10000) {
+
+        Threads.sleep(1000);
+      }
+      if (System.currentTimeMillis() > startTime + maxwait) {
+        String msg = "Master not initialized after " + maxwait + "ms seconds";
+        ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
+          "Thread dump because: " + msg);
+        throw new RuntimeException(msg);
       }
       try {
         Thread.sleep(100);
@@ -278,8 +289,6 @@ public class JVMClusterUtil {
         }
       }
     }
-
-
 
     if (masters != null) {
       for (JVMClusterUtil.MasterThread t : masters) {

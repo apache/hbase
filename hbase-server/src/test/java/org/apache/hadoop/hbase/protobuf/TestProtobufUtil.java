@@ -31,11 +31,11 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -88,9 +88,9 @@ public class TestProtobufUtil {
    */
   @Test
   public void testAppend() throws IOException {
-    Mutate.Builder mutateBuilder = Mutate.newBuilder();
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
-    mutateBuilder.setMutateType(MutateType.APPEND);
+    mutateBuilder.setMutateType(MutationType.APPEND);
     mutateBuilder.setTimestamp(111111);
     ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
     valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
@@ -103,29 +103,27 @@ public class TestProtobufUtil {
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     mutateBuilder.addColumnValue(valueBuilder.build());
 
-    Mutate proto = mutateBuilder.build();
+    MutationProto proto = mutateBuilder.build();
     // default fields
     assertEquals(true, proto.getWriteToWAL());
 
     // set the default value for equal comparison
-    mutateBuilder = Mutate.newBuilder(proto);
+    mutateBuilder = MutationProto.newBuilder(proto);
     mutateBuilder.setWriteToWAL(true);
 
-    Append append = ProtobufUtil.toAppend(proto);
+    Append append = ProtobufUtil.toAppend(proto, null);
 
     // append always use the latest timestamp,
     // add the timestamp to the original mutate
     long timestamp = append.getTimeStamp();
     mutateBuilder.setTimestamp(timestamp);
-    for (ColumnValue.Builder column:
-        mutateBuilder.getColumnValueBuilderList()) {
+    for (ColumnValue.Builder column: mutateBuilder.getColumnValueBuilderList()) {
       for (QualifierValue.Builder qualifier:
           column.getQualifierValueBuilderList()) {
         qualifier.setTimestamp(timestamp);
       }
     }
-    assertEquals(mutateBuilder.build(),
-      ProtobufUtil.toMutate(MutateType.APPEND, append));
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.APPEND, append));
   }
 
   /**
@@ -135,9 +133,9 @@ public class TestProtobufUtil {
    */
   @Test
   public void testDelete() throws IOException {
-    Mutate.Builder mutateBuilder = Mutate.newBuilder();
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
-    mutateBuilder.setMutateType(MutateType.DELETE);
+    mutateBuilder.setMutateType(MutationType.DELETE);
     mutateBuilder.setTimestamp(111111);
     ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
     valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
@@ -152,12 +150,12 @@ public class TestProtobufUtil {
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     mutateBuilder.addColumnValue(valueBuilder.build());
 
-    Mutate proto = mutateBuilder.build();
+    MutationProto proto = mutateBuilder.build();
     // default fields
     assertEquals(true, proto.getWriteToWAL());
 
     // set the default value for equal comparison
-    mutateBuilder = Mutate.newBuilder(proto);
+    mutateBuilder = MutationProto.newBuilder(proto);
     mutateBuilder.setWriteToWAL(true);
 
     Delete delete = ProtobufUtil.toDelete(proto);
@@ -172,7 +170,7 @@ public class TestProtobufUtil {
       }
     }
     assertEquals(mutateBuilder.build(),
-      ProtobufUtil.toMutate(MutateType.DELETE, delete));
+      ProtobufUtil.toMutation(MutationType.DELETE, delete));
   }
 
   /**
@@ -182,9 +180,9 @@ public class TestProtobufUtil {
    */
   @Test
   public void testIncrement() throws IOException {
-    Mutate.Builder mutateBuilder = Mutate.newBuilder();
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
-    mutateBuilder.setMutateType(MutateType.INCREMENT);
+    mutateBuilder.setMutateType(MutationType.INCREMENT);
     ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
     valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
     QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
@@ -196,16 +194,16 @@ public class TestProtobufUtil {
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     mutateBuilder.addColumnValue(valueBuilder.build());
 
-    Mutate proto = mutateBuilder.build();
+    MutationProto proto = mutateBuilder.build();
     // default fields
     assertEquals(true, proto.getWriteToWAL());
 
     // set the default value for equal comparison
-    mutateBuilder = Mutate.newBuilder(proto);
+    mutateBuilder = MutationProto.newBuilder(proto);
     mutateBuilder.setWriteToWAL(true);
 
-    Increment increment = ProtobufUtil.toIncrement(proto);
-    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutate(increment));
+    Increment increment = ProtobufUtil.toIncrement(proto, null);
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(increment));
   }
 
   /**
@@ -215,9 +213,9 @@ public class TestProtobufUtil {
    */
   @Test
   public void testPut() throws IOException {
-    Mutate.Builder mutateBuilder = Mutate.newBuilder();
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
-    mutateBuilder.setMutateType(MutateType.PUT);
+    mutateBuilder.setMutateType(MutationType.PUT);
     mutateBuilder.setTimestamp(111111);
     ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
     valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
@@ -231,12 +229,12 @@ public class TestProtobufUtil {
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     mutateBuilder.addColumnValue(valueBuilder.build());
 
-    Mutate proto = mutateBuilder.build();
+    MutationProto proto = mutateBuilder.build();
     // default fields
     assertEquals(true, proto.getWriteToWAL());
 
     // set the default value for equal comparison
-    mutateBuilder = Mutate.newBuilder(proto);
+    mutateBuilder = MutationProto.newBuilder(proto);
     mutateBuilder.setWriteToWAL(true);
 
     Put put = ProtobufUtil.toPut(proto);
@@ -255,7 +253,7 @@ public class TestProtobufUtil {
       }
     }
     assertEquals(mutateBuilder.build(),
-      ProtobufUtil.toMutate(MutateType.PUT, put));
+      ProtobufUtil.toMutation(MutationType.PUT, put));
   }
 
   /**
