@@ -26,7 +26,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -323,21 +322,10 @@ public class HLogSplitter {
       }
       status.setStatus("Log splits complete. Checking for orphaned logs.");
 
-      FileStatus[] currFiles = fs.listStatus(srcDir);
-      if (currFiles.length > processedLogs.size()
+      if (fs.listStatus(srcDir).length > processedLogs.size()
           + corruptedLogs.size()) {
-        Set<Path> fileSet = new HashSet<Path>();
-        for (FileStatus fstat : currFiles) {
-          fileSet.add(fstat.getPath());
-        }
-        for (Path p : processedLogs) {
-          fileSet.remove(p);
-        }
-        for (Path p : corruptedLogs) {
-          fileSet.remove(p);
-        }        
         throw new OrphanHLogAfterSplitException(
-          "Discovered orphan hlog after split. " + fileSet.iterator().next() + " Maybe the "
+            "Discovered orphan hlog after split. Maybe the "
             + "HRegionServer was not dead when we started");
       }
     } finally {

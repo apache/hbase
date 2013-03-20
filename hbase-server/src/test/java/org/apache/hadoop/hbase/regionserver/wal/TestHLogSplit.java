@@ -137,8 +137,6 @@ public class TestHLogSplit {
     FSUtils.setRootDir(TEST_UTIL.getConfiguration(), HBASEDIR);
     TEST_UTIL.getConfiguration().setClass("hbase.regionserver.hlog.writer.impl",
       InstrumentedSequenceFileLogWriter.class, HLog.Writer.class);
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.broken.append", true);
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);    
     // This is how you turn off shortcircuit read currently.  TODO: Fix.  Should read config.
     System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
     // Create fake maping user to group and set it to the conf.
@@ -717,17 +715,14 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
     Thread zombie = new ZombieNewLogWriterRegionServer(stop);
 
-    List<Path> splits = null;
     try {
       zombie.start();
       try {
         HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
             HBASEDIR, HLOGDIR, OLDLOGDIR, fs);
-        splits = logSplitter.splitLog();
+        logSplitter.splitLog();
       } catch (IOException ex) {/* expected */}
-      FileStatus[] files = fs.listStatus(HLOGDIR);
-      if (files == null) fail("no files in " + HLOGDIR + " with splits " + splits);
-      int logFilesNumber = files.length;
+      int logFilesNumber = fs.listStatus(HLOGDIR).length;
 
       assertEquals("Log files should not be archived if there's an extra file after split",
               NUM_WRITERS + 1, logFilesNumber);
