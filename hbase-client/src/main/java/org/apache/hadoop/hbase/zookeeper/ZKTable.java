@@ -342,6 +342,23 @@ public class ZKTable {
     return getAllTables(zkw, ZooKeeperProtos.Table.State.DISABLED,
       ZooKeeperProtos.Table.State.DISABLING);
   }
+  
+  /**
+   * If the table is found in ENABLING state the inmemory state is removed. This
+   * helps in cases where CreateTable is to be retried by the client incase of
+   * failures
+   * 
+   * @param tableName
+   */
+  public void removeEnablingTable(final String tableName) {
+    synchronized (this.cache) {
+      if (isEnablingTable(tableName)) {
+        this.cache.remove(tableName);
+      }
+
+    }
+  }
+
 
   /**
    * Gets a list of all the tables of specified states in zookeeper.
