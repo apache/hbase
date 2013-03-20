@@ -68,6 +68,9 @@ public class TestMultiParallel {
   private static final int slaves = 2; // also used for testing HTable pool size
 
   @BeforeClass public static void beforeClass() throws Exception {
+    ((Log4JLogger)HBaseServer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)HBaseClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     UTIL.startMiniCluster(slaves);
     HTable t = UTIL.createTable(Bytes.toBytes(TEST_TABLE), Bytes.toBytes(FAMILY));
     UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));

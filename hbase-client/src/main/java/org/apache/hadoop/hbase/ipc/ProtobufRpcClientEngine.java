@@ -24,9 +24,10 @@ import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.IpcProtocol;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 
 import java.io.IOException;
@@ -77,36 +78,13 @@ public class ProtobufRpcClientEngine implements RpcClientEngine {
     final private int rpcTimeout;
 
     public Invoker(Class<? extends IpcProtocol> protocol, InetSocketAddress addr, User ticket,
-        int rpcTimeout, HBaseClient client) throws IOException {
+        int rpcTimeout, HBaseClient client)
+    throws IOException {
       this.protocol = protocol;
       this.address = addr;
       this.ticket = ticket;
       this.client = client;
       this.rpcTimeout = rpcTimeout;
-    }
-
-    private RpcRequestBody constructRpcRequest(Method method,
-                                               Object[] params) throws ServiceException {
-      RpcRequestBody rpcRequest;
-      RpcRequestBody.Builder builder = RpcRequestBody.newBuilder();
-      builder.setMethodName(method.getName());
-      Message param;
-      int length = params.length;
-      if (length == 2) {
-        // RpcController + Message in the method args
-        // (generated code from RPC bits in .proto files have RpcController)
-        param = (Message)params[1];
-      } else if (length == 1) { // Message
-        param = (Message)params[0];
-      } else {
-        throw new ServiceException("Too many parameters for request. Method: ["
-            + method.getName() + "]" + ", Expected: 2, Actual: "
-            + params.length);
-      }
-      builder.setRequestClassName(param.getClass().getName());
-      builder.setRequest(param.toByteString());
-      rpcRequest = builder.build();
-      return rpcRequest;
     }
 
     /**
@@ -122,33 +100,51 @@ public class ProtobufRpcClientEngine implements RpcClientEngine {
      * set as cause in ServiceException</li>
      * </ol>
      *
-     * Note that the client calling protobuf RPC methods, must handle
+     * <p>Note that the client calling protobuf RPC methods, must handle
      * ServiceException by getting the cause from the ServiceException. If the
      * cause is RemoteException, then unwrap it to get the exception thrown by
      * the server.
      */
     @Override
     public Object invoke(Object proxy, Method method, Object[] args)
-        throws ServiceException {
+    throws ServiceException {
       long startTime = 0;
-      if (LOG.isDebugEnabled()) {
+      if (LOG.isTraceEnabled()) {
         startTime = System.currentTimeMillis();
       }
-
-      RpcRequestBody rpcRequest = constructRpcRequest(method, args);
-      Message val = null;
+      if (args.length != 2) {
+        throw new ServiceException(method.getName() + " didn't get two args: " + args.length);
+      }
+      // Get the controller.  Often null.  Presume payload carrying controller.  Payload is optional.
+      // It is cells/data that we do not want to protobuf.
+      PayloadCarryingRpcController controller = (PayloadCarryingRpcController)args[0];
+      CellScanner cells = null;
+      if (controller != null) {
+        cells = controller.cellScanner();
+        // Clear it here so we don't by mistake try and these cells processing results.
+        controller.setCellScanner(null);
+      }
+      // The request parameter
+      Message param = (Message)args[1];
+      Pair<Message, CellScanner> val = null;
       try {
-        val = client.call(rpcRequest, address, protocol, ticket, rpcTimeout);
+        val = client.call(method, param, cells, address, protocol, ticket, rpcTimeout);
+        if (controller != null) {
+          // Shove the results into controller so can be carried across the proxy/pb service void.
+          if (val.getSecond() != null) controller.setCellScanner(val.getSecond());
+        } else if (val.getSecond() != null) {
+          throw new ServiceException("Client dropping data on the floor!");
+        }
 
-        if (LOG.isDebugEnabled()) {
+        if (LOG.isTraceEnabled()) {
           long callTime = System.currentTimeMillis() - startTime;
           if (LOG.isTraceEnabled()) LOG.trace("Call: " + method.getName() + " " + callTime);
         }
-        return val;
+        return val.getFirst();
       } catch (Throwable e) {
         if (e instanceof RemoteException) {
           Throwable cause = ((RemoteException)e).unwrapRemoteException();
-          throw new ServiceException(cause);
+          throw new ServiceException("methodName=" + method.getName(), cause);
         }
         throw new ServiceException(e);
       }
@@ -158,8 +154,8 @@ public class ProtobufRpcClientEngine implements RpcClientEngine {
       if (returnTypes.containsKey(method.getName())) {
         return returnTypes.get(method.getName());
       }
-
       Class<?> returnType = method.getReturnType();
+      if (returnType.getName().equals("void")) return null;
       Method newInstMethod = returnType.getMethod("getDefaultInstance");
       newInstMethod.setAccessible(true);
       Message protoType = (Message) newInstMethod.invoke(null, (Object[]) null);

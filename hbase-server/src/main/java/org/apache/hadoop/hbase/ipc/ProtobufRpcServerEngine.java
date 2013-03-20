@@ -23,36 +23,33 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.protobuf.Message;
 import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
 /**
  * The {@link RpcServerEngine} implementation for ProtoBuf-based RPCs.
  */
 @InterfaceAudience.Private
 class ProtobufRpcServerEngine implements RpcServerEngine {
-  private static final Log LOG =
-      LogFactory.getLog("org.apache.hadoop.hbase.ipc.ProtobufRpcServerEngine");
-
   ProtobufRpcServerEngine() {
     super();
   }
@@ -65,7 +62,6 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
     return new Server(instance, ifaces, conf, bindAddress, port, numHandlers,
         metaHandlerCount, verbose, highPriorityLevel);
   }
-
 
   public static class Server extends HBaseServer {
     boolean verbose;
@@ -111,10 +107,6 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
       this.instance = instance;
       this.implementation = instance.getClass();
     }
-    private static final Map<String, Message> methodArg =
-        new ConcurrentHashMap<String, Message>();
-    private static final Map<String, Method> methodInstances =
-        new ConcurrentHashMap<String, Method>();
 
     private AuthenticationTokenSecretManager createSecretManager(){
       if (!isSecurityEnabled ||
@@ -152,37 +144,20 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
      * the return response has protobuf response payload. On failure, the
      * exception name and the stack trace are returned in the protobuf response.
      */
-    public Message call(Class<? extends IpcProtocol> protocol,
-      RpcRequestBody rpcRequest, long receiveTime, MonitoredRPCHandler status)
+    public Pair<Message, CellScanner> call(Class<? extends IpcProtocol> protocol,
+      Method method, Message param, CellScanner cellScanner, long receiveTime,
+      MonitoredRPCHandler status)
     throws IOException {
       try {
-        String methodName = rpcRequest.getMethodName();
-        Method method = getMethod(protocol, methodName);
-        if (method == null) {
-          throw new UnknownProtocolException("Method " + methodName +
-              " doesn't exist in protocol " + protocol.getName());
-        }
-
-        /**
-         * RPCs for a particular interface (ie protocol) are done using a
-         * IPC connection that is setup using rpcProxy.
-         * The rpcProxy's has a declared protocol name that is
-         * sent form client to server at connection time.
-         */
-
         if (verbose) {
-          LOG.info("Call: protocol name=" + protocol.getName() +
-              ", method=" + methodName);
+          LOG.info("callId: " + CurCall.get().id + " protocol: " + protocol.getName() +
+            " method: " + method.getName());
         }
-
-        status.setRPC(rpcRequest.getMethodName(),
-            new Object[]{rpcRequest.getRequest()}, receiveTime);
-        status.setRPCPacket(rpcRequest);
+        status.setRPC(method.getName(), new Object[]{param}, receiveTime);
+        // TODO: Review after we add in encoded data blocks.
+        status.setRPCPacket(param);
         status.resume("Servicing call");
         //get an instance of the method arg type
-        Message protoType = getMethodArgType(method);
-        Message param = protoType.newBuilderForType()
-            .mergeFrom(rpcRequest.getRequest()).build();
         Message result;
         Object impl = null;
         if (protocol.isAssignableFrom(this.implementation)) {
@@ -190,57 +165,53 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
         } else {
           throw new UnknownProtocolException(protocol);
         }
-
+        PayloadCarryingRpcController controller = null;
         long startTime = System.currentTimeMillis();
         if (method.getParameterTypes().length == 2) {
-          // RpcController + Message in the method args
-          // (generated code from RPC bits in .proto files have RpcController)
-          result = (Message)method.invoke(impl, null, param);
-        } else if (method.getParameterTypes().length == 1) {
-          // Message (hand written code usually has only a single argument)
-          result = (Message)method.invoke(impl, param);
+          // Always create a controller.  Some invocations may not pass data in but will pass
+          // data out and they'll need a controller instance to carry it for them.
+          controller = new PayloadCarryingRpcController(cellScanner);
+          result = (Message)method.invoke(impl, controller, param);
         } else {
-          throw new ServiceException("Too many parameters for method: ["
-              + method.getName() + "]" + ", allowed (at most): 2, Actual: "
-              + method.getParameterTypes().length);
+          throw new ServiceException("Wrong number of parameters for method: [" +
+            method.getName() + "]" + ", wanted: 2, actual: " + method.getParameterTypes().length);
         }
         int processingTime = (int) (System.currentTimeMillis() - startTime);
         int qTime = (int) (startTime-receiveTime);
-        if (TRACELOG.isDebugEnabled()) {
-          TRACELOG.debug("Call #" + CurCall.get().id +
-              "; served=" + protocol.getSimpleName() + "#" + method.getName() +
-              ", queueTime=" + qTime +
-              ", processingTime=" + processingTime +
-              ", request=" + param.toString() +
-              " response=" + result.toString());
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(CurCall.get().toString() +
+              " response: " + TextFormat.shortDebugString(result) +
+              " served: " + protocol.getSimpleName() +
+              " queueTime: " + qTime +
+              " processingTime: " + processingTime);
         }
         metrics.dequeuedCall(qTime);
         metrics.processedCall(processingTime);
-
         if (verbose) {
-          log("Return: "+result, LOG);
+          log("Return " + TextFormat.shortDebugString(result), LOG);
         }
         long responseSize = result.getSerializedSize();
         // log any RPC responses that are slower than the configured warn
         // response time or larger than configured warning size
-        boolean tooSlow = (processingTime > warnResponseTime
-            && warnResponseTime > -1);
-        boolean tooLarge = (responseSize > warnResponseSize
-            && warnResponseSize > -1);
+        boolean tooSlow = (processingTime > warnResponseTime && warnResponseTime > -1);
+        boolean tooLarge = (responseSize > warnResponseSize && warnResponseSize > -1);
         if (tooSlow || tooLarge) {
           // when tagging, we let TooLarge trump TooSmall to keep output simple
           // note that large responses will often also be slow.
+          // TOOD: This output is useless.... output the serialized pb as toString but do a
+          // short form, shorter than TextFormat.shortDebugString(proto).
           StringBuilder buffer = new StringBuilder(256);
-          buffer.append(methodName);
+          buffer.append(method.getName());
           buffer.append("(");
           buffer.append(param.getClass().getName());
           buffer.append(")");
-          logResponse(new Object[]{rpcRequest.getRequest()},
-              methodName, buffer.toString(), (tooLarge ? "TooLarge" : "TooSlow"),
+          logResponse(new Object[]{param},
+              method.getName(), buffer.toString(), (tooLarge ? "TooLarge" : "TooSlow"),
               status.getClient(), startTime, processingTime, qTime,
               responseSize);
         }
-        return result;
+        return new Pair<Message, CellScanner>(result,
+          controller != null? controller.cellScanner(): null);
       } catch (InvocationTargetException e) {
         Throwable target = e.getTargetException();
         if (target instanceof IOException) {
@@ -262,48 +233,6 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
       }
     }
 
-    static Method getMethod(Class<? extends IpcProtocol> protocol,
-                            String methodName) {
-      Method method = methodInstances.get(methodName);
-      if (method != null) {
-        return method;
-      }
-      Method[] methods = protocol.getMethods();
-      for (Method m : methods) {
-        if (m.getName().equals(methodName)) {
-          m.setAccessible(true);
-          methodInstances.put(methodName, m);
-          return m;
-        }
-      }
-      return null;
-    }
-
-    static Message getMethodArgType(Method method) throws Exception {
-      Message protoType = methodArg.get(method.getName());
-      if (protoType != null) {
-        return protoType;
-      }
-
-      Class<?>[] args = method.getParameterTypes();
-      Class<?> arg;
-      if (args.length == 2) {
-        // RpcController + Message in the method args
-        // (generated code from RPC bits in .proto files have RpcController)
-        arg = args[1];
-      } else if (args.length == 1) {
-        arg = args[0];
-      } else {
-        //unexpected
-        return null;
-      }
-      //in the protobuf methods, args[1] is the only significant argument
-      Method newInstMethod = arg.getMethod("getDefaultInstance");
-      newInstMethod.setAccessible(true);
-      protoType = (Message) newInstMethod.invoke(null, (Object[]) null);
-      methodArg.put(method.getName(), protoType);
-      return protoType;
-    }
     /**
      * Logs an RPC response to the LOG file, producing valid JSON objects for
      * client Operations.
@@ -361,10 +290,12 @@ class ProtobufRpcServerEngine implements RpcServerEngine {
             mapper.writeValueAsString(responseInfo));
       }
     }
+
     protected static void log(String value, Log LOG) {
       String v = value;
-      if (v != null && v.length() > 55)
-        v = v.substring(0, 55)+"...";
+      final int max = 100;
+      if (v != null && v.length() > max)
+        v = v.substring(0, max) + "...";
       LOG.info(v);
     }
   }

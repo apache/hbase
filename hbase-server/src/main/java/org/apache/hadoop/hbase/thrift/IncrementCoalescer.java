@@ -279,7 +279,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
             LOG.error("FAILED_ICV: " + Bytes.toString(row.getTable()) + ", "
                 + Bytes.toStringBinary(row.getRowKey()) + ", "
                 + Bytes.toStringBinary(row.getFamily()) + ", "
-                + Bytes.toStringBinary(row.getQualifier()) + ", " + counter);
+                + Bytes.toStringBinary(row.getQualifier()) + ", " + counter, e);
           }
 
         }

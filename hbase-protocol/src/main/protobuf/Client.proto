@@ -51,7 +51,16 @@ message Get {
 }
 
 message Result {
-  repeated KeyValue keyValue = 1;
+  // Result includes the Cells or else it just has a count of Cells
+  // that are carried otherwise.
+  repeated Cell cell = 1;
+  // The below count is set when the associated cells are
+  // not part of this protobuf message; they are passed alongside
+  // and then this Message is just a placeholder with metadata.
+  // The count is needed to know how many to peel off the block of Cells as
+  // ours.  NOTE: This is different from the pb managed cellCount of the
+  // 'cell' field above which is non-null when the cells are pb'd.
+  optional int32 associatedCellCount = 2;
 }
 
 /**
@@ -118,24 +127,34 @@ message Condition {
   required Comparator comparator = 5;
 }
 
+
 /**
- * A specific mutate inside a mutate request.
+ * A specific mutation inside a mutate request.
  * It can be an append, increment, put or delete based
- * on the mutate type.
+ * on the mutation type.  It can be fully filled in or
+ * only metadata present because data is being carried
+ * elsewhere outside of pb.
  */
-message Mutate {
-  required bytes row = 1;
-  required MutateType mutateType = 2;
+message MutationProto {
+  optional bytes row = 1;
+  optional MutationType mutateType = 2;
   repeated ColumnValue columnValue = 3;
-  repeated NameBytesPair attribute = 4;
-  optional uint64 timestamp = 5;
+  optional uint64 timestamp = 4;
+  repeated NameBytesPair attribute = 5;
   optional bool writeToWAL = 6 [default = true];
 
-  // For some mutate, result may be returned, in which case,
+  // For some mutations, a result may be returned, in which case,
   // time range can be specified for potential performance gain
-  optional TimeRange timeRange = 10;
+  optional TimeRange timeRange = 7;
+  // The below count is set when the associated cells are NOT
+  // part of this protobuf message; they are passed alongside
+  // and then this Message is a placeholder with metadata.  The
+  // count is needed to know how many to peel off the block of Cells as
+  // ours.  NOTE: This is different from the pb managed cellCount of the
+  // 'cell' field above which is non-null when the cells are pb'd.
+  optional int32 associatedCellCount = 8;
 
-  enum MutateType {
+  enum MutationType {
     APPEND = 0;
     INCREMENT = 1;
     PUT = 2;
@@ -172,7 +191,7 @@ message Mutate {
  */
 message MutateRequest {
   required RegionSpecifier region = 1;
-  required Mutate mutate = 2;
+  required MutationProto mutation = 2;
   optional Condition condition = 3;
 }
 
@@ -281,7 +300,7 @@ message CoprocessorServiceResponse {
  * This is a union type - exactly one of the fields will be set.
  */
 message MultiAction {
-  optional Mutate mutate = 1;
+  optional MutationProto mutation = 1;
   optional Get get = 2;
 }
 

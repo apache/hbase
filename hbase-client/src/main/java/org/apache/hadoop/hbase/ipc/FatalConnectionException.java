@@ -15,21 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import "Client.proto";
-option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "MultiRowMutation";
-option java_generate_equals_and_hash = true;
-option java_generic_services = true;
-option optimize_for = SPEED;
+package org.apache.hadoop.hbase.ipc;
 
-message MultiMutateRequest {
-  repeated MutationProto mutationRequest = 1;
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 
-message MultiMutateResponse {
-}
+/**
+ * Thrown when server finds fatal issue w/ connection setup: e.g. bad rpc version
+ * or unsupported auth method.
+ * Closes connection after throwing this exception with message on why the failure.
+ */
+@SuppressWarnings("serial")
+@InterfaceAudience.Private
+public class FatalConnectionException extends DoNotRetryIOException {
+  public FatalConnectionException() {
+    super();
+  }
 
-service MultiRowMutationService {
-  rpc mutateRows(MultiMutateRequest) 
-      returns(MultiMutateResponse);
+  public FatalConnectionException(String msg) {
+    super(msg);
+  }
+
+  public FatalConnectionException(String msg, Throwable t) {
+    super(msg, t);
+  }
 }

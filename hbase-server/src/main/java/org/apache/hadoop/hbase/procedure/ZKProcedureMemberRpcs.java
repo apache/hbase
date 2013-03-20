@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -205,8 +206,9 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       byte[] data = ZKUtil.getData(zkController.getWatcher(), path);
       LOG.debug("start proc data length is " + data.length);
       if (!ProtobufUtil.isPBMagicPrefix(data)) {
-        String msg = "Data in for starting procuedure " + opName + " is illegally formatted. "
-            + "Killing the procedure.";
+        String msg = "Data in for starting procuedure " + opName +
+          " is illegally formatted (no pb magic). " +
+          "Killing the procedure: " + Bytes.toString(data);
         LOG.error(msg);
         throw new IllegalArgumentException(msg);
       }

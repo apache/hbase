@@ -2048,15 +2048,19 @@ public final class ClientProtos {
   public interface ResultOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .KeyValue keyValue = 1;
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue> 
-        getKeyValueList();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue getKeyValue(int index);
-    int getKeyValueCount();
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValueOrBuilder> 
-        getKeyValueOrBuilderList();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValueOrBuilder getKeyValueOrBuilder(
+    // repeated .Cell cell = 1;
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> 
+        getCellList();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell getCell(int index);
+    int getCellCount();
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> 
+        getCellOrBuilderList();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder getCellOrBuilder(
         int index);
+    
+    // optional int32 associatedCellCount = 2;
+    boolean hasAssociatedCellCount();
+    int getAssociatedCellCount();
   }
   public static final class Result extends
       com.google.protobuf.GeneratedMessage
@@ -2086,41 +2090,47 @@ public final class ClientProtos {
       return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Result_fieldAccessorTable;
     }
     
-    // repeated .KeyValue keyValue = 1;
-    public static final int KEYVALUE_FIELD_NUMBER = 1;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue> keyValue_;
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue> getKeyValueList() {
-      return keyValue_;
+    private int bitField0_;
+    // repeated .Cell cell = 1;
+    public static final int CELL_FIELD_NUMBER = 1;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> cell_;
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> getCellList() {
+      return cell_;
     }
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValueOrBuilder> 
-        getKeyValueOrBuilderList() {
-      return keyValue_;
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> 
+        getCellOrBuilderList() {
+      return cell_;
     }
-    public int getKeyValueCount() {
-      return keyValue_.size();
+    public int getCellCount() {
+      return cell_.size();
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue getKeyValue(int index) {
-      return keyValue_.get(index);
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell getCell(int index) {
+      return cell_.get(index);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValueOrBuilder getKeyValueOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder getCellOrBuilder(
         int index) {
-      return keyValue_.get(index);
+      return cell_.get(index);
+    }
+    
+    // optional int32 associatedCellCount = 2;
+    public static final int ASSOCIATEDCELLCOUNT_FIELD_NUMBER = 2;
+    private int associatedCellCount_;
+    public boolean hasAssociatedCellCount() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public int getAssociatedCellCount() {
+      return associatedCellCount_;
     }
     
     private void initFields() {
-      keyValue_ = java.util.Collections.emptyList();
+      cell_ = java.util.Collections.emptyList();
+      associatedCellCount_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      for (int i = 0; i < getKeyValueCount(); i++) {
-        if (!getKeyValue(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -2128,8 +2138,11 @@ public final class ClientProtos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      for (int i = 0; i < keyValue_.size(); i++) {
-        output.writeMessage(1, keyValue_.get(i));
+      for (int i = 0; i < cell_.size(); i++) {
+        output.writeMessage(1, cell_.get(i));
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt32(2, associatedCellCount_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -2140,9 +2153,13 @@ public final class ClientProtos {
       if (size != -1) return size;
     
       size = 0;
-      for (int i = 0; i < keyValue_.size(); i++) {
+      for (int i = 0; i < cell_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, keyValue_.get(i));
+          .computeMessageSize(1, cell_.get(i));
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(2, associatedCellCount_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2167,8 +2184,13 @@ public final class ClientProtos {
       org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result) obj;
       
       boolean result = true;
-      result = result && getKeyValueList()
-          .equals(other.getKeyValueList());
+      result = result && getCellList()
+          .equals(other.getCellList());
+      result = result && (hasAssociatedCellCount() == other.hasAssociatedCellCount());
+      if (hasAssociatedCellCount()) {
+        result = result && (getAssociatedCellCount()
+            == other.getAssociatedCellCount());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -2178,9 +2200,13 @@ public final class ClientProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (getKeyValueCount() > 0) {
-        hash = (37 * hash) + KEYVALUE_FIELD_NUMBER;
-        hash = (53 * hash) + getKeyValueList().hashCode();
+      if (getCellCount() > 0) {
+        hash = (37 * hash) + CELL_FIELD_NUMBER;
+        hash = (53 * hash) + getCellList().hashCode();
+      }
+      if (hasAssociatedCellCount()) {
+        hash = (37 * hash) + ASSOCIATEDCELLCOUNT_FIELD_NUMBER;
+        hash = (53 * hash) + getAssociatedCellCount();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -2290,7 +2316,7 @@ public final class ClientProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getKeyValueFieldBuilder();
+          getCellFieldBuilder();
         }
       }
       private static Builder create() {
@@ -2299,12 +2325,14 @@ public final class ClientProtos {
       
       public Builder clear() {
         super.clear();
-        if (keyValueBuilder_ == null) {
-          keyValue_ = java.util.Collections.emptyList();
+        if (cellBuilder_ == null) {
+          cell_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000001);
         } else {
-          keyValueBuilder_.clear();
+          cellBuilder_.clear();
         }
+        associatedCellCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       
@@ -2342,15 +2370,21 @@ public final class ClientProtos {
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result(this);
         int from_bitField0_ = bitField0_;
-        if (keyValueBuilder_ == null) {
+        int to_bitField0_ = 0;
+        if (cellBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
-            keyValue_ = java.util.Collections.unmodifiableList(keyValue_);
+            cell_ = java.util.Collections.unmodifiableList(cell_);
             bitField0_ = (bitField0_ & ~0x00000001);
           }
-          result.keyValue_ = keyValue_;
+          result.cell_ = cell_;
         } else {
-          result.keyValue_ = keyValueBuilder_.build();
+          result.cell_ = cellBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.associatedCellCount_ = associatedCellCount_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -2366,43 +2400,40 @@ public final class ClientProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance()) return this;
-        if (keyValueBuilder_ == null) {
-          if (!other.keyValue_.isEmpty()) {
-            if (keyValue_.isEmpty()) {
-              keyValue_ = other.keyValue_;
+        if (cellBuilder_ == null) {
+          if (!other.cell_.isEmpty()) {
+            if (cell_.isEmpty()) {
+              cell_ = other.cell_;
               bitField0_ = (bitField0_ & ~0x00000001);
             } else {
-              ensureKeyValueIsMutable();
-              keyValue_.addAll(other.keyValue_);
+              ensureCellIsMutable();
+              cell_.addAll(other.cell_);
             }
             onChanged();
           }
         } else {
-          if (!other.keyValue_.isEmpty()) {
-            if (keyValueBuilder_.isEmpty()) {
-              keyValueBuilder_.dispose();
-              keyValueBuilder_ = null;
-              keyValue_ = other.keyValue_;
+          if (!other.cell_.isEmpty()) {
+            if (cellBuilder_.isEmpty()) {
+              cellBuilder_.dispose();
+              cellBuilder_ = null;
+              cell_ = other.cell_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              keyValueBuilder_ = 
+              cellBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getKeyValueFieldBuilder() : null;
+                   getCellFieldBuilder() : null;
             } else {
-              keyValueBuilder_.addAllMessages(other.keyValue_);
+              cellBuilder_.addAllMessages(other.cell_);
             }
           }
+        }
+        if (other.hasAssociatedCellCount()) {
+          setAssociatedCellCount(other.getAssociatedCellCount());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
       
       public final boolean isInitialized() {
-        for (int i = 0; i < getKeyValueCount(); i++) {
-          if (!getKeyValue(i).isInitialized()) {
-            
-            return false;
-          }
-        }
         return true;
       }
       
@@ -2430,9 +2461,14 @@ public final class ClientProtos {
               break;
             }
             case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
-              addKeyValue(subBuilder.buildPartial());
+              addCell(subBuilder.buildPartial());
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              associatedCellCount_ = input.readInt32();
               break;
             }
           }
@@ -2441,190 +2477,211 @@ public final class ClientProtos {
       
       private int bitField0_;
       
-      // repeated .KeyValue keyValue = 1;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue> keyValue_ =
+      // repeated .Cell cell = 1;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> cell_ =
         java.util.Collections.emptyList();
-      private void ensureKeyValueIsMutable() {
+      private void ensureCellIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          keyValue_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue>(keyValue_);
+          cell_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell>(cell_);
           bitField0_ |= 0x00000001;
          }
       }
       
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValueOrBuilder> keyValueBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> cellBuilder_;
       
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue> getKeyValueList() {
-        if (keyValueBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(keyValue_);
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> getCellList() {
+        if (cellBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(cell_);
         } else {
-          return keyValueBuilder_.getMessageList();
+          return cellBuilder_.getMessageList();
         }
       }
-      public int getKeyValueCount() {
-        if (keyValueBuilder_ == null) {
-          return keyValue_.size();
+      public int getCellCount() {
+        if (cellBuilder_ == null) {
+          return cell_.size();
         } else {
-          return keyValueBuilder_.getCount();
+          return cellBuilder_.getCount();
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue getKeyValue(int index) {
-        if (keyValueBuilder_ == null) {
-          return keyValue_.get(index);
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell getCell(int index) {
+        if (cellBuilder_ == null) {
+          return cell_.get(index);
         } else {
-          return keyValueBuilder_.getMessage(index);
+          return cellBuilder_.getMessage(index);
         }
       }
-      public Builder setKeyValue(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue value) {
-        if (keyValueBuilder_ == null) {
+      public Builder setCell(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell value) {
+        if (cellBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureKeyValueIsMutable();
-          keyValue_.set(index, value);
+          ensureCellIsMutable();
+          cell_.set(index, value);
           onChanged();
         } else {
-          keyValueBuilder_.setMessage(index, value);
+          cellBuilder_.setMessage(index, value);
         }
         return this;
       }
-      public Builder setKeyValue(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder builderForValue) {
-        if (keyValueBuilder_ == null) {
-          ensureKeyValueIsMutable();
-          keyValue_.set(index, builderForValue.build());
+      public Builder setCell(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder builderForValue) {
+        if (cellBuilder_ == null) {
+          ensureCellIsMutable();
+          cell_.set(index, builderForValue.build());
           onChanged();
         } else {
-          keyValueBuilder_.setMessage(index, builderForValue.build());
+          cellBuilder_.setMessage(index, builderForValue.build());
         }
         return this;
       }
-      public Builder addKeyValue(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue value) {
-        if (keyValueBuilder_ == null) {
+      public Builder addCell(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell value) {
+        if (cellBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureKeyValueIsMutable();
-          keyValue_.add(value);
+          ensureCellIsMutable();
+          cell_.add(value);
           onChanged();
         } else {
-          keyValueBuilder_.addMessage(value);
+          cellBuilder_.addMessage(value);
         }
         return this;
       }
-      public Builder addKeyValue(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue value) {
-        if (keyValueBuilder_ == null) {
+      public Builder addCell(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell value) {
+        if (cellBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureKeyValueIsMutable();
-          keyValue_.add(index, value);
+          ensureCellIsMutable();
+          cell_.add(index, value);
           onChanged();
         } else {
-          keyValueBuilder_.addMessage(index, value);
+          cellBuilder_.addMessage(index, value);
         }
         return this;
       }
-      public Builder addKeyValue(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder builderForValue) {
-        if (keyValueBuilder_ == null) {
-          ensureKeyValueIsMutable();
-          keyValue_.add(builderForValue.build());
+      public Builder addCell(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder builderForValue) {
+        if (cellBuilder_ == null) {
+          ensureCellIsMutable();
+          cell_.add(builderForValue.build());
           onChanged();
         } else {
-          keyValueBuilder_.addMessage(builderForValue.build());
+          cellBuilder_.addMessage(builderForValue.build());
         }
         return this;
       }
-      public Builder addKeyValue(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder builderForValue) {
-        if (keyValueBuilder_ == null) {
-          ensureKeyValueIsMutable();
-          keyValue_.add(index, builderForValue.build());
+      public Builder addCell(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder builderForValue) {
+        if (cellBuilder_ == null) {
+          ensureCellIsMutable();
+          cell_.add(index, builderForValue.build());
           onChanged();
         } else {
-          keyValueBuilder_.addMessage(index, builderForValue.build());
+          cellBuilder_.addMessage(index, builderForValue.build());
         }
         return this;
       }
-      public Builder addAllKeyValue(
-          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue> values) {
-        if (keyValueBuilder_ == null) {
-          ensureKeyValueIsMutable();
-          super.addAll(values, keyValue_);
+      public Builder addAllCell(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> values) {
+        if (cellBuilder_ == null) {
+          ensureCellIsMutable();
+          super.addAll(values, cell_);
           onChanged();
         } else {
-          keyValueBuilder_.addAllMessages(values);
+          cellBuilder_.addAllMessages(values);
         }
         return this;
       }
-      public Builder clearKeyValue() {
-        if (keyValueBuilder_ == null) {
-          keyValue_ = java.util.Collections.emptyList();
+      public Builder clearCell() {
+        if (cellBuilder_ == null) {
+          cell_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000001);
           onChanged();
         } else {
-          keyValueBuilder_.clear();
+          cellBuilder_.clear();
         }
         return this;
       }
-      public Builder removeKeyValue(int index) {
-        if (keyValueBuilder_ == null) {
-          ensureKeyValueIsMutable();
-          keyValue_.remove(index);
+      public Builder removeCell(int index) {
+        if (cellBuilder_ == null) {
+          ensureCellIsMutable();
+          cell_.remove(index);
           onChanged();
         } else {
-          keyValueBuilder_.remove(index);
+          cellBuilder_.remove(index);
         }
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder getKeyValueBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder getCellBuilder(
           int index) {
-        return getKeyValueFieldBuilder().getBuilder(index);
+        return getCellFieldBuilder().getBuilder(index);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValueOrBuilder getKeyValueOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder getCellOrBuilder(
           int index) {
-        if (keyValueBuilder_ == null) {
-          return keyValue_.get(index);  } else {
-          return keyValueBuilder_.getMessageOrBuilder(index);
+        if (cellBuilder_ == null) {
+          return cell_.get(index);  } else {
+          return cellBuilder_.getMessageOrBuilder(index);
         }
       }
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValueOrBuilder> 
-           getKeyValueOrBuilderList() {
-        if (keyValueBuilder_ != null) {
-          return keyValueBuilder_.getMessageOrBuilderList();
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> 
+           getCellOrBuilderList() {
+        if (cellBuilder_ != null) {
+          return cellBuilder_.getMessageOrBuilderList();
         } else {
-          return java.util.Collections.unmodifiableList(keyValue_);
+          return java.util.Collections.unmodifiableList(cell_);
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder addKeyValueBuilder() {
-        return getKeyValueFieldBuilder().addBuilder(
-            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.getDefaultInstance());
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder addCellBuilder() {
+        return getCellFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.getDefaultInstance());
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder addKeyValueBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder addCellBuilder(
           int index) {
-        return getKeyValueFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.getDefaultInstance());
+        return getCellFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.getDefaultInstance());
       }
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder> 
-           getKeyValueBuilderList() {
-        return getKeyValueFieldBuilder().getBuilderList();
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder> 
+           getCellBuilderList() {
+        return getCellFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValueOrBuilder> 
-          getKeyValueFieldBuilder() {
-        if (keyValueBuilder_ == null) {
-          keyValueBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValue.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.KeyValueOrBuilder>(
-                  keyValue_,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> 
+          getCellFieldBuilder() {
+        if (cellBuilder_ == null) {
+          cellBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder>(
+                  cell_,
                   ((bitField0_ & 0x00000001) == 0x00000001),
                   getParentForChildren(),
                   isClean());
-          keyValue_ = null;
+          cell_ = null;
         }
-        return keyValueBuilder_;
+        return cellBuilder_;
+      }
+      
+      // optional int32 associatedCellCount = 2;
+      private int associatedCellCount_ ;
+      public boolean hasAssociatedCellCount() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public int getAssociatedCellCount() {
+        return associatedCellCount_;
+      }
+      public Builder setAssociatedCellCount(int value) {
+        bitField0_ |= 0x00000002;
+        associatedCellCount_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearAssociatedCellCount() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        associatedCellCount_ = 0;
+        onChanged();
+        return this;
       }
       
       // @@protoc_insertion_point(builder_scope:Result)
@@ -4380,12 +4437,6 @@ public final class ClientProtos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (hasResult()) {
-        if (!getResult().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -4668,12 +4719,6 @@ public final class ClientProtos {
       }
       
       public final boolean isInitialized() {
-        if (hasResult()) {
-          if (!getResult().isInitialized()) {
-            
-            return false;
-          }
-        }
         return true;
       }
       
@@ -4932,12 +4977,6 @@ public final class ClientProtos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      for (int i = 0; i < getResultCount(); i++) {
-        if (!getResult(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -5246,12 +5285,6 @@ public final class ClientProtos {
       }
       
       public final boolean isInitialized() {
-        for (int i = 0; i < getResultCount(); i++) {
-          if (!getResult(i).isInitialized()) {
-            
-            return false;
-          }
-        }
         return true;
       }
       
@@ -6333,28 +6366,32 @@ public final class ClientProtos {
     // @@protoc_insertion_point(class_scope:Condition)
   }
   
-  public interface MutateOrBuilder
+  public interface MutationProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes row = 1;
+    // optional bytes row = 1;
     boolean hasRow();
     com.google.protobuf.ByteString getRow();
     
-    // required .Mutate.MutateType mutateType = 2;
+    // optional .MutationProto.MutationType mutateType = 2;
     boolean hasMutateType();
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType getMutateType();
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType getMutateType();
     
-    // repeated .Mutate.ColumnValue columnValue = 3;
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue> 
+    // repeated .MutationProto.ColumnValue columnValue = 3;
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue> 
         getColumnValueList();
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue getColumnValue(int index);
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue getColumnValue(int index);
     int getColumnValueCount();
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder> 
         getColumnValueOrBuilderList();
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder getColumnValueOrBuilder(
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder getColumnValueOrBuilder(
         int index);
     
-    // repeated .NameBytesPair attribute = 4;
+    // optional uint64 timestamp = 4;
+    boolean hasTimestamp();
+    long getTimestamp();
+    
+    // repeated .NameBytesPair attribute = 5;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair> 
         getAttributeList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getAttribute(int index);
@@ -6364,48 +6401,48 @@ public final class ClientProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getAttributeOrBuilder(
         int index);
     
-    // optional uint64 timestamp = 5;
-    boolean hasTimestamp();
-    long getTimestamp();
-    
     // optional bool writeToWAL = 6 [default = true];
     boolean hasWriteToWAL();
     boolean getWriteToWAL();
     
-    // optional .TimeRange timeRange = 10;
+    // optional .TimeRange timeRange = 7;
     boolean hasTimeRange();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange getTimeRange();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRangeOrBuilder getTimeRangeOrBuilder();
+    
+    // optional int32 associatedCellCount = 8;
+    boolean hasAssociatedCellCount();
+    int getAssociatedCellCount();
   }
-  public static final class Mutate extends
+  public static final class MutationProto extends
       com.google.protobuf.GeneratedMessage
-      implements MutateOrBuilder {
-    // Use Mutate.newBuilder() to construct.
-    private Mutate(Builder builder) {
+      implements MutationProtoOrBuilder {
+    // Use MutationProto.newBuilder() to construct.
+    private MutationProto(Builder builder) {
       super(builder);
     }
-    private Mutate(boolean noInit) {}
+    private MutationProto(boolean noInit) {}
     
-    private static final Mutate defaultInstance;
-    public static Mutate getDefaultInstance() {
+    private static final MutationProto defaultInstance;
+    public static MutationProto getDefaultInstance() {
       return defaultInstance;
     }
     
-    public Mutate getDefaultInstanceForType() {
+    public MutationProto getDefaultInstanceForType() {
       return defaultInstance;
     }
     
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_descriptor;
     }
     
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_fieldAccessorTable;
     }
     
-    public enum MutateType
+    public enum MutationType
         implements com.google.protobuf.ProtocolMessageEnum {
       APPEND(0, 0),
       INCREMENT(1, 1),
@@ -6421,7 +6458,7 @@ public final class ClientProtos {
       
       public final int getNumber() { return value; }
       
-      public static MutateType valueOf(int value) {
+      public static MutationType valueOf(int value) {
         switch (value) {
           case 0: return APPEND;
           case 1: return INCREMENT;
@@ -6431,15 +6468,15 @@ public final class ClientProtos {
         }
       }
       
-      public static com.google.protobuf.Internal.EnumLiteMap<MutateType>
+      public static com.google.protobuf.Internal.EnumLiteMap<MutationType>
           internalGetValueMap() {
         return internalValueMap;
       }
-      private static com.google.protobuf.Internal.EnumLiteMap<MutateType>
+      private static com.google.protobuf.Internal.EnumLiteMap<MutationType>
           internalValueMap =
-            new com.google.protobuf.Internal.EnumLiteMap<MutateType>() {
-              public MutateType findValueByNumber(int number) {
-                return MutateType.valueOf(number);
+            new com.google.protobuf.Internal.EnumLiteMap<MutationType>() {
+              public MutationType findValueByNumber(int number) {
+                return MutationType.valueOf(number);
               }
             };
       
@@ -6453,14 +6490,14 @@ public final class ClientProtos {
       }
       public static final com.google.protobuf.Descriptors.EnumDescriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDescriptor().getEnumTypes().get(0);
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDescriptor().getEnumTypes().get(0);
       }
       
-      private static final MutateType[] VALUES = {
+      private static final MutationType[] VALUES = {
         APPEND, INCREMENT, PUT, DELETE, 
       };
       
-      public static MutateType valueOf(
+      public static MutationType valueOf(
           com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
         if (desc.getType() != getDescriptor()) {
           throw new java.lang.IllegalArgumentException(
@@ -6472,12 +6509,12 @@ public final class ClientProtos {
       private final int index;
       private final int value;
       
-      private MutateType(int index, int value) {
+      private MutationType(int index, int value) {
         this.index = index;
         this.value = value;
       }
       
-      // @@protoc_insertion_point(enum_scope:Mutate.MutateType)
+      // @@protoc_insertion_point(enum_scope:MutationProto.MutationType)
     }
     
     public enum DeleteType
@@ -6525,7 +6562,7 @@ public final class ClientProtos {
       }
       public static final com.google.protobuf.Descriptors.EnumDescriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDescriptor().getEnumTypes().get(1);
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDescriptor().getEnumTypes().get(1);
       }
       
       private static final DeleteType[] VALUES = {
@@ -6549,7 +6586,7 @@ public final class ClientProtos {
         this.value = value;
       }
       
-      // @@protoc_insertion_point(enum_scope:Mutate.DeleteType)
+      // @@protoc_insertion_point(enum_scope:MutationProto.DeleteType)
     }
     
     public interface ColumnValueOrBuilder
@@ -6559,14 +6596,14 @@ public final class ClientProtos {
       boolean hasFamily();
       com.google.protobuf.ByteString getFamily();
       
-      // repeated .Mutate.ColumnValue.QualifierValue qualifierValue = 2;
-      java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue> 
+      // repeated .MutationProto.ColumnValue.QualifierValue qualifierValue = 2;
+      java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue> 
           getQualifierValueList();
-      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue getQualifierValue(int index);
+      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue getQualifierValue(int index);
       int getQualifierValueCount();
-      java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder> 
+      java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder> 
           getQualifierValueOrBuilderList();
-      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder getQualifierValueOrBuilder(
+      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder getQualifierValueOrBuilder(
           int index);
     }
     public static final class ColumnValue extends
@@ -6589,12 +6626,12 @@ public final class ClientProtos {
       
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_ColumnValue_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_ColumnValue_descriptor;
       }
       
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_ColumnValue_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_ColumnValue_fieldAccessorTable;
       }
       
       public interface QualifierValueOrBuilder
@@ -6612,9 +6649,9 @@ public final class ClientProtos {
         boolean hasTimestamp();
         long getTimestamp();
         
-        // optional .Mutate.DeleteType deleteType = 4;
+        // optional .MutationProto.DeleteType deleteType = 4;
         boolean hasDeleteType();
-        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType getDeleteType();
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType getDeleteType();
       }
       public static final class QualifierValue extends
           com.google.protobuf.GeneratedMessage
@@ -6636,12 +6673,12 @@ public final class ClientProtos {
         
         public static final com.google.protobuf.Descriptors.Descriptor
             getDescriptor() {
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_ColumnValue_QualifierValue_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_ColumnValue_QualifierValue_descriptor;
         }
         
         protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
             internalGetFieldAccessorTable() {
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_ColumnValue_QualifierValue_fieldAccessorTable;
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_ColumnValue_QualifierValue_fieldAccessorTable;
         }
         
         private int bitField0_;
@@ -6675,13 +6712,13 @@ public final class ClientProtos {
           return timestamp_;
         }
         
-        // optional .Mutate.DeleteType deleteType = 4;
+        // optional .MutationProto.DeleteType deleteType = 4;
         public static final int DELETETYPE_FIELD_NUMBER = 4;
-        private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType deleteType_;
+        private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType deleteType_;
         public boolean hasDeleteType() {
           return ((bitField0_ & 0x00000008) == 0x00000008);
         }
-        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType getDeleteType() {
+        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType getDeleteType() {
           return deleteType_;
         }
         
@@ -6689,7 +6726,7 @@ public final class ClientProtos {
           qualifier_ = com.google.protobuf.ByteString.EMPTY;
           value_ = com.google.protobuf.ByteString.EMPTY;
           timestamp_ = 0L;
-          deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType.DELETE_ONE_VERSION;
+          deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType.DELETE_ONE_VERSION;
         }
         private byte memoizedIsInitialized = -1;
         public final boolean isInitialized() {
@@ -6757,10 +6794,10 @@ public final class ClientProtos {
           if (obj == this) {
            return true;
           }
-          if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue)) {
+          if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue)) {
             return super.equals(obj);
           }
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue) obj;
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue) obj;
           
           boolean result = true;
           result = result && (hasQualifier() == other.hasQualifier());
@@ -6812,41 +6849,41 @@ public final class ClientProtos {
           return hash;
         }
         
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseFrom(
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseFrom(
             com.google.protobuf.ByteString data)
             throws com.google.protobuf.InvalidProtocolBufferException {
           return newBuilder().mergeFrom(data).buildParsed();
         }
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseFrom(
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseFrom(
             com.google.protobuf.ByteString data,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
           return newBuilder().mergeFrom(data, extensionRegistry)
                    .buildParsed();
         }
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseFrom(byte[] data)
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseFrom(byte[] data)
             throws com.google.protobuf.InvalidProtocolBufferException {
           return newBuilder().mergeFrom(data).buildParsed();
         }
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseFrom(
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseFrom(
             byte[] data,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
           return newBuilder().mergeFrom(data, extensionRegistry)
                    .buildParsed();
         }
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseFrom(java.io.InputStream input)
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseFrom(java.io.InputStream input)
             throws java.io.IOException {
           return newBuilder().mergeFrom(input).buildParsed();
         }
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseFrom(
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseFrom(
             java.io.InputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws java.io.IOException {
           return newBuilder().mergeFrom(input, extensionRegistry)
                    .buildParsed();
         }
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseDelimitedFrom(java.io.InputStream input)
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseDelimitedFrom(java.io.InputStream input)
             throws java.io.IOException {
           Builder builder = newBuilder();
           if (builder.mergeDelimitedFrom(input)) {
@@ -6855,7 +6892,7 @@ public final class ClientProtos {
             return null;
           }
         }
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseDelimitedFrom(
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseDelimitedFrom(
             java.io.InputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws java.io.IOException {
@@ -6866,12 +6903,12 @@ public final class ClientProtos {
             return null;
           }
         }
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseFrom(
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseFrom(
             com.google.protobuf.CodedInputStream input)
             throws java.io.IOException {
           return newBuilder().mergeFrom(input).buildParsed();
         }
-        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue parseFrom(
+        public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue parseFrom(
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws java.io.IOException {
@@ -6881,7 +6918,7 @@ public final class ClientProtos {
         
         public static Builder newBuilder() { return Builder.create(); }
         public Builder newBuilderForType() { return newBuilder(); }
-        public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue prototype) {
+        public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue prototype) {
           return newBuilder().mergeFrom(prototype);
         }
         public Builder toBuilder() { return newBuilder(this); }
@@ -6894,18 +6931,18 @@ public final class ClientProtos {
         }
         public static final class Builder extends
             com.google.protobuf.GeneratedMessage.Builder<Builder>
-           implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder {
+           implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder {
           public static final com.google.protobuf.Descriptors.Descriptor
               getDescriptor() {
-            return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_ColumnValue_QualifierValue_descriptor;
+            return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_ColumnValue_QualifierValue_descriptor;
           }
           
           protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
               internalGetFieldAccessorTable() {
-            return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_ColumnValue_QualifierValue_fieldAccessorTable;
+            return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_ColumnValue_QualifierValue_fieldAccessorTable;
           }
           
-          // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.newBuilder()
+          // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.newBuilder()
           private Builder() {
             maybeForceBuilderInitialization();
           }
@@ -6930,7 +6967,7 @@ public final class ClientProtos {
             bitField0_ = (bitField0_ & ~0x00000002);
             timestamp_ = 0L;
             bitField0_ = (bitField0_ & ~0x00000004);
-            deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType.DELETE_ONE_VERSION;
+            deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType.DELETE_ONE_VERSION;
             bitField0_ = (bitField0_ & ~0x00000008);
             return this;
           }
@@ -6941,24 +6978,24 @@ public final class ClientProtos {
           
           public com.google.protobuf.Descriptors.Descriptor
               getDescriptorForType() {
-            return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.getDescriptor();
+            return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.getDescriptor();
           }
           
-          public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue getDefaultInstanceForType() {
-            return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.getDefaultInstance();
+          public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue getDefaultInstanceForType() {
+            return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.getDefaultInstance();
           }
           
-          public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue build() {
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue result = buildPartial();
+          public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue build() {
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue result = buildPartial();
             if (!result.isInitialized()) {
               throw newUninitializedMessageException(result);
             }
             return result;
           }
           
-          private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue buildParsed()
+          private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue buildParsed()
               throws com.google.protobuf.InvalidProtocolBufferException {
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue result = buildPartial();
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue result = buildPartial();
             if (!result.isInitialized()) {
               throw newUninitializedMessageException(
                 result).asInvalidProtocolBufferException();
@@ -6966,8 +7003,8 @@ public final class ClientProtos {
             return result;
           }
           
-          public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue buildPartial() {
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue(this);
+          public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue buildPartial() {
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue(this);
             int from_bitField0_ = bitField0_;
             int to_bitField0_ = 0;
             if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -6992,16 +7029,16 @@ public final class ClientProtos {
           }
           
           public Builder mergeFrom(com.google.protobuf.Message other) {
-            if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue) {
-              return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue)other);
+            if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue) {
+              return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue)other);
             } else {
               super.mergeFrom(other);
               return this;
             }
           }
           
-          public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue other) {
-            if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.getDefaultInstance()) return this;
+          public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue other) {
+            if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.getDefaultInstance()) return this;
             if (other.hasQualifier()) {
               setQualifier(other.getQualifier());
             }
@@ -7062,7 +7099,7 @@ public final class ClientProtos {
                 }
                 case 32: {
                   int rawValue = input.readEnum();
-                  org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType value = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType.valueOf(rawValue);
+                  org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType value = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType.valueOf(rawValue);
                   if (value == null) {
                     unknownFields.mergeVarintField(4, rawValue);
                   } else {
@@ -7146,15 +7183,15 @@ public final class ClientProtos {
             return this;
           }
           
-          // optional .Mutate.DeleteType deleteType = 4;
-          private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType.DELETE_ONE_VERSION;
+          // optional .MutationProto.DeleteType deleteType = 4;
+          private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType.DELETE_ONE_VERSION;
           public boolean hasDeleteType() {
             return ((bitField0_ & 0x00000008) == 0x00000008);
           }
-          public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType getDeleteType() {
+          public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType getDeleteType() {
             return deleteType_;
           }
-          public Builder setDeleteType(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType value) {
+          public Builder setDeleteType(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType value) {
             if (value == null) {
               throw new NullPointerException();
             }
@@ -7165,12 +7202,12 @@ public final class ClientProtos {
           }
           public Builder clearDeleteType() {
             bitField0_ = (bitField0_ & ~0x00000008);
-            deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType.DELETE_ONE_VERSION;
+            deleteType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType.DELETE_ONE_VERSION;
             onChanged();
             return this;
           }
           
-          // @@protoc_insertion_point(builder_scope:Mutate.ColumnValue.QualifierValue)
+          // @@protoc_insertion_point(builder_scope:MutationProto.ColumnValue.QualifierValue)
         }
         
         static {
@@ -7178,7 +7215,7 @@ public final class ClientProtos {
           defaultInstance.initFields();
         }
         
-        // @@protoc_insertion_point(class_scope:Mutate.ColumnValue.QualifierValue)
+        // @@protoc_insertion_point(class_scope:MutationProto.ColumnValue.QualifierValue)
       }
       
       private int bitField0_;
@@ -7192,23 +7229,23 @@ public final class ClientProtos {
         return family_;
       }
       
-      // repeated .Mutate.ColumnValue.QualifierValue qualifierValue = 2;
+      // repeated .MutationProto.ColumnValue.QualifierValue qualifierValue = 2;
       public static final int QUALIFIERVALUE_FIELD_NUMBER = 2;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue> qualifierValue_;
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue> getQualifierValueList() {
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue> qualifierValue_;
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue> getQualifierValueList() {
         return qualifierValue_;
       }
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder> 
           getQualifierValueOrBuilderList() {
         return qualifierValue_;
       }
       public int getQualifierValueCount() {
         return qualifierValue_.size();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue getQualifierValue(int index) {
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue getQualifierValue(int index) {
         return qualifierValue_.get(index);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder getQualifierValueOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder getQualifierValueOrBuilder(
           int index) {
         return qualifierValue_.get(index);
       }
@@ -7273,10 +7310,10 @@ public final class ClientProtos {
         if (obj == this) {
          return true;
         }
-        if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue)) {
+        if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue)) {
           return super.equals(obj);
         }
-        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue) obj;
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue) obj;
         
         boolean result = true;
         result = result && (hasFamily() == other.hasFamily());
@@ -7307,41 +7344,41 @@ public final class ClientProtos {
         return hash;
       }
       
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseFrom(
           com.google.protobuf.ByteString data)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data).buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseFrom(
           com.google.protobuf.ByteString data,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data, extensionRegistry)
                  .buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseFrom(byte[] data)
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseFrom(byte[] data)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data).buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseFrom(
           byte[] data,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data, extensionRegistry)
                  .buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseFrom(java.io.InputStream input)
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseFrom(java.io.InputStream input)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input).buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseFrom(
           java.io.InputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input, extensionRegistry)
                  .buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseDelimitedFrom(java.io.InputStream input)
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseDelimitedFrom(java.io.InputStream input)
           throws java.io.IOException {
         Builder builder = newBuilder();
         if (builder.mergeDelimitedFrom(input)) {
@@ -7350,7 +7387,7 @@ public final class ClientProtos {
           return null;
         }
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseDelimitedFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseDelimitedFrom(
           java.io.InputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
@@ -7361,12 +7398,12 @@ public final class ClientProtos {
           return null;
         }
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseFrom(
           com.google.protobuf.CodedInputStream input)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input).buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue parseFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
@@ -7376,7 +7413,7 @@ public final class ClientProtos {
       
       public static Builder newBuilder() { return Builder.create(); }
       public Builder newBuilderForType() { return newBuilder(); }
-      public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue prototype) {
+      public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue prototype) {
         return newBuilder().mergeFrom(prototype);
       }
       public Builder toBuilder() { return newBuilder(this); }
@@ -7389,18 +7426,18 @@ public final class ClientProtos {
       }
       public static final class Builder extends
           com.google.protobuf.GeneratedMessage.Builder<Builder>
-         implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder {
+         implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder {
         public static final com.google.protobuf.Descriptors.Descriptor
             getDescriptor() {
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_ColumnValue_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_ColumnValue_descriptor;
         }
         
         protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
             internalGetFieldAccessorTable() {
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_ColumnValue_fieldAccessorTable;
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_ColumnValue_fieldAccessorTable;
         }
         
-        // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.newBuilder()
+        // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.newBuilder()
         private Builder() {
           maybeForceBuilderInitialization();
         }
@@ -7437,24 +7474,24 @@ public final class ClientProtos {
         
         public com.google.protobuf.Descriptors.Descriptor
             getDescriptorForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.getDescriptor();
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.getDescriptor();
         }
         
-        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue getDefaultInstanceForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.getDefaultInstance();
+        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue getDefaultInstanceForType() {
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.getDefaultInstance();
         }
         
-        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue build() {
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue result = buildPartial();
+        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue build() {
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue result = buildPartial();
           if (!result.isInitialized()) {
             throw newUninitializedMessageException(result);
           }
           return result;
         }
         
-        private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue buildParsed()
+        private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue buildParsed()
             throws com.google.protobuf.InvalidProtocolBufferException {
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue result = buildPartial();
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue result = buildPartial();
           if (!result.isInitialized()) {
             throw newUninitializedMessageException(
               result).asInvalidProtocolBufferException();
@@ -7462,8 +7499,8 @@ public final class ClientProtos {
           return result;
         }
         
-        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue buildPartial() {
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue(this);
+        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue buildPartial() {
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue(this);
           int from_bitField0_ = bitField0_;
           int to_bitField0_ = 0;
           if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -7485,16 +7522,16 @@ public final class ClientProtos {
         }
         
         public Builder mergeFrom(com.google.protobuf.Message other) {
-          if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue) {
-            return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue)other);
+          if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue) {
+            return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue)other);
           } else {
             super.mergeFrom(other);
             return this;
           }
         }
         
-        public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue other) {
-          if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.getDefaultInstance()) return this;
+        public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue other) {
+          if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.getDefaultInstance()) return this;
           if (other.hasFamily()) {
             setFamily(other.getFamily());
           }
@@ -7565,7 +7602,7 @@ public final class ClientProtos {
                 break;
               }
               case 18: {
-                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.newBuilder();
+                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.newBuilder();
                 input.readMessage(subBuilder, extensionRegistry);
                 addQualifierValue(subBuilder.buildPartial());
                 break;
@@ -7600,20 +7637,20 @@ public final class ClientProtos {
           return this;
         }
         
-        // repeated .Mutate.ColumnValue.QualifierValue qualifierValue = 2;
-        private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue> qualifierValue_ =
+        // repeated .MutationProto.ColumnValue.QualifierValue qualifierValue = 2;
+        private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue> qualifierValue_ =
           java.util.Collections.emptyList();
         private void ensureQualifierValueIsMutable() {
           if (!((bitField0_ & 0x00000002) == 0x00000002)) {
-            qualifierValue_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue>(qualifierValue_);
+            qualifierValue_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue>(qualifierValue_);
             bitField0_ |= 0x00000002;
            }
         }
         
         private com.google.protobuf.RepeatedFieldBuilder<
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder> qualifierValueBuilder_;
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder> qualifierValueBuilder_;
         
-        public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue> getQualifierValueList() {
+        public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue> getQualifierValueList() {
           if (qualifierValueBuilder_ == null) {
             return java.util.Collections.unmodifiableList(qualifierValue_);
           } else {
@@ -7627,7 +7664,7 @@ public final class ClientProtos {
             return qualifierValueBuilder_.getCount();
           }
         }
-        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue getQualifierValue(int index) {
+        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue getQualifierValue(int index) {
           if (qualifierValueBuilder_ == null) {
             return qualifierValue_.get(index);
           } else {
@@ -7635,7 +7672,7 @@ public final class ClientProtos {
           }
         }
         public Builder setQualifierValue(
-            int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue value) {
+            int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue value) {
           if (qualifierValueBuilder_ == null) {
             if (value == null) {
               throw new NullPointerException();
@@ -7649,7 +7686,7 @@ public final class ClientProtos {
           return this;
         }
         public Builder setQualifierValue(
-            int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder builderForValue) {
+            int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder builderForValue) {
           if (qualifierValueBuilder_ == null) {
             ensureQualifierValueIsMutable();
             qualifierValue_.set(index, builderForValue.build());
@@ -7659,7 +7696,7 @@ public final class ClientProtos {
           }
           return this;
         }
-        public Builder addQualifierValue(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue value) {
+        public Builder addQualifierValue(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue value) {
           if (qualifierValueBuilder_ == null) {
             if (value == null) {
               throw new NullPointerException();
@@ -7673,7 +7710,7 @@ public final class ClientProtos {
           return this;
         }
         public Builder addQualifierValue(
-            int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue value) {
+            int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue value) {
           if (qualifierValueBuilder_ == null) {
             if (value == null) {
               throw new NullPointerException();
@@ -7687,7 +7724,7 @@ public final class ClientProtos {
           return this;
         }
         public Builder addQualifierValue(
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder builderForValue) {
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder builderForValue) {
           if (qualifierValueBuilder_ == null) {
             ensureQualifierValueIsMutable();
             qualifierValue_.add(builderForValue.build());
@@ -7698,7 +7735,7 @@ public final class ClientProtos {
           return this;
         }
         public Builder addQualifierValue(
-            int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder builderForValue) {
+            int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder builderForValue) {
           if (qualifierValueBuilder_ == null) {
             ensureQualifierValueIsMutable();
             qualifierValue_.add(index, builderForValue.build());
@@ -7709,7 +7746,7 @@ public final class ClientProtos {
           return this;
         }
         public Builder addAllQualifierValue(
-            java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue> values) {
+            java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue> values) {
           if (qualifierValueBuilder_ == null) {
             ensureQualifierValueIsMutable();
             super.addAll(values, qualifierValue_);
@@ -7739,18 +7776,18 @@ public final class ClientProtos {
           }
           return this;
         }
-        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder getQualifierValueBuilder(
+        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder getQualifierValueBuilder(
             int index) {
           return getQualifierValueFieldBuilder().getBuilder(index);
         }
-        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder getQualifierValueOrBuilder(
+        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder getQualifierValueOrBuilder(
             int index) {
           if (qualifierValueBuilder_ == null) {
             return qualifierValue_.get(index);  } else {
             return qualifierValueBuilder_.getMessageOrBuilder(index);
           }
         }
-        public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder> 
+        public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder> 
              getQualifierValueOrBuilderList() {
           if (qualifierValueBuilder_ != null) {
             return qualifierValueBuilder_.getMessageOrBuilderList();
@@ -7758,25 +7795,25 @@ public final class ClientProtos {
             return java.util.Collections.unmodifiableList(qualifierValue_);
           }
         }
-        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder addQualifierValueBuilder() {
+        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder addQualifierValueBuilder() {
           return getQualifierValueFieldBuilder().addBuilder(
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.getDefaultInstance());
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.getDefaultInstance());
         }
-        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder addQualifierValueBuilder(
+        public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder addQualifierValueBuilder(
             int index) {
           return getQualifierValueFieldBuilder().addBuilder(
-              index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.getDefaultInstance());
+              index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.getDefaultInstance());
         }
-        public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder> 
+        public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder> 
              getQualifierValueBuilderList() {
           return getQualifierValueFieldBuilder().getBuilderList();
         }
         private com.google.protobuf.RepeatedFieldBuilder<
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder> 
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder> 
             getQualifierValueFieldBuilder() {
           if (qualifierValueBuilder_ == null) {
             qualifierValueBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValueOrBuilder>(
+                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValueOrBuilder>(
                     qualifierValue_,
                     ((bitField0_ & 0x00000002) == 0x00000002),
                     getParentForChildren(),
@@ -7786,7 +7823,7 @@ public final class ClientProtos {
           return qualifierValueBuilder_;
         }
         
-        // @@protoc_insertion_point(builder_scope:Mutate.ColumnValue)
+        // @@protoc_insertion_point(builder_scope:MutationProto.ColumnValue)
       }
       
       static {
@@ -7794,11 +7831,11 @@ public final class ClientProtos {
         defaultInstance.initFields();
       }
       
-      // @@protoc_insertion_point(class_scope:Mutate.ColumnValue)
+      // @@protoc_insertion_point(class_scope:MutationProto.ColumnValue)
     }
     
     private int bitField0_;
-    // required bytes row = 1;
+    // optional bytes row = 1;
     public static final int ROW_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString row_;
     public boolean hasRow() {
@@ -7808,39 +7845,49 @@ public final class ClientProtos {
       return row_;
     }
     
-    // required .Mutate.MutateType mutateType = 2;
+    // optional .MutationProto.MutationType mutateType = 2;
     public static final int MUTATETYPE_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType mutateType_;
+    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType mutateType_;
     public boolean hasMutateType() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType getMutateType() {
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType getMutateType() {
       return mutateType_;
     }
     
-    // repeated .Mutate.ColumnValue columnValue = 3;
+    // repeated .MutationProto.ColumnValue columnValue = 3;
     public static final int COLUMNVALUE_FIELD_NUMBER = 3;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue> columnValue_;
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue> getColumnValueList() {
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue> columnValue_;
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue> getColumnValueList() {
       return columnValue_;
     }
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder> 
         getColumnValueOrBuilderList() {
       return columnValue_;
     }
     public int getColumnValueCount() {
       return columnValue_.size();
     }
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue getColumnValue(int index) {
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue getColumnValue(int index) {
       return columnValue_.get(index);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder getColumnValueOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder getColumnValueOrBuilder(
         int index) {
       return columnValue_.get(index);
     }
     
-    // repeated .NameBytesPair attribute = 4;
-    public static final int ATTRIBUTE_FIELD_NUMBER = 4;
+    // optional uint64 timestamp = 4;
+    public static final int TIMESTAMP_FIELD_NUMBER = 4;
+    private long timestamp_;
+    public boolean hasTimestamp() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public long getTimestamp() {
+      return timestamp_;
+    }
+    
+    // repeated .NameBytesPair attribute = 5;
+    public static final int ATTRIBUTE_FIELD_NUMBER = 5;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair> attribute_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair> getAttributeList() {
       return attribute_;
@@ -7860,16 +7907,6 @@ public final class ClientProtos {
       return attribute_.get(index);
     }
     
-    // optional uint64 timestamp = 5;
-    public static final int TIMESTAMP_FIELD_NUMBER = 5;
-    private long timestamp_;
-    public boolean hasTimestamp() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    public long getTimestamp() {
-      return timestamp_;
-    }
-    
     // optional bool writeToWAL = 6 [default = true];
     public static final int WRITETOWAL_FIELD_NUMBER = 6;
     private boolean writeToWAL_;
@@ -7880,8 +7917,8 @@ public final class ClientProtos {
       return writeToWAL_;
     }
     
-    // optional .TimeRange timeRange = 10;
-    public static final int TIMERANGE_FIELD_NUMBER = 10;
+    // optional .TimeRange timeRange = 7;
+    public static final int TIMERANGE_FIELD_NUMBER = 7;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange timeRange_;
     public boolean hasTimeRange() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -7893,28 +7930,31 @@ public final class ClientProtos {
       return timeRange_;
     }
     
+    // optional int32 associatedCellCount = 8;
+    public static final int ASSOCIATEDCELLCOUNT_FIELD_NUMBER = 8;
+    private int associatedCellCount_;
+    public boolean hasAssociatedCellCount() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public int getAssociatedCellCount() {
+      return associatedCellCount_;
+    }
+    
     private void initFields() {
       row_ = com.google.protobuf.ByteString.EMPTY;
-      mutateType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType.APPEND;
+      mutateType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.APPEND;
       columnValue_ = java.util.Collections.emptyList();
-      attribute_ = java.util.Collections.emptyList();
       timestamp_ = 0L;
+      attribute_ = java.util.Collections.emptyList();
       writeToWAL_ = true;
       timeRange_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.getDefaultInstance();
+      associatedCellCount_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (!hasRow()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMutateType()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
       for (int i = 0; i < getColumnValueCount(); i++) {
         if (!getColumnValue(i).isInitialized()) {
           memoizedIsInitialized = 0;
@@ -7943,17 +7983,20 @@ public final class ClientProtos {
       for (int i = 0; i < columnValue_.size(); i++) {
         output.writeMessage(3, columnValue_.get(i));
       }
-      for (int i = 0; i < attribute_.size(); i++) {
-        output.writeMessage(4, attribute_.get(i));
-      }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeUInt64(5, timestamp_);
+        output.writeUInt64(4, timestamp_);
+      }
+      for (int i = 0; i < attribute_.size(); i++) {
+        output.writeMessage(5, attribute_.get(i));
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeBool(6, writeToWAL_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeMessage(10, timeRange_);
+        output.writeMessage(7, timeRange_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeInt32(8, associatedCellCount_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -7976,13 +8019,13 @@ public final class ClientProtos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(3, columnValue_.get(i));
       }
-      for (int i = 0; i < attribute_.size(); i++) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, attribute_.get(i));
-      }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(5, timestamp_);
+          .computeUInt64Size(4, timestamp_);
+      }
+      for (int i = 0; i < attribute_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(5, attribute_.get(i));
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
@@ -7990,7 +8033,11 @@ public final class ClientProtos {
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(10, timeRange_);
+          .computeMessageSize(7, timeRange_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(8, associatedCellCount_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -8009,10 +8056,10 @@ public final class ClientProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate) obj;
+      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto) obj;
       
       boolean result = true;
       result = result && (hasRow() == other.hasRow());
@@ -8027,13 +8074,13 @@ public final class ClientProtos {
       }
       result = result && getColumnValueList()
           .equals(other.getColumnValueList());
-      result = result && getAttributeList()
-          .equals(other.getAttributeList());
       result = result && (hasTimestamp() == other.hasTimestamp());
       if (hasTimestamp()) {
         result = result && (getTimestamp()
             == other.getTimestamp());
       }
+      result = result && getAttributeList()
+          .equals(other.getAttributeList());
       result = result && (hasWriteToWAL() == other.hasWriteToWAL());
       if (hasWriteToWAL()) {
         result = result && (getWriteToWAL()
@@ -8043,6 +8090,11 @@ public final class ClientProtos {
       if (hasTimeRange()) {
         result = result && getTimeRange()
             .equals(other.getTimeRange());
+      }
+      result = result && (hasAssociatedCellCount() == other.hasAssociatedCellCount());
+      if (hasAssociatedCellCount()) {
+        result = result && (getAssociatedCellCount()
+            == other.getAssociatedCellCount());
       }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
@@ -8065,13 +8117,13 @@ public final class ClientProtos {
         hash = (37 * hash) + COLUMNVALUE_FIELD_NUMBER;
         hash = (53 * hash) + getColumnValueList().hashCode();
       }
-      if (getAttributeCount() > 0) {
-        hash = (37 * hash) + ATTRIBUTE_FIELD_NUMBER;
-        hash = (53 * hash) + getAttributeList().hashCode();
-      }
       if (hasTimestamp()) {
         hash = (37 * hash) + TIMESTAMP_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getTimestamp());
+      }
+      if (getAttributeCount() > 0) {
+        hash = (37 * hash) + ATTRIBUTE_FIELD_NUMBER;
+        hash = (53 * hash) + getAttributeList().hashCode();
       }
       if (hasWriteToWAL()) {
         hash = (37 * hash) + WRITETOWAL_FIELD_NUMBER;
@@ -8081,45 +8133,49 @@ public final class ClientProtos {
         hash = (37 * hash) + TIMERANGE_FIELD_NUMBER;
         hash = (53 * hash) + getTimeRange().hashCode();
       }
+      if (hasAssociatedCellCount()) {
+        hash = (37 * hash) + ASSOCIATEDCELLCOUNT_FIELD_NUMBER;
+        hash = (53 * hash) + getAssociatedCellCount();
+      }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
     }
     
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       Builder builder = newBuilder();
       if (builder.mergeDelimitedFrom(input)) {
@@ -8128,7 +8184,7 @@ public final class ClientProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -8139,12 +8195,12 @@ public final class ClientProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -8154,7 +8210,7 @@ public final class ClientProtos {
     
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -8167,18 +8223,18 @@ public final class ClientProtos {
     }
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_descriptor;
       }
       
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Mutate_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_fieldAccessorTable;
       }
       
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -8202,7 +8258,7 @@ public final class ClientProtos {
         super.clear();
         row_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000001);
-        mutateType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType.APPEND;
+        mutateType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.APPEND;
         bitField0_ = (bitField0_ & ~0x00000002);
         if (columnValueBuilder_ == null) {
           columnValue_ = java.util.Collections.emptyList();
@@ -8210,14 +8266,14 @@ public final class ClientProtos {
         } else {
           columnValueBuilder_.clear();
         }
+        timestamp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000008);
         if (attributeBuilder_ == null) {
           attribute_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000008);
+          bitField0_ = (bitField0_ & ~0x00000010);
         } else {
           attributeBuilder_.clear();
         }
-        timestamp_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000010);
         writeToWAL_ = true;
         bitField0_ = (bitField0_ & ~0x00000020);
         if (timeRangeBuilder_ == null) {
@@ -8226,6 +8282,8 @@ public final class ClientProtos {
           timeRangeBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000040);
+        associatedCellCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
       
@@ -8235,24 +8293,24 @@ public final class ClientProtos {
       
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDescriptor();
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance();
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate build() {
-        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto build() {
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
       
-      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate buildParsed()
+      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate result = buildPartial();
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
@@ -8260,8 +8318,8 @@ public final class ClientProtos {
         return result;
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate(this);
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -8281,19 +8339,19 @@ public final class ClientProtos {
         } else {
           result.columnValue_ = columnValueBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.timestamp_ = timestamp_;
         if (attributeBuilder_ == null) {
-          if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          if (((bitField0_ & 0x00000010) == 0x00000010)) {
             attribute_ = java.util.Collections.unmodifiableList(attribute_);
-            bitField0_ = (bitField0_ & ~0x00000008);
+            bitField0_ = (bitField0_ & ~0x00000010);
           }
           result.attribute_ = attribute_;
         } else {
           result.attribute_ = attributeBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.timestamp_ = timestamp_;
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000008;
         }
@@ -8306,22 +8364,26 @@ public final class ClientProtos {
         } else {
           result.timeRange_ = timeRangeBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.associatedCellCount_ = associatedCellCount_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
       
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
       
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance()) return this;
         if (other.hasRow()) {
           setRow(other.getRow());
         }
@@ -8354,11 +8416,14 @@ public final class ClientProtos {
             }
           }
         }
+        if (other.hasTimestamp()) {
+          setTimestamp(other.getTimestamp());
+        }
         if (attributeBuilder_ == null) {
           if (!other.attribute_.isEmpty()) {
             if (attribute_.isEmpty()) {
               attribute_ = other.attribute_;
-              bitField0_ = (bitField0_ & ~0x00000008);
+              bitField0_ = (bitField0_ & ~0x00000010);
             } else {
               ensureAttributeIsMutable();
               attribute_.addAll(other.attribute_);
@@ -8371,7 +8436,7 @@ public final class ClientProtos {
               attributeBuilder_.dispose();
               attributeBuilder_ = null;
               attribute_ = other.attribute_;
-              bitField0_ = (bitField0_ & ~0x00000008);
+              bitField0_ = (bitField0_ & ~0x00000010);
               attributeBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getAttributeFieldBuilder() : null;
@@ -8380,28 +8445,20 @@ public final class ClientProtos {
             }
           }
         }
-        if (other.hasTimestamp()) {
-          setTimestamp(other.getTimestamp());
-        }
         if (other.hasWriteToWAL()) {
           setWriteToWAL(other.getWriteToWAL());
         }
         if (other.hasTimeRange()) {
           mergeTimeRange(other.getTimeRange());
         }
+        if (other.hasAssociatedCellCount()) {
+          setAssociatedCellCount(other.getAssociatedCellCount());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
       
       public final boolean isInitialized() {
-        if (!hasRow()) {
-          
-          return false;
-        }
-        if (!hasMutateType()) {
-          
-          return false;
-        }
         for (int i = 0; i < getColumnValueCount(); i++) {
           if (!getColumnValue(i).isInitialized()) {
             
@@ -8447,7 +8504,7 @@ public final class ClientProtos {
             }
             case 16: {
               int rawValue = input.readEnum();
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType value = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType.valueOf(rawValue);
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType value = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.valueOf(rawValue);
               if (value == null) {
                 unknownFields.mergeVarintField(2, rawValue);
               } else {
@@ -8457,20 +8514,20 @@ public final class ClientProtos {
               break;
             }
             case 26: {
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addColumnValue(subBuilder.buildPartial());
               break;
             }
-            case 34: {
+            case 32: {
+              bitField0_ |= 0x00000008;
+              timestamp_ = input.readUInt64();
+              break;
+            }
+            case 42: {
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addAttribute(subBuilder.buildPartial());
-              break;
-            }
-            case 40: {
-              bitField0_ |= 0x00000010;
-              timestamp_ = input.readUInt64();
               break;
             }
             case 48: {
@@ -8478,7 +8535,7 @@ public final class ClientProtos {
               writeToWAL_ = input.readBool();
               break;
             }
-            case 82: {
+            case 58: {
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.newBuilder();
               if (hasTimeRange()) {
                 subBuilder.mergeFrom(getTimeRange());
@@ -8487,13 +8544,18 @@ public final class ClientProtos {
               setTimeRange(subBuilder.buildPartial());
               break;
             }
+            case 64: {
+              bitField0_ |= 0x00000080;
+              associatedCellCount_ = input.readInt32();
+              break;
+            }
           }
         }
       }
       
       private int bitField0_;
       
-      // required bytes row = 1;
+      // optional bytes row = 1;
       private com.google.protobuf.ByteString row_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasRow() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -8517,15 +8579,15 @@ public final class ClientProtos {
         return this;
       }
       
-      // required .Mutate.MutateType mutateType = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType mutateType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType.APPEND;
+      // optional .MutationProto.MutationType mutateType = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType mutateType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.APPEND;
       public boolean hasMutateType() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType getMutateType() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType getMutateType() {
         return mutateType_;
       }
-      public Builder setMutateType(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType value) {
+      public Builder setMutateType(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType value) {
         if (value == null) {
           throw new NullPointerException();
         }
@@ -8536,25 +8598,25 @@ public final class ClientProtos {
       }
       public Builder clearMutateType() {
         bitField0_ = (bitField0_ & ~0x00000002);
-        mutateType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType.APPEND;
+        mutateType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.APPEND;
         onChanged();
         return this;
       }
       
-      // repeated .Mutate.ColumnValue columnValue = 3;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue> columnValue_ =
+      // repeated .MutationProto.ColumnValue columnValue = 3;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue> columnValue_ =
         java.util.Collections.emptyList();
       private void ensureColumnValueIsMutable() {
         if (!((bitField0_ & 0x00000004) == 0x00000004)) {
-          columnValue_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue>(columnValue_);
+          columnValue_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue>(columnValue_);
           bitField0_ |= 0x00000004;
          }
       }
       
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder> columnValueBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder> columnValueBuilder_;
       
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue> getColumnValueList() {
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue> getColumnValueList() {
         if (columnValueBuilder_ == null) {
           return java.util.Collections.unmodifiableList(columnValue_);
         } else {
@@ -8568,7 +8630,7 @@ public final class ClientProtos {
           return columnValueBuilder_.getCount();
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue getColumnValue(int index) {
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue getColumnValue(int index) {
         if (columnValueBuilder_ == null) {
           return columnValue_.get(index);
         } else {
@@ -8576,7 +8638,7 @@ public final class ClientProtos {
         }
       }
       public Builder setColumnValue(
-          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue value) {
         if (columnValueBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -8590,7 +8652,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder setColumnValue(
-          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder builderForValue) {
         if (columnValueBuilder_ == null) {
           ensureColumnValueIsMutable();
           columnValue_.set(index, builderForValue.build());
@@ -8600,7 +8662,7 @@ public final class ClientProtos {
         }
         return this;
       }
-      public Builder addColumnValue(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue value) {
+      public Builder addColumnValue(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue value) {
         if (columnValueBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -8614,7 +8676,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder addColumnValue(
-          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue value) {
         if (columnValueBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -8628,7 +8690,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder addColumnValue(
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder builderForValue) {
         if (columnValueBuilder_ == null) {
           ensureColumnValueIsMutable();
           columnValue_.add(builderForValue.build());
@@ -8639,7 +8701,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder addColumnValue(
-          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder builderForValue) {
         if (columnValueBuilder_ == null) {
           ensureColumnValueIsMutable();
           columnValue_.add(index, builderForValue.build());
@@ -8650,7 +8712,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder addAllColumnValue(
-          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue> values) {
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue> values) {
         if (columnValueBuilder_ == null) {
           ensureColumnValueIsMutable();
           super.addAll(values, columnValue_);
@@ -8680,18 +8742,18 @@ public final class ClientProtos {
         }
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder getColumnValueBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder getColumnValueBuilder(
           int index) {
         return getColumnValueFieldBuilder().getBuilder(index);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder getColumnValueOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder getColumnValueOrBuilder(
           int index) {
         if (columnValueBuilder_ == null) {
           return columnValue_.get(index);  } else {
           return columnValueBuilder_.getMessageOrBuilder(index);
         }
       }
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder> 
            getColumnValueOrBuilderList() {
         if (columnValueBuilder_ != null) {
           return columnValueBuilder_.getMessageOrBuilderList();
@@ -8699,25 +8761,25 @@ public final class ClientProtos {
           return java.util.Collections.unmodifiableList(columnValue_);
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder addColumnValueBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder addColumnValueBuilder() {
         return getColumnValueFieldBuilder().addBuilder(
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.getDefaultInstance());
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.getDefaultInstance());
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder addColumnValueBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder addColumnValueBuilder(
           int index) {
         return getColumnValueFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.getDefaultInstance());
+            index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.getDefaultInstance());
       }
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder> 
            getColumnValueBuilderList() {
         return getColumnValueFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder> 
           getColumnValueFieldBuilder() {
         if (columnValueBuilder_ == null) {
           columnValueBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValueOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValueOrBuilder>(
                   columnValue_,
                   ((bitField0_ & 0x00000004) == 0x00000004),
                   getParentForChildren(),
@@ -8727,13 +8789,34 @@ public final class ClientProtos {
         return columnValueBuilder_;
       }
       
-      // repeated .NameBytesPair attribute = 4;
+      // optional uint64 timestamp = 4;
+      private long timestamp_ ;
+      public boolean hasTimestamp() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public long getTimestamp() {
+        return timestamp_;
+      }
+      public Builder setTimestamp(long value) {
+        bitField0_ |= 0x00000008;
+        timestamp_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearTimestamp() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        timestamp_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // repeated .NameBytesPair attribute = 5;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair> attribute_ =
         java.util.Collections.emptyList();
       private void ensureAttributeIsMutable() {
-        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
+        if (!((bitField0_ & 0x00000010) == 0x00000010)) {
           attribute_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair>(attribute_);
-          bitField0_ |= 0x00000008;
+          bitField0_ |= 0x00000010;
          }
       }
       
@@ -8849,7 +8932,7 @@ public final class ClientProtos {
       public Builder clearAttribute() {
         if (attributeBuilder_ == null) {
           attribute_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000008);
+          bitField0_ = (bitField0_ & ~0x00000010);
           onChanged();
         } else {
           attributeBuilder_.clear();
@@ -8905,33 +8988,12 @@ public final class ClientProtos {
           attributeBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder>(
                   attribute_,
-                  ((bitField0_ & 0x00000008) == 0x00000008),
+                  ((bitField0_ & 0x00000010) == 0x00000010),
                   getParentForChildren(),
                   isClean());
           attribute_ = null;
         }
         return attributeBuilder_;
-      }
-      
-      // optional uint64 timestamp = 5;
-      private long timestamp_ ;
-      public boolean hasTimestamp() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
-      }
-      public long getTimestamp() {
-        return timestamp_;
-      }
-      public Builder setTimestamp(long value) {
-        bitField0_ |= 0x00000010;
-        timestamp_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearTimestamp() {
-        bitField0_ = (bitField0_ & ~0x00000010);
-        timestamp_ = 0L;
-        onChanged();
-        return this;
       }
       
       // optional bool writeToWAL = 6 [default = true];
@@ -8955,7 +9017,7 @@ public final class ClientProtos {
         return this;
       }
       
-      // optional .TimeRange timeRange = 10;
+      // optional .TimeRange timeRange = 7;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange timeRange_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRangeOrBuilder> timeRangeBuilder_;
@@ -9045,15 +9107,36 @@ public final class ClientProtos {
         return timeRangeBuilder_;
       }
       
-      // @@protoc_insertion_point(builder_scope:Mutate)
+      // optional int32 associatedCellCount = 8;
+      private int associatedCellCount_ ;
+      public boolean hasAssociatedCellCount() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      public int getAssociatedCellCount() {
+        return associatedCellCount_;
+      }
+      public Builder setAssociatedCellCount(int value) {
+        bitField0_ |= 0x00000080;
+        associatedCellCount_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearAssociatedCellCount() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        associatedCellCount_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:MutationProto)
     }
     
     static {
-      defaultInstance = new Mutate(true);
+      defaultInstance = new MutationProto(true);
       defaultInstance.initFields();
     }
     
-    // @@protoc_insertion_point(class_scope:Mutate)
+    // @@protoc_insertion_point(class_scope:MutationProto)
   }
   
   public interface MutateRequestOrBuilder
@@ -9064,10 +9147,10 @@ public final class ClientProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder();
     
-    // required .Mutate mutate = 2;
-    boolean hasMutate();
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate getMutate();
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder getMutateOrBuilder();
+    // required .MutationProto mutation = 2;
+    boolean hasMutation();
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutation();
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationOrBuilder();
     
     // optional .Condition condition = 3;
     boolean hasCondition();
@@ -9116,17 +9199,17 @@ public final class ClientProtos {
       return region_;
     }
     
-    // required .Mutate mutate = 2;
-    public static final int MUTATE_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate mutate_;
-    public boolean hasMutate() {
+    // required .MutationProto mutation = 2;
+    public static final int MUTATION_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto mutation_;
+    public boolean hasMutation() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate getMutate() {
-      return mutate_;
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutation() {
+      return mutation_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder getMutateOrBuilder() {
-      return mutate_;
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationOrBuilder() {
+      return mutation_;
     }
     
     // optional .Condition condition = 3;
@@ -9144,7 +9227,7 @@ public final class ClientProtos {
     
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
-      mutate_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance();
+      mutation_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance();
       condition_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
@@ -9156,7 +9239,7 @@ public final class ClientProtos {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!hasMutate()) {
+      if (!hasMutation()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -9164,7 +9247,7 @@ public final class ClientProtos {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!getMutate().isInitialized()) {
+      if (!getMutation().isInitialized()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -9185,7 +9268,7 @@ public final class ClientProtos {
         output.writeMessage(1, region_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeMessage(2, mutate_);
+        output.writeMessage(2, mutation_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeMessage(3, condition_);
@@ -9205,7 +9288,7 @@ public final class ClientProtos {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, mutate_);
+          .computeMessageSize(2, mutation_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
@@ -9239,10 +9322,10 @@ public final class ClientProtos {
         result = result && getRegion()
             .equals(other.getRegion());
       }
-      result = result && (hasMutate() == other.hasMutate());
-      if (hasMutate()) {
-        result = result && getMutate()
-            .equals(other.getMutate());
+      result = result && (hasMutation() == other.hasMutation());
+      if (hasMutation()) {
+        result = result && getMutation()
+            .equals(other.getMutation());
       }
       result = result && (hasCondition() == other.hasCondition());
       if (hasCondition()) {
@@ -9262,9 +9345,9 @@ public final class ClientProtos {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegion().hashCode();
       }
-      if (hasMutate()) {
-        hash = (37 * hash) + MUTATE_FIELD_NUMBER;
-        hash = (53 * hash) + getMutate().hashCode();
+      if (hasMutation()) {
+        hash = (37 * hash) + MUTATION_FIELD_NUMBER;
+        hash = (53 * hash) + getMutation().hashCode();
       }
       if (hasCondition()) {
         hash = (37 * hash) + CONDITION_FIELD_NUMBER;
@@ -9379,7 +9462,7 @@ public final class ClientProtos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getRegionFieldBuilder();
-          getMutateFieldBuilder();
+          getMutationFieldBuilder();
           getConditionFieldBuilder();
         }
       }
@@ -9395,10 +9478,10 @@ public final class ClientProtos {
           regionBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
-        if (mutateBuilder_ == null) {
-          mutate_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance();
+        if (mutationBuilder_ == null) {
+          mutation_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance();
         } else {
-          mutateBuilder_.clear();
+          mutationBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
         if (conditionBuilder_ == null) {
@@ -9456,10 +9539,10 @@ public final class ClientProtos {
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        if (mutateBuilder_ == null) {
-          result.mutate_ = mutate_;
+        if (mutationBuilder_ == null) {
+          result.mutation_ = mutation_;
         } else {
-          result.mutate_ = mutateBuilder_.build();
+          result.mutation_ = mutationBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
@@ -9488,8 +9571,8 @@ public final class ClientProtos {
         if (other.hasRegion()) {
           mergeRegion(other.getRegion());
         }
-        if (other.hasMutate()) {
-          mergeMutate(other.getMutate());
+        if (other.hasMutation()) {
+          mergeMutation(other.getMutation());
         }
         if (other.hasCondition()) {
           mergeCondition(other.getCondition());
@@ -9503,7 +9586,7 @@ public final class ClientProtos {
           
           return false;
         }
-        if (!hasMutate()) {
+        if (!hasMutation()) {
           
           return false;
         }
@@ -9511,7 +9594,7 @@ public final class ClientProtos {
           
           return false;
         }
-        if (!getMutate().isInitialized()) {
+        if (!getMutation().isInitialized()) {
           
           return false;
         }
@@ -9557,12 +9640,12 @@ public final class ClientProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.newBuilder();
-              if (hasMutate()) {
-                subBuilder.mergeFrom(getMutate());
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.newBuilder();
+              if (hasMutation()) {
+                subBuilder.mergeFrom(getMutation());
               }
               input.readMessage(subBuilder, extensionRegistry);
-              setMutate(subBuilder.buildPartial());
+              setMutation(subBuilder.buildPartial());
               break;
             }
             case 26: {
@@ -9670,94 +9753,94 @@ public final class ClientProtos {
         return regionBuilder_;
       }
       
-      // required .Mutate mutate = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate mutate_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance();
+      // required .MutationProto mutation = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto mutation_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder> mutateBuilder_;
-      public boolean hasMutate() {
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder> mutationBuilder_;
+      public boolean hasMutation() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate getMutate() {
-        if (mutateBuilder_ == null) {
-          return mutate_;
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutation() {
+        if (mutationBuilder_ == null) {
+          return mutation_;
         } else {
-          return mutateBuilder_.getMessage();
+          return mutationBuilder_.getMessage();
         }
       }
-      public Builder setMutate(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate value) {
-        if (mutateBuilder_ == null) {
+      public Builder setMutation(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto value) {
+        if (mutationBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          mutate_ = value;
+          mutation_ = value;
           onChanged();
         } else {
-          mutateBuilder_.setMessage(value);
+          mutationBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000002;
         return this;
       }
-      public Builder setMutate(
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder builderForValue) {
-        if (mutateBuilder_ == null) {
-          mutate_ = builderForValue.build();
+      public Builder setMutation(
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder builderForValue) {
+        if (mutationBuilder_ == null) {
+          mutation_ = builderForValue.build();
           onChanged();
         } else {
-          mutateBuilder_.setMessage(builderForValue.build());
+          mutationBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000002;
         return this;
       }
-      public Builder mergeMutate(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate value) {
-        if (mutateBuilder_ == null) {
+      public Builder mergeMutation(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto value) {
+        if (mutationBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              mutate_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance()) {
-            mutate_ =
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.newBuilder(mutate_).mergeFrom(value).buildPartial();
+              mutation_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance()) {
+            mutation_ =
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.newBuilder(mutation_).mergeFrom(value).buildPartial();
           } else {
-            mutate_ = value;
+            mutation_ = value;
           }
           onChanged();
         } else {
-          mutateBuilder_.mergeFrom(value);
+          mutationBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000002;
         return this;
       }
-      public Builder clearMutate() {
-        if (mutateBuilder_ == null) {
-          mutate_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance();
+      public Builder clearMutation() {
+        if (mutationBuilder_ == null) {
+          mutation_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance();
           onChanged();
         } else {
-          mutateBuilder_.clear();
+          mutationBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder getMutateBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder getMutationBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
-        return getMutateFieldBuilder().getBuilder();
+        return getMutationFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder getMutateOrBuilder() {
-        if (mutateBuilder_ != null) {
-          return mutateBuilder_.getMessageOrBuilder();
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationOrBuilder() {
+        if (mutationBuilder_ != null) {
+          return mutationBuilder_.getMessageOrBuilder();
         } else {
-          return mutate_;
+          return mutation_;
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder> 
-          getMutateFieldBuilder() {
-        if (mutateBuilder_ == null) {
-          mutateBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder>(
-                  mutate_,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder> 
+          getMutationFieldBuilder() {
+        if (mutationBuilder_ == null) {
+          mutationBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder>(
+                  mutation_,
                   getParentForChildren(),
                   isClean());
-          mutate_ = null;
+          mutation_ = null;
         }
-        return mutateBuilder_;
+        return mutationBuilder_;
       }
       
       // optional .Condition condition = 3;
@@ -9934,12 +10017,6 @@ public final class ClientProtos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (hasResult()) {
-        if (!getResult().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -10222,12 +10299,6 @@ public final class ClientProtos {
       }
       
       public final boolean isInitialized() {
-        if (hasResult()) {
-          if (!getResult().isInitialized()) {
-            
-            return false;
-          }
-        }
         return true;
       }
       
@@ -13227,12 +13298,6 @@ public final class ClientProtos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      for (int i = 0; i < getResultCount(); i++) {
-        if (!getResult(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -13611,12 +13676,6 @@ public final class ClientProtos {
       }
       
       public final boolean isInitialized() {
-        for (int i = 0; i < getResultCount(); i++) {
-          if (!getResult(i).isInitialized()) {
-            
-            return false;
-          }
-        }
         return true;
       }
       
@@ -17624,10 +17683,10 @@ public final class ClientProtos {
   public interface MultiActionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional .Mutate mutate = 1;
-    boolean hasMutate();
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate getMutate();
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder getMutateOrBuilder();
+    // optional .MutationProto mutation = 1;
+    boolean hasMutation();
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutation();
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationOrBuilder();
     
     // optional .Get get = 2;
     boolean hasGet();
@@ -17663,17 +17722,17 @@ public final class ClientProtos {
     }
     
     private int bitField0_;
-    // optional .Mutate mutate = 1;
-    public static final int MUTATE_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate mutate_;
-    public boolean hasMutate() {
+    // optional .MutationProto mutation = 1;
+    public static final int MUTATION_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto mutation_;
+    public boolean hasMutation() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate getMutate() {
-      return mutate_;
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutation() {
+      return mutation_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder getMutateOrBuilder() {
-      return mutate_;
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationOrBuilder() {
+      return mutation_;
     }
     
     // optional .Get get = 2;
@@ -17690,7 +17749,7 @@ public final class ClientProtos {
     }
     
     private void initFields() {
-      mutate_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance();
+      mutation_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance();
       get_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Get.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
@@ -17698,8 +17757,8 @@ public final class ClientProtos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (hasMutate()) {
-        if (!getMutate().isInitialized()) {
+      if (hasMutation()) {
+        if (!getMutation().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -17718,7 +17777,7 @@ public final class ClientProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, mutate_);
+        output.writeMessage(1, mutation_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeMessage(2, get_);
@@ -17734,7 +17793,7 @@ public final class ClientProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, mutate_);
+          .computeMessageSize(1, mutation_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
@@ -17763,10 +17822,10 @@ public final class ClientProtos {
       org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction) obj;
       
       boolean result = true;
-      result = result && (hasMutate() == other.hasMutate());
-      if (hasMutate()) {
-        result = result && getMutate()
-            .equals(other.getMutate());
+      result = result && (hasMutation() == other.hasMutation());
+      if (hasMutation()) {
+        result = result && getMutation()
+            .equals(other.getMutation());
       }
       result = result && (hasGet() == other.hasGet());
       if (hasGet()) {
@@ -17782,9 +17841,9 @@ public final class ClientProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasMutate()) {
-        hash = (37 * hash) + MUTATE_FIELD_NUMBER;
-        hash = (53 * hash) + getMutate().hashCode();
+      if (hasMutation()) {
+        hash = (37 * hash) + MUTATION_FIELD_NUMBER;
+        hash = (53 * hash) + getMutation().hashCode();
       }
       if (hasGet()) {
         hash = (37 * hash) + GET_FIELD_NUMBER;
@@ -17898,7 +17957,7 @@ public final class ClientProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getMutateFieldBuilder();
+          getMutationFieldBuilder();
           getGetFieldBuilder();
         }
       }
@@ -17908,10 +17967,10 @@ public final class ClientProtos {
       
       public Builder clear() {
         super.clear();
-        if (mutateBuilder_ == null) {
-          mutate_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance();
+        if (mutationBuilder_ == null) {
+          mutation_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance();
         } else {
-          mutateBuilder_.clear();
+          mutationBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         if (getBuilder_ == null) {
@@ -17961,10 +18020,10 @@ public final class ClientProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        if (mutateBuilder_ == null) {
-          result.mutate_ = mutate_;
+        if (mutationBuilder_ == null) {
+          result.mutation_ = mutation_;
         } else {
-          result.mutate_ = mutateBuilder_.build();
+          result.mutation_ = mutationBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
@@ -17990,8 +18049,8 @@ public final class ClientProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction.getDefaultInstance()) return this;
-        if (other.hasMutate()) {
-          mergeMutate(other.getMutate());
+        if (other.hasMutation()) {
+          mergeMutation(other.getMutation());
         }
         if (other.hasGet()) {
           mergeGet(other.getGet());
@@ -18001,8 +18060,8 @@ public final class ClientProtos {
       }
       
       public final boolean isInitialized() {
-        if (hasMutate()) {
-          if (!getMutate().isInitialized()) {
+        if (hasMutation()) {
+          if (!getMutation().isInitialized()) {
             
             return false;
           }
@@ -18040,12 +18099,12 @@ public final class ClientProtos {
               break;
             }
             case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.newBuilder();
-              if (hasMutate()) {
-                subBuilder.mergeFrom(getMutate());
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.newBuilder();
+              if (hasMutation()) {
+                subBuilder.mergeFrom(getMutation());
               }
               input.readMessage(subBuilder, extensionRegistry);
-              setMutate(subBuilder.buildPartial());
+              setMutation(subBuilder.buildPartial());
               break;
             }
             case 18: {
@@ -18063,94 +18122,94 @@ public final class ClientProtos {
       
       private int bitField0_;
       
-      // optional .Mutate mutate = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate mutate_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance();
+      // optional .MutationProto mutation = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto mutation_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder> mutateBuilder_;
-      public boolean hasMutate() {
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder> mutationBuilder_;
+      public boolean hasMutation() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate getMutate() {
-        if (mutateBuilder_ == null) {
-          return mutate_;
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutation() {
+        if (mutationBuilder_ == null) {
+          return mutation_;
         } else {
-          return mutateBuilder_.getMessage();
+          return mutationBuilder_.getMessage();
         }
       }
-      public Builder setMutate(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate value) {
-        if (mutateBuilder_ == null) {
+      public Builder setMutation(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto value) {
+        if (mutationBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          mutate_ = value;
+          mutation_ = value;
           onChanged();
         } else {
-          mutateBuilder_.setMessage(value);
+          mutationBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder setMutate(
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder builderForValue) {
-        if (mutateBuilder_ == null) {
-          mutate_ = builderForValue.build();
+      public Builder setMutation(
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder builderForValue) {
+        if (mutationBuilder_ == null) {
+          mutation_ = builderForValue.build();
           onChanged();
         } else {
-          mutateBuilder_.setMessage(builderForValue.build());
+          mutationBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder mergeMutate(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate value) {
-        if (mutateBuilder_ == null) {
+      public Builder mergeMutation(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto value) {
+        if (mutationBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              mutate_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance()) {
-            mutate_ =
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.newBuilder(mutate_).mergeFrom(value).buildPartial();
+              mutation_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance()) {
+            mutation_ =
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.newBuilder(mutation_).mergeFrom(value).buildPartial();
           } else {
-            mutate_ = value;
+            mutation_ = value;
           }
           onChanged();
         } else {
-          mutateBuilder_.mergeFrom(value);
+          mutationBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder clearMutate() {
-        if (mutateBuilder_ == null) {
-          mutate_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.getDefaultInstance();
+      public Builder clearMutation() {
+        if (mutationBuilder_ == null) {
+          mutation_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance();
           onChanged();
         } else {
-          mutateBuilder_.clear();
+          mutationBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder getMutateBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder getMutationBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
-        return getMutateFieldBuilder().getBuilder();
+        return getMutationFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder getMutateOrBuilder() {
-        if (mutateBuilder_ != null) {
-          return mutateBuilder_.getMessageOrBuilder();
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationOrBuilder() {
+        if (mutationBuilder_ != null) {
+          return mutationBuilder_.getMessageOrBuilder();
         } else {
-          return mutate_;
+          return mutation_;
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder> 
-          getMutateFieldBuilder() {
-        if (mutateBuilder_ == null) {
-          mutateBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateOrBuilder>(
-                  mutate_,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder> 
+          getMutationFieldBuilder() {
+        if (mutationBuilder_ == null) {
+          mutationBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder>(
+                  mutation_,
                   getParentForChildren(),
                   isClean());
-          mutate_ = null;
+          mutation_ = null;
         }
-        return mutateBuilder_;
+        return mutationBuilder_;
       }
       
       // optional .Get get = 2;
@@ -18331,12 +18390,6 @@ public final class ClientProtos {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (hasValue()) {
-        if (!getValue().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       if (hasException()) {
         if (!getException().isInitialized()) {
           memoizedIsInitialized = 0;
@@ -18634,12 +18687,6 @@ public final class ClientProtos {
       }
       
       public final boolean isInitialized() {
-        if (hasValue()) {
-          if (!getValue().isInitialized()) {
-            
-            return false;
-          }
-        }
         if (hasException()) {
           if (!getException().isInitialized()) {
             
@@ -20962,20 +21009,20 @@ public final class ClientProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_Condition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Mutate_descriptor;
+    internal_static_MutationProto_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Mutate_fieldAccessorTable;
+      internal_static_MutationProto_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Mutate_ColumnValue_descriptor;
+    internal_static_MutationProto_ColumnValue_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Mutate_ColumnValue_fieldAccessorTable;
+      internal_static_MutationProto_ColumnValue_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Mutate_ColumnValue_QualifierValue_descriptor;
+    internal_static_MutationProto_ColumnValue_QualifierValue_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Mutate_ColumnValue_QualifierValue_fieldAccessorTable;
+      internal_static_MutationProto_ColumnValue_QualifierValue_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_MutateRequest_descriptor;
   private static
@@ -21068,83 +21115,86 @@ public final class ClientProtos {
       "timeRange\030\005 \001(\0132\n.TimeRange\022\026\n\013maxVersio" +
       "ns\030\006 \001(\r:\0011\022\031\n\013cacheBlocks\030\007 \001(\010:\004true\022\022" +
       "\n\nstoreLimit\030\010 \001(\r\022\023\n\013storeOffset\030\t \001(\r\"" +
-      "%\n\006Result\022\033\n\010keyValue\030\001 \003(\0132\t.KeyValue\"r" +
-      "\n\nGetRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpe",
-      "cifier\022\021\n\003get\030\002 \002(\0132\004.Get\022\030\n\020closestRowB" +
-      "efore\030\003 \001(\010\022\025\n\rexistenceOnly\030\004 \001(\010\"w\n\017Mu" +
-      "ltiGetRequest\022 \n\006region\030\001 \002(\0132\020.RegionSp" +
-      "ecifier\022\021\n\003get\030\002 \003(\0132\004.Get\022\030\n\020closestRow" +
-      "Before\030\003 \001(\010\022\025\n\rexistenceOnly\030\004 \001(\010\"6\n\013G" +
-      "etResponse\022\027\n\006result\030\001 \001(\0132\007.Result\022\016\n\006e" +
-      "xists\030\002 \001(\010\";\n\020MultiGetResponse\022\027\n\006resul" +
-      "t\030\001 \003(\0132\007.Result\022\016\n\006exists\030\002 \003(\010\"\177\n\tCond" +
-      "ition\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tqu" +
-      "alifier\030\003 \002(\014\022!\n\013compareType\030\004 \002(\0162\014.Com",
-      "pareType\022\037\n\ncomparator\030\005 \002(\0132\013.Comparato" +
-      "r\"\266\004\n\006Mutate\022\013\n\003row\030\001 \002(\014\022&\n\nmutateType\030" +
-      "\002 \002(\0162\022.Mutate.MutateType\022(\n\013columnValue" +
-      "\030\003 \003(\0132\023.Mutate.ColumnValue\022!\n\tattribute" +
-      "\030\004 \003(\0132\016.NameBytesPair\022\021\n\ttimestamp\030\005 \001(" +
-      "\004\022\030\n\nwriteToWAL\030\006 \001(\010:\004true\022\035\n\ttimeRange" +
-      "\030\n \001(\0132\n.TimeRange\032\310\001\n\013ColumnValue\022\016\n\006fa" +
-      "mily\030\001 \002(\014\022:\n\016qualifierValue\030\002 \003(\0132\".Mut" +
-      "ate.ColumnValue.QualifierValue\032m\n\016Qualif" +
-      "ierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001",
-      "(\014\022\021\n\ttimestamp\030\003 \001(\004\022&\n\ndeleteType\030\004 \001(" +
-      "\0162\022.Mutate.DeleteType\"<\n\nMutateType\022\n\n\006A" +
-      "PPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELET" +
-      "E\020\003\"U\n\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020" +
-      "\000\022\034\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDELET" +
-      "E_FAMILY\020\002\"i\n\rMutateRequest\022 \n\006region\030\001 " +
-      "\002(\0132\020.RegionSpecifier\022\027\n\006mutate\030\002 \002(\0132\007." +
-      "Mutate\022\035\n\tcondition\030\003 \001(\0132\n.Condition\"<\n" +
-      "\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007.Result" +
-      "\022\021\n\tprocessed\030\002 \001(\010\"\307\002\n\004Scan\022\027\n\006column\030\001",
-      " \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\0132\016.NameB" +
-      "ytesPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007stopRow\030\004 " +
-      "\001(\014\022\027\n\006filter\030\005 \001(\0132\007.Filter\022\035\n\ttimeRang" +
-      "e\030\006 \001(\0132\n.TimeRange\022\026\n\013maxVersions\030\007 \001(\r" +
-      ":\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004true\022\021\n\tbatchS" +
-      "ize\030\t \001(\r\022\025\n\rmaxResultSize\030\n \001(\004\022\022\n\nstor" +
-      "eLimit\030\013 \001(\r\022\023\n\013storeOffset\030\014 \001(\r\022\"\n\032loa" +
-      "dColumnFamiliesOnDemand\030\r \001(\010\"\230\001\n\013ScanRe" +
-      "quest\022 \n\006region\030\001 \001(\0132\020.RegionSpecifier\022" +
-      "\023\n\004scan\030\002 \001(\0132\005.Scan\022\021\n\tscannerId\030\003 \001(\004\022",
-      "\024\n\014numberOfRows\030\004 \001(\r\022\024\n\014closeScanner\030\005 " +
-      "\001(\010\022\023\n\013nextCallSeq\030\006 \001(\004\"u\n\014ScanResponse" +
-      "\022\027\n\006result\030\001 \003(\0132\007.Result\022\021\n\tscannerId\030\002" +
-      " \001(\004\022\023\n\013moreResults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\022\027" +
-      "\n\017resultSizeBytes\030\005 \001(\004\"\260\001\n\024BulkLoadHFil" +
-      "eRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi" +
-      "er\0224\n\nfamilyPath\030\002 \003(\0132 .BulkLoadHFileRe" +
-      "quest.FamilyPath\022\024\n\014assignSeqNum\030\003 \001(\010\032*" +
-      "\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002" +
-      "(\t\"\'\n\025BulkLoadHFileResponse\022\016\n\006loaded\030\001 ",
-      "\002(\010\"_\n\026CoprocessorServiceCall\022\013\n\003row\030\001 \002" +
-      "(\014\022\023\n\013serviceName\030\002 \002(\t\022\022\n\nmethodName\030\003 " +
-      "\002(\t\022\017\n\007request\030\004 \002(\014\"d\n\031CoprocessorServi" +
-      "ceRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif" +
-      "ier\022%\n\004call\030\002 \002(\0132\027.CoprocessorServiceCa" +
-      "ll\"]\n\032CoprocessorServiceResponse\022 \n\006regi" +
-      "on\030\001 \002(\0132\020.RegionSpecifier\022\035\n\005value\030\002 \002(" +
-      "\0132\016.NameBytesPair\"9\n\013MultiAction\022\027\n\006muta" +
-      "te\030\001 \001(\0132\007.Mutate\022\021\n\003get\030\002 \001(\0132\004.Get\"I\n\014" +
-      "ActionResult\022\026\n\005value\030\001 \001(\0132\007.Result\022!\n\t",
-      "exception\030\002 \001(\0132\016.NameBytesPair\"^\n\014Multi" +
-      "Request\022 \n\006region\030\001 \002(\0132\020.RegionSpecifie" +
-      "r\022\034\n\006action\030\002 \003(\0132\014.MultiAction\022\016\n\006atomi" +
-      "c\030\003 \001(\010\".\n\rMultiResponse\022\035\n\006result\030\001 \003(\013" +
-      "2\r.ActionResult2\342\002\n\rClientService\022 \n\003get" +
-      "\022\013.GetRequest\032\014.GetResponse\022/\n\010multiGet\022" +
-      "\020.MultiGetRequest\032\021.MultiGetResponse\022)\n\006" +
-      "mutate\022\016.MutateRequest\032\017.MutateResponse\022" +
-      "#\n\004scan\022\014.ScanRequest\032\r.ScanResponse\022>\n\r" +
-      "bulkLoadHFile\022\025.BulkLoadHFileRequest\032\026.B",
-      "ulkLoadHFileResponse\022F\n\013execService\022\032.Co" +
-      "processorServiceRequest\032\033.CoprocessorSer" +
-      "viceResponse\022&\n\005multi\022\r.MultiRequest\032\016.M" +
-      "ultiResponseBB\n*org.apache.hadoop.hbase." +
-      "protobuf.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
+      ":\n\006Result\022\023\n\004cell\030\001 \003(\0132\005.Cell\022\033\n\023associ" +
+      "atedCellCount\030\002 \001(\005\"r\n\nGetRequest\022 \n\006reg",
+      "ion\030\001 \002(\0132\020.RegionSpecifier\022\021\n\003get\030\002 \002(\013" +
+      "2\004.Get\022\030\n\020closestRowBefore\030\003 \001(\010\022\025\n\rexis" +
+      "tenceOnly\030\004 \001(\010\"w\n\017MultiGetRequest\022 \n\006re" +
+      "gion\030\001 \002(\0132\020.RegionSpecifier\022\021\n\003get\030\002 \003(" +
+      "\0132\004.Get\022\030\n\020closestRowBefore\030\003 \001(\010\022\025\n\rexi" +
+      "stenceOnly\030\004 \001(\010\"6\n\013GetResponse\022\027\n\006resul" +
+      "t\030\001 \001(\0132\007.Result\022\016\n\006exists\030\002 \001(\010\";\n\020Mult" +
+      "iGetResponse\022\027\n\006result\030\001 \003(\0132\007.Result\022\016\n" +
+      "\006exists\030\002 \003(\010\"\177\n\tCondition\022\013\n\003row\030\001 \002(\014\022" +
+      "\016\n\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022!\n\013co",
+      "mpareType\030\004 \002(\0162\014.CompareType\022\037\n\ncompara" +
+      "tor\030\005 \002(\0132\013.Comparator\"\372\004\n\rMutationProto" +
+      "\022\013\n\003row\030\001 \001(\014\022/\n\nmutateType\030\002 \001(\0162\033.Muta" +
+      "tionProto.MutationType\022/\n\013columnValue\030\003 " +
+      "\003(\0132\032.MutationProto.ColumnValue\022\021\n\ttimes" +
+      "tamp\030\004 \001(\004\022!\n\tattribute\030\005 \003(\0132\016.NameByte" +
+      "sPair\022\030\n\nwriteToWAL\030\006 \001(\010:\004true\022\035\n\ttimeR" +
+      "ange\030\007 \001(\0132\n.TimeRange\022\033\n\023associatedCell" +
+      "Count\030\010 \001(\005\032\326\001\n\013ColumnValue\022\016\n\006family\030\001 " +
+      "\002(\014\022A\n\016qualifierValue\030\002 \003(\0132).MutationPr",
+      "oto.ColumnValue.QualifierValue\032t\n\016Qualif" +
+      "ierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001" +
+      "(\014\022\021\n\ttimestamp\030\003 \001(\004\022-\n\ndeleteType\030\004 \001(" +
+      "\0162\031.MutationProto.DeleteType\">\n\014Mutation" +
+      "Type\022\n\n\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002" +
+      "\022\n\n\006DELETE\020\003\"U\n\nDeleteType\022\026\n\022DELETE_ONE" +
+      "_VERSION\020\000\022\034\n\030DELETE_MULTIPLE_VERSIONS\020\001" +
+      "\022\021\n\rDELETE_FAMILY\020\002\"r\n\rMutateRequest\022 \n\006" +
+      "region\030\001 \002(\0132\020.RegionSpecifier\022 \n\010mutati" +
+      "on\030\002 \002(\0132\016.MutationProto\022\035\n\tcondition\030\003 ",
+      "\001(\0132\n.Condition\"<\n\016MutateResponse\022\027\n\006res" +
+      "ult\030\001 \001(\0132\007.Result\022\021\n\tprocessed\030\002 \001(\010\"\307\002" +
+      "\n\004Scan\022\027\n\006column\030\001 \003(\0132\007.Column\022!\n\tattri" +
+      "bute\030\002 \003(\0132\016.NameBytesPair\022\020\n\010startRow\030\003" +
+      " \001(\014\022\017\n\007stopRow\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007." +
+      "Filter\022\035\n\ttimeRange\030\006 \001(\0132\n.TimeRange\022\026\n" +
+      "\013maxVersions\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001" +
+      "(\010:\004true\022\021\n\tbatchSize\030\t \001(\r\022\025\n\rmaxResult" +
+      "Size\030\n \001(\004\022\022\n\nstoreLimit\030\013 \001(\r\022\023\n\013storeO" +
+      "ffset\030\014 \001(\r\022\"\n\032loadColumnFamiliesOnDeman",
+      "d\030\r \001(\010\"\230\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132" +
+      "\020.RegionSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\021" +
+      "\n\tscannerId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001(\r\022" +
+      "\024\n\014closeScanner\030\005 \001(\010\022\023\n\013nextCallSeq\030\006 \001" +
+      "(\004\"u\n\014ScanResponse\022\027\n\006result\030\001 \003(\0132\007.Res" +
+      "ult\022\021\n\tscannerId\030\002 \001(\004\022\023\n\013moreResults\030\003 " +
+      "\001(\010\022\013\n\003ttl\030\004 \001(\r\022\027\n\017resultSizeBytes\030\005 \001(" +
+      "\004\"\260\001\n\024BulkLoadHFileRequest\022 \n\006region\030\001 \002" +
+      "(\0132\020.RegionSpecifier\0224\n\nfamilyPath\030\002 \003(\013" +
+      "2 .BulkLoadHFileRequest.FamilyPath\022\024\n\014as",
+      "signSeqNum\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family" +
+      "\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileRes" +
+      "ponse\022\016\n\006loaded\030\001 \002(\010\"_\n\026CoprocessorServ" +
+      "iceCall\022\013\n\003row\030\001 \002(\014\022\023\n\013serviceName\030\002 \002(" +
+      "\t\022\022\n\nmethodName\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"d" +
+      "\n\031CoprocessorServiceRequest\022 \n\006region\030\001 " +
+      "\002(\0132\020.RegionSpecifier\022%\n\004call\030\002 \002(\0132\027.Co" +
+      "processorServiceCall\"]\n\032CoprocessorServi" +
+      "ceResponse\022 \n\006region\030\001 \002(\0132\020.RegionSpeci" +
+      "fier\022\035\n\005value\030\002 \002(\0132\016.NameBytesPair\"B\n\013M",
+      "ultiAction\022 \n\010mutation\030\001 \001(\0132\016.MutationP" +
+      "roto\022\021\n\003get\030\002 \001(\0132\004.Get\"I\n\014ActionResult\022" +
+      "\026\n\005value\030\001 \001(\0132\007.Result\022!\n\texception\030\002 \001" +
+      "(\0132\016.NameBytesPair\"^\n\014MultiRequest\022 \n\006re" +
+      "gion\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006action\030\002" +
+      " \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 \001(\010\".\n\rMu" +
+      "ltiResponse\022\035\n\006result\030\001 \003(\0132\r.ActionResu" +
+      "lt2\342\002\n\rClientService\022 \n\003get\022\013.GetRequest" +
+      "\032\014.GetResponse\022/\n\010multiGet\022\020.MultiGetReq" +
+      "uest\032\021.MultiGetResponse\022)\n\006mutate\022\016.Muta",
+      "teRequest\032\017.MutateResponse\022#\n\004scan\022\014.Sca" +
+      "nRequest\032\r.ScanResponse\022>\n\rbulkLoadHFile" +
+      "\022\025.BulkLoadHFileRequest\032\026.BulkLoadHFileR" +
+      "esponse\022F\n\013execService\022\032.CoprocessorServ" +
+      "iceRequest\032\033.CoprocessorServiceResponse\022" +
+      "&\n\005multi\022\r.MultiRequest\032\016.MultiResponseB" +
+      "B\n*org.apache.hadoop.hbase.protobuf.gene" +
+      "ratedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21172,7 +21222,7 @@ public final class ClientProtos {
           internal_static_Result_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Result_descriptor,
-              new java.lang.String[] { "KeyValue", },
+              new java.lang.String[] { "Cell", "AssociatedCellCount", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder.class);
           internal_static_GetRequest_descriptor =
@@ -21215,36 +21265,36 @@ public final class ClientProtos {
               new java.lang.String[] { "Row", "Family", "Qualifier", "CompareType", "Comparator", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder.class);
-          internal_static_Mutate_descriptor =
+          internal_static_MutationProto_descriptor =
             getDescriptor().getMessageTypes().get(8);
-          internal_static_Mutate_fieldAccessorTable = new
+          internal_static_MutationProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Mutate_descriptor,
-              new java.lang.String[] { "Row", "MutateType", "ColumnValue", "Attribute", "Timestamp", "WriteToWAL", "TimeRange", },
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.class,
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.Builder.class);
-          internal_static_Mutate_ColumnValue_descriptor =
-            internal_static_Mutate_descriptor.getNestedTypes().get(0);
-          internal_static_Mutate_ColumnValue_fieldAccessorTable = new
+              internal_static_MutationProto_descriptor,
+              new java.lang.String[] { "Row", "MutateType", "ColumnValue", "Timestamp", "Attribute", "WriteToWAL", "TimeRange", "AssociatedCellCount", },
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.class,
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder.class);
+          internal_static_MutationProto_ColumnValue_descriptor =
+            internal_static_MutationProto_descriptor.getNestedTypes().get(0);
+          internal_static_MutationProto_ColumnValue_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Mutate_ColumnValue_descriptor,
+              internal_static_MutationProto_ColumnValue_descriptor,
               new java.lang.String[] { "Family", "QualifierValue", },
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.class,
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.Builder.class);
-          internal_static_Mutate_ColumnValue_QualifierValue_descriptor =
-            internal_static_Mutate_ColumnValue_descriptor.getNestedTypes().get(0);
-          internal_static_Mutate_ColumnValue_QualifierValue_fieldAccessorTable = new
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.class,
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.Builder.class);
+          internal_static_MutationProto_ColumnValue_QualifierValue_descriptor =
+            internal_static_MutationProto_ColumnValue_descriptor.getNestedTypes().get(0);
+          internal_static_MutationProto_ColumnValue_QualifierValue_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Mutate_ColumnValue_QualifierValue_descriptor,
+              internal_static_MutationProto_ColumnValue_QualifierValue_descriptor,
               new java.lang.String[] { "Qualifier", "Value", "Timestamp", "DeleteType", },
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.class,
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.class,
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue.Builder.class);
           internal_static_MutateRequest_descriptor =
             getDescriptor().getMessageTypes().get(9);
           internal_static_MutateRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MutateRequest_descriptor,
-              new java.lang.String[] { "Region", "Mutate", "Condition", },
+              new java.lang.String[] { "Region", "Mutation", "Condition", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest.Builder.class);
           internal_static_MutateResponse_descriptor =
@@ -21332,7 +21382,7 @@ public final class ClientProtos {
           internal_static_MultiAction_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiAction_descriptor,
-              new java.lang.String[] { "Mutate", "Get", },
+              new java.lang.String[] { "Mutation", "Get", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction.Builder.class);
           internal_static_ActionResult_descriptor =

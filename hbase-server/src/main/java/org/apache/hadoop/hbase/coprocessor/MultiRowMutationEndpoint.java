@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.exceptions.WrongRegionException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiRowMutationService;
@@ -86,9 +86,9 @@ CoprocessorService, Coprocessor {
     try {
       // set of rows to lock, sorted to avoid deadlocks
       SortedSet<byte[]> rowsToLock = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-      List<Mutate> mutateRequestList = request.getMutationRequestList();
+      List<MutationProto> mutateRequestList = request.getMutationRequestList();
       List<Mutation> mutations = new ArrayList<Mutation>(mutateRequestList.size());
-      for (Mutate m : mutateRequestList) {
+      for (MutationProto m : mutateRequestList) {
         mutations.add(ProtobufUtil.toMutation(m));
       }
 

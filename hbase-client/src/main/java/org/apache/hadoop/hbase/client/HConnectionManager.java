@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.zookeeper.*;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -523,7 +522,6 @@ public class HConnectionManager {
     // package protected for the tests
     ClusterStatusListener clusterStatusListener;
 
-    private final Object metaRegionLock = new Object();
     private final Object userRegionLock = new Object();
 
     // We have a single lock for master & zk to prevent deadlocks. Having
@@ -645,7 +643,7 @@ public class HConnectionManager {
      * @return
      */
     public String toString(){
-      return "hconnection 0x" + Integer.toHexString( hashCode() );
+      return "hconnection-0x" + Integer.toHexString(hashCode());
     }
 
     private String clusterId = null;
@@ -882,7 +880,7 @@ public class HConnectionManager {
       MetaScanner.metaScan(conf, visitor, tableName);
       return available.get() && (regionCount.get() > 0);
     }
-    
+
     @Override
     public boolean isTableAvailable(final byte[] tableName, final byte[][] splitKeys)
         throws IOException {
@@ -1011,13 +1009,16 @@ public class HConnectionManager {
       if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
         ZooKeeperKeepAliveConnection zkw = getKeepAliveZooKeeperWatcher();
         try {
-          LOG.debug("Looking up meta region location in ZK," +
-            " connection=" + this);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Looking up meta region location in ZK," + " connection=" + this);
+          }
           ServerName servername =
             MetaRegionTracker.blockUntilAvailable(zkw, this.rpcTimeout);
 
-          LOG.debug("Looked up meta region location, connection=" + this +
-            "; serverName=" + ((servername == null) ? "null" : servername));
+          if (LOG.isTraceEnabled()) {
+            LOG.debug("Looked up meta region location, connection=" + this +
+              "; serverName=" + ((servername == null) ? "null" : servername));
+          }
           if (servername == null) return null;
           return new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, servername, 0);
         } catch (InterruptedException e) {
@@ -1821,26 +1822,17 @@ public class HConnectionManager {
     }
 
     @Deprecated
-    private <R> Callable<MultiResponse> createCallable(
-      final HRegionLocation loc, final MultiAction<R> multi,
-      final byte [] tableName) {
-      // TODO: This does not belong in here!!! St.Ack  HConnections should
+    private <R> Callable<MultiResponse> createCallable(final HRegionLocation loc,
+        final MultiAction<R> multi, final byte[] tableName) {
+      // TODO: This does not belong in here!!! St.Ack HConnections should
       // not be dealing in Callables; Callables have HConnections, not other
       // way around.
       final HConnection connection = this;
       return new Callable<MultiResponse>() {
-        public MultiResponse call() throws IOException {
+        @Override
+        public MultiResponse call() throws Exception {
           ServerCallable<MultiResponse> callable =
-            new ServerCallable<MultiResponse>(connection, tableName, null) {
-              public MultiResponse call() throws IOException {
-                return ProtobufUtil.multi(server, multi);
-              }
-
-              @Override
-              public void connect(boolean reload) throws IOException {
-                server = connection.getClient(loc.getServerName());
-              }
-            };
+            new MultiServerCallable<R>(connection, tableName, loc, multi);
           return callable.withoutRetries();
         }
       };
@@ -2162,8 +2154,7 @@ public class HConnectionManager {
                 } else // success
                   if (callback != null) {
                     this.callback.update(resultsForRS.getKey(),
-                      this.rows.get(regionResult.getFirst()).getRow(),
-                      (R) result);
+                      this.rows.get(regionResult.getFirst()).getRow(), (R) result);
                 }
               }
             }
@@ -2221,8 +2212,6 @@ public class HConnectionManager {
           return new RetriesExhaustedWithDetailsException(exceptions, actions, addresses);
         }
       }
-
-
 
       /**
        * Put the action that has to be retried in the Replay list.

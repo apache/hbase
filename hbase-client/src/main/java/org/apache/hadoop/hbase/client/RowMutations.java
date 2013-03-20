@@ -19,13 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -52,10 +50,8 @@ public class RowMutations implements Row {
    * @param row row key
    */
   public RowMutations(byte [] row) {
-    if(row == null || row.length > HConstants.MAX_ROW_LENGTH) {
-      throw new IllegalArgumentException("Row key is invalid");
-    }
-    this.row = Arrays.copyOf(row, row.length);
+    Mutation.checkRow(row);
+    this.row = Bytes.copy(row);
   }
 
   /**
@@ -78,10 +74,10 @@ public class RowMutations implements Row {
 
   private void internalAdd(Mutation m) throws IOException {
     int res = Bytes.compareTo(this.row, m.getRow());
-    if(res != 0) {
-      throw new IOException("The row in the recently added Put/Delete " +
-          Bytes.toStringBinary(m.getRow()) + " doesn't match the original one " +
-          Bytes.toStringBinary(this.row));
+    if (res != 0) {
+      throw new WrongRowIOException("The row in the recently added Put/Delete <" +
+          Bytes.toStringBinary(m.getRow()) + "> doesn't match the original one <" +
+          Bytes.toStringBinary(this.row) + ">");
     }
     mutations.add(m);
   }

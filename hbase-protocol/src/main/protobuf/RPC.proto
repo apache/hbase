@@ -15,123 +15,117 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * Specification of (unsecure) HBase RPC:
- *
- * Client needs to set up a connection first to a server serving a certain
- * HBase protocol (like ClientProtocol). Once the connection is set up, the 
- * client and server communicates on that channel for RPC requests/responses.
- * The sections below describe the flow. 
- * 
- * As part of setting up a connection to a server, the client needs to send
- * the ConnectionHeader header. At the data level, this looks like
- * <"hrpc"-bytearray><'5'[byte]><length-of-serialized-ConnectionHeader-obj[int32]><ConnectionHeader-object serialized>
- *
- * For every RPC that the client makes it needs to send the following
- * RpcRequestHeader and the RpcRequestBody. At the data level this looks like:
- *  <length-of-serialized-RpcRequestHeader + length-of-varint32-of-serialized-RpcRequestHeader + 
- *   length-of-serialized-RpcRequestBody + length-of-varint32-of-serialized-RpcRequestBody>
- *  <RpcRequestHeader [serialized using Message.writeDelimitedTo]>
- *  <RpcRequestBody [serialized using Message.writeDelimitedTo]>
- *
- * On a success, the server's protobuf response looks like
- *  <RpcResponseHeader-object [serialized using Message.writeDelimitedTo]>
- *  <RpcResponseBody-object [serialized using Message.writeDelimitedTo]>
- * On a failure, the server's protobuf response looks like
- *  <RpcResponseHeader-object [serialized using Message.writeDelimitedTo]>
- *  <RpcException-object [serialized using Message.writeDelimitedTo]>
- *
- * There is one special message that's sent from client to server -
- * the Ping message. At the data level, this is just the bytes corresponding
- *   to integer -1.
- */
-
 import "Tracing.proto"; 
+import "hbase.proto"; 
 
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
 option java_outer_classname = "RPCProtos";
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+// See https://issues.apache.org/jira/browse/HBASE-7898 for high-level
+// description of RPC specification.
+//
+// On connection setup, the client sends six bytes of preamble -- a four
+// byte magic, a byte of version, and a byte of authentication type.
+//
+// We then send a "ConnectionHeader" protobuf of user information and the
+// 'protocol' or 'service' that is to be run over this connection as well as
+// info such as codecs and compression to use when we send cell blocks(see below).
+// This connection header protobuf is prefaced by an int that holds the length
+// of this connection header (this is NOT a varint).  The pb connection header
+// is sent with Message#writeTo.  The server throws an exception if it doesn't
+// like what it was sent noting what it is objecting too.  Otherwise, the server
+// says nothing and is open for business.
+//
+// Hereafter the client makes requests and the server returns responses.
+//
+// Requests look like this:
+//
+// <An int with the total length of the request>
+// <RequestHeader Message written out using Message#writeDelimitedTo>
+// <Optionally a Request Parameter Message written out using Message#writeDelimitedTo>
+// <Optionally a Cell block>
+//
+// ...where the Request Parameter Message is whatever the method name stipulated
+// in the RequestHeader expects; e.g. if the method is a scan, then the pb
+// Request Message is a GetRequest, or a ScanRequest.  A block of Cells
+// optionally follows.  The presence of a Request param Message and/or a
+// block of Cells will be noted in the RequestHeader.
+//
+// Response is the mirror of the request:
+//
+// <An int with the total length of the response>
+// <ResponseHeader Message written out using Message#writeDelimitedTo>
+// <Optionally a Response Result Message written out using Message#writeDelimitedTo>
+// <Optionally a Cell block>
+//
+// ...where the Response Message is the response type that goes with the
+// method specified when making the request and the follow on Cell blocks may
+// or may not be there -- read the response header to find out if one following.
+// If an exception, it will be included inside the Response Header.
+//
+// Any time we write a pb, we do it with Message#writeDelimitedTo EXCEPT when
+// the connection header is sent; this is prefaced by an int with its length
+// and the pb connection header is then written with Message#writeTo.
+//
+
+// User Information proto.  Included in ConnectionHeader on connection setup
 message UserInformation {
   required string effectiveUser = 1;
   optional string realUser = 2;
 }
 
+// This is sent on connection setup after the connection preamble is sent.
 message ConnectionHeader {
-  /** User Info beyond what is established at connection establishment
-   *  (applies to secure HBase setup)
-   */
   optional UserInformation userInfo = 1;
-  /** Protocol name for next rpc layer
-   * the client created a proxy with this protocol name
-   */
   optional string protocol = 2 [default = "org.apache.hadoop.hbase.client.ClientProtocol"];
+  // Cell block codec we will use sending over optional cell blocks.  Server throws exception
+  // if cannot deal.
+  optional string cellBlockCodecClass = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
+  // Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
+  // Class must implement hadoop's CompressionCodec Interface
+  optional string cellBlockCompressorClass = 4;
 }
 
-
-/**
- * The RPC request header
- */
-message RpcRequestHeader {
-  /** Monotonically increasing callId, mostly to keep track of RPCs */
-  required uint32 callId = 1;
-  optional RPCTInfo tinfo = 2;
-}
-/**
- * The RPC request body
- */
-message RpcRequestBody {
-  /** Name of the RPC method */
-  required string methodName = 1;
-
-  /** Bytes corresponding to the client protobuf request. This is the actual
-   *  bytes corresponding to the RPC request argument.
-   */
-  optional bytes request = 2;
-
-  /** Some metainfo about the request. Helps us to treat RPCs with
-   *  different priorities. For now this is just the classname of the request
-   *  proto object. 
-   */
-  optional string requestClassName = 4;
+// Optional Cell block Message.  Included in client RequestHeader
+message CellBlockMeta {
+  // Length of the following cell block.  Could calculate it but convenient having it too hand.
+  optional uint32 length = 1;
 }
 
-/**
- * The RPC response header
- */
-message RpcResponseHeader {
-  /** Echo back the callId the client sent */
-  required uint32 callId = 1;
-  /** Did the RPC execution encounter an error at the server */
-  enum Status {
-    SUCCESS = 0;
-    ERROR = 1;
-    FATAL = 2;
-  }
-  required Status status = 2;
-}
-/**
- * The RPC response body
- */
-message RpcResponseBody {
-   /** Optional response bytes. This is the actual bytes corresponding to the
-    *  return value of the invoked RPC.
-    */
-  optional bytes response = 1;
-}
-/**
- * At the RPC layer, this message is used to indicate
- * the server side exception to the RPC client.
- *
- * HBase RPC client throws an exception indicated
- * by exceptionName with the stackTrace.
- */
-message RpcException {
-  /** Class name of the exception thrown from the server */
-  required string exceptionName = 1;
-
-  /** Exception stack trace from the server side */
+// At the RPC layer, this message is used to carry
+// the server side exception to the RPC client.
+message ExceptionResponse {
+  // Class name of the exception thrown from the server
+  optional string exceptionClassName = 1;
+  // Exception stack trace from the server side
   optional string stackTrace = 2;
+  // Optional hostname.  Filled in for some exceptions such as region moved
+  // where exception gives clue on where the region may have moved.
+  optional string hostname = 3;
+  optional int32 port = 4;
+  // Set if we are NOT to retry on receipt of this exception
+  optional bool doNotRetry = 5;
+}
+
+// Header sent making a request.
+message RequestHeader {
+  // Monotonically increasing callId to keep track of RPC requests and their response
+  optional uint32 callId = 1;
+  optional RPCTInfo traceInfo = 2;
+  optional string methodName = 3;
+  // If true, then a pb Message param follows.
+  optional bool requestParam = 4;
+  // If present, then an encoded data block follows.
+  optional CellBlockMeta cellBlockMeta = 5; 
+  // TODO: Have client specify priority
+}
+
+message ResponseHeader {
+  optional uint32 callId = 1;
+  // If present, then request threw an exception and no response message (else we presume one)
+  optional ExceptionResponse exception = 2;
+  // If present, then an encoded data block follows.
+  optional CellBlockMeta cellBlockMeta = 3; 
 }
