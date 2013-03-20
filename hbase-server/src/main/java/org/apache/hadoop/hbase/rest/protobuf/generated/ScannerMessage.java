@@ -43,6 +43,10 @@ public final class ScannerMessage {
     // optional string filter = 8;
     boolean hasFilter();
     String getFilter();
+    
+    // optional int32 caching = 9;
+    boolean hasCaching();
+    int getCaching();
   }
   public static final class Scanner extends
       com.google.protobuf.GeneratedMessage
@@ -179,6 +183,16 @@ public final class ScannerMessage {
       }
     }
     
+    // optional int32 caching = 9;
+    public static final int CACHING_FIELD_NUMBER = 9;
+    private int caching_;
+    public boolean hasCaching() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    public int getCaching() {
+      return caching_;
+    }
+    
     private void initFields() {
       startRow_ = com.google.protobuf.ByteString.EMPTY;
       endRow_ = com.google.protobuf.ByteString.EMPTY;
@@ -188,6 +202,7 @@ public final class ScannerMessage {
       endTime_ = 0L;
       maxVersions_ = 0;
       filter_ = "";
+      caching_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -224,6 +239,9 @@ public final class ScannerMessage {
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeBytes(8, getFilterBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeInt32(9, caching_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -270,6 +288,10 @@ public final class ScannerMessage {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(8, getFilterBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(9, caching_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -411,6 +433,8 @@ public final class ScannerMessage {
         bitField0_ = (bitField0_ & ~0x00000040);
         filter_ = "";
         bitField0_ = (bitField0_ & ~0x00000080);
+        caching_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
       
@@ -482,6 +506,10 @@ public final class ScannerMessage {
           to_bitField0_ |= 0x00000040;
         }
         result.filter_ = filter_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.caching_ = caching_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -528,6 +556,9 @@ public final class ScannerMessage {
         }
         if (other.hasFilter()) {
           setFilter(other.getFilter());
+        }
+        if (other.hasCaching()) {
+          setCaching(other.getCaching());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -598,6 +629,11 @@ public final class ScannerMessage {
             case 66: {
               bitField0_ |= 0x00000080;
               filter_ = input.readBytes();
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000100;
+              caching_ = input.readInt32();
               break;
             }
           }
@@ -825,6 +861,27 @@ public final class ScannerMessage {
         onChanged();
       }
       
+      // optional int32 caching = 9;
+      private int caching_ ;
+      public boolean hasCaching() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public int getCaching() {
+        return caching_;
+      }
+      public Builder setCaching(int value) {
+        bitField0_ |= 0x00000100;
+        caching_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearCaching() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        caching_ = 0;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.Scanner)
     }
     
@@ -851,11 +908,11 @@ public final class ScannerMessage {
   static {
     java.lang.String[] descriptorData = {
       "\n\024ScannerMessage.proto\022/org.apache.hadoo" +
-      "p.hbase.rest.protobuf.generated\"\224\001\n\007Scan" +
+      "p.hbase.rest.protobuf.generated\"\245\001\n\007Scan" +
       "ner\022\020\n\010startRow\030\001 \001(\014\022\016\n\006endRow\030\002 \001(\014\022\017\n" +
       "\007columns\030\003 \003(\014\022\r\n\005batch\030\004 \001(\005\022\021\n\tstartTi" +
       "me\030\005 \001(\003\022\017\n\007endTime\030\006 \001(\003\022\023\n\013maxVersions" +
-      "\030\007 \001(\005\022\016\n\006filter\030\010 \001(\t"
+      "\030\007 \001(\005\022\016\n\006filter\030\010 \001(\t\022\017\n\007caching\030\t \001(\005"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -867,7 +924,7 @@ public final class ScannerMessage {
           internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Scanner_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Scanner_descriptor,
-              new java.lang.String[] { "StartRow", "EndRow", "Columns", "Batch", "StartTime", "EndTime", "MaxVersions", "Filter", },
+              new java.lang.String[] { "StartRow", "EndRow", "Columns", "Batch", "StartTime", "EndTime", "MaxVersions", "Filter", "Caching", },
               org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner.class,
               org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner.Builder.class);
           return null;

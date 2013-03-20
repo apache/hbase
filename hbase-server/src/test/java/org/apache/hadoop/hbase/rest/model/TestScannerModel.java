@@ -41,21 +41,23 @@ public class TestScannerModel extends TestCase {
   private static final byte[] COLUMN2 = Bytes.toBytes("column2:foo");
   private static final long START_TIME = 1245219839331L;
   private static final long END_TIME = 1245393318192L;
+  private static final int CACHING = 1000;
   private static final int BATCH = 100;
 
   private static final String AS_XML =
     "<Scanner startTime=\"1245219839331\"" +
-      " startRow=\"YWJyYWNhZGFicmE=\"" + 
+      " startRow=\"YWJyYWNhZGFicmE=\"" +
       " endTime=\"1245393318192\"" +
       " endRow=\"enp5eng=\"" +
-      " batch=\"100\">" +
+      " batch=\"100\"" +
+      " caching=\"1000\">" +
         "<column>Y29sdW1uMQ==</column>" +
         "<column>Y29sdW1uMjpmb28=</column>" +
       "</Scanner>";
 
-  private static final String AS_PB = 
-    "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mf" +
-    "JA==";
+  private static final String AS_PB =
+    "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9" +
+    "vIGQo47qL554kMLDi57mfJDj/////B0joBw==";
 
   private JAXBContext context;
 
@@ -73,6 +75,7 @@ public class TestScannerModel extends TestCase {
     model.setStartTime(START_TIME);
     model.setEndTime(END_TIME);
     model.setBatch(BATCH);
+    model.setCaching(CACHING);
     return model;
   }
 
@@ -114,6 +117,7 @@ public class TestScannerModel extends TestCase {
     assertEquals(model.getStartTime(), START_TIME);
     assertEquals(model.getEndTime(), END_TIME);
     assertEquals(model.getBatch(), BATCH);
+    assertEquals(model.getCaching(), CACHING);
   }
 
   public void testBuildModel() throws Exception {
@@ -127,6 +131,5 @@ public class TestScannerModel extends TestCase {
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }
-
 }
 

@@ -26,4 +26,5 @@ message Scanner {
   optional int64 endTime = 6;
   optional int32 maxVersions = 7;
   optional string filter = 8;
+  optional int32 caching = 9;
 }
