@@ -3733,6 +3733,8 @@ See the HTrace <filename>README</filename> for more information on Samplers.
 
   </appendix>
 
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="rpc.xml" />
+
   <index xml:id="book_index">
   <title>Index</title>
   </index>
