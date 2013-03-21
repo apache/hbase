@@ -309,9 +309,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
         HFile.preadTimeNano.addAndGet(deltaNs);
         HFile.preadOps.incrementAndGet();
       }
-      if (obtainedFromCache != null) {
-        obtainedFromCache.set(false);
-      }
       getSchemaMetrics().updateOnCacheMiss(blockCategory, isCompaction,
           TimeUnit.NANOSECONDS.toMillis(deltaNs));
 
