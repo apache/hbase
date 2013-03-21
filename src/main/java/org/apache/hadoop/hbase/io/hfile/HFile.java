@@ -265,7 +265,6 @@ public class HFile {
     protected Path path;
     protected FSDataOutputStream ostream;
     protected int blockSize = HColumnDescriptor.DEFAULT_BLOCKSIZE;
-    protected int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
     protected Compression.Algorithm compression =
         HFile.DEFAULT_COMPRESSION_ALGORITHM;
     protected HFileDataBlockEncoder encoder = NoOpDataBlockEncoder.INSTANCE;
@@ -333,7 +332,7 @@ public class HFile {
       }
       if (path != null) {
         ostream = AbstractHFileWriter.createOutputStream(conf, fs, path,
-            bytesPerChecksum, favoredNodes);
+            HFile.getBytesPerChecksum(conf, fs.getConf()), favoredNodes);
       }
       return createWriter();
     }

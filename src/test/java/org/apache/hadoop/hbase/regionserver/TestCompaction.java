@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
@@ -53,6 +54,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+
 
 
 /**
@@ -189,6 +192,37 @@ public class TestCompaction extends HBaseTestCase {
     for (Entry<Store, HFileDataBlockEncoder> entry :
         replaceBlockCache.entrySet()) {
       entry.getKey().setDataBlockEncoderInTest(entry.getValue());
+    }
+  }
+  /**
+   * Tests the fileChecksum for the HFile created via normal operations and
+   * compactions.
+   * @throws IOException
+   */
+
+  public void testFileCheckSumAfterCompaction() throws IOException {
+    conf.setInt("hfile.io.bytes.per.checksum", 4096);
+
+    createStoreFile(r);
+    for (int i = 0; i < compactionThreshold; i++) {
+      createStoreFile(r);
+    }
+    // Major compact.
+    r.compactStores(true);
+
+    createStoreFile(r);
+    Set<byte[]> columnFamilies = r.getStores().keySet();
+    int nCF = columnFamilies.size();
+    List<String> allStoreFiles = r.getStoreFileList(columnFamilies.toArray(new byte[nCF][]));
+
+    // compacted file + the new store file
+    assertEquals(2, allStoreFiles.size());
+
+    for (String f : allStoreFiles) {
+      Path filePath = new Path(f);
+      String checkSumAlgo = ((DistributedFileSystem)this.cluster.getFileSystem()).
+          getFileChecksum(filePath).getAlgorithmName();
+      assertTrue(checkSumAlgo.contains("4096CRC32"));
     }
   }
 
