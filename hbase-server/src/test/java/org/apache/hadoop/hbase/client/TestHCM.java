@@ -424,7 +424,7 @@ public class TestHCM {
     assertNotNull(location);
 
     HRegionLocation anySource = new HRegionLocation(location.getRegionInfo(), new ServerName(
-        location.getHostname(), location.getPort() - 1, 0L), HConstants.NO_SEQNUM);
+        location.getHostname(), location.getPort() - 1, 0L));
 
     // Same server as already in cache reporting - overwrites any value despite seqNum.
     int nextPort = location.getPort() + 1;

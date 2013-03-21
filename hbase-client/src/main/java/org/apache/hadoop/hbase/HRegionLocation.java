@@ -40,6 +40,10 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   // Cache of the hostname + port
   private String cachedHostnamePort;
 
+  public HRegionLocation(HRegionInfo regionInfo, ServerName serverName) {
+    this(regionInfo, serverName, HConstants.NO_SEQNUM);
+  }
+
   public HRegionLocation(HRegionInfo regionInfo, ServerName serverName, long seqNum) {
     this.regionInfo = regionInfo;
     this.serverName = serverName;

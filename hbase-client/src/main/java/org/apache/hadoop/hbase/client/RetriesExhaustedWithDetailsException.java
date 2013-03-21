@@ -121,18 +121,22 @@ extends RetriesExhaustedException {
 
   public String getExhaustiveDescription() {
     StringWriter errorWriter = new StringWriter();
+    PrintWriter pw = new PrintWriter(errorWriter);
     for (int i = 0; i < this.exceptions.size(); ++i) {
       Throwable t = this.exceptions.get(i);
       Row action = this.actions.get(i);
       String server = this.hostnameAndPort.get(i);
-      errorWriter.append("Error #" + i + " from [" + server + "] for ["
+      pw.append("Error");
+      if (this.exceptions.size() > 1) {
+        pw.append(" #" + i);
+      }
+      pw.append(" from [" + server + "] for ["
         + ((action == null) ? "unknown key" : Bytes.toStringBinary(action.getRow())) + "]");
       if (t != null) {
-        PrintWriter pw = new PrintWriter(errorWriter);
         t.printStackTrace(pw);
-        pw.flush();
       }
     }
+    pw.flush();
     return errorWriter.toString();
   }
 

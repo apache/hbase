@@ -178,7 +178,7 @@ public class TestMetaReaderEditorNoCluster {
       // Fix the location lookup so it 'works' though no network.  First
       // make an 'any location' object.
       final HRegionLocation anyLocation =
-        new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, sn, HConstants.NO_SEQNUM);
+        new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, sn);
       // Return the any location object when locateRegion is called in HTable
       // constructor and when its called by ServerCallable (it uses getRegionLocation).
       // The ugly format below comes of 'Important gotcha on spying real objects!' from
