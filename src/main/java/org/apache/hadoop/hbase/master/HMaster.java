@@ -47,7 +47,6 @@ import com.google.common.collect.MutableClassToInstanceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -108,7 +107,6 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -205,8 +203,11 @@ Server {
   private volatile boolean abort = false;
   // flag set after we become the active master (used for testing)
   private volatile boolean isActiveMaster = false;
-  // flag set after we complete initialization once active (used for testing)
-  private volatile boolean initialized = false;
+
+  // flag set after we complete initialization once active,
+  // it is not private since it's used in unit tests
+  volatile boolean initialized = false;
+
   // flag set after we complete assignRootAndMeta.
   private volatile boolean serverShutdownHandlerEnabled = false;
 
@@ -1186,6 +1187,7 @@ Server {
     RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
     
     try {
+      checkInitialized();
       if (this.cpHost != null) {
         if (this.cpHost.preMove(p.getFirst(), p.getSecond(), dest)) {
           return;
@@ -1202,7 +1204,6 @@ Server {
       ure.initCause(ioe);
       throw ure;
     }
-
   }
 
   public void createTable(HTableDescriptor hTableDescriptor,
