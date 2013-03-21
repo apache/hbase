@@ -38,9 +38,45 @@
       For more background on how we arrived at this spec., see
       <link xlink:href="https://docs.google.com/document/d/1WCKwgaLDqBw2vpux0jPsAu2WPTRISob7HGCO8YhfDTA/edit#">HBase RPC: WIP</link></para>
   <para/>
+  <section><title>Goals</title>
+      <para>
+      <orderedlist>
+          <listitem>
+              <para>A wire-format we can evolve</para>
+          </listitem>
+          <listitem>
+              <para>A format that does not require our rewriting server core or
+                  radically changing its current architecture (for later).</para>
+          </listitem>
+      </orderedlist>
+  </para>
+  </section>
+  <section><title>TODO</title>
+      <para>
+      <orderedlist>
+          <listitem>
+              <para>List of problems with currently specified format and where
+                  we would like to go in a version2, etc. For example, what would we
+                  have to change if anything to move server async or to support
+                  streaming/chunking?</para>
+          </listitem>
+          <listitem>
+              <para>Diagram on how it works</para>
+          </listitem>
+          <listitem>
+              <para>A grammar that succinctly describes the wire-format. Currently
+                  we have these words and the content of the rpc protobuf idl but
+                  a grammar for the back and forth would help with groking rpc.  Also,
+                  a little state machine on client/server interactions would help
+              with understanding (and ensuring correct implementation).</para>
+          </listitem>
+      </orderedlist>
+  </para>
+  </section>
   <section><title>RPC</title>
   <para>The client will send setup information on connection establish.
       Thereafter, the client invokes methods against the remote server sending a protobuf Message and receiving a protobuf Message in response.
+      Communication is synchronous.  All back and forth is preceded by an int that has the total length of the request/response.
       Optionally, Cells(KeyValues) can be passed outside of protobufs in follow-behind Cell blocks (because
       <link xlink:href="https://docs.google.com/document/d/1WEtrq-JTIUhlnlnvA0oYRLp0F8MKpEBeBSCFcQiacdw/edit#">we can’t protobuf megabytes of KeyValues</link> or Cells).
       These CellBlocks are encoded and optionally compressed.</para>
@@ -67,13 +103,16 @@
           CellBlock encoders and compressors are for the life of the connection.
           CellBlock encoders implement org.apache.hadoop.hbase.codec.Codec.
           CellBlocks may then also be compressed.
-          Compressors implement org.apache.hadoop.io.compress.CompressionCodec.</para>
+          Compressors implement org.apache.hadoop.io.compress.CompressionCodec.
+          This protobuf is written using writeDelimited so is prefaced by a pb varint
+          with its serialized length</para>
   </section>
   </section><!--Client-->
 
   <section><title>Server</title>
       <para>After client sends preamble and connection header,
-          server does NOT respond if successful connection setup.  No response means server is READY to accept requests and to give out response.
+          server does NOT respond if successful connection setup.
+          No response means server is READY to accept requests and to give out response.
       If the version or authentication in the preamble is not agreeable or the server has trouble parsing the preamble,
       it will throw a org.apache.hadoop.hbase.ipc.FatalConnectionException explaining the error and will then disconnect.
       If the client in the connection header -- i.e. the protobuf’d Message that comes after the connection preamble -- asks for for a
@@ -84,15 +123,18 @@
   <section><title>Request</title>
       <para>After a Connection has been set up, client makes requests.  Server responds.</para>
       <para>A request is made up of a protobuf RequestHeader followed by a protobuf Message parameter.
-          The header includes method name and optionally, metadata on the optional CellBlock that may be following.
+          The header includes the method name and optionally, metadata on the optional CellBlock that may be following.
           The parameter type suits the method being invoked: i.e. if we are doing a getRegionInfo request,
           the protobuf Message param will be an instance of GetRegionInfoRequest.
           The response will be a GetRegionInfoResponse.
           The CellBlock is optionally used ferrying the bulk of the RPC data: i.e Cells/KeyValues.</para>
   <para/>
   <section><title>Request Parts</title>
+      <section><title>&lt;Total Length&gt;</title>
+          <para>The request is prefaced by an int that holds the total length of what follows.</para>
+      </section>
       <section><title>&lt;Protobuf RequestHeader Message&gt;</title>
-          <para>Will have call.id, trace.id, and method name, etc. including optional Metadata on the Cell block if one is following.
+          <para>Will have call.id, trace.id, and method name, etc. including optional Metadata on the Cell block IFF one is following.
               Data is protobuf’d inline in this pb Message or optionally comes in the following CellBlock</para>
       </section>
       <section><title>&lt;Protobuf Param Message&gt;</title>
@@ -109,8 +151,11 @@
       <para>Same as Request, it is a protobuf ResponseHeader followed by a protobuf Message response where the Message response type suits the method invoked.
           Bulk of the data may come in a following CellBlock.</para>
   <section><title>Response Parts</title>
+      <section><title>&lt;Total Length&gt;</title>
+          <para>The response is prefaced by an int that holds the total length of what follows.</para>
+      </section>
           <section><title>&lt;Protobuf ResponseHeader Message&gt;</title>
-  <para>Will have call.id, etc. Will include exception if failed processing.  Optionally includes metadata on optional, following CellBlock.</para>
+  <para>Will have call.id, etc. Will include exception if failed processing.  Optionally includes metadata on optional, IFF there is a CellBlock following.</para>
   </section>
 
   <section><title>&lt;Protobuf Response Message&gt;</title>
