@@ -829,8 +829,10 @@ public class HConnectionManager {
           // region at the same time. One will go do the find while the
           // second waits. The second thread will not do find.
 
-          if (!useCache || rootRegionLocation == null) {
+          if (!useCache || rootRegionLocation == null
+              || inFastFailMode(this.rootRegionLocation.getServerAddress())) {
             this.rootRegionLocation = locateRootRegion();
+            LOG.info("Updated rootRegionLocation from ZK to : " + this.rootRegionLocation);
           }
           return this.rootRegionLocation;
         }
