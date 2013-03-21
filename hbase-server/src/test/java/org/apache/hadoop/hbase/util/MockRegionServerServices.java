@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -128,6 +130,11 @@ public class MockRegionServerServices implements RegionServerServices {
 
   public RegionServerAccounting getRegionServerAccounting() {
     return null;
+  }
+
+  @Override
+  public TableLockManager getTableLockManager() {
+    return new NullTableLockManager();
   }
 
   @Override

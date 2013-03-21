@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.zookeeper.KeeperException;
 
@@ -58,6 +59,11 @@ public interface RegionServerServices extends OnlineRegions {
    * @return the RegionServerAccounting for this Region Server
    */
   public RegionServerAccounting getRegionServerAccounting();
+
+  /**
+   * @return RegionServer's instance of {@link TableLockManager}
+   */
+  public TableLockManager getTableLockManager();
 
   /**
    * Tasks to perform after region open to complete deploy of region on

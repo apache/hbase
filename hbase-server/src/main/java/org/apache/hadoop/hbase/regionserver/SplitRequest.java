@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
@@ -38,6 +39,7 @@ class SplitRequest implements Runnable {
   private final HRegion parent;
   private final byte[] midKey;
   private final HRegionServer server;
+  private TableLock tableLock;
 
   SplitRequest(HRegion region, byte[] midKey, HRegionServer hrs) {
     Preconditions.checkNotNull(hrs);
@@ -61,6 +63,18 @@ class SplitRequest implements Runnable {
     try {
       final long startTime = System.currentTimeMillis();
       SplitTransaction st = new SplitTransaction(parent, midKey);
+
+      //acquire a shared read lock on the table, so that table schema modifications
+      //do not happen concurrently
+      tableLock = server.getTableLockManager().readLock(parent.getTableDesc().getName()
+          , "SPLIT_REGION:" + parent.getRegionNameAsString());
+      try {
+        tableLock.acquire();
+      } catch (IOException ex) {
+        tableLock = null;
+        throw ex;
+      }
+
       // If prepare does not return true, for some reason -- logged inside in
       // the prepare call -- we are not ready to split just now. Just return.
       if (!st.prepare()) return;
@@ -109,6 +123,18 @@ class SplitRequest implements Runnable {
           LOG.error("Split failed " + this,
               RemoteExceptionHandler.checkIOException(io));
         }
+      }
+      releaseTableLock();
+    }
+  }
+
+  protected void releaseTableLock() {
+    if (this.tableLock != null) {
+      try {
+        this.tableLock.release();
+      } catch (IOException ex) {
+        LOG.warn("Could not release the table lock", ex);
+        //TODO: if we get here, and not abort RS, this lock will never be released
       }
     }
   }
