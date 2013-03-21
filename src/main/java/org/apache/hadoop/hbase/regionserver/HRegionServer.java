@@ -910,39 +910,37 @@ public class HRegionServer implements HRegionInterface,
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
 
-  /*
+  /**
    * Add to the passed <code>msgs</code> messages to pass to the master.
+   *
    * @param msgs Current outboundMsgs array; we'll add messages to this List.
    */
-  // Amit: Warning n^2 loop. Can bring it down to O(n) using a hash map.
-  private void addOutboundMsgs(final List<HMsg> msgs) {
+  private void addOutboundMsgs(List<HMsg> msgs) {
     if (msgs.isEmpty()) {
       this.outboundMsgs.drainTo(msgs);
       return;
     }
-    OUTER: for (HMsg m: this.outboundMsgs) {
-      for (HMsg mm: msgs) {
-        // Be careful don't add duplicates.
-        if (mm.equals(m)) {
-          continue OUTER;
-        }
+    Set<HMsg> msgsSet = new HashSet<HMsg>(msgs);
+    for (HMsg m: this.outboundMsgs) {
+      if (!msgsSet.contains(m)) {
+        msgs.add(m);
+        msgsSet.add(m);
       }
-      msgs.add(m);
     }
   }
 
-  /*
+  /**
    * Remove from this.outboundMsgs those messsages we sent the master.
+   *
    * @param msgs Messages we sent the master.
    */
   private void updateOutboundMsgs(final List<HMsg> msgs) {
     if (msgs.isEmpty()) return;
-    for (HMsg m: this.outboundMsgs) {
-      for (HMsg mm: msgs) {
-        if (mm.equals(m)) {
-          this.outboundMsgs.remove(m);
-          break;
-        }
+    Set<HMsg> msgsSet = new HashSet<HMsg>(msgs);
+    for (Iterator<HMsg> iterator = this.outboundMsgs.iterator(); iterator.hasNext();) {
+      HMsg m = (HMsg) iterator.next();
+      if (msgsSet.contains(m)){
+        iterator.remove();
       }
     }
   }
