@@ -71,6 +71,19 @@ implements Configurable {
   /** The number of rows for caching that will be passed to scanners. */
   public static final String SCAN_CACHEDROWS = "hbase.mapreduce.scan.cachedrows";
 
+  /** Enable scan prefetch on the server side. */
+  public static final String SCAN_PREFETCH = "hbase.mapreduce.scan.prefetch";
+
+  /** Set the maximum response size for a scan call. This will help in handling large rows on
+   * hbase side by returning partial rows upto the specified limit */
+  public static final String SCAN_MAX_RESPONSE_SIZE = "hbase.mapreduce.scan.maxresponsesize";
+
+  /** Allow partial rows */
+  public static final String SCAN_PARTIAL_ROWS = "hbase.mapreduce.scan.partialrows";
+
+  /** Set the batch size */
+  public static final String SCAN_BATCH_SIZE = "hbase.mapreduce.scan.batchsize";
+
   /** Start row of the scan */
   public static final String SCAN_START_ROW = "hbase.mapreduce.scan.startrow";
 
@@ -163,6 +176,22 @@ implements Configurable {
           scan.setCaching(Integer.parseInt(conf.get(SCAN_CACHEDROWS)));
         }
 
+        // Set scan prefetch false by default;
+        scan.setServerPrefetching(conf.getBoolean(SCAN_PREFETCH, false));
+
+        int batchSize = conf.getInt(SCAN_BATCH_SIZE, -1);
+        if (batchSize > 0) {
+          scan.setBatch(batchSize);
+        }
+
+        int maxResponseSize = conf.getInt(SCAN_MAX_RESPONSE_SIZE, -1);
+        boolean partialRows = conf.getBoolean(SCAN_PARTIAL_ROWS, false);
+        if (maxResponseSize > 0) {
+          LOG.info("Setting max response size: " + maxResponseSize +
+              " partial rows: " + partialRows);
+          scan.setCaching(maxResponseSize, partialRows);
+        }
+
         // false by default, full table scans generate too much BC churn
         scan.setCacheBlocks((conf.getBoolean(SCAN_CACHEBLOCKS, false)));
 
@@ -177,6 +206,13 @@ implements Configurable {
           LOG.info("Setting end row to: " + endRow);
           scan.setStopRow(Bytes.toBytes(endRow));
         }
+
+        LOG.info("Scan config:" +
+            " Scan Prefetch=" + scan.getServerPrefetching() +
+            " Cached Rows=" + scan.getCaching() +
+            " Batch Size=" + scan.getBatch() +
+            " Max response Size=" + scan.getMaxResponseSize());
+
       } catch (Exception e) {
         LOG.error(StringUtils.stringifyException(e));
         throw new RuntimeException(e);
