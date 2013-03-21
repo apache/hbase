@@ -696,7 +696,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0-beta-3</version>
+        <version>1.0</version>
         <inherited>false</inherited>
         <executions>
           <execution>
@@ -710,12 +710,12 @@
           <transformationSets>
             <transformationSet>
               <!--Reaching down into sub-module for docs-->
-              <dir>${basedir}/hbase-server/src/main/resources/</dir>
+              <dir>${basedir}/hbase-common/src/main/resources/</dir>
               <includes>
                 <include>hbase-default.xml</include>
               </includes>
               <stylesheet>${basedir}/src/xslt/configuration_to_docbook_section.xsl</stylesheet>
-              <outputDir>${basedir}/target/site</outputDir>
+              <outputDir>${basedir}/target/docbkx</outputDir>
             </transformationSet>
           </transformationSets>
         </configuration>
