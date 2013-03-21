@@ -97,7 +97,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    */
   public HServerAddress(String bindAddress, int port) {
     this.address = new InetSocketAddress(bindAddress, port);
-    this.stringValue = bindAddress + ":" + port;
+    this.stringValue = getHostAddressWithPort();
     checkBindAddressCanBeResolved();
   }
 
@@ -212,7 +212,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
       stringValue = null;
     } else {
       address = new InetSocketAddress(bindAddress, port);
-      stringValue = bindAddress + ":" + port;
+      stringValue = getHostAddressWithPort();
       checkBindAddressCanBeResolved();
     }
   }

@@ -22,6 +22,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.util.Writables;
@@ -97,6 +102,40 @@ public class TestHServerInfo {
     int compare2 = hsi2.compareTo(hsi1);
     assertTrue((compare1 > 0)? compare2 < 0: compare2 > 0);
   }
+
+  @Test
+  public void testHostNameToString() throws IOException {
+
+    // Constructor test
+    HServerAddress hsa1 = new HServerAddress("localhost", 1234);
+    assertTrue(hsa1.toString().equals("127.0.0.1:1234"));
+
+    // Writable
+    File tempFile = new File("test.out");
+    tempFile.createNewFile();
+    assertTrue(tempFile.exists());
+
+    FileOutputStream fos = new FileOutputStream("test.out");
+
+    DataOutputStream dos = new DataOutputStream(fos);
+    dos.writeUTF("localhost");
+    dos.writeInt(1234);
+    dos.flush();
+    dos.close();
+
+    FileInputStream fis = new FileInputStream("test.out");
+    DataInputStream dis = new DataInputStream(fis);
+
+    HServerAddress hsa2 = new HServerAddress();
+    hsa2.readFields(dis);
+
+    assertTrue(hsa2.toString().equals("127.0.0.1:1234"));
+    dis.close();
+
+    assertTrue(tempFile.delete());
+
+   }
+
 
   @Test
   public void testFromServerName() {
