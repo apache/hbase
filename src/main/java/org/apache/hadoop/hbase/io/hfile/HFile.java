@@ -166,6 +166,25 @@ public class HFile {
   static final AtomicInteger preadOps = new AtomicInteger();
   static final AtomicLong preadTimeNano = new AtomicLong();
 
+  //For measuring latency of pread during compactions
+  static final AtomicInteger preadCompactionOps = new AtomicInteger();
+  static final AtomicLong preadCompactionTimeNano = new AtomicLong();
+
+  /**
+   * Get the number of positional read operations during compaction
+   * and reset it to zero.
+   */
+  public static final int getPreadCompactionOpsAndReset() {
+    return preadCompactionOps.getAndSet(0);
+  }
+
+  /**
+   * Get the total time of positional reads during compaction in milliseconds and reset it to zero.
+   */
+  public static final long getPreadCompactionTimeMsAndReset() {
+    return preadCompactionTimeNano.getAndSet(0) / 1000000;
+  }
+
   /**
    * Get the number of positional read operations and reset it to zero.
    */

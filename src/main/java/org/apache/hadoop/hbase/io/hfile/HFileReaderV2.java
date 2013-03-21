@@ -301,9 +301,17 @@ public class HFileReaderV2 extends AbstractHFileReader {
       BlockCategory blockCategory = hfileBlock.getBlockType().getCategory();
 
       long deltaNs = System.nanoTime() - startTimeNs;
-      HFile.preadTimeNano.addAndGet(deltaNs);
-      HFile.preadOps.incrementAndGet();
 
+      if (isCompaction) {
+        HFile.preadCompactionTimeNano.addAndGet(deltaNs);
+        HFile.preadCompactionOps.incrementAndGet();
+      } else {
+        HFile.preadTimeNano.addAndGet(deltaNs);
+        HFile.preadOps.incrementAndGet();
+      }
+      if (obtainedFromCache != null) {
+        obtainedFromCache.set(false);
+      }
       getSchemaMetrics().updateOnCacheMiss(blockCategory, isCompaction,
           TimeUnit.NANOSECONDS.toMillis(deltaNs));
 

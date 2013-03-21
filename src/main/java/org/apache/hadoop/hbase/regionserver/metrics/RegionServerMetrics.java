@@ -174,6 +174,13 @@ public class RegionServerMetrics implements Updater {
       new MetricsTimeVaryingRate("fsReadLatency", registry);
 
   /**
+   * filesystem read latency for positional read operations during
+   * compactions
+   */
+  public final MetricsTimeVaryingRate fsCompactionReadLatency =
+      new MetricsTimeVaryingRate("fsCompactionReadLatency", registry);
+
+  /**
    * filesystem write latency
    */
   public final MetricsTimeVaryingRate fsWriteLatency =
@@ -335,6 +342,9 @@ public class RegionServerMetrics implements Updater {
       // HFile metrics
       collectHFileMetric(fsReadLatency,
           HFile.getPreadOpsAndReset(), HFile.getPreadTimeMsAndReset());
+      collectHFileMetric(fsCompactionReadLatency,
+          HFile.getPreadCompactionOpsAndReset(),
+          HFile.getPreadCompactionTimeMsAndReset());
 
       /* NOTE: removed HFile write latency.  2 reasons:
        * 1) Mixing HLog latencies are far higher priority since they're
@@ -352,6 +362,7 @@ public class RegionServerMetrics implements Updater {
 
       // push the result
       this.fsReadLatency.pushMetric(this.metricsRecord);
+      this.fsCompactionReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
       this.fsWriteSize.pushMetric(this.metricsRecord);
       this.fsSyncLatency.pushMetric(this.metricsRecord);
@@ -409,6 +420,7 @@ public class RegionServerMetrics implements Updater {
     this.flushSize.resetMinMaxAvg();
     this.atomicIncrementTime.resetMinMax();
     this.fsReadLatency.resetMinMax();
+    this.fsCompactionReadLatency.resetMinMax();
     this.fsWriteLatency.resetMinMax();
     this.fsWriteSize.resetMinMax();
     this.fsSyncLatency.resetMinMax();

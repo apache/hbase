@@ -320,8 +320,13 @@ public class HFileReaderV1 extends AbstractHFileReader {
       hfileBlock.expectType(BlockType.DATA);
 
       long delta = System.nanoTime() - startTimeNs;
-      HFile.preadTimeNano.addAndGet(delta);
-      HFile.preadOps.incrementAndGet();
+      if (isCompaction) {
+        HFile.preadCompactionTimeNano.addAndGet(delta);
+        HFile.preadCompactionOps.incrementAndGet();
+      } else {
+        HFile.preadTimeNano.addAndGet(delta);
+        HFile.preadOps.incrementAndGet();
+      }
       getSchemaMetrics().updateOnCacheMiss(BlockCategory.DATA, isCompaction,
           delta);
 
