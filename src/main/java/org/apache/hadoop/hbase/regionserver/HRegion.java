@@ -3221,7 +3221,9 @@ public class HRegion implements HeapSize {
         prefetchScanFuture = HRegionServer.scanPrefetchThreadPool.submit(callable);
       }
       rowReadCnt.addAndGet(scanResult.outResults.length);
-      return scanResult.outResults;
+      return scanResult.outResults == null || 
+      		(isFilterDone() && scanResult.outResults.length == 0) ?
+          null : scanResult.outResults;
     }
     
     /**
