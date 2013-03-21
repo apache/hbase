@@ -1529,20 +1529,19 @@ public class AssignmentManager extends ZooKeeperListener {
   private void unassign(final HRegionInfo region,
       final RegionState state, final int versionOfClosingNode,
       final ServerName dest, final boolean transitionInZK) {
-    // Send CLOSE RPC
     ServerName server = state.getServerName();
-    // ClosedRegionhandler can remove the server from this.regions
-    if (!serverManager.isServerOnline(server)) {
-      if (transitionInZK) {
-        // delete the node. if no node exists need not bother.
-        deleteClosingOrClosedNode(region);
-      }
-      regionOffline(region);
-      return;
-    }
-
     for (int i = 1; i <= this.maximumAttempts; i++) {
+      // ClosedRegionhandler can remove the server from this.regions
+      if (!serverManager.isServerOnline(server)) {
+        if (transitionInZK) {
+          // delete the node. if no node exists need not bother.
+          deleteClosingOrClosedNode(region);
+        }
+        regionOffline(region);
+        return;
+      }
       try {
+        // Send CLOSE RPC
         if (serverManager.sendRegionClose(server, region,
           versionOfClosingNode, dest, transitionInZK)) {
           LOG.debug("Sent CLOSE to " + server + " for region " +
@@ -1557,7 +1556,8 @@ public class AssignmentManager extends ZooKeeperListener {
         if (t instanceof RemoteException) {
           t = ((RemoteException)t).unwrapRemoteException();
         }
-        if (t instanceof NotServingRegionException) {
+        if (t instanceof NotServingRegionException
+            || t instanceof RegionServerStoppedException) {
           if (transitionInZK) {
             deleteClosingOrClosedNode(region);
           }
@@ -1573,6 +1573,10 @@ public class AssignmentManager extends ZooKeeperListener {
           + " of " + this.maximumAttempts, t);
         // Presume retry or server will expire.
       }
+    }
+    // Run out of attempts
+    if (!tomActivated) {
+      regionStates.updateRegionState(region, RegionState.State.FAILED_CLOSE);
     }
   }
 
@@ -1597,13 +1601,15 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       case CLOSING:
       case PENDING_CLOSE:
+      case FAILED_CLOSE:
         unassign(region, state, -1, null, false);
+        state = regionStates.getRegionState(region);
+        if (state.isOffline()) break;
+      case FAILED_OPEN:
       case CLOSED:
-        if (!state.isOffline()) {
-          LOG.debug("Forcing OFFLINE; was=" + state);
-          state = regionStates.updateRegionState(
-            region, RegionState.State.OFFLINE);
-        }
+        LOG.debug("Forcing OFFLINE; was=" + state);
+        state = regionStates.updateRegionState(
+          region, RegionState.State.OFFLINE);
       case OFFLINE:
         break;
       default:
@@ -1637,6 +1643,8 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.warn("Unable to determine a plan to assign " + region);
         if (tomActivated){
           this.timeoutMonitor.setAllRegionServersOffline(true);
+        } else {
+          regionStates.updateRegionState(region, RegionState.State.FAILED_OPEN);
         }
         return;
       }
@@ -1662,6 +1670,10 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
       if (setOfflineInZK && versionOfOfflineNode == -1) {
+        LOG.warn("Unable to set offline in ZooKeeper to assign " + region);
+        if (!tomActivated) {
+          regionStates.updateRegionState(region, RegionState.State.FAILED_OPEN);
+        }
         return;
       }
       if (this.server.isStopped()) {
@@ -1740,6 +1752,9 @@ public class AssignmentManager extends ZooKeeperListener {
             LOG.warn("Failed to assign "
                 + region.getRegionNameAsString() + " since interrupted", ie);
             Thread.currentThread().interrupt();
+            if (!tomActivated) {
+              regionStates.updateRegionState(region, RegionState.State.FAILED_OPEN);
+            }
             return;
           }
         } else if (retry) {
@@ -1772,6 +1787,8 @@ public class AssignmentManager extends ZooKeeperListener {
         if (newPlan == null) {
           if (tomActivated) {
             this.timeoutMonitor.setAllRegionServersOffline(true);
+          } else {
+            regionStates.updateRegionState(region, RegionState.State.FAILED_OPEN);
           }
           LOG.warn("Unable to find a viable location to assign region " +
               region.getRegionNameAsString());
@@ -1787,6 +1804,10 @@ public class AssignmentManager extends ZooKeeperListener {
           plan = newPlan;
         }
       }
+    }
+    // Run out of attempts
+    if (!tomActivated) {
+      regionStates.updateRegionState(region, RegionState.State.FAILED_OPEN);
     }
   }
 
@@ -1914,6 +1935,10 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     if (newPlan) {
+      if (randomPlan.getDestination() == null) {
+        LOG.warn("Can't find a destination for region" + encodedName);
+        return null;
+      }
       LOG.debug("No previous transition plan was found (or we are ignoring " +
         "an existing plan) for " + region.getRegionNameAsString() +
         " so generated a random one; " + randomPlan + "; " +
@@ -2052,10 +2077,18 @@ public class AssignmentManager extends ZooKeeperListener {
           return;
         }
         state = regionStates.updateRegionState(region, RegionState.State.PENDING_CLOSE);
-      } else if (force && (state.isPendingClose() || state.isClosing())) {
+      } else if (state.isFailedOpen()) {
+        // The region is not open yet
+        regionOffline(region);
+        return;
+      } else if (force && (state.isPendingClose()
+          || state.isClosing() || state.isFailedClose())) {
         LOG.debug("Attempting to unassign region " + region.getRegionNameAsString() +
           " which is already " + state.getState()  +
           " but forcing to send a CLOSE RPC again ");
+        if (state.isFailedClose()) {
+          state = regionStates.updateRegionState(region, RegionState.State.PENDING_CLOSE);
+        }
         state.updateTimestampToNow();
       } else {
         LOG.debug("Attempting to unassign region " +
@@ -2134,15 +2167,20 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionInfo region to wait on assignment for
    * @throws InterruptedException
    */
-  public void waitForAssignment(HRegionInfo regionInfo)
+  public boolean waitForAssignment(HRegionInfo regionInfo)
       throws InterruptedException {
-    while(!this.server.isStopped() &&
-        !regionStates.isRegionAssigned(regionInfo)) {
+    while (!regionStates.isRegionAssigned(regionInfo)) {
+      if (regionStates.isRegionFailedToOpen(regionInfo)
+          || this.server.isStopped()) {
+        return false;
+      }
+
       // We should receive a notification, but it's
       //  better to have a timeout to recheck the condition here:
       //  it lowers the impact of a race condition if any
       regionStates.waitForUpdate(100);
     }
+    return true;
   }
 
   /**
@@ -2690,6 +2728,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
       case SPLIT:
       case SPLITTING:
+      case FAILED_OPEN:
+      case FAILED_CLOSE:
         break;
 
       default:
