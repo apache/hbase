@@ -1249,6 +1249,8 @@ public class ServerManager {
       }
     }
 
+    Set<HServerAddress> specialServers = this.getRootAndMetaServers();
+
     next_rack:
     for (Map.Entry<String, List<HServerInfo>> e:
       rackTimedOutServersMap.entrySet()) {
@@ -1288,6 +1290,7 @@ public class ServerManager {
       int cappedMaxServersToExpire = Math.min(maxServersToExpire,
           rackNumServersMap.get(rack) - 1);
       if (numExpired > cappedMaxServersToExpire) {
+        boolean specialServersInRack = false;
         // Too many servers are ready to be expired in this rack. We expect
         // something is wrong with the rack and not with the servers.
         // We will not expire these servers.
@@ -1303,16 +1306,25 @@ public class ServerManager {
                 si.getServerName());
             continue; //server vanished
           }
-          load.expireAfter = Long.MAX_VALUE;
+          // Let us allow RS's serving Meta regions to fast fail
+          if (specialServers.contains(si.getServerAddress())) {
+            specialServersInRack = true;
+          } else  {
+            load.expireAfter = Long.MAX_VALUE;
+          }
         }
         if (!inaccessibleRacks.contains(rack)) {
           inaccessibleRacks.add(rack);
           LOG.info("Too many servers count=" + timedOutServers.size() +
               " timed out in rack " + rack + ". Timed out Servers = " +
-              timedOutServers + ". Not expiring any, hoping for rack" +
-              " to become accessible");
+              timedOutServers +
+              (specialServersInRack? "Only failing servers with ROOT/META": "")
+              + ". Not expiring"
+              + (specialServersInRack? " the rest": " any")
+              + ", hoping for rack" + " to become accessible");
         }
-        continue next_rack;
+        if (specialServersInRack)
+          continue next_rack;
       }
       for (HServerInfo si : timedOutServers) {
         HServerLoad load = serversToLoad.get(si.getServerName());
@@ -1331,6 +1343,21 @@ public class ServerManager {
       }
     }
     return waitingForMoreServersInRackToTimeOut;
+  }
+
+  private Set<HServerAddress> getRootAndMetaServers() {
+    Set<HServerAddress> set = new HashSet<HServerAddress>(2);
+
+    if (master.getRegionManager() != null) { // RegionManager is initialized after ServerManager
+      set.add(master.getRegionManager().getRootRegionLocation());
+      List<MetaRegion> metaRegions = master.getRegionManager().getListOfOnlineMetaRegions();
+      for(MetaRegion metaRegion: metaRegions) {
+        set.add(metaRegion.getServer());
+      }
+    }
+
+    return set;
+
   }
 
   boolean hasBlacklistedServersInTest() {
