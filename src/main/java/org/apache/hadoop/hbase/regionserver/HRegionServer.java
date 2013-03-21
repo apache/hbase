@@ -356,6 +356,8 @@ public class HRegionServer implements HRegionInterface,
   
   private int numRowRequests = 0;
 
+  public static boolean runMetrics = true;
+
   public static long getResponseSizeLimit() {
     return responseSizeLimit;
   }
@@ -1334,14 +1336,14 @@ public class HRegionServer implements HRegionInterface,
     } 
   }
 
-  /*
-   * @param interval Interval since last time metrics were called.
-   */
   protected void doMetrics() {
-    try {
-      metrics();
-    } catch (Throwable e) {
-      LOG.warn("Failed metrics", e);
+    // for testing purposes we don't want to collect the metrics if runMetrics is false
+    if (runMetrics) {
+      try {
+        metrics();
+      } catch (Throwable e) {
+        LOG.warn("Failed metrics", e);
+      }
     }
   }
 

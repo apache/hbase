@@ -22,9 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -33,8 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
@@ -48,7 +44,6 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -219,43 +214,6 @@ public class TestRegionServerMetrics {
     }
     assertSizeMetric(tableName, cfs,
         new int[] {kvLength, kvLength, kvLength, kvLength});
-  }
-
-  @Test
-  public void testNumReadsAndWrites() throws IOException, InterruptedException{
-    testUtil.createRandomTable("NumReadsWritesTest", Arrays.asList(FAMILIES),
-        MAX_VERSIONS, NUM_COLS_PER_ROW, NUM_FLUSHES, NUM_REGIONS, 1000);
-    List<RegionServerThread> threads = testUtil.getMiniHBaseCluster()
-        .getLiveRegionServerThreads();
-    HRegionServer rs = threads.get(0).getRegionServer();
-    long preNumRead = 0;
-    long preNumWrite = 0;
-    for (HRegion region : rs.getOnlineRegions()) {
-      HRegionInfo regionInfo = region.getRegionInfo();
-      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
-        System.out.println(region.getRegionNameAsString());
-        preNumRead += region.rowReadCnt.get();
-        preNumWrite += region.rowUpdateCnt.get();
-      }
-    }
-
-    HRegion[] regions = rs.getOnlineRegionsAsArray();
-    for (int i = 0; i < regions.length; i++) {
-      Get g = new Get(Bytes.toBytes("row" + i));
-      regions[i].get(g, null);
-    }
-
-    long numRead = 0;
-    long numWrite = 0;
-    for (HRegion region : rs.getOnlineRegions()) {
-      HRegionInfo regionInfo = region.getRegionInfo();
-      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
-        numRead += region.rowReadCnt.get();
-        numWrite += region.rowUpdateCnt.get();
-      }
-    }
-    assertEquals(regions.length - 2, numRead - preNumRead);
-    assertEquals(0, numWrite - preNumWrite);
   }
 
   @Test
