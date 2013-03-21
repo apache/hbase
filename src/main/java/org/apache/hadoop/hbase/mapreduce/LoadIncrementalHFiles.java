@@ -76,8 +76,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   public LoadIncrementalHFiles(Configuration conf) {
     super(conf);
-    assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
-    exitOnFirstFailure = conf.getBoolean(EXIT_ON_FIRST_FAILURE, true);
   }
 
   public LoadIncrementalHFiles() {
@@ -352,6 +350,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
     Path hfofDir = new Path(args[0]);
     HTable table = new HTable(getConf(), args[1]);
+
+    Configuration conf = this.getConf();
+    assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
+    exitOnFirstFailure = conf.getBoolean(EXIT_ON_FIRST_FAILURE, true);
 
     doBulkLoad(hfofDir, table);
     return 0;
