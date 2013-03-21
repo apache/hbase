@@ -1886,6 +1886,13 @@ public class Store extends SchemaConfigured implements HeapSize {
       ClassSize.CONCURRENT_SKIPLISTMAP +
       ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ClassSize.OBJECT);
 
+  /*
+   * Set to
+   * true  : for using pread
+   * false : for using seek+read
+   */
+  public static boolean isPread = true;
+
   @Override
   public long heapSize() {
     return DEEP_OVERHEAD + this.memstore.heapSize();

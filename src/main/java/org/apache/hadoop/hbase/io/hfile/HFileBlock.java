@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MemStore;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -1095,33 +1096,57 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
       long t0, t1;
       long timeToRead;
-      // Positional read. Better for random reads.
-      int extraSize = peekIntoNextBlock ? HEADER_SIZE : 0;
+      if (Store.isPread) {
+        // Positional read. Better for random reads.
+        int extraSize = peekIntoNextBlock ? HEADER_SIZE : 0;
 
-      t0 = EnvironmentEdgeManager.currentTimeMillis();
-      numPositionalRead.incrementAndGet();
-      int sizeToRead = size + extraSize;
-      int sizeRead = 0;
-      if (sizeToRead > 0) {
-        sizeRead = istream.read(fileOffset, dest, destOffset, sizeToRead);
-        if (pData != null) {
-          t1 = EnvironmentEdgeManager.currentTimeMillis();
-          timeToRead = t1 - t0;
-          pData.addToHist(ProfilingData.HFILE_BLOCK_P_READ_TIME_MS, timeToRead);
+        t0 = EnvironmentEdgeManager.currentTimeMillis();
+        numPositionalRead.incrementAndGet();
+        int sizeToRead = size + extraSize;
+        int sizeRead = 0;
+        if (sizeToRead > 0) {
+          sizeRead = istream.read(fileOffset, dest, destOffset, sizeToRead);
+          if (pData != null) {
+            t1 = EnvironmentEdgeManager.currentTimeMillis();
+            timeToRead = t1 - t0;
+            pData.addToHist(ProfilingData.HFILE_BLOCK_P_READ_TIME_MS, timeToRead);
+          }
+          if (size == 0 && sizeRead == -1) {
+            // a degenerate case of a zero-size block and no next block header.
+            sizeRead = 0;
+          }
+          if (sizeRead < size) {
+            throw new IOException("Positional read of " + sizeToRead + " bytes " +
+                "failed at offset " + fileOffset + " (returned " + sizeRead + ")");
+          }
         }
-        if (size == 0 && sizeRead == -1) {
-          // a degenerate case of a zero-size block and no next block header.
-          sizeRead = 0;
-        }
-        if (sizeRead < size) {
-          throw new IOException("Positional read of " + sizeToRead + " bytes " +
-              "failed at offset " + fileOffset + " (returned " + sizeRead + ")");
-        }
-      }
 
-      if (sizeRead == size || sizeRead < sizeToRead) {
-        // Could not read the next block's header, or did not try.
-        return -1;
+        if (sizeRead == size || sizeRead < sizeToRead) {
+          // Could not read the next block's header, or did not try.
+          return -1;
+        }
+      } else {
+        // Seek + read. Better for scanning.
+        synchronized (istream) {
+          numSeekRead.incrementAndGet();
+          istream.seek(fileOffset);
+          long realOffset = istream.getPos();
+          if (realOffset != fileOffset) {
+            throw new IOException("Tried to seek to " + fileOffset + " to "
+                + "read " + size + " bytes, but pos=" + realOffset
+                + " after seek");
+          }
+
+          if (!peekIntoNextBlock) {
+            IOUtils.readFully(istream, dest, destOffset, size);
+            return -1;
+          }
+
+          // Try to read the next block header.
+          if (!readWithExtra(istream, dest, destOffset, size, HEADER_SIZE)){
+            return -1;
+          }
+        }
       }
       assert peekIntoNextBlock;
       return Bytes.toInt(dest, destOffset + size + BlockType.MAGIC_LENGTH) +

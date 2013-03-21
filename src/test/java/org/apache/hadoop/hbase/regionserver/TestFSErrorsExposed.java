@@ -67,6 +67,7 @@ public class TestFSErrorsExposed {
    */
   @Test
   public void testHFileScannerThrowsErrors() throws IOException {
+    Store.isPread = true; // Forcing usage of pread.
     Path hfilePath = new Path(new Path(
         util.getTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
@@ -114,6 +115,7 @@ public class TestFSErrorsExposed {
    */
   @Test
   public void testStoreFileScannerThrowsErrors() throws IOException {
+    Store.isPread = true; // Forcing usage of pread.
     Path hfilePath = new Path(new Path(
         util.getTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
