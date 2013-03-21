@@ -52,6 +52,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.HConnectionManager.TableServers.FailureInfo;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
@@ -389,26 +391,30 @@ public class HConnectionManager {
       ConcurrentSkipListMap<byte [], HRegionLocation>>();
 
     // amount of time to wait before we consider a server to be in fast fail mode
-    private long fastFailThresholdMilliSec;
+    protected long fastFailThresholdMilliSec;
     // Keeps track of failures when we cannot talk to a server. Helps in
     // fast failing clients if the server is down for a long time.
-    private final ConcurrentMap<HServerAddress, FailureInfo> repeatedFailuresMap =
+    protected final ConcurrentMap<HServerAddress, FailureInfo> repeatedFailuresMap =
       new ConcurrentHashMap<HServerAddress, FailureInfo>();
     // We populate repeatedFailuresMap every time there is a failure. So, to keep it
     // from growing unbounded, we garbage collect the failure information
     // every cleanupInterval.
-    private final long failureMapCleanupIntervalMilliSec;
-    private volatile long lastFailureMapCleanupTimeMilliSec;
+    protected final long failureMapCleanupIntervalMilliSec;
+    protected volatile long lastFailureMapCleanupTimeMilliSec;
     // Amount of time that has to pass, before we clear region -> regionserver cache
-    // again, when in fast fail mode.
-    private long cacheClearingTimeoutMilliSec;
+    // again, when in fast fail mode. This is used to clean unused entries.
+    protected long cacheClearingTimeoutMilliSec;
+    // clear failure Info. Used to clean out all entries.
+    // A safety valve, in case the client does not exit the
+    // fast fail mode for any reason.
+    private long fastFailClearingTimeMilliSec;
 
     /**
      * Keeps track of repeated failures to any region server.
      * @author amitanand.s
      *
      */
-    private class FailureInfo {
+    protected class FailureInfo {
       // The number of consecutive failures.
       private final AtomicLong numConsecutiveFailures = new AtomicLong();
       // The time when the server started to become unresponsive
@@ -425,7 +431,27 @@ public class HConnectionManager {
       // the rest of the client threads will fail fast.
       private final AtomicBoolean
           exclusivelyRetringInspiteOfFastFail = new AtomicBoolean(false);
+
+      public String toString() {
+        return "FailureInfo: numConsecutiveFailures = " + numConsecutiveFailures
+            + " timeOfFirstFailureMilliSec = " + timeOfFirstFailureMilliSec
+            + " timeOfLatestAttemptMilliSec = " + timeOfLatestAttemptMilliSec
+            + " timeOfLatestCacheClearMilliSec = " + timeOfLatestCacheClearMilliSec
+            + " exclusivelyRetringInspiteOfFastFail  = " + exclusivelyRetringInspiteOfFastFail.get();
+      }
+
+      FailureInfo(long firstFailureTime) {
+        this.timeOfFirstFailureMilliSec = firstFailureTime;
+      }
     }
+    private final ThreadLocal<MutableBoolean> threadRetryingInFastFailMode =
+        new ThreadLocal<MutableBoolean>();
+
+    // For TESTING purposes only;
+    public Map<HServerAddress, FailureInfo> getFailureMap() {
+      return repeatedFailuresMap;
+    }
+
     // The presence of a server in the map implies it's likely that there is an
     // entry in cachedRegionLocations that map to this server; but the absence
     // of a server in this map guarentees that there is no entry in cache that
@@ -487,6 +513,8 @@ public class HConnectionManager {
           60000); // 1 min
       this.failureMapCleanupIntervalMilliSec = conf.getLong(
           "hbase.client.fastfail.cleanup.map.interval.millisec", 600000); // 10 min
+      this.fastFailClearingTimeMilliSec = conf.getLong(
+          "hbase.client.fastfail.cleanup.all.millisec", 900000); // 15 mins
 
       this.prefetchRegionLimit = conf.getInt("hbase.client.prefetch.limit",
           10);
@@ -950,7 +978,8 @@ public class HConnectionManager {
 
           server = metaLocation.getServerAddress();
           // Handle the case where .META. is on an unresponsive server.
-          if (inFastFailMode(server)) {
+          if (inFastFailMode(server) &&
+              !this.currentThreadInFastFailMode()) {
             // In Fast-fail mode, all but one thread will fast fail. Check
             // if we are that one chosen thread.
             fInfo = repeatedFailuresMap.get(server);
@@ -1201,7 +1230,7 @@ public class HConnectionManager {
      * @param tablename
      * @param server
      */
-    private void clearCachedLocationForServer(
+    protected void clearCachedLocationForServer(
         final String server) {
       boolean deletedSomething = false;
 
@@ -1564,7 +1593,8 @@ public class HConnectionManager {
 
         // Logic to fast fail requests to unreachable servers.
         server = callable.getServerAddress();
-        if (inFastFailMode(server)) {
+        if (inFastFailMode(server) &&
+            !currentThreadInFastFailMode()) {
           // In Fast-fail mode, all but one thread will fast fail. Check
           // if we are that one chosen thread.
           fInfo = repeatedFailuresMap.get(server);
@@ -1614,15 +1644,13 @@ public class HConnectionManager {
      * @param t - the throwable to be handled.
      * @throws PreemptiveFastFailException
      */
-    private void handleFailureToServer(HServerAddress server, Throwable t)
-        throws PreemptiveFastFailException {
+    private void handleFailureToServer(HServerAddress server, Throwable t) {
       if (server == null || t == null) return;
 
       long currentTime = System.currentTimeMillis();
       FailureInfo fInfo = repeatedFailuresMap.get(server);
       if (fInfo == null) {
-        fInfo = new FailureInfo();
-        fInfo.timeOfFirstFailureMilliSec = currentTime;
+        fInfo = new FailureInfo(currentTime);
         FailureInfo oldfInfo = repeatedFailuresMap.putIfAbsent(server, fInfo);
         if (oldfInfo != null) {
           fInfo = oldfInfo;
@@ -1637,11 +1665,8 @@ public class HConnectionManager {
             fInfo.timeOfLatestCacheClearMilliSec = currentTime;
             clearCachedLocationForServer(server.toString());
           }
-
-          LOG.error("Preemptive fast fail exception caused by : " +  t.toString());
-
-          throw  new PreemptiveFastFailException(fInfo.numConsecutiveFailures.get(),
-            fInfo.timeOfFirstFailureMilliSec, fInfo.timeOfLatestAttemptMilliSec);
+          LOG.error("Exception in FastFail mode : " +  t.toString());
+          return;
       }
 
       // if thrown these exceptions, we clear all the cache entries that
@@ -1667,13 +1692,26 @@ public class HConnectionManager {
       // remove entries that haven't been attempted in a while
       // No synchronization needed. It is okay if multiple threads try to
       // remove the entry again and again from a concurrent hash map.
-      lastFailureMapCleanupTimeMilliSec = now;
+      StringBuilder sb = new StringBuilder();
       for(Entry<HServerAddress, FailureInfo> entry : repeatedFailuresMap.entrySet()) {
         if (now > entry.getValue().timeOfLatestAttemptMilliSec
-            + failureMapCleanupIntervalMilliSec) {
+              + failureMapCleanupIntervalMilliSec) { // no recent failures
           repeatedFailuresMap.remove(entry.getKey());
+        } else if (now > entry.getValue().timeOfFirstFailureMilliSec
+            + this.fastFailClearingTimeMilliSec) { // been failing for a long time
+          LOG.error(entry.getKey() + " been failing for a long time. clearing out."
+            + entry.getValue().toString());
+          repeatedFailuresMap.remove(entry.getKey());
+        } else {
+          sb.append(entry.getKey().toString() + " failing " + entry.getValue().toString() + "\n");
         }
       }
+      if (sb.length() > 0
+        // If there are multiple threads cleaning up, try to see that only one will log the msg.
+          && now > this.lastFailureMapCleanupTimeMilliSec + this.failureMapCleanupIntervalMilliSec) {
+        LOG.warn("Preemptive failure enabled for : " + sb.toString());
+      }
+      lastFailureMapCleanupTimeMilliSec = now;
     }
 
     /**
@@ -1694,6 +1732,15 @@ public class HConnectionManager {
     }
 
     /**
+     * Checks to see if the current thread is already in FastFail mode for *some* server.
+     * @return true, if the thread is already in FF mode.
+     */
+    private boolean currentThreadInFastFailMode() {
+      return (this.threadRetryingInFastFailMode.get() != null &&
+            this.threadRetryingInFastFailMode.get().booleanValue() == true);
+    }
+
+    /**
      * Check to see if the client should try to connnect to the server, inspite of
      * knowing that it is in the fast fail mode.
      *
@@ -1707,8 +1754,18 @@ public class HConnectionManager {
       // We believe that the server is down, But, we want to have just one client
       // actively trying to connect. If we are the chosen one, we will retry
       // and not throw an exception.
-      return  (fInfo != null &&
-          fInfo.exclusivelyRetringInspiteOfFastFail.compareAndSet(false, true));
+      if (fInfo != null && fInfo.exclusivelyRetringInspiteOfFastFail.compareAndSet(false, true)) {
+        MutableBoolean threadAlreadyInFF = this.threadRetryingInFastFailMode.get();
+        if (threadAlreadyInFF == null) {
+          threadAlreadyInFF = new MutableBoolean();
+          this.threadRetryingInFastFailMode.set(threadAlreadyInFF);
+        }
+        threadAlreadyInFF.setValue(true);
+
+        return true;
+      } else {
+        return false;
+      }
     }
 
     /**
@@ -1734,6 +1791,7 @@ public class HConnectionManager {
         // Release the lock if we were retrying inspite of FastFail
         if (retryDespiteFastFailMode) {
           fInfo.exclusivelyRetringInspiteOfFastFail.set(false);
+          threadRetryingInFastFailMode.get().setValue(false);
         }
       }
 

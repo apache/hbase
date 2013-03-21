@@ -81,7 +81,7 @@ public class DelayInducingInjectionHandler extends InjectionHandler {
       }
       eventsToWaitFor.get(event).countDown();
       long delayTimeMs = eventToDelayTimeMs.get(event);
-      LOG.warn("Sleeping for " + delayTimeMs + " ms for " + event);
+      LOG.warn("Sleeping " + delayTimeMs + " ms for " + event);
       try {
         Thread.sleep(delayTimeMs);
       } catch (InterruptedException e) {

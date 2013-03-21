@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 
 /**
  * Instantiated when a server's lease has expired, meaning it has crashed.
@@ -366,6 +368,8 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   @Override
   protected RegionServerOperationResult process() throws IOException {
+    InjectionHandler.processEvent(InjectionEvent.HMASTER_START_PROCESS_DEAD_SERVER);
+
     switch (this.logSplitResult) {
     case NOT_RUNNING:
       LOG.info("Process server shut down for dead server " + deadServer);
@@ -382,7 +386,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     case FAILED:
       logSplitResult = LogSplitResult.NOT_RUNNING;
       throw new IOException("Failed splitting log for dead server " +
-				deadServer);
+        deadServer);
 
     default:
       throw new RuntimeException("Invalid split log result: "
@@ -391,7 +395,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     LOG.info("Log split is completed for " + deadServer
         + ", meta reassignment and scanning: "
-	+ "rootRescanned: " + rootRescanned + ", numberOfMetaRegions: "
+      + "rootRescanned: " + rootRescanned + ", numberOfMetaRegions: "
       + master.getRegionManager().numMetaRegions()
       + ", onlineMetaRegions.size(): "
       + master.getRegionManager().numOnlineMetaRegions());

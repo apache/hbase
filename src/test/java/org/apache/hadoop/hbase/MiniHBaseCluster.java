@@ -455,6 +455,14 @@ public class MiniHBaseCluster {
   }
 
   /**
+   * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()}
+   * of HRS carrying regionName. Returns -1 if none found.
+   */
+  public int getServerWithRoot() {
+    return getServerWith(HRegionInfo.ROOT_REGIONINFO.getRegionName());
+  }
+
+  /**
    * Get the location of the specified region
    * @param regionName Name of the region in bytes
    * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()}
