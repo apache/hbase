@@ -380,6 +380,43 @@ public class HTable implements HTableInterface {
   }
   
   /**
+   * Returns the Array of StartKeys along with the favoredNodes 
+   * for a particular region. Identifying the the favoredNodes using the 
+   * Meta table similar to the 
+   * {@link org.apache.hadoop.hbase.client.HTable.getStartEndKeys()} 
+   * function 
+   * @return
+   * @throws IOException
+   */
+  public Pair<byte[][], byte[][]> getStartKeysAndFavoredNodes()
+  		throws IOException {
+  	final List<byte[]> startKeyList = new ArrayList<byte[]>();
+  	final List<byte[]> favoredNodes =
+  		new ArrayList<byte[]>();
+  	MetaScannerVisitor visitor = new MetaScannerVisitor() {
+  		public boolean processRow(Result rowResult) throws IOException {
+  			HRegionInfo info = Writables.getHRegionInfo(
+  				rowResult.getValue(HConstants.CATALOG_FAMILY,
+  				HConstants.REGIONINFO_QUALIFIER));
+  			byte[] favoredNodesBytes = rowResult.getValue(
+  				HConstants.CATALOG_FAMILY,
+  				HConstants.FAVOREDNODES_QUALIFIER);
+  			if (Bytes.equals(info.getTableDesc().getName(), getTableName())) {
+  				if (!(info.isOffline() || info.isSplit())) {
+  					startKeyList.add(info.getStartKey());
+  					favoredNodes.add(favoredNodesBytes);
+  				}
+  			}
+  			return true;
+  		}
+  	};
+  	MetaScanner.metaScan(configuration, visitor, this.tableName);
+  	return new Pair<byte[][], byte[][]>(
+  		startKeyList.toArray(new byte[startKeyList.size()][]),
+  		favoredNodes.toArray(new byte[favoredNodes.size()][]));
+  }
+  
+  /**
    * Gets all the regions and their address for this table.
    * <p>
    * This is mainly useful for the MapReduce integration.

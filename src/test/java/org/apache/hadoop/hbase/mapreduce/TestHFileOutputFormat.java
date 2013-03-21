@@ -26,6 +26,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -43,10 +46,13 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -64,9 +70,17 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.master.AssignmentPlan;
+import org.apache.hadoop.hbase.master.RegionPlacement;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -810,7 +824,6 @@ public class TestHFileOutputFormat  {
         util.getTestDir("testColumnFamilyBloomFilter");
 
     HTable table = Mockito.mock(HTable.class);
-
     Map<String, BloomType> configuredBloomFilter =
       new HashMap<String, BloomType>();
     BloomType [] bloomTypeValues = BloomType.values();
@@ -917,7 +930,6 @@ public class TestHFileOutputFormat  {
         util.getTestDir("testColumnFamilyEncoding");
 
     HTable table = Mockito.mock(HTable.class);
-
     Map<String, DataBlockEncoding> configuredEncoding =
       new HashMap<String, DataBlockEncoding>();
     DataBlockEncoding[] EncodingTypeValues = DataBlockEncoding.values();
@@ -965,6 +977,7 @@ public class TestHFileOutputFormat  {
             // verify that the Encoding type on this file matches the
             // configured Encoding type.
             Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
+            
             StoreFile.Reader reader = new StoreFile.Reader(fileSystem,
                 dataFilePath, new CacheConfig(conf), null);
             Map<byte[], byte[]> metadataMap = reader.loadFileInfo();
@@ -985,6 +998,142 @@ public class TestHFileOutputFormat  {
 
     } finally {
       dir.getFileSystem(conf).delete(dir, true);
+    }
+  }
+  
+  @Test
+  public void testFavoredNodes() throws Exception {
+  	Random rand = new Random();
+  	for (int i=0; i<3; i++) {
+  		int tmp = (int)'b';
+  		byte c = (byte)(tmp + (Math.abs(rand.nextInt()))%24);
+  		testFavoredNodesPerChar(c);
+  	}
+  }
+  private static final int FAVORED_NODES_NUM = 3;
+  private static final int REGION_SERVERS = 10;
+  /** 
+   * Testing FavoredNodes support for HFileOutputFormat
+   */
+  public void testFavoredNodesPerChar(byte c) throws Exception{
+  	util.startMiniCluster(REGION_SERVERS);
+  	Configuration conf = new Configuration(this.util.getConfiguration());
+    RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
+    TaskAttemptContext context = null;
+    Path dir = util.getTestDir("TestFavoredNodes");
+    byte[] familyName = Bytes.toBytes("family");
+    byte[] tableName = Bytes.toBytes("TestFavoredNodes");
+    HTable table = util.createTable(tableName, familyName);
+    int countOfRegions = util.createMultiRegions(table, familyName);
+    util.waitUntilAllRegionsAssigned(countOfRegions);
+
+    InetSocketAddress[] nodes = new InetSocketAddress[REGION_SERVERS];
+    List<DataNode> datanodes = util.getDFSCluster().getDataNodes();
+    for (int i = 0; i < REGION_SERVERS; i++) {
+      nodes[i] = datanodes.get(i).getSelfAddr();
+    }
+
+    String[] nodeNames = new String[REGION_SERVERS];
+    for (int i = 0; i < REGION_SERVERS; i++) {
+      nodeNames[i] = nodes[i].getAddress().getHostAddress() + ":" +
+      	nodes[i].getPort();
+    }
+
+    List<Put> puts = new ArrayList<Put>();
+    int testIndex = 0;
+    List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    for (int i = 0; i < regions.size(); i++) {
+    	List<HServerAddress> favoredNodes = new ArrayList<HServerAddress>(FAVORED_NODES_NUM);
+    	HRegion region = regions.get(i);
+    	if (Bytes.BYTES_COMPARATOR.compare(region.getStartKey(), HConstants.EMPTY_BYTE_ARRAY) != 0) {
+    		if (region.getStartKey()[0] == c) {
+      		testIndex = i;
+      	}
+    	}
+    	for (int j = 0; j < FAVORED_NODES_NUM; j++) {
+        favoredNodes.add(new HServerAddress(nodeNames[(i + j) % REGION_SERVERS]));
+      }
+      String favoredNodesString = RegionPlacement.getFavoredNodes(favoredNodes);
+      Put put = new Put(region.getRegionName());
+      put.add(HConstants.CATALOG_FAMILY, HConstants.FAVOREDNODES_QUALIFIER,
+          favoredNodesString.getBytes());
+      puts.add(put);
+    }
+
+    // Write the region assignments to the meta table.
+    HTable metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
+    metaTable.put(puts);
+    LOG.info("Updated the META with the new assignment plan");
+
+    // Allowing the Master thread to rescan and clean the empty meta rows
+    int sleepTime = conf.getInt("hbase.master.meta.thread.rescanfrequency", 100*1000);
+    Thread.sleep(sleepTime);
+    try {
+      Job job = new Job(conf, "testLocalMRIncrementalLoad");
+      setupRandomGeneratorMapper(job);
+      HFileOutputFormat.configureIncrementalLoad(job, table);
+      FileOutputFormat.setOutputPath(job, dir);
+      context = new TaskAttemptContext(job.getConfiguration(),
+      	new TaskAttemptID());
+      HFileOutputFormat hof = new HFileOutputFormat();
+      writer = hof.getRecordWriter(context);
+
+      // write out random rows
+      writeKVs(writer, familyName, c);
+      writer.close(context);
+
+      hof.getOutputCommitter(context).commitTask(context);
+      // Make sure that a directory was created for every CF
+      FileSystem fileSystem = dir.getFileSystem(conf);
+      for (byte[] family : new byte[][]{familyName}) {
+        for (FileStatus f : fileSystem.listStatus(dir)) {
+          if (Bytes.toString(family).equals(f.getPath().getName())) {
+            // verify that the Encoding type on this file matches the
+            // configured Encoding type.
+            Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
+            LocatedBlocks lbks = util.getDFSCluster().getNameNode()
+                .getBlockLocations(dataFilePath.toUri().getPath(), 0, Long.MAX_VALUE);
+
+            for (LocatedBlock lbk : lbks.getLocatedBlocks()) {
+              locations:
+              for (DatanodeInfo info : lbk.getLocations()) {
+                for (int j = 0; j < FAVORED_NODES_NUM; j++) {
+                  if (info.getName().equals(nodeNames[(testIndex + j) % REGION_SERVERS])) {
+                    continue locations;
+                  }
+                }
+                // This block was at a location that was not a favored location.
+                fail("Block location " + info.getName() + " not a favored node");
+              }
+            }
+          }
+        }
+      }
+    } finally {
+    	dir.getFileSystem(conf).delete(dir, true);
+    	util.shutdownMiniCluster();
+    }
+  }
+
+  private void writeKVs(RecordWriter<ImmutableBytesWritable, KeyValue> writer,
+  	byte[] family, byte keyByte) throws IOException, InterruptedException{
+  	byte[] k = new byte[3];
+  	int b1 = (int)keyByte;
+  	Random rand = new Random();
+		int tmp = rand.nextInt();
+		int b2 = Math.min(b1 + Math.abs(tmp)%26, (int)'z');
+		tmp = rand.nextInt();
+		int b3 = Math.min(b1 + Math.abs(tmp)%26, (int)'z');
+		
+		for (byte byte2 = (byte)b2; byte2 <= 'z'; byte2++) {
+      for (byte byte3 = (byte)b3; byte3 <= 'z'; byte3++) {
+        k[0] = (byte)b1;
+        k[1] = byte2;
+        k[2] = byte3;
+        ImmutableBytesWritable key = new ImmutableBytesWritable(k);
+        KeyValue kv = new KeyValue(k, family, null, k);
+        writer.write(key, kv);
+      }
     }
   }
 
