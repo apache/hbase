@@ -38,8 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -70,7 +68,6 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.HConnectionManager.TableServers.FailureInfo;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
@@ -1528,9 +1525,15 @@ public class HConnectionManager {
                 prevLoc.getRegionInfo().getStartKey(),
                 prevLoc.getServerAddress());
           }
-          // do not retry if getting the location throws exception
-          callable.instantiateRegionLocation(false /* reload cache ? */);
 
+          try {
+            // do not retry if getting the location throws exception
+            callable.instantiateRegionLocation(false /* reload cache ? */);
+          } catch (IOException e) {
+            exceptions.add(e);
+            throw new RetriesExhaustedException(callable.getServerName(),
+                callable.getRegionName(), callable.getRow(), tries, exceptions);
+          }
           if (prevLoc.getServerAddress().
               equals(callable.location.getServerAddress())) {
             // Bail out of the retry loop if we have to wait too long
@@ -1978,7 +1981,8 @@ public class HConnectionManager {
      */
     private List<Mutation> collectResponsesForMutateFromAllRS(byte[] tableName,
         Map<HServerAddress, MultiAction> actionsByServer,
-        Map<HServerAddress, Future<MultiResponse>> futures)
+        Map<HServerAddress, Future<MultiResponse>> futures,
+        Map<String, HRegionFailureInfo> failureInfo)
       throws InterruptedException, IOException {
 
      List<Mutation> newWorkingList = null;
@@ -2004,11 +2008,11 @@ public class HConnectionManager {
        // If the response is null, we will add it to newWorkingList here.
        if (request.deletes != null) {
          newWorkingList = processMutationResponseFromOneRegionServer(tableName, address,
-             resp, request.deletes, newWorkingList, true);
+             resp, request.deletes, newWorkingList, true, failureInfo);
        }
        if (request.puts != null) {
          newWorkingList = processMutationResponseFromOneRegionServer(tableName, address,
-             resp, request.puts, newWorkingList, false);
+             resp, request.puts, newWorkingList, false, failureInfo);
        }
      }
       return newWorkingList;
@@ -2023,7 +2027,8 @@ public class HConnectionManager {
          Map<HServerAddress, MultiAction> actionsByServer,
          Map<HServerAddress, Future<MultiResponse>> futures,
          List<Get> orig_list,
-         Result[] results) throws IOException, InterruptedException {
+         Result[] results,
+         Map<String, HRegionFailureInfo> failureInfo) throws IOException, InterruptedException {
 
        List<Get> newWorkingList = null;
        for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer
@@ -2049,7 +2054,7 @@ public class HConnectionManager {
          }
 
          newWorkingList = processGetResponseFromOneRegionServer(tableName, address,
-             request, resp, orig_list, newWorkingList, results);
+             request, resp, orig_list, newWorkingList, results, failureInfo);
        }
        return newWorkingList;
      }
@@ -2060,7 +2065,8 @@ public class HConnectionManager {
         MultiResponse resp,
         Map<byte[], List<R>> map,
         List<Mutation> newWorkingList,
-        boolean isDelete) throws IOException {
+        boolean isDelete,
+        Map<String, HRegionFailureInfo> failureInfo) throws IOException {
         // If we got a response. Let us go through the responses from each region and
         // process the Puts and Deletes.
         for (Map.Entry<byte[], List<R>> e : map.entrySet()) {
@@ -2082,8 +2088,17 @@ public class HConnectionManager {
                   regionOps.size()));
             }
           } catch (Exception ex) {
+            String serverName = address.getHostname();
+            String regName = Bytes.toStringBinary(regionName);
             // If response is null, we will catch a NPE here.
             translateException(ex);
+
+            if (!failureInfo.containsKey(regName)) {
+              failureInfo.put(regName, new HRegionFailureInfo(regName));
+            }
+            failureInfo.get(regName).addException(ex);
+            failureInfo.get(regName).setServerName(serverName);
+
             if (newWorkingList == null)
               newWorkingList = new ArrayList<Mutation>();
 
@@ -2101,7 +2116,8 @@ public class HConnectionManager {
        MultiAction request,
        MultiResponse resp,
        List<Get> orig_list, List<Get> newWorkingList,
-       Result[] results) throws IOException {
+       Result[] results,
+       Map<String, HRegionFailureInfo> failureInfo) throws IOException {
 
        for (Map.Entry<byte[], List<Get>> e : request.gets.entrySet()) {
          byte[] regionName = e.getKey();
@@ -2120,8 +2136,18 @@ public class HConnectionManager {
          } catch (Exception ex) {
            // If response is null, we will catch a NPE here.
            translateException(ex);
+
            if (newWorkingList == null)
              newWorkingList = new ArrayList<Get>(orig_list.size());
+
+           String serverName = address.getHostname();
+           String regName = Bytes.toStringBinary(regionName);
+
+           if (!failureInfo.containsKey(regName)) {
+             failureInfo.put(regName, new HRegionFailureInfo(regName));
+           }
+           failureInfo.get(regName).addException(ex);
+           failureInfo.get(regName).setServerName(serverName);
 
            // Add the element to the correct position
            for(int i = 0; i < regionGets.size(); i++) {
@@ -2148,6 +2174,8 @@ public class HConnectionManager {
       // lastServers.
       // Sort the puts based on the row key in order to optimize the row lock acquiring
       // in the server side.
+
+      Map<String, HRegionFailureInfo> failureInfo = new HashMap<String, HRegionFailureInfo>();
       List<Mutation> workingList = orig_list;
       Collections.sort(workingList);
 
@@ -2172,12 +2200,12 @@ public class HConnectionManager {
 
         // step 3: collect the failures and successes and prepare for retry
         workingList = collectResponsesForMutateFromAllRS(tableName,
-            actionsByServer, futures);
+            actionsByServer, futures, failureInfo);
       }
 
       if (workingList != null && !workingList.isEmpty()) {
         if (failures != null) failures.addAll(workingList);
-        throw new RetriesExhaustedException(
+        throw new RetriesExhaustedException(failureInfo,
             workingList.size() + "mutate operations remaining after "
             + numRetries + " retries");
       }
@@ -2190,6 +2218,8 @@ public class HConnectionManager {
         Result[] results, HBaseRPCOptions options)
     throws IOException, InterruptedException {
 
+      Map<String, HRegionFailureInfo> failureInfo =
+         new HashMap<String, HRegionFailureInfo>();
       // if results is not NULL
       // results must be the same size as list
       if (results != null && (results.length != orig_list.size())) {
@@ -2223,11 +2253,11 @@ public class HConnectionManager {
 
         // step 3: collect the failures and successes and prepare for retry
         workingList = collectResponsesForGetFromAllRS(tableName, actionsByServer,
-            futures, workingList, results);
+            futures, workingList, results, failureInfo);
       }
 
       if (workingList != null && !workingList.isEmpty()) {
-        throw new RetriesExhaustedException(
+        throw new RetriesExhaustedException(failureInfo,
             workingList.size() + " get operations remaining after "
             + numRetries + " retries");
       }
@@ -2499,7 +2529,8 @@ public class HConnectionManager {
     }
 
     public List<Put> processListOfMultiPut(List<MultiPut> multiPuts,
-      final byte[] givenTableName, HBaseRPCOptions options) throws IOException {
+      final byte[] givenTableName, HBaseRPCOptions options,
+      Map<String, HRegionFailureInfo> failedRegionsInfo) throws IOException {
       List<Put> failed = null;
 
       List<Future<MultiPutResponse>> futures =
@@ -2521,9 +2552,14 @@ public class HConnectionManager {
 
       RegionOverloadedException toThrow = null;
       long maxWaitTimeRequested = 0;
+
       for (int i = 0; i < futures.size(); i++ ) {
         Future<MultiPutResponse> future = futures.get(i);
         MultiPut request = multiPuts.get(i);
+        String serverName = request.address.getHostname();
+        String regionName = null;
+        HRegionFailureInfo regionFailure = null;
+
         MultiPutResponse resp = null;
         try {
           resp = future.get();
@@ -2531,6 +2567,19 @@ public class HConnectionManager {
           Thread.currentThread().interrupt();
           throw new InterruptedIOException(e.getMessage());
         } catch (ExecutionException ex) {
+
+          // Add entry for the all the regions involved in this operation.
+          for (Map.Entry<byte[], List<Put>> e : request.puts.entrySet()) {
+            regionName = Bytes.toStringBinary(e.getKey());
+            if (!failedRegionsInfo.containsKey(regionName)) {
+              regionFailure = new HRegionFailureInfo(regionName);
+              failedRegionsInfo.put(regionName, regionFailure);
+            } else {
+              regionFailure = failedRegionsInfo.get(regionName);
+            }
+            regionFailure.setServerName(serverName);
+            regionFailure.addException(ex);
+          }
           // retry, unless it is not to be retried.
           if (ex.getCause() instanceof DoNotRetryIOException) {
             throw (DoNotRetryIOException)ex.getCause();
@@ -2560,6 +2609,15 @@ public class HConnectionManager {
           if (resp != null)
             result = resp.getAnswer(region);
 
+          if (result == null || result != HConstants.MULTIPUT_SUCCESS) {
+            regionName = Bytes.toStringBinary(e.getKey());
+            if (!failedRegionsInfo.containsKey(regionName)) {
+              regionFailure = new HRegionFailureInfo(regionName);
+              failedRegionsInfo.put(regionName, regionFailure);
+            }
+            regionFailure.setServerName(serverName);
+            regionFailure.addException(new IOException("Put failed for " + regionName));
+          }
           if (result == null) {
             // failed
             LOG.debug("Failed all for region: " +
@@ -2570,11 +2628,11 @@ public class HConnectionManager {
             // and derive the tableName from the regionName.
             byte[] tableName = (givenTableName != null)? givenTableName
                 : HRegionInfo.parseRegionName(region)[0];
-
-
             deleteCachedLocation(tableName, lst.get(0).getRow(), request.address);
 
-            if (failed == null) failed = new ArrayList<Put>();
+            if (failed == null) {
+              failed = new ArrayList<Put>();
+            }
             failed.addAll(e.getValue());
           } else if (result != HConstants.MULTIPUT_SUCCESS) {
             // some failures
@@ -2621,7 +2679,8 @@ public class HConnectionManager {
       int tries;
       long serverRequestedWaitTime = 0;
       int serverRequestedRetries = 0;
-      
+      Map<String, HRegionFailureInfo> failedServersInfo =
+          new HashMap<String, HRegionFailureInfo>();
       // Sort the puts based on the row key in order to optimize the row lock acquiring
       // in the server side.
       Collections.sort(list);
@@ -2652,8 +2711,9 @@ public class HConnectionManager {
 
         List<Put> failed = null;
         List<MultiPut> multiPuts = this.splitPutsIntoMultiPuts(list, tableName, options);
+
         try {
-          failed = this.processListOfMultiPut(multiPuts, tableName, options);
+          failed = this.processListOfMultiPut(multiPuts, tableName, options, failedServersInfo);
         } catch (RegionOverloadedException ex) {
           roe = ex;
           serverRequestedWaitTime = roe.getBackoffTimeMillis();
@@ -2691,10 +2751,12 @@ public class HConnectionManager {
 
       // Get exhausted after the retries
       if (!list.isEmpty()) {
+
         // ran out of retries and didnt succeed everything!
-        throw new RetriesExhaustedException("Still had " + list.size() +
-            " puts left after retrying " +
-            tries + " times, in " + (System.currentTimeMillis() - callStartTime) + " ms.");
+        throw new RetriesExhaustedException(failedServersInfo,
+            "Still had " + list.size() + " puts left after retrying " +
+            tries + " times, in " + (System.currentTimeMillis() - callStartTime) +
+            " ms.");
       }
     }
 

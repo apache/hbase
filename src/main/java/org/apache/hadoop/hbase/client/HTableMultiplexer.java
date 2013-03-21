@@ -500,8 +500,11 @@ public class HTableMultiplexer {
             
             // Process this multiput request
             List<Put> failed = null;
+            Map<String, HRegionFailureInfo> failureInfo =
+                new HashMap<String, HRegionFailureInfo>();
             try {
-              failed = connection.processListOfMultiPut(Arrays.asList(mput), null, options);
+              failed = connection.processListOfMultiPut(Arrays.asList(mput), null, options,
+                  failureInfo);
             } catch(PreemptiveFastFailException e) {
               // Client is not blocking on us. So, let us treat this
               // as a normal failure, and retry.

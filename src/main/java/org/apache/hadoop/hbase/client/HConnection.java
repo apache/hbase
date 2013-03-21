@@ -320,7 +320,8 @@ public interface HConnection extends Closeable {
    * @throws IOException
    */
   public List<Put> processListOfMultiPut(List<MultiPut> mputs,
-      final byte[] tableName, HBaseRPCOptions options) throws IOException;
+      final byte[] tableName, HBaseRPCOptions options,
+      Map<String, HRegionFailureInfo> failureInfo) throws IOException;
   
   /**
    * Delete the cached location

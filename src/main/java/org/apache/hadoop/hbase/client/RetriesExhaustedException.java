@@ -20,7 +20,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Exception thrown by HTable methods when an attempt to do something (like
@@ -28,10 +31,7 @@ import java.util.List;
  */
 public class RetriesExhaustedException extends IOException {
   private static final long serialVersionUID = 1876775844L;
-
-  public RetriesExhaustedException(final String msg) {
-    super(msg);
-  }
+  private Map<String, HRegionFailureInfo> failureInfo = null;
 
   /**
    * Create a new RetriesExhaustedException from the list of prior failures.
@@ -44,6 +44,21 @@ public class RetriesExhaustedException extends IOException {
   public RetriesExhaustedException(String serverName, final byte [] regionName,
       final byte []  row, int numTries, List<Throwable> exceptions) {
     super(getMessage(serverName, regionName, row, numTries, exceptions));
+    failureInfo = new HashMap<String, HRegionFailureInfo>();
+    String regName = Bytes.toStringBinary(regionName);
+
+    if (!failureInfo.containsKey(regName)) {
+      failureInfo.put(regName, new HRegionFailureInfo(regName));
+    }
+
+    failureInfo.get(regName).setServerName(serverName);
+    this.failureInfo.get(regName).addAllExceptions(exceptions);
+  }
+
+  public RetriesExhaustedException(final Map<String, HRegionFailureInfo> failureInfo,
+      String msg) {
+    super(msg);
+    this.failureInfo = failureInfo;
   }
 
   private static String getMessage(String serverName, final byte [] regionName,
@@ -71,5 +86,17 @@ public class RetriesExhaustedException extends IOException {
       } catch (IOException e) {} // ignore
     }
     return buffer.toString();
+  }
+
+  public Set<String> getRegionNames() {
+    return this.failureInfo.keySet();
+  }
+
+  public HRegionFailureInfo getFailureInfoForRegion(String regionName) {
+    return this.failureInfo.get(regionName);
+  }
+
+  public Map<String, HRegionFailureInfo> getFailureInfo() {
+    return this.failureInfo;
   }
 }
