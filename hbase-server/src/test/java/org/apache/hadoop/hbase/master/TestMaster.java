@@ -23,12 +23,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -52,7 +54,7 @@ public class TestMaster {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     // Start a cluster of two regionservers.
-    TEST_UTIL.startMiniCluster(1);
+    TEST_UTIL.startMiniCluster(2);
   }
 
   @AfterClass
@@ -110,6 +112,22 @@ public class TestMaster {
       assertEquals(tableRegionFromName.getFirst(), pair.getFirst());
     } finally {
       proceed.countDown();
+    }
+  }
+
+  @Test
+  public void testMoveRegionWhenNotInitialized() {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HMaster m = cluster.getMaster();
+    try {
+      m.initialized = false; // fake it, set back later
+      HRegionInfo meta = HRegionInfo.FIRST_META_REGIONINFO;
+      m.move(meta.getEncodedNameAsBytes(), null);
+      fail("Region should not be moved since master is not initialized");
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause() instanceof PleaseHoldException);
+    } finally {
+      m.initialized = true;
     }
   }
 

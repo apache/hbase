@@ -293,8 +293,11 @@ Server {
   private volatile boolean abort = false;
   // flag set after we become the active master (used for testing)
   private volatile boolean isActiveMaster = false;
-  // flag set after we complete initialization once active (used for testing)
-  private volatile boolean initialized = false;
+
+  // flag set after we complete initialization once active,
+  // it is not private since it's used in unit tests
+  volatile boolean initialized = false;
+
   // flag set after we complete assignMeta.
   private volatile boolean serverShutdownHandlerEnabled = false;
 
@@ -1397,11 +1400,21 @@ Server {
       LOG.warn("moveRegion specifier type: expected: " + RegionSpecifierType.ENCODED_REGION_NAME
         + " actual: " + type);
     }
+
+    try {
+      move(encodedRegionName, destServerName);
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+    return mrr;
+  }
+
+  void move(final byte[] encodedRegionName,
+      final byte[] destServerName) throws UnknownRegionException {
     RegionState regionState = assignmentManager.getRegionStates().
       getRegionState(Bytes.toString(encodedRegionName));
     if (regionState == null) {
-      throw new ServiceException(
-        new UnknownRegionException(Bytes.toStringBinary(encodedRegionName)));
+      throw new UnknownRegionException(Bytes.toStringBinary(encodedRegionName));
     }
 
     HRegionInfo hri = regionState.getRegion();
@@ -1417,7 +1430,7 @@ Server {
       if (dest.equals(regionState.getServerName())) {
         LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
           + " because region already assigned to the same server " + dest + ".");
-        return mrr;
+        return;
       }
     }
 
@@ -1425,9 +1438,10 @@ Server {
     RegionPlan rp = new RegionPlan(hri, regionState.getServerName(), dest);
 
     try {
+      checkInitialized();
       if (this.cpHost != null) {
         if (this.cpHost.preMove(hri, rp.getSource(), rp.getDestination())) {
-          return mrr;
+          return;
         }
       }
       LOG.info("Added move plan " + rp + ", running balancer");
@@ -1439,9 +1453,8 @@ Server {
       UnknownRegionException ure = new UnknownRegionException(
         Bytes.toStringBinary(encodedRegionName));
       ure.initCause(ioe);
-      throw new ServiceException(ure);
+      throw ure;
     }
-    return mrr;
   }
 
   @Override
