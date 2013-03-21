@@ -99,7 +99,7 @@ public class HConnectionTestingUtility {
     HConnection c = HConnectionTestingUtility.getMockedConnection(conf);
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
-    final HRegionLocation loc = new HRegionLocation(hri, sn, HConstants.NO_SEQNUM);
+    final HRegionLocation loc = new HRegionLocation(hri, sn);
     Mockito.when(c.getRegionLocation((byte[]) Mockito.any(),
         (byte[]) Mockito.any(), Mockito.anyBoolean())).
       thenReturn(loc);

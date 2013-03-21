@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.RegionServerStoppedException;
 import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
@@ -86,6 +87,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDe
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Triple;
@@ -1065,8 +1067,8 @@ public class HConnectionManager {
               return true; // don't cache it
             }
             // instantiate the location
-            HRegionLocation loc = new HRegionLocation(regionInfo, serverName,
-                HRegionInfo.getSeqNumDuringOpen(result));
+            long seqNum = HRegionInfo.getSeqNumDuringOpen(result);
+            HRegionLocation loc = new HRegionLocation(regionInfo, serverName, seqNum);
             // cache this meta entry
             cacheLocation(tableName, null, loc);
             return true;
@@ -1196,7 +1198,7 @@ public class HConnectionManager {
 
           // Instantiate the location
           location = new HRegionLocation(regionInfo, serverName,
-              HRegionInfo.getSeqNumDuringOpen(regionInfoRow));
+            HRegionInfo.getSeqNumDuringOpen(regionInfoRow));
           cacheLocation(tableName, null, location);
           return location;
         } catch (TableNotFoundException e) {
@@ -1292,8 +1294,7 @@ public class HConnectionManager {
     void forceDeleteCachedLocation(final byte [] tableName, final byte [] row) {
       HRegionLocation rl = null;
       synchronized (this.cachedRegionLocations) {
-        Map<byte[], HRegionLocation> tableLocations =
-            getTableLocations(tableName);
+        Map<byte[], HRegionLocation> tableLocations = getTableLocations(tableName);
         // start to examine the cache. we can only do cache actions
         // if there's something in the cache for this table.
         if (!tableLocations.isEmpty()) {
@@ -1853,7 +1854,7 @@ public class HConnectionManager {
     */
     void deleteCachedLocation(HRegionInfo hri, HRegionLocation source) {
       boolean isStaleDelete = false;
-      HRegionLocation oldLocation;
+      HRegionLocation oldLocation = null;
       synchronized (this.cachedRegionLocations) {
         Map<byte[], HRegionLocation> tableLocations =
           getTableLocations(hri.getTableName());
@@ -1902,6 +1903,9 @@ public class HConnectionManager {
           rme.getHostname() + ":" + rme.getPort() + " according to " + source.getHostnamePort());
         updateCachedLocation(
             regionInfo, source, rme.getServerName(), rme.getLocationSeqNum());
+      } else if (RegionOpeningException.find(exception) != null) {
+        LOG.info("Region " + regionInfo.getRegionNameAsString() + " is being opened on "
+          + source.getHostnamePort() + "; not deleting the cache entry");
       } else {
         deleteCachedLocation(regionInfo, source);
       }
@@ -2163,13 +2167,11 @@ public class HConnectionManager {
           // Retry all actions in toReplay then clear it.
           if (!noRetry && !toReplay.isEmpty()) {
             if (isTraceEnabled) {
-              LOG.trace("Retrying due to errors: " + retriedErrors.getDescriptionAndClear());
+              LOG.trace("Retrying due to errors" + (lastRetry ? " (one last time)" : "")
+                   + ": " + retriedErrors.getDescriptionAndClear());
             }
             doRetry();
             if (lastRetry) {
-              if (isTraceEnabled) {
-                LOG.trace("No more retries");
-              }
               noRetry = true;
             }
           }
@@ -2201,7 +2203,7 @@ public class HConnectionManager {
           if (exceptions.isEmpty()) {
             return "";
           }
-          String result = makeException().getMessage();
+          String result = makeException().getExhaustiveDescription();
           exceptions.clear();
           actions.clear();
           addresses.clear();
@@ -2293,9 +2295,7 @@ public class HConnectionManager {
     int getNumberOfCachedRegionLocations(final byte[] tableName) {
       Integer key = Bytes.mapKey(tableName);
       synchronized (this.cachedRegionLocations) {
-        Map<byte[], HRegionLocation> tableLocs =
-          this.cachedRegionLocations.get(key);
-
+        Map<byte[], HRegionLocation> tableLocs = this.cachedRegionLocations.get(key);
         if (tableLocs == null) {
           return 0;
         }

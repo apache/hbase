@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
@@ -2409,9 +2410,12 @@ public class HRegionServer implements ClientProtocol,
       MovedRegionInfo moveInfo = getMovedRegion(encodedRegionName);
       if (moveInfo != null) {
         throw new RegionMovedException(moveInfo.getServerName(), moveInfo.getSeqNum());
-      } else {
-        throw new NotServingRegionException("Region is not online: " + encodedRegionName);
       }
+      Boolean isOpening = this.regionsInTransitionInRS.get(Bytes.toBytes(encodedRegionName));
+      if (isOpening != null && isOpening.booleanValue()) {
+        throw new RegionOpeningException("Region is being opened: " + encodedRegionName);
+      }
+      throw new NotServingRegionException("Region is not online: " + encodedRegionName);
     }
     return region;
   }
