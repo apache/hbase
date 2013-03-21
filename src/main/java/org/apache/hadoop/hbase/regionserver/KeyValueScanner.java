@@ -116,4 +116,12 @@ public interface KeyValueScanner {
    */
   public void enforceSeek() throws IOException;
 
+  /**
+   * MemStoreScanner and StoreFileScanner should implement this method to check
+   * if there are any deletes in the bloom filter or memstore.
+   *
+   * @return true if there are any deletes.
+   */
+  boolean passesDeleteColumnCheck(KeyValue kv);
+
 }

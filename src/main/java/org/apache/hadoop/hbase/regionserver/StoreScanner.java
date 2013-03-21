@@ -64,6 +64,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   private final KeyValueAggregator keyValueAggregator;
   private final NavigableSet<byte[]> columns;
   private final long oldestUnexpiredTS;
+  private boolean deleteColBloomEnabled = false;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -103,6 +104,11 @@ public class StoreScanner extends NonLazyKeyValueScanner
     // for multi-row (non-"get") scans because this is not done in
     // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
     useRowColBloom = numCol > 1 || (!isGet && numCol == 1);
+    if (store != null) {
+      this.deleteColBloomEnabled = store.conf.getBoolean(
+          HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING,
+          HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER);
+    }
   }
 
   /**
@@ -267,7 +273,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
       final List<? extends KeyValueScanner> allScanners) {
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(allScanners.size());
-
     // include only those scan files which pass all filters
     for (KeyValueScanner kvs : allScanners) {
       if (kvs.shouldUseScanner(scan, columns, oldestUnexpiredTS)) {
@@ -385,7 +390,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
         }
         prevKV = kv;
         ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv);
-
         if ((qcode == MatchCode.INCLUDE) ||
           (qcode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL) ||
           (qcode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
@@ -397,9 +401,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
             qcode = keyValueAggregator.nextAction(qcode);
           }
         }
-
         switch(qcode) {
-
           case SEEK_TO_EFFECTIVE_TS:
             reseek(matcher.getKeyForEffectiveTSOnRow(kv));
             break;
@@ -439,7 +441,13 @@ public class StoreScanner extends NonLazyKeyValueScanner
               }
               reseek(matcher.getKeyForNextRow(kv));
             } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
-              reseek(matcher.getKeyForNextColumn(kv));
+            // we check this since some tests have store = null
+              if (this.store == null) {
+                reseek(matcher.getKeyForNextColumn(kv, null, false));
+              } else {
+                reseek(matcher.getKeyForNextColumn(kv,
+                    this.heap.getActiveScanners(), deleteColBloomEnabled));
+              }
             } else {
               this.heap.next();
             }
@@ -476,7 +484,12 @@ public class StoreScanner extends NonLazyKeyValueScanner
             break;
 
           case SEEK_NEXT_COL:
-            reseek(matcher.getKeyForNextColumn(kv));
+          // we check this since some tests have store = null
+            if (this.store == null) {
+              reseek(matcher.getKeyForNextColumn(kv, null, false));
+            } else {
+              reseek(matcher.getKeyForNextColumn(kv, this.heap.getActiveScanners(),deleteColBloomEnabled));
+            }
             break;
 
           case SKIP:
@@ -661,4 +674,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
     lazySeekEnabledGlobally = enable;
   }
 
+  @Override
+  public boolean passesDeleteColumnCheck(KeyValue kv) {
+    return true;
+  }
 }

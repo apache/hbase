@@ -989,6 +989,13 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * @return True if this KV is a delete column type.
+   */
+  public boolean isDeleteColumn() {
+    return getType() == Type.DeleteColumn.getCode();
+  }
+
+  /**
    *
    * @return True if this KV is a delete family or column type.
    */

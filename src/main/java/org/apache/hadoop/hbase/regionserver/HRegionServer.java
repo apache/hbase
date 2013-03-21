@@ -350,7 +350,7 @@ public class HRegionServer implements HRegionInterface,
   // large GC issues.
   private static long responseSizeLimit;
   public static boolean enableServerSideProfilingForAllCalls;
-  
+  public static AtomicInteger numOptimizedSeeks = new AtomicInteger(0);
   private int numRowRequests = 0;
 
   public static boolean runMetrics = true;
@@ -410,9 +410,9 @@ public class HRegionServer implements HRegionInterface,
         HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
-    this.responseSizeLimit = conf.getLong("hbase.regionserver.results.size.max",
+    responseSizeLimit = conf.getLong("hbase.regionserver.results.size.max",
         (long)Integer.MAX_VALUE); // set the max to 2G
-    this.enableServerSideProfilingForAllCalls = conf.getBoolean(
+    enableServerSideProfilingForAllCalls = conf.getBoolean(
         "hbase.regionserver.enable.serverside.profiling", false);
 
     reinitialize();
@@ -1346,6 +1346,7 @@ public class HRegionServer implements HRegionInterface,
 
   protected void metrics() {
     this.metrics.regions.set(this.onlineRegions.size());
+    this.metrics.numOptimizedSeeks.set(numOptimizedSeeks.intValue());
     // Is this too expensive every three seconds getting a lock on onlineRegions
     // and then per store carried?  Can I make metrics be sloppier and avoid
     // the synchronizations?

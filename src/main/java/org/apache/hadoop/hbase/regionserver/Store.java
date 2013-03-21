@@ -285,6 +285,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    */
   void setCompactionPolicy(String managerClassName) {
     try {
+      @SuppressWarnings("unchecked")
       Class<? extends CompactionManager> managerClass =
         (Class<? extends CompactionManager>) Class.forName(managerClassName);
       compactionManager = managerClass.getDeclaredConstructor(
@@ -693,7 +694,6 @@ public class Store extends SchemaConfigured implements HeapSize {
         writer = createWriterInTmp(snapshot.size());
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
         fileName = writer.getPath().getName();
-        int entries = 0;
         try {
           final List<KeyValue> kvs = new ArrayList<KeyValue>();
           boolean hasMore;
@@ -710,7 +710,6 @@ public class Store extends SchemaConfigured implements HeapSize {
                   kv.setMemstoreTS(0);
                 }
                 writer.append(kv);
-                entries++;
                 flushed += this.memstore.heapSizeChange(kv, true);
               }
               kvs.clear();
@@ -1020,7 +1019,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       // Ready to go. Have list of files to compact.
       StoreFile.Writer writer = compactStores(filesToCompact, isMajor, maxId);
       // Move the compaction into place.
-      StoreFile sf = completeCompaction(filesToCompact, writer);
+      completeCompaction(filesToCompact, writer);
     } finally {
       synchronized (filesCompacting) {
         filesCompacting.removeAll(filesToCompact);
@@ -1920,4 +1919,5 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
    }
   }
+
 }

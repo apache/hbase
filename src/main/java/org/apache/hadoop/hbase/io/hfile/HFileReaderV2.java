@@ -236,7 +236,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       return metaBlock.getBufferWithoutHeader();
     }
   }
-  
+
   /**
    * Read in a file block.
    * @param dataBlockOffset offset to read.
@@ -273,8 +273,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
         new BlockCacheKey(name, dataBlockOffset,
             dataBlockEncoder.getEffectiveEncodingInCache(isCompaction),
             expectedBlockType);
-    
-    // Checking the block cache. 
+
+    // Checking the block cache.
     HFileBlock cachedBlock = this.getCachedBlock(cacheKey, cacheBlock, isCompaction,
         expectedBlockType, true);
     if (cachedBlock != null) {
@@ -355,7 +355,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       if (cachedBlock != null) {
         // Validate the block type first
         validateBlockType(cachedBlock, expectedBlockType);
-        
+
         // Validate encoding type for encoded blocks. We include encoding
         // type in the cache key, and we expect it to match on a cache hit.
         if (cachedBlock.getBlockType() == BlockType.ENCODED_DATA &&
@@ -365,7 +365,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
               "has wrong encoding: " + cachedBlock.getDataBlockEncoding() +
               " (expected: " + dataBlockEncoder.getEncodingInCache() + ")");
         }
-        
+
         // Update the metrics if enabled
         if (updateMetrics) {
           BlockCategory blockCategory =
@@ -455,16 +455,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
   protected abstract static class AbstractScannerV2
       extends AbstractHFileReader.Scanner {
     protected HFileBlock block;
-    
+
     /**
      * The next indexed key is to keep track of the indexed key of the next data block.
-     * If the nextIndexedKey is HConstants.NO_NEXT_INDEXED_KEY, it means that the 
+     * If the nextIndexedKey is HConstants.NO_NEXT_INDEXED_KEY, it means that the
      * current data block is the last data block.
-     * 
+     *
      * If the nextIndexedKey is null, it means the nextIndexedKey has not been loaded yet.
      */
     protected byte[] nextIndexedKey;
-    
+
     public AbstractScannerV2(HFileReaderV2 r, boolean cacheBlocks,
         final boolean isCompaction) {
       super(r, cacheBlocks, isCompaction);
@@ -526,12 +526,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
         } else {
           if (this.nextIndexedKey != null &&
               (this.nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY ||
-               reader.getComparator().compare(key, offset, length, 
+               reader.getComparator().compare(key, offset, length,
                    nextIndexedKey, 0, nextIndexedKey.length) < 0)) {
-            // The reader shall continue to scan the current data block instead of querying the 
-            // block index as long as it knows the target key is strictly smaller than 
+            // The reader shall continue to scan the current data block instead of querying the
+            // block index as long as it knows the target key is strictly smaller than
             // the next indexed key or the current data block is the last data block.
-            return loadBlockAndSeekToKey(this.block, this.nextIndexedKey, 
+            return loadBlockAndSeekToKey(this.block, this.nextIndexedKey,
                 false, key, offset, length, false);
           }
         }
@@ -551,7 +551,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         return false;
       }
       ByteBuffer firstKey = getFirstKeyInBlock(seekToBlock);
-      
+
       if (reader.getComparator().compare(firstKey.array(),
           firstKey.arrayOffset(), firstKey.limit(), key, offset, length) == 0)
       {
@@ -748,7 +748,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
 
     @Override
-    protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, byte[] nextIndexedKey, 
+    protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, byte[] nextIndexedKey,
         boolean rewind, byte[] key, int offset, int length, boolean seekBefore)
         throws IOException {
       if (block == null || block.getOffset() != seekToBlock.getOffset()) {
@@ -756,12 +756,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
       } else if (rewind) {
         blockBuffer.rewind();
       }
-      
+
       // Update the nextIndexedKey
       this.nextIndexedKey = nextIndexedKey;
       return blockSeek(key, offset, length, seekBefore);
     }
-    
+
     /**
      * Updates the current block to be the given {@link HFileBlock}. Seeks to
      * the the first key/value pair.
@@ -783,7 +783,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       blockBuffer = block.getBufferWithoutHeader();
       readKeyValueLen();
       blockFetches++;
-      
+
       // Reset the next indexed key
       this.nextIndexedKey = null;
     }
@@ -1098,10 +1098,16 @@ public class HFileReaderV2 extends AbstractHFileReader {
     return this.getBloomFilterMetadata(BlockType.DELETE_FAMILY_BLOOM_META);
   }
 
+  @Override
+  public DataInput getDeleteColumnBloomFilterMetadata() throws IOException {
+    return this.getBloomFilterMetadata(BlockType.DELETE_COLUMN_BLOOM_META);
+  }
+
   private DataInput getBloomFilterMetadata(BlockType blockType)
   throws IOException {
     if (blockType != BlockType.GENERAL_BLOOM_META &&
-        blockType != BlockType.DELETE_FAMILY_BLOOM_META) {
+        blockType != BlockType.DELETE_FAMILY_BLOOM_META &&
+        blockType != BlockType.DELETE_COLUMN_BLOOM_META) {
       throw new RuntimeException("Block Type: " + blockType.toString() +
           " is not supported") ;
     }

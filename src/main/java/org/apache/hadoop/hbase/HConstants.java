@@ -442,11 +442,6 @@ public final class HConstants {
    */
   public static final int WEEK_IN_SECONDS = 7 * 24 * 3600;
 
-  //TODO: HBASE_CLIENT_RETRIES_NUMBER_KEY is only used by TestMigrate. Move it
-  //      there.
-  public static final String HBASE_CLIENT_RETRIES_NUMBER_KEY =
-    "hbase.client.retries.number";
-
   //TODO: although the following are referenced widely to format strings for
   //      the shell. They really aren't a part of the public API. It would be
   //      nice if we could put them somewhere where they did not need to be
@@ -651,7 +646,17 @@ public final class HConstants {
    */
   public static  String COMPACTION_HOOK_JAR = "compaction_hook_jar";
 
+  public static final String GENERAL_BLOOM_FILTER = "general_bloom_filter";
+
+  public static final String DELETE_FAMILY_BLOOM_FILTER = "delete_family_bloom_filter";
+
+  public static final String DELETE_COLUMN_BLOOM_FILTER = "delete_column_bloom_filter";
+
+  public static final boolean ENABLE_DELETE_COLUMN_BLOOM_FILTER = false;
+
+  public static final String ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING = "enable_delete_column_bloom_filter";
+
   private HConstants() {
-    // Can't be instantiated with this ctor.
+    // Can't be instantiated with this constructor.
   }
 }

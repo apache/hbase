@@ -75,6 +75,9 @@ public enum BlockType {
   /** Delete Family Bloom filter metadata, version 2 */
   DELETE_FAMILY_BLOOM_META("DFBLMET2", BlockCategory.BLOOM),
 
+  /** Delete Column Bloom filter metadata, version 2 */
+  DELETE_COLUMN_BLOOM_META("DCBLMET2", BlockCategory.BLOOM),
+
   // Trailer
 
   /** Fixed file trailer, both versions (always just a magic string) */

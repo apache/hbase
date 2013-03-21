@@ -26,6 +26,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -72,6 +73,10 @@ public final class BloomFilterFactory {
   /** Master switch to enable Delete Family Bloom filters */
   public static final String IO_STOREFILE_DELETEFAMILY_BLOOM_ENABLED =
       "io.storefile.delete.family.bloom.enabled";
+
+  /** Master switch to enable Delete Column Family filters */
+  public static final String IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED =
+      "io.storefile.delete.column.bloom.enabled";
 
   /**
    * Target Bloom block size. Bloom filter blocks of approximately this size
@@ -128,6 +133,13 @@ public final class BloomFilterFactory {
    */
   public static boolean isDeleteFamilyBloomEnabled(Configuration conf) {
     return conf.getBoolean(IO_STOREFILE_DELETEFAMILY_BLOOM_ENABLED, true);
+  }
+
+  /**
+   * @return true if Delete Column Bloom filters are enabled in the given configuration
+   */
+  public static boolean isDeleteColumnBloomEnabled(Configuration conf) {
+    return conf.getBoolean(IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, true);
   }
 
   /**
@@ -239,7 +251,7 @@ public final class BloomFilterFactory {
   }
 
   /**
-   * Creates a new Delete Family Bloom filter at the time of
+   * Creates a new Delete Family/Column Bloom filter at the time of
    * {@link org.apache.hadoop.hbase.regionserver.StoreFile} writing.
    * @param conf
    * @param maxKeys an estimate of the number of keys we expect to insert.
@@ -251,9 +263,14 @@ public final class BloomFilterFactory {
    */
   public static BloomFilterWriter createDeleteBloomAtWrite(
       Configuration conf, CacheConfig cacheConf, int maxKeys,
-      HFile.Writer writer, float bloomErrorRate) {
-    if (!isDeleteFamilyBloomEnabled(conf)) {
-      LOG.info("Delete Bloom filters are disabled by configuration for "
+      HFile.Writer writer, float bloomErrorRate, String deleteBloomType) {
+    if (deleteBloomType.equals(HConstants.DELETE_FAMILY_BLOOM_FILTER) && !isDeleteFamilyBloomEnabled(conf)) {
+      LOG.info("Delete Family Bloom filters are disabled by configuration for "
+          + writer.getPath()
+          + (conf == null ? " (configuration is null)" : ""));
+      return null;
+    } else if (deleteBloomType.equals(HConstants.DELETE_COLUMN_BLOOM_FILTER) && !isDeleteColumnBloomEnabled(conf)) {
+      LOG.info("Delete Column Bloom filters are disabled by configuration for "
           + writer.getPath()
           + (conf == null ? " (configuration is null)" : ""));
       return null;
@@ -269,7 +286,7 @@ public final class BloomFilterFactory {
       writer.addInlineBlockWriter(bloomWriter);
       return bloomWriter;
     } else {
-      LOG.info("Delete Family Bloom filter is not supported in HFile V1");
+      LOG.info("Delete Bloom filter is not supported in HFile V1");
       return null;
     }
   }

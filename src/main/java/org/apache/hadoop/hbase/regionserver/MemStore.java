@@ -78,6 +78,9 @@ public class MemStore implements HeapSize {
   // Used to track own heapSize
   final AtomicLong size;
 
+  private AtomicLong numDeletesInKvSet;
+  private AtomicLong numDeletesInSnapshot;
+
   TimeRangeTracker timeRangeTracker;
   TimeRangeTracker snapshotTimeRangeTracker;
 
@@ -102,6 +105,8 @@ public class MemStore implements HeapSize {
     timeRangeTracker = new TimeRangeTracker();
     snapshotTimeRangeTracker = new TimeRangeTracker();
     this.size = new AtomicLong(DEEP_OVERHEAD);
+    this.numDeletesInKvSet = new AtomicLong(0);
+    this.numDeletesInSnapshot = new AtomicLong(0);
   }
 
   void dump() {
@@ -134,6 +139,8 @@ public class MemStore implements HeapSize {
           this.timeRangeTracker = new TimeRangeTracker();
           // Reset heap to not include any keys
           this.size.set(DEEP_OVERHEAD);
+          this.numDeletesInSnapshot = numDeletesInKvSet;
+          this.numDeletesInKvSet.set(0);
         }
       }
     } finally {
@@ -190,6 +197,9 @@ public class MemStore implements HeapSize {
       s = heapSizeChange(kv, this.kvset.add(kv));
       timeRangeTracker.includeTimestamp(kv);
       this.size.addAndGet(s);
+      if (kv.isDelete()) {
+        this.numDeletesInKvSet.incrementAndGet();
+      }
     } finally {
       this.lock.readLock().unlock();
     }
@@ -209,6 +219,9 @@ public class MemStore implements HeapSize {
       timeRangeTracker.includeTimestamp(delete);
     } finally {
       this.lock.readLock().unlock();
+    }
+    if (delete.isDelete()) {
+      this.numDeletesInKvSet.incrementAndGet();
     }
     this.size.addAndGet(s);
     return s;
@@ -667,10 +680,17 @@ public class MemStore implements HeapSize {
         long oldestUnexpiredTS) {
       return shouldSeek(scan, oldestUnexpiredTS);
     }
+
+    @Override
+    public boolean passesDeleteColumnCheck(KeyValue kv) {
+      if (numDeletesInKvSet.get() > 0 || numDeletesInSnapshot.get() > 0)
+        return true;
+      return false;
+    }
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (9 * ClassSize.REFERENCE));
+      ClassSize.OBJECT + (11 * ClassSize.REFERENCE));
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +

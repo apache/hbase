@@ -701,4 +701,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
     return fileInfoLoaded;
   }
 
+  @Override
+  public DataInput getDeleteColumnBloomFilterMetadata() {
+    return null;
+  }
+
 }

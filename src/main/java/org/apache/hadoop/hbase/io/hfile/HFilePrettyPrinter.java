@@ -38,9 +38,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilter;
@@ -370,34 +372,36 @@ public class HFilePrettyPrinter {
     }
     System.out.println("Mid-key: " + Bytes.toStringBinary(reader.midkey()));
 
-    // Printing general bloom information
-    DataInput bloomMeta = reader.getGeneralBloomFilterMetadata();
-    BloomFilter bloomFilter = null;
-    if (bloomMeta != null)
-      bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+    // Printing bloom filter information
+    String[] bloomFilters = new String[] {HConstants.GENERAL_BLOOM_FILTER,
+        HConstants.DELETE_FAMILY_BLOOM_FILTER, HConstants.DELETE_COLUMN_BLOOM_FILTER};
 
-    System.out.println("Bloom filter:");
-    if (bloomFilter != null) {
-      System.out.println(FOUR_SPACES
-          + bloomFilter.toString().replaceAll(ByteBloomFilter.STATS_RECORD_SEP,
-              "\n" + FOUR_SPACES));
-    } else {
-      System.out.println(FOUR_SPACES + "Not present");
+    for (String blf : bloomFilters) {
+      DataInput bloomMeta = getCustomBloomFilterMetadata(blf, reader);
+      BloomFilter bloomFilter = null;
+      if (bloomMeta != null)
+        bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+
+      System.out.println("Bloom filter: " + blf);
+      if (bloomFilter != null) {
+        System.out.println(FOUR_SPACES
+            + bloomFilter.toString().replaceAll(
+                ByteBloomFilter.STATS_RECORD_SEP, "\n" + FOUR_SPACES));
+      } else {
+        System.out.println(FOUR_SPACES + "Not present");
+      }
     }
+  }
 
-    // Printing delete bloom information
-    bloomMeta = reader.getDeleteBloomFilterMetadata();
-    bloomFilter = null;
-    if (bloomMeta != null)
-      bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
-
-    System.out.println("Delete Family Bloom filter:");
-    if (bloomFilter != null) {
-      System.out.println(FOUR_SPACES
-          + bloomFilter.toString().replaceAll(ByteBloomFilter.STATS_RECORD_SEP,
-              "\n" + FOUR_SPACES));
-    } else {
-      System.out.println(FOUR_SPACES + "Not present");
+  private DataInput getCustomBloomFilterMetadata(String bloomFilter,
+      Reader reader) throws IOException {
+    if (bloomFilter.equals(HConstants.GENERAL_BLOOM_FILTER)) {
+      return reader.getGeneralBloomFilterMetadata();
+    } else if (bloomFilter.equals(HConstants.DELETE_FAMILY_BLOOM_FILTER)) {
+      return reader.getDeleteBloomFilterMetadata();
+    } else if (bloomFilter.equals(HConstants.DELETE_COLUMN_BLOOM_FILTER)) {
+      return reader.getDeleteColumnBloomFilterMetadata();
     }
+    return null;
   }
 }

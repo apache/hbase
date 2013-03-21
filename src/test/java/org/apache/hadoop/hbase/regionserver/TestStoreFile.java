@@ -64,6 +64,7 @@ import com.google.common.collect.Lists;
 /**
  * Test HStoreFile
  */
+@SuppressWarnings("deprecation")
 public class TestStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestStoreFile.class);
   private MiniDFSCluster cluster;

@@ -53,7 +53,6 @@ import java.util.List;
  * these variables (objects) have methods to update their values.
  */
 public class RegionServerMetrics implements Updater {
-  @SuppressWarnings({"FieldCanBeLocal"})
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final MetricsRecord metricsRecord;
   private long lastUpdate = System.currentTimeMillis();
@@ -216,6 +215,9 @@ public class RegionServerMetrics implements Updater {
   public final MetricsTimeVaryingRate mvccWaitTime =
     new MetricsTimeVaryingRate("mvccWait", registry);
 
+  public final MetricsRate numOptimizedSeeks =
+    new MetricsRate("numOptimizedSeeks", registry);
+
   /**
    * time each scheduled compaction takes
    */
@@ -332,6 +334,7 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
       this.rowReadCnt.pushMetric(this.metricsRecord);
       this.rowUpdatedCnt.pushMetric(this.metricsRecord);
+      this.numOptimizedSeeks.pushMetric(this.metricsRecord);
 
       // Be careful. Here is code for MTVR from up in hadoop:
       // public synchronized void inc(final int numOps, final long time) {
@@ -500,6 +503,8 @@ public class RegionServerMetrics implements Updater {
       Float.valueOf(this.rowUpdatedCnt.getPreviousIntervalValue()));
     sb = Strings.appendKeyValue(sb, "numReads",
       Float.valueOf(this.rowReadCnt.getPreviousIntervalValue()));
+    sb = Strings.appendKeyValue(sb, "numOptimizedSeeks",
+      Float.valueOf(this.numOptimizedSeeks.getPreviousIntervalValue()));
 
     // Duplicate from jvmmetrics because metrics are private there so
     // inaccessible.

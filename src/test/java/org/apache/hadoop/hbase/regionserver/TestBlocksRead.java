@@ -12,6 +12,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -27,10 +28,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.Test;
 
+@SuppressWarnings("deprecation")
 public class TestBlocksRead extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
-  static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
-      BloomType.ROW, BloomType.NONE };
+  static final BloomType[] BLOOM_TYPE = new BloomType[] {BloomType.ROWCOL,
+      BloomType.ROW, BloomType.NONE};
 
   private static BlockCache blockCache;
 
@@ -50,13 +52,11 @@ public class TestBlocksRead extends HBaseTestCase {
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
    */
-  @SuppressWarnings("deprecation")
   @Override
   protected void setUp() throws Exception {
     super.setUp();
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   protected void tearDown() throws Exception {
     super.tearDown();
@@ -64,7 +64,7 @@ public class TestBlocksRead extends HBaseTestCase {
   }
 
   private void initHRegion(byte[] tableName, String callingMethod,
-      HBaseConfiguration conf, String family) throws IOException {
+      HBaseConfiguration conf, String family, boolean versions) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor familyDesc;
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
@@ -72,6 +72,8 @@ public class TestBlocksRead extends HBaseTestCase {
       familyDesc = new HColumnDescriptor(family + "_" + bloomType)
           .setBlocksize(1)
           .setBloomFilterType(BLOOM_TYPE[i]);
+      if (versions)
+        familyDesc.setMaxVersions(Integer.MAX_VALUE);
       htd.addFamily(familyDesc);
     }
 
@@ -80,6 +82,8 @@ public class TestBlocksRead extends HBaseTestCase {
     region = HRegion.createHRegion(info, path, conf);
     blockCache = new CacheConfig(conf).getBlockCache();
   }
+
+
 
   private void putData(String family, String row, String col, long version)
       throws IOException {
@@ -108,6 +112,40 @@ public class TestBlocksRead extends HBaseTestCase {
   private KeyValue[] getData(String family, String row, List<String> columns,
       int expBlocks) throws IOException {
     return getData(family, row, columns, expBlocks, expBlocks, expBlocks);
+  }
+
+  private KeyValue[] getData(String family, String row, List<String> columns,
+      long timestamp, int expBlocks) throws IOException {
+    return getData(family, row, columns, timestamp, expBlocks, expBlocks, expBlocks);
+  }
+
+  private KeyValue[] getData(String family, String row, List<String> columns,
+      long timestamp, int expBlocksRowCol, int expBlocksRow, int expBlocksNone)
+      throws IOException {
+    int[] expBlocks = new int[] { expBlocksRowCol, expBlocksRow, expBlocksNone };
+    KeyValue[] kvs = null;
+
+    for (int i = 0; i < BLOOM_TYPE.length; i++) {
+      BloomType bloomType = BLOOM_TYPE[i];
+      byte[] cf = Bytes.toBytes(family + "_" + bloomType);
+      long blocksStart = getBlkAccessCount(cf);
+      Get get = new Get(Bytes.toBytes(row));
+
+      for (String column : columns) {
+        get.addColumn(cf, Bytes.toBytes(column));
+        get.setTimeStamp(timestamp);
+      }
+
+      kvs = region.get(get, null).raw();
+      long blocksEnd = getBlkAccessCount(cf);
+      if (expBlocks[i] != -1) {
+        assertEquals("Blocks Read Check for Bloom: " + bloomType, expBlocks[i],
+            blocksEnd - blocksStart);
+      }
+      System.out.println("Blocks Read for Bloom: " + bloomType + " = "
+          + (blocksEnd - blocksStart) + "Expected = " + expBlocks[i]);
+    }
+    return kvs;
   }
 
   private KeyValue[] getData(String family, String row, List<String> columns,
@@ -160,6 +198,26 @@ public class TestBlocksRead extends HBaseTestCase {
     region.delete(del, null, true);
   }
 
+  public void deleteColumn(String family, String qualifier, String row,
+      long version) throws IOException {
+    Delete del = new Delete(Bytes.toBytes(row));
+    for (int i=0; i<BLOOM_TYPE.length; i++) {
+      del.deleteColumn(Bytes.toBytes(family + BLOOM_TYPE[i]),
+          Bytes.toBytes(qualifier), version);
+    }
+    region.delete(del, null, true);
+  }
+
+  public void deleteColumn(String family, String qualifier, String row)
+      throws IOException {
+    Delete del = new Delete(Bytes.toBytes(row));
+    for (int i=0; i<BLOOM_TYPE.length; i++) {
+      del.deleteColumns(Bytes.toBytes(family + "_" + BLOOM_TYPE[i]),
+          Bytes.toBytes(qualifier));
+    }
+    region.delete(del, null, true);
+  }
+
   private static void verifyData(KeyValue kv, String expectedRow,
       String expectedCol, long expectedVersion) {
     assertEquals("RowCheck", expectedRow, Bytes.toString(kv.getRow()));
@@ -191,7 +249,7 @@ public class TestBlocksRead extends HBaseTestCase {
     String FAMILY = "cf1";
     KeyValue kvs[];
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILY);
+    initHRegion(TABLE, getName(), conf, FAMILY, false);
 
     putData(FAMILY, "row", "col1", 1);
     putData(FAMILY, "row", "col2", 2);
@@ -200,6 +258,7 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col5", 5);
     putData(FAMILY, "row", "col6", 6);
     putData(FAMILY, "row", "col7", 7);
+
     region.flushcache();
 
     // Expected block reads: 1
@@ -243,7 +302,7 @@ public class TestBlocksRead extends HBaseTestCase {
     String FAMILY = "cf1";
     KeyValue kvs[];
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILY);
+    initHRegion(TABLE, getName(), conf, FAMILY, false);
 
     // File 1
     putData(FAMILY, "row", "col1", 1);
@@ -340,7 +399,7 @@ public class TestBlocksRead extends HBaseTestCase {
     String FAMILY = "cf1";
     KeyValue kvs[];
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILY);
+    initHRegion(TABLE, getName(), conf, FAMILY, true);
 
     deleteFamily(FAMILY, "row", 200);
     for (int i = 0; i < 100; i++) {
@@ -357,6 +416,231 @@ public class TestBlocksRead extends HBaseTestCase {
     verifyData(kvs[0], "row", "col99", 201);
   }
 
+  @Test
+  public void testDeleteColBloomFilterWithoutDeletesWithFlushCache() throws IOException{
+    HRegionServer.numOptimizedSeeks.set(0);
+    byte[] TABLE = Bytes.toBytes("testDeleteColBloomFilterWithoutDeletes");
+    String FAMILY = "cf1";
+    KeyValue kvs[];
+    HBaseConfiguration conf = getConf();
+    conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
+    initHRegion(TABLE, getName(), conf, FAMILY, true);
+    if (!conf.getBoolean(HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING, HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER)) {
+      System.out.println("ignoring this test since the delete bloom filter is not enabled...");
+      return;
+    }
+    for (int i = 1; i < 8; i++) {
+      for (int j = 1; j < 6; j++) {
+        putData(FAMILY, "row", "col"+i, j);
+      }
+    }
+    region.flushcache();
+
+    Scan scan = new Scan();
+    scan.setMaxVersions(5);
+    InternalScanner s = region.getScanner(scan);
+    List<KeyValue> results = new ArrayList<KeyValue>(10);
+    while (s.next(results))
+      ;
+    s.close();
+    for (KeyValue kv : results) {
+      System.out.println(kv.toString());
+    }
+    System.out.println("======");
+    for (int i = 1; i < 8; i++) {
+      for (int j = 1; j < 6; j++) {
+        if (i == 1 && j == 5) {
+          /**
+           * Since this is the top KV (KV with smallest column and highest
+           * timestamp, we just need one seek
+           */
+          kvs = getData(FAMILY, "row", Arrays.asList("col" + i), j, 1);
+          verifyData(kvs[0], "row", "col" + i, j);
+          assertEquals(1, kvs.length);
+          System.out.println("=====");
+        } else {
+          /**
+           * We first go on the KV with max timestamp, then land on the actual
+           * KV, which is 2 blocks read
+           */
+          kvs = getData(FAMILY, "row", Arrays.asList("col" + i), j, 2);
+          verifyData(kvs[0], "row", "col" + i, j);
+          assertEquals(1, kvs.length);
+        }
+      }
+    }
+    int optimizedSeeks = HRegionServer.numOptimizedSeeks.get();
+    /**
+     * Since we have 7 columns, 3 col families and 5 versions in total, and no
+     * deletes, then we should get 7 * 3 * 5 optimized reads (all of them should
+     * be optimized)
+     **/
+    assertEquals(7 * 3 * 5, optimizedSeeks);
+  }
+
+
+  @Test
+  public void testDeleteColBloomFilterWithDeletesWithoutFlushCache() throws IOException{
+    HRegionServer.numOptimizedSeeks.set(0);
+    byte[] TABLE = Bytes.toBytes("testDeleteColBloomFilterWithDeletes");
+    String FAMILY = "cf1";
+    KeyValue kvs[];
+    HBaseConfiguration conf = getConf();
+    conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
+    initHRegion(TABLE, getName(), conf, FAMILY, true);
+    if (!conf.getBoolean(HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING, HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER)) {
+      System.out.println("ignoring this test since the delete bloom filter is not enabled...");
+      return;
+    }
+    for (int i = 1; i < 8; i++) {
+      for (int j = 1; j < 6; j++) {
+        putData(FAMILY, "row", "col"+i, j);
+      }
+    }
+
+    deleteColumn(FAMILY, "col2", "row");
+    deleteColumn(FAMILY, "col5", "row");
+    deleteColumn(FAMILY, "col7", "row");
+
+    kvs = getData(FAMILY, "row",  Arrays.asList("col2"), 5, 0);
+    assertTrue(kvs.length == 0);
+    kvs = getData(FAMILY, "row",  Arrays.asList("col3"), 3, 0);
+    verifyData(kvs[0], "row", "col3", 3);
+    assertEquals(1, kvs.length);
+    kvs = getData(FAMILY, "row",  Arrays.asList("col6"), 4, 0 );
+    verifyData(kvs[0], "row", "col6", 4);
+    assertEquals(1, kvs.length);
+    kvs = getData(FAMILY, "row",  Arrays.asList("col7"), 5, 0);
+    assertTrue(kvs.length == 0);
+    kvs = getData(FAMILY, "row",  Arrays.asList("col5"), 5, 0);
+    assertTrue(kvs.length == 0);
+
+    /**
+     * Since we don't do flush we read just from the memstore, we are not
+     * supposed to update the number of optimized seeks
+     **/
+    int optimizedSeeks = HRegionServer.numOptimizedSeeks.get();
+    assertEquals(0, optimizedSeeks);
+  }
+
+  @Test
+  public void testDeleteColBloomFilterWithDeletesWithFlushCache() throws IOException{
+    HRegionServer.numOptimizedSeeks.set(0);
+    byte[] TABLE = Bytes.toBytes("testDeleteColBloomFilterWithDeletes");
+    String FAMILY = "cf1";
+    KeyValue kvs[];
+    HBaseConfiguration conf = getConf();
+    conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
+    initHRegion(TABLE, getName(), conf, FAMILY, true);
+    if (!conf.getBoolean(HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING, HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER)) {
+      System.out.println("ignoring this test since the delete bloom filter is not enabled...");
+      return;
+    }
+    for (int i = 1; i < 8; i++) {
+      for (int j = 1; j < 6; j++) {
+        putData(FAMILY, "row", "col"+i, j);
+      }
+    }
+
+    deleteColumn(FAMILY, "col2", "row");
+    deleteColumn(FAMILY, "col5", "row");
+    deleteColumn(FAMILY, "col7", "row");
+    region.flushcache();
+
+    /**
+     * only the seeks for the KVs for which we don't have any deletes should be
+     * optimized, and since we have 3 col families we will have number of seeks
+     *
+     **/
+    kvs = getData(FAMILY, "row",  Arrays.asList("col2"), 5, 3);
+    assertTrue(kvs.length == 0);
+    kvs = getData(FAMILY, "row",  Arrays.asList("col3"), 3, 2);
+    verifyData(kvs[0], "row", "col3", 3);
+    assertEquals(1, kvs.length);
+    kvs = getData(FAMILY, "row",  Arrays.asList("col6"), 4, 2 );
+    verifyData(kvs[0], "row", "col6", 4);
+    assertEquals(1, kvs.length);
+    kvs = getData(FAMILY, "row",  Arrays.asList("col7"), 5, 2);
+    assertTrue(kvs.length == 0);
+    kvs = getData(FAMILY, "row",  Arrays.asList("col5"), 5, 3);
+    assertTrue(kvs.length == 0);
+    int numSeeks = HRegionServer.numOptimizedSeeks.get();
+    assertEquals(6, numSeeks);
+  }
+
+  /**
+   * This test will make a number of puts, and then do flush, then do another
+   * series of puts. Then we will test the number of blocks read while doing get
+   * @throws IOException
+   */
+  @Test
+  public void testDeleteColBloomFilterWithoutDeletes() throws IOException {
+    HRegionServer.numOptimizedSeeks.set(0);
+    byte[] TABLE = Bytes.toBytes("testDeleteColBloomFilterWithDeletes");
+    String FAMILY = "cf1";
+    KeyValue kvs[];
+    HBaseConfiguration conf = getConf();
+    conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
+    initHRegion(TABLE, getName(), conf, FAMILY, true);
+    if (!conf.getBoolean(HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING, HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER)) {
+      System.out.println("ignoring this test since the delete bloom filter is not enabled...");
+      return;
+    }
+    int i, j;
+    for (i = 1; i < 8; i++) {
+      for (j = 1; j < 6; j++) {
+        putData(FAMILY, "row", "col" + i, j);
+      }
+    }
+    region.flushcache();
+
+    /** Do some more puts and don't flush them **/
+    for (i = 5; i < 10; i++) {
+      for (j = 6; j < 10; j++) {
+        putData(FAMILY, "row", "col" + i, j);
+      }
+    }
+
+    /** Check the number of blocks read for the puts which are flushed **/
+    for (i = 1; i < 8; i++) {
+      for (j = 1; j < 6; j++) {
+        if (i == 1 && j == 5) {
+          /**
+           * Since this is the top KV (KV with smallest column and highest
+           * timestamp, we just need one seek
+           */
+          kvs = getData(FAMILY, "row", Arrays.asList("col" + i), j, 1);
+          verifyData(kvs[0], "row", "col" + i, j);
+          assertEquals(1, kvs.length);
+          System.out.println("=====");
+        } else {
+          /**
+           * We first go on the KV with max timestamp, then land on the actual
+           * KV, which is 2 blocks read
+           */
+          System.out.println("i: "+ i + "j: "+ j);
+          kvs = getData(FAMILY, "row", Arrays.asList("col" + i), j, 2);
+          verifyData(kvs[0], "row", "col" + i, j);
+          assertEquals(1, kvs.length);
+        }
+      }
+    }
+    /** Check the number of blocks read for the puts which were not flushed **/
+    for (i = 6; i < 10; i++) {
+      for (j = 6; j < 10; j++) {
+        kvs = getData(FAMILY, "row", Arrays.asList("col" + i), j, 0);
+        verifyData(kvs[0], "row", "col" + i, j);
+      }
+    }
+
+    int optimizedSeeks = HRegionServer.numOptimizedSeeks.get();
+    /**
+     * since there are no deletes, the additional gets for puts which are not
+     * flushed will be counted as optimized too
+     **/
+    assertEquals((7 * 5 * 3 + 4 *3 * 4), optimizedSeeks);
+  }
+
   /**
    * Test # of blocks read to ensure disabling cache-fill on Scan works.
    * @throws Exception
@@ -367,7 +651,7 @@ public class TestBlocksRead extends HBaseTestCase {
     String FAMILY = "cf1";
 
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILY);
+    initHRegion(TABLE, getName(), conf, FAMILY, false);
 
     putData(FAMILY, "row", "col1", 1);
     putData(FAMILY, "row", "col2", 2);

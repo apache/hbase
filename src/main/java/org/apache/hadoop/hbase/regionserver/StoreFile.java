@@ -124,6 +124,10 @@ public class StoreFile extends SchemaConfigured {
   public static final byte[] DELETE_FAMILY_COUNT =
       Bytes.toBytes("DELETE_FAMILY_COUNT");
 
+  /** Delete Column Count in FileInfo */
+  public static final byte[] DELETE_COLUMN_COUNT =
+      Bytes.toBytes("DELETE_COLUMN_COUNT");
+
   /** Last Bloom filter key in FileInfo */
   private static final byte[] LAST_BLOOM_KEY = Bytes.toBytes("LAST_BLOOM_KEY");
 
@@ -397,7 +401,7 @@ public class StoreFile extends SchemaConfigured {
    * the given list. Store files that were created by a mapreduce
    * bulk load are ignored, as they do not correspond to any edit
    * log items.
-   * @param sfs 
+   * @param sfs
    * @param includeBulkLoadedFiles
    * @return 0 if no non-bulk-load files are provided or, this is Store that
    * does not yet have any store files.
@@ -467,8 +471,8 @@ public class StoreFile extends SchemaConfigured {
           this.sequenceid += 1;
         }
       }
-    } 
-    
+    }
+
     if (isBulkLoadResult()){
       // generate the sequenceId from the fileName
       // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
@@ -522,6 +526,9 @@ public class StoreFile extends SchemaConfigured {
 
     // load delete family bloom filter
     reader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
+
+    // load delete column bloom filter
+    reader.loadBloomfilter(BlockType.DELETE_COLUMN_BLOOM_META);
 
     try {
       byte [] timerangeBytes = metadataMap.get(TIMERANGE_KEY);
@@ -848,13 +855,16 @@ public class StoreFile extends SchemaConfigured {
   public static class Writer {
     private final BloomFilterWriter generalBloomFilterWriter;
     private final BloomFilterWriter deleteFamilyBloomFilterWriter;
+    private final BloomFilterWriter deleteColumnBloomFilterWriter;
     private final BloomType bloomType;
     private byte[] lastBloomKey;
     private int lastBloomKeyOffset, lastBloomKeyLen;
     private final KVComparator kvComparator;
     private KeyValue lastKv = null;
     private KeyValue lastDeleteFamilyKV = null;
+    private KeyValue lastDeleteColumnKV = null;
     private long deleteFamilyCnt = 0;
+    private long deleteColumnCnt = 0;
 
     protected final HFileDataBlockEncoder dataBlockEncoder;
 
@@ -904,13 +914,23 @@ public class StoreFile extends SchemaConfigured {
         this.deleteFamilyBloomFilterWriter = BloomFilterFactory
             .createDeleteBloomAtWrite(wb.conf, wb.cacheConf,
                 (int) Math.min(wb.maxKeyCount, Integer.MAX_VALUE), writer,
-                wb.bloomErrorRate);
+                wb.bloomErrorRate, HConstants.DELETE_FAMILY_BLOOM_FILTER);
       } else {
         deleteFamilyBloomFilterWriter = null;
       }
       if (deleteFamilyBloomFilterWriter != null) {
         LOG.info("Delete Family Bloom filter type for " + wb.filePath + ": "
             + deleteFamilyBloomFilterWriter.getClass().getSimpleName());
+      }
+      // initialize DeleteColumn bloom filter
+      this.deleteColumnBloomFilterWriter = BloomFilterFactory
+          .createDeleteBloomAtWrite(wb.conf, wb.cacheConf,
+              (int) Math.min(wb.maxKeyCount, Integer.MAX_VALUE), writer,
+              wb.bloomErrorRate, HConstants.DELETE_COLUMN_BLOOM_FILTER);
+
+      if (deleteColumnBloomFilterWriter != null) {
+        LOG.info("Delete Column Family filter type for " + wb.filePath + ": "
+            + deleteColumnBloomFilterWriter.getClass().getSimpleName());
       }
     }
 
@@ -1073,9 +1093,33 @@ public class StoreFile extends SchemaConfigured {
       }
     }
 
+    private void appendDeleteColumnBloomFilter(final KeyValue kv)
+        throws IOException {
+      if (!kv.isDeleteColumn()) {
+        return;
+      }
+      deleteColumnCnt++;
+      if (this.deleteColumnBloomFilterWriter != null) {
+        boolean newKey = true;
+        if (lastDeleteColumnKV != null) {
+          boolean compared = kvComparator.compare(kv, lastDeleteColumnKV) == 0 ? true
+              : false;
+          newKey = !compared;
+        }
+        if (newKey) {
+          byte[] bloomKey = deleteColumnBloomFilterWriter.createBloomKey(
+              kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+              kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
+          this.deleteColumnBloomFilterWriter.add(bloomKey, 0, bloomKey.length);
+          this.lastDeleteColumnKV = kv;
+        }
+      }
+    }
+
     public void append(final KeyValue kv) throws IOException {
       appendGeneralBloomfilter(kv);
       appendDeleteFamilyBloomFilter(kv);
+      appendDeleteColumnBloomFilter(kv);
       writer.append(kv);
       includeInTimeRangeTracker(kv);
     }
@@ -1139,19 +1183,36 @@ public class StoreFile extends SchemaConfigured {
       return hasDeleteFamilyBloom;
     }
 
+    private boolean closeDeleteColumnBloomFilter() throws IOException {
+      boolean hasDeleteColumnBloom = closeBloomFilter(deleteColumnBloomFilterWriter);
+
+      //add the delete column Bloom filter writer
+      if (hasDeleteColumnBloom) {
+        writer.addDeleteColumnBloomFilter(deleteColumnBloomFilterWriter);
+      }
+
+      // append file info about the number of delete column kvs
+      // even if there is no delete column Bloom.
+      writer.appendFileInfo(DELETE_COLUMN_COUNT,
+          Bytes.toBytes(this.deleteColumnCnt));
+      return hasDeleteColumnBloom;
+    }
+
     public void close() throws IOException {
       // Save data block encoder metadata in the file info.
       dataBlockEncoder.saveMetadata(this);
 
       boolean hasGeneralBloom = this.closeGeneralBloomFilter();
       boolean hasDeleteFamilyBloom = this.closeDeleteFamilyBloomFilter();
+      boolean hasDeleteColumnBloom = this.closeDeleteColumnBloomFilter();
 
       writer.close();
 
       // Log final Bloom filter statistics. This needs to be done after close()
       // because compound Bloom filters might be finalized as part of closing.
       StoreFile.LOG.info((hasGeneralBloom ? "" : "NO ") + "General Bloom and "
-          + (hasDeleteFamilyBloom ? "" : "NO ") + "DeleteFamily"
+          + (hasDeleteFamilyBloom ? "" : "NO ") + "DeleteFamily and "
+          + (hasDeleteColumnBloom ? "" : "NO ") + "DeleteColumn"
           + " was added to HFile (" + getPath() + ") ");
 
     }
@@ -1174,12 +1235,14 @@ public class StoreFile extends SchemaConfigured {
 
     protected BloomFilter generalBloomFilter = null;
     protected BloomFilter deleteFamilyBloomFilter = null;
+    protected BloomFilter deleteColumnBloomFilter = null;
     protected BloomType bloomFilterType;
     private final HFile.Reader reader;
     protected TimeRangeTracker timeRangeTracker = null;
     protected long sequenceID = -1;
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
+    private long deleteColumnCnt = -1;
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf,
         DataBlockEncoding preferredEncodingInCache) throws IOException {
@@ -1345,6 +1408,31 @@ public class StoreFile extends SchemaConfigured {
       return true;
     }
 
+    public boolean passesDeleteColumnBloomFilter (KeyValue kv) {
+      // Empty file or there is no delete column at all
+      if (reader.getTrailer().getEntryCount() == 0 || deleteColumnCnt == 0) {
+        return false;
+      }
+      BloomFilter bloomFilter = this.deleteColumnBloomFilter;
+      if (bloomFilter == null) {
+        return true;
+      }
+      try {
+        if (!bloomFilter.supportsAutoLoading()) {
+          return true;
+        }
+        byte[] bloomKey = deleteColumnBloomFilter.createBloomKey(kv.getBuffer(),
+            kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
+            kv.getQualifierOffset(), kv.getQualifierLength());
+        return bloomFilter.contains(bloomKey, 0, bloomKey.length, null);
+      } catch (IllegalArgumentException e) {
+        LOG.error("Bad Delete Column bloom filter data -- proceeding without",
+            e);
+        setDeleteColumnBloomFilterFaulty();
+      }
+      return true;
+    }
+
     /**
      * A method for checking Bloom filters. Called directly from
      * {@link StoreFileScanner} in case of a multi-column query.
@@ -1469,6 +1557,10 @@ public class StoreFile extends SchemaConfigured {
       if (cnt != null) {
         deleteFamilyCnt = Bytes.toLong(cnt);
       }
+      cnt = fi.get(DELETE_COLUMN_COUNT);
+      if (cnt != null) {
+        deleteColumnCnt = Bytes.toLong(cnt);
+      }
 
       return fi;
     }
@@ -1476,6 +1568,7 @@ public class StoreFile extends SchemaConfigured {
     public void loadBloomfilter() {
       this.loadBloomfilter(BlockType.GENERAL_BLOOM_META);
       this.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
+      this.loadBloomfilter(BlockType.DELETE_COLUMN_BLOOM_META);
     }
 
     private void loadBloomfilter(BlockType blockType) {
@@ -1510,6 +1603,17 @@ public class StoreFile extends SchemaConfigured {
                 + deleteFamilyBloomFilter.getClass().getSimpleName()
                 + ") metadata for " + reader.getName());
           }
+        } else if (blockType == BlockType.DELETE_COLUMN_BLOOM_META) {
+          if (this.deleteColumnBloomFilter != null) {
+            return;
+          }
+          DataInput bloomMeta = reader.getDeleteColumnBloomFilterMetadata();
+          if (bloomMeta != null) {
+            deleteColumnBloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+            LOG.info("Loaded Delete Column Bloom ( "
+                + deleteColumnBloomFilter.getClass().getSimpleName()
+                + ") metadata for " + reader.getName());
+          }
         } else {
           throw new RuntimeException("Block Type: " + blockType.toString()
               + "is not supported for Bloom filter");
@@ -1530,6 +1634,8 @@ public class StoreFile extends SchemaConfigured {
         setGeneralBloomFilterFaulty();
       } else if (blockType == BlockType.DELETE_FAMILY_BLOOM_META) {
         setDeleteFamilyBloomFilterFaulty();
+      } else if (blockType == BlockType.DELETE_COLUMN_BLOOM_META) {
+        setDeleteColumnBloomFilterFaulty();
       }
     }
 
@@ -1553,6 +1659,10 @@ public class StoreFile extends SchemaConfigured {
       this.deleteFamilyBloomFilter = null;
     }
 
+    public void setDeleteColumnBloomFilterFaulty() {
+      this.deleteColumnBloomFilter = null;
+    }
+
     public byte[] getLastKey() {
       return reader.getLastKey();
     }
@@ -1571,6 +1681,10 @@ public class StoreFile extends SchemaConfigured {
 
     public long getDeleteFamilyCnt() {
       return deleteFamilyCnt;
+    }
+
+    public long getDeleteColumnCnt() {
+      return deleteColumnCnt;
     }
 
     public byte[] getFirstKey() {
@@ -1654,7 +1768,7 @@ public class StoreFile extends SchemaConfigured {
         return sf.getMaxSequenceId();
       }
     }
-    
+
     private static class GetBulkTime implements Function<StoreFile, Long> {
       @Override
       public Long apply(StoreFile sf) {
@@ -1662,7 +1776,7 @@ public class StoreFile extends SchemaConfigured {
         return sf.getBulkLoadTimestamp();
       }
     }
-    
+
     private static class GetPathName implements Function<StoreFile, String> {
       @Override
       public String apply(StoreFile sf) {

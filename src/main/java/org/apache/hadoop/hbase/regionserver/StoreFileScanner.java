@@ -367,4 +367,9 @@ class StoreFileScanner implements KeyValueScanner {
     return reader.passesTimerangeFilter(scan, oldestUnexpiredTS) &&
         reader.passesBloomFilter(scan, columns);
   }
+
+  @Override
+  public boolean passesDeleteColumnCheck(KeyValue kv) {
+    return this.reader.passesDeleteColumnBloomFilter(kv);
+  }
 }

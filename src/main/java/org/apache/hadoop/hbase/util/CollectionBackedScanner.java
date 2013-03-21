@@ -126,4 +126,9 @@ public class CollectionBackedScanner extends NonLazyKeyValueScanner {
     closed = true;
   }
 
+  @Override
+  public boolean passesDeleteColumnCheck(KeyValue kv) {
+    return true;
+  }
+
 }

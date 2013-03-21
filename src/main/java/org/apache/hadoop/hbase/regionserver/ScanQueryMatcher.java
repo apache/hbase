@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.NavigableSet;
 
 /**
@@ -248,7 +249,6 @@ public class ScanQueryMatcher {
     if (!this.deletes.isEmpty()) {
       DeleteResult deleteResult = deletes.isDeleted(bytes, offset, qualLength,
           timestamp);
-
       switch (deleteResult) {
         case FAMILY_DELETED:
         case COLUMN_DELETED:
@@ -373,7 +373,23 @@ public class ScanQueryMatcher {
     }
   }
 
-  public KeyValue getKeyForNextColumn(KeyValue kv) {
+  /**
+   * If there is no next column, we return a KV which is the last possible key
+   * for the current row. Otherwise, we proceed to the next kv (the first kv on
+   * the next column). if there is no delete column blooom filter enabled, we
+   * return the next kv on the column. If the delete column bloom filter is
+   * enabled, we first check whether the scanners contain delete information
+   * about the next kv. If there is no delete, we proceed to the searched kv
+   * with highest timestamp.
+   *
+   * @param kv - current keyvalue
+   * @param allScanners - all scanners including the scanners from memstore and
+   * storefiles
+   * @param deleteColBloomFilterEnabled - is the delete column bloom filter
+   * ebnabled
+   * @return - kv in the next column
+   */
+  public KeyValue getKeyForNextColumn(KeyValue kv, List<KeyValueScanner> allScanners, boolean deleteColBloomFilterEnabled) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
       return KeyValue.createLastOnRow(
@@ -381,10 +397,22 @@ public class ScanQueryMatcher {
           kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
           kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
     } else {
-      return KeyValue.createFirstOnRow(
-          kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
-          kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
-          nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength());
+      KeyValue nextKV = KeyValue.createFirstOnRow(kv.getBuffer(),
+          kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
+          kv.getFamilyOffset(), kv.getFamilyLength(), nextColumn.getBuffer(),
+          nextColumn.getOffset(), nextColumn.getLength());
+      if (!deleteColBloomFilterEnabled) {
+        return nextKV;
+      }
+      for (KeyValueScanner kvScanner : allScanners) {
+        if (kvScanner.passesDeleteColumnCheck(nextKV))
+          return nextKV;
+      }
+      HRegionServer.numOptimizedSeeks.incrementAndGet();
+      return KeyValue.createFirstOnRow(nextKV.getBuffer(), nextKV.getRowOffset(), nextKV.getRowLength(),
+          nextKV.getBuffer(), nextKV.getFamilyOffset(), nextKV.getFamilyLength(),
+          nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength(),
+          Math.max(tr.getMax() -1, tr.getMin()));
     }
   }
 

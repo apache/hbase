@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -401,5 +402,21 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
 
   KeyValueScanner getCurrentForTesting() {
     return current;
+  }
+
+  /**
+   * @return all the scanners from the heap and the current KeyValueScanner,
+   * since it is not included in the heap
+   */
+  List<KeyValueScanner> getActiveScanners() {
+    List<KeyValueScanner> allScanners = new ArrayList<KeyValueScanner>();
+    allScanners.addAll(this.heap);
+    allScanners.add(current);
+    return allScanners;
+  }
+
+  @Override
+  public boolean passesDeleteColumnCheck(KeyValue kv) {
+    return true;
   }
 }

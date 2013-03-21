@@ -252,6 +252,13 @@ public class HFile {
      * HFile V2.
      */
     void addDeleteFamilyBloomFilter(BloomFilterWriter bfw) throws IOException;
+
+    /**
+     * Store delete column Bloom filter in the file, which is only supported in
+     * HFile V2.
+     * @throws IOException
+     */
+    void addDeleteColumnBloomFilter(BloomFilterWriter bfw) throws IOException;
   }
 
   /**
@@ -446,6 +453,14 @@ public class HFile {
      * Knows nothing about how that metadata is structured.
      */
     DataInput getDeleteBloomFilterMetadata() throws IOException;
+
+    /**
+     * Retrieves delete column Bloom filter metadata as appropriate for each
+     * {@link HFile} version.
+     * Knows nothing about how metadata is structured.
+     * @throws IOException
+     */
+    DataInput getDeleteColumnBloomFilterMetadata() throws IOException;
 
     Path getPath();
 
