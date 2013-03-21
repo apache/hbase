@@ -488,9 +488,10 @@ public class HRegionServer implements ClientProtocol,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
 
     // Server to handle client requests.
-    String hostname = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-      conf.get("hbase.regionserver.dns.interface", "default"),
-      conf.get("hbase.regionserver.dns.nameserver", "default")));
+    String hostname = conf.get("hbase.regionserver.ipc.address",
+      Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+        conf.get("hbase.regionserver.dns.interface", "default"),
+        conf.get("hbase.regionserver.dns.nameserver", "default"))));
     int port = conf.getInt(HConstants.REGIONSERVER_PORT,
       HConstants.DEFAULT_REGIONSERVER_PORT);
     // Creation of a HSA will force a resolve.
