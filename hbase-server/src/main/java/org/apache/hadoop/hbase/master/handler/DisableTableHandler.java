@@ -202,11 +202,12 @@ public class DisableTableHandler extends EventHandler {
     protected void populatePool(ExecutorService pool) {
       RegionStates regionStates = assignmentManager.getRegionStates();
       for (HRegionInfo region: regions) {
-        if (regionStates.isRegionInTransition(region)) continue;
+        if (regionStates.isRegionInTransition(region)
+            && !regionStates.isRegionFailedToClose(region)) continue;
         final HRegionInfo hri = region;
         pool.execute(Trace.wrap(new Runnable() {
           public void run() {
-            assignmentManager.unassign(hri);
+            assignmentManager.unassign(hri, true);
           }
         }));
       }

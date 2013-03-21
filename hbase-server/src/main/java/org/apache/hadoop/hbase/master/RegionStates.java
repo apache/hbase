@@ -133,6 +133,24 @@ public class RegionStates {
   }
 
   /**
+   * @return True if specified region failed to open.
+   */
+  public synchronized boolean isRegionFailedToOpen(final HRegionInfo hri) {
+    RegionState regionState = getRegionTransitionState(hri);
+    State state = regionState != null ? regionState.getState() : null;
+    return state == State.FAILED_OPEN;
+  }
+
+  /**
+   * @return True if specified region failed to close.
+   */
+  public synchronized boolean isRegionFailedToClose(final HRegionInfo hri) {
+    RegionState regionState = getRegionTransitionState(hri);
+    State state = regionState != null ? regionState.getState() : null;
+    return state == State.FAILED_CLOSE;
+  }
+
+  /**
    * Wait for the state map to be updated by assignment manager.
    */
   public synchronized void waitForUpdate(

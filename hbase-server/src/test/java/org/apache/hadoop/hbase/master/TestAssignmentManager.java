@@ -201,6 +201,8 @@ public class TestAssignmentManager {
       // let's assume it is going to open on server b:
       am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_B));
 
+      Mocking.waitForRegionFailedToCloseAndSetToPendingClose(am, REGIONINFO);
+
       // Now fake the region closing successfully over on the regionserver; the
       // regionserver will have set the region in CLOSED state. This will
       // trigger callback into AM. The below zk close call is from the RS close
@@ -248,6 +250,8 @@ public class TestAssignmentManager {
       // So a random server will be used to open the region. For testing purpose,
       // let's assume it is going to open on server b:
       am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_B));
+
+      Mocking.waitForRegionFailedToCloseAndSetToPendingClose(am, REGIONINFO);
 
       // Now fake the region closing successfully over on the regionserver; the
       // regionserver will have set the region in CLOSED state. This will
@@ -298,6 +302,8 @@ public class TestAssignmentManager {
       // let's assume it is going to open on server b:
       am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_B));
 
+      Mocking.waitForRegionFailedToCloseAndSetToPendingClose(am, REGIONINFO);
+
       // Now fake the region closing successfully over on the regionserver; the
       // regionserver will have set the region in CLOSED state. This will
       // trigger callback into AM. The below zk close call is from the RS close
@@ -341,7 +347,6 @@ public class TestAssignmentManager {
     am.balance(new RegionPlan(hri, from, to));
   }
 
-
   /**
    * Tests AssignmentManager balance function.  Runs a balance moving a region
    * from one server to another mocking regionserver responding over zk.
@@ -374,6 +379,11 @@ public class TestAssignmentManager {
       // Balance region from A to B.
       RegionPlan plan = new RegionPlan(REGIONINFO, SERVERNAME_A, SERVERNAME_B);
       am.balance(plan);
+
+      // Must be failed to close since the server is fake
+      assertTrue(am.getRegionStates().isRegionFailedToClose(REGIONINFO));
+      // Move it back to pending_close
+      am.getRegionStates().updateRegionState(REGIONINFO, State.PENDING_CLOSE);
 
       // Now fake the region closing successfully over on the regionserver; the
       // regionserver will have set the region in CLOSED state.  This will

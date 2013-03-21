@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -33,6 +34,22 @@ import org.apache.zookeeper.KeeperException;
  * Package scoped mocking utility.
  */
 public class Mocking {
+
+  static void waitForRegionFailedToCloseAndSetToPendingClose(
+      AssignmentManager am, HRegionInfo hri) throws InterruptedException {
+    // Since region server is fake, sendRegionClose will fail, and closing
+    // region will fail. For testing purpose, moving it back to pending close
+    boolean wait = true;
+    while (wait) {
+      RegionState state = am.getRegionStates().getRegionState(hri);
+      if (state != null && state.isFailedClose()){
+        am.getRegionStates().updateRegionState(hri, State.PENDING_CLOSE);
+        wait = false;
+      } else {
+        Thread.sleep(1);
+      }
+    }
+  }
 
   static void waitForRegionPendingOpenInRIT(AssignmentManager am, String encodedName)
     throws InterruptedException {
@@ -53,7 +70,6 @@ public class Mocking {
         Thread.sleep(1);
       }
     }
-
   }
 
   /**

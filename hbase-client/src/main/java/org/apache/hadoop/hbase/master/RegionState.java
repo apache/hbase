@@ -44,7 +44,9 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     CLOSING,        // server has begun to close but not yet done
     CLOSED,         // server closed region and updated meta
     SPLITTING,      // server started split of a region
-    SPLIT           // server completed split of a region
+    SPLIT,          // server completed split of a region
+    FAILED_OPEN,    // failed to open, and won't retry any more
+    FAILED_CLOSE    // failed to close, and won't retry any more
   }
 
   // Many threads can update the state at the stamp at the same time
@@ -126,6 +128,14 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     return state == State.SPLIT;
   }
 
+  public boolean isFailedOpen() {
+    return state == State.FAILED_OPEN;
+  }
+
+  public boolean isFailedClose() {
+    return state == State.FAILED_CLOSE;
+  }
+
   public boolean isPendingOpenOrOpeningOnServer(final ServerName sn) {
     return isOnServer(sn) && (isPendingOpen() || isOpening());
   }
@@ -195,6 +205,12 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     case SPLIT:
       rs = ClusterStatusProtos.RegionState.State.SPLIT;
       break;
+    case FAILED_OPEN:
+      rs = ClusterStatusProtos.RegionState.State.FAILED_OPEN;
+      break;
+    case FAILED_CLOSE:
+      rs = ClusterStatusProtos.RegionState.State.FAILED_CLOSE;
+      break;
     default:
       throw new IllegalStateException("");
     }
@@ -238,6 +254,12 @@ public class RegionState implements org.apache.hadoop.io.Writable {
       break;
     case SPLIT:
       state = State.SPLIT;
+      break;
+    case FAILED_OPEN:
+      state = State.FAILED_OPEN;
+      break;
+    case FAILED_CLOSE:
+      state = State.FAILED_CLOSE;
       break;
     default:
       throw new IllegalStateException("");

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -34,6 +36,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -53,6 +61,12 @@ public class TestAssignmentManagerOnCluster {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // Using the test load balancer to control region plans
+    conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+      TestLoadBalancer.class, LoadBalancer.class);
+    conf.setClass(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      TestRegionObserver.class, RegionObserver.class);
+
     TEST_UTIL.startMiniCluster(3);
     admin = TEST_UTIL.getHBaseAdmin();
   }
@@ -191,4 +205,110 @@ public class TestAssignmentManagerOnCluster {
     }
   }
 
+  /**
+   * This tests region close failed
+   */
+  @Test
+  public void testCloseFailed() throws Exception {
+    String table = "testCloseFailed";
+    try {
+      HTableDescriptor desc = new HTableDescriptor(table);
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HRegionInfo hri = new HRegionInfo(
+        desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaEditor.addRegionToMeta(meta, hri);
+
+      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+      master.assignRegion(hri);
+      AssignmentManager am = master.getAssignmentManager();
+      assertTrue(am.waitForAssignment(hri));
+
+      TestRegionObserver.enabled = true;
+      am.unassign(hri);
+      RegionState state = am.getRegionStates().getRegionState(hri);
+      assertEquals(RegionState.State.FAILED_CLOSE, state.getState());
+
+      TestRegionObserver.enabled = false;
+      am.unassign(hri, true);
+      state = am.getRegionStates().getRegionState(hri);
+      assertTrue(RegionState.State.FAILED_CLOSE != state.getState());
+
+      am.assign(hri, true, true);
+      assertTrue(am.waitForAssignment(hri));
+
+      ServerName serverName = master.getAssignmentManager().
+        getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+    } finally {
+      TestRegionObserver.enabled = false;
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+    }
+  }
+
+  /**
+   * This tests region open failed
+   */
+  @Test
+  public void testOpenFailed() throws Exception {
+    String table = "testOpenFailed";
+    try {
+      HTableDescriptor desc = new HTableDescriptor(table);
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HRegionInfo hri = new HRegionInfo(
+        desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaEditor.addRegionToMeta(meta, hri);
+
+      TestLoadBalancer.controledRegion = hri.getEncodedName();
+
+      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+      master.assignRegion(hri);
+      AssignmentManager am = master.getAssignmentManager();
+      assertFalse(am.waitForAssignment(hri));
+
+      RegionState state = am.getRegionStates().getRegionState(hri);
+      assertEquals(RegionState.State.FAILED_OPEN, state.getState());
+
+      TestLoadBalancer.controledRegion = null;
+      master.assignRegion(hri);
+      assertTrue(am.waitForAssignment(hri));
+
+      ServerName serverName = master.getAssignmentManager().
+        getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+    } finally {
+      TestLoadBalancer.controledRegion = null;
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+    }
+  }
+
+  static class TestLoadBalancer extends StochasticLoadBalancer {
+    // For this region, if specified, always assign to nowhere
+    static volatile String controledRegion = null;
+
+    @Override
+    public ServerName randomAssignment(HRegionInfo regionInfo,
+        List<ServerName> servers) {
+      if (regionInfo.getEncodedName().equals(controledRegion)) {
+        return null;
+      }
+      return super.randomAssignment(regionInfo, servers);
+    }
+  }
+
+  public static class TestRegionObserver extends BaseRegionObserver {
+    // If enabled, fail all preClose calls
+    static volatile boolean enabled = false;
+
+    @Override
+    public void preClose(ObserverContext<RegionCoprocessorEnvironment> c,
+        boolean abortRequested) throws IOException {
+      if (enabled) throw new IOException("fail preClose from coprocessor");
+    }
+  }
 }
