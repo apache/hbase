@@ -21,9 +21,12 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -34,10 +37,12 @@ import java.util.concurrent.Future;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.LockTimeoutException;
 import org.apache.hadoop.hbase.exceptions.TableNotDisabledException;
@@ -45,7 +50,10 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.LoadTestTool;
+import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -56,7 +64,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests the default table lock manager
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestTableLockManager {
 
   private static final Log LOG =
@@ -289,6 +297,105 @@ public class TestTableLockManager {
       .acquire();
 
     executor.shutdownNow();
+  }
+
+  @Test(timeout = 600000)
+  public void testTableReadLock() throws Exception {
+    // test plan: write some data to the table. Continuously alter the table and
+    // force splits
+    // concurrently until we have 10 regions. verify the data just in case.
+    // Every region should contain the same table descriptor
+    // This is not an exact test
+    prepareMiniCluster();
+    LoadTestTool loadTool = new LoadTestTool();
+    loadTool.setConf(TEST_UTIL.getConfiguration());
+    int numKeys = 10000;
+    final byte[] tableName = Bytes.toBytes("testTableReadLock");
+    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
+    final byte[] family = Bytes.toBytes("test_cf");
+    desc.addFamily(new HColumnDescriptor(family));
+    admin.createTable(desc); // create with one region
+
+    // write some data, not much
+    int ret = loadTool.run(new String[] { "-tn", Bytes.toString(tableName), "-write",
+        String.format("%d:%d:%d", 1, 10, 10), "-num_keys", String.valueOf(numKeys), "-skip_init" });
+    if (0 != ret) {
+      String errorMsg = "Load failed with error code " + ret;
+      LOG.error(errorMsg);
+      fail(errorMsg);
+    }
+
+    int familyValues = admin.getTableDescriptor(tableName).getFamily(family).getValues().size();
+    StoppableImplementation stopper = new StoppableImplementation();
+
+    //alter table every 10 sec
+    Chore alterThread = new Chore("Alter Chore", 10000, stopper) {
+      @Override
+      protected void chore() {
+        Random random = new Random();
+        try {
+          HTableDescriptor htd = admin.getTableDescriptor(tableName);
+          String val = String.valueOf(random.nextInt());
+          htd.getFamily(family).setValue(val, val);
+          desc.getFamily(family).setValue(val, val); // save it for later
+                                                     // control
+          admin.modifyTable(tableName, htd);
+        } catch (Exception ex) {
+          LOG.warn("Caught exception", ex);
+          fail(ex.getMessage());
+        }
+      }
+    };
+
+    //split table every 5 sec
+    Chore splitThread = new Chore("Split thread", 5000, stopper) {
+      @Override
+      public void chore() {
+        try {
+          Random random = new Random();
+          List<HRegionInfo> regions = admin.getTableRegions(tableName);
+          byte[] regionName = regions.get(random.nextInt(regions.size())).getRegionName();
+          admin.flush(regionName);
+          admin.compact(regionName);
+          admin.split(regionName);
+        } catch (Exception ex) {
+          LOG.warn("Caught exception", ex);
+          fail(ex.getMessage());
+        }
+      }
+    };
+
+    alterThread.start();
+    splitThread.start();
+    while (true) {
+      List<HRegionInfo> regions = admin.getTableRegions(tableName);
+      LOG.info(String.format("Table #regions: %d regions: %s:", regions.size(), regions));
+      assertEquals(admin.getTableDescriptor(tableName), desc);
+      for (HRegion region : TEST_UTIL.getMiniHBaseCluster().getRegions(tableName)) {
+        assertEquals(desc, region.getTableDesc());
+      }
+      if (regions.size() >= 10) {
+        break;
+      }
+      Threads.sleep(1000);
+    }
+    stopper.stop("test finished");
+
+    int newFamilyValues = admin.getTableDescriptor(tableName).getFamily(family).getValues().size();
+    LOG.info(String.format("Altered the table %d times", newFamilyValues - familyValues));
+    assertTrue(newFamilyValues > familyValues); // at least one alter went
+                                                // through
+
+    ret = loadTool.run(new String[] { "-tn", Bytes.toString(tableName), "-read", "100:10",
+        "-num_keys", String.valueOf(numKeys), "-skip_init" });
+    if (0 != ret) {
+      String errorMsg = "Verify failed with error code " + ret;
+      LOG.error(errorMsg);
+      fail(errorMsg);
+    }
+
+    admin.close();
   }
 
 }

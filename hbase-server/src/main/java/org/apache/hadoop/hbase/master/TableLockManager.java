@@ -149,7 +149,7 @@ public abstract class TableLockManager {
    * A null implementation
    */
   @InterfaceAudience.Private
-  static class NullTableLockManager extends TableLockManager {
+  public static class NullTableLockManager extends TableLockManager {
     static class NullTableLock implements TableLock {
       @Override
       public void acquire() throws IOException {

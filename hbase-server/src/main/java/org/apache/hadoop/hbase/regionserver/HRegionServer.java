@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.ipc.RpcClientEngine;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -437,6 +438,9 @@ public class HRegionServer implements ClientProtocol,
   /** Handle all the snapshot requests to this server */
   RegionServerSnapshotManager snapshotManager;
 
+  // Table level lock manager for locking for region operations
+  private TableLockManager tableLockManager;
+
   /**
    * Starts a HRegionServer at the default location
    *
@@ -634,6 +638,8 @@ public class HRegionServer implements ClientProtocol,
     } catch (KeeperException e) {
       this.abort("Failed to reach zk cluster when creating snapshot handler.");
     }
+    this.tableLockManager = TableLockManager.createTableLockManager(conf, zooKeeper,
+        new ServerName(isa.getHostName(), isa.getPort(), startcode));
   }
 
   /**
@@ -1128,6 +1134,11 @@ public class HRegionServer implements ClientProtocol,
 
   public RegionServerAccounting getRegionServerAccounting() {
     return regionServerAccounting;
+  }
+
+  @Override
+  public TableLockManager getTableLockManager() {
+    return tableLockManager;
   }
 
   /*

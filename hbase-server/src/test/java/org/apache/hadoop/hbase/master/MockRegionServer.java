@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -148,7 +149,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
 
   /**
    * @param sn Name of this mock regionserver
-   * @throws IOException 
+   * @throws IOException
    * @throws org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException
    */
   MockRegionServer(final Configuration conf, final ServerName sn)
@@ -288,6 +289,10 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   public RegionServerAccounting getRegionServerAccounting() {
     // TODO Auto-generated method stub
     return null;
+  }
+
+  public TableLockManager getTableLockManager() {
+    return new NullTableLockManager();
   }
 
   @Override
