@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -2818,12 +2819,13 @@ public class HConnectionManager {
           Map<HRegionInfo, Long> flushedTSMap =
               getRegionFlushTimes(regionsUpdated, options);
 
-          for (Entry<HRegionInfo, Long> entry: targetTSMap.entrySet()) {
+          for (Iterator<Entry<HRegionInfo, Long>> iter = targetTSMap.entrySet().iterator(); iter.hasNext();) {
+            Entry<HRegionInfo, Long> entry = iter.next();
             HRegionInfo region = entry.getKey();
             long targetTime = entry.getValue().longValue();
             long flushedTime = flushedTSMap.get(region).longValue();
             if (flushedTime > targetTime) {
-              targetTSMap.remove(region);
+              iter.remove();
             }
             LOG.debug("Region " + region.getEncodedName() + " was flushed at "
                 + flushedTime
