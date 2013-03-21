@@ -86,14 +86,12 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -121,7 +119,6 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.master.RegionPlacement;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
@@ -1499,6 +1496,18 @@ public class HRegionServer implements HRegionInterface,
     this.metrics.filesRead.set(filesRead);
     this.metrics.cntWriteException.set(cntWriteException);
     this.metrics.cntReadException.set(cntReadException);
+
+    if (this.fs instanceof DistributedFileSystem) {
+      DFSClient client = ((DistributedFileSystem)fs).getClient();
+
+      long quorumReadsDone = client.quorumReadMetrics.getParallelReadOps();
+      this.metrics.quorumReadsDone.set(quorumReadsDone);
+      long quorumReadWins = client.quorumReadMetrics.getParallelReadWins();
+      this.metrics.quorumReadWins.set(quorumReadWins);
+      long quorumReadsExecutedInCurThread =
+          client.quorumReadMetrics.getParallelReadOpsInCurThread();
+      this.metrics.quorumReadsExecutedInCurThread.set(quorumReadsExecutedInCurThread);
+    }
   }
 
   /**

@@ -254,6 +254,14 @@ public class RegionServerMetrics implements Updater {
   public final MetricsLongValue cntReadException = 
       new MetricsLongValue("dfsCntReadException", registry);
 
+  // quorum read metrics
+  public final MetricsLongValue quorumReadsDone =
+      new MetricsLongValue("quorumReadsDone", registry);
+  public final MetricsLongValue quorumReadWins =
+      new MetricsLongValue("quorumReadWins", registry);
+  public final MetricsLongValue quorumReadsExecutedInCurThread =
+      new MetricsLongValue("quorumReadsExecutedInCurThread", registry);
+
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
     metricsRecord = MetricsUtil.createRecord(context, "regionserver");
@@ -383,6 +391,11 @@ public class RegionServerMetrics implements Updater {
       this.filesRead.pushMetric(this.metricsRecord);
       this.cntWriteException.pushMetric(this.metricsRecord);
       this.cntReadException.pushMetric(this.metricsRecord);
+
+      this.quorumReadsDone.pushMetric(this.metricsRecord);
+      this.quorumReadWins.pushMetric(this.metricsRecord);
+      this.quorumReadsExecutedInCurThread.pushMetric(this.metricsRecord);
+
     }
     this.metricsRecord.update();
   }
@@ -534,6 +547,12 @@ public class RegionServerMetrics implements Updater {
     sb = Strings.appendKeyValue(sb, this.cntReadException.getName(),
         Long.valueOf(this.cntReadException.get()));
     
+    sb = Strings.appendKeyValue(sb, this.quorumReadsDone.getName(),
+        Long.valueOf(this.quorumReadsDone.get()));
+    sb = Strings.appendKeyValue(sb, this.quorumReadWins.getName(),
+        Long.valueOf(this.quorumReadWins.get()));
+    sb = Strings.appendKeyValue(sb, this.quorumReadsExecutedInCurThread.getName(),
+        Long.valueOf(this.quorumReadsExecutedInCurThread.get()));
     return sb.toString();
   }
 }
