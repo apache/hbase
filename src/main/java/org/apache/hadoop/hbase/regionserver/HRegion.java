@@ -3212,6 +3212,10 @@ public class HRegion implements HeapSize {
         scanResult = scanFetch.call();
       }
 
+      if (scanResult.isException) {
+        throw scanResult.ioException;
+      }
+
       // schedule a background prefetch for the next result if prefetch is
       // enabled on scans
       boolean scanDone = 
@@ -3220,9 +3224,11 @@ public class HRegion implements HeapSize {
         ScanPrefetcher callable = new ScanPrefetcher(nbRows, limit, metric);
         prefetchScanFuture = HRegionServer.scanPrefetchThreadPool.submit(callable);
       }
-      rowReadCnt.addAndGet(scanResult.outResults.length);
+      if (!scanDone) {
+        rowReadCnt.addAndGet(scanResult.outResults.length);
+      }
       return scanResult.outResults == null || 
-      		(isFilterDone() && scanResult.outResults.length == 0) ?
+          (isFilterDone() && scanResult.outResults.length == 0) ?
           null : scanResult.outResults;
     }
     
