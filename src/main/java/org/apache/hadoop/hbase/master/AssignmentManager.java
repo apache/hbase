@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -240,8 +241,12 @@ public class AssignmentManager {
     public void run() {
       LOG.debug("Started TransientAssignmentHandler");
       TransisentAssignment plan = null;
-      int resetFrequency = master.getConfiguration().getInt(
-          "hbase.master.meta.thread.rescanfrequency", 60 * 1000);
+      Configuration conf = master.getConfiguration();
+      int resetFrequency = Math.min(
+          conf.getInt("hbase.master.meta.thread.rescanfrequency",
+              60 * 1000), // metaScanner runs at this rate
+          10 * conf.getInt("hbase.regionserver.msginterval",
+              HConstants.REGION_SERVER_MSG_INTERVAL)); // 10 regionServerReports
       while (!master.getClosed().get()) {
         try {
           // check if any regions waiting time expired

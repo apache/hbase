@@ -443,6 +443,14 @@ public class ServerManager {
     // Otherwise we could end up processing the server exit twice.
     LOG.info("Region server " + serverInfo.getServerName() +
         ": MSG_REPORT_EXITING");
+
+    LOG.info("Removing server's info " + serverInfo.getServerName());
+    this.serversToServerInfo.remove(serverInfo.getServerName());
+    serversToLoad.removeServerLoad(serverInfo.getServerName());
+    if (this.master.getSplitLogManager() != null) {
+      this.master.getSplitLogManager().handleDeadServer(serverInfo.getServerName());
+    }
+
     // Get all the regions the server was serving reassigned
     // (if we are not shutting down).
     if (!master.isClosed()) {
@@ -473,12 +481,6 @@ public class ServerManager {
           + "state " + entry.getValue());
       master.getRegionManager().setUnassigned(entry.getValue().getRegionInfo(),
           true);
-    }
-    LOG.info("Removing server's info " + serverInfo.getServerName());
-    this.serversToServerInfo.remove(serverInfo.getServerName());
-    serversToLoad.removeServerLoad(serverInfo.getServerName());
-    if (this.master.getSplitLogManager() != null) {
-      this.master.getSplitLogManager().handleDeadServer(serverInfo.getServerName());
     }
   }
 
