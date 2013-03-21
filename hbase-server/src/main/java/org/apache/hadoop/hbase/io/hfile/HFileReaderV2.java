@@ -54,6 +54,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
   private static int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;
 
   private boolean includesMemstoreTS = false;
+  private boolean decodeMemstoreTS = false;
 
   private boolean shouldIncludeMemstoreTS() {
     return includesMemstoreTS;
@@ -147,6 +148,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
         Bytes.toInt(keyValueFormatVersion) ==
             HFileWriterV2.KEY_VALUE_VER_WITH_MEMSTORE;
     fsBlockReaderV2.setIncludesMemstoreTS(includesMemstoreTS);
+    if (includesMemstoreTS) {
+      decodeMemstoreTS = Bytes.toLong(fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY)) > 0;
+    }
 
     // Read data block encoding algorithm name from file info.
     dataBlockEncoder = HFileDataBlockEncoderImpl.createFromFileInfo(fileInfo,
@@ -769,15 +773,20 @@ public class HFileReaderV2 extends AbstractHFileReader {
       currValueLen = blockBuffer.getInt();
       blockBuffer.reset();
       if (this.reader.shouldIncludeMemstoreTS()) {
-        try {
-          int memstoreTSOffset = blockBuffer.arrayOffset()
-              + blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen
-              + currValueLen;
-          currMemstoreTS = Bytes.readVLong(blockBuffer.array(),
-              memstoreTSOffset);
-          currMemstoreTSLen = WritableUtils.getVIntSize(currMemstoreTS);
-        } catch (Exception e) {
-          throw new RuntimeException("Error reading memstore timestamp", e);
+        if (this.reader.decodeMemstoreTS) {
+          try {
+            int memstoreTSOffset = blockBuffer.arrayOffset()
+                + blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen
+                + currValueLen;
+            currMemstoreTS = Bytes.readVLong(blockBuffer.array(),
+                memstoreTSOffset);
+            currMemstoreTSLen = WritableUtils.getVIntSize(currMemstoreTS);
+          } catch (Exception e) {
+            throw new RuntimeException("Error reading memstore timestamp", e);
+          }
+        } else {
+          currMemstoreTS = 0;
+          currMemstoreTSLen = 1;
         }
       }
 
@@ -816,14 +825,19 @@ public class HFileReaderV2 extends AbstractHFileReader {
         vlen = blockBuffer.getInt();
         blockBuffer.reset();
         if (this.reader.shouldIncludeMemstoreTS()) {
-          try {
-            int memstoreTSOffset = blockBuffer.arrayOffset()
-                + blockBuffer.position() + KEY_VALUE_LEN_SIZE + klen + vlen;
-            memstoreTS = Bytes.readVLong(blockBuffer.array(),
-                memstoreTSOffset);
-            memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
-          } catch (Exception e) {
-            throw new RuntimeException("Error reading memstore timestamp", e);
+          if (this.reader.decodeMemstoreTS) {
+            try {
+              int memstoreTSOffset = blockBuffer.arrayOffset()
+                  + blockBuffer.position() + KEY_VALUE_LEN_SIZE + klen + vlen;
+              memstoreTS = Bytes.readVLong(blockBuffer.array(),
+                  memstoreTSOffset);
+              memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
+            } catch (Exception e) {
+              throw new RuntimeException("Error reading memstore timestamp", e);
+            }
+          } else {
+            memstoreTS = 0;
+            memstoreTSLen = 1;
           }
         }
 
