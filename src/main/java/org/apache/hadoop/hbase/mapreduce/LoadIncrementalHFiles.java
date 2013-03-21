@@ -76,6 +76,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   public LoadIncrementalHFiles(Configuration conf) {
     super(conf);
+    assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
+    exitOnFirstFailure = conf.getBoolean(EXIT_ON_FIRST_FAILURE, true);
   }
 
   public LoadIncrementalHFiles() {
