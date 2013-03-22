@@ -298,7 +298,7 @@ Result r = htable.get(get);
 byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value
 </programlisting>
 		But especially when inside loops (and MapReduce jobs), converting the columnFamily and column-names
-		to byte-arrays repeatedly is surprsingly expensive.
+		to byte-arrays repeatedly is surprisingly expensive.
 		It's better to use constants for the byte-arrays, like this:
 <programlisting>
 public static final byte[] CF = "cf".getBytes();
