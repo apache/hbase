@@ -418,6 +418,14 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <!--Intentionally, this is not bound to a phase because it is an
+           'aggregating' plugin; it expects to be run from the top-level only; see
+           http://www.sonatype.com/books/mvnref-book/reference/assemblies-sect-basics.html.
+           When it was bound to pre-site, we were descending into modules expecting
+           dependencies like hbase-*.jar to be already built.  It was messing us up,
+           particular on clean checkouts.  To get javadoc into your site, you must
+           precede site build by invocation of javadoc:aggregate expplicitly.
+           -->
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>${javadoc.version}</version>
@@ -427,7 +435,6 @@
               <goals>
                 <goal>aggregate</goal>
               </goals>
-              <phase>pre-site</phase>
             </execution>
           </executions>
           <configuration>
