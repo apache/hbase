@@ -287,6 +287,31 @@
     </section>
   </section>  <!--  perf schema -->
 
+  <section xml:id="perf.general">
+    <title>HBase General Patterns</title>
+    <section xml:id="perf.general.constants">
+      <title>Constants</title>
+      <para>When people get started with HBase they have a tendency to write code that looks like this:
+<programlisting>
+Get get = new Get(rowkey);
+Result r = htable.get(get);
+byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value
+</programlisting>
+		But especially when inside loops (and MapReduce jobs), converting the columnFamily and column-names
+		to byte-arrays repeatedly is surprsingly expensive.
+		It's better to use constants for the byte-arrays, like this:
+<programlisting>
+public static final byte[] CF = "cf".getBytes();
+public static final byte[] ATTR = "attr".getBytes();
+...
+Get get = new Get(rowkey);
+Result r = htable.get(get);
+byte[] b = r.getValue(CF, ATTR);  // returns current version of value
+</programlisting>
+      </para>
+    </section> 
+
+  </section>
   <section xml:id="perf.writing">
     <title>Writing to HBase</title>
 
