@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
+import org.apache.hadoop.hbase.regionserver.StoreFile.WriterBuilder;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -338,6 +339,7 @@ public class HFile {
     protected KeyComparator comparator;
     protected ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
     protected int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
+    protected boolean includeMVCCReadpoint = true;
 
     WriterFactory(Configuration conf, CacheConfig cacheConf) {
       this.conf = conf;
@@ -398,6 +400,15 @@ public class HFile {
       return this;
     }
 
+    /**
+     * @param includeMVCCReadpoint whether to write the mvcc readpoint to the file for each KV
+     * @return this (for chained invocation)
+     */
+    public WriterFactory includeMVCCReadpoint(boolean includeMVCCReadpoint) {
+      this.includeMVCCReadpoint = includeMVCCReadpoint;
+      return this;
+    }
+
     public Writer create() throws IOException {
       if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
         throw new AssertionError("Please specify exactly one of " +
@@ -407,7 +418,7 @@ public class HFile {
         ostream = AbstractHFileWriter.createOutputStream(conf, fs, path);
       }
       return createWriter(fs, path, ostream, blockSize,
-          compression, encoder, comparator, checksumType, bytesPerChecksum);
+          compression, encoder, comparator, checksumType, bytesPerChecksum, includeMVCCReadpoint);
     }
 
     protected abstract Writer createWriter(FileSystem fs, Path path,
@@ -415,7 +426,7 @@ public class HFile {
         Compression.Algorithm compress,
         HFileDataBlockEncoder dataBlockEncoder,
         KeyComparator comparator, ChecksumType checksumType,
-        int bytesPerChecksum) throws IOException;
+        int bytesPerChecksum, boolean includeMVCCReadpoint) throws IOException;
   }
 
   /** The configuration key for HFile version to use for new files */

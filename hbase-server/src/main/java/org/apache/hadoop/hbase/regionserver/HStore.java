@@ -827,7 +827,7 @@ public class HStore implements Store {
    */
   private StoreFile.Writer createWriterInTmp(long maxKeyCount)
   throws IOException {
-    return createWriterInTmp(maxKeyCount, this.family.getCompression(), false);
+    return createWriterInTmp(maxKeyCount, this.family.getCompression(), false, true);
   }
 
   /*
@@ -837,7 +837,7 @@ public class HStore implements Store {
    * @return Writer for a new StoreFile in the tmp dir.
    */
   public StoreFile.Writer createWriterInTmp(long maxKeyCount,
-    Compression.Algorithm compression, boolean isCompaction)
+    Compression.Algorithm compression, boolean isCompaction, boolean includeMVCCReadpoint)
   throws IOException {
     final CacheConfig writerCacheConf;
     if (isCompaction) {
@@ -857,6 +857,7 @@ public class HStore implements Store {
             .withChecksumType(checksumType)
             .withBytesPerChecksum(bytesPerChecksum)
             .withCompression(compression)
+            .includeMVCCReadpoint(includeMVCCReadpoint)
             .build();
     return w;
   }

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
@@ -111,6 +113,8 @@ public abstract class Compactor {
     public long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     /** The last key in the files we're compacting. */
     public long maxSeqId = 0;
+    /** Latest memstore read point found in any of the involved files */
+    public long maxMVCCReadpoint = 0;
   }
 
   protected FileDetails getFileDetails(
@@ -130,11 +134,17 @@ public abstract class Compactor {
       long keyCount = (r.getBloomFilterType() == store.getFamily().getBloomFilterType())
           ? r.getFilterEntries() : r.getEntries();
       fd.maxKeyCount += keyCount;
+      // calculate the latest MVCC readpoint in any of the involved store files
+      Map<byte[], byte[]> fileInfo = r.loadFileInfo();
+      byte tmp[] = fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
+      if (tmp != null) {
+        fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, Bytes.toLong(tmp));
+      }
       // If required, calculate the earliest put timestamp of all involved storefiles.
       // This is used to remove family delete marker during compaction.
       long earliestPutTs = 0;
       if (calculatePutTs) {
-        byte [] tmp = r.loadFileInfo().get(StoreFile.EARLIEST_PUT_TS);
+        tmp = fileInfo.get(StoreFile.EARLIEST_PUT_TS);
         if (tmp == null) {
           // There's a file with no information, must be an old one
           // assume we have very old puts
