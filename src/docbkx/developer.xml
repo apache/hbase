@@ -164,7 +164,7 @@ mvn clean package -DskipTests
         <title>Building the HBase tarball</title>
         <para>Do the following to build the HBase tarball.
         Passing the -Prelease will generate javadoc and run the RAT plugin to verify licenses on source.
-        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:assembly -DskipTests -Prelease</programlisting>
+        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:assembly -DskipTests -Prelease</programlisting>
 </para>
       </section>
 
@@ -343,7 +343,7 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
               # Getting the javadoc into site is a little tricky.  You have to build it independent, then
               # 'aggregate' it at top-level so the pre-site site lifecycle step can find it; that is
               # what the javadoc:javadoc and javadoc:aggregate is about.
-              $ MAVEN_OPTS=" -Xmx3g" mvn clean -DskipTests javadoc:javadoc javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
+              $ MAVEN_OPTS=" -Xmx3g" mvn clean -DskipTests javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
               # Check the deployed site by viewing in a brower.
               # If all is good, commit it and it will show up at http://hbase.apache.org
               #
