@@ -20,36 +20,22 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
-import org.apache.hadoop.hbase.regionserver.StoreScanner;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Compact passed set of files. Create an instance and then call {@link #compact(CompactionRequest)}
  */
 @InterfaceAudience.Private
 public class DefaultCompactor extends Compactor {
-  private static final Log LOG = LogFactory.getLog(DefaultCompactor.class);
-
   public DefaultCompactor(final Configuration conf, final Store store) {
     super(conf, store);
   }
@@ -84,7 +70,8 @@ public class DefaultCompactor extends Compactor {
         }
         // Create the writer even if no kv(Empty store file is also ok),
         // because we need record the max seq id for the store file, see HBASE-6059
-        writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true);
+        writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
+            fd.maxMVCCReadpoint >= smallestReadPoint);
         boolean finished = performCompaction(scanner, writer, smallestReadPoint);
         if (!finished) {
           abortWriter(writer);

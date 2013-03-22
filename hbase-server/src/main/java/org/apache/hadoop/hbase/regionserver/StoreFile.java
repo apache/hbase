@@ -737,6 +737,7 @@ public class StoreFile {
     private Path filePath;
     private ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
     private int bytesPerChecksum = HFile.DEFAULT_BYTES_PER_CHECKSUM;
+    private boolean includeMVCCReadpoint = true;
 
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs, int blockSize) {
@@ -822,6 +823,15 @@ public class StoreFile {
     }
 
     /**
+     * @param includeMVCCReadpoint whether to write the mvcc readpoint to the file for each KV
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder includeMVCCReadpoint(boolean includeMVCCReadpoint) {
+      this.includeMVCCReadpoint = includeMVCCReadpoint;
+      return this;
+    }
+
+    /**
      * Create a store file writer. Client is responsible for closing file when
      * done. If metadata, add BEFORE closing using
      * {@link Writer#appendMetadata}.
@@ -855,7 +865,7 @@ public class StoreFile {
       }
       return new Writer(fs, filePath, blockSize, compressAlgo, dataBlockEncoder,
           conf, cacheConf, comparator, bloomType, maxKeyCount, checksumType,
-          bytesPerChecksum);
+          bytesPerChecksum, includeMVCCReadpoint);
     }
   }
 
@@ -1032,6 +1042,7 @@ public class StoreFile {
      *        for Bloom filter size in {@link HFile} format version 1.
      * @param checksumType the checksum type
      * @param bytesPerChecksum the number of bytes per checksum value
+     * @param includeMVCCReadpoint whether to write the mvcc readpoint to the file for each KV
      * @throws IOException problem writing to FS
      */
     private Writer(FileSystem fs, Path path, int blocksize,
@@ -1039,8 +1050,8 @@ public class StoreFile {
         HFileDataBlockEncoder dataBlockEncoder, final Configuration conf,
         CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType, long maxKeys,
-        final ChecksumType checksumType, final int bytesPerChecksum)
-        throws IOException {
+        final ChecksumType checksumType, final int bytesPerChecksum,
+        final boolean includeMVCCReadpoint) throws IOException {
       this.dataBlockEncoder = dataBlockEncoder != null ?
           dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
       writer = HFile.getWriterFactory(conf, cacheConf)
@@ -1051,6 +1062,7 @@ public class StoreFile {
           .withComparator(comparator.getRawComparator())
           .withChecksumType(checksumType)
           .withBytesPerChecksum(bytesPerChecksum)
+          .includeMVCCReadpoint(includeMVCCReadpoint)
           .create();
 
       this.kvComparator = comparator;

@@ -177,7 +177,7 @@ public class TestStore extends TestCase {
     init(getName(), conf, hcd);
 
     // Test createWriterInTmp()
-    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompression(), false);
+    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompression(), false, true);
     Path path = writer.getPath();
     writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
     writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));
