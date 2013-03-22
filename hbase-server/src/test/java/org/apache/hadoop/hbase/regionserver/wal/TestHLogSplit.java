@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -137,6 +138,8 @@ public class TestHLogSplit {
     FSUtils.setRootDir(TEST_UTIL.getConfiguration(), HBASEDIR);
     TEST_UTIL.getConfiguration().setClass("hbase.regionserver.hlog.writer.impl",
       InstrumentedSequenceFileLogWriter.class, HLog.Writer.class);
+    TEST_UTIL.getConfiguration().setBoolean("dfs.support.broken.append", true);
+    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);    
     // This is how you turn off shortcircuit read currently.  TODO: Fix.  Should read config.
     System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
     // Create fake maping user to group and set it to the conf.
@@ -253,9 +256,9 @@ public class TestHLogSplit {
       try {
         doWriting();
       } catch (IOException e) {
-        flushToConsole(getName() + " Writer exiting " + e);
+        LOG.warn(getName() + " Writer exiting " + e);
       } catch (InterruptedException e) {
-        flushToConsole(getName() + " Writer exiting " + e);
+        LOG.warn(getName() + " Writer exiting " + e);
       }
     }
 
@@ -378,11 +381,12 @@ public class TestHLogSplit {
 
     generateHLogs(-1);
 
+    CountDownLatch latch = new CountDownLatch(1);
     try {
-    (new ZombieNewLogWriterRegionServer(stop)).start();
-    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
+      (new ZombieNewLogWriterRegionServer(latch, stop)).start();
+      HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
         HBASEDIR, HLOGDIR, OLDLOGDIR, fs);
-    logSplitter.splitLog();
+      logSplitter.splitLog(latch);
     } finally {
       stop.set(true);
     }
@@ -713,16 +717,23 @@ public class TestHLogSplit {
     AtomicBoolean stop = new AtomicBoolean(false);
     generateHLogs(-1);
     fs.initialize(fs.getUri(), conf);
-    Thread zombie = new ZombieNewLogWriterRegionServer(stop);
+    CountDownLatch latch = new CountDownLatch(1);
+    Thread zombie = new ZombieNewLogWriterRegionServer(latch, stop);
 
+    List<Path> splits = null;
     try {
       zombie.start();
       try {
         HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
             HBASEDIR, HLOGDIR, OLDLOGDIR, fs);
-        logSplitter.splitLog();
-      } catch (IOException ex) {/* expected */}
-      int logFilesNumber = fs.listStatus(HLOGDIR).length;
+        splits = logSplitter.splitLog();
+      } catch (IOException ex) {
+        /* expected */
+        LOG.warn("testSplitWillNotTouchLogsIfNewHLogGetsCreatedAfterSplitStarted", ex);
+      }
+      FileStatus[] files = fs.listStatus(HLOGDIR);
+      if (files == null) fail("no files in " + HLOGDIR + " with splits " + splits);
+      int logFilesNumber = files.length;
 
       assertEquals("Log files should not be archived if there's an extra file after split",
               NUM_WRITERS + 1, logFilesNumber);
@@ -1066,8 +1077,10 @@ public class TestHLogSplit {
    */
   class ZombieNewLogWriterRegionServer extends Thread {
     AtomicBoolean stop;
-    public ZombieNewLogWriterRegionServer(AtomicBoolean stop) {
+    CountDownLatch latch;
+    public ZombieNewLogWriterRegionServer(CountDownLatch latch, AtomicBoolean stop) {
       super("ZombieNewLogWriterRegionServer");
+      this.latch = latch;
       this.stop = stop;
     }
 
@@ -1084,7 +1097,7 @@ public class TestHLogSplit {
       try {
 
         while (!fs.exists(recoveredEdits) && !stop.get()) {
-          flushToConsole("Juliet: split not started, sleeping a bit...");
+          LOG.info("Juliet: split not started, sleeping a bit...");
           Threads.sleep(10);
         }
 
@@ -1094,8 +1107,10 @@ public class TestHLogSplit {
         appendEntry(writer, "juliet".getBytes(), ("juliet").getBytes(),
             ("r").getBytes(), FAMILY, QUALIFIER, VALUE, 0);
         writer.close();
-        flushToConsole("Juliet file creator: created file " + julietLog);
+        LOG.info("Juliet file creator: created file " + julietLog);
+        latch.countDown();
       } catch (IOException e1) {
+        LOG.error("Failed to create file " + julietLog, e1);
         assertTrue("Failed to create file " + julietLog, false);
       }
     }
@@ -1306,7 +1321,7 @@ public class TestHLogSplit {
       }
       if (i != leaveOpen) {
         ws[i].close();
-        flushToConsole("Closing writer " + i);
+        LOG.info("Closing writer " + i);
       }
     }
     return ws;
@@ -1418,9 +1433,9 @@ public class TestHLogSplit {
                           byte[] row, byte[] family, byte[] qualifier,
                           byte[] value, long seq)
           throws IOException {
-    flushToConsole(Thread.currentThread().getName() + " append");
+    LOG.info(Thread.currentThread().getName() + " append");
     writer.append(createTestEntry(table, region, row, family, qualifier, value, seq));
-    flushToConsole(Thread.currentThread().getName() + " sync");
+    LOG.info(Thread.currentThread().getName() + " sync");
     writer.sync();
     return seq;
   }
