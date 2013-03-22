@@ -784,7 +784,7 @@
             <goals>
               <goal>copy-resources</goal>
             </goals>
-            <phase>pre-site</phase>
+            <phase>site</phase>
             <configuration>
               <outputDirectory>target/site/apidocs</outputDirectory>
               <resources>
@@ -802,7 +802,7 @@
             <goals>
               <goal>copy-resources</goal>
             </goals>
-            <phase>pre-site</phase>
+            <phase>site</phase>
             <configuration>
               <outputDirectory>target/site</outputDirectory>
               <resources>
