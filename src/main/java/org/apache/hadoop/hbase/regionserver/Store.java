@@ -901,7 +901,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    */
   private StoreFile.Writer createWriterInTmp(int maxKeyCount)
   throws IOException {
-    return createWriterInTmp(maxKeyCount, this.family.getCompression(), false);
+    return createWriterInTmp(maxKeyCount, this.family.getCompression(), false, true);
   }
 
   /*
@@ -911,7 +911,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @return Writer for a new StoreFile in the tmp dir.
    */
   public StoreFile.Writer createWriterInTmp(int maxKeyCount,
-    Compression.Algorithm compression, boolean isCompaction)
+    Compression.Algorithm compression, boolean isCompaction, boolean includeMVCCReadpoint)
   throws IOException {
     final CacheConfig writerCacheConf;
     if (isCompaction) {
@@ -931,6 +931,7 @@ public class Store extends SchemaConfigured implements HeapSize {
             .withChecksumType(checksumType)
             .withBytesPerChecksum(bytesPerChecksum)
             .withCompression(compression)
+            .includeMVCCReadpoint(includeMVCCReadpoint)
             .build();
     // The store file writer's path does not include the CF name, so we need
     // to configure the HFile writer directly.

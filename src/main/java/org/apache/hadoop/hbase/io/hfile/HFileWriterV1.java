@@ -92,7 +92,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
         FSDataOutputStream ostream, int blockSize,
         Algorithm compressAlgo, HFileDataBlockEncoder dataBlockEncoder,
         KeyComparator comparator, final ChecksumType checksumType,
-        final int bytesPerChecksum) throws IOException {
+        final int bytesPerChecksum, boolean includeMVCCReadpoint) throws IOException {
       // version 1 does not implement checksums
       return new HFileWriterV1(conf, cacheConf, fs, path, ostream, blockSize,
           compressAlgo, dataBlockEncoder, comparator);

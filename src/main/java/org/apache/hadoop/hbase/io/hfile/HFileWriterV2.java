@@ -86,7 +86,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   private ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
   private int bytesPerChecksum = HFile.DEFAULT_BYTES_PER_CHECKSUM;
 
-  private final boolean includeMemstoreTS = true;
+  private final boolean includeMemstoreTS;
   private long maxMemstoreTS = 0;
 
   private int minorVersion = HFileReaderV2.MAX_MINOR_VERSION;
@@ -101,9 +101,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         FSDataOutputStream ostream, int blockSize,
         Compression.Algorithm compress, HFileDataBlockEncoder blockEncoder,
         final KeyComparator comparator, final ChecksumType checksumType,
-        final int bytesPerChecksum) throws IOException {
-      return new HFileWriterV2(conf, cacheConf, fs, path, ostream, blockSize,
-          compress, blockEncoder, comparator, checksumType, bytesPerChecksum);
+        final int bytesPerChecksum, boolean includeMVCCReadpoint) throws IOException {
+      return new HFileWriterV2(conf, cacheConf, fs, path, ostream, blockSize, compress,
+          blockEncoder, comparator, checksumType, bytesPerChecksum, includeMVCCReadpoint);
     }
   }
 
@@ -112,13 +112,14 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       FileSystem fs, Path path, FSDataOutputStream ostream, int blockSize,
       Compression.Algorithm compressAlgo, HFileDataBlockEncoder blockEncoder,
       final KeyComparator comparator, final ChecksumType checksumType,
-      final int bytesPerChecksum) throws IOException {
+      final int bytesPerChecksum, boolean includeMVCCReadpoint) throws IOException {
     super(cacheConf,
         ostream == null ? createOutputStream(conf, fs, path) : ostream,
         path, blockSize, compressAlgo, blockEncoder, comparator);
     SchemaMetrics.configureGlobally(conf);
     this.checksumType = checksumType;
     this.bytesPerChecksum = bytesPerChecksum;
+    this.includeMemstoreTS = includeMVCCReadpoint;
     if (!conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, false)) {
       this.minorVersion = 0;
     }

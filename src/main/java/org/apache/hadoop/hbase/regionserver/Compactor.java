@@ -22,6 +22,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -84,6 +86,7 @@ class Compactor extends Configured {
     // Also calculate earliest put timestamp if major compaction
     int maxKeyCount = 0;
     long earliestPutTs = HConstants.LATEST_TIMESTAMP;
+    long maxMVCCReadpoint = 0;
 
     // pull out the interesting things from the CR for ease later
     final Store store = request.getStore();
@@ -102,11 +105,17 @@ class Compactor extends Configured {
           .getBloomFilterType()) ?
           r.getFilterEntries() : r.getEntries();
       maxKeyCount += keyCount;
+      // Calculate the maximum MVCC readpoint used in any of the involved files
+      Map<byte[], byte[]> fileInfo = r.loadFileInfo();
+      byte[] tmp = fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
+      if (tmp != null) {
+        maxMVCCReadpoint = Math.max(maxMVCCReadpoint, Bytes.toLong(tmp));
+      }
       // For major compactions calculate the earliest put timestamp
       // of all involved storefiles. This is used to remove 
       // family delete marker during the compaction.
       if (majorCompaction) {
-        byte[] tmp = r.loadFileInfo().get(StoreFile.EARLIEST_PUT_TS);
+        tmp = fileInfo.get(StoreFile.EARLIEST_PUT_TS);
         if (tmp == null) {
           // There's a file with no information, must be an old one
           // assume we have very old puts
@@ -183,7 +192,8 @@ class Compactor extends Configured {
         do {
           hasMore = scanner.next(kvs, compactionKVMax);
           if (writer == null && !kvs.isEmpty()) {
-            writer = store.createWriterInTmp(maxKeyCount, compactionCompression, true);
+            writer = store.createWriterInTmp(maxKeyCount, compactionCompression, true,
+                maxMVCCReadpoint >= smallestReadPoint);
           }
           if (writer != null) {
             // output to writer:

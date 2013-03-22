@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
@@ -741,6 +740,7 @@ public class StoreFile extends SchemaConfigured {
     private Path filePath;
     private ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
     private int bytesPerChecksum = HFile.DEFAULT_BYTES_PER_CHECKSUM;
+    private boolean includeMVCCReadpoint = true;
 
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs, int blockSize) {
@@ -826,6 +826,15 @@ public class StoreFile extends SchemaConfigured {
     }
 
     /**
+     * @param includeMVCCReadpoint whether to write the mvcc readpoint to the file for each KV
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder includeMVCCReadpoint(boolean includeMVCCReadpoint) {
+      this.includeMVCCReadpoint = includeMVCCReadpoint;
+      return this;
+    }
+
+    /**
      * Create a store file writer. Client is responsible for closing file when
      * done. If metadata, add BEFORE closing using
      * {@link Writer#appendMetadata}.
@@ -859,7 +868,7 @@ public class StoreFile extends SchemaConfigured {
       }
       return new Writer(fs, filePath, blockSize, compressAlgo, dataBlockEncoder,
           conf, cacheConf, comparator, bloomType, maxKeyCount, checksumType,
-          bytesPerChecksum);
+          bytesPerChecksum, includeMVCCReadpoint);
     }
   }
 
@@ -998,6 +1007,7 @@ public class StoreFile extends SchemaConfigured {
      *        for Bloom filter size in {@link HFile} format version 1.
      * @param checksumType the checksum type
      * @param bytesPerChecksum the number of bytes per checksum value
+     * @param includeMVCCReadpoint whether to write the mvcc readpoint to the file for each KV
      * @throws IOException problem writing to FS
      */
     private Writer(FileSystem fs, Path path, int blocksize,
@@ -1005,7 +1015,7 @@ public class StoreFile extends SchemaConfigured {
         HFileDataBlockEncoder dataBlockEncoder, final Configuration conf,
         CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType, long maxKeys,
-        final ChecksumType checksumType, final int bytesPerChecksum)
+        final ChecksumType checksumType, final int bytesPerChecksum, boolean includeMVCCReadpoint)
         throws IOException {
       this.dataBlockEncoder = dataBlockEncoder != null ?
           dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
@@ -1017,6 +1027,7 @@ public class StoreFile extends SchemaConfigured {
           .withComparator(comparator.getRawComparator())
           .withChecksumType(checksumType)
           .withBytesPerChecksum(bytesPerChecksum)
+          .includeMVCCReadpoint(includeMVCCReadpoint)
           .create();
 
       this.kvComparator = comparator;

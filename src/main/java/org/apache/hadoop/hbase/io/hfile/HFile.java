@@ -323,6 +323,7 @@ public class HFile {
     protected KeyComparator comparator;
     protected ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
     protected int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
+    protected boolean includeMVCCReadpoint = true;
 
     WriterFactory(Configuration conf, CacheConfig cacheConf) {
       this.conf = conf;
@@ -383,6 +384,11 @@ public class HFile {
       return this;
     }
 
+    public WriterFactory includeMVCCReadpoint(boolean includeMVCCReadpoint) {
+      this.includeMVCCReadpoint = includeMVCCReadpoint;
+      return this;
+    }
+
     public Writer create() throws IOException {
       if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
         throw new AssertionError("Please specify exactly one of " +
@@ -391,8 +397,8 @@ public class HFile {
       if (path != null) {
         ostream = AbstractHFileWriter.createOutputStream(conf, fs, path);
       }
-      return createWriter(fs, path, ostream, blockSize,
-          compression, encoder, comparator, checksumType, bytesPerChecksum);
+      return createWriter(fs, path, ostream, blockSize, compression, encoder, comparator,
+          checksumType, bytesPerChecksum, includeMVCCReadpoint);
     }
 
     protected abstract Writer createWriter(FileSystem fs, Path path,
@@ -400,7 +406,7 @@ public class HFile {
         Compression.Algorithm compress,
         HFileDataBlockEncoder dataBlockEncoder,
         KeyComparator comparator, ChecksumType checksumType,
-        int bytesPerChecksum) throws IOException;
+        int bytesPerChecksum, boolean includeMVCCReadpoint) throws IOException;
   }
 
   /** The configuration key for HFile version to use for new files */
