@@ -726,7 +726,7 @@ public class TestHLogSplit {
       try {
         HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
             HBASEDIR, HLOGDIR, OLDLOGDIR, fs);
-        splits = logSplitter.splitLog();
+        splits = logSplitter.splitLog(latch);
       } catch (IOException ex) {
         /* expected */
         LOG.warn("testSplitWillNotTouchLogsIfNewHLogGetsCreatedAfterSplitStarted", ex);
