@@ -322,7 +322,7 @@ row10	c1	c2
     <section xml:id="ops.regionmgt.merge">
       <title>Merge</title>
       <para>Merge is a utility that can merge adjoining regions in the same table (see org.apache.hadoop.hbase.util.Merge).</para>
-<programlisting>$ bin/hbase org.apache.hbase.util.Merge &lt;tablename&gt; &lt;region1&gt; &lt;region2&gt;
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.util.Merge &lt;tablename&gt; &lt;region1&gt; &lt;region2&gt;
 </programlisting>
       <para>If you feel you have too many regions and want to consolidate them, Merge is the utility you need.  Merge must
       run be done when the cluster is down.
