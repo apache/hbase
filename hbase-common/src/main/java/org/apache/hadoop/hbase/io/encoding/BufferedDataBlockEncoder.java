@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -228,6 +229,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         if (comp < 0) { // already too large, check previous
           if (previous.isValid()) {
             moveToPrevious();
+          } else {
+            return HConstants.INDEX_KEY_MAGIC; // using optimized index key
           }
           return 1;
         }

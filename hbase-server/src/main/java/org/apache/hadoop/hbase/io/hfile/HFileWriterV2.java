@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
@@ -76,6 +77,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
   /** The offset of the last data block or 0 if the file is empty. */
   private long lastDataBlockOffset;
+
+  /** The last(stop) Key of the previous data block. */
+  private byte[] lastKeyOfPreviousBlock = null;
 
   /** Additional data items to be written to the "load-on-open" section. */
   private List<BlockWritable> additionalLoadOnOpenData =
@@ -162,24 +166,37 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       return;
 
     long startTimeNs = System.nanoTime();
-
     // Update the first data block offset for scanning.
     if (firstDataBlockOffset == -1) {
       firstDataBlockOffset = outputStream.getPos();
     }
-
     // Update the last data block offset
     lastDataBlockOffset = outputStream.getPos();
-
     fsBlockWriter.writeHeaderAndData(outputStream);
-
     int onDiskSize = fsBlockWriter.getOnDiskSizeWithHeader();
-    dataBlockIndexWriter.addEntry(firstKeyInBlock, lastDataBlockOffset,
-        onDiskSize);
+    // Generate a shorter faked key into index block. For example, consider a block boundary
+    // between the keys "the quick brown fox" and "the who test text".  We can use "the r" as the 
+    // key for the index block entry since it is > all entries in the previous block and <= all
+    // entries in subsequent blocks.
+    if (comparator instanceof KeyComparator) {
+      byte[] fakeKey = ((KeyComparator) comparator).getShortMidpointKey(
+        lastKeyOfPreviousBlock, firstKeyInBlock);
+      if (comparator.compare(fakeKey, firstKeyInBlock) > 0) {
+        throw new IOException("Unexpected getShortMidpointKey result, fakeKey:" + fakeKey
+            + ", firstKeyInBlock:" + firstKeyInBlock);
+      }
+      if (lastKeyOfPreviousBlock != null && comparator.compare(lastKeyOfPreviousBlock,
+        fakeKey) >= 0) {
+        throw new IOException("Unexpected getShortMidpointKey result, lastKeyOfPreviousBlock:" +
+            Bytes.toString(lastKeyOfPreviousBlock) + ", fakeKey:" +
+            Bytes.toString(fakeKey));
+      }
+      dataBlockIndexWriter.addEntry(fakeKey, lastDataBlockOffset,onDiskSize);
+    } else {
+      dataBlockIndexWriter.addEntry(firstKeyInBlock, lastDataBlockOffset,onDiskSize);
+    }
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
-
     HFile.offerWriteLatency(System.nanoTime() - startTimeNs);
-    
     if (cacheConf.shouldCacheDataOnWrite()) {
       doCacheOnWrite(lastDataBlockOffset);
     }
@@ -230,6 +247,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     // This is where the next block begins.
     fsBlockWriter.startWriting(BlockType.DATA);
     firstKeyInBlock = null;
+    if (lastKeyLength > 0) {
+      lastKeyOfPreviousBlock = new byte[lastKeyLength];
+      System.arraycopy(lastKeyBuffer, lastKeyOffset, lastKeyOfPreviousBlock, 0, lastKeyLength);
+    }
   }
 
   /**
