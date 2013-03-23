@@ -130,7 +130,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   @Override
   public int getStoreCompactionPriority() {
     int blockingFileCount = conf.getInt(
-        "hbase.hstore.blockingStoreFiles", HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
+        HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
     return blockingFileCount - storefiles.size();
   }
 
