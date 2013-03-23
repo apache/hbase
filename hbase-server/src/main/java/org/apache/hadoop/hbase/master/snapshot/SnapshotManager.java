@@ -428,10 +428,10 @@ public class SnapshotManager implements Stoppable {
       throws HBaseSnapshotException {
     TakeSnapshotHandler handler;
     try {
-      handler = new EnabledTableSnapshotHandler(snapshot, master, this);
+      handler = new EnabledTableSnapshotHandler(snapshot, master, this).prepare();
       this.executorService.submit(handler);
       this.handler = handler;
-    } catch (IOException e) {
+    } catch (Exception e) {
       // cleanup the working directory by trying to delete it from the fs.
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
       try {
@@ -537,10 +537,10 @@ public class SnapshotManager implements Stoppable {
 
     DisabledTableSnapshotHandler handler;
     try {
-      handler = new DisabledTableSnapshotHandler(snapshot, this.master);
+      handler = new DisabledTableSnapshotHandler(snapshot, this.master).prepare();
       this.executorService.submit(handler);
       this.handler = handler;
-    } catch (IOException e) {
+    } catch (Exception e) {
       // cleanup the working directory by trying to delete it from the fs.
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
       try {

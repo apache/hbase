@@ -28,11 +28,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.exceptions.HBaseSnapshotException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.exceptions.HBaseSnapshotException;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.collect.Lists;
@@ -52,6 +52,11 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
       SnapshotManager manager) throws IOException {
     super(snapshot, master);
     this.coordinator = manager.getCoordinator();
+  }
+
+  @Override
+  public EnabledTableSnapshotHandler prepare() throws Exception {
+    return (EnabledTableSnapshotHandler) super.prepare();
   }
 
   // TODO consider switching over to using regionnames, rather than server names. This would allow
