@@ -97,7 +97,7 @@ public class TestScanWithBloomError {
     LOG.info("Scanning column set: " + Arrays.toString(colSet));
     Scan scan = new Scan(ROW_BYTES, ROW_BYTES);
     addColumnSetToScan(scan, colSet);
-    HRegion.RegionScanner scanner = (HRegion.RegionScanner)
+    RegionScanner scanner = (RegionScanner)
         region.getScanner(scan);
     KeyValueHeap storeHeap = scanner.getStoreHeapForTesting();
     assertEquals(0, storeHeap.getHeap().size());

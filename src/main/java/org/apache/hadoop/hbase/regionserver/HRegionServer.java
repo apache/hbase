@@ -2635,8 +2635,8 @@ public class HRegionServer implements HRegionInterface,
       long scannerId = (Long) params[0];
       String scannerName = String.valueOf(scannerId);
       InternalScanner s = regionServer.scanners.get(scannerName);
-      if (s != null && s instanceof HRegion.RegionScanner) {
-        res.put("scan", ((HRegion.RegionScanner)s).getOriginalScan().toMap(DEFAULT_MAX_COLS));
+      if (s != null && s instanceof RegionScanner) {
+        res.put("scan", ((RegionScanner)s).getOriginalScan().toMap(DEFAULT_MAX_COLS));
       }
 
       if (params.length > 1) {
@@ -2653,7 +2653,7 @@ public class HRegionServer implements HRegionInterface,
       String scannerName = String.valueOf(scannerId);
       // HRegionServer only deals with Region Scanner, 
       // thus, we just typecast directly
-      HRegion.RegionScanner s = (HRegion.RegionScanner)this.scanners.get(scannerName);
+      RegionScanner s = (RegionScanner)this.scanners.get(scannerName);
       if (s == null) {
         throw new UnknownScannerException("Name: " + scannerName);
       }

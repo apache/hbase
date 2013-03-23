@@ -392,8 +392,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
     // initialize the thread pool for opening store files in parallel..
     ThreadPoolExecutor storeFileOpenerThreadPool =
-      this.region.getStoreFileOpenAndCloseThreadPool("StoreFileOpenerThread-" +
-          this.family.getNameAsString());
+        StoreThreadUtils.getStoreFileOpenAndCloseThreadPool("StoreFileOpenerThread-" +
+          this.family.getNameAsString(), this.getHRegionInfo(), this.conf);
     CompletionService<StoreFile> completionService =
       new ExecutorCompletionService<StoreFile>(storeFileOpenerThreadPool);
 
@@ -587,9 +587,9 @@ public class Store extends SchemaConfigured implements HeapSize {
       storefiles = ImmutableList.of();
       if (!result.isEmpty()) {
         // initialize the thread pool for closing store files in parallel.
-        ThreadPoolExecutor storeFileCloserThreadPool = this.region
-            .getStoreFileOpenAndCloseThreadPool("StoreFileCloserThread-"
-                + this.family.getNameAsString());
+        ThreadPoolExecutor storeFileCloserThreadPool =
+            StoreThreadUtils.getStoreFileOpenAndCloseThreadPool("StoreFileCloserThread-"
+                + this.family.getNameAsString(), this.getHRegionInfo(), this.conf);
 
         // close each store file in parallel
         CompletionService<Void> completionService =

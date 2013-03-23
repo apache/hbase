@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -1417,7 +1416,7 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     Scan scan = null;
-    HRegion.RegionScanner is = null;
+    RegionScanner is = null;
 
     //Testing to see how many scanners that is produced by getScanner, starting
     //with known number, 2 - current = 1
