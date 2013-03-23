@@ -251,13 +251,13 @@ public class TestBlocksRead extends HBaseTestCase {
       // The first 2 seeks is to find out col2. [HBASE-4443]
       // One additional seek for col3
       // So 3 seeks are needed.
-      kvs = getData(FAMILY, "row", Arrays.asList("col2", "col3"), 3);
+      kvs = getData(FAMILY, "row", Arrays.asList("col2", "col3"), 2);
       assertEquals(2, kvs.length);
       verifyData(kvs[0], "row", "col2", 2);
       verifyData(kvs[1], "row", "col3", 3);
 
-      // Expected block reads: 2. [HBASE-4443]
-      kvs = getData(FAMILY, "row", Arrays.asList("col5"), 2);
+      // Expected block reads: 1. [HBASE-4443]&[HBASE-7845]
+      kvs = getData(FAMILY, "row", Arrays.asList("col5"), 1);
       assertEquals(1, kvs.length);
       verifyData(kvs[0], "row", "col5", 5);
     } finally {
@@ -334,7 +334,7 @@ public class TestBlocksRead extends HBaseTestCase {
       // For NONE Bloom filter: Expected blocks read: 3.
       kvs = getData(FAMILY, "row", "col1", 2, 3, 3);
       assertEquals(0, kvs.length);
-      kvs = getData(FAMILY, "row", "col2", 3, 4, 4);
+      kvs = getData(FAMILY, "row", "col2", 2, 3, 3);
       assertEquals(0, kvs.length);
       kvs = getData(FAMILY, "row", "col3", 2);
       assertEquals(0, kvs.length);

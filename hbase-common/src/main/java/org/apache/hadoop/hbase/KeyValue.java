@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -2484,6 +2485,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       return result;
     }
 
+    @Override
+    public byte[] getShortMidpointKey(final byte[] leftKey, final byte[] rightKey) {
+      return Arrays.copyOf(rightKey, rightKey.length);
+    }
+
     protected int compareRowid(byte[] left, int loffset, int llength,
         byte[] right, int roffset, int rlength) {
       return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
@@ -2677,6 +2683,89 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
       return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
+    }
+
+    /**
+     * Generate a faked byte array if possible. It aims to:
+     * 1)reduce key length, which expects to reduce HFile index memory footprint
+     * 2)replace TS field with LATEST_TIMESTAMP(to avoid seeking previous block)
+     * see HBASE-7845 for more details
+     * we need to ensure: leftKey < newKey <= rightKey
+     * @param leftKey the previous block's real stop key usually
+     * @param rightKey the current block's real start key usually
+     * @return newKey: the newly generated faked key
+     */
+    public byte[] getShortMidpointKey(final byte[] leftKey, final byte[] rightKey) {
+      if (rightKey == null) {
+        throw new IllegalArgumentException("rightKey can not be null");
+      }
+      if (leftKey == null) {
+        return Arrays.copyOf(rightKey, rightKey.length);
+      }
+      if (compare(leftKey, rightKey) >= 0) {
+        throw new IllegalArgumentException("Unexpected input, leftKey:" + Bytes.toString(leftKey)
+          + ", rightKey:" + Bytes.toString(rightKey));
+      }
+
+      short leftRowLength = Bytes.toShort(leftKey, 0);
+      short rightRowLength = Bytes.toShort(rightKey, 0);
+      int leftCommonLength = ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE + leftRowLength;
+      int rightCommonLength = ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE + rightRowLength;
+      int leftCommonLengthWithTSAndType = TIMESTAMP_TYPE_SIZE + leftCommonLength;
+      int rightCommonLengthWithTSAndType = TIMESTAMP_TYPE_SIZE + rightCommonLength;
+      int leftColumnLength = leftKey.length - leftCommonLengthWithTSAndType;
+      int rightColumnLength = rightKey.length - rightCommonLengthWithTSAndType;
+      // rows are equal
+      if (leftRowLength == rightRowLength && compareRows(leftKey, ROW_LENGTH_SIZE, leftRowLength,
+        rightKey, ROW_LENGTH_SIZE, rightRowLength) == 0) {
+        // Compare family & qualifier together.
+        int comparison = Bytes.compareTo(leftKey, leftCommonLength, leftColumnLength, rightKey,
+          rightCommonLength, rightColumnLength);
+        // same with "row + family + qualifier", return rightKey directly
+        if (comparison == 0) {
+          return Arrays.copyOf(rightKey, rightKey.length);
+        }
+        // "family + qualifier" are different, generate a faked key per rightKey
+        byte[] newKey = Arrays.copyOf(rightKey, rightKey.length);
+        Bytes.putLong(newKey, rightKey.length - TIMESTAMP_TYPE_SIZE, HConstants.LATEST_TIMESTAMP);
+        Bytes.putByte(newKey, rightKey.length - TYPE_SIZE, Type.Maximum.getCode());
+        return newKey;
+      }
+      // rows are different
+      short minLength = leftRowLength < rightRowLength ? leftRowLength : rightRowLength;
+      short diffIdx = 0;
+      while (diffIdx < minLength
+          && leftKey[ROW_LENGTH_SIZE + diffIdx] == rightKey[ROW_LENGTH_SIZE + diffIdx]) {
+        diffIdx++;
+      }
+      if (diffIdx >= minLength) {
+        // leftKey's row is prefix of rightKey's. we can optimize it in future
+        return Arrays.copyOf(rightKey, rightKey.length);
+      }
+      int diffByte = leftKey[ROW_LENGTH_SIZE + diffIdx];
+      if ((0xff & diffByte) < 0xff && (diffByte + 1) <
+          (rightKey[ROW_LENGTH_SIZE + diffIdx] & 0xff)) {
+        byte[] newRowKey = new byte[diffIdx + 1];
+        System.arraycopy(leftKey, ROW_LENGTH_SIZE, newRowKey, 0, diffIdx);
+        newRowKey[diffIdx] = (byte) (diffByte + 1);
+        int rightFamilyLength = rightKey[rightCommonLength - 1];
+        byte[] family = null;
+        if (rightFamilyLength > 0) {
+          family = new byte[rightFamilyLength];
+          System.arraycopy(rightKey, rightCommonLength, family, 0, rightFamilyLength);
+        }
+        int rightQualifierLength = rightColumnLength - rightFamilyLength;
+        byte[] qualifier = null;
+        if (rightQualifierLength > 0) {
+          qualifier = new byte[rightQualifierLength];
+          System.arraycopy(rightKey, rightCommonLength + rightFamilyLength, qualifier, 0,
+            rightQualifierLength);
+        }
+        return new KeyValue(newRowKey, null, null, HConstants.LATEST_TIMESTAMP,
+          Type.Maximum).getKey();
+      }
+      // the following is optimizable in future
+      return Arrays.copyOf(rightKey, rightKey.length);
     }
 
     protected int compareColumns(

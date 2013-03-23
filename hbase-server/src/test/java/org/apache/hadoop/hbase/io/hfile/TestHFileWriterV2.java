@@ -102,19 +102,16 @@ public class TestHFileWriterV2 {
             .create();
 
     Random rand = new Random(9713312); // Just a fixed seed.
-
-    List<byte[]> keys = new ArrayList<byte[]>();
-    List<byte[]> values = new ArrayList<byte[]>();
+    List<KeyValue> keyValues = new ArrayList<KeyValue>(entryCount);
 
     for (int i = 0; i < entryCount; ++i) {
       byte[] keyBytes = randomOrderedKey(rand, i);
 
       // A random-length random value.
       byte[] valueBytes = randomValue(rand);
-      writer.append(keyBytes, valueBytes);
-
-      keys.add(keyBytes);
-      values.add(valueBytes);
+      KeyValue keyValue = new KeyValue(keyBytes, null, null, valueBytes);
+      writer.append(keyValue);
+      keyValues.add(keyValue);
     }
 
     // Add in an arbitrary order. They will be sorted lexicographically by
@@ -207,8 +204,8 @@ public class TestHFileWriterV2 {
         }
 
         // A brute-force check to see that all keys and values are correct.
-        assertTrue(Bytes.compareTo(key, keys.get(entriesRead)) == 0);
-        assertTrue(Bytes.compareTo(value, values.get(entriesRead)) == 0);
+        assertTrue(Bytes.compareTo(key, keyValues.get(entriesRead).getKey()) == 0);
+        assertTrue(Bytes.compareTo(value, keyValues.get(entriesRead).getValue()) == 0);
 
         ++entriesRead;
       }

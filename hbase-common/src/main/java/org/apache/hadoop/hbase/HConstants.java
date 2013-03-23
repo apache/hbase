@@ -47,6 +47,9 @@ public final class HConstants {
    * Default block size for an HFile.
    */
   public final static int DEFAULT_BLOCKSIZE = 64 * 1024;
+
+  /** Used as a magic return value while optimized index key feature enabled(HBASE-7845) */
+  public final static int INDEX_KEY_MAGIC = -2;
   /*
      * Name of directory that holds recovered edits written by the wal log
      * splitting code, one per region

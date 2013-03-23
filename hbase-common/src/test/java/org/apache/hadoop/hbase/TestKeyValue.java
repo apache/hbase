@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -27,6 +28,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -325,6 +327,7 @@ public class TestKeyValue extends TestCase {
 
   private final byte[] family = Bytes.toBytes("family");
   private final byte[] qualA = Bytes.toBytes("qfA");
+  private final byte[] qualB = Bytes.toBytes("qfB");
 
   private void assertKVLess(KeyValue.KVComparator c,
                             KeyValue less,
@@ -492,5 +495,70 @@ public class TestKeyValue extends TestCase {
     long time2 = kv.getTimestamp();
     assertEquals(HConstants.LATEST_TIMESTAMP, time1);
     assertEquals(12345L, time2);
+  }
+
+  /**
+   * See HBASE-7845
+   */
+  public void testGetShortMidpointKey() {
+    final KeyComparator keyComparator = new KeyValue.KeyComparator();
+    //verify that faked shorter rowkey could be generated
+    long ts = 5;
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("the quick brown fox"), family, qualA, ts, Type.Put);
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("the who test text"), family, qualA, ts, Type.Put);
+    byte[] newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
+    assertTrue(keyComparator.compare(kv1.getKey(), newKey) < 0);
+    assertTrue(keyComparator.compare(newKey, kv2.getKey()) < 0);
+    short newRowLength = Bytes.toShort(newKey, 0);
+    byte[] expectedArray = Bytes.toBytes("the r");
+    Bytes.equals(newKey, KeyValue.ROW_LENGTH_SIZE, newRowLength, expectedArray, 0,
+      expectedArray.length);
+
+    //verify: same with "row + family + qualifier", return rightKey directly
+    kv1 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, 5, Type.Put);
+    kv2 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, 0, Type.Put);
+    assertTrue(keyComparator.compare(kv1.getKey(), kv2.getKey()) < 0);
+    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
+    assertTrue(keyComparator.compare(kv1.getKey(), newKey) < 0);
+    assertTrue(keyComparator.compare(newKey, kv2.getKey()) == 0);
+    kv1 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, -5, Type.Put);
+    kv2 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, -10, Type.Put);
+    assertTrue(keyComparator.compare(kv1.getKey(), kv2.getKey()) < 0);
+    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
+    assertTrue(keyComparator.compare(kv1.getKey(), newKey) < 0);
+    assertTrue(keyComparator.compare(newKey, kv2.getKey()) == 0);
+
+    // verify: same with row, different with qualifier
+    kv1 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, 5, Type.Put);
+    kv2 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualB, 5, Type.Put);
+    assertTrue(keyComparator.compare(kv1.getKey(), kv2.getKey()) < 0);
+    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
+    assertTrue(keyComparator.compare(kv1.getKey(), newKey) < 0);
+    assertTrue(keyComparator.compare(newKey, kv2.getKey()) < 0);
+    KeyValue newKeyValue = KeyValue.createKeyValueFromKey(newKey);
+    assertTrue(Arrays.equals(newKeyValue.getFamily(),family));
+    assertTrue(Arrays.equals(newKeyValue.getQualifier(),qualB));
+    assertTrue(newKeyValue.getTimestamp() == HConstants.LATEST_TIMESTAMP);
+    assertTrue(newKeyValue.getType() == Type.Maximum.getCode());
+
+    //verify root/metaKeyComparator's getShortMidpointKey output
+    final KeyComparator rootKeyComparator = new KeyValue.RootKeyComparator();
+    final KeyComparator metaKeyComparator = new KeyValue.MetaKeyComparator();
+    kv1 = new KeyValue(Bytes.toBytes("ilovehbase123"), family, qualA, 5, Type.Put);
+    kv2 = new KeyValue(Bytes.toBytes("ilovehbase234"), family, qualA, 0, Type.Put);
+    newKey = rootKeyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
+    assertTrue(rootKeyComparator.compare(kv1.getKey(), newKey) < 0);
+    assertTrue(rootKeyComparator.compare(newKey, kv2.getKey()) == 0);
+    newKey = metaKeyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
+    assertTrue(metaKeyComparator.compare(kv1.getKey(), newKey) < 0);
+    assertTrue(metaKeyComparator.compare(newKey, kv2.getKey()) == 0);
+
+    //verify common fix scenario
+    kv1 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, ts, Type.Put);
+    kv2 = new KeyValue(Bytes.toBytes("ilovehbaseandhdfs"), family, qualA, ts, Type.Put);
+    assertTrue(keyComparator.compare(kv1.getKey(), kv2.getKey()) < 0);
+    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
+    assertTrue(keyComparator.compare(kv1.getKey(), newKey) < 0);
+    assertTrue(keyComparator.compare(newKey, kv2.getKey()) == 0);
   }
 }

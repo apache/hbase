@@ -316,9 +316,10 @@ public class HFileBlockIndex {
       if (rootCount == 0)
         throw new IOException("HFile empty");
 
-      byte[] midKey = this.midKey.get();
-      if (midKey != null)
-        return midKey;
+      byte[] targetMidKey = this.midKey.get();
+      if (targetMidKey != null) {
+        return targetMidKey;
+      }
 
       if (midLeafBlockOffset >= 0) {
         if (cachingBlockReader == null) {
@@ -339,14 +340,14 @@ public class HFileBlockIndex {
         int keyOffset = b.arrayOffset() +
             Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset +
             SECONDARY_INDEX_ENTRY_OVERHEAD;
-        midKey = Arrays.copyOfRange(b.array(), keyOffset, keyOffset + keyLen);
+        targetMidKey = Arrays.copyOfRange(b.array(), keyOffset, keyOffset + keyLen);
       } else {
         // The middle of the root-level index.
-        midKey = blockKeys[rootCount / 2];
+        targetMidKey = blockKeys[rootCount / 2];
       }
 
-      this.midKey.set(midKey);
-      return midKey;
+      this.midKey.set(targetMidKey);
+      return targetMidKey;
     }
 
     /**
