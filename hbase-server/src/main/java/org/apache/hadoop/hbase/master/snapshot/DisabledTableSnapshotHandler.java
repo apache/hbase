@@ -67,6 +67,11 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
     timeoutInjector = TakeSnapshotUtils.getMasterTimerAndBindToMonitor(snapshot, conf, monitor);
   }
 
+  @Override
+  public DisabledTableSnapshotHandler prepare() throws Exception {
+    return (DisabledTableSnapshotHandler) super.prepare();
+  }
+
   // TODO consider parallelizing these operations since they are independent. Right now its just
   // easier to keep them serial though
   @Override
