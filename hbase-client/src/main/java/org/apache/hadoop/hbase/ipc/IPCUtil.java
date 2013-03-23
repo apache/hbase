@@ -102,9 +102,11 @@ class IPCUtil {
       os.close();
       if (poolCompressor != null) CodecPool.returnCompressor(poolCompressor);
     }
-    if (this.cellBlockBuildingInitialBufferSize < baos.size()) {
-      LOG.warn("Buffer grew from " + this.cellBlockBuildingInitialBufferSize +
-      " to " + baos.size());
+    if (LOG.isTraceEnabled()) {}
+      if (this.cellBlockBuildingInitialBufferSize < baos.size()) {
+        LOG.trace("Buffer grew from " + this.cellBlockBuildingInitialBufferSize +
+        " to " + baos.size());
+      }
     }
     return baos.getByteBuffer();
   }
