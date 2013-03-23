@@ -102,7 +102,7 @@ class IPCUtil {
       os.close();
       if (poolCompressor != null) CodecPool.returnCompressor(poolCompressor);
     }
-    if (LOG.isTraceEnabled()) {}
+    if (LOG.isTraceEnabled()) {
       if (this.cellBlockBuildingInitialBufferSize < baos.size()) {
         LOG.trace("Buffer grew from " + this.cellBlockBuildingInitialBufferSize +
         " to " + baos.size());
