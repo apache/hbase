@@ -40,8 +40,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.Reference;
@@ -194,6 +196,21 @@ public class HRegionFileSystem {
       }
     );
     return files != null && files.length > 0;
+  }
+
+  /**
+   * Check whether region has Reference file
+   * @param htd table desciptor of the region
+   * @return true if region has reference file
+   * @throws IOException
+   */
+  public boolean hasReferences(final HTableDescriptor htd) throws IOException {
+    for (HColumnDescriptor family : htd.getFamilies()) {
+      if (hasReferences(family.getNameAsString())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -509,11 +526,93 @@ public class HRegionFileSystem {
     return new Path(getRegionDir(), REGION_MERGES_DIR);
   }
 
+  Path getMergesDir(final HRegionInfo hri) {
+    return new Path(getMergesDir(), hri.getEncodedName());
+  }
+
   /**
    * Clean up any merge detritus that may have been left around from previous merge attempts.
    */
   void cleanupMergesDir() throws IOException {
     FSUtils.deleteDirectory(fs, getMergesDir());
+  }
+
+  /**
+   * Remove merged region
+   * @param mergedRegion {@link HRegionInfo}
+   * @throws IOException
+   */
+  void cleanupMergedRegion(final HRegionInfo mergedRegion) throws IOException {
+    Path regionDir = new Path(this.tableDir, mergedRegion.getEncodedName());
+    if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
+      throw new IOException("Failed delete of " + regionDir);
+    }
+  }
+
+  /**
+   * Create the region merges directory.
+   * @throws IOException If merges dir already exists or we fail to create it.
+   * @see HRegionFileSystem#cleanupMergesDir()
+   */
+  void createMergesDir() throws IOException {
+    Path mergesdir = getMergesDir();
+    if (fs.exists(mergesdir)) {
+      LOG.info("The " + mergesdir
+          + " directory exists.  Hence deleting it to recreate it");
+      if (!fs.delete(mergesdir, true)) {
+        throw new IOException("Failed deletion of " + mergesdir
+            + " before creating them again.");
+      }
+    }
+    if (!fs.mkdirs(mergesdir))
+      throw new IOException("Failed create of " + mergesdir);
+  }
+
+  /**
+   * Write out a merge reference under the given merges directory. Package local
+   * so it doesnt leak out of regionserver.
+   * @param mergedRegion {@link HRegionInfo} of the merged region
+   * @param familyName Column Family Name
+   * @param f File to create reference.
+   * @param mergedDir
+   * @return Path to created reference.
+   * @throws IOException
+   */
+  Path mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
+      final StoreFile f, final Path mergedDir)
+      throws IOException {
+    Path referenceDir = new Path(new Path(mergedDir,
+        mergedRegion.getEncodedName()), familyName);
+    // A whole reference to the store file.
+    Reference r = Reference.createTopReference(regionInfo.getStartKey());
+    // Add the referred-to regions name as a dot separated suffix.
+    // See REF_NAME_REGEX regex above. The referred-to regions name is
+    // up in the path of the passed in <code>f</code> -- parentdir is family,
+    // then the directory above is the region name.
+    String mergingRegionName = regionInfo.getEncodedName();
+    // Write reference with same file id only with the other region name as
+    // suffix and into the new region location (under same family).
+    Path p = new Path(referenceDir, f.getPath().getName() + "."
+        + mergingRegionName);
+    return r.write(fs, p);
+  }
+
+  /**
+   * Commit a merged region, moving it from the merges temporary directory to
+   * the proper location in the filesystem.
+   * @param mergedRegionInfo merged region {@link HRegionInfo}
+   * @throws IOException 
+   */
+  void commitMergedRegion(final HRegionInfo mergedRegionInfo) throws IOException {
+    Path regionDir = new Path(this.tableDir, mergedRegionInfo.getEncodedName());
+    Path mergedRegionTmpDir = this.getMergesDir(mergedRegionInfo);
+    // Move the tmp dir in the expected location
+    if (mergedRegionTmpDir != null && fs.exists(mergedRegionTmpDir)) {
+      if (!fs.rename(mergedRegionTmpDir, regionDir)) {
+        throw new IOException("Unable to rename " + mergedRegionTmpDir + " to "
+            + regionDir);
+      }
+    }
   }
 
   // ===========================================================================

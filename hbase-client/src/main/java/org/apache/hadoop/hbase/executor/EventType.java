@@ -43,6 +43,8 @@ public enum EventType {
   RS_ZK_REGION_SPLITTING    (5, null), // RS has started a region split
   RS_ZK_REGION_SPLIT        (6, ExecutorType.MASTER_SERVER_OPERATIONS),   // RS split has completed.
   RS_ZK_REGION_FAILED_OPEN  (7, ExecutorType.MASTER_CLOSE_REGION),   // RS failed to open a region
+  RS_ZK_REGION_MERGING      (8, null), // RS has started merging regions
+  RS_ZK_REGION_MERGE        (9, ExecutorType.MASTER_SERVER_OPERATIONS),   // RS region merge has completed.
 
   // Messages originating from Master to RS
   M_RS_OPEN_REGION          (20, ExecutorType.RS_OPEN_REGION),  // Master asking RS to open a region
@@ -53,6 +55,7 @@ public enum EventType {
   M_RS_CLOSE_META           (25, ExecutorType.RS_CLOSE_META),  // Master asking RS to close meta
 
   // Messages originating from Client to Master
+  C_M_MERGE_REGION          (30, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to merge regions
   C_M_DELETE_TABLE          (40, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to delete a table
   C_M_DISABLE_TABLE         (41, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to disable a table
   C_M_ENABLE_TABLE          (42, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to enable a table

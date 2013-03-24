@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -325,6 +325,11 @@ public class TestCatalogJanitor {
     public TableLockManager getTableLockManager() {
       return null;
     }
+
+    @Override
+    public void dispatchMergingRegions(HRegionInfo region_a, HRegionInfo region_b,
+        boolean forcible) throws IOException {
+    }
   }
 
   @Test
@@ -546,9 +551,11 @@ public class TestCatalogJanitor {
     splita.setOffline(true); //simulate that splita goes offline when it is split
     splitParents.put(splita, createResult(splita, splitaa,splitab));
 
+    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<HRegionInfo, Result>();
     CatalogJanitor janitor = spy(new CatalogJanitor(server, services));
-    doReturn(new Pair<Integer, Map<HRegionInfo, Result>>(
-        10, splitParents)).when(janitor).getSplitParents();
+    doReturn(new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
+            10, mergedRegions, splitParents)).when(janitor)
+        .getMergedRegionsAndSplitParents();
 
     //create ref from splita to parent
     Path splitaRef =

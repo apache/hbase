@@ -234,6 +234,38 @@ public class MetaReader {
   }
 
   /**
+   * Gets the result in META for the specified region.
+   * @param catalogTracker
+   * @param regionName
+   * @return result of the specified region
+   * @throws IOException
+   */
+  public static Result getRegionResult(CatalogTracker catalogTracker,
+      byte[] regionName) throws IOException {
+    Get get = new Get(regionName);
+    get.addFamily(HConstants.CATALOG_FAMILY);
+    return get(getCatalogHTable(catalogTracker), get);
+  }
+
+  /**
+   * Get regions from the merge qualifier of the specified merged region
+   * @return null if it doesn't contain merge qualifier, else two merge regions
+   * @throws IOException
+   */
+  public static Pair<HRegionInfo, HRegionInfo> getRegionsFromMergeQualifier(
+      CatalogTracker catalogTracker, byte[] regionName) throws IOException {
+    Result result = getRegionResult(catalogTracker, regionName);
+    HRegionInfo mergeA = HRegionInfo.getHRegionInfo(result,
+        HConstants.MERGEA_QUALIFIER);
+    HRegionInfo mergeB = HRegionInfo.getHRegionInfo(result,
+        HConstants.MERGEB_QUALIFIER);
+    if (mergeA == null && mergeB == null) {
+      return null;
+    }
+    return new Pair<HRegionInfo, HRegionInfo>(mergeA, mergeB);
+ }
+
+  /**
    * Checks if the specified table exists.  Looks at the META table hosted on
    * the specified server.
    * @param catalogTracker

@@ -514,8 +514,9 @@ public class SplitTransaction {
   void openDaughterRegion(final Server server, final HRegion daughter)
   throws IOException, KeeperException {
     HRegionInfo hri = daughter.getRegionInfo();
-    LoggingProgressable reporter = server == null? null:
-      new LoggingProgressable(hri, server.getConfiguration());
+    LoggingProgressable reporter = server == null ? null
+        : new LoggingProgressable(hri, server.getConfiguration().getLong(
+            "hbase.regionserver.split.daughter.open.log.interval", 10000));
     daughter.openHRegion(reporter);
   }
 
@@ -524,10 +525,9 @@ public class SplitTransaction {
     private long lastLog = -1;
     private final long interval;
 
-    LoggingProgressable(final HRegionInfo hri, final Configuration c) {
+    LoggingProgressable(final HRegionInfo hri, final long interval) {
       this.hri = hri;
-      this.interval = c.getLong("hbase.regionserver.split.daughter.open.log.interval",
-        10000);
+      this.interval = interval;
     }
 
     @Override

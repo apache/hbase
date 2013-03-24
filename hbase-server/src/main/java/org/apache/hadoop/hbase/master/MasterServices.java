@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -170,5 +171,17 @@ public interface MasterServices extends Server {
    * otherwise
    */
   public boolean registerService(Service instance);
+
+  /**
+   * Merge two regions. The real implementation is on the regionserver, master
+   * just move the regions together and send MERGE RPC to regionserver
+   * @param region_a region to merge
+   * @param region_b region to merge
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          two adjacent regions
+   * @throws IOException
+   */
+  public void dispatchMergingRegions(final HRegionInfo region_a,
+      final HRegionInfo region_b, final boolean forcible) throws IOException;
 
 }

@@ -102,4 +102,9 @@ public interface RegionServerServices extends OnlineRegions {
    * @return hbase executor service
    */
   public ExecutorService getExecutorService();
+
+  /**
+   * @return The RegionServer's CatalogTracker
+   */
+  public CatalogTracker getCatalogTracker();
 }

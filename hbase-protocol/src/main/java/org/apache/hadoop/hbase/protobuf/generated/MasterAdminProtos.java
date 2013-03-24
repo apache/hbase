@@ -3404,6 +3404,1013 @@ public final class MasterAdminProtos {
     // @@protoc_insertion_point(class_scope:MoveRegionResponse)
   }
   
+  public interface DispatchMergingRegionsRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // required .RegionSpecifier regionA = 1;
+    boolean hasRegionA();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionA();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionAOrBuilder();
+    
+    // required .RegionSpecifier regionB = 2;
+    boolean hasRegionB();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionB();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionBOrBuilder();
+    
+    // optional bool forcible = 3 [default = false];
+    boolean hasForcible();
+    boolean getForcible();
+  }
+  public static final class DispatchMergingRegionsRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements DispatchMergingRegionsRequestOrBuilder {
+    // Use DispatchMergingRegionsRequest.newBuilder() to construct.
+    private DispatchMergingRegionsRequest(Builder builder) {
+      super(builder);
+    }
+    private DispatchMergingRegionsRequest(boolean noInit) {}
+    
+    private static final DispatchMergingRegionsRequest defaultInstance;
+    public static DispatchMergingRegionsRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public DispatchMergingRegionsRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_DispatchMergingRegionsRequest_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_DispatchMergingRegionsRequest_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // required .RegionSpecifier regionA = 1;
+    public static final int REGIONA_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionA_;
+    public boolean hasRegionA() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionA() {
+      return regionA_;
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionAOrBuilder() {
+      return regionA_;
+    }
+    
+    // required .RegionSpecifier regionB = 2;
+    public static final int REGIONB_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionB_;
+    public boolean hasRegionB() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionB() {
+      return regionB_;
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionBOrBuilder() {
+      return regionB_;
+    }
+    
+    // optional bool forcible = 3 [default = false];
+    public static final int FORCIBLE_FIELD_NUMBER = 3;
+    private boolean forcible_;
+    public boolean hasForcible() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public boolean getForcible() {
+      return forcible_;
+    }
+    
+    private void initFields() {
+      regionA_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+      regionB_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+      forcible_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      if (!hasRegionA()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasRegionB()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getRegionA().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getRegionB().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, regionA_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, regionB_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBool(3, forcible_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, regionA_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, regionB_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(3, forcible_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest) obj;
+      
+      boolean result = true;
+      result = result && (hasRegionA() == other.hasRegionA());
+      if (hasRegionA()) {
+        result = result && getRegionA()
+            .equals(other.getRegionA());
+      }
+      result = result && (hasRegionB() == other.hasRegionB());
+      if (hasRegionB()) {
+        result = result && getRegionB()
+            .equals(other.getRegionB());
+      }
+      result = result && (hasForcible() == other.hasForcible());
+      if (hasForcible()) {
+        result = result && (getForcible()
+            == other.getForcible());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasRegionA()) {
+        hash = (37 * hash) + REGIONA_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionA().hashCode();
+      }
+      if (hasRegionB()) {
+        hash = (37 * hash) + REGIONB_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionB().hashCode();
+      }
+      if (hasForcible()) {
+        hash = (37 * hash) + FORCIBLE_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getForcible());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_DispatchMergingRegionsRequest_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_DispatchMergingRegionsRequest_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getRegionAFieldBuilder();
+          getRegionBFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        if (regionABuilder_ == null) {
+          regionA_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+        } else {
+          regionABuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        if (regionBBuilder_ == null) {
+          regionB_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+        } else {
+          regionBBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        forcible_ = false;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (regionABuilder_ == null) {
+          result.regionA_ = regionA_;
+        } else {
+          result.regionA_ = regionABuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (regionBBuilder_ == null) {
+          result.regionB_ = regionB_;
+        } else {
+          result.regionB_ = regionBBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.forcible_ = forcible_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest.getDefaultInstance()) return this;
+        if (other.hasRegionA()) {
+          mergeRegionA(other.getRegionA());
+        }
+        if (other.hasRegionB()) {
+          mergeRegionB(other.getRegionB());
+        }
+        if (other.hasForcible()) {
+          setForcible(other.getForcible());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        if (!hasRegionA()) {
+          
+          return false;
+        }
+        if (!hasRegionB()) {
+          
+          return false;
+        }
+        if (!getRegionA().isInitialized()) {
+          
+          return false;
+        }
+        if (!getRegionB().isInitialized()) {
+          
+          return false;
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.newBuilder();
+              if (hasRegionA()) {
+                subBuilder.mergeFrom(getRegionA());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRegionA(subBuilder.buildPartial());
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.newBuilder();
+              if (hasRegionB()) {
+                subBuilder.mergeFrom(getRegionB());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRegionB(subBuilder.buildPartial());
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              forcible_ = input.readBool();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // required .RegionSpecifier regionA = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionA_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionABuilder_;
+      public boolean hasRegionA() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionA() {
+        if (regionABuilder_ == null) {
+          return regionA_;
+        } else {
+          return regionABuilder_.getMessage();
+        }
+      }
+      public Builder setRegionA(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
+        if (regionABuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          regionA_ = value;
+          onChanged();
+        } else {
+          regionABuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      public Builder setRegionA(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder builderForValue) {
+        if (regionABuilder_ == null) {
+          regionA_ = builderForValue.build();
+          onChanged();
+        } else {
+          regionABuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      public Builder mergeRegionA(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
+        if (regionABuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              regionA_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance()) {
+            regionA_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.newBuilder(regionA_).mergeFrom(value).buildPartial();
+          } else {
+            regionA_ = value;
+          }
+          onChanged();
+        } else {
+          regionABuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      public Builder clearRegionA() {
+        if (regionABuilder_ == null) {
+          regionA_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+          onChanged();
+        } else {
+          regionABuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder getRegionABuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getRegionAFieldBuilder().getBuilder();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionAOrBuilder() {
+        if (regionABuilder_ != null) {
+          return regionABuilder_.getMessageOrBuilder();
+        } else {
+          return regionA_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+          getRegionAFieldBuilder() {
+        if (regionABuilder_ == null) {
+          regionABuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>(
+                  regionA_,
+                  getParentForChildren(),
+                  isClean());
+          regionA_ = null;
+        }
+        return regionABuilder_;
+      }
+      
+      // required .RegionSpecifier regionB = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionB_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionBBuilder_;
+      public boolean hasRegionB() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionB() {
+        if (regionBBuilder_ == null) {
+          return regionB_;
+        } else {
+          return regionBBuilder_.getMessage();
+        }
+      }
+      public Builder setRegionB(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
+        if (regionBBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          regionB_ = value;
+          onChanged();
+        } else {
+          regionBBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      public Builder setRegionB(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder builderForValue) {
+        if (regionBBuilder_ == null) {
+          regionB_ = builderForValue.build();
+          onChanged();
+        } else {
+          regionBBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      public Builder mergeRegionB(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
+        if (regionBBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              regionB_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance()) {
+            regionB_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.newBuilder(regionB_).mergeFrom(value).buildPartial();
+          } else {
+            regionB_ = value;
+          }
+          onChanged();
+        } else {
+          regionBBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      public Builder clearRegionB() {
+        if (regionBBuilder_ == null) {
+          regionB_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+          onChanged();
+        } else {
+          regionBBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder getRegionBBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getRegionBFieldBuilder().getBuilder();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionBOrBuilder() {
+        if (regionBBuilder_ != null) {
+          return regionBBuilder_.getMessageOrBuilder();
+        } else {
+          return regionB_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+          getRegionBFieldBuilder() {
+        if (regionBBuilder_ == null) {
+          regionBBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>(
+                  regionB_,
+                  getParentForChildren(),
+                  isClean());
+          regionB_ = null;
+        }
+        return regionBBuilder_;
+      }
+      
+      // optional bool forcible = 3 [default = false];
+      private boolean forcible_ ;
+      public boolean hasForcible() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public boolean getForcible() {
+        return forcible_;
+      }
+      public Builder setForcible(boolean value) {
+        bitField0_ |= 0x00000004;
+        forcible_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearForcible() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        forcible_ = false;
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:DispatchMergingRegionsRequest)
+    }
+    
+    static {
+      defaultInstance = new DispatchMergingRegionsRequest(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:DispatchMergingRegionsRequest)
+  }
+  
+  public interface DispatchMergingRegionsResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  public static final class DispatchMergingRegionsResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements DispatchMergingRegionsResponseOrBuilder {
+    // Use DispatchMergingRegionsResponse.newBuilder() to construct.
+    private DispatchMergingRegionsResponse(Builder builder) {
+      super(builder);
+    }
+    private DispatchMergingRegionsResponse(boolean noInit) {}
+    
+    private static final DispatchMergingRegionsResponse defaultInstance;
+    public static DispatchMergingRegionsResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public DispatchMergingRegionsResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_DispatchMergingRegionsResponse_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_DispatchMergingRegionsResponse_fieldAccessorTable;
+    }
+    
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse) obj;
+      
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_DispatchMergingRegionsResponse_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_DispatchMergingRegionsResponse_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse(this);
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // @@protoc_insertion_point(builder_scope:DispatchMergingRegionsResponse)
+    }
+    
+    static {
+      defaultInstance = new DispatchMergingRegionsResponse(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:DispatchMergingRegionsResponse)
+  }
+  
   public interface AssignRegionRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
@@ -19524,6 +20531,11 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse> done);
       
+      public abstract void dispatchMergingRegions(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse> done);
+      
       public abstract void assignRegion(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest request,
@@ -19669,6 +20681,14 @@ public final class MasterAdminProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse> done) {
           impl.moveRegion(controller, request, done);
+        }
+        
+        @java.lang.Override
+        public  void dispatchMergingRegions(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse> done) {
+          impl.dispatchMergingRegions(controller, request, done);
         }
         
         @java.lang.Override
@@ -19878,48 +20898,50 @@ public final class MasterAdminProtos {
             case 3:
               return impl.moveRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest)request);
             case 4:
-              return impl.assignRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest)request);
+              return impl.dispatchMergingRegions(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest)request);
             case 5:
-              return impl.unassignRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest)request);
+              return impl.assignRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest)request);
             case 6:
-              return impl.offlineRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest)request);
+              return impl.unassignRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest)request);
             case 7:
-              return impl.deleteTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest)request);
+              return impl.offlineRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest)request);
             case 8:
-              return impl.enableTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest)request);
+              return impl.deleteTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest)request);
             case 9:
-              return impl.disableTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest)request);
+              return impl.enableTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest)request);
             case 10:
-              return impl.modifyTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest)request);
+              return impl.disableTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest)request);
             case 11:
-              return impl.createTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest)request);
+              return impl.modifyTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest)request);
             case 12:
-              return impl.shutdown(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest)request);
+              return impl.createTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest)request);
             case 13:
-              return impl.stopMaster(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest)request);
+              return impl.shutdown(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest)request);
             case 14:
-              return impl.balance(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest)request);
+              return impl.stopMaster(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest)request);
             case 15:
-              return impl.setBalancerRunning(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest)request);
+              return impl.balance(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest)request);
             case 16:
-              return impl.runCatalogScan(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest)request);
+              return impl.setBalancerRunning(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest)request);
             case 17:
-              return impl.enableCatalogJanitor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest)request);
+              return impl.runCatalogScan(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest)request);
             case 18:
-              return impl.isCatalogJanitorEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest)request);
+              return impl.enableCatalogJanitor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest)request);
             case 19:
-              return impl.execMasterService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request);
+              return impl.isCatalogJanitorEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest)request);
             case 20:
-              return impl.snapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest)request);
+              return impl.execMasterService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request);
             case 21:
-              return impl.getCompletedSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest)request);
+              return impl.snapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest)request);
             case 22:
-              return impl.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest)request);
+              return impl.getCompletedSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest)request);
             case 23:
-              return impl.isSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest)request);
+              return impl.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest)request);
             case 24:
-              return impl.restoreSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest)request);
+              return impl.isSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest)request);
             case 25:
+              return impl.restoreSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest)request);
+            case 26:
               return impl.isRestoreSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -19944,48 +20966,50 @@ public final class MasterAdminProtos {
             case 3:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest.getDefaultInstance();
             case 4:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest.getDefaultInstance();
             case 5:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest.getDefaultInstance();
             case 6:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest.getDefaultInstance();
             case 7:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest.getDefaultInstance();
             case 8:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest.getDefaultInstance();
             case 9:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest.getDefaultInstance();
             case 10:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest.getDefaultInstance();
             case 11:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest.getDefaultInstance();
             case 12:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest.getDefaultInstance();
             case 13:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest.getDefaultInstance();
             case 14:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest.getDefaultInstance();
             case 15:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest.getDefaultInstance();
             case 16:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest.getDefaultInstance();
             case 17:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest.getDefaultInstance();
             case 18:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest.getDefaultInstance();
             case 19:
-              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
             case 20:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
             case 21:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest.getDefaultInstance();
             case 22:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest.getDefaultInstance();
             case 23:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.getDefaultInstance();
             case 24:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.getDefaultInstance();
             case 25:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.getDefaultInstance();
+            case 26:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -20010,48 +21034,50 @@ public final class MasterAdminProtos {
             case 3:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse.getDefaultInstance();
             case 4:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.getDefaultInstance();
             case 5:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse.getDefaultInstance();
             case 6:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse.getDefaultInstance();
             case 7:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse.getDefaultInstance();
             case 8:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse.getDefaultInstance();
             case 9:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse.getDefaultInstance();
             case 10:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse.getDefaultInstance();
             case 11:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse.getDefaultInstance();
             case 12:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse.getDefaultInstance();
             case 13:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse.getDefaultInstance();
             case 14:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse.getDefaultInstance();
             case 15:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse.getDefaultInstance();
             case 16:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse.getDefaultInstance();
             case 17:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse.getDefaultInstance();
             case 18:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.getDefaultInstance();
             case 19:
-              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
             case 20:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
             case 21:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.getDefaultInstance();
             case 22:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.getDefaultInstance();
             case 23:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance();
             case 24:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance();
             case 25:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance();
+            case 26:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -20080,6 +21106,11 @@ public final class MasterAdminProtos {
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse> done);
+    
+    public abstract void dispatchMergingRegions(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse> done);
     
     public abstract void assignRegion(
         com.google.protobuf.RpcController controller,
@@ -20234,111 +21265,116 @@ public final class MasterAdminProtos {
               done));
           return;
         case 4:
+          this.dispatchMergingRegions(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse>specializeCallback(
+              done));
+          return;
+        case 5:
           this.assignRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse>specializeCallback(
               done));
           return;
-        case 5:
+        case 6:
           this.unassignRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse>specializeCallback(
               done));
           return;
-        case 6:
+        case 7:
           this.offlineRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse>specializeCallback(
               done));
           return;
-        case 7:
+        case 8:
           this.deleteTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse>specializeCallback(
               done));
           return;
-        case 8:
+        case 9:
           this.enableTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse>specializeCallback(
               done));
           return;
-        case 9:
+        case 10:
           this.disableTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse>specializeCallback(
               done));
           return;
-        case 10:
+        case 11:
           this.modifyTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse>specializeCallback(
               done));
           return;
-        case 11:
+        case 12:
           this.createTable(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse>specializeCallback(
               done));
           return;
-        case 12:
+        case 13:
           this.shutdown(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse>specializeCallback(
               done));
           return;
-        case 13:
+        case 14:
           this.stopMaster(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse>specializeCallback(
               done));
           return;
-        case 14:
+        case 15:
           this.balance(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse>specializeCallback(
               done));
           return;
-        case 15:
+        case 16:
           this.setBalancerRunning(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse>specializeCallback(
               done));
           return;
-        case 16:
+        case 17:
           this.runCatalogScan(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse>specializeCallback(
               done));
           return;
-        case 17:
+        case 18:
           this.enableCatalogJanitor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse>specializeCallback(
               done));
           return;
-        case 18:
+        case 19:
           this.isCatalogJanitorEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse>specializeCallback(
               done));
           return;
-        case 19:
+        case 20:
           this.execMasterService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse>specializeCallback(
               done));
           return;
-        case 20:
+        case 21:
           this.snapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse>specializeCallback(
               done));
           return;
-        case 21:
+        case 22:
           this.getCompletedSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse>specializeCallback(
               done));
           return;
-        case 22:
+        case 23:
           this.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse>specializeCallback(
               done));
           return;
-        case 23:
+        case 24:
           this.isSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse>specializeCallback(
               done));
           return;
-        case 24:
+        case 25:
           this.restoreSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse>specializeCallback(
               done));
           return;
-        case 25:
+        case 26:
           this.isRestoreSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse>specializeCallback(
               done));
@@ -20366,48 +21402,50 @@ public final class MasterAdminProtos {
         case 3:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest.getDefaultInstance();
         case 4:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest.getDefaultInstance();
         case 5:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest.getDefaultInstance();
         case 6:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest.getDefaultInstance();
         case 7:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest.getDefaultInstance();
         case 8:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest.getDefaultInstance();
         case 9:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest.getDefaultInstance();
         case 10:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest.getDefaultInstance();
         case 11:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest.getDefaultInstance();
         case 12:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest.getDefaultInstance();
         case 13:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest.getDefaultInstance();
         case 14:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest.getDefaultInstance();
         case 15:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest.getDefaultInstance();
         case 16:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest.getDefaultInstance();
         case 17:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest.getDefaultInstance();
         case 18:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest.getDefaultInstance();
         case 19:
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
         case 20:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
         case 21:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest.getDefaultInstance();
         case 22:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest.getDefaultInstance();
         case 23:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.getDefaultInstance();
         case 24:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.getDefaultInstance();
         case 25:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.getDefaultInstance();
+        case 26:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -20432,48 +21470,50 @@ public final class MasterAdminProtos {
         case 3:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse.getDefaultInstance();
         case 4:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.getDefaultInstance();
         case 5:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse.getDefaultInstance();
         case 6:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse.getDefaultInstance();
         case 7:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse.getDefaultInstance();
         case 8:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse.getDefaultInstance();
         case 9:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse.getDefaultInstance();
         case 10:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse.getDefaultInstance();
         case 11:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse.getDefaultInstance();
         case 12:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse.getDefaultInstance();
         case 13:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse.getDefaultInstance();
         case 14:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse.getDefaultInstance();
         case 15:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse.getDefaultInstance();
         case 16:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse.getDefaultInstance();
         case 17:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse.getDefaultInstance();
         case 18:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.getDefaultInstance();
         case 19:
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
         case 20:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
         case 21:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.getDefaultInstance();
         case 22:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.getDefaultInstance();
         case 23:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance();
         case 24:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance();
         case 25:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance();
+        case 26:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -20556,12 +21596,27 @@ public final class MasterAdminProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse.getDefaultInstance()));
       }
       
+      public  void dispatchMergingRegions(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(4),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.getDefaultInstance()));
+      }
+      
       public  void assignRegion(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(4),
+          getDescriptor().getMethods().get(5),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse.getDefaultInstance(),
@@ -20576,7 +21631,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(5),
+          getDescriptor().getMethods().get(6),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse.getDefaultInstance(),
@@ -20591,7 +21646,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(6),
+          getDescriptor().getMethods().get(7),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse.getDefaultInstance(),
@@ -20606,7 +21661,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(7),
+          getDescriptor().getMethods().get(8),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse.getDefaultInstance(),
@@ -20621,7 +21676,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(8),
+          getDescriptor().getMethods().get(9),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse.getDefaultInstance(),
@@ -20636,7 +21691,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(9),
+          getDescriptor().getMethods().get(10),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse.getDefaultInstance(),
@@ -20651,7 +21706,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(10),
+          getDescriptor().getMethods().get(11),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse.getDefaultInstance(),
@@ -20666,7 +21721,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(11),
+          getDescriptor().getMethods().get(12),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse.getDefaultInstance(),
@@ -20681,7 +21736,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(12),
+          getDescriptor().getMethods().get(13),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse.getDefaultInstance(),
@@ -20696,7 +21751,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(13),
+          getDescriptor().getMethods().get(14),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse.getDefaultInstance(),
@@ -20711,7 +21766,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(14),
+          getDescriptor().getMethods().get(15),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse.getDefaultInstance(),
@@ -20726,7 +21781,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(15),
+          getDescriptor().getMethods().get(16),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse.getDefaultInstance(),
@@ -20741,7 +21796,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(16),
+          getDescriptor().getMethods().get(17),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse.getDefaultInstance(),
@@ -20756,7 +21811,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(17),
+          getDescriptor().getMethods().get(18),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.getDefaultInstance(),
@@ -20771,7 +21826,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(18),
+          getDescriptor().getMethods().get(19),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance(),
@@ -20786,7 +21841,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(19),
+          getDescriptor().getMethods().get(20),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance(),
@@ -20801,7 +21856,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(20),
+          getDescriptor().getMethods().get(21),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.getDefaultInstance(),
@@ -20816,7 +21871,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(21),
+          getDescriptor().getMethods().get(22),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.getDefaultInstance(),
@@ -20831,7 +21886,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(22),
+          getDescriptor().getMethods().get(23),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance(),
@@ -20846,7 +21901,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(23),
+          getDescriptor().getMethods().get(24),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance(),
@@ -20861,7 +21916,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(24),
+          getDescriptor().getMethods().get(25),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance(),
@@ -20876,7 +21931,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(25),
+          getDescriptor().getMethods().get(26),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance(),
@@ -20911,6 +21966,11 @@ public final class MasterAdminProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse moveRegion(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest request)
+          throws com.google.protobuf.ServiceException;
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse dispatchMergingRegions(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest request)
           throws com.google.protobuf.ServiceException;
       
       public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse assignRegion(
@@ -21079,12 +22139,24 @@ public final class MasterAdminProtos {
       }
       
       
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse dispatchMergingRegions(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(4),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.getDefaultInstance());
+      }
+      
+      
       public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse assignRegion(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(4),
+          getDescriptor().getMethods().get(5),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse.getDefaultInstance());
@@ -21096,7 +22168,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(5),
+          getDescriptor().getMethods().get(6),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse.getDefaultInstance());
@@ -21108,7 +22180,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(6),
+          getDescriptor().getMethods().get(7),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse.getDefaultInstance());
@@ -21120,7 +22192,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(7),
+          getDescriptor().getMethods().get(8),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse.getDefaultInstance());
@@ -21132,7 +22204,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(8),
+          getDescriptor().getMethods().get(9),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse.getDefaultInstance());
@@ -21144,7 +22216,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(9),
+          getDescriptor().getMethods().get(10),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse.getDefaultInstance());
@@ -21156,7 +22228,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(10),
+          getDescriptor().getMethods().get(11),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse.getDefaultInstance());
@@ -21168,7 +22240,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(11),
+          getDescriptor().getMethods().get(12),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse.getDefaultInstance());
@@ -21180,7 +22252,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(12),
+          getDescriptor().getMethods().get(13),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse.getDefaultInstance());
@@ -21192,7 +22264,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(13),
+          getDescriptor().getMethods().get(14),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse.getDefaultInstance());
@@ -21204,7 +22276,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(14),
+          getDescriptor().getMethods().get(15),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse.getDefaultInstance());
@@ -21216,7 +22288,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(15),
+          getDescriptor().getMethods().get(16),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse.getDefaultInstance());
@@ -21228,7 +22300,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(16),
+          getDescriptor().getMethods().get(17),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse.getDefaultInstance());
@@ -21240,7 +22312,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(17),
+          getDescriptor().getMethods().get(18),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.getDefaultInstance());
@@ -21252,7 +22324,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(18),
+          getDescriptor().getMethods().get(19),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance());
@@ -21264,7 +22336,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(19),
+          getDescriptor().getMethods().get(20),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance());
@@ -21276,7 +22348,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(20),
+          getDescriptor().getMethods().get(21),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.getDefaultInstance());
@@ -21288,7 +22360,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(21),
+          getDescriptor().getMethods().get(22),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.getDefaultInstance());
@@ -21300,7 +22372,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(22),
+          getDescriptor().getMethods().get(23),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance());
@@ -21312,7 +22384,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(23),
+          getDescriptor().getMethods().get(24),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance());
@@ -21324,7 +22396,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(24),
+          getDescriptor().getMethods().get(25),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance());
@@ -21336,7 +22408,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(25),
+          getDescriptor().getMethods().get(26),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance());
@@ -21385,6 +22457,16 @@ public final class MasterAdminProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_MoveRegionResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_DispatchMergingRegionsRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_DispatchMergingRegionsRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_DispatchMergingRegionsResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_DispatchMergingRegionsResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_AssignRegionRequest_descriptor;
   private static
@@ -21615,97 +22697,103 @@ public final class MasterAdminProtos {
       "hema\"\026\n\024ModifyColumnResponse\"Z\n\021MoveRegi" +
       "onRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif",
       "ier\022#\n\016destServerName\030\002 \001(\0132\013.ServerName" +
-      "\"\024\n\022MoveRegionResponse\"7\n\023AssignRegionRe" +
-      "quest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\"" +
-      "\026\n\024AssignRegionResponse\"O\n\025UnassignRegio" +
-      "nRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi" +
-      "er\022\024\n\005force\030\002 \001(\010:\005false\"\030\n\026UnassignRegi" +
-      "onResponse\"8\n\024OfflineRegionRequest\022 \n\006re" +
-      "gion\030\001 \002(\0132\020.RegionSpecifier\"\027\n\025OfflineR" +
-      "egionResponse\"J\n\022CreateTableRequest\022!\n\013t" +
-      "ableSchema\030\001 \002(\0132\014.TableSchema\022\021\n\tsplitK",
-      "eys\030\002 \003(\014\"\025\n\023CreateTableResponse\"\'\n\022Dele" +
-      "teTableRequest\022\021\n\ttableName\030\001 \002(\014\"\025\n\023Del" +
-      "eteTableResponse\"\'\n\022EnableTableRequest\022\021" +
-      "\n\ttableName\030\001 \002(\014\"\025\n\023EnableTableResponse" +
-      "\"(\n\023DisableTableRequest\022\021\n\ttableName\030\001 \002" +
-      "(\014\"\026\n\024DisableTableResponse\"J\n\022ModifyTabl" +
-      "eRequest\022\021\n\ttableName\030\001 \002(\014\022!\n\013tableSche" +
-      "ma\030\002 \002(\0132\014.TableSchema\"\025\n\023ModifyTableRes" +
-      "ponse\"\021\n\017ShutdownRequest\"\022\n\020ShutdownResp" +
-      "onse\"\023\n\021StopMasterRequest\"\024\n\022StopMasterR",
-      "esponse\"\020\n\016BalanceRequest\"&\n\017BalanceResp" +
-      "onse\022\023\n\013balancerRan\030\001 \002(\010\"<\n\031SetBalancer" +
-      "RunningRequest\022\n\n\002on\030\001 \002(\010\022\023\n\013synchronou" +
-      "s\030\002 \001(\010\"6\n\032SetBalancerRunningResponse\022\030\n" +
-      "\020prevBalanceValue\030\001 \001(\010\"\024\n\022CatalogScanRe" +
-      "quest\")\n\023CatalogScanResponse\022\022\n\nscanResu" +
-      "lt\030\001 \001(\005\"-\n\033EnableCatalogJanitorRequest\022" +
-      "\016\n\006enable\030\001 \002(\010\"1\n\034EnableCatalogJanitorR" +
-      "esponse\022\021\n\tprevValue\030\001 \001(\010\" \n\036IsCatalogJ" +
-      "anitorEnabledRequest\"0\n\037IsCatalogJanitor",
-      "EnabledResponse\022\r\n\005value\030\001 \002(\010\"=\n\023TakeSn" +
-      "apshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snapsh" +
-      "otDescription\"/\n\024TakeSnapshotResponse\022\027\n" +
-      "\017expectedTimeout\030\001 \002(\003\"\025\n\023ListSnapshotRe" +
-      "quest\"?\n\024ListSnapshotResponse\022\'\n\tsnapsho" +
-      "ts\030\001 \003(\0132\024.SnapshotDescription\"?\n\025Delete" +
+      "\"\024\n\022MoveRegionResponse\"~\n\035DispatchMergin" +
+      "gRegionsRequest\022!\n\007regionA\030\001 \002(\0132\020.Regio" +
+      "nSpecifier\022!\n\007regionB\030\002 \002(\0132\020.RegionSpec" +
+      "ifier\022\027\n\010forcible\030\003 \001(\010:\005false\" \n\036Dispat" +
+      "chMergingRegionsResponse\"7\n\023AssignRegion" +
+      "Request\022 \n\006region\030\001 \002(\0132\020.RegionSpecifie" +
+      "r\"\026\n\024AssignRegionResponse\"O\n\025UnassignReg" +
+      "ionRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpeci" +
+      "fier\022\024\n\005force\030\002 \001(\010:\005false\"\030\n\026UnassignRe",
+      "gionResponse\"8\n\024OfflineRegionRequest\022 \n\006" +
+      "region\030\001 \002(\0132\020.RegionSpecifier\"\027\n\025Offlin" +
+      "eRegionResponse\"J\n\022CreateTableRequest\022!\n" +
+      "\013tableSchema\030\001 \002(\0132\014.TableSchema\022\021\n\tspli" +
+      "tKeys\030\002 \003(\014\"\025\n\023CreateTableResponse\"\'\n\022De" +
+      "leteTableRequest\022\021\n\ttableName\030\001 \002(\014\"\025\n\023D" +
+      "eleteTableResponse\"\'\n\022EnableTableRequest" +
+      "\022\021\n\ttableName\030\001 \002(\014\"\025\n\023EnableTableRespon" +
+      "se\"(\n\023DisableTableRequest\022\021\n\ttableName\030\001" +
+      " \002(\014\"\026\n\024DisableTableResponse\"J\n\022ModifyTa",
+      "bleRequest\022\021\n\ttableName\030\001 \002(\014\022!\n\013tableSc" +
+      "hema\030\002 \002(\0132\014.TableSchema\"\025\n\023ModifyTableR" +
+      "esponse\"\021\n\017ShutdownRequest\"\022\n\020ShutdownRe" +
+      "sponse\"\023\n\021StopMasterRequest\"\024\n\022StopMaste" +
+      "rResponse\"\020\n\016BalanceRequest\"&\n\017BalanceRe" +
+      "sponse\022\023\n\013balancerRan\030\001 \002(\010\"<\n\031SetBalanc" +
+      "erRunningRequest\022\n\n\002on\030\001 \002(\010\022\023\n\013synchron" +
+      "ous\030\002 \001(\010\"6\n\032SetBalancerRunningResponse\022" +
+      "\030\n\020prevBalanceValue\030\001 \001(\010\"\024\n\022CatalogScan" +
+      "Request\")\n\023CatalogScanResponse\022\022\n\nscanRe",
+      "sult\030\001 \001(\005\"-\n\033EnableCatalogJanitorReques" +
+      "t\022\016\n\006enable\030\001 \002(\010\"1\n\034EnableCatalogJanito" +
+      "rResponse\022\021\n\tprevValue\030\001 \001(\010\" \n\036IsCatalo" +
+      "gJanitorEnabledRequest\"0\n\037IsCatalogJanit" +
+      "orEnabledResponse\022\r\n\005value\030\001 \002(\010\"=\n\023Take" +
       "SnapshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snap" +
-      "shotDescription\"\030\n\026DeleteSnapshotRespons" +
-      "e\"@\n\026RestoreSnapshotRequest\022&\n\010snapshot\030" +
-      "\001 \002(\0132\024.SnapshotDescription\"\031\n\027RestoreSn",
-      "apshotResponse\"?\n\025IsSnapshotDoneRequest\022" +
-      "&\n\010snapshot\030\001 \001(\0132\024.SnapshotDescription\"" +
-      "U\n\026IsSnapshotDoneResponse\022\023\n\004done\030\001 \001(\010:" +
-      "\005false\022&\n\010snapshot\030\002 \001(\0132\024.SnapshotDescr" +
-      "iption\"F\n\034IsRestoreSnapshotDoneRequest\022&" +
-      "\n\010snapshot\030\001 \001(\0132\024.SnapshotDescription\"3" +
-      "\n\035IsRestoreSnapshotDoneResponse\022\022\n\004done\030" +
-      "\001 \001(\010:\004true2\244\r\n\022MasterAdminService\0222\n\tad" +
-      "dColumn\022\021.AddColumnRequest\032\022.AddColumnRe" +
-      "sponse\022;\n\014deleteColumn\022\024.DeleteColumnReq",
-      "uest\032\025.DeleteColumnResponse\022;\n\014modifyCol" +
-      "umn\022\024.ModifyColumnRequest\032\025.ModifyColumn" +
-      "Response\0225\n\nmoveRegion\022\022.MoveRegionReque" +
-      "st\032\023.MoveRegionResponse\022;\n\014assignRegion\022" +
-      "\024.AssignRegionRequest\032\025.AssignRegionResp" +
-      "onse\022A\n\016unassignRegion\022\026.UnassignRegionR" +
-      "equest\032\027.UnassignRegionResponse\022>\n\roffli" +
-      "neRegion\022\025.OfflineRegionRequest\032\026.Offlin" +
-      "eRegionResponse\0228\n\013deleteTable\022\023.DeleteT" +
-      "ableRequest\032\024.DeleteTableResponse\0228\n\013ena",
-      "bleTable\022\023.EnableTableRequest\032\024.EnableTa" +
-      "bleResponse\022;\n\014disableTable\022\024.DisableTab" +
-      "leRequest\032\025.DisableTableResponse\0228\n\013modi" +
-      "fyTable\022\023.ModifyTableRequest\032\024.ModifyTab" +
-      "leResponse\0228\n\013createTable\022\023.CreateTableR" +
-      "equest\032\024.CreateTableResponse\022/\n\010shutdown" +
-      "\022\020.ShutdownRequest\032\021.ShutdownResponse\0225\n" +
-      "\nstopMaster\022\022.StopMasterRequest\032\023.StopMa" +
-      "sterResponse\022,\n\007balance\022\017.BalanceRequest" +
-      "\032\020.BalanceResponse\022M\n\022setBalancerRunning",
-      "\022\032.SetBalancerRunningRequest\032\033.SetBalanc" +
-      "erRunningResponse\022;\n\016runCatalogScan\022\023.Ca" +
-      "talogScanRequest\032\024.CatalogScanResponse\022S" +
-      "\n\024enableCatalogJanitor\022\034.EnableCatalogJa" +
-      "nitorRequest\032\035.EnableCatalogJanitorRespo" +
-      "nse\022\\\n\027isCatalogJanitorEnabled\022\037.IsCatal" +
-      "ogJanitorEnabledRequest\032 .IsCatalogJanit" +
-      "orEnabledResponse\022L\n\021execMasterService\022\032" +
-      ".CoprocessorServiceRequest\032\033.Coprocessor" +
-      "ServiceResponse\0227\n\010snapshot\022\024.TakeSnapsh",
-      "otRequest\032\025.TakeSnapshotResponse\022D\n\025getC" +
-      "ompletedSnapshots\022\024.ListSnapshotRequest\032" +
-      "\025.ListSnapshotResponse\022A\n\016deleteSnapshot" +
-      "\022\026.DeleteSnapshotRequest\032\027.DeleteSnapsho" +
-      "tResponse\022A\n\016isSnapshotDone\022\026.IsSnapshot" +
-      "DoneRequest\032\027.IsSnapshotDoneResponse\022D\n\017" +
-      "restoreSnapshot\022\027.RestoreSnapshotRequest" +
-      "\032\030.RestoreSnapshotResponse\022V\n\025isRestoreS" +
-      "napshotDone\022\035.IsRestoreSnapshotDoneReque" +
-      "st\032\036.IsRestoreSnapshotDoneResponseBG\n*or",
-      "g.apache.hadoop.hbase.protobuf.generated" +
-      "B\021MasterAdminProtosH\001\210\001\001\240\001\001"
+      "shotDescription\"/\n\024TakeSnapshotResponse\022" +
+      "\027\n\017expectedTimeout\030\001 \002(\003\"\025\n\023ListSnapshot" +
+      "Request\"?\n\024ListSnapshotResponse\022\'\n\tsnaps" +
+      "hots\030\001 \003(\0132\024.SnapshotDescription\"?\n\025Dele",
+      "teSnapshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Sn" +
+      "apshotDescription\"\030\n\026DeleteSnapshotRespo" +
+      "nse\"@\n\026RestoreSnapshotRequest\022&\n\010snapsho" +
+      "t\030\001 \002(\0132\024.SnapshotDescription\"\031\n\027Restore" +
+      "SnapshotResponse\"?\n\025IsSnapshotDoneReques" +
+      "t\022&\n\010snapshot\030\001 \001(\0132\024.SnapshotDescriptio" +
+      "n\"U\n\026IsSnapshotDoneResponse\022\023\n\004done\030\001 \001(" +
+      "\010:\005false\022&\n\010snapshot\030\002 \001(\0132\024.SnapshotDes" +
+      "cription\"F\n\034IsRestoreSnapshotDoneRequest" +
+      "\022&\n\010snapshot\030\001 \001(\0132\024.SnapshotDescription",
+      "\"3\n\035IsRestoreSnapshotDoneResponse\022\022\n\004don" +
+      "e\030\001 \001(\010:\004true2\377\r\n\022MasterAdminService\0222\n\t" +
+      "addColumn\022\021.AddColumnRequest\032\022.AddColumn" +
+      "Response\022;\n\014deleteColumn\022\024.DeleteColumnR" +
+      "equest\032\025.DeleteColumnResponse\022;\n\014modifyC" +
+      "olumn\022\024.ModifyColumnRequest\032\025.ModifyColu" +
+      "mnResponse\0225\n\nmoveRegion\022\022.MoveRegionReq" +
+      "uest\032\023.MoveRegionResponse\022Y\n\026dispatchMer" +
+      "gingRegions\022\036.DispatchMergingRegionsRequ" +
+      "est\032\037.DispatchMergingRegionsResponse\022;\n\014",
+      "assignRegion\022\024.AssignRegionRequest\032\025.Ass" +
+      "ignRegionResponse\022A\n\016unassignRegion\022\026.Un" +
+      "assignRegionRequest\032\027.UnassignRegionResp" +
+      "onse\022>\n\rofflineRegion\022\025.OfflineRegionReq" +
+      "uest\032\026.OfflineRegionResponse\0228\n\013deleteTa" +
+      "ble\022\023.DeleteTableRequest\032\024.DeleteTableRe" +
+      "sponse\0228\n\013enableTable\022\023.EnableTableReque" +
+      "st\032\024.EnableTableResponse\022;\n\014disableTable" +
+      "\022\024.DisableTableRequest\032\025.DisableTableRes" +
+      "ponse\0228\n\013modifyTable\022\023.ModifyTableReques",
+      "t\032\024.ModifyTableResponse\0228\n\013createTable\022\023" +
+      ".CreateTableRequest\032\024.CreateTableRespons" +
+      "e\022/\n\010shutdown\022\020.ShutdownRequest\032\021.Shutdo" +
+      "wnResponse\0225\n\nstopMaster\022\022.StopMasterReq" +
+      "uest\032\023.StopMasterResponse\022,\n\007balance\022\017.B" +
+      "alanceRequest\032\020.BalanceResponse\022M\n\022setBa" +
+      "lancerRunning\022\032.SetBalancerRunningReques" +
+      "t\032\033.SetBalancerRunningResponse\022;\n\016runCat" +
+      "alogScan\022\023.CatalogScanRequest\032\024.CatalogS" +
+      "canResponse\022S\n\024enableCatalogJanitor\022\034.En",
+      "ableCatalogJanitorRequest\032\035.EnableCatalo" +
+      "gJanitorResponse\022\\\n\027isCatalogJanitorEnab" +
+      "led\022\037.IsCatalogJanitorEnabledRequest\032 .I" +
+      "sCatalogJanitorEnabledResponse\022L\n\021execMa" +
+      "sterService\022\032.CoprocessorServiceRequest\032" +
+      "\033.CoprocessorServiceResponse\0227\n\010snapshot" +
+      "\022\024.TakeSnapshotRequest\032\025.TakeSnapshotRes" +
+      "ponse\022D\n\025getCompletedSnapshots\022\024.ListSna" +
+      "pshotRequest\032\025.ListSnapshotResponse\022A\n\016d" +
+      "eleteSnapshot\022\026.DeleteSnapshotRequest\032\027.",
+      "DeleteSnapshotResponse\022A\n\016isSnapshotDone" +
+      "\022\026.IsSnapshotDoneRequest\032\027.IsSnapshotDon" +
+      "eResponse\022D\n\017restoreSnapshot\022\027.RestoreSn" +
+      "apshotRequest\032\030.RestoreSnapshotResponse\022" +
+      "V\n\025isRestoreSnapshotDone\022\035.IsRestoreSnap" +
+      "shotDoneRequest\032\036.IsRestoreSnapshotDoneR" +
+      "esponseBG\n*org.apache.hadoop.hbase.proto" +
+      "buf.generatedB\021MasterAdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21776,8 +22864,24 @@ public final class MasterAdminProtos {
               new java.lang.String[] { },
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse.Builder.class);
-          internal_static_AssignRegionRequest_descriptor =
+          internal_static_DispatchMergingRegionsRequest_descriptor =
             getDescriptor().getMessageTypes().get(8);
+          internal_static_DispatchMergingRegionsRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_DispatchMergingRegionsRequest_descriptor,
+              new java.lang.String[] { "RegionA", "RegionB", "Forcible", },
+              org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest.class,
+              org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest.Builder.class);
+          internal_static_DispatchMergingRegionsResponse_descriptor =
+            getDescriptor().getMessageTypes().get(9);
+          internal_static_DispatchMergingRegionsResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_DispatchMergingRegionsResponse_descriptor,
+              new java.lang.String[] { },
+              org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.class,
+              org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse.Builder.class);
+          internal_static_AssignRegionRequest_descriptor =
+            getDescriptor().getMessageTypes().get(10);
           internal_static_AssignRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_AssignRegionRequest_descriptor,
@@ -21785,7 +22889,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest.Builder.class);
           internal_static_AssignRegionResponse_descriptor =
-            getDescriptor().getMessageTypes().get(9);
+            getDescriptor().getMessageTypes().get(11);
           internal_static_AssignRegionResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_AssignRegionResponse_descriptor,
@@ -21793,7 +22897,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse.Builder.class);
           internal_static_UnassignRegionRequest_descriptor =
-            getDescriptor().getMessageTypes().get(10);
+            getDescriptor().getMessageTypes().get(12);
           internal_static_UnassignRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_UnassignRegionRequest_descriptor,
@@ -21801,7 +22905,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest.Builder.class);
           internal_static_UnassignRegionResponse_descriptor =
-            getDescriptor().getMessageTypes().get(11);
+            getDescriptor().getMessageTypes().get(13);
           internal_static_UnassignRegionResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_UnassignRegionResponse_descriptor,
@@ -21809,7 +22913,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse.Builder.class);
           internal_static_OfflineRegionRequest_descriptor =
-            getDescriptor().getMessageTypes().get(12);
+            getDescriptor().getMessageTypes().get(14);
           internal_static_OfflineRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_OfflineRegionRequest_descriptor,
@@ -21817,7 +22921,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest.Builder.class);
           internal_static_OfflineRegionResponse_descriptor =
-            getDescriptor().getMessageTypes().get(13);
+            getDescriptor().getMessageTypes().get(15);
           internal_static_OfflineRegionResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_OfflineRegionResponse_descriptor,
@@ -21825,7 +22929,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse.Builder.class);
           internal_static_CreateTableRequest_descriptor =
-            getDescriptor().getMessageTypes().get(14);
+            getDescriptor().getMessageTypes().get(16);
           internal_static_CreateTableRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CreateTableRequest_descriptor,
@@ -21833,7 +22937,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest.Builder.class);
           internal_static_CreateTableResponse_descriptor =
-            getDescriptor().getMessageTypes().get(15);
+            getDescriptor().getMessageTypes().get(17);
           internal_static_CreateTableResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CreateTableResponse_descriptor,
@@ -21841,7 +22945,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse.Builder.class);
           internal_static_DeleteTableRequest_descriptor =
-            getDescriptor().getMessageTypes().get(16);
+            getDescriptor().getMessageTypes().get(18);
           internal_static_DeleteTableRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DeleteTableRequest_descriptor,
@@ -21849,7 +22953,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest.Builder.class);
           internal_static_DeleteTableResponse_descriptor =
-            getDescriptor().getMessageTypes().get(17);
+            getDescriptor().getMessageTypes().get(19);
           internal_static_DeleteTableResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DeleteTableResponse_descriptor,
@@ -21857,7 +22961,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse.Builder.class);
           internal_static_EnableTableRequest_descriptor =
-            getDescriptor().getMessageTypes().get(18);
+            getDescriptor().getMessageTypes().get(20);
           internal_static_EnableTableRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EnableTableRequest_descriptor,
@@ -21865,7 +22969,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest.Builder.class);
           internal_static_EnableTableResponse_descriptor =
-            getDescriptor().getMessageTypes().get(19);
+            getDescriptor().getMessageTypes().get(21);
           internal_static_EnableTableResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EnableTableResponse_descriptor,
@@ -21873,7 +22977,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse.Builder.class);
           internal_static_DisableTableRequest_descriptor =
-            getDescriptor().getMessageTypes().get(20);
+            getDescriptor().getMessageTypes().get(22);
           internal_static_DisableTableRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DisableTableRequest_descriptor,
@@ -21881,7 +22985,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest.Builder.class);
           internal_static_DisableTableResponse_descriptor =
-            getDescriptor().getMessageTypes().get(21);
+            getDescriptor().getMessageTypes().get(23);
           internal_static_DisableTableResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DisableTableResponse_descriptor,
@@ -21889,7 +22993,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse.Builder.class);
           internal_static_ModifyTableRequest_descriptor =
-            getDescriptor().getMessageTypes().get(22);
+            getDescriptor().getMessageTypes().get(24);
           internal_static_ModifyTableRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ModifyTableRequest_descriptor,
@@ -21897,7 +23001,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest.Builder.class);
           internal_static_ModifyTableResponse_descriptor =
-            getDescriptor().getMessageTypes().get(23);
+            getDescriptor().getMessageTypes().get(25);
           internal_static_ModifyTableResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ModifyTableResponse_descriptor,
@@ -21905,7 +23009,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableResponse.Builder.class);
           internal_static_ShutdownRequest_descriptor =
-            getDescriptor().getMessageTypes().get(24);
+            getDescriptor().getMessageTypes().get(26);
           internal_static_ShutdownRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ShutdownRequest_descriptor,
@@ -21913,7 +23017,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest.Builder.class);
           internal_static_ShutdownResponse_descriptor =
-            getDescriptor().getMessageTypes().get(25);
+            getDescriptor().getMessageTypes().get(27);
           internal_static_ShutdownResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ShutdownResponse_descriptor,
@@ -21921,7 +23025,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse.Builder.class);
           internal_static_StopMasterRequest_descriptor =
-            getDescriptor().getMessageTypes().get(26);
+            getDescriptor().getMessageTypes().get(28);
           internal_static_StopMasterRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_StopMasterRequest_descriptor,
@@ -21929,7 +23033,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest.Builder.class);
           internal_static_StopMasterResponse_descriptor =
-            getDescriptor().getMessageTypes().get(27);
+            getDescriptor().getMessageTypes().get(29);
           internal_static_StopMasterResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_StopMasterResponse_descriptor,
@@ -21937,7 +23041,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse.Builder.class);
           internal_static_BalanceRequest_descriptor =
-            getDescriptor().getMessageTypes().get(28);
+            getDescriptor().getMessageTypes().get(30);
           internal_static_BalanceRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BalanceRequest_descriptor,
@@ -21945,7 +23049,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest.Builder.class);
           internal_static_BalanceResponse_descriptor =
-            getDescriptor().getMessageTypes().get(29);
+            getDescriptor().getMessageTypes().get(31);
           internal_static_BalanceResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BalanceResponse_descriptor,
@@ -21953,7 +23057,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse.Builder.class);
           internal_static_SetBalancerRunningRequest_descriptor =
-            getDescriptor().getMessageTypes().get(30);
+            getDescriptor().getMessageTypes().get(32);
           internal_static_SetBalancerRunningRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SetBalancerRunningRequest_descriptor,
@@ -21961,7 +23065,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest.Builder.class);
           internal_static_SetBalancerRunningResponse_descriptor =
-            getDescriptor().getMessageTypes().get(31);
+            getDescriptor().getMessageTypes().get(33);
           internal_static_SetBalancerRunningResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SetBalancerRunningResponse_descriptor,
@@ -21969,7 +23073,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse.Builder.class);
           internal_static_CatalogScanRequest_descriptor =
-            getDescriptor().getMessageTypes().get(32);
+            getDescriptor().getMessageTypes().get(34);
           internal_static_CatalogScanRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CatalogScanRequest_descriptor,
@@ -21977,7 +23081,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest.Builder.class);
           internal_static_CatalogScanResponse_descriptor =
-            getDescriptor().getMessageTypes().get(33);
+            getDescriptor().getMessageTypes().get(35);
           internal_static_CatalogScanResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CatalogScanResponse_descriptor,
@@ -21985,7 +23089,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse.Builder.class);
           internal_static_EnableCatalogJanitorRequest_descriptor =
-            getDescriptor().getMessageTypes().get(34);
+            getDescriptor().getMessageTypes().get(36);
           internal_static_EnableCatalogJanitorRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EnableCatalogJanitorRequest_descriptor,
@@ -21993,7 +23097,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest.Builder.class);
           internal_static_EnableCatalogJanitorResponse_descriptor =
-            getDescriptor().getMessageTypes().get(35);
+            getDescriptor().getMessageTypes().get(37);
           internal_static_EnableCatalogJanitorResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EnableCatalogJanitorResponse_descriptor,
@@ -22001,7 +23105,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse.Builder.class);
           internal_static_IsCatalogJanitorEnabledRequest_descriptor =
-            getDescriptor().getMessageTypes().get(36);
+            getDescriptor().getMessageTypes().get(38);
           internal_static_IsCatalogJanitorEnabledRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsCatalogJanitorEnabledRequest_descriptor,
@@ -22009,7 +23113,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest.Builder.class);
           internal_static_IsCatalogJanitorEnabledResponse_descriptor =
-            getDescriptor().getMessageTypes().get(37);
+            getDescriptor().getMessageTypes().get(39);
           internal_static_IsCatalogJanitorEnabledResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsCatalogJanitorEnabledResponse_descriptor,
@@ -22017,7 +23121,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse.Builder.class);
           internal_static_TakeSnapshotRequest_descriptor =
-            getDescriptor().getMessageTypes().get(38);
+            getDescriptor().getMessageTypes().get(40);
           internal_static_TakeSnapshotRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_TakeSnapshotRequest_descriptor,
@@ -22025,7 +23129,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest.Builder.class);
           internal_static_TakeSnapshotResponse_descriptor =
-            getDescriptor().getMessageTypes().get(39);
+            getDescriptor().getMessageTypes().get(41);
           internal_static_TakeSnapshotResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_TakeSnapshotResponse_descriptor,
@@ -22033,7 +23137,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse.Builder.class);
           internal_static_ListSnapshotRequest_descriptor =
-            getDescriptor().getMessageTypes().get(40);
+            getDescriptor().getMessageTypes().get(42);
           internal_static_ListSnapshotRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ListSnapshotRequest_descriptor,
@@ -22041,7 +23145,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest.Builder.class);
           internal_static_ListSnapshotResponse_descriptor =
-            getDescriptor().getMessageTypes().get(41);
+            getDescriptor().getMessageTypes().get(43);
           internal_static_ListSnapshotResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ListSnapshotResponse_descriptor,
@@ -22049,7 +23153,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.Builder.class);
           internal_static_DeleteSnapshotRequest_descriptor =
-            getDescriptor().getMessageTypes().get(42);
+            getDescriptor().getMessageTypes().get(44);
           internal_static_DeleteSnapshotRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DeleteSnapshotRequest_descriptor,
@@ -22057,7 +23161,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.Builder.class);
           internal_static_DeleteSnapshotResponse_descriptor =
-            getDescriptor().getMessageTypes().get(43);
+            getDescriptor().getMessageTypes().get(45);
           internal_static_DeleteSnapshotResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DeleteSnapshotResponse_descriptor,
@@ -22065,7 +23169,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.Builder.class);
           internal_static_RestoreSnapshotRequest_descriptor =
-            getDescriptor().getMessageTypes().get(44);
+            getDescriptor().getMessageTypes().get(46);
           internal_static_RestoreSnapshotRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RestoreSnapshotRequest_descriptor,
@@ -22073,7 +23177,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.Builder.class);
           internal_static_RestoreSnapshotResponse_descriptor =
-            getDescriptor().getMessageTypes().get(45);
+            getDescriptor().getMessageTypes().get(47);
           internal_static_RestoreSnapshotResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RestoreSnapshotResponse_descriptor,
@@ -22081,7 +23185,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.Builder.class);
           internal_static_IsSnapshotDoneRequest_descriptor =
-            getDescriptor().getMessageTypes().get(46);
+            getDescriptor().getMessageTypes().get(48);
           internal_static_IsSnapshotDoneRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsSnapshotDoneRequest_descriptor,
@@ -22089,7 +23193,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.Builder.class);
           internal_static_IsSnapshotDoneResponse_descriptor =
-            getDescriptor().getMessageTypes().get(47);
+            getDescriptor().getMessageTypes().get(49);
           internal_static_IsSnapshotDoneResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsSnapshotDoneResponse_descriptor,
@@ -22097,7 +23201,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.Builder.class);
           internal_static_IsRestoreSnapshotDoneRequest_descriptor =
-            getDescriptor().getMessageTypes().get(48);
+            getDescriptor().getMessageTypes().get(50);
           internal_static_IsRestoreSnapshotDoneRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsRestoreSnapshotDoneRequest_descriptor,
@@ -22105,7 +23209,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest.Builder.class);
           internal_static_IsRestoreSnapshotDoneResponse_descriptor =
-            getDescriptor().getMessageTypes().get(49);
+            getDescriptor().getMessageTypes().get(51);
           internal_static_IsRestoreSnapshotDoneResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsRestoreSnapshotDoneResponse_descriptor,

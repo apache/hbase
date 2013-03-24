@@ -57,6 +57,7 @@ public class CompactSplitThread implements CompactionRequestor {
   private final ThreadPoolExecutor largeCompactions;
   private final ThreadPoolExecutor smallCompactions;
   private final ThreadPoolExecutor splits;
+  private final ThreadPoolExecutor mergePool;
 
   /**
    * Splitting should not take place if the total number of regions exceed this.
@@ -118,6 +119,16 @@ public class CompactSplitThread implements CompactionRequestor {
             return t;
           }
       });
+    int mergeThreads = conf.getInt("hbase.regionserver.thread.merge", 1);
+    this.mergePool = (ThreadPoolExecutor) Executors.newFixedThreadPool(
+        mergeThreads, new ThreadFactory() {
+          @Override
+          public Thread newThread(Runnable r) {
+            Thread t = new Thread(r);
+            t.setName(n + "-merges-" + System.currentTimeMillis());
+            return t;
+          }
+        });
   }
 
   @Override
@@ -125,7 +136,8 @@ public class CompactSplitThread implements CompactionRequestor {
     return "compaction_queue=("
         + largeCompactions.getQueue().size() + ":"
         + smallCompactions.getQueue().size() + ")"
-        + ", split_queue=" + splits.getQueue().size();
+        + ", split_queue=" + splits.getQueue().size()
+        + ", merge_queue=" + mergePool.getQueue().size();
   }
   
   public String dumpQueue() {
@@ -159,7 +171,30 @@ public class CompactSplitThread implements CompactionRequestor {
       queueLists.append("\n");
     }
     
+    queueLists.append("\n");
+    queueLists.append("  Region Merge Queue:\n");
+    lq = mergePool.getQueue();
+    it = lq.iterator();
+    while (it.hasNext()) {
+      queueLists.append("    " + it.next().toString());
+      queueLists.append("\n");
+    }
+
     return queueLists.toString();
+  }
+
+  public synchronized void requestRegionsMerge(final HRegion a,
+      final HRegion b, final boolean forcible) {
+    try {
+      mergePool.execute(new RegionMergeRequest(a, b, this.server, forcible));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Region merge requested for " + a + "," + b + ", forcible="
+            + forcible + ".  " + this);
+      }
+    } catch (RejectedExecutionException ree) {
+      LOG.warn("Could not execute merge for " + a + "," + b + ", forcible="
+          + forcible, ree);
+    }
   }
 
   public synchronized boolean requestSplit(final HRegion r) {
@@ -270,6 +305,7 @@ public class CompactSplitThread implements CompactionRequestor {
    */
   void interruptIfNecessary() {
     splits.shutdown();
+    mergePool.shutdown();
     largeCompactions.shutdown();
     smallCompactions.shutdown();
   }
@@ -291,6 +327,7 @@ public class CompactSplitThread implements CompactionRequestor {
 
   void join() {
     waitFor(splits, "Split Thread");
+    waitFor(mergePool, "Merge Thread");
     waitFor(largeCompactions, "Large Compaction Thread");
     waitFor(smallCompactions, "Small Compaction Thread");
   }

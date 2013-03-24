@@ -66,6 +66,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -77,6 +78,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -781,6 +783,24 @@ public class HRegion implements HeapSize { // , Writable{
   /** @return true if region is splittable */
   public boolean isSplittable() {
     return isAvailable() && !hasReferences();
+  }
+
+  /**
+   * @return true if region is mergeable
+   */
+  public boolean isMergeable() {
+    if (!isAvailable()) {
+      LOG.debug("Region " + this.getRegionNameAsString()
+          + " is not mergeable because it is closing or closed");
+      return false;
+    }
+    if (hasReferences()) {
+      LOG.debug("Region " + this.getRegionNameAsString()
+          + " is not mergeable because it has references");
+      return false;
+    }
+
+    return true;
   }
 
   public boolean areWritesEnabled() {
@@ -4057,6 +4077,26 @@ public class HRegion implements HeapSize { // , Writable{
     r.readRequestsCount.set(this.getReadRequestsCount() / 2);
     r.writeRequestsCount.set(this.getWriteRequestsCount() / 2);
     fs.commitDaughterRegion(hri);
+    return r;
+  }
+
+  /**
+   * Create a merged region given a temp directory with the region data.
+   * @param mergedRegionInfo
+   * @param region_b another merging region
+   * @return merged hregion
+   * @throws IOException
+   */
+  HRegion createMergedRegionFromMerges(final HRegionInfo mergedRegionInfo,
+      final HRegion region_b) throws IOException {
+    HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getLog(),
+        fs.getFileSystem(), this.getBaseConf(), mergedRegionInfo,
+        this.getTableDesc(), this.rsServices);
+    r.readRequestsCount.set(this.getReadRequestsCount()
+        + region_b.getReadRequestsCount());
+    r.writeRequestsCount.set(this.getWriteRequestsCount()
+        + region_b.getWriteRequestsCount());
+    this.fs.commitMergedRegion(mergedRegionInfo);
     return r;
   }
 

@@ -63,6 +63,18 @@ message MoveRegionRequest {
 message MoveRegionResponse {
 }
 
+/**
+ * Dispatch merging the specified regions.
+ */
+message DispatchMergingRegionsRequest {
+  required RegionSpecifier regionA = 1;
+  required RegionSpecifier regionB = 2;
+  optional bool forcible = 3 [default = false];
+}
+
+message DispatchMergingRegionsResponse {
+}
+
 message AssignRegionRequest {
   required RegionSpecifier region = 1;
 }
@@ -242,6 +254,10 @@ service MasterAdminService {
   /** Move the region region to the destination server. */
   rpc moveRegion(MoveRegionRequest)
     returns(MoveRegionResponse);
+
+ /** Master dispatch merging the regions */
+  rpc dispatchMergingRegions(DispatchMergingRegionsRequest)
+    returns(DispatchMergingRegionsResponse);    
 
   /** Assign a region to a server chosen at random. */
   rpc assignRegion(AssignRegionRequest)

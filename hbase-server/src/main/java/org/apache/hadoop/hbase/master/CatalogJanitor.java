@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -45,13 +46,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.util.Triple;
 
 /**
  * A janitor for the catalog tables.  Scans the <code>.META.</code> catalog
  * table on a period looking for unused regions to garbage collect.
  */
 @InterfaceAudience.Private
-class CatalogJanitor extends Chore {
+public class CatalogJanitor extends Chore {
   private static final Log LOG = LogFactory.getLog(CatalogJanitor.class.getName());
   private final Server server;
   private final MasterServices services;
@@ -102,16 +104,37 @@ class CatalogJanitor extends Chore {
   }
 
   /**
-   * Scans META and returns a number of scanned rows, and
-   * an ordered map of split parents.
+   * Scans META and returns a number of scanned rows, and a map of merged
+   * regions, and an ordered map of split parents.
+   * @return triple of scanned rows, map of merged regions and map of split
+   *         parent regioninfos
+   * @throws IOException
    */
-  Pair<Integer, Map<HRegionInfo, Result>> getSplitParents() throws IOException {
+  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>> getMergedRegionsAndSplitParents()
+      throws IOException {
+    return getMergedRegionsAndSplitParents(null);
+  }
+
+  /**
+   * Scans META and returns a number of scanned rows, and a map of merged
+   * regions, and an ordered map of split parents. if the given table name is
+   * null, return merged regions and split parents of all tables, else only the
+   * specified table
+   * @param tableName null represents all tables
+   * @return triple of scanned rows, and map of merged regions, and map of split
+   *         parent regioninfos
+   * @throws IOException
+   */
+  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>> getMergedRegionsAndSplitParents(
+      final byte[] tableName) throws IOException {
+    final boolean isTableSpecified = (tableName != null && tableName.length != 0);
     // TODO: Only works with single .META. region currently.  Fix.
     final AtomicInteger count = new AtomicInteger(0);
     // Keep Map of found split parents.  There are candidates for cleanup.
     // Use a comparator that has split parents come before its daughters.
     final Map<HRegionInfo, Result> splitParents =
       new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
+    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<HRegionInfo, Result>();
     // This visitor collects split parents and counts rows in the .META. table
     MetaReader.Visitor visitor = new MetaReader.Visitor() {
       @Override
@@ -120,20 +143,72 @@ class CatalogJanitor extends Chore {
         count.incrementAndGet();
         HRegionInfo info = HRegionInfo.getHRegionInfo(r);
         if (info == null) return true; // Keep scanning
+        if (isTableSpecified
+            && Bytes.compareTo(info.getTableName(), tableName) > 0) {
+          // Another table, stop scanning
+          return false;
+        }
         if (info.isSplitParent()) splitParents.put(info, r);
+        if (r.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER) != null) {
+          mergedRegions.put(info, r);
+        }
         // Returning true means "keep scanning"
         return true;
       }
     };
-    // Run full scan of .META. catalog table passing in our custom visitor
-    MetaReader.fullScan(this.server.getCatalogTracker(), visitor);
 
-    return new Pair<Integer, Map<HRegionInfo, Result>>(count.get(), splitParents);
+    byte[] startRow = (!isTableSpecified) ? HConstants.EMPTY_START_ROW
+        : HRegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW,
+            HConstants.ZEROES, false);
+    // Run full scan of .META. catalog table passing in our custom visitor with
+    // the start row
+    MetaReader.fullScan(this.server.getCatalogTracker(), visitor, startRow);
+
+    return new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
+        count.get(), mergedRegions, splitParents);
+  }
+
+  /**
+   * If merged region no longer holds reference to the merge regions, archive
+   * merge region on hdfs and perform deleting references in .META.
+   * @param mergedRegion
+   * @param regionA
+   * @param regionB
+   * @return true if we delete references in merged region on .META. and archive
+   *         the files on the file system
+   * @throws IOException
+   */
+  boolean cleanMergeRegion(final HRegionInfo mergedRegion,
+      final HRegionInfo regionA, final HRegionInfo regionB) throws IOException {
+    FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
+    Path rootdir = this.services.getMasterFileSystem().getRootDir();
+    Path tabledir = HTableDescriptor.getTableDir(rootdir,
+        mergedRegion.getTableName());
+    HTableDescriptor htd = getTableDescriptor(mergedRegion
+        .getTableNameAsString());
+    HRegionFileSystem regionFs = null;
+    try {
+      regionFs = HRegionFileSystem.openRegionFromFileSystem(
+          this.services.getConfiguration(), fs, tabledir, mergedRegion, true);
+    } catch (IOException e) {
+      LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
+    }
+    if (regionFs == null || !regionFs.hasReferences(htd)) {
+      LOG.debug("Deleting region " + regionA.getRegionNameAsString() + " and "
+          + regionB.getRegionNameAsString()
+          + " from fs because merged region no longer holds references");
+      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionA);
+      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionB);
+      MetaEditor.deleteMergeQualifiers(server.getCatalogTracker(), mergedRegion);
+      return true;
+    }
+    return false;
   }
 
   /**
    * Run janitorial scan of catalog <code>.META.</code> table looking for
    * garbage to collect.
+   * @return number of cleaned regions
    * @throws IOException
    */
   int scan() throws IOException {
@@ -141,18 +216,44 @@ class CatalogJanitor extends Chore {
       if (!alreadyRunning.compareAndSet(false, true)) {
         return 0;
       }
-      Pair<Integer, Map<HRegionInfo, Result>> pair = getSplitParents();
-      int count = pair.getFirst();
-      Map<HRegionInfo, Result> splitParents = pair.getSecond();
+      Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>> scanTriple =
+        getMergedRegionsAndSplitParents();
+      int count = scanTriple.getFirst();
+      /**
+       * clean merge regions first
+       */
+      int mergeCleaned = 0;
+      Map<HRegionInfo, Result> mergedRegions = scanTriple.getSecond();
+      for (Map.Entry<HRegionInfo, Result> e : mergedRegions.entrySet()) {
+        HRegionInfo regionA = HRegionInfo.getHRegionInfo(e.getValue(),
+            HConstants.MERGEA_QUALIFIER);
+        HRegionInfo regionB = HRegionInfo.getHRegionInfo(e.getValue(),
+            HConstants.MERGEB_QUALIFIER);
+        if (regionA == null || regionB == null) {
+          LOG.warn("Unexpected references regionA="
+              + (regionA == null ? "null" : regionA.getRegionNameAsString())
+              + ",regionB="
+              + (regionB == null ? "null" : regionB.getRegionNameAsString())
+              + " in merged region " + e.getKey().getRegionNameAsString());
+        } else {
+          if (cleanMergeRegion(e.getKey(), regionA, regionB)) {
+            mergeCleaned++;
+          }
+        }
+      }
+      /**
+       * clean split parents
+       */
+      Map<HRegionInfo, Result> splitParents = scanTriple.getThird();
 
       // Now work on our list of found parents. See if any we can clean up.
-      int cleaned = 0;
-    //regions whose parents are still around
+      int splitCleaned = 0;
+      // regions whose parents are still around
       HashSet<String> parentNotCleaned = new HashSet<String>();
       for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
         if (!parentNotCleaned.contains(e.getKey().getEncodedName()) &&
             cleanParent(e.getKey(), e.getValue())) {
-          cleaned++;
+          splitCleaned++;
         } else {
           // We could not clean the parent, so it's daughters should not be cleaned either (HBASE-6160)
           PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(e.getValue());
@@ -160,14 +261,16 @@ class CatalogJanitor extends Chore {
           parentNotCleaned.add(daughters.getSecond().getEncodedName());
         }
       }
-      if (cleaned != 0) {
-        LOG.info("Scanned " + count + " catalog row(s) and gc'd " + cleaned +
-            " unreferenced parent region(s)");
+      if ((mergeCleaned + splitCleaned) != 0) {
+        LOG.info("Scanned " + count + " catalog row(s), gc'd " + mergeCleaned
+            + " unreferenced merged region(s) and " + splitCleaned
+            + " unreferenced parent region(s)");
       } else if (LOG.isDebugEnabled()) {
-        LOG.debug("Scanned " + count + " catalog row(s) and gc'd " + cleaned +
-            " unreferenced parent region(s)");
+        LOG.debug("Scanned " + count + " catalog row(s), gc'd " + mergeCleaned
+            + " unreferenced merged region(s) and " + splitCleaned
+            + " unreferenced parent region(s)");
       }
-      return cleaned;
+      return mergeCleaned + splitCleaned;
     } finally {
       alreadyRunning.set(false);
     }
@@ -220,6 +323,14 @@ class CatalogJanitor extends Chore {
   boolean cleanParent(final HRegionInfo parent, Result rowContent)
   throws IOException {
     boolean result = false;
+    // Check whether it is a merged region and not clean reference
+    // No necessary to check MERGEB_QUALIFIER because these two qualifiers will
+    // be inserted/deleted together
+    if (rowContent.getValue(HConstants.CATALOG_FAMILY,
+        HConstants.MERGEA_QUALIFIER) != null) {
+      // wait cleaning merge region first
+      return result;
+    }
     // Run checks on each daughter split.
     PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(rowContent);
     Pair<Boolean, Boolean> a = checkDaughterInFs(parent, daughters.getFirst());
@@ -308,5 +419,34 @@ class CatalogJanitor extends Chore {
   private HTableDescriptor getTableDescriptor(final String tableName)
       throws FileNotFoundException, IOException {
     return this.services.getTableDescriptors().get(tableName);
+  }
+
+  /**
+   * Checks if the specified region has merge qualifiers, if so, try to clean
+   * them
+   * @param region
+   * @return true if the specified region doesn't have merge qualifier now
+   * @throws IOException
+   */
+  public boolean cleanMergeQualifier(final HRegionInfo region)
+      throws IOException {
+    // Get merge regions if it is a merged region and already has merge
+    // qualifier
+    Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaReader
+        .getRegionsFromMergeQualifier(this.services.getCatalogTracker(),
+            region.getRegionName());
+    if (mergeRegions == null
+        || (mergeRegions.getFirst() == null && mergeRegions.getSecond() == null)) {
+      // It doesn't have merge qualifier, no need to clean
+      return true;
+    }
+    // It shouldn't happen, we must insert/delete these two qualifiers together
+    if (mergeRegions.getFirst() == null || mergeRegions.getSecond() == null) {
+      LOG.error("Merged region " + region.getRegionNameAsString()
+          + " has only one merge qualifier in META.");
+      return false;
+    }
+    return cleanMergeRegion(region, mergeRegions.getFirst(),
+        mergeRegions.getSecond());
   }
 }
