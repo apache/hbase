@@ -283,6 +283,7 @@ Shell.load_command_group(
     major_compact
     move
     split
+    merge_region
     unassign
     zk_dump
     hlog_roll
