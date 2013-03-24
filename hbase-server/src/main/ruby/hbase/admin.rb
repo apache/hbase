@@ -307,6 +307,12 @@ module Hbase
     def move(encoded_region_name, server = nil)
       @admin.move(encoded_region_name.to_java_bytes, server ? server.to_java_bytes: nil)
     end
+    
+    #----------------------------------------------------------------------------------------------
+    # Merge two regions
+    def merge_region(encoded_region_a_name, encoded_region_b_name, force)
+      @admin.mergeRegions(encoded_region_a_name.to_java_bytes, encoded_region_b_name.to_java_bytes, java.lang.Boolean::valueOf(force))
+    end
 
     #----------------------------------------------------------------------------------------------
     # Returns table's structure description
