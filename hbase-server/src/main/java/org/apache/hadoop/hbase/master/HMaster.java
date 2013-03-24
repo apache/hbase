@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -56,17 +55,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.MasterMonitorProtocol;
-import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
-import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
 import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.exceptions.TableNotDisabledException;
-import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
-import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -75,13 +68,20 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
+import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
+import org.apache.hadoop.hbase.exceptions.TableNotDisabledException;
+import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
+import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
+import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
+import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
@@ -125,6 +126,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
@@ -1393,6 +1396,57 @@ Server {
    */
   public void setCatalogJanitorEnabled(final boolean b) {
     this.catalogJanitorChore.setEnabled(b);
+  }
+
+  @Override
+  public DispatchMergingRegionsResponse dispatchMergingRegions(
+      RpcController controller, DispatchMergingRegionsRequest request)
+      throws ServiceException {
+    final byte[] encodedNameOfRegionA = request.getRegionA().getValue()
+        .toByteArray();
+    final byte[] encodedNameOfRegionB = request.getRegionB().getValue()
+        .toByteArray();
+    final boolean forcible = request.getForcible();
+    if (request.getRegionA().getType() != RegionSpecifierType.ENCODED_REGION_NAME
+        || request.getRegionB().getType() != RegionSpecifierType.ENCODED_REGION_NAME) {
+      LOG.warn("mergeRegions specifier type: expected: "
+          + RegionSpecifierType.ENCODED_REGION_NAME + " actual: region_a="
+          + request.getRegionA().getType() + ", region_b="
+          + request.getRegionB().getType());
+    }
+    RegionState regionStateA = assignmentManager.getRegionStates()
+        .getRegionState(Bytes.toString(encodedNameOfRegionA));
+    RegionState regionStateB = assignmentManager.getRegionStates()
+        .getRegionState(Bytes.toString(encodedNameOfRegionB));
+    if (regionStateA == null || regionStateB == null) {
+      throw new ServiceException(new UnknownRegionException(
+          Bytes.toStringBinary(regionStateA == null ? encodedNameOfRegionA
+              : encodedNameOfRegionB)));
+    }
+
+    if (!forcible && !HRegionInfo.areAdjacent(regionStateA.getRegion(),
+            regionStateB.getRegion())) {
+      throw new ServiceException("Unable to merge not adjacent regions "
+          + regionStateA.getRegion().getRegionNameAsString() + ", "
+          + regionStateB.getRegion().getRegionNameAsString()
+          + " where forcible = " + forcible);
+    }
+
+    try {
+      dispatchMergingRegions(regionStateA.getRegion(), regionStateB.getRegion(), forcible);
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+
+    return DispatchMergingRegionsResponse.newBuilder().build();
+  }
+
+  @Override
+  public void dispatchMergingRegions(final HRegionInfo region_a,
+      final HRegionInfo region_b, final boolean forcible) throws IOException {
+    checkInitialized();
+    this.executorService.submit(new DispatchMergingRegionHandler(this,
+        this.catalogJanitorChore, region_a, region_b, forcible));
   }
 
   @Override

@@ -141,6 +141,20 @@ message CompactRegionRequest {
 message CompactRegionResponse {
 }
 
+/**
+ * Merges the specified regions.
+ * <p>
+ * This method currently closes the regions and then merges them
+ */
+message MergeRegionsRequest {
+  required RegionSpecifier regionA = 1;
+  required RegionSpecifier regionB = 2;
+  optional bool forcible = 3 [default = false];
+}
+
+message MergeRegionsResponse {
+}
+
 message UUID {
   required uint64 leastSigBits = 1;
   required uint64 mostSigBits = 2;
@@ -240,6 +254,9 @@ service AdminService {
 
   rpc compactRegion(CompactRegionRequest)
     returns(CompactRegionResponse);
+    
+  rpc mergeRegions(MergeRegionsRequest)
+    returns(MergeRegionsResponse);
 
   rpc replicateWALEntry(ReplicateWALEntryRequest)
     returns(ReplicateWALEntryResponse);

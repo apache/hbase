@@ -39,36 +39,36 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
+import org.apache.hadoop.hbase.exceptions.RegionAlreadyInTransitionException;
+import org.apache.hadoop.hbase.exceptions.RegionServerStoppedException;
+import org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
+import org.apache.hadoop.hbase.master.handler.MergedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
-import org.apache.hadoop.hbase.exceptions.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
-import org.apache.hadoop.hbase.exceptions.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
@@ -85,6 +85,7 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedHashMultimap;
 
 /**
@@ -623,6 +624,24 @@ public class AssignmentManager extends ZooKeeperListener {
           // multiple times so if it's still up we will receive an update soon.
         }
         break;
+      case RS_ZK_REGION_MERGING:
+        // nothing to do
+        LOG.info("Processed region " + regionInfo.getEncodedName()
+            + " in state : " + et + " nothing to do.");
+        break;
+      case RS_ZK_REGION_MERGE:
+        if (!serverManager.isServerOnline(sn)) {
+          // ServerShutdownHandler would handle this region
+          LOG.warn("Processed region " + regionInfo.getEncodedName()
+              + " in state : " + et + " on a dead regionserver: " + sn
+              + " doing nothing");
+        } else {
+          LOG.info("Processed region " + regionInfo.getEncodedName() + " in state : " +
+              et + " nothing to do.");
+          // We don't do anything. The regionserver is supposed to update the znode
+          // multiple times so if it's still up we will receive an update soon.
+        }
+        break;
       default:
         throw new IllegalStateException("Received region in state :" + et + " is not valid.");
     }
@@ -781,6 +800,34 @@ public class AssignmentManager extends ZooKeeperListener {
           // Run handler to do the rest of the SPLIT handling.
           this.executorService.submit(new SplitRegionHandler(server, this,
             regionState.getRegion(), sn, daughters));
+          break;
+
+        case RS_ZK_REGION_MERGING:
+          // Merged region is a new region, we can't find it in the region states now.
+          // Do nothing.
+          break;
+
+        case RS_ZK_REGION_MERGE:
+          // Assert that we can get a serverinfo for this server.
+          if (!this.serverManager.isServerOnline(sn)) {
+            LOG.error("Dropped merge! ServerName=" + sn + " unknown.");
+            break;
+          }
+          // Get merged and merging regions.
+          byte[] payloadOfMerge = rt.getPayload();
+          List<HRegionInfo> mergeRegions;
+          try {
+            mergeRegions = HRegionInfo.parseDelimitedFrom(payloadOfMerge, 0,
+                payloadOfMerge.length);
+          } catch (IOException e) {
+            LOG.error("Dropped merge! Failed reading merge payload for " +
+              prettyPrintedRegionName);
+            break;
+          }
+          assert mergeRegions.size() == 3;
+          // Run handler to do the rest of the MERGE handling.
+          this.executorService.submit(new MergedRegionHandler(server, this, sn,
+              mergeRegions));
           break;
 
         case M_ZK_REGION_CLOSING:
@@ -2056,9 +2103,9 @@ public class AssignmentManager extends ZooKeeperListener {
             NodeExistsException nee = (NodeExistsException)e;
             String path = nee.getPath();
             try {
-              if (isSplitOrSplitting(path)) {
-                LOG.debug(path + " is SPLIT or SPLITTING; " +
-                  "skipping unassign because region no longer exists -- its split");
+              if (isSplitOrSplittingOrMergeOrMerging(path)) {
+                LOG.debug(path + " is SPLIT or SPLITTING or MERGE or MERGING; " +
+                  "skipping unassign because region no longer exists -- its split or merge");
                 return;
               }
             } catch (KeeperException.NoNodeException ke) {
@@ -2136,21 +2183,23 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * @param path
-   * @return True if znode is in SPLIT or SPLITTING state.
+   * @return True if znode is in SPLIT or SPLITTING or MERGE or MERGING state.
    * @throws KeeperException Can happen if the znode went away in meantime.
    * @throws DeserializationException
    */
-  private boolean isSplitOrSplitting(final String path)
+  private boolean isSplitOrSplittingOrMergeOrMerging(final String path)
       throws KeeperException, DeserializationException {
     boolean result = false;
-    // This may fail if the SPLIT or SPLITTING znode gets cleaned up before we
-    // can get data from it.
+    // This may fail if the SPLIT or SPLITTING or MERGE or MERGING znode gets
+    // cleaned up before we can get data from it.
     byte [] data = ZKAssign.getData(watcher, path);
     if (data == null) return false;
     RegionTransition rt = RegionTransition.parseFrom(data);
     switch (rt.getEventType()) {
     case RS_ZK_REGION_SPLIT:
     case RS_ZK_REGION_SPLITTING:
+    case RS_ZK_REGION_MERGE:
+    case RS_ZK_REGION_MERGING:
       result = true;
       break;
     default:
@@ -2898,9 +2947,31 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
+   * Update inmemory structures.
+   * @param sn Server that reported the merge
+   * @param merged regioninfo of merged
+   * @param a region a
+   * @param b region b
+   */
+  public void handleRegionsMergeReport(final ServerName sn,
+      final HRegionInfo merged, final HRegionInfo a, final HRegionInfo b) {
+    regionOffline(a);
+    regionOffline(b);
+    regionOnline(merged, sn);
+
+    // There's a possibility that the region was merging while a user asked
+    // the master to disable, we need to make sure we close those regions in
+    // that case. This is not racing with the region server itself since RS
+    // report is done after the regions merge transaction completed.
+    if (this.zkTable.isDisablingOrDisabledTable(merged.getTableNameAsString())) {
+      unassign(merged);
+    }
+  }
+
+  /**
    * @param plan Plan to execute.
    */
-  void balance(final RegionPlan plan) {
+  public void balance(final RegionPlan plan) {
     synchronized (this.regionPlans) {
       this.regionPlans.put(plan.getRegionName(), plan);
     }

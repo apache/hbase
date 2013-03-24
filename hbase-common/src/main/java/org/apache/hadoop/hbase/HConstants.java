@@ -381,6 +381,12 @@ public final class HConstants {
   /** The upper-half split region column qualifier */
   public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
 
+  /** The lower-half merge region column qualifier */
+  public static final byte[] MERGEA_QUALIFIER = Bytes.toBytes("mergeA");
+
+  /** The upper-half merge region column qualifier */
+  public static final byte[] MERGEB_QUALIFIER = Bytes.toBytes("mergeB");
+
   /**
    * The meta table version column qualifier.
    * We keep current version of the meta table in this column in <code>-ROOT-</code>

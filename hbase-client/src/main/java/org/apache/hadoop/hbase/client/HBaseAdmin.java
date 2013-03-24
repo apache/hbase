@@ -18,8 +18,18 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -78,6 +88,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumn
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse;
@@ -109,17 +120,8 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.net.SocketTimeoutException;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Pattern;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.ServiceException;
 
 /**
  * Provides an interface to manage HBase database table metadata + general
@@ -1684,6 +1686,38 @@ public class HBaseAdmin implements Abortable, Closeable {
     try {
       return master.isCatalogJanitorEnabled(null,
           RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue();
+    } finally {
+      master.close();
+    }
+  }
+
+  /**
+   * Merge two regions. Asynchronous operation.
+   * @param encodedNameOfRegionA encoded name of region a
+   * @param encodedNameOfRegionB encoded name of region b
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          two adjacent regions
+   * @throws IOException
+   */
+  public void mergeRegions(final byte[] encodedNameOfRegionA,
+      final byte[] encodedNameOfRegionB, final boolean forcible)
+      throws IOException {
+    MasterAdminKeepAliveConnection master = connection
+        .getKeepAliveMasterAdmin();
+    try {
+      DispatchMergingRegionsRequest request = RequestConverter
+          .buildDispatchMergingRegionsRequest(encodedNameOfRegionA,
+              encodedNameOfRegionB, forcible);
+      master.dispatchMergingRegions(null, request);
+    } catch (ServiceException se) {
+      IOException ioe = ProtobufUtil.getRemoteException(se);
+      if (ioe instanceof UnknownRegionException) {
+        throw (UnknownRegionException) ioe;
+      }
+      LOG.error("Unexpected exception: " + se
+          + " from calling HMaster.dispatchMergingRegions");
+    } catch (DeserializationException de) {
+      LOG.error("Could not parse destination server name: " + de);
     } finally {
       master.close();
     }

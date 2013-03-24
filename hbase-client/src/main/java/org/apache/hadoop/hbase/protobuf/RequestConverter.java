@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionReq
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
@@ -78,6 +79,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DispatchMergingRegionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
@@ -777,6 +779,26 @@ public final class RequestConverter {
    return builder.build();
  }
 
+  /**
+   * Create a MergeRegionsRequest for the given regions
+   * @param regionA name of region a
+   * @param regionB name of region b
+   * @param forcible true if it is a compulsory merge
+   * @return a MergeRegionsRequest
+   */
+  public static MergeRegionsRequest buildMergeRegionsRequest(
+      final byte[] regionA, final byte[] regionB, final boolean forcible) {
+    MergeRegionsRequest.Builder builder = MergeRegionsRequest.newBuilder();
+    RegionSpecifier regionASpecifier = buildRegionSpecifier(
+        RegionSpecifierType.REGION_NAME, regionA);
+    RegionSpecifier regionBSpecifier = buildRegionSpecifier(
+        RegionSpecifierType.REGION_NAME, regionB);
+    builder.setRegionA(regionASpecifier);
+    builder.setRegionB(regionBSpecifier);
+    builder.setForcible(forcible);
+    return builder.build();
+  }
+
  /**
   * Create a  CompactRegionRequest for a given region name
   *
@@ -933,6 +955,18 @@ public final class RequestConverter {
       builder.setDestServerName(
         ProtobufUtil.toServerName(new ServerName(Bytes.toString(destServerName))));
     }
+    return builder.build();
+  }
+
+  public static DispatchMergingRegionsRequest buildDispatchMergingRegionsRequest(
+      final byte[] encodedNameOfRegionA, final byte[] encodedNameOfRegionB,
+      final boolean forcible) throws DeserializationException {
+    DispatchMergingRegionsRequest.Builder builder = DispatchMergingRegionsRequest.newBuilder();
+    builder.setRegionA(buildRegionSpecifier(
+        RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfRegionA));
+    builder.setRegionB(buildRegionSpecifier(
+        RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfRegionB));
+    builder.setForcible(forcible);
     return builder.build();
   }
 

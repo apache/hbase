@@ -19,9 +19,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.EOFException;
-import java.io.IOException;
 import java.io.FileNotFoundException;
-import org.apache.hadoop.fs.permission.FsPermission;
+import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
@@ -70,6 +69,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -120,7 +121,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -636,6 +636,8 @@ public class HRegion implements HeapSize { // , Writable{
     // these directories here on open.  We may be opening a region that was
     // being split but we crashed in the middle of it all.
     SplitTransaction.cleanupAnySplitDetritus(this);
+    RegionMergeTransaction.cleanupMergeDir(this.getFilesystem(),
+        RegionMergeTransaction.getMergeDir(this));
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
     this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
 
@@ -917,6 +919,24 @@ public class HRegion implements HeapSize { // , Writable{
   /** @return true if region is splittable */
   public boolean isSplittable() {
     return isAvailable() && !hasReferences();
+  }
+
+  /**
+   * @return true if region is mergeable
+   */
+  public boolean isMergeable() {
+    if (!isAvailable()) {
+      LOG.debug("Region " + this.getRegionNameAsString()
+          + " is not mergeable because it is closing or closed");
+      return false;
+    }
+    if (hasReferences()) {
+      LOG.debug("Region " + this.getRegionNameAsString()
+          + " is not mergeable because it has references");
+      return false;
+    }
+
+    return true;
   }
 
   public boolean areWritesEnabled() {
@@ -4230,6 +4250,33 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
+   * Create a merged region given a temp directory with the region data.
+   * @param mergedRegionInfo
+   * @param region_b another merging region
+   * @param mergedTmpDir Directory that contains region files.
+   * @return merged hregion
+   * @throws IOException
+   */
+  HRegion createMergedRegionFromMerges(final HRegionInfo mergedRegionInfo,
+      final HRegion region_b, final Path mergedTmpDir) throws IOException {
+    HRegion r = HRegion.newHRegion(this.getTableDir(), this.getLog(), fs,
+        this.getBaseConf(), mergedRegionInfo, this.getTableDesc(),
+        this.rsServices);
+    r.readRequestsCount.set(this.getReadRequestsCount()
+        + region_b.getReadRequestsCount());
+    r.writeRequestsCount.set(this.getWriteRequestsCount()
+        + region_b.getWriteRequestsCount());
+    // Move the tmp dir in the expected location
+    if (mergedTmpDir != null && fs.exists(mergedTmpDir)) {
+      if (!fs.rename(mergedTmpDir, r.getRegionDir())) {
+        throw new IOException("Unable to rename " + mergedTmpDir + " to "
+            + r.getRegionDir());
+      }
+    }
+    return r;
+  }
+
+  /**
    * Inserts a new region's meta information into the passed
    * <code>meta</code> region. Used by the HMaster bootstrap code adding
    * new table to META table.
@@ -4505,6 +4552,41 @@ public class HRegion implements HeapSize { // , Writable{
       v.add(src);
     }
     return byFamily;
+  }
+
+  /**
+   * Check whether region has Reference file
+   * @param fs
+   * @param rootDir
+   * @param region
+   * @param htd
+   * @return true if region has reference file
+   * @throws IOException
+   */
+  public static boolean hasReferences(final FileSystem fs,
+      final Path rootDir, final HRegionInfo region, final HTableDescriptor htd)
+      throws IOException {
+    Path tabledir = new Path(rootDir, region.getTableNameAsString());
+    boolean hasReference = false;
+    for (HColumnDescriptor family : htd.getFamilies()) {
+      Path p = HStore.getStoreHomedir(tabledir, region.getEncodedName(),
+          family.getName());
+      if (!fs.exists(p))
+        continue;
+      // Look for reference files. Call listStatus with anonymous instance of
+      // PathFilter.
+      FileStatus[] ps = FSUtils.listStatus(fs, p, new PathFilter() {
+        public boolean accept(Path path) {
+          return StoreFile.isReference(path);
+        }
+      });
+
+      if (ps != null && ps.length > 0) {
+        hasReference = true;
+        break;
+      }
+    }
+    return hasReference;
   }
 
   /**

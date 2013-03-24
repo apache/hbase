@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
@@ -1421,6 +1422,28 @@ public final class ProtobufUtil {
       RequestConverter.buildSplitRegionRequest(hri.getRegionName(), splitPoint);
     try {
       admin.splitRegion(null, request);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to merge regions using admin protocol. Send request to
+   * regionserver.
+   * @param admin
+   * @param region_a
+   * @param region_b
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          two adjacent regions
+   * @throws IOException
+   */
+  public static void mergeRegions(final AdminProtocol admin,
+      final HRegionInfo region_a, final HRegionInfo region_b,
+      final boolean forcible) throws IOException {
+    MergeRegionsRequest request = RequestConverter.buildMergeRegionsRequest(
+        region_a.getRegionName(), region_b.getRegionName(),forcible);
+    try {
+      admin.mergeRegions(null, request);
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);
     }

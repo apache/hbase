@@ -1107,4 +1107,27 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     return hris;
   }
 
+  /**
+   * Check whether two regions are adjacent
+   * @param regionA
+   * @param regionB
+   * @return true if two regions are adjacent
+   */
+  public static boolean areAdjacent(HRegionInfo regionA, HRegionInfo regionB) {
+    if (regionA == null || regionB == null) {
+      throw new IllegalArgumentException(
+          "Can't check whether adjacent for null region");
+    }
+    HRegionInfo a = regionA;
+    HRegionInfo b = regionB;
+    if (Bytes.compareTo(a.getStartKey(), b.getStartKey()) > 0) {
+      a = regionB;
+      b = regionA;
+    }
+    if (Bytes.compareTo(a.getEndKey(), b.getStartKey()) == 0) {
+      return true;
+    }
+    return false;
+  }
+
 }
