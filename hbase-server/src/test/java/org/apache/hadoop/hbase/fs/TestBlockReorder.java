@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -252,9 +253,9 @@ public class TestBlockReorder {
     // make us fall in nasty hdfs bugs/issues. So we're going to try multiple times.
 
     // Now we need to find the log file, its locations, and look at it
-    String rootDir = FileSystem.get(conf).makeQualified(new Path(
-        conf.get(HConstants.HBASE_DIR) + "/" + HConstants.HREGION_LOGDIR_NAME +
-            "/" + targetRs.getServerName().toString())).toUri().getPath();
+
+    String rootDir = new Path(FSUtils.getRootDir(conf) + "/" + HConstants.HREGION_LOGDIR_NAME +
+            "/" + targetRs.getServerName().toString()).toUri().getPath();
 
     DistributedFileSystem mdfs = (DistributedFileSystem)
         hbm.getMaster().getMasterFileSystem().getFileSystem();

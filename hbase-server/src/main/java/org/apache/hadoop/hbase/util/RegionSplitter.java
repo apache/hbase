@@ -398,7 +398,7 @@ public class RegionSplitter {
     final int MAX_OUTSTANDING =
         Math.max(table.getConnection().getCurrentNrHRS() / 2, minOS);
 
-    Path hbDir = new Path(conf.get(HConstants.HBASE_DIR));
+    Path hbDir = FSUtils.getRootDir(conf);
     Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
     Path splitFile = new Path(tableDir, "_balancedSplit");
     FileSystem fs = FileSystem.get(conf);
@@ -707,7 +707,7 @@ public class RegionSplitter {
 
   static LinkedList<Pair<byte[], byte[]>> getSplits(HTable table,
       SplitAlgorithm splitAlgo) throws IOException {
-    Path hbDir = new Path(table.getConfiguration().get(HConstants.HBASE_DIR));
+    Path hbDir = FSUtils.getRootDir(table.getConfiguration());
     Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
     Path splitFile = new Path(tableDir, "_balancedSplit");
     FileSystem fs = tableDir.getFileSystem(table.getConfiguration());

@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -191,8 +192,7 @@ public class TestMasterFailover {
     htdEnabled.addFamily(new HColumnDescriptor(FAMILY));
 
     FileSystem filesystem = FileSystem.get(conf);
-    Path rootdir = filesystem.makeQualified(
-        new Path(conf.get(HConstants.HBASE_DIR)));
+    Path rootdir = FSUtils.getRootDir(conf);
     // Write the .tableinfo
     FSTableDescriptors.createTableDescriptor(filesystem, rootdir, htdEnabled);
 
@@ -498,8 +498,7 @@ public class TestMasterFailover {
     HTableDescriptor htdEnabled = new HTableDescriptor(enabledTable);
     htdEnabled.addFamily(new HColumnDescriptor(FAMILY));
     FileSystem filesystem = FileSystem.get(conf);
-    Path rootdir = filesystem.makeQualified(
-           new Path(conf.get(HConstants.HBASE_DIR)));
+    Path rootdir = FSUtils.getRootDir(conf);
     // Write the .tableinfo
     FSTableDescriptors.createTableDescriptor(filesystem, rootdir, htdEnabled);
     HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getName(),

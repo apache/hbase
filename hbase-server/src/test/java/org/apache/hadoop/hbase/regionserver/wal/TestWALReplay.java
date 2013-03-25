@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -107,7 +108,7 @@ public class TestWALReplay {
     Path hbaseRootDir =
       TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
-    conf.set(HConstants.HBASE_DIR, hbaseRootDir.toString());
+    FSUtils.setRootDir(conf, hbaseRootDir);
   }
 
   @AfterClass
@@ -119,7 +120,7 @@ public class TestWALReplay {
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    this.hbaseRootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
+    this.hbaseRootDir = FSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     this.logName = HConstants.HREGION_LOGDIR_NAME;
     this.logDir = new Path(this.hbaseRootDir, logName);

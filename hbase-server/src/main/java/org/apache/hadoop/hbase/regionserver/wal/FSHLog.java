@@ -1397,7 +1397,7 @@ class FSHLog implements HLog, Syncable {
     if (!fs.exists(p)) {
       throw new FileNotFoundException(p.toString());
     }
-    final Path baseDir = new Path(conf.get(HConstants.HBASE_DIR));
+    final Path baseDir = FSUtils.getRootDir(conf);
     final Path oldLogDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     if (!fs.getFileStatus(p).isDir()) {
       throw new IOException(p + " is not a directory");
@@ -1443,9 +1443,8 @@ class FSHLog implements HLog, Syncable {
       Configuration conf = HBaseConfiguration.create();
       for (int i = 1; i < args.length; i++) {
         try {
-          conf.set("fs.default.name", args[i]);
-          conf.set("fs.defaultFS", args[i]);
           Path logPath = new Path(args[i]);
+          FSUtils.setFsDefault(conf, logPath);
           split(conf, logPath);
         } catch (Throwable t) {
           t.printStackTrace(System.err);

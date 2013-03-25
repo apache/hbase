@@ -1103,10 +1103,10 @@ public class HRegionServer implements ClientProtocol,
       // to match the filesystem on hbase.rootdir else underlying hadoop hdfs
       // accessors will be going against wrong filesystem (unless all is set
       // to defaults).
-      this.conf.set("fs.defaultFS", this.conf.get("hbase.rootdir"));
+      FSUtils.setFsDefault(this.conf, FSUtils.getRootDir(this.conf));
       // Get fs instance used by this RS
       this.fs = new HFileSystem(this.conf, this.useHBaseChecksum);
-      this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
+      this.rootDir = FSUtils.getRootDir(this.conf);
       this.tableDescriptors = new FSTableDescriptors(this.fs, this.rootDir, true);
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set

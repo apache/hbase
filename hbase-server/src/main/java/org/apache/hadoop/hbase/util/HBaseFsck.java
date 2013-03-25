@@ -1202,7 +1202,7 @@ public class HBaseFsck extends Configured implements Tool {
    */
   Path sidelineOldMeta() throws IOException {
     // put current .META. aside.
-    Path hbaseDir = new Path(getConf().get(HConstants.HBASE_DIR));
+    Path hbaseDir = FSUtils.getRootDir(getConf());
     FileSystem fs = hbaseDir.getFileSystem(getConf());
     Path backupDir = getSidelineDir();
     fs.mkdirs(backupDir);
@@ -1254,7 +1254,7 @@ public class HBaseFsck extends Configured implements Tool {
    * regionInfoMap
    */
   public void loadHdfsRegionDirs() throws IOException, InterruptedException {
-    Path rootDir = new Path(getConf().get(HConstants.HBASE_DIR));
+    Path rootDir = FSUtils.getRootDir(getConf());
     FileSystem fs = rootDir.getFileSystem(getConf());
 
     // list all tables from HDFS
@@ -1410,7 +1410,7 @@ public class HBaseFsck extends Configured implements Tool {
       return;
     }
 
-    Path hbaseDir = new Path(getConf().get(HConstants.HBASE_DIR));
+    Path hbaseDir = FSUtils.getRootDir(getConf());
     FileSystem fs = hbaseDir.getFileSystem(getConf());
     UserGroupInformation ugi = User.getCurrent().getUGI();
     FileStatus[] files = fs.listStatus(hbaseDir);
@@ -3494,10 +3494,9 @@ public class HBaseFsck extends Configured implements Tool {
   public static void main(String[] args) throws Exception {
     // create a fsck object
     Configuration conf = HBaseConfiguration.create();
-    Path hbasedir = new Path(conf.get(HConstants.HBASE_DIR));
+    Path hbasedir = FSUtils.getRootDir(conf);
     URI defaultFs = hbasedir.getFileSystem(conf).getUri();
-    conf.set("fs.defaultFS", defaultFs.toString());     // for hadoop 0.21+
-    conf.set("fs.default.name", defaultFs.toString());  // for hadoop 0.20
+    FSUtils.setFsDefault(conf, new Path(defaultFs));
 
     int ret = ToolRunner.run(new HBaseFsck(conf), args);
     System.exit(ret);

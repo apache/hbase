@@ -55,7 +55,7 @@ public class TestHFileLinkCleaner {
   @Test
   public void testHFileLinkCleaning() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(HConstants.HBASE_DIR, TEST_UTIL.getDataTestDir().toString());
+    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, HFileLinkCleaner.class.getName());
     Path rootDir = FSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(conf);

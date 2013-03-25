@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -80,7 +81,7 @@ public class TestMasterNoCluster {
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TESTUTIL.getConfiguration();
     // We use local filesystem.  Set it so it writes into the testdir.
-    c.set(HConstants.HBASE_DIR, TESTUTIL.getDataTestDir().toString());
+    FSUtils.setRootDir(c, TESTUTIL.getDataTestDir());
     // Startup a mini zk cluster.
     TESTUTIL.startMiniZKCluster();
   }

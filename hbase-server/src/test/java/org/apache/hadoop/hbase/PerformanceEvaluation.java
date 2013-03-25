@@ -1527,10 +1527,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       // mangle the conf so that the fs parameter points to the minidfs we
       // just started up
       FileSystem fs = dfsCluster.getFileSystem();
-      conf.set("fs.default.name", fs.getUri().toString());
+      FSUtils.setFsDefault(conf, new Path(fs.getUri()));
       conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(zooKeeperPort));
       Path parentdir = fs.getHomeDirectory();
-      conf.set(HConstants.HBASE_DIR, parentdir.toString());
+      FSUtils.setRootDir(conf, parentdir);
       fs.mkdirs(parentdir);
       FSUtils.setVersion(fs, parentdir);
       hbaseMiniCluster = new MiniHBaseCluster(conf, N);

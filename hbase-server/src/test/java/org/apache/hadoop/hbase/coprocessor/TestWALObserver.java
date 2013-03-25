@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
@@ -92,7 +93,7 @@ public class TestWALObserver {
     Path hbaseRootDir = TEST_UTIL.getDFSCluster().getFileSystem()
         .makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
-    conf.set(HConstants.HBASE_DIR, hbaseRootDir.toString());
+    FSUtils.setRootDir(conf, hbaseRootDir);
   }
 
   @AfterClass
@@ -105,7 +106,7 @@ public class TestWALObserver {
     this.conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     // this.cluster = TEST_UTIL.getDFSCluster();
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    this.hbaseRootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    this.hbaseRootDir = FSUtils.getRootDir(conf);
     this.dir = new Path(this.hbaseRootDir, TestWALObserver.class.getName());
     this.oldLogDir = new Path(this.hbaseRootDir,
         HConstants.HREGION_OLDLOGDIR_NAME);

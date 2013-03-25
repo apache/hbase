@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.exceptions.CorruptHFileException;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSUtils.FamilyDirFilter;
 import org.apache.hadoop.hbase.util.FSUtils.HFileFilter;
 import org.apache.hadoop.hbase.util.FSUtils.RegionDirFilter;
@@ -127,14 +128,14 @@ public class HFileCorruptionChecker {
    * @return path to where corrupted files are stored. This should be
    *         HBASE_DIR/.corrupt/table/region/cf/file.
    */
-  Path createQuarantinePath(Path hFile) {
+  Path createQuarantinePath(Path hFile) throws IOException {
     // extract the normal dirs structure
     Path cfDir = hFile.getParent();
     Path regionDir = cfDir.getParent();
     Path tableDir = regionDir.getParent();
 
     // build up the corrupted dirs strcture
-    Path corruptBaseDir = new Path(conf.get(HConstants.HBASE_DIR), conf.get(
+    Path corruptBaseDir = new Path(FSUtils.getRootDir(conf), conf.get(
         "hbase.hfile.quarantine.dir", HConstants.CORRUPT_DIR_NAME));
     Path corruptTableDir = new Path(corruptBaseDir, tableDir.getName());
     Path corruptRegionDir = new Path(corruptTableDir, regionDir.getName());
