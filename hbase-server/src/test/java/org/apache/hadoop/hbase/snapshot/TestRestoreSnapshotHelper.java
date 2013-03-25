@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -156,19 +156,21 @@ public class TestRestoreSnapshotHelper {
   private void createSnapshot(final Path rootDir, final Path snapshotDir, final HTableDescriptor htd)
       throws IOException {
     // First region, simple with one plain hfile.
-    HRegion r0 = HRegion.createHRegion(new HRegionInfo(htd.getName()), archiveDir,
-        conf, htd, null, true, true);
-    Path storeFile = new Path(new Path(r0.getRegionDir(), TEST_FAMILY), TEST_HFILE);
+    HRegionInfo hri = new HRegionInfo(htd.getName());
+    HRegionFileSystem r0fs = HRegionFileSystem.createRegionOnFileSystem(conf,
+      fs, new Path(archiveDir, hri.getTableNameAsString()), hri);
+    Path storeFile = new Path(rootDir, TEST_HFILE);
     fs.createNewFile(storeFile);
-    r0.close();
+    r0fs.commitStoreFile(TEST_FAMILY, storeFile);
 
     // Second region, used to test the split case.
     // This region contains a reference to the hfile in the first region.
-    HRegion r1 = HRegion.createHRegion(new HRegionInfo(htd.getName()), archiveDir,
-        conf, htd, null, true, true);
-    fs.createNewFile(new Path(new Path(r1.getRegionDir(), TEST_FAMILY),
-        storeFile.getName() + '.' + r0.getRegionInfo().getEncodedName()));
-    r1.close();
+    hri = new HRegionInfo(htd.getName());
+    HRegionFileSystem r1fs = HRegionFileSystem.createRegionOnFileSystem(conf,
+      fs, new Path(archiveDir, hri.getTableNameAsString()), hri);
+    storeFile = new Path(rootDir, TEST_HFILE + '.' + r0fs.getRegionInfo().getEncodedName());
+    fs.createNewFile(storeFile);
+    r1fs.commitStoreFile(TEST_FAMILY, storeFile);
 
     Path tableDir = HTableDescriptor.getTableDir(archiveDir, htd.getName());
     FileUtil.copy(fs, tableDir, fs, snapshotDir, false, conf);

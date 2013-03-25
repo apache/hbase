@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction.LoggingProgressable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -75,7 +76,6 @@ import org.apache.zookeeper.KeeperException.NodeExistsException;
 @InterfaceAudience.Private
 public class RegionMergeTransaction {
   private static final Log LOG = LogFactory.getLog(RegionMergeTransaction.class);
-  private static final String MERGEDIR = ".merges";
 
   // Merged region info
   private HRegionInfo mergedRegionInfo;
@@ -152,7 +152,7 @@ public class RegionMergeTransaction {
       this.region_b = a;
     }
     this.forcible = forcible;
-    this.mergesdir = getMergeDir(this.region_a);
+    this.mergesdir = region_a.getRegionFileSystem().getMergesDir();
   }
 
   /**
@@ -280,12 +280,12 @@ public class RegionMergeTransaction {
       }
     }
 
-    createMergeDir(this.region_a.getFilesystem(), this.mergesdir);
+    this.region_a.getRegionFileSystem().createMergesDir();
     this.journal.add(JournalEntry.CREATED_MERGE_DIR);
 
-    List<StoreFile> hstoreFilesOfRegionA = closeAndOfflineRegion(
+    Map<byte[], List<StoreFile>> hstoreFilesOfRegionA = closeAndOfflineRegion(
         services, this.region_a, true, testing);
-    List<StoreFile> hstoreFilesOfRegionB = closeAndOfflineRegion(
+    Map<byte[], List<StoreFile>> hstoreFilesOfRegionB = closeAndOfflineRegion(
         services, this.region_b, false, testing);
 
     assert hstoreFilesOfRegionA != null && hstoreFilesOfRegionB != null;
@@ -335,8 +335,7 @@ public class RegionMergeTransaction {
    */
   HRegion createMergedRegionFromMerges(final HRegion a, final HRegion b,
       final HRegionInfo mergedRegion) throws IOException {
-    return a.createMergedRegionFromMerges(mergedRegion, b, new Path(
-        this.mergesdir, mergedRegion.getEncodedName()));
+    return a.createMergedRegionFromMerges(mergedRegion, b);
   }
 
   /**
@@ -345,13 +344,13 @@ public class RegionMergeTransaction {
    * @param region
    * @param isRegionA true if it is merging region a, false if it is region b
    * @param testing true if it is testing
-   * @return a list of store files
+   * @return a map of family name to list of store files
    * @throws IOException
    */
-  private List<StoreFile> closeAndOfflineRegion(
+  private Map<byte[], List<StoreFile>> closeAndOfflineRegion(
       final RegionServerServices services, final HRegion region,
       final boolean isRegionA, final boolean testing) throws IOException {
-    List<StoreFile> hstoreFilesToMerge = null;
+    Map<byte[], List<StoreFile>> hstoreFilesToMerge = null;
     Exception exceptionToThrow = null;
     try {
       hstoreFilesToMerge = region.close(false);
@@ -511,24 +510,29 @@ public class RegionMergeTransaction {
    * @param hstoreFilesOfRegionB
    * @throws IOException
    */
-  private void mergeStoreFiles(List<StoreFile> hstoreFilesOfRegionA,
-      List<StoreFile> hstoreFilesOfRegionB)
+  private void mergeStoreFiles(
+      Map<byte[], List<StoreFile>> hstoreFilesOfRegionA,
+      Map<byte[], List<StoreFile>> hstoreFilesOfRegionB)
       throws IOException {
     // Create reference file(s) of region A in mergdir
-    FileSystem fs = this.region_a.getFilesystem();
-    for (StoreFile storeFile : hstoreFilesOfRegionA) {
-      Path storedir = HStore.getStoreHomedir(this.mergesdir,
-          mergedRegionInfo.getEncodedName(), storeFile.getFamily());
-      StoreFile.split(fs, storedir, storeFile, this.region_a.getStartKey(),
-          true);
+    HRegionFileSystem fs_a = this.region_a.getRegionFileSystem();
+    for (Map.Entry<byte[], List<StoreFile>> entry : hstoreFilesOfRegionA
+        .entrySet()) {
+      String familyName = Bytes.toString(entry.getKey());
+      for (StoreFile storeFile : entry.getValue()) {
+        fs_a.mergeStoreFile(this.mergedRegionInfo, familyName, storeFile,
+            this.mergesdir);
+      }
     }
-
     // Create reference file(s) of region B in mergedir
-    for (StoreFile storeFile : hstoreFilesOfRegionB) {
-      Path storedir = HStore.getStoreHomedir(this.mergesdir,
-          mergedRegionInfo.getEncodedName(), storeFile.getFamily());
-      StoreFile.split(fs, storedir, storeFile, this.region_b.getStartKey(),
-          true);
+    HRegionFileSystem fs_b = this.region_b.getRegionFileSystem();
+    for (Map.Entry<byte[], List<StoreFile>> entry : hstoreFilesOfRegionB
+        .entrySet()) {
+      String familyName = Bytes.toString(entry.getKey());
+      for (StoreFile storeFile : entry.getValue()) {
+        fs_b.mergeStoreFile(this.mergedRegionInfo, familyName, storeFile,
+            this.mergesdir);
+      }
     }
   }
 
@@ -544,7 +548,6 @@ public class RegionMergeTransaction {
       final RegionServerServices services) throws IOException {
     assert this.mergedRegionInfo != null;
     boolean result = true;
-    FileSystem fs = this.region_a.getFilesystem();
     ListIterator<JournalEntry> iterator = this.journal
         .listIterator(this.journal.size());
     // Iterate in reverse.
@@ -561,7 +564,7 @@ public class RegionMergeTransaction {
         case CREATED_MERGE_DIR:
           this.region_a.writestate.writesEnabled = true;
           this.region_b.writestate.writesEnabled = true;
-          cleanupMergeDir(fs, this.mergesdir);
+          this.region_a.getRegionFileSystem().cleanupMergesDir();
           break;
 
         case CLOSED_REGION_A:
@@ -600,8 +603,8 @@ public class RegionMergeTransaction {
           break;
 
         case STARTED_MERGED_REGION_CREATION:
-          cleanupMergedRegion(fs, region_a.getTableDir(),
-              this.mergedRegionInfo.getEncodedName());
+          this.region_a.getRegionFileSystem().cleanupMergedRegion(
+              this.mergedRegionInfo);
           break;
 
         case PONR:
@@ -764,59 +767,5 @@ public class RegionMergeTransaction {
     }
     return false;
   }
-
-  static Path getMergeDir(final HRegion r) {
-    return new Path(r.getRegionDir(), MERGEDIR);
-  }
-
-  /**
-   * @param fs Filesystem to use
-   * @param mergedir Directory to store temporary merge data in
-   * @throws IOException If <code>mergedir</code> already exists or we fail to
-   *           create it.
-   * @see #cleanupMergeDir(FileSystem, Path)
-   */
-  private static void createMergeDir(final FileSystem fs, final Path mergedir)
-      throws IOException {
-    if (fs.exists(mergedir)) {
-      LOG.info("The " + mergedir
-          + " directory exists.  Hence deleting it to recreate it");
-      if (!fs.delete(mergedir, true)) {
-        throw new IOException("Failed deletion of " + mergedir
-            + " before creating them again.");
-      }
-    }
-    if (!fs.mkdirs(mergedir))
-      throw new IOException("Failed create of " + mergedir);
-  }
-
-  static void cleanupMergeDir(final FileSystem fs, final Path mergedir)
-      throws IOException {
-    // Mergedir may have been cleaned up by reopen of the parent dir.
-    deleteDir(fs, mergedir, false);
-  }
-
-  /**
-   * @param fs Filesystem to use
-   * @param dir Directory to delete
-   * @param mustPreExist If true, we'll throw exception if <code>dir</code> does
-   *          not preexist, else we'll just pass.
-   * @throws IOException Thrown if we fail to delete passed <code>dir</code>
-   */
-  private static void deleteDir(final FileSystem fs, final Path dir,
-      final boolean mustPreExist) throws IOException {
-    if (!fs.exists(dir)) {
-      if (mustPreExist)
-        throw new IOException(dir.toString() + " does not exist!");
-    } else if (!fs.delete(dir, true)) {
-      throw new IOException("Failed delete of " + dir);
-    }
-  }
-
-  private static void cleanupMergedRegion(final FileSystem fs,
-      final Path tabledir, final String encodedName) throws IOException {
-    Path regiondir = HRegion.getRegionDir(tabledir, encodedName);
-    // Dir may not preexist.
-    deleteDir(fs, regiondir, false);
-  }
 }
+

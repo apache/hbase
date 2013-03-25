@@ -245,8 +245,8 @@ public class TestHRegion extends HBaseTestCase {
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, conf, family);
     try {
-      Path regiondir = region.getRegionDir();
-      FileSystem fs = region.getFilesystem();
+      Path regiondir = region.getRegionFileSystem().getRegionDir();
+      FileSystem fs = region.getRegionFileSystem().getFileSystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
 
       Path recoveredEditsDir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
@@ -257,8 +257,7 @@ public class TestHRegion extends HBaseTestCase {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        HLog.Writer writer = HLogFactory.createWriter(fs,
-            recoveredEdits, conf);
+        HLog.Writer writer = HLogFactory.createWriter(fs, recoveredEdits, conf);
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
@@ -273,8 +272,7 @@ public class TestHRegion extends HBaseTestCase {
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
           Bytes.BYTES_COMPARATOR);
       for (Store store : region.getStores().values()) {
-        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
-            minSeqId - 1);
+        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId - 1);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
@@ -297,8 +295,8 @@ public class TestHRegion extends HBaseTestCase {
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, conf, family);
     try {
-      Path regiondir = region.getRegionDir();
-      FileSystem fs = region.getFilesystem();
+      Path regiondir = region.getRegionFileSystem().getRegionDir();
+      FileSystem fs = region.getRegionFileSystem().getFileSystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
 
       Path recoveredEditsDir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
@@ -309,8 +307,7 @@ public class TestHRegion extends HBaseTestCase {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        HLog.Writer writer = HLogFactory.createWriter(fs,
-            recoveredEdits, conf);
+        HLog.Writer writer = HLogFactory.createWriter(fs, recoveredEdits, conf);
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
@@ -354,13 +351,12 @@ public class TestHRegion extends HBaseTestCase {
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, conf, family);
     try {
-      Path regiondir = region.getRegionDir();
-      FileSystem fs = region.getFilesystem();
+      Path regiondir = region.getRegionFileSystem().getRegionDir();
+      FileSystem fs = region.getRegionFileSystem().getFileSystem();
 
       Path recoveredEditsDir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
       for (int i = 1000; i < 1050; i += 10) {
-        Path recoveredEdits = new Path(
-            recoveredEditsDir, String.format("%019d", i));
+        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         FSDataOutputStream dos=  fs.create(recoveredEdits);
         dos.writeInt(i);
         dos.close();
@@ -1713,9 +1709,9 @@ public class TestHRegion extends HBaseTestCase {
           openClosedRegion(subregions[i]);
           subregions[i].compactStores();
         }
-        Path oldRegionPath = region.getRegionDir();
-        Path oldRegion1 = subregions[0].getRegionDir();
-        Path oldRegion2 = subregions[1].getRegionDir();
+        Path oldRegionPath = region.getRegionFileSystem().getRegionDir();
+        Path oldRegion1 = subregions[0].getRegionFileSystem().getRegionDir();
+        Path oldRegion2 = subregions[1].getRegionFileSystem().getRegionDir();
         long startTime = System.currentTimeMillis();
         region = HRegion.mergeAdjacent(subregions[0], subregions[1]);
         LOG.info("Merge regions elapsed time: " +
@@ -3491,8 +3487,8 @@ public class TestHRegion extends HBaseTestCase {
 
     // Create a region and skip the initialization (like CreateTableHandler)
     HRegion region = HRegion.createHRegion(hri, rootDir, conf, htd, null, false, true);
-    Path regionDir = region.getRegionDir();
-    FileSystem fs = region.getFilesystem();
+    Path regionDir = region.getRegionFileSystem().getRegionDir();
+    FileSystem fs = region.getRegionFileSystem().getFileSystem();
     HRegion.closeHRegion(region);
 
     Path regionInfoFile = new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE);
@@ -3503,7 +3499,7 @@ public class TestHRegion extends HBaseTestCase {
 
     // Try to open the region
     region = HRegion.openHRegion(rootDir, hri, htd, null, conf);
-    assertEquals(regionDir, region.getRegionDir());
+    assertEquals(regionDir, region.getRegionFileSystem().getRegionDir());
     HRegion.closeHRegion(region);
 
     // Verify that the .regioninfo file is still there
@@ -3516,7 +3512,7 @@ public class TestHRegion extends HBaseTestCase {
       fs.exists(regionInfoFile));
 
     region = HRegion.openHRegion(rootDir, hri, htd, null, conf);
-    assertEquals(regionDir, region.getRegionDir());
+    assertEquals(regionDir, region.getRegionFileSystem().getRegionDir());
     HRegion.closeHRegion(region);
 
     // Verify that the .regioninfo file is still there

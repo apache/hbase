@@ -142,7 +142,8 @@ public class TestHFileArchiving {
     FileSystem fs = UTIL.getTestFileSystem();
 
     // now attempt to depose the region
-    Path regionDir = HRegion.getRegionDir(region.getTableDir().getParent(), region.getRegionInfo());
+    Path rootDir = region.getRegionFileSystem().getTableDir().getParent();
+    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
 
     HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
 
@@ -175,7 +176,7 @@ public class TestHFileArchiving {
     assertEquals(1, servingRegions.size());
     HRegion region = servingRegions.get(0);
 
-    FileSystem fs = region.getFilesystem();
+    FileSystem fs = region.getRegionFileSystem().getFileSystem();
 
     // make sure there are some files in the regiondir
     Path rootDir = FSUtils.getRootDir(fs.getConf());
@@ -241,8 +242,7 @@ public class TestHFileArchiving {
     clearArchiveDirectory();
 
     // then get the current store files
-    Path regionDir = region.getRegionDir();
-    List<String> storeFiles = getRegionStoreFiles(fs, regionDir);
+    List<String> storeFiles = getRegionStoreFiles(region);
 
     // then delete the table so the hfiles get archived
     UTIL.deleteTable(TABLE_NAME);
@@ -302,8 +302,7 @@ public class TestHFileArchiving {
     clearArchiveDirectory();
 
     // then get the current store files
-    Path regionDir = region.getRegionDir();
-    List<String> storeFiles = getRegionStoreFiles(fs, regionDir);
+    List<String> storeFiles = getRegionStoreFiles(region);
 
     // then delete the table so the hfiles get archived
     UTIL.getHBaseAdmin().deleteColumn(TABLE_NAME, TEST_FAM);
@@ -419,8 +418,9 @@ public class TestHFileArchiving {
     return fileNames;
   }
 
-  private List<String> getRegionStoreFiles(final FileSystem fs, final Path regionDir) 
-      throws IOException {
+  private List<String> getRegionStoreFiles(final HRegion region) throws IOException {
+    Path regionDir = region.getRegionFileSystem().getRegionDir();
+    FileSystem fs = region.getRegionFileSystem().getFileSystem();
     List<String> storeFiles = getAllFileNames(fs, regionDir);
     // remove all the non-storefile named files for the region
     for (int i = 0; i < storeFiles.size(); i++) {

@@ -95,9 +95,9 @@ public class TestSplitTransaction {
 
   @After public void teardown() throws IOException {
     if (this.parent != null && !this.parent.isClosed()) this.parent.close();
-    if (this.fs.exists(this.parent.getRegionDir()) &&
-        !this.fs.delete(this.parent.getRegionDir(), true)) {
-      throw new IOException("Failed delete of " + this.parent.getRegionDir());
+    Path regionDir = this.parent.getRegionFileSystem().getRegionDir();
+    if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
+      throw new IOException("Failed delete of " + regionDir);
     }
     if (this.wal != null) this.wal.closeAndDelete();
     this.fs.delete(this.testdir, true);
@@ -136,11 +136,9 @@ public class TestSplitTransaction {
     // Make sure that region a and region b are still in the filesystem, that
     // they have not been removed; this is supposed to be the case if we go
     // past point of no return.
-    Path tableDir =  this.parent.getRegionDir().getParent();
-    Path daughterADir =
-      new Path(tableDir, spiedUponSt.getFirstDaughter().getEncodedName());
-    Path daughterBDir =
-      new Path(tableDir, spiedUponSt.getSecondDaughter().getEncodedName());
+    Path tableDir =  this.parent.getRegionFileSystem().getTableDir();
+    Path daughterADir = new Path(tableDir, spiedUponSt.getFirstDaughter().getEncodedName());
+    Path daughterBDir = new Path(tableDir, spiedUponSt.getSecondDaughter().getEncodedName());
     assertTrue(TEST_UTIL.getTestFileSystem().exists(daughterADir));
     assertTrue(TEST_UTIL.getTestFileSystem().exists(daughterBDir));
   }
@@ -154,7 +152,11 @@ public class TestSplitTransaction {
   }
 
   private SplitTransaction prepareGOOD_SPLIT_ROW() {
-    SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
+    return prepareGOOD_SPLIT_ROW(this.parent);
+  }
+
+  private SplitTransaction prepareGOOD_SPLIT_ROW(final HRegion parentRegion) {
+    SplitTransaction st = new SplitTransaction(parentRegion, GOOD_SPLIT_ROW);
     assertTrue(st.prepare());
     return st;
   }
@@ -165,6 +167,7 @@ public class TestSplitTransaction {
   @Test public void testPrepareWithRegionsWithReference() throws IOException {
     HStore storeMock = Mockito.mock(HStore.class);
     when(storeMock.hasReferences()).thenReturn(true);
+    when(storeMock.getFamily()).thenReturn(new HColumnDescriptor("cf"));
     when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
     this.parent.stores.put(Bytes.toBytes(""), storeMock);
 
@@ -214,13 +217,13 @@ public class TestSplitTransaction {
     when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
     PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
     // Do some assertions about execution.
-    assertTrue(this.fs.exists(st.getSplitDir()));
+    assertTrue(this.fs.exists(this.parent.getRegionFileSystem().getSplitsDir()));
     // Assert the parent region is closed.
     assertTrue(this.parent.isClosed());
 
     // Assert splitdir is empty -- because its content will have been moved out
     // to be under the daughter region dirs.
-    assertEquals(0, this.fs.listStatus(st.getSplitDir()).length);
+    assertEquals(0, this.fs.listStatus(this.parent.getRegionFileSystem().getSplitsDir()).length);
     // Check daughters have correct key span.
     assertTrue(Bytes.equals(this.parent.getStartKey(), daughters.getFirst().getStartKey()));
     assertTrue(Bytes.equals(GOOD_SPLIT_ROW, daughters.getFirst().getEndKey()));
@@ -249,9 +252,10 @@ public class TestSplitTransaction {
     assertEquals(rowcount, parentRowCount);
 
     // Start transaction.
-    SplitTransaction st = prepareGOOD_SPLIT_ROW();
+    HRegion spiedRegion = spy(this.parent);
+    SplitTransaction st = prepareGOOD_SPLIT_ROW(spiedRegion);
     SplitTransaction spiedUponSt = spy(st);
-    when(spiedUponSt.createDaughterRegion(spiedUponSt.getSecondDaughter())).
+    when(spiedRegion.createDaughterRegionFromSplits(spiedUponSt.getSecondDaughter())).
       thenThrow(new MockedFailedDaughterCreation());
     // Run the execute.  Look at what it returns.
     boolean expectedException = false;

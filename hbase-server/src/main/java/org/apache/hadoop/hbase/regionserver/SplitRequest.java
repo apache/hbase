@@ -107,13 +107,12 @@ class SplitRequest implements Runnable {
         return;
       }
       LOG.info("Region split, META updated, and report to master. Parent="
-          + parent.getRegionInfo().getRegionNameAsString() + ", new regions: "
+          + parent.getRegionNameAsString() + ", new regions: "
           + st.getFirstDaughter().getRegionNameAsString() + ", "
           + st.getSecondDaughter().getRegionNameAsString() + ". Split took "
           + StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
     } catch (IOException ex) {
-      LOG.error("Split failed " + this, RemoteExceptionHandler
-          .checkIOException(ex));
+      LOG.error("Split failed " + this, RemoteExceptionHandler.checkIOException(ex));
       server.checkFileSystem();
     } finally {
       if (this.parent.getCoprocessorHost() != null) {

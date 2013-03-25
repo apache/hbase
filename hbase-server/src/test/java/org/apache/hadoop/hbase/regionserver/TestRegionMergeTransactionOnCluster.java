@@ -162,15 +162,15 @@ public class TestRegionMergeTransactionOnCluster {
       admin.compact(mergedRegionInfo.getRegionName());
       // wait until merged region doesn't have reference file
       long timeout = System.currentTimeMillis() + waitTime;
+      HRegionFileSystem hrfs = new HRegionFileSystem(
+          TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo);
       while (System.currentTimeMillis() < timeout) {
-        if (!HRegion.hasReferences(fs, rootDir, mergedRegionInfo,
-            tableDescritor)) {
+        if (!hrfs.hasReferences(tableDescritor)) {
           break;
         }
         Thread.sleep(50);
       }
-      assertFalse(HRegion.hasReferences(fs, rootDir, mergedRegionInfo,
-          tableDescritor));
+      assertFalse(hrfs.hasReferences(tableDescritor));
 
       // run CatalogJanitor to clean merge references in META and archive the
       // files of merging regions
@@ -295,3 +295,4 @@ public class TestRegionMergeTransactionOnCluster {
   }
 
 }
+

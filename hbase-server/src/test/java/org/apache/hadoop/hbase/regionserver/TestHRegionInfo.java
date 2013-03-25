@@ -68,13 +68,13 @@ public class TestHRegionInfo {
     assertEquals(modtime, modtime2);
     // Now load the file.
     HRegionInfo deserializedHri = HRegionFileSystem.loadRegionInfoFileContent(
-        FileSystem.get(htu.getConfiguration()), r.getRegionDir());
+        r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
     assertTrue(hri.equals(deserializedHri));
   }
 
   long getModTime(final HRegion r) throws IOException {
-    FileStatus [] statuses =
-      r.getFilesystem().listStatus(new Path(r.getRegionDir(), HRegionFileSystem.REGION_INFO_FILE));
+    FileStatus[] statuses = r.getRegionFileSystem().getFileSystem().listStatus(
+      new Path(r.getRegionFileSystem().getRegionDir(), HRegionFileSystem.REGION_INFO_FILE));
     assertTrue(statuses != null && statuses.length == 1);
     return statuses[0].getModificationTime();
   }
