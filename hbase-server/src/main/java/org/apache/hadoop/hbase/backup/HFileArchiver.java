@@ -186,19 +186,19 @@ public class HFileArchiver {
    * Remove the store files, either by archiving them or outright deletion
    * @param conf {@link Configuration} to examine to determine the archive directory
    * @param fs the filesystem where the store files live
-   * @param parent Parent region hosting the store files
+   * @param regionInfo {@link HRegionInfo} of the region hosting the store files
    * @param family the family hosting the store files
    * @param compactedFiles files to be disposed of. No further reading of these files should be
    *          attempted; otherwise likely to cause an {@link IOException}
    * @throws IOException if the files could not be correctly disposed.
    */
-  public static void archiveStoreFiles(Configuration conf, FileSystem fs, HRegion parent,
-      byte[] family, Collection<StoreFile> compactedFiles) throws IOException {
+  public static void archiveStoreFiles(Configuration conf, FileSystem fs, HRegionInfo regionInfo,
+      Path tableDir, byte[] family, Collection<StoreFile> compactedFiles) throws IOException {
 
     // sometimes in testing, we don't have rss, so we need to check for that
     if (fs == null) {
       LOG.warn("Passed filesystem is null, so just deleting the files without archiving for region:"
-          + Bytes.toString(parent.getRegionName()) + ", family:" + Bytes.toString(family));
+          + Bytes.toString(regionInfo.getRegionName()) + ", family:" + Bytes.toString(family));
       deleteStoreFilesWithoutArchiving(compactedFiles);
       return;
     }
@@ -210,10 +210,10 @@ public class HFileArchiver {
     }
 
     // build the archive path
-    if (parent == null || family == null) throw new IOException(
-        "Need to have a parent region and a family to archive from.");
+    if (regionInfo == null || family == null) throw new IOException(
+        "Need to have a region and a family to archive from.");
 
-    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, parent, family);
+    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
 
     // make sure we don't archive if we can't and that the archive dir exists
     if (!fs.mkdirs(storeArchiveDir)) {
@@ -231,7 +231,36 @@ public class HFileArchiver {
     // do the actual archive
     if (!resolveAndArchive(fs, storeArchiveDir, storeFiles)) {
       throw new IOException("Failed to archive/delete all the files for region:"
-          + Bytes.toString(parent.getRegionName()) + ", family:" + Bytes.toString(family)
+          + Bytes.toString(regionInfo.getRegionName()) + ", family:" + Bytes.toString(family)
+          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
+    }
+  }
+
+  /**
+   * Archive the store file
+   * @param fs the filesystem where the store files live
+   * @param regionInfo region hosting the store files
+   * @param conf {@link Configuration} to examine to determine the archive directory
+   * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
+   * @param family the family hosting the store files
+   * @param storeFile file to be archived
+   * @throws IOException if the files could not be correctly disposed.
+   */
+  public static void archiveStoreFile(Configuration conf, FileSystem fs, HRegionInfo regionInfo,
+      Path tableDir, byte[] family, Path storeFile) throws IOException {
+    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
+    // make sure we don't archive if we can't and that the archive dir exists
+    if (!fs.mkdirs(storeArchiveDir)) {
+      throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
+          + Bytes.toString(family) + ", deleting compacted files instead.");
+    }
+
+    // do the actual archive
+    long start = EnvironmentEdgeManager.currentTimeMillis();
+    File file = new FileablePath(fs, storeFile);
+    if (!resolveAndArchiveFile(storeArchiveDir, file, Long.toString(start))) {
+      throw new IOException("Failed to archive/delete the file for region:"
+          + regionInfo.getRegionNameAsString() + ", family:" + Bytes.toString(family)
           + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
     }
   }

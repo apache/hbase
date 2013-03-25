@@ -93,17 +93,16 @@ public class TestDefaultCompactSelection extends TestCase {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
 
-    hlog = HLogFactory.createHLog(fs, basedir,
-        logName, conf);
+    hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
     region = HRegion.createHRegion(info, basedir, conf, htd);
     HRegion.closeHRegion(region);
     Path tableDir = new Path(basedir, Bytes.toString(htd.getName()));
     region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
 
-    store = new HStore(basedir, region, hcd, fs, conf);
+    store = new HStore(region, hcd, conf);
 
-    TEST_FILE = StoreFile.getRandomFilename(fs, store.getHomedir());
-    fs.create(TEST_FILE);
+    TEST_FILE = region.getRegionFileSystem().createTempName();
+    fs.createNewFile(TEST_FILE);
   }
 
   @After

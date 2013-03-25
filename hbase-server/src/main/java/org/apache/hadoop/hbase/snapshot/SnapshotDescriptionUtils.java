@@ -206,7 +206,7 @@ public class SnapshotDescriptionUtils {
    * Get the directory to store the snapshot instance
    * @param snapshotsDir hbase-global directory for storing all snapshots
    * @param snapshotName name of the snapshot to take
-   * @return
+   * @return the final directory for the completed snapshot
    */
   private static final Path getCompletedSnapshotDir(final Path snapshotsDir, String snapshotName) {
     return new Path(snapshotsDir, snapshotName);

@@ -70,9 +70,9 @@ public class TestHFileLinkCleaner {
 
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
-          tableName, hri.getEncodedName(), familyName);
+          tableName, hri, familyName);
     Path archiveLinkStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
-          tableLinkName, hriLink.getEncodedName(), familyName);
+          tableLinkName, hriLink, familyName);
 
     // Create hfile /hbase/table-link/region/cf/getEncodedName.HFILE(conf);
     Path familyPath = getFamilyDirPath(archiveDir, tableName, hri.getEncodedName(), familyName);

@@ -74,19 +74,6 @@ public class TakeSnapshotUtils {
   }
 
   /**
-   * Get the home directory for store-level snapshot files.
-   * <p>
-   * Specific files per store are kept in a similar layout as per the current directory layout.
-   * @param regionDir snapshot directory for the parent region, <b>not</b> the standard region
-   *          directory. See {@link #getRegionSnapshotDirectory}
-   * @param family name of the store to snapshot
-   * @return path to the snapshot home directory for the store/family
-   */
-  public static Path getStoreSnapshotDirectory(Path regionDir, String family) {
-    return HStore.getStoreHomedir(regionDir, Bytes.toBytes(family));
-  }
-
-  /**
    * Get the snapshot directory for each family to be added to the the snapshot
    * @param snapshot description of the snapshot being take
    * @param snapshotRegionDir directory in the snapshot where the region directory information
@@ -102,7 +89,7 @@ public class TakeSnapshotUtils {
     List<Path> familyDirs = new ArrayList<Path>(families.length);
     for (FileStatus family : families) {
       // build the reference directory name
-      familyDirs.add(getStoreSnapshotDirectory(snapshotRegionDir, family.getPath().getName()));
+      familyDirs.add(new Path(snapshotRegionDir, family.getPath().getName()));
     }
     return familyDirs;
   }

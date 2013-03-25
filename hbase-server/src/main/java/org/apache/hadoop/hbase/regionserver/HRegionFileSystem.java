@@ -22,6 +22,9 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,7 +41,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -115,6 +117,214 @@ public class HRegionFileSystem {
    */
   public void cleanupTempDir() throws IOException {
     FSUtils.deleteDirectory(fs, getTempDir());
+  }
+
+  // ===========================================================================
+  //  Store/StoreFile Helpers
+  // ===========================================================================
+  /**
+   * Returns the directory path of the specified family
+   * @param familyName Column Family Name
+   * @return {@link Path} to the directory of the specified family
+   */
+  Path getStoreDir(final String familyName) {
+    return new Path(this.getRegionDir(), familyName);
+  }
+
+  /**
+   * Create the store directory for the specified family name
+   * @param familyName Column Family Name
+   * @return {@link Path} to the directory of the specified family
+   * @throws IOException if the directory creation fails.
+   */
+  public Path createStoreDir(final String familyName) throws IOException {
+    Path storeDir = getStoreDir(familyName);
+    if (!fs.exists(storeDir) && !fs.mkdirs(storeDir)) {
+      throw new IOException("Failed create of: " + storeDir);
+    }
+    return storeDir;
+  }
+
+  /**
+   * Returns the store files available for the family.
+   * This methods performs the filtering based on the valid store files.
+   * @param familyName Column Family Name
+   * @return a set of {@link StoreFileInfo} for the specified family.
+   */
+  public Collection<StoreFileInfo> getStoreFiles(final byte[] familyName) throws IOException {
+    return getStoreFiles(Bytes.toString(familyName));
+  }
+
+  /**
+   * Returns the store files available for the family.
+   * This methods performs the filtering based on the valid store files.
+   * @param familyName Column Family Name
+   * @return a set of {@link StoreFileInfo} for the specified family.
+   */
+  public Collection<StoreFileInfo> getStoreFiles(final String familyName) throws IOException {
+    Path familyDir = getStoreDir(familyName);
+    FileStatus[] files = FSUtils.listStatus(this.fs, familyDir);
+    if (files == null) return null;
+
+    ArrayList<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>(files.length);
+    for (FileStatus status: files) {
+      if (!StoreFileInfo.isValid(status)) continue;
+
+      storeFiles.add(new StoreFileInfo(this.conf, this.fs, status));
+    }
+    return storeFiles;
+  }
+
+  /**
+   * @return the set of families present on disk
+   */
+  public Collection<String> getFamilies() throws IOException {
+    FileStatus[] fds = FSUtils.listStatus(fs, getRegionDir(), new FSUtils.FamilyDirFilter(fs));
+    if (fds == null) return null;
+
+    ArrayList<String> families = new ArrayList<String>(fds.length);
+    for (FileStatus status: fds) {
+      families.add(status.getPath().getName());
+    }
+
+    return families;
+  }
+
+  /**
+   * Generate a unique file name, used by createTempName() and commitStoreFile()
+   * @param suffix extra information to append to the generated name
+   * @return Unique file name
+   */
+  private static String generateUniqueName(final String suffix) {
+    String name = UUID.randomUUID().toString().replaceAll("-", "");
+    if (suffix != null) name += suffix;
+    return name;
+  }
+
+  /**
+   * Generate a unique temporary Path. Used in conjuction with commitStoreFile()
+   * to get a safer file creation.
+   * <code>
+   * Path file = fs.createTempName();
+   * ...StoreFile.Writer(file)...
+   * fs.commitStoreFile("family", file);
+   * </code>
+   *
+   * @return Unique {@link Path} of the temporary file
+   */
+  public Path createTempName() {
+    return createTempName(null);
+  }
+
+  /**
+   * Generate a unique temporary Path. Used in conjuction with commitStoreFile()
+   * to get a safer file creation.
+   * <code>
+   * Path file = fs.createTempName();
+   * ...StoreFile.Writer(file)...
+   * fs.commitStoreFile("family", file);
+   * </code>
+   *
+   * @param suffix extra information to append to the generated name
+   * @return Unique {@link Path} of the temporary file
+   */
+  public Path createTempName(final String suffix) {
+    return new Path(getTempDir(), generateUniqueName(suffix));
+  }
+
+  /**
+   * Move the file from a build/temp location to the main family store directory.
+   * @param familyName Family that will gain the file
+   * @param buildPath {@link Path} to the file to commit.
+   * @return The new {@link Path} of the committed file
+   * @throws IOException
+   */
+  public Path commitStoreFile(final String familyName, final Path buildPath) throws IOException {
+    return commitStoreFile(familyName, buildPath, -1, false);
+  }
+
+  /**
+   * Move the file from a build/temp location to the main family store directory.
+   * @param familyName Family that will gain the file
+   * @param buildPath {@link Path} to the file to commit.
+   * @param seqNum Sequence Number to append to the file name (less then 0 if no sequence number)
+   * @param generateNewName False if you want to keep the buildPath name
+   * @return The new {@link Path} of the committed file
+   * @throws IOException
+   */
+  public Path commitStoreFile(final String familyName, final Path buildPath,
+      final long seqNum, final boolean generateNewName) throws IOException {
+    Path storeDir = getStoreDir(familyName);
+    fs.mkdirs(storeDir);
+    String name = buildPath.getName();
+    if (generateNewName) {
+      name = generateUniqueName((seqNum < 0) ? null : "_SeqId_" + seqNum + "_");
+    }
+    Path dstPath = new Path(storeDir, name);
+    if (!fs.exists(buildPath)) {
+      throw new FileNotFoundException(buildPath.toString());
+    }
+    LOG.debug("Committing store file " + buildPath + " as " + dstPath);
+    if (!fs.rename(buildPath, dstPath)) {
+      throw new IOException("Failed rename of " + buildPath + " to " + dstPath);
+    }
+    return dstPath;
+  }
+
+  /**
+   * Archives the specified store file from the specified family.
+   * @param familyName Family that contains the store files
+   * @param filePath {@link Path} to the store file to remove
+   * @throws IOException if the archiving fails
+   */
+  public void removeStoreFile(final String familyName, final Path filePath)
+      throws IOException {
+    HFileArchiver.archiveStoreFile(this.conf, this.fs, this.regionInfo,
+        this.tableDir, Bytes.toBytes(familyName), filePath);
+  }
+
+  /**
+   * Closes and archives the specified store files from the specified family.
+   * @param familyName Family that contains the store files
+   * @param storeFiles set of store files to remove
+   * @throws IOException if the archiving fails
+   */
+  public void removeStoreFiles(final String familyName, final Collection<StoreFile> storeFiles)
+      throws IOException {
+    HFileArchiver.archiveStoreFiles(this.conf, this.fs, this.regionInfo,
+        this.tableDir, Bytes.toBytes(familyName), storeFiles);
+  }
+
+  /**
+   * Bulk load: Add a specified store file to the specified family.
+   * If the source file is on the same different file-system is moved from the
+   * source location to the destination location, otherwise is copied over.
+   *
+   * @param familyName Family that will gain the file
+   * @param srcPath {@link Path} to the file to import
+   * @param seqNum Bulk Load sequence number
+   * @return The destination {@link Path} of the bulk loaded file
+   * @throws IOException
+   */
+  public Path bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
+      throws IOException {
+    // Copy the file if it's on another filesystem
+    FileSystem srcFs = srcPath.getFileSystem(conf);
+    FileSystem desFs = fs instanceof HFileSystem ? ((HFileSystem)fs).getBackingFs() : fs;
+
+    // We can't compare FileSystem instances as equals() includes UGI instance
+    // as part of the comparison and won't work when doing SecureBulkLoad
+    // TODO deal with viewFS
+    if (!srcFs.getUri().equals(desFs.getUri())) {
+      LOG.info("Bulk-load file " + srcPath + " is on different filesystem than " +
+          "the destination store. Copying file over to destination filesystem.");
+      Path tmpPath = createTempName();
+      FileUtil.copy(srcFs, srcPath, fs, tmpPath, false, conf);
+      LOG.info("Copied " + srcPath + " to temporary path on destination filesystem: " + tmpPath);
+      srcPath = tmpPath;
+    }
+
+    return commitStoreFile(familyName, srcPath, seqNum, true);
   }
 
   // ===========================================================================

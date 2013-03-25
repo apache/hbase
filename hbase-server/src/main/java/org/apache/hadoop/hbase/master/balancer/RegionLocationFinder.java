@@ -125,8 +125,7 @@ class RegionLocationFinder {
       HTableDescriptor tableDescriptor = getTableDescriptor(region.getTableName());
       if (tableDescriptor != null) {
         HDFSBlocksDistribution blocksDistribution =
-            HRegion.computeHDFSBlocksDistribution(getConf(), tableDescriptor,
-              region.getEncodedName());
+            HRegion.computeHDFSBlocksDistribution(getConf(), tableDescriptor, region);
         List<String> topHosts = blocksDistribution.getTopHosts();
         topServerNames = mapHostNameToServerName(topHosts);
       }

@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
@@ -85,16 +86,18 @@ public class HalfStoreFileReader extends StoreFile.Reader {
    * Creates a half file reader for a hfile referred to by an hfilelink.
    * @param fs fileystem to read from
    * @param p path to hfile
-   * @param link
+   * @param in {@link FSDataInputStream}
+   * @param inNoChecksum {@link FSDataInputStream} opened on a filesystem without checksum
+   * @param size Full size of the hfile file
    * @param cacheConf
    * @param r original reference file (contains top or bottom)
    * @param preferredEncodingInCache
    * @throws IOException
    */
-  public HalfStoreFileReader(final FileSystem fs, final Path p, final HFileLink link,
-      final CacheConfig cacheConf, final Reference r,
-      DataBlockEncoding preferredEncodingInCache) throws IOException {
-    super(fs, p, link, link.getFileStatus(fs).getLen(), cacheConf, preferredEncodingInCache, true);
+  public HalfStoreFileReader(final FileSystem fs, final Path p, final FSDataInputStream in,
+      final FSDataInputStream inNoChecksum, long size, final CacheConfig cacheConf,
+      final Reference r, final DataBlockEncoding preferredEncodingInCache) throws IOException {
+    super(fs, p, in, inNoChecksum, size, cacheConf, preferredEncodingInCache, true);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom.  Have to look in files to find
     // actual last and first keys for bottom and top halves.  Half-files don't

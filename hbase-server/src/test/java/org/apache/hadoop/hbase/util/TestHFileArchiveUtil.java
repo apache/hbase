@@ -65,14 +65,5 @@ public class TestHFileArchiveUtil {
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));
     conf = new Configuration();
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));
-
-    // do a little mocking of a region to get the same results
-    HRegion mockRegion = Mockito.mock(HRegion.class);
-    Mockito.when(mockRegion.getRegionInfo()).thenReturn(region);
-    Mockito.when(mockRegion.getTableDir()).thenReturn(tabledir);
-
-    assertNotNull(HFileArchiveUtil.getStoreArchivePath(null, mockRegion, family));
-    conf = new Configuration();
-    assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, mockRegion, family));
   }
 }

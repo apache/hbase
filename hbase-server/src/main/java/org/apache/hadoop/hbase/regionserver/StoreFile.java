@@ -30,8 +30,6 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,9 +44,6 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -65,7 +60,6 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -126,28 +120,14 @@ public class StoreFile {
   // Need to make it 8k for testing.
   public static final int DEFAULT_BLOCKSIZE_SMALL = 8 * 1024;
 
+  private final StoreFileInfo fileInfo;
   private final FileSystem fs;
-
-  // This file's path.
-  private final Path path;
-
-  // If this storefile references another, this is the reference instance.
-  private Reference reference;
-
-  // If this StoreFile references another, this is the other files path.
-  private Path referencePath;
-
-  // If this storefile is a link to another, this is the link instance.
-  private HFileLink link;
 
   // Block cache configuration and reference.
   private final CacheConfig cacheConf;
 
   // What kind of data block encoding will be used
   private final HFileDataBlockEncoder dataBlockEncoder;
-
-  // HDFS blocks distribution information
-  private HDFSBlocksDistribution hdfsBlocksDistribution;
 
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
@@ -184,27 +164,6 @@ public class StoreFile {
    */
   private Map<byte[], byte[]> metadataMap;
 
-  /**
-   * A non-capture group, for hfiles, so that this can be embedded.
-   * HFiles are uuid ([0-9a-z]+). Bulk loaded hfiles has (_SeqId_[0-9]+_) has suffix.
-   */
-  public static final String HFILE_NAME_REGEX = "[0-9a-f]+(?:_SeqId_[0-9]+_)?";
-
-  /** Regex that will work for hfiles */
-  private static final Pattern HFILE_NAME_PATTERN =
-    Pattern.compile("^(" + HFILE_NAME_REGEX + ")");
-
-  /**
-   * Regex that will work for straight reference names (<hfile>.<parentEncRegion>)
-   * and hfilelink reference names (<table>=<region>-<hfile>.<parentEncRegion>)
-   * If reference, then the regex has more than just one group.
-   * Group 1, hfile/hfilelink pattern, is this file's id.
-   * Group 2 '(.+)' is the reference's parent region name.
-   */
-  private static final Pattern REF_NAME_PATTERN =
-    Pattern.compile(String.format("^(%s|%s)\\.(.+)$",
-      HFILE_NAME_REGEX, HFileLink.LINK_NAME_REGEX));
-
   // StoreFile.Reader
   private volatile Reader reader;
 
@@ -233,64 +192,63 @@ public class StoreFile {
    * @param dataBlockEncoder data block encoding algorithm.
    * @throws IOException When opening the reader fails.
    */
-  public StoreFile(final FileSystem fs,
-            final Path p,
-            final Configuration conf,
-            final CacheConfig cacheConf,
-            final BloomType cfBloomType,
-            final HFileDataBlockEncoder dataBlockEncoder)
-      throws IOException {
+  public StoreFile(final FileSystem fs, final Path p, final Configuration conf,
+        final CacheConfig cacheConf, final BloomType cfBloomType,
+        final HFileDataBlockEncoder dataBlockEncoder) throws IOException {
+    this(fs, new StoreFileInfo(conf, fs, p), conf, cacheConf, cfBloomType, dataBlockEncoder);
+  }
+
+
+  /**
+   * Constructor, loads a reader and it's indices, etc. May allocate a
+   * substantial amount of ram depending on the underlying files (10-20MB?).
+   *
+   * @param fs  The current file system to use.
+   * @param fileInfo  The store file information.
+   * @param conf  The current configuration.
+   * @param cacheConf  The cache configuration and block cache reference.
+   * @param cfBloomType The bloom type to use for this store file as specified
+   *          by column family configuration. This may or may not be the same
+   *          as the Bloom filter type actually present in the HFile, because
+   *          column family configuration might change. If this is
+   *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
+   * @param dataBlockEncoder data block encoding algorithm.
+   * @throws IOException When opening the reader fails.
+   */
+  public StoreFile(final FileSystem fs, final StoreFileInfo fileInfo, final Configuration conf,
+      final CacheConfig cacheConf,  final BloomType cfBloomType,
+      final HFileDataBlockEncoder dataBlockEncoder) throws IOException {
     this.fs = fs;
-    this.path = p;
+    this.fileInfo = fileInfo;
     this.cacheConf = cacheConf;
     this.dataBlockEncoder =
         dataBlockEncoder == null ? NoOpDataBlockEncoder.INSTANCE
             : dataBlockEncoder;
 
-    if (HFileLink.isHFileLink(p)) {
-      this.link = new HFileLink(conf, p);
-      LOG.debug("Store file " + p + " is a link");
-    } else if (isReference(p)) {
-      this.reference = Reference.read(fs, p);
-      this.referencePath = getReferredToFile(this.path);
-      if (HFileLink.isHFileLink(this.referencePath)) {
-        this.link = new HFileLink(conf, this.referencePath);
-      }
-      LOG.debug("Store file " + p + " is a " + reference.getFileRegion() +
-        " reference to " + this.referencePath);
-    } else if (!isHFile(p)) {
-      throw new IOException("path=" + path + " doesn't look like a valid StoreFile");
-    }
-
     if (BloomFilterFactory.isGeneralBloomEnabled(conf)) {
       this.cfBloomType = cfBloomType;
     } else {
-      LOG.info("Ignoring bloom filter check for file " + path + ": " +
+      LOG.info("Ignoring bloom filter check for file " + this.getPath() + ": " +
           "cfBloomType=" + cfBloomType + " (disabled in config)");
       this.cfBloomType = BloomType.NONE;
     }
 
     // cache the modification time stamp of this store file
-    FileStatus[] stats = FSUtils.listStatus(fs, p, null);
-    if (stats != null && stats.length == 1) {
-      this.modificationTimeStamp = stats[0].getModificationTime();
-    } else {
-      this.modificationTimeStamp = 0;
-    }
+    this.modificationTimeStamp = fileInfo.getModificationTime();
   }
 
   /**
    * @return Path or null if this StoreFile was made with a Stream.
    */
   public Path getPath() {
-    return this.path;
+    return this.fileInfo.getPath();
   }
 
   /**
    * @return The Store/ColumnFamily this file belongs to.
    */
   byte [] getFamily() {
-    return Bytes.toBytes(this.path.getParent().getName());
+    return Bytes.toBytes(this.getPath().getParent().getName());
   }
 
   /**
@@ -298,64 +256,7 @@ public class StoreFile {
    * else may get wrong answer.
    */
   public boolean isReference() {
-    return this.reference != null;
-  }
-
-  /**
-   * @return <tt>true</tt> if this StoreFile is an HFileLink
-   */
-  boolean isLink() {
-    return this.link != null && this.reference == null;
-  }
-
-  private static boolean isHFile(final Path path) {
-    Matcher m = HFILE_NAME_PATTERN.matcher(path.getName());
-    return m.matches() && m.groupCount() > 0;
-  }
-
-  /**
-   * @param p Path to check.
-   * @return True if the path has format of a HStoreFile reference.
-   */
-  public static boolean isReference(final Path p) {
-    return isReference(p.getName());
-  }
-
-  /**
-   * @param name file name to check.
-   * @return True if the path has format of a HStoreFile reference.
-   */
-  public static boolean isReference(final String name) {
-    Matcher m = REF_NAME_PATTERN.matcher(name);
-    return m.matches() && m.groupCount() > 1;
-  }
-
-  /*
-   * Return path to the file referred to by a Reference.  Presumes a directory
-   * hierarchy of <code>${hbase.rootdir}/tablename/regionname/familyname</code>.
-   * @param p Path to a Reference file.
-   * @return Calculated path to parent region file.
-   * @throws IllegalArgumentException when path regex fails to match.
-   */
-  public static Path getReferredToFile(final Path p) {
-    Matcher m = REF_NAME_PATTERN.matcher(p.getName());
-    if (m == null || !m.matches()) {
-      LOG.warn("Failed match of store file name " + p.toString());
-      throw new IllegalArgumentException("Failed match of store file name " +
-          p.toString());
-    }
-
-    // Other region name is suffix on the passed Reference file name
-    String otherRegion = m.group(2);
-    // Tabledir is up two directories from where Reference was written.
-    Path tableDir = p.getParent().getParent().getParent();
-    String nameStrippedOfSuffix = m.group(1);
-    LOG.debug("reference '" + p + "' to region=" + otherRegion + " hfile=" + nameStrippedOfSuffix);
-
-    // Build up new path with the referenced region in place of our current
-    // region in the reference path.  Also strip regionname suffix from name.
-    return new Path(new Path(new Path(tableDir, otherRegion),
-      p.getParent().getName()), nameStrippedOfSuffix);
+    return this.fileInfo.isReference();
   }
 
   /**
@@ -445,65 +346,7 @@ public class StoreFile {
    * calculated when store file is opened.
    */
   public HDFSBlocksDistribution getHDFSBlockDistribution() {
-    return this.hdfsBlocksDistribution;
-  }
-
-  /**
-   * helper function to compute HDFS blocks distribution of a given reference
-   * file.For reference file, we don't compute the exact value. We use some
-   * estimate instead given it might be good enough. we assume bottom part
-   * takes the first half of reference file, top part takes the second half
-   * of the reference file. This is just estimate, given
-   * midkey ofregion != midkey of HFile, also the number and size of keys vary.
-   * If this estimate isn't good enough, we can improve it later.
-   * @param fs  The FileSystem
-   * @param reference  The reference
-   * @param status  The reference FileStatus
-   * @return HDFS blocks distribution
-   */
-  static private HDFSBlocksDistribution computeRefFileHDFSBlockDistribution(
-    FileSystem fs, Reference reference, FileStatus status) throws IOException {
-    if (status == null) {
-      return null;
-    }
-
-    long start = 0;
-    long length = 0;
-
-    if (Reference.isTopFileRegion(reference.getFileRegion())) {
-      start = status.getLen()/2;
-      length = status.getLen() - status.getLen()/2;
-    } else {
-      start = 0;
-      length = status.getLen()/2;
-    }
-    return FSUtils.computeHDFSBlocksDistribution(fs, status, start, length);
-  }
-
-  /**
-   * compute HDFS block distribution, for reference file, it is an estimate
-   */
-  private void computeHDFSBlockDistribution() throws IOException {
-    if (isReference()) {
-      FileStatus status;
-      if (this.link != null) {
-        status = this.link.getFileStatus(fs);
-      } else {
-        status = fs.getFileStatus(this.referencePath);
-      }
-      this.hdfsBlocksDistribution = computeRefFileHDFSBlockDistribution(
-        this.fs, this.reference, status);
-    } else {
-      FileStatus status;
-      if (isLink()) {
-        status = link.getFileStatus(fs);
-      } else {
-        status = this.fs.getFileStatus(path);
-      }
-      long length = status.getLen();
-      this.hdfsBlocksDistribution = FSUtils.computeHDFSBlocksDistribution(
-        this.fs, status, 0, length);
-    }
+    return this.fileInfo.getHDFSBlockDistribution();
   }
 
   /**
@@ -516,24 +359,9 @@ public class StoreFile {
     if (this.reader != null) {
       throw new IllegalAccessError("Already open");
     }
-    if (isReference()) {
-      if (this.link != null) {
-        this.reader = new HalfStoreFileReader(this.fs, this.referencePath, this.link,
-          this.cacheConf, this.reference, dataBlockEncoder.getEncodingInCache());
-      } else {
-        this.reader = new HalfStoreFileReader(this.fs, this.referencePath,
-          this.cacheConf, this.reference, dataBlockEncoder.getEncodingInCache());
-      }
-    } else if (isLink()) {
-      long size = link.getFileStatus(fs).getLen();
-      this.reader = new Reader(this.fs, this.path, link, size, this.cacheConf,
-          dataBlockEncoder.getEncodingInCache(), true);
-    } else {
-      this.reader = new Reader(this.fs, this.path, this.cacheConf,
-          dataBlockEncoder.getEncodingInCache());
-    }
 
-    computeHDFSBlockDistribution();
+    // Open the StoreFile.Reader
+    this.reader = fileInfo.open(this.fs, this.cacheConf, dataBlockEncoder.getEncodingInCache());
 
     // Load up indices and fileinfo. This also loads Bloom filter type.
     metadataMap = Collections.unmodifiableMap(this.reader.loadFileInfo());
@@ -547,26 +375,22 @@ public class StoreFile {
       // since store files are distinguished by sequence id, the one half would
       // subsume the other.
       this.sequenceid = Bytes.toLong(b);
-      if (isReference()) {
-        if (Reference.isTopFileRegion(this.reference.getFileRegion())) {
-          this.sequenceid += 1;
-        }
+      if (fileInfo.isTopReference()) {
+        this.sequenceid += 1;
       }
     }
 
     if (isBulkLoadResult()){
       // generate the sequenceId from the fileName
       // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
-      String fileName = this.path.getName();
+      String fileName = this.getPath().getName();
       int startPos = fileName.indexOf("SeqId_");
       if (startPos != -1) {
         this.sequenceid = Long.parseLong(fileName.substring(startPos + 6,
             fileName.indexOf('_', startPos + 6)));
         // Handle reference files as done above.
-        if (isReference()) {
-          if (Reference.isTopFileRegion(this.reference.getFileRegion())) {
-            this.sequenceid += 1;
-          }
+        if (fileInfo.isTopReference()) {
+          this.sequenceid += 1;
         }
       }
     }
@@ -636,7 +460,7 @@ public class StoreFile {
       } catch (IOException e) {
         try {
           this.closeReader(true);
-        } catch (IOException ee) {              
+        } catch (IOException ee) {
         }
         throw e;
       }
@@ -676,8 +500,7 @@ public class StoreFile {
 
   @Override
   public String toString() {
-    return this.path.toString() +
-      (isReference()? "-" + this.referencePath + "-" + reference.toString(): "");
+    return this.fileInfo.toString();
   }
 
   /**
@@ -685,7 +508,7 @@ public class StoreFile {
    */
   public String toStringDetailed() {
     StringBuilder sb = new StringBuilder();
-    sb.append(this.path.toString());
+    sb.append(this.getPath().toString());
     sb.append(", isReference=").append(isReference());
     sb.append(", isBulkLoadResult=").append(isBulkLoadResult());
     if (isBulkLoadResult()) {
@@ -880,48 +703,7 @@ public class StoreFile {
       throw new IOException("Expecting " + dir.toString() +
         " to be a directory");
     }
-    return getRandomFilename(fs, dir);
-  }
-
-  /**
-   *
-   * @param fs
-   * @param dir
-   * @return Path to a file that doesn't exist at time of this invocation.
-   * @throws IOException
-   */
-  static Path getRandomFilename(final FileSystem fs, final Path dir)
-      throws IOException {
-    return getRandomFilename(fs, dir, null);
-  }
-
-  /**
-   *
-   * @param fs
-   * @param dir
-   * @param suffix
-   * @return Path to a file that doesn't exist at time of this invocation.
-   * @throws IOException
-   */
-  static Path getRandomFilename(final FileSystem fs,
-                                final Path dir,
-                                final String suffix)
-      throws IOException {
-    return new Path(dir, UUID.randomUUID().toString().replaceAll("-", "")
-        + (suffix == null ? "" : suffix));
-  }
-
-  /**
-   * Validate the store file name.
-   * @param fileName name of the file to validate
-   * @return <tt>true</tt> if the file could be a valid store file, <tt>false</tt> otherwise
-   */
-  public static boolean validateStoreFileName(String fileName) {
-    if (HFileLink.isHFileLink(fileName))
-      return true;
-    if (isReference(fileName))
-      return true;
-    return !fileName.contains("-");
+    return new Path(dir, UUID.randomUUID().toString().replaceAll("-", ""));
   }
 
   /**
@@ -1349,17 +1131,10 @@ public class StoreFile {
       bloomFilterType = BloomType.NONE;
     }
 
-    public Reader(FileSystem fs, Path path, HFileLink hfileLink, long size,
+    public Reader(FileSystem fs, Path path, FSDataInputStream in,
+        final FSDataInputStream inNoChecksum, long size,
         CacheConfig cacheConf, DataBlockEncoding preferredEncodingInCache,
         boolean closeIStream) throws IOException {
-
-      FSDataInputStream in = hfileLink.open(fs);
-      FSDataInputStream inNoChecksum = in;
-      if (fs instanceof HFileSystem) {
-        FileSystem noChecksumFs = ((HFileSystem)fs).getNoChecksumFs();
-        inNoChecksum = hfileLink.open(noChecksumFs);
-      }
-
       reader = HFile.createReaderWithEncoding(fs, path, in, inNoChecksum,
                   size, cacheConf, preferredEncodingInCache, closeIStream);
       bloomFilterType = BloomType.NONE;

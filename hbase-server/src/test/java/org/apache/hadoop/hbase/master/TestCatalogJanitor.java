@@ -359,7 +359,7 @@ public class TestCatalogJanitor {
       Path rootdir = services.getMasterFileSystem().getRootDir();
       Path tabledir =
         HTableDescriptor.getTableDir(rootdir, htd.getName());
-      Path storedir = HStore.getStoreHomedir(tabledir, splita.getEncodedName(),
+      Path storedir = HStore.getStoreHomedir(tabledir, splita,
           htd.getColumnFamilies()[0].getName());
       Reference ref = Reference.createTopReference(Bytes.toBytes("ccc"));
       long now = System.currentTimeMillis();
@@ -607,8 +607,7 @@ public class TestCatalogJanitor {
     // the single test passes, but when the full suite is run, things get borked).
     FSUtils.setRootDir(fs.getConf(), rootdir);
     Path tabledir = HTableDescriptor.getTableDir(rootdir, htd.getName());
-    Path storedir = HStore.getStoreHomedir(tabledir, parent.getEncodedName(),
-      htd.getColumnFamilies()[0].getName());
+    Path storedir = HStore.getStoreHomedir(tabledir, parent, htd.getColumnFamilies()[0].getName());
     Path storeArchive = HFileArchiveUtil.getStoreArchivePath(services.getConfiguration(), parent,
       tabledir, htd.getColumnFamilies()[0].getName());
     LOG.debug("Table dir:" + tabledir);
@@ -689,8 +688,7 @@ public class TestCatalogJanitor {
     // the single test passes, but when the full suite is run, things get borked).
     FSUtils.setRootDir(fs.getConf(), rootdir);
     Path tabledir = HTableDescriptor.getTableDir(rootdir, parent.getTableName());
-    Path storedir = HStore.getStoreHomedir(tabledir, parent.getEncodedName(),
-      htd.getColumnFamilies()[0].getName());
+    Path storedir = HStore.getStoreHomedir(tabledir, parent, htd.getColumnFamilies()[0].getName());
     System.out.println("Old root:" + rootdir);
     System.out.println("Old table:" + tabledir);
     System.out.println("Old store:" + storedir);
@@ -773,7 +771,7 @@ public class TestCatalogJanitor {
   throws IOException {
     Path rootdir = services.getMasterFileSystem().getRootDir();
     Path tabledir = HTableDescriptor.getTableDir(rootdir, parent.getTableName());
-    Path storedir = HStore.getStoreHomedir(tabledir, daughter.getEncodedName(),
+    Path storedir = HStore.getStoreHomedir(tabledir, daughter,
       htd.getColumnFamilies()[0].getName());
     Reference ref =
       top? Reference.createTopReference(midkey): Reference.createBottomReference(midkey);

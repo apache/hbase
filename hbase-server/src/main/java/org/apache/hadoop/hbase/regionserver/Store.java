@@ -146,7 +146,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @param includeMVCCReadpoint whether we should out the MVCC readpoint
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  public StoreFile.Writer createWriterInTmp(int maxKeyCount, Compression.Algorithm compression,
+  public StoreFile.Writer createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
       boolean isCompaction, boolean includeMVCCReadpoint) throws IOException;
 
   // Compaction oriented methods

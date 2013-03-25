@@ -49,20 +49,22 @@ public class HFileArchiveUtil {
   public static Path getStoreArchivePath(final Configuration conf, final String tableName,
       final String regionName, final String familyName) throws IOException {
     Path tableArchiveDir = getTableArchivePath(conf, tableName);
-    return HStore.getStoreHomedir(tableArchiveDir, regionName, familyName);
+    return HStore.getStoreHomedir(tableArchiveDir, regionName, Bytes.toBytes(familyName));
   }
 
   /**
    * Get the directory to archive a store directory
    * @param conf {@link Configuration} to read for the archive directory name
-   * @param region parent region information under which the store currently
-   *          lives
-   * @param family name of the family in the store
+   * @param tableName table name under which the store currently lives
+   * @param region parent region information under which the store currently lives
+   * @param familyName name of the family in the store
    * @return {@link Path} to the directory to archive the given store or
    *         <tt>null</tt> if it should not be archived
    */
-  public static Path getStoreArchivePath(Configuration conf, HRegion region, byte [] family){
-    return getStoreArchivePath(conf, region.getRegionInfo(), region.getTableDir(), family);
+  public static Path getStoreArchivePath(final Configuration conf, final String tableName,
+      final HRegionInfo region, final String familyName) throws IOException {
+    Path tableArchiveDir = getTableArchivePath(conf, tableName);
+    return HStore.getStoreHomedir(tableArchiveDir, region, Bytes.toBytes(familyName));
   }
 
   /**

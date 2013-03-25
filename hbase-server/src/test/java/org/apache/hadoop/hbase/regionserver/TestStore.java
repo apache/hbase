@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
@@ -160,7 +161,7 @@ public class TestStore extends TestCase {
     HLog hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
 
-    store = new HStore(basedir, region, hcd, fs, conf);
+    store = new HStore(region, hcd, conf);
   }
 
   /**
@@ -325,10 +326,7 @@ public class TestStore extends TestCase {
     w.close();
     this.store.close();
     // Reopen it... should pick up two files
-    this.store = new HStore(storedir.getParent().getParent(),
-      this.store.getHRegion(),
-      this.store.getFamily(), fs, c);
-    System.out.println(this.store.getRegionInfo().getEncodedName());
+    this.store = new HStore(this.store.getHRegion(), this.store.getFamily(), c);
     assertEquals(2, this.store.getStorefilesCount());
 
     result = HBaseTestingUtility.getFromStoreFile(store,
@@ -653,10 +651,10 @@ public class TestStore extends TestCase {
         store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
 
         LOG.info("Before flush, we should have no files");
-        FileStatus[] files = fs.listStatus(store.getHomedir());
-        Path[] paths = FileUtil.stat2Paths(files);
-        System.err.println("Got paths: " + Joiner.on(",").join(paths));
-        assertEquals(0, paths.length);
+
+        Collection<StoreFileInfo> files =
+          store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
+        assertEquals(0, files != null ? files.size() : 0);
 
         //flush
         try {
@@ -668,10 +666,8 @@ public class TestStore extends TestCase {
         }
 
         LOG.info("After failed flush, we should still have no files!");
-        files = fs.listStatus(store.getHomedir());
-        paths = FileUtil.stat2Paths(files);
-        System.err.println("Got paths: " + Joiner.on(",").join(paths));
-        assertEquals(0, paths.length);
+        files = store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
+        assertEquals(0, files != null ? files.size() : 0);
         return null;
       }
     });

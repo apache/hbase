@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -669,11 +669,10 @@ public class RegionSplitter {
           HTableDescriptor htd = table.getTableDescriptor();
           // check every Column Family for that region
           for (HColumnDescriptor c : htd.getFamilies()) {
-            Path cfDir = HStore.getStoreHomedir(tableDir, hri.getEncodedName(),
-                c.getName());
+            Path cfDir = HStore.getStoreHomedir(tableDir, hri, c.getName());
             if (fs.exists(cfDir)) {
               for (FileStatus file : fs.listStatus(cfDir)) {
-                refFound |= StoreFile.isReference(file.getPath());
+                refFound |= StoreFileInfo.isReference(file.getPath());
                 if (refFound)
                   break;
               }

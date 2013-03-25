@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.exceptions.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
@@ -207,7 +207,7 @@ public final class MasterSnapshotVerifier {
       Path archivedCfDir = new Path(archivedRegion, cf.getPath().getName());
       for (FileStatus hfile : hfiles) {
         // make sure the name is correct
-        if (!StoreFile.validateStoreFileName(hfile.getPath().getName())) {
+        if (!StoreFileInfo.validateStoreFileName(hfile.getPath().getName())) {
           throw new CorruptedSnapshotException("HFile: " + hfile.getPath()
               + " is not a valid hfile name.", snapshot);
         }
