@@ -21,14 +21,13 @@ package org.apache.hadoop.hbase.exceptions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import java.io.IOException;
 /**
  * Thrown when something happens related to region handling.
  * Subclasses have to be more specific.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class RegionException extends IOException {
+public class RegionException extends HBaseIOException {
   private static final long serialVersionUID = 1473510258071111371L;
 
   /** default constructor */

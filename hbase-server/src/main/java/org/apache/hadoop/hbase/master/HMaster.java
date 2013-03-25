@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.HBaseIOException;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
@@ -1465,14 +1466,14 @@ Server {
 
     try {
       move(encodedRegionName, destServerName);
-    } catch (IOException ioe) {
+    } catch (HBaseIOException ioe) {
       throw new ServiceException(ioe);
     }
     return mrr;
   }
 
   void move(final byte[] encodedRegionName,
-      final byte[] destServerName) throws UnknownRegionException {
+      final byte[] destServerName) throws HBaseIOException {
     RegionState regionState = assignmentManager.getRegionStates().
       getRegionState(Bytes.toString(encodedRegionName));
     if (regionState == null) {
@@ -1512,10 +1513,10 @@ Server {
         this.cpHost.postMove(hri, rp.getSource(), rp.getDestination());
       }
     } catch (IOException ioe) {
-      UnknownRegionException ure = new UnknownRegionException(
-        Bytes.toStringBinary(encodedRegionName));
-      ure.initCause(ioe);
-      throw ure;
+      if (ioe instanceof HBaseIOException) {
+        throw (HBaseIOException)ioe;
+      }
+      throw new HBaseIOException(ioe);
     }
   }
 

@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.FailedLogCloseException;
+import org.apache.hadoop.hbase.exceptions.HBaseIOException;
 import org.apache.hadoop.hbase.exceptions.HBaseSnapshotException;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
@@ -1516,15 +1517,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws MasterNotRunningException
    */
   public void move(final byte [] encodedRegionName, final byte [] destServerName)
-  throws UnknownRegionException, MasterNotRunningException, ZooKeeperConnectionException {
+  throws HBaseIOException, MasterNotRunningException, ZooKeeperConnectionException {
     MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
     try {
       MoveRegionRequest request = RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
       master.moveRegion(null,request);
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
-      if (ioe instanceof UnknownRegionException) {
-        throw (UnknownRegionException)ioe;
+      if (ioe instanceof HBaseIOException) {
+        throw (HBaseIOException)ioe;
       }
       LOG.error("Unexpected exception: " + se + " from calling HMaster.moveRegion");
     } catch (DeserializationException de) {
