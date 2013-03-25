@@ -85,7 +85,6 @@ class MemStoreFlusher implements FlushRequester {
     "hbase.regionserver.global.memstore.upperLimit";
   private static final String LOWER_KEY =
     "hbase.regionserver.global.memstore.lowerLimit";
-  private int blockingStoreFileCount;
   private long blockingWaitTime;
   private final Counter updatesBlockedMsHighWater = new Counter();
 
@@ -111,8 +110,6 @@ class MemStoreFlusher implements FlushRequester {
         "because supplied " + LOWER_KEY + " was > " + UPPER_KEY);
     }
     this.globalMemStoreLimitLowMark = lower;
-    this.blockingStoreFileCount =
-      conf.getInt("hbase.hstore.blockingStoreFiles", HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
     int handlerCount = conf.getInt("hbase.hstore.flusher.count", 1);
@@ -480,8 +477,8 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   private boolean isTooManyStoreFiles(HRegion region) {
-    for (Store hstore : region.stores.values()) {
-      if (hstore.getStorefilesCount() > this.blockingStoreFileCount) {
+    for (Store store : region.stores.values()) {
+      if (store.hasTooManyStoreFiles()) {
         return true;
       }
     }

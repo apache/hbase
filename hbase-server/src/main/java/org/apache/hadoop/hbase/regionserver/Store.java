@@ -315,4 +315,9 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @param o Observer no longer interested in changes in set of Readers.
    */
   public void deleteChangedReaderObserver(ChangedReadersObserver o);
+
+  /**
+   * @return Whether this store has too many store files.
+   */
+  public boolean hasTooManyStoreFiles();
 }

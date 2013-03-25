@@ -105,6 +105,7 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class HStore implements Store {
+  public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 7;
 
   static final Log LOG = LogFactory.getLog(HStore.class);
@@ -150,6 +151,8 @@ public class HStore implements Store {
   private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
   private static int flush_retries_number;
   private static int pauseTime;
+
+  private long blockingFileCount;
 
   /**
    * Constructor
@@ -201,6 +204,9 @@ public class HStore implements Store {
     this.cacheConf = new CacheConfig(conf, family);
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify", false);
+
+    this.blockingFileCount =
+        conf.getInt(BLOCKING_STOREFILES_KEY, DEFAULT_BLOCKING_STOREFILE_COUNT);
 
     if (HStore.closeCheckInterval == 0) {
       HStore.closeCheckInterval = conf.getInt(
@@ -1786,7 +1792,7 @@ public class HStore implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align((17 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
+      ClassSize.align((17 * ClassSize.REFERENCE) + (5 * Bytes.SIZEOF_LONG)
               + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
@@ -1815,5 +1821,10 @@ public class HStore implements Store {
    */
   void setScanInfo(ScanInfo scanInfo) {
     this.scanInfo = scanInfo;
+  }
+
+  @Override
+  public boolean hasTooManyStoreFiles() {
+    return getStorefilesCount() > this.blockingFileCount;
   }
 }
