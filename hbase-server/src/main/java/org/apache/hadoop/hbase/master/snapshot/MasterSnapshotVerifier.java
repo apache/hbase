@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.exceptions.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -166,21 +167,16 @@ public final class MasterSnapshotVerifier {
           snapshot);
     }
     // make sure we have the region info in the snapshot
-    Path regionInfo = new Path(regionDir, HRegion.REGIONINFO_FILE);
+    Path regionInfo = new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE);
     // make sure the file exists
     if (!fs.exists(regionInfo)) {
       throw new CorruptedSnapshotException("No region info found for region:" + region, snapshot);
     }
-    FSDataInputStream in = fs.open(regionInfo);
-    HRegionInfo found;
-    try {
-      found = HRegionInfo.parseFrom(in);
-      if (!region.equals(found)) {
-        throw new CorruptedSnapshotException("Found region info (" + found
-          + ") doesn't match expected region:" + region, snapshot);
-      }
-    } finally {
-      in.close();      
+
+    HRegionInfo found = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+    if (!region.equals(found)) {
+      throw new CorruptedSnapshotException("Found region info (" + found
+        + ") doesn't match expected region:" + region, snapshot);
     }
 
     // make sure we have the expected recovered edits files

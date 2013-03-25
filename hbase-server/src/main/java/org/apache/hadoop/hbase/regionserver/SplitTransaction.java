@@ -83,7 +83,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Private
 public class SplitTransaction {
   private static final Log LOG = LogFactory.getLog(SplitTransaction.class);
-  private static final String SPLITDIR = ".splits";
 
   /*
    * Region to split
@@ -544,7 +543,7 @@ public class SplitTransaction {
   }
 
   private static Path getSplitDir(final HRegion r) {
-    return new Path(r.getRegionDir(), SPLITDIR);
+    return new Path(r.getRegionDir(), HRegionFileSystem.REGION_SPLITS_DIR);
   }
 
   /**

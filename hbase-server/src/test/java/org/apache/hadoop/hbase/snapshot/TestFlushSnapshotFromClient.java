@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -292,7 +293,7 @@ public class TestFlushSnapshotFromClient {
     for (HRegionInfo info : regions) {
       String regionName = info.getEncodedName();
       Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo snapshotRegionInfo = HRegion.loadDotRegionInfoFileContent(fs, regionDir);
+      HRegionInfo snapshotRegionInfo = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
       assertEquals(info, snapshotRegionInfo);
       // check to make sure we have the family
       Path familyDir = new Path(regionDir, Bytes.toString(TEST_FAM));
