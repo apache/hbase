@@ -119,6 +119,9 @@ public class HLog implements Syncable {
   /** File Extension used while splitting an HLog into regions (HBASE-2312) */
   public static final String SPLITTING_EXT = "-splitting";
   public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
+  /** The META region's HLog filename extension */
+  public static final String META_HLOG_FILE_EXTN = ".meta";
+  public static final String SEPARATE_HLOG_FOR_META = "hbase.regionserver.separate.hlog.for.meta";
 
   /*
    * Name of directory that holds recovered edits written by the wal log
@@ -200,6 +203,8 @@ public class HLog implements Syncable {
 
   private final AtomicLong logSeqNum = new AtomicLong(0);
 
+  private boolean forMeta = false;
+
   // The timestamp (in ms) when the log file was created.
   private volatile long filenum = -1;
 
@@ -254,7 +259,8 @@ public class HLog implements Syncable {
   /**
    * Pattern used to validate a HLog file name
    */
-  private static final Pattern pattern = Pattern.compile(".*\\.\\d*");
+  private static final Pattern pattern = 
+      Pattern.compile(".*\\.\\d*("+HLog.META_HLOG_FILE_EXTN+")*");
 
   static byte [] COMPLETE_CACHE_FLUSH;
   static {
@@ -334,7 +340,7 @@ public class HLog implements Syncable {
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
               final Configuration conf)
   throws IOException {
-    this(fs, dir, oldLogDir, conf, null, true, null);
+    this(fs, dir, oldLogDir, conf, null, true, null, false);
   }
 
   /**
@@ -359,7 +365,7 @@ public class HLog implements Syncable {
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
       final Configuration conf, final List<WALActionsListener> listeners,
       final String prefix) throws IOException {
-    this(fs, dir, oldLogDir, conf, listeners, true, prefix);
+    this(fs, dir, oldLogDir, conf, listeners, true, prefix, false);
   }
 
   /**
@@ -380,11 +386,12 @@ public class HLog implements Syncable {
    * @param prefix should always be hostname and port in distributed env and
    *        it will be URL encoded before being used.
    *        If prefix is null, "hlog" will be used
+   * @param forMeta if this hlog is meant for meta updates
    * @throws IOException
    */
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
       final Configuration conf, final List<WALActionsListener> listeners,
-      final boolean failIfLogDirExists, final String prefix)
+      final boolean failIfLogDirExists, final String prefix, boolean forMeta)
   throws IOException {
     super();
     this.fs = fs;
@@ -402,10 +409,11 @@ public class HLog implements Syncable {
     this.logrollsize = (long)(this.blocksize * multi);
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 1 * 1000);
-    if (failIfLogDirExists && fs.exists(dir)) {
+    boolean dirExists = false;
+    if (failIfLogDirExists && (dirExists = this.fs.exists(dir))) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
-    if (!fs.mkdirs(dir)) {
+    if (!dirExists && !fs.mkdirs(dir)) {
       throw new IOException("Unable to mkdir " + dir);
     }
     this.oldLogDir = oldLogDir;
@@ -414,6 +422,7 @@ public class HLog implements Syncable {
         throw new IOException("Unable to mkdir " + this.oldLogDir);
       }
     }
+    this.forMeta = forMeta;
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
     this.minTolerableReplication = conf.getInt(
         "hbase.regionserver.hlog.tolerable.lowreplication",
@@ -623,6 +632,7 @@ public class HLog implements Syncable {
       long currentFilenum = this.filenum;
       Path oldPath = null;
       if (currentFilenum > 0) {
+        //computeFilename  will take care of meta hlog filename
         oldPath = computeFilename(currentFilenum);
       }
       this.filenum = System.currentTimeMillis();
@@ -698,6 +708,9 @@ public class HLog implements Syncable {
    */
   protected Writer createWriterInstance(final FileSystem fs, final Path path,
       final Configuration conf) throws IOException {
+    if (forMeta) {
+      //TODO: set a higher replication for the hlog files (HBASE-6773)
+    }
     return createWriter(fs, path, conf);
   }
 
@@ -947,7 +960,18 @@ public class HLog implements Syncable {
     if (filenum < 0) {
       throw new RuntimeException("hlog file number can't be < 0");
     }
-    return new Path(dir, prefix + "." + filenum);
+    String child = prefix + "." + filenum;
+    if (forMeta) {
+      child += HLog.META_HLOG_FILE_EXTN;
+    }
+    return new Path(dir, child);
+  }
+
+  public static boolean isMetaFile(Path p) {
+    if (p.getName().endsWith(HLog.META_HLOG_FILE_EXTN)) {
+      return true;
+    }
+    return false;
   }
 
   /**

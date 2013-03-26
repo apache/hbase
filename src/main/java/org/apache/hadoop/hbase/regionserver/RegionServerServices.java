@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -38,8 +37,9 @@ public interface RegionServerServices extends OnlineRegions {
    */
   public boolean isStopping();
 
-  /** @return the HLog */
-  public HLog getWAL();
+  /** @return the HLog for a particular region. Pass null for getting the
+   * default (common) WAL */
+  public HLog getWAL(HRegionInfo regionInfo) throws IOException;
 
   /**
    * @return Implementation of {@link CompactionRequestor} or null.

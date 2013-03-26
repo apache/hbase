@@ -135,6 +135,11 @@ public interface MasterServices extends Server {
    * @return true if master enables ServerShutdownHandler;
    */
   public boolean isServerShutdownHandlerEnabled();
+  
+  /**
+   * @return true if master thinks that meta hlogs should be split separately
+   */
+  public boolean shouldSplitMetaSeparately();
 
   /**
    * @return returns the master coprocessor host

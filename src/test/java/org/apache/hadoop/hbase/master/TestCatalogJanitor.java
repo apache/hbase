@@ -308,6 +308,11 @@ public class TestCatalogJanitor {
     @Override
     public void deleteColumn(byte[] tableName, byte[] columnName) throws IOException {
     }
+
+    @Override
+    public boolean shouldSplitMetaSeparately() {
+      return false;
+    }
   }
 
   @Test

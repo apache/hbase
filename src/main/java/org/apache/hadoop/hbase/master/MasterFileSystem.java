@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -82,6 +83,18 @@ public class MasterFileSystem {
   final boolean distributedLogSplitting;
   final SplitLogManager splitLogManager;
   private final MasterServices services;
+
+  private final static PathFilter META_FILTER = new PathFilter() {
+    public boolean accept(Path p) {
+      return HLog.isMetaFile(p);
+    }
+  };
+
+  private final static PathFilter NON_META_FILTER = new PathFilter() {
+    public boolean accept(Path p) {
+      return !HLog.isMetaFile(p);
+    }
+  };
 
   public MasterFileSystem(Server master, MasterServices services,
       MasterMetrics metrics, boolean masterRecovery)
@@ -238,7 +251,12 @@ public class MasterFileSystem {
                 + " belongs to an existing region server");
           }
         }
-        splitLog(serverNames);
+        if (services.shouldSplitMetaSeparately()) {
+          splitLog(serverNames, META_FILTER);
+          splitLog(serverNames, NON_META_FILTER);
+        } else {
+          splitAllLogs(serverNames);
+        }
         retrySplitting = false;
       } catch (IOException ioe) {
         LOG.warn("Failed splitting of " + serverNames, ioe);
@@ -267,8 +285,36 @@ public class MasterFileSystem {
     splitLog(serverNames);
   }
 
-  public void splitLog(final List<ServerName> serverNames) throws IOException {
+  public void splitAllLogs(final ServerName serverName) throws IOException {
+    List<ServerName> serverNames = new ArrayList<ServerName>();
+    serverNames.add(serverName);
+    splitAllLogs(serverNames);
+  }
+
+  /**
+   * Specialized method to handle the splitting for meta HLog
+   * @param serverName
+   * @throws IOException
+   */
+  public void splitMetaLog(final ServerName serverName) throws IOException {
     long splitTime = 0, splitLogSize = 0;
+    List<ServerName> serverNames = new ArrayList<ServerName>();
+    serverNames.add(serverName);
+    List<Path> logDirs = getLogDirs(serverNames);
+    if (logDirs.isEmpty()) {
+      LOG.info("No meta logs to split");
+      return;
+    }
+    splitLogManager.handleDeadWorkers(serverNames);
+    splitTime = EnvironmentEdgeManager.currentTimeMillis();
+    splitLogSize = splitLogManager.splitLogDistributed(logDirs, META_FILTER);
+    splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
+    if (this.metrics != null) {
+      this.metrics.addSplit(splitTime, splitLogSize);
+    }
+  }
+
+  private List<Path> getLogDirs(final List<ServerName> serverNames) throws IOException {
     List<Path> logDirs = new ArrayList<Path>();
     for(ServerName serverName: serverNames){
       Path logDir = new Path(this.rootdir,
@@ -287,6 +333,27 @@ public class MasterFileSystem {
       }
       logDirs.add(splitDir);
     }
+    return logDirs;
+  }
+
+  public void splitLog(final List<ServerName> serverNames) throws IOException {
+    splitLog(serverNames, NON_META_FILTER);
+  }
+
+  public void splitAllLogs(final List<ServerName> serverNames) throws IOException {
+    splitLog(serverNames, null); //no filter
+  }
+
+  /**
+   * This method is the base split method that splits HLog files matching a filter.
+   * Callers should pass the appropriate filter for meta and non-meta HLogs.
+   * @param serverNames
+   * @param filter
+   * @throws IOException
+   */
+  public void splitLog(final List<ServerName> serverNames, PathFilter filter) throws IOException {
+    long splitTime = 0, splitLogSize = 0;
+    List<Path> logDirs = getLogDirs(serverNames);
 
     if (logDirs.isEmpty()) {
       LOG.info("No logs to split");
@@ -296,7 +363,7 @@ public class MasterFileSystem {
     if (distributedLogSplitting) {
       splitLogManager.handleDeadWorkers(serverNames);
       splitTime = EnvironmentEdgeManager.currentTimeMillis();
-      splitLogSize = splitLogManager.splitLogDistributed(logDirs);
+      splitLogSize = splitLogManager.splitLogDistributed(logDirs,filter);
       splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
     } else {
       for(Path logDir: logDirs){

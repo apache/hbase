@@ -232,6 +232,10 @@
     <description>The HLog file writer implementation.</description>
   </property>
   <property>
+    <name>hbase.regionserver.separate.hlog.for.meta</name>
+    <value>false</value>
+  </property>
+  <property>
     <name>hbase.regionserver.nbreservationblocks</name>
     <value>4</value>
     <description>The number of resevoir blocks of memory release on

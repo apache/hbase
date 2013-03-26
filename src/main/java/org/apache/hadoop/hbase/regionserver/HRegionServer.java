@@ -31,6 +31,7 @@ import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -249,6 +250,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private HBaseServer server;  
 
   private final InetSocketAddress isa;
+  private UncaughtExceptionHandler uncaughtExceptionHandler;
 
   // Leases
   private Leases leases;
@@ -293,7 +295,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // HLog and HLog roller. log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
   protected volatile HLog hlog;
+  // The meta updates are written to a different hlog. If this
+  // regionserver holds meta regions, then this field will be non-null.
+  protected volatile HLog hlogForMeta;
+
   LogRoller hlogRoller;
+  LogRoller metaHLogRoller;
+
+  private final boolean separateHLogForMeta;
 
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
@@ -401,6 +410,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       HConstants.HBASE_CHECKSUM_VERIFICATION, false);
 
     // Config'ed params
+    this.separateHLogForMeta = conf.getBoolean(HLog.SEPARATE_HLOG_FOR_META, false);
     this.numRetries = conf.getInt("hbase.client.retries.number", 10);
     this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
       10 * 1000);
@@ -460,6 +470,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       "hbase.regionserver.kerberos.principal", this.isa.getHostName());
     regionServerAccounting = new RegionServerAccounting();
     cacheConfig = new CacheConfig(conf);
+    uncaughtExceptionHandler = new UncaughtExceptionHandler() {
+      public void uncaughtException(Thread t, Throwable e) {
+        abort("Uncaught exception in service thread " + t.getName(), e);
+      }
+    };
   }
 
   /** Handle all the snapshot requests to this server */
@@ -806,6 +821,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (this.cacheFlusher != null) this.cacheFlusher.interruptIfNecessary();
     if (this.compactSplitThread != null) this.compactSplitThread.interruptIfNecessary();
     if (this.hlogRoller != null) this.hlogRoller.interruptIfNecessary();
+    if (this.metaHLogRoller != null) this.metaHLogRoller.interruptIfNecessary();
     if (this.compactionChecker != null)
       this.compactionChecker.interrupt();
     if (this.healthCheckChore != null) {
@@ -994,16 +1010,27 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   private void closeWAL(final boolean delete) {
-    try {
-      if (this.hlog != null) {
+    if (this.hlogForMeta != null) {
+      // All hlogs (meta and non-meta) are in the same directory. Don't call
+      // closeAndDelete here since that would delete all hlogs not just the
+      // meta ones. We will just 'close' the hlog for meta here, and leave
+      // the directory cleanup to the follow-on closeAndDelete call.
+      try { //Part of the patch from HBASE-7982 to do with exception handling 
+        this.hlogForMeta.close();
+      } catch (Throwable e) {
+        LOG.error("Metalog close and delete failed", RemoteExceptionHandler.checkThrowable(e));
+      }
+    }
+    if (this.hlog != null) {
+      try {
         if (delete) {
           hlog.closeAndDelete();
         } else {
           hlog.close();
         }
+      } catch (Throwable e) {
+        LOG.error("Close and delete failed", RemoteExceptionHandler.checkThrowable(e));
       }
-    } catch (Throwable e) {
-      LOG.error("Close and delete failed", RemoteExceptionHandler.checkThrowable(e));
     }
   }
 
@@ -1355,6 +1382,24 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return instantiateHLog(logdir, oldLogDir);
   }
 
+  // The method is synchronized to guarantee atomic update to hlogForMeta - 
+  // It is possible that multiple calls could be made to this method almost 
+  // at the same time, one for _ROOT_ and another for .META. (if they happen
+  // to be assigned to the same RS). Also, we want to use the same log for both
+  private synchronized HLog getMetaWAL() throws IOException {
+    if (this.hlogForMeta == null) {
+      final String logName
+      = HLog.getHLogDirectoryName(this.serverNameFromMasterPOV.toString());
+
+      Path logdir = new Path(rootDir, logName);
+      final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+      if (LOG.isDebugEnabled()) LOG.debug("logdir=" + logdir);
+      this.hlogForMeta = new HLog(this.fs.getBackingFs(), logdir, oldLogDir, this.conf,
+          getMetaWALActionListeners(), false, this.serverNameFromMasterPOV.toString(), true);
+    }
+    return this.hlogForMeta;
+  }
+
   /**
    * Called by {@link #setupWALAndReplication()} creating WAL instance.
    * @param logdir
@@ -1383,6 +1428,20 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Replication handler is an implementation of WALActionsListener.
       listeners.add(this.replicationSourceHandler.getWALActionsListener());
     }
+    return listeners;
+  }
+
+  protected List<WALActionsListener> getMetaWALActionListeners() {
+    List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
+    // Using a tmp log roller to ensure metaLogRoller is alive once it is not
+    // null (addendum patch on HBASE-7213)
+    MetaLogRoller tmpLogRoller = new MetaLogRoller(this, this);
+    String n = Thread.currentThread().getName();
+    Threads.setDaemonThreadRunning(tmpLogRoller.getThread(),
+        n + "MetaLogRoller", uncaughtExceptionHandler);
+    this.metaHLogRoller = tmpLogRoller;
+    tmpLogRoller = null;
+    listeners.add(this.metaHLogRoller);
     return listeners;
   }
 
@@ -1580,12 +1639,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   private void startServiceThreads() throws IOException {
     String n = Thread.currentThread().getName();
-    UncaughtExceptionHandler handler = new UncaughtExceptionHandler() {
-      public void uncaughtException(Thread t, Throwable e) {
-        abort("Uncaught exception in service thread " + t.getName(), e);
-      }
-    };
-
     // Start executor services
     this.service = new ExecutorService(getServerName().toString());
     this.service.startExecutorService(ExecutorType.RS_OPEN_REGION,
@@ -1601,14 +1654,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.service.startExecutorService(ExecutorType.RS_CLOSE_META,
       conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
 
-    Threads.setDaemonThreadRunning(this.hlogRoller.getThread(), n + ".logRoller", handler);
+    Threads.setDaemonThreadRunning(this.hlogRoller.getThread(), n + ".logRoller",
+        uncaughtExceptionHandler);
     Threads.setDaemonThreadRunning(this.cacheFlusher.getThread(), n + ".cacheFlusher",
-      handler);
+        uncaughtExceptionHandler);
     Threads.setDaemonThreadRunning(this.compactionChecker.getThread(), n +
-      ".compactionChecker", handler);
+      ".compactionChecker", uncaughtExceptionHandler);
     if (this.healthCheckChore != null) {
       Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker",
-        handler);
+          uncaughtExceptionHandler);
     }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
@@ -1690,11 +1744,33 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       stop("One or more threads are no longer alive -- stop");
       return false;
     }
+    if (metaHLogRoller != null && !metaHLogRoller.isAlive()) {
+      stop("Meta HLog roller thread is no longer alive -- stop");
+      return false;
+    }
     return true;
   }
 
-  @Override
   public HLog getWAL() {
+    try {
+      return getWAL(null);
+    } catch (IOException e) {
+      LOG.warn("getWAL threw exception " + e);
+      return null; 
+    }
+  }
+
+  @Override
+  public HLog getWAL(HRegionInfo regionInfo) throws IOException {
+    //TODO: at some point this should delegate to the HLogFactory
+    //currently, we don't care about the region as much as we care about the 
+    //table.. (hence checking the tablename below)
+    //_ROOT_ and .META. regions have separate WAL. 
+    if (this.separateHLogForMeta && 
+        regionInfo != null && 
+        regionInfo.isMetaTable()) {
+      return getMetaWAL();
+    }
     return this.hlog;
   }
 
@@ -1845,6 +1921,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     if (this.hlogRoller != null) {
       Threads.shutdown(this.hlogRoller.getThread());
+    }
+    if (this.metaHLogRoller != null) {
+      Threads.shutdown(this.metaHLogRoller.getThread());
     }
     if (this.compactSplitThread != null) {
       this.compactSplitThread.join();

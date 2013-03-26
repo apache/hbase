@@ -82,7 +82,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public HLog getWAL() {
+  public HLog getWAL(HRegionInfo regionInfo) throws IOException {
     return null;
   }
 

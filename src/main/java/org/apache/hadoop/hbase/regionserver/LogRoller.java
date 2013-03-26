@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -46,7 +47,7 @@ class LogRoller extends HasThread implements WALActionsListener {
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
   private final Server server;
-  private final RegionServerServices services;
+  protected final RegionServerServices services;
   private volatile long lastrolltime = System.currentTimeMillis();
   // Period to roll log.
   private final long rollperiod;
@@ -91,7 +92,7 @@ class LogRoller extends HasThread implements WALActionsListener {
       try {
         this.lastrolltime = now;
         // This is array of actual region names.
-        byte [][] regionsToFlush = this.services.getWAL().rollWriter(rollLog.get());
+        byte [][] regionsToFlush = getWAL().rollWriter(rollLog.get());
         if (regionsToFlush != null) {
           for (byte [] r: regionsToFlush) scheduleFlush(r);
         }
@@ -153,6 +154,10 @@ class LogRoller extends HasThread implements WALActionsListener {
     } finally {
       rollLock.unlock();
     }
+  }
+
+  protected HLog getWAL() throws IOException {
+    return this.services.getWAL(null);
   }
 
   @Override
