@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
@@ -70,6 +71,7 @@ public class TestExportSnapshot {
 
   private final static byte[] FAMILY = Bytes.toBytes("cf");
 
+  private byte[] emptySnapshotName;
   private byte[] snapshotName;
   private byte[] tableName;
   private HBaseAdmin admin;
@@ -99,11 +101,19 @@ public class TestExportSnapshot {
     long tid = System.currentTimeMillis();
     tableName = Bytes.toBytes("testtb-" + tid);
     snapshotName = Bytes.toBytes("snaptb0-" + tid);
+    emptySnapshotName = Bytes.toBytes("emptySnaptb0-" + tid);
 
     // create Table
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(htd, null);
+
+    // Take an empty snapshot
+    admin.disableTable(tableName);
+    admin.snapshot(emptySnapshotName, tableName);
+    admin.enableTable(tableName);
+
+    // Add some rows
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     TEST_UTIL.loadTable(table, FAMILY);
 
@@ -115,7 +125,11 @@ public class TestExportSnapshot {
 
   @After
   public void tearDown() throws Exception {
-    this.admin.close();
+    admin.disableTable(tableName);
+    admin.deleteSnapshot(snapshotName);
+    admin.deleteSnapshot(emptySnapshotName);
+    admin.deleteTable(tableName);
+    admin.close();
   }
 
   /**
@@ -160,6 +174,19 @@ public class TestExportSnapshot {
    */
   @Test
   public void testExportFileSystemState() throws Exception {
+    testExportFileSystemState(tableName, snapshotName, 2);
+  }
+
+  @Test
+  public void testEmptyExportFileSystemState() throws Exception {
+    testExportFileSystemState(tableName, emptySnapshotName, 1);
+  }
+
+  /**
+   * Test ExportSnapshot
+   */
+  private void testExportFileSystemState(final byte[] tableName, final byte[] snapshotName,
+      int filesExpected) throws Exception {
     Path copyDir = TEST_UTIL.getDataTestDir("export-" + System.currentTimeMillis());
     URI hdfsUri = FileSystem.get(TEST_UTIL.getConfiguration()).getUri();
     FileSystem fs = FileSystem.get(copyDir.toUri(), new Configuration());
@@ -174,7 +201,7 @@ public class TestExportSnapshot {
 
     // Verify File-System state
     FileStatus[] rootFiles = fs.listStatus(copyDir);
-    assertEquals(2, rootFiles.length);
+    assertEquals(filesExpected, rootFiles.length);
     for (FileStatus fileStatus: rootFiles) {
       String name = fileStatus.getPath().getName();
       assertTrue(fileStatus.isDir());
@@ -254,4 +281,3 @@ public class TestExportSnapshot {
     return files;
   }
 }
-
