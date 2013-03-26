@@ -34,7 +34,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -69,6 +73,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
@@ -79,14 +84,11 @@ import org.apache.hadoop.hbase.util.HBaseFsck.PrintingErrorReporter;
 import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
@@ -1095,9 +1097,6 @@ public class TestHBaseFsck {
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       assertTrue(cluster.waitForActiveAndReadyMaster());
 
-      // Create a ZKW to use in the test
-      ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
-
       FileSystem filesystem = FileSystem.get(conf);
       Path rootdir = FSUtils.getRootDir(conf);
 
@@ -1114,52 +1113,26 @@ public class TestHBaseFsck {
 
       // Let's just assign everything to first RS
       HRegionServer hrs = cluster.getRegionServer(0);
-      ServerName serverName = hrs.getServerName();
 
-      // create region files.
+      // Create region files.
       TEST_UTIL.getHBaseAdmin().disableTable(table);
       TEST_UTIL.getHBaseAdmin().enableTable(table);
 
-      // Region of disable table was opened on RS
+      // Disable the table and close its regions
       TEST_UTIL.getHBaseAdmin().disableTable(table);
-      // Mess up ZKTable state, otherwise, can't open the region
-      ZKTable zkTable = cluster.getMaster().getAssignmentManager().getZKTable();
-      zkTable.setEnabledTable(table);
       HRegionInfo region = disabledRegions.remove(0);
       byte[] regionName = region.getRegionName();
 
       // The region should not be assigned currently
       assertTrue(cluster.getServerWith(regionName) == -1);
-      ZKAssign.createNodeOffline(zkw, region, serverName);
-      ProtobufUtil.openRegion(hrs, region);
 
-      int iTimes = 0;
-      while (true) {
-        if (cluster.getServerWith(regionName) != -1) {
-          List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
-          boolean found = false;
-          for (HRegionInfo hri: regions) {
-            if (Bytes.equals(hri.getRegionName(), regionName)) {
-              found = true;
-              break;
-            }
-          }
-          if (!found) {
-            LOG.info("Region was deployed but not in online " +
-              "region list. This should be transient. Waiting longer");
-          } else {
-            // Now, region is deployed, reset the table state back
-            zkTable.setDisabledTable(table);
-            break;
-          }
-        }
-        Thread.sleep(100);
-        iTimes++;
-        if (iTimes >= REGION_ONLINE_TIMEOUT) {
-          break;
-        }
-      }
-      assertTrue(iTimes < REGION_ONLINE_TIMEOUT);
+      // Directly open a region on a region server.
+      // If going through AM/ZK, the region won't be open.
+      // Even it is opened, AM will close it which causes
+      // flakiness of this test.
+      HRegion r = HRegion.openHRegion(
+        region, htdDisabled, hrs.getWAL(region), conf);
+      hrs.addToOnlineRegions(r);
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.SHOULD_NOT_BE_DEPLOYED });
