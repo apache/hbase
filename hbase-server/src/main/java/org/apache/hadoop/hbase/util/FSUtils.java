@@ -165,19 +165,6 @@ public abstract class FSUtils {
     return fs.exists(dir) && fs.delete(dir, true);
   }
 
-  /**
-   * Check if directory exists.  If it does not, create it.
-   * @param fs filesystem object
-   * @param dir path to check
-   * @return Path
-   * @throws IOException e
-   */
-  public Path checkdir(final FileSystem fs, final Path dir) throws IOException {
-    if (!fs.exists(dir)) {
-      fs.mkdirs(dir);
-    }
-    return dir;
-  }
 
   /**
    * Create the specified file on the filesystem. By default, this will:

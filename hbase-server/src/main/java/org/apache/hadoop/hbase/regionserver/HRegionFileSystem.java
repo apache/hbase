@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * View to an on-disk Region.
@@ -74,6 +74,15 @@ public class HRegionFileSystem {
   private final Configuration conf;
   private final Path tableDir;
   private final FileSystem fs;
+  
+  /**
+   * In order to handle NN connectivity hiccups, one need to retry non-idempotent operation at the
+   * client level.
+   */
+  private final int hdfsClientRetriesNumber;
+  private final int baseSleepBeforeRetries;
+  private static final int DEFAULT_HDFS_CLIENT_RETRIES_NUMBER = 10;
+  private static final int DEFAULT_BASE_SLEEP_BEFORE_RETRIES = 1000;
 
   /**
    * Create a view to the on-disk region
@@ -82,13 +91,17 @@ public class HRegionFileSystem {
    * @param tableDir {@link Path} to where the table is being stored
    * @param regionInfo {@link HRegionInfo} for region
    */
-  HRegionFileSystem(final Configuration conf, final FileSystem fs,
-      final Path tableDir, final HRegionInfo regionInfo) {
+  HRegionFileSystem(final Configuration conf, final FileSystem fs, final Path tableDir,
+      final HRegionInfo regionInfo) {
     this.fs = fs;
     this.conf = conf;
     this.tableDir = tableDir;
     this.regionInfo = regionInfo;
-  }
+    this.hdfsClientRetriesNumber = conf.getInt("hdfs.client.retries.number",
+      DEFAULT_HDFS_CLIENT_RETRIES_NUMBER);
+    this.baseSleepBeforeRetries = conf.getInt("hdfs.client.sleep.before.retries",
+      DEFAULT_BASE_SLEEP_BEFORE_RETRIES);
+ }
 
   /** @return the underlying {@link FileSystem} */
   public FileSystem getFileSystem() {
@@ -122,7 +135,7 @@ public class HRegionFileSystem {
    * Clean up any temp detritus that may have been left around from previous operation attempts.
    */
   void cleanupTempDir() throws IOException {
-    FSUtils.deleteDirectory(fs, getTempDir());
+    deleteDir(getTempDir());
   }
 
   // ===========================================================================
@@ -145,9 +158,8 @@ public class HRegionFileSystem {
    */
   Path createStoreDir(final String familyName) throws IOException {
     Path storeDir = getStoreDir(familyName);
-    if (!fs.exists(storeDir) && !fs.mkdirs(storeDir)) {
-      throw new IOException("Failed create of: " + storeDir);
-    }
+    if(!fs.exists(storeDir) && !createDir(storeDir))
+      throw new IOException("Failed creating "+storeDir);
     return storeDir;
   }
 
@@ -240,11 +252,10 @@ public class HRegionFileSystem {
 
     // delete the family folder
     Path familyDir = getStoreDir(familyName);
-    if (!fs.delete(familyDir, true)) {
-      throw new IOException("Could not delete family " + familyName +
-        " from FileSystem for region " + regionInfo.getRegionNameAsString() +
-        "(" + regionInfo.getEncodedName() + ")");
-    }
+    if(fs.exists(familyDir) && !deleteDir(familyDir))
+      throw new IOException("Could not delete family " + familyName
+          + " from FileSystem for region " + regionInfo.getRegionNameAsString() + "("
+          + regionInfo.getEncodedName() + ")");
   }
 
   /**
@@ -312,7 +323,9 @@ public class HRegionFileSystem {
   private Path commitStoreFile(final String familyName, final Path buildPath,
       final long seqNum, final boolean generateNewName) throws IOException {
     Path storeDir = getStoreDir(familyName);
-    fs.mkdirs(storeDir);
+    if(!fs.exists(storeDir) && !createDir(storeDir))
+      throw new IOException("Failed creating " + storeDir);
+    
     String name = buildPath.getName();
     if (generateNewName) {
       name = generateUniqueName((seqNum < 0) ? null : "_SeqId_" + seqNum + "_");
@@ -322,11 +335,13 @@ public class HRegionFileSystem {
       throw new FileNotFoundException(buildPath.toString());
     }
     LOG.debug("Committing store file " + buildPath + " as " + dstPath);
-    if (!fs.rename(buildPath, dstPath)) {
+    // buildPath exists, therefore not doing an exists() check.
+    if (!rename(buildPath, dstPath)) {
       throw new IOException("Failed rename of " + buildPath + " to " + dstPath);
     }
     return dstPath;
   }
+
 
   /**
    * Moves multiple store files to the relative region's family store directory.
@@ -414,7 +429,7 @@ public class HRegionFileSystem {
    * Clean up any split detritus that may have been left around from previous split attempts.
    */
   void cleanupSplitsDir() throws IOException {
-    FSUtils.deleteDirectory(fs, getSplitsDir());
+    deleteDir(getSplitsDir());
   }
 
   /**
@@ -437,7 +452,7 @@ public class HRegionFileSystem {
     if (daughters != null) {
       for (FileStatus daughter: daughters) {
         Path daughterDir = new Path(getTableDir(), daughter.getPath().getName());
-        if (fs.exists(daughterDir) && !fs.delete(daughterDir, true)) {
+        if (fs.exists(daughterDir) && !deleteDir(daughterDir)) {
           throw new IOException("Failed delete of " + daughterDir);
         }
       }
@@ -453,7 +468,7 @@ public class HRegionFileSystem {
    */
   void cleanupDaughterRegion(final HRegionInfo regionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
-    if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
+    if (this.fs.exists(regionDir) && !deleteDir(regionDir)) {
       throw new IOException("Failed delete of " + regionDir);
     }
   }
@@ -467,7 +482,7 @@ public class HRegionFileSystem {
   Path commitDaughterRegion(final HRegionInfo regionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
     Path daughterTmpDir = this.getSplitsDir(regionInfo);
-    if (fs.exists(daughterTmpDir) && !fs.rename(daughterTmpDir, regionDir)) {
+    if (fs.exists(daughterTmpDir) && !rename(daughterTmpDir, regionDir)) {
       throw new IOException("Unable to rename " + daughterTmpDir + " to " + regionDir);
     }
     return regionDir;
@@ -480,12 +495,13 @@ public class HRegionFileSystem {
     Path splitdir = getSplitsDir();
     if (fs.exists(splitdir)) {
       LOG.info("The " + splitdir + " directory exists.  Hence deleting it to recreate it");
-      if (!fs.delete(splitdir, true)) {
+      if (!deleteDir(splitdir)) {
         throw new IOException("Failed deletion of " + splitdir
             + " before creating them again.");
       }
     }
-    if (!fs.mkdirs(splitdir)) {
+    // splitDir doesn't exists now. No need to do an exists() call for it.
+    if (!createDir(splitdir)) {
       throw new IOException("Failed create of " + splitdir);
     }
   }
@@ -534,7 +550,7 @@ public class HRegionFileSystem {
    * Clean up any merge detritus that may have been left around from previous merge attempts.
    */
   void cleanupMergesDir() throws IOException {
-    FSUtils.deleteDirectory(fs, getMergesDir());
+    deleteDir(getMergesDir());
   }
 
   /**
@@ -740,7 +756,7 @@ public class HRegionFileSystem {
       writeRegionInfoFileContent(conf, fs, tmpPath, regionInfoContent);
 
       // Move the created file to the original path
-      if (!fs.rename(tmpPath, regionInfoFile)) {
+      if (fs.exists(tmpPath) &&  !rename(tmpPath, regionInfoFile)) {
         throw new IOException("Unable to rename " + tmpPath + " to " + regionInfoFile);
       }
     } else {
@@ -768,7 +784,7 @@ public class HRegionFileSystem {
     }
 
     // Create the region directory
-    if (!fs.mkdirs(regionFs.getRegionDir())) {
+    if (!createDirOnFileSystem(fs, conf, regionDir)) {
       LOG.warn("Unable to create the region directory: " + regionDir);
       throw new IOException("Unable to create region directory: " + regionDir);
     }
@@ -841,5 +857,123 @@ public class HRegionFileSystem {
     if (!fs.delete(regionDir, true)) {
       LOG.warn("Failed delete of " + regionDir);
     }
+  }
+
+  /**
+   * Creates a directory. Assumes the user has already checked for this directory existence.
+   * @param dir
+   * @return the result of fs.mkdirs(). In case underlying fs throws an IOException, it checks
+   *         whether the directory exists or not, and returns true if it exists.
+   * @throws IOException
+   */
+  boolean createDir(Path dir) throws IOException {
+    int i = 0;
+    IOException lastIOE = null;
+    do {
+      try {
+        return fs.mkdirs(dir);
+      } catch (IOException ioe) {
+        lastIOE = ioe;
+        if (fs.exists(dir)) return true; // directory is present
+        sleepBeforeRetry("Create Directory", i+1);
+      }
+    } while (++i <= hdfsClientRetriesNumber);
+    throw new IOException("Exception in createDir", lastIOE);
+  }
+
+  /**
+   * Renames a directory. Assumes the user has already checked for this directory existence.
+   * @param srcpath
+   * @param dstPath
+   * @return true if rename is successful.
+   * @throws IOException
+   */
+  boolean rename(Path srcpath, Path dstPath) throws IOException {
+    IOException lastIOE = null;
+    int i = 0;
+    do {
+      try {
+        return fs.rename(srcpath, dstPath);
+      } catch (IOException ioe) {
+        lastIOE = ioe;
+        if (!fs.exists(srcpath) && fs.exists(dstPath)) return true; // successful move
+        // dir is not there, retry after some time.
+        sleepBeforeRetry("Rename Directory", i+1);
+      }
+    } while (++i <= hdfsClientRetriesNumber);
+    throw new IOException("Exception in rename", lastIOE);
+  }
+
+  /**
+   * Deletes a directory. Assumes the user has already checked for this directory existence.
+   * @param dir
+   * @return true if the directory is deleted.
+   * @throws IOException
+   */
+  boolean deleteDir(Path dir) throws IOException {
+    IOException lastIOE = null;
+    int i = 0;
+    do {
+      try {
+        return fs.delete(dir, true);
+      } catch (IOException ioe) {
+        lastIOE = ioe;
+        if (!fs.exists(dir)) return true;
+        // dir is there, retry deleting after some time.
+        sleepBeforeRetry("Delete Directory", i+1);
+      }
+    } while (++i <= hdfsClientRetriesNumber);
+    throw new IOException("Exception in DeleteDir", lastIOE);
+  }
+
+  /**
+   * sleeping logic; handles the interrupt exception.
+   */
+  private void sleepBeforeRetry(String msg, int sleepMultiplier) {
+    sleepBeforeRetry(msg, sleepMultiplier, baseSleepBeforeRetries, hdfsClientRetriesNumber);
+  }
+
+  /**
+   * Creates a directory for a filesystem and configuration object. Assumes the user has already
+   * checked for this directory existence.
+   * @param fs
+   * @param conf
+   * @param dir
+   * @return the result of fs.mkdirs(). In case underlying fs throws an IOException, it checks
+   *         whether the directory exists or not, and returns true if it exists.
+   * @throws IOException
+   */
+  private static boolean createDirOnFileSystem(FileSystem fs, Configuration conf, Path dir)
+      throws IOException {
+    int i = 0;
+    IOException lastIOE = null;
+    int hdfsClientRetriesNumber = conf.getInt("hdfs.client.retries.number",
+      DEFAULT_HDFS_CLIENT_RETRIES_NUMBER);
+    int baseSleepBeforeRetries = conf.getInt("hdfs.client.sleep.before.retries",
+      DEFAULT_BASE_SLEEP_BEFORE_RETRIES);
+    do {
+      try {
+        return fs.mkdirs(dir);
+      } catch (IOException ioe) {
+        lastIOE = ioe;
+        if (fs.exists(dir)) return true; // directory is present
+        sleepBeforeRetry("Create Directory", i+1, baseSleepBeforeRetries, hdfsClientRetriesNumber);
+      }
+    } while (++i <= hdfsClientRetriesNumber);
+    throw new IOException("Exception in createDir", lastIOE);
+  }
+
+  /**
+   * sleeping logic for static methods; handles the interrupt exception. Keeping a static version
+   * for this to avoid re-looking for the integer values.
+   */
+  private static void sleepBeforeRetry(String msg, int sleepMultiplier, int baseSleepBeforeRetries,
+      int hdfsClientRetriesNumber) {
+    if (sleepMultiplier > hdfsClientRetriesNumber) {
+      LOG.debug(msg + ", retries exhausted");
+      return;
+    }
+    LOG.debug(msg + ", sleeping " + baseSleepBeforeRetries + " times " + sleepMultiplier);
+    Threads.sleep(baseSleepBeforeRetries * sleepMultiplier);
   }
 }
