@@ -32,24 +32,17 @@ import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.client.HConnectionManager
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
-import org.apache.hadoop.hbase.HServerAddress
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.util.Writables
 import org.apache.hadoop.conf.Configuration
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil
+import org.apache.hadoop.hbase.ServerName
+import org.apache.hadoop.hbase.HRegionInfo
 
 # Name of this script
 NAME = "region_mover"
-
-# Get root table reference
-def getRootTable(config)
-  # Keep meta reference in ruby global
-  if not $ROOT
-    $ROOT = HTable.new(config, HConstants::ROOT_TABLE_NAME)
-  end
-  return $ROOT
-end
 
 # Get meta table reference
 def getMetaTable(config)
@@ -93,24 +86,20 @@ end
 # Get servername that is up in .META.; this is hostname + port + startcode comma-delimited.
 # Can return nil
 def getServerNameForRegion(admin, r)
-  if r.isRootRegion()
+  if r.isMetaRegion()
     # Hack
-    tracker = org.apache.hadoop.hbase.zookeeper.RootRegionTracker.new(admin.getConnection().getZooKeeperWatcher(), RubyAbortable.new())
+    tracker = org.apache.hadoop.hbase.zookeeper.MetaRegionTracker.new(admin.getConnection().getZooKeeperWatcher(), RubyAbortable.new())
     tracker.start()
     while not tracker.isLocationAvailable()
       sleep 0.1
     end
     # Make a fake servername by appending ','
-    rootServer = tracker.getRootRegionLocation().toString() + ","
+    metaServer = tracker.getMetaRegionLocation().toString() + ","
     tracker.stop()
-    return rootServer
+    return metaServer
   end
   table = nil
-  if r.isMetaRegion()
-    table = getRootTable(admin.getConfiguration()) 
-  else
-    table = getMetaTable(admin.getConfiguration())
-  end
+  table = getMetaTable(admin.getConfiguration())
   g = Get.new(r.getRegionName())
   g.addColumn(HConstants::CATALOG_FAMILY, HConstants::SERVER_QUALIFIER)
   g.addColumn(HConstants::CATALOG_FAMILY, HConstants::STARTCODE_QUALIFIER)
@@ -259,10 +248,8 @@ end
 
 # Now get list of regions on targetServer
 def getRegions(config, servername)
-  connection = HConnectionManager::getConnection(config)
-  parts = servername.split(',')
-  rs = connection.getHRegionConnection(parts[0], parts[1].to_i)
-  return rs.getOnlineRegions()
+  connection = HConnectionManager::getConnection(config);
+  return ProtobufUtil::getOnlineRegions(connection.getAdmin(ServerName.new(servername)));
 end
 
 def deleteFile(filename)
@@ -280,8 +267,7 @@ def writeFile(filename, regions)
   dos.writeInt(regions.size())
   # Write actual region names.
   for r in regions
-    bytes = Writables.getBytes(r)
-    Bytes.writeByteArray(dos, bytes)
+    Bytes.writeByteArray(dos, r.toByteArray())
   end
   dos.close()
 end
@@ -298,7 +284,7 @@ def readFile(filename)
   regions = java.util.ArrayList.new(count)
   index = 0
   while index < count
-    regions.add(Writables.getHRegionInfo(Bytes.readByteArray(dis)))
+    regions.add(HRegionInfo.parseFromOrNull(Bytes.readByteArray(dis)))
     index = index + 1
   end
   dis.close()
