@@ -34,7 +34,7 @@ zk = ZooKeeperWatcher.new(config, 'get-active-master', nil)
 begin
   master_address = ZKUtil.getData(zk, zk.masterAddressZNode)
   if master_address
-    puts ServerName.parseVersionedServerName(master_address).getHostname()
+    puts ServerName.parseFrom(master_address).getHostname()
   else
     puts 'Master not running'
   end

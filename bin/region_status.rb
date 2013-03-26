@@ -53,7 +53,8 @@ import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.hadoop.hbase.util.Writables
+import org.apache.hadoop.hbase.HRegionInfo
+import org.apache.hadoop.hbase.client.MetaScanner
 
 # disable debug logging on this script for clarity
 log_level = org.apache.log4j.Level::ERROR
@@ -114,7 +115,7 @@ while iter.hasNext
     # Gone too far, break
     break
   end
-  region = Writables.getHRegionInfo result.getValue(INFO, REGION_INFO)
+  region = HRegionInfo.getHRegionInfo result
   if not region.isOffline
     # only include regions that should be online
     meta_count += 1
@@ -122,9 +123,9 @@ while iter.hasNext
 end
 scanner.close
 # If we're trying to see the status of all HBase tables, we need to include the
-# -ROOT- & .META. tables, that are not included in our scan
+# .META. table, that is not included in our scan
 if $tablename.nil?
-  meta_count += 2
+  meta_count += 1
 end
 
 # query the master to see how many regions are on region servers
@@ -135,7 +136,7 @@ while true
   if $tablename.nil?
     server_count = admin.getClusterStatus().getRegionsCount()
   else
-    server_count = $tableq.getRegionsInfo().size()
+    server_count = MetaScanner::allTableRegions(config,$tablename.to_java_bytes,false).size()
   end
   print "Region Status: #{server_count} / #{meta_count}\n"
   if SHOULD_WAIT and server_count < meta_count
