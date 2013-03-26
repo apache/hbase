@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -745,23 +746,36 @@ public class HBaseTestingUtility {
   public int createMultiRegions(final Configuration c, final HTable table,
       final byte[] columnFamily)
   throws IOException {
+    return createMultiRegions(c, table, columnFamily, getTmpKeys());
+  }
+
+  public byte[][] getTmpKeys() {
     byte[][] KEYS = {
-      HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("bbb"),
-      Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
-      Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
-      Bytes.toBytes("iii"), Bytes.toBytes("jjj"), Bytes.toBytes("kkk"),
-      Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
-      Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
-      Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"),
-      Bytes.toBytes("uuu"), Bytes.toBytes("vvv"), Bytes.toBytes("www"),
-      Bytes.toBytes("xxx"), Bytes.toBytes("yyy")
-    };
-    return createMultiRegions(c, table, columnFamily, KEYS);
+        HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("bbb"),
+        Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
+        Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
+        Bytes.toBytes("iii"), Bytes.toBytes("jjj"), Bytes.toBytes("kkk"),
+        Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
+        Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
+        Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"),
+        Bytes.toBytes("uuu"), Bytes.toBytes("vvv"), Bytes.toBytes("www"),
+        Bytes.toBytes("xxx"), Bytes.toBytes("yyy")
+      };
+    return KEYS;
   }
 
   public int createMultiRegions(final Configuration c, final HTable table,
       final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
+    return createMultiRegionsWithFavoredNodes(c,table,columnFamily,
+        new Pair<byte[][], byte[][]>(startKeys, null));
+  }
+
+  public int createMultiRegionsWithFavoredNodes(final Configuration c, final HTable table,
+      final byte[] columnFamily, Pair<byte[][], byte[][]> startKeysAndFavNodes)
+  throws IOException {
+    byte[][] startKeys = startKeysAndFavNodes.getFirst();
+    byte[][] favNodes = startKeysAndFavNodes.getSecond();
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
     HTableDescriptor htd = table.getTableDescriptor();
@@ -783,6 +797,10 @@ public class HBaseTestingUtility {
       Put put = new Put(hri.getRegionName());
       put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(hri));
+      if (favNodes != null) {
+        put.add(HConstants.CATALOG_FAMILY, HConstants.FAVOREDNODES_QUALIFIER,
+            favNodes[i]);
+      }
       meta.put(put);
       LOG.info("createMultiRegions: inserted " + hri.toString());
       count++;
@@ -1232,7 +1250,7 @@ TOP_LOOP:
         Threads.sleepWithoutInterrupt(2000);
         continue;
       } catch (PreemptiveFastFailException ex) {
-      	// Be more patient
+        // Be more patient
         Threads.sleepWithoutInterrupt(2000);
         continue;
       }

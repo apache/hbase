@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -876,9 +877,9 @@ public class TestHFileOutputFormat  {
             Map<byte[], byte[]> metadataMap = reader.loadFileInfo();
 
             assertTrue("timeRange is not set",
-			metadataMap.get(StoreFile.TIMERANGE_KEY) != null);
+      metadataMap.get(StoreFile.TIMERANGE_KEY) != null);
             assertEquals("Incorrect bloom type used for column family " +
-			     familyStr + "(reader: " + reader + ")",
+           familyStr + "(reader: " + reader + ")",
                          configuredBloomFilter.get(familyStr),
                          reader.getBloomFilterType());
             break;
@@ -896,24 +897,24 @@ public class TestHFileOutputFormat  {
   }
 
   private void setupColumnFamiliesEncodingType(HTable table, 
-  		Map<String, DataBlockEncoding> familyToEncoding) throws IOException {
-  	HTableDescriptor mockTableDesc = new HTableDescriptor();
-  	for (Entry<String, DataBlockEncoding> entry : familyToEncoding.entrySet()) {
-  		mockTableDesc.addFamily(
-  			new HColumnDescriptor(entry.getKey().getBytes(), 
-  				1, 
-  				Compression.Algorithm.NONE.toString(), 
-  				true, 
-  				entry.getValue().toString(), 
-  				false, 
-  				false, 
-  				HColumnDescriptor.DEFAULT_BLOCKSIZE, 
-  				0,
-  				BloomType.NONE.toString(),
-  				HColumnDescriptor.DEFAULT_REPLICATION_SCOPE,
-  				HColumnDescriptor.DEFAULT_BLOOMFILTER_ERROR_RATE));
-  	}
-  	Mockito.doReturn(mockTableDesc).when(table).getTableDescriptor();
+      Map<String, DataBlockEncoding> familyToEncoding) throws IOException {
+    HTableDescriptor mockTableDesc = new HTableDescriptor();
+    for (Entry<String, DataBlockEncoding> entry : familyToEncoding.entrySet()) {
+      mockTableDesc.addFamily(
+        new HColumnDescriptor(entry.getKey().getBytes(),
+          1,
+          Compression.Algorithm.NONE.toString(),
+          true,
+          entry.getValue().toString(),
+          false,
+          false,
+          HColumnDescriptor.DEFAULT_BLOCKSIZE,
+          0,
+          BloomType.NONE.toString(),
+          HColumnDescriptor.DEFAULT_REPLICATION_SCOPE,
+          HColumnDescriptor.DEFAULT_BLOOMFILTER_ERROR_RATE));
+    }
+    Mockito.doReturn(mockTableDesc).when(table).getTableDescriptor();
   }
   
   /**
@@ -936,8 +937,8 @@ public class TestHFileOutputFormat  {
 
     int familyIndex = 0;
     for (byte[] family : FAMILIES) {
-    	configuredEncoding.put(Bytes.toString(family),
-    		EncodingTypeValues[familyIndex++ % EncodingTypeValues.length]);
+      configuredEncoding.put(Bytes.toString(family),
+        EncodingTypeValues[familyIndex++ % EncodingTypeValues.length]);
     }
 
     setupColumnFamiliesEncodingType(table, configuredEncoding);
@@ -984,7 +985,7 @@ public class TestHFileOutputFormat  {
 
             assertTrue("timeRange is not set", metadataMap.get(StoreFile.TIMERANGE_KEY) != null);
             assertEquals("Incorrect Encoding Type used for column family " 
-            	+ familyStr + "(reader: " + reader + ")",
+              + familyStr + "(reader: " + reader + ")",
               configuredEncoding.get(familyStr),
               reader.getHFileReader().getEncodingOnDisk());
             break;
@@ -1000,15 +1001,15 @@ public class TestHFileOutputFormat  {
       dir.getFileSystem(conf).delete(dir, true);
     }
   }
-  
+
   @Test
   public void testFavoredNodes() throws Exception {
-  	Random rand = new Random();
-  	for (int i=0; i<3; i++) {
-  		int tmp = (int)'b';
-  		byte c = (byte)(tmp + (Math.abs(rand.nextInt()))%24);
-  		testFavoredNodesPerChar(c);
-  	}
+    Random rand = new Random();
+    for (int i=0; i<3; i++) {
+      int tmp = (int)'b';
+      byte c = (byte)(tmp + (Math.abs(rand.nextInt()))%24);
+      testFavoredNodesPerChar(c);
+    }
   }
   private static final int FAVORED_NODES_NUM = 3;
   private static final int REGION_SERVERS = 10;
@@ -1016,65 +1017,51 @@ public class TestHFileOutputFormat  {
    * Testing FavoredNodes support for HFileOutputFormat
    */
   public void testFavoredNodesPerChar(byte c) throws Exception{
-  	util.startMiniCluster(REGION_SERVERS);
-  	Configuration conf = new Configuration(this.util.getConfiguration());
+    util.startMiniCluster(REGION_SERVERS);
+    Configuration conf = new Configuration(this.util.getConfiguration());
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
     Path dir = util.getTestDir("TestFavoredNodes");
     byte[] familyName = Bytes.toBytes("family");
     byte[] tableName = Bytes.toBytes("TestFavoredNodes");
+    byte[][] startKeys = util.getTmpKeys();
+    String[] nodeNames = new String[REGION_SERVERS];
+    List<DataNode> dataNodes = util.getDFSCluster().getDataNodes();
+    for (int i = 0; i < REGION_SERVERS; i++) {
+      DataNode node = dataNodes.get(i);
+      nodeNames[i] =
+          node.getSelfAddr().getAddress().getHostAddress() + ":" +
+              node.getSelfAddr().getPort();
+    }
+    int testIndex = 0;
+    byte[][] favNodes = new byte[startKeys.length][];
+    for (int i = 0; i < startKeys.length; i++) {
+      List<HServerAddress> favoredNodes =
+          new ArrayList<HServerAddress>(FAVORED_NODES_NUM);
+      if (i>0 && startKeys[i][0] == c) {
+        testIndex = i;
+      }
+      for (int j = 0; j < FAVORED_NODES_NUM; j++) {
+        favoredNodes.add(new HServerAddress(nodeNames[(i + j) %
+                                            REGION_SERVERS]));
+      }
+      String favoredNodesString =
+          RegionPlacement.getFavoredNodes(favoredNodes);
+      byte[] favoredNodesBytes = Bytes.toBytes(favoredNodesString);
+      favNodes[i] = favoredNodesBytes;
+    }
     HTable table = util.createTable(tableName, familyName);
-    int countOfRegions = util.createMultiRegions(table, familyName);
+    int countOfRegions = util.createMultiRegionsWithFavoredNodes(conf, table, familyName,
+        new Pair<byte[][],byte[][]>(startKeys, favNodes));
     util.waitUntilAllRegionsAssigned(countOfRegions);
 
-    InetSocketAddress[] nodes = new InetSocketAddress[REGION_SERVERS];
-    List<DataNode> datanodes = util.getDFSCluster().getDataNodes();
-    for (int i = 0; i < REGION_SERVERS; i++) {
-      nodes[i] = datanodes.get(i).getSelfAddr();
-    }
-
-    String[] nodeNames = new String[REGION_SERVERS];
-    for (int i = 0; i < REGION_SERVERS; i++) {
-      nodeNames[i] = nodes[i].getAddress().getHostAddress() + ":" +
-      	nodes[i].getPort();
-    }
-
-    List<Put> puts = new ArrayList<Put>();
-    int testIndex = 0;
-    List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
-    for (int i = 0; i < regions.size(); i++) {
-    	List<HServerAddress> favoredNodes = new ArrayList<HServerAddress>(FAVORED_NODES_NUM);
-    	HRegion region = regions.get(i);
-    	if (Bytes.BYTES_COMPARATOR.compare(region.getStartKey(), HConstants.EMPTY_BYTE_ARRAY) != 0) {
-    		if (region.getStartKey()[0] == c) {
-      		testIndex = i;
-      	}
-    	}
-    	for (int j = 0; j < FAVORED_NODES_NUM; j++) {
-        favoredNodes.add(new HServerAddress(nodeNames[(i + j) % REGION_SERVERS]));
-      }
-      String favoredNodesString = RegionPlacement.getFavoredNodes(favoredNodes);
-      Put put = new Put(region.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.FAVOREDNODES_QUALIFIER,
-          favoredNodesString.getBytes());
-      puts.add(put);
-    }
-
-    // Write the region assignments to the meta table.
-    HTable metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
-    metaTable.put(puts);
-    LOG.info("Updated the META with the new assignment plan");
-
-    // Allowing the Master thread to rescan and clean the empty meta rows
-    int sleepTime = conf.getInt("hbase.master.meta.thread.rescanfrequency", 100*1000);
-    Thread.sleep(sleepTime);
     try {
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       setupRandomGeneratorMapper(job);
       HFileOutputFormat.configureIncrementalLoad(job, table);
       FileOutputFormat.setOutputPath(job, dir);
       context = new TaskAttemptContext(job.getConfiguration(),
-      	new TaskAttemptID());
+        new TaskAttemptID());
       HFileOutputFormat hof = new HFileOutputFormat();
       writer = hof.getRecordWriter(context);
 
@@ -1110,22 +1097,22 @@ public class TestHFileOutputFormat  {
         }
       }
     } finally {
-    	dir.getFileSystem(conf).delete(dir, true);
-    	util.shutdownMiniCluster();
+      dir.getFileSystem(conf).delete(dir, true);
+      util.shutdownMiniCluster();
     }
   }
 
   private void writeKVs(RecordWriter<ImmutableBytesWritable, KeyValue> writer,
-  	byte[] family, byte keyByte) throws IOException, InterruptedException{
-  	byte[] k = new byte[3];
-  	int b1 = (int)keyByte;
-  	Random rand = new Random();
-		int tmp = rand.nextInt();
-		int b2 = Math.min(b1 + Math.abs(tmp)%26, (int)'z');
-		tmp = rand.nextInt();
-		int b3 = Math.min(b1 + Math.abs(tmp)%26, (int)'z');
-		
-		for (byte byte2 = (byte)b2; byte2 <= 'z'; byte2++) {
+    byte[] family, byte keyByte) throws IOException, InterruptedException{
+    byte[] k = new byte[3];
+    int b1 = (int)keyByte;
+    Random rand = new Random();
+    int tmp = rand.nextInt();
+    int b2 = Math.min(b1 + Math.abs(tmp)%26, (int)'z');
+    tmp = rand.nextInt();
+    int b3 = Math.min(b1 + Math.abs(tmp)%26, (int)'z');
+
+    for (byte byte2 = (byte)b2; byte2 <= 'z'; byte2++) {
       for (byte byte3 = (byte)b3; byte3 <= 'z'; byte3++) {
         k[0] = (byte)b1;
         k[1] = byte2;

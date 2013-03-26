@@ -88,7 +88,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     "hbase.hfileoutputformat.families.bloomfilter.typePerCF";
   
   static final String ENCODING_TYPE_PER_CF_KEY =
-  	"hbase.hfileoutputformat.families.encoding.typePerCF";
+    "hbase.hfileoutputformat.families.encoding.typePerCF";
 
   static final String TABLE_NAME = "hbase.hfileoutputformat.tablename";
   static final String UTF8 = "UTF-8";
@@ -110,7 +110,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         Compression.Algorithm.NONE.getName());
     HTable tempTable = null;
     if (conf.get(TABLE_NAME) != null) {
-    	tempTable = new HTable(conf, conf.get(TABLE_NAME));
+      tempTable = new HTable(conf, conf.get(TABLE_NAME));
     }
     final HTable table = tempTable;
 
@@ -120,10 +120,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     final Map<byte[], BloomType> bloomTypeMap = createFamilyBloomTypeMap(conf);
     
     final Map<byte[], HFileDataBlockEncoder> encoderTypeMap = 
-    	createFamilyDeltaEncodingMap(conf);
+      createFamilyDeltaEncodingMap(conf);
     
     final Pair<byte[][], byte[][]> startKeysAndFavoredNodes = 
-    	(table == null ? null : table.getStartKeysAndFavoredNodes());
+      (table == null ? null : table.getStartKeysAndFavoredNodes());
 
     return new RecordWriter<ImmutableBytesWritable, KeyValue>() {
       // Map of families to writers and how much has been output on the writer.
@@ -180,21 +180,21 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       }
 
       private byte[] getFavoredNodesForKey(byte[] rowKey) {
-      	if (startKeysAndFavoredNodes == null) {
-      		return HConstants.EMPTY_BYTE_ARRAY;
-      	}
-      	byte[][] startKeys = startKeysAndFavoredNodes.getFirst();
-      	byte[][] favoredNodes = startKeysAndFavoredNodes.getSecond();
-      	if (startKeys == null || favoredNodes == null)
-    			return HConstants.EMPTY_BYTE_ARRAY;
-      	ConcurrentSkipListMap<byte [], byte[]> startKeysToFavoredNodes =
-      		new ConcurrentSkipListMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
-      	for (int i=0; i<startKeys.length; i++) {
-      		if (startKeys[i] == null || favoredNodes[i] == null)
-      			return HConstants.EMPTY_BYTE_ARRAY;
-      		startKeysToFavoredNodes.put(startKeys[i], favoredNodes[i]);
-      	}
-      	return startKeysToFavoredNodes.floorEntry(rowKey).getValue();
+        if (startKeysAndFavoredNodes == null) {
+          return HConstants.EMPTY_BYTE_ARRAY;
+        }
+        byte[][] startKeys = startKeysAndFavoredNodes.getFirst();
+        byte[][] favoredNodes = startKeysAndFavoredNodes.getSecond();
+        if (startKeys == null || favoredNodes == null)
+          return HConstants.EMPTY_BYTE_ARRAY;
+        ConcurrentSkipListMap<byte [], byte[]> startKeysToFavoredNodes =
+          new ConcurrentSkipListMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+        for (int i=0; i<startKeys.length; i++) {
+          if (startKeys[i] == null || favoredNodes[i] == null)
+            return HConstants.EMPTY_BYTE_ARRAY;
+          startKeysToFavoredNodes.put(startKeys[i], favoredNodes[i]);
+        }
+        return startKeysToFavoredNodes.floorEntry(rowKey).getValue();
       }
 
       private void rollWriters() throws IOException {
@@ -229,13 +229,13 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
           bloomType = BloomType.NONE;
         }
         if (encoder == null) {
-        	encoder = new HFileDataBlockEncoderImpl(DataBlockEncoding.NONE, 
-        		DataBlockEncoding.NONE);
+          encoder = new HFileDataBlockEncoderImpl(DataBlockEncoding.NONE,
+            DataBlockEncoding.NONE);
         }
 
         LOG.info("Using " + encoder.getEncodingInCache() + " in cache and " +
-        	encoder.getEncodingOnDisk() + " on disk for the column family " +
-        	Bytes.toString(family));
+          encoder.getEncodingOnDisk() + " on disk for the column family " +
+          Bytes.toString(family));
 
         /* new bloom filter does not require maxKeys. */
         int maxKeys = 0;
@@ -351,8 +351,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   public static void configAsMapOutputFormat(Job job, HTable table) throws IOException {
     LOG.warn("Set up the HFileOutputFormat as MapperOutputFormat." +
-    		"It is the mapper task's responsibility to make sure that each mapper emits values " +
-    		"for one region only and in a sorted order. !");
+        "It is the mapper task's responsibility to make sure that each mapper emits values " +
+        "for one region only and in a sorted order. !");
     Configuration conf = job.getConfiguration();
     if (!KeyValue.class.equals(job.getMapOutputValueClass())) {
       LOG.error("Only support the KeyValue.class as MapOutputValueClass so far!");
@@ -569,7 +569,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
   protected static void configureDeltaEncoding(HTable table, Configuration conf)
   throws IOException {
-  	HTableDescriptor tableDescriptor = table.getTableDescriptor();
+    HTableDescriptor tableDescriptor = table.getTableDescriptor();
     if (tableDescriptor == null){
       return;
     }
@@ -587,11 +587,11 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       encodingTypePerCFConfigValue.append('=');
       encodingTypePerCFConfigValue.append(
           URLEncoder.encode(familyDescriptor.getDataBlockEncodingOnDisk().toString(),
-          	UTF8));
+            UTF8));
       encodingTypePerCFConfigValue.append(':');
       encodingTypePerCFConfigValue.append(
           URLEncoder.encode(familyDescriptor.getDataBlockEncoding().toString(),
-          	UTF8));
+            UTF8));
     }
 
     conf.set(ENCODING_TYPE_PER_CF_KEY, encodingTypePerCFConfigValue.toString());
@@ -613,13 +613,13 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       }
 
       try {
-      	String[] encodingsForFamily =
-      		URLDecoder.decode(familySplit[1], UTF8).split(":");
-      	HFileDataBlockEncoder encoder = new HFileDataBlockEncoderImpl(
-      		DataBlockEncoding.valueOf(URLDecoder.decode(encodingsForFamily[0], UTF8)), 
-      		DataBlockEncoding.valueOf(URLDecoder.decode(encodingsForFamily[1], UTF8)));
-      	encodingTypeMap.put(
-      		URLDecoder.decode(familySplit[0], UTF8).getBytes(),
+        String[] encodingsForFamily =
+          URLDecoder.decode(familySplit[1], UTF8).split(":");
+        HFileDataBlockEncoder encoder = new HFileDataBlockEncoderImpl(
+          DataBlockEncoding.valueOf(URLDecoder.decode(encodingsForFamily[0], UTF8)),
+          DataBlockEncoding.valueOf(URLDecoder.decode(encodingsForFamily[1], UTF8)));
+        encodingTypeMap.put(
+          URLDecoder.decode(familySplit[0], UTF8).getBytes(),
           encoder);
       } catch (UnsupportedEncodingException e) {
         // will not happen with UTF-8 encoding
@@ -630,9 +630,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   }
 
   protected static void configureFavoredNodes(HTable table, Configuration conf) {
-  	if (table.getTableName() != null) {
-  		conf.set(TABLE_NAME, Bytes.toString(table.getTableName()));
-  	}
-  	// The rest of the stuff will be taken care of by the RecordWriter
+    if (table.getTableName() != null) {
+      conf.set(TABLE_NAME, Bytes.toString(table.getTableName()));
+    }
+    // The rest of the stuff will be taken care of by the RecordWriter
   }
 }
