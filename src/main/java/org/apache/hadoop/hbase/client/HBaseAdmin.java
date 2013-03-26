@@ -381,6 +381,10 @@ public class HBaseAdmin implements Abortable, Closeable {
     } else if(Bytes.compareTo(startKey, endKey) >= 0) {
       throw new IllegalArgumentException("Start key must be smaller than end key");
     }
+    if (numRegions == 3) {
+      createTable(desc, new byte[][] { startKey, endKey });
+      return;
+    }
     byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
     if(splitKeys == null || splitKeys.length != numRegions - 1) {
       throw new IllegalArgumentException("Unable to split key range into enough regions");
