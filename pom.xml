@@ -27,16 +27,16 @@
    -->
 
   <parent>
-    <groupId>org.apache</groupId>
-    <artifactId>apache</artifactId>
-    <version>8</version>
+    <groupId>com.cloudera.cdh</groupId>
+    <artifactId>cdh-root</artifactId>
+    <version>4.3.0-SNAPSHOT</version>
     <relativePath></relativePath><!-- no parent resolution -->
   </parent>
 
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.94.6</version>
+  <version>0.94.6-cdh4.3.0-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -247,6 +247,25 @@
   </developers>
 
   <repositories>
+    <repository>
+      <id>cdh.repo</id>
+      <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+      <name>Cloudera Repositories</name>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>cdh.snapshots.repo</id>
+      <url>https://repository.cloudera.com/artifactory/libs-snapshot-local</url>
+      <name>Cloudera Snapshots Repository</name>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+    </repository>
     <repository>
       <id>apache release</id>
       <url>https://repository.apache.org/content/repositories/releases/</url>
@@ -746,6 +765,19 @@
                 <parallel>classes</parallel><!-- surefire hack, if not we're using method parallelisation class !-->
                 <groups>${surefire.firstPartGroups}</groups>
                 <testFailureIgnore>false</testFailureIgnore>
+                <includes>
+                 <include>${unittest.include}</include>
+                </includes>
+                <excludes>
+                  <exclude>${integrationtest.include}</exclude>
+                  <exclude>**/*$*</exclude>
+                <exclude>${test.exclude.pattern}</exclude>
+            </excludes>
+            <environmentVariables>
+              <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/nativelib</LD_LIBRARY_PATH>
+              <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/nativelib</DYLD_LIBRARY_PATH>
+              <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
+            </environmentVariables>
         </configuration>
         <executions>
           <execution>
@@ -1026,7 +1058,7 @@
     <jackson.version>1.8.8</jackson.version>
     <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.1</jaxb-api.version>
-    <jetty.version>6.1.26</jetty.version>
+    <jetty.version>6.1.26.cloudera.2</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.5</jruby.version>
@@ -1037,8 +1069,8 @@
     <protobuf.version>2.4.0a</protobuf.version>
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.8.0</thrift.version>
-    <zookeeper.version>3.4.5</zookeeper.version>
-    <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
+    <zookeeper.version>${cdh.zookeeper.version}</zookeeper.version>
+    <hadoop-snappy.version>${cdh.hadoop-snappy.version}</hadoop-snappy.version>
     <clover.version>2.6.3</clover.version>
 
     <package.prefix>/usr</package.prefix>
@@ -1070,6 +1102,14 @@
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
+    <!-- For flaky tests exclusion -->
+    <test.exclude></test.exclude>
+    <test.exclude.pattern>**/${test.exclude}.java</test.exclude.pattern>
+    
+    <!-- Test inclusion patterns -->
+    <unittest.include>**/Test*.java</unittest.include>
+    <integrationtest.include>**/IntegrationTest*.java</integrationtest.include>
+
   </properties>
 
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
@@ -1669,7 +1709,7 @@
     <profile>
       <id>security</id>
       <properties>
-        <hadoop.version>1.0.4</hadoop.version>
+        <hadoop.version>${cdh.hadoop.version}</hadoop.version>
       </properties>
       <build>
         <finalName>${project.artifactId}-${project.version}-security</finalName>
@@ -1996,7 +2036,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>0.23.3</hadoop.version>
+        <hadoop.version>${cdh.hadoop.version}</hadoop.version>
         <slf4j.version>1.6.1</slf4j.version>
       </properties>
       <dependencies>
@@ -2160,7 +2200,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>2.0.0-alpha</hadoop.version>
+        <hadoop.version>${cdh.hadoop.version}</hadoop.version>
         <slf4j.version>1.6.1</slf4j.version>
       </properties>
       <dependencies>
