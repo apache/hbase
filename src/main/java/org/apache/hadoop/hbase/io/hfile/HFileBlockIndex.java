@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
@@ -181,10 +182,10 @@ public class HFileBlockIndex {
      */
     public HFileBlock seekToDataBlock(final byte[] key, int keyOffset,
         int keyLength, HFileBlock currentBlock, boolean cacheBlocks,
-        boolean isCompaction)
+        boolean isCompaction, KeyValueContext kvContext)
         throws IOException {
       BlockWithScanInfo blockWithScanInfo = loadDataBlockWithScanInfo(key, keyOffset, keyLength,
-          currentBlock, cacheBlocks, isCompaction);
+          currentBlock, cacheBlocks, isCompaction, kvContext);
       if (blockWithScanInfo == null) {
         return null;
       } else {
@@ -204,12 +205,14 @@ public class HFileBlockIndex {
      *          block
      * @param cacheBlocks
      * @param isCompaction
+     * @param kvContext
      * @return the BlockWithScanInfo which contains the DataBlock with other scan info 
      *         such as nextIndexedKey.
      * @throws IOException
      */
     public BlockWithScanInfo loadDataBlockWithScanInfo(final byte[] key, int keyOffset,
-        int keyLength, HFileBlock currentBlock, boolean cacheBlocks, boolean isCompaction)
+        int keyLength, HFileBlock currentBlock, boolean cacheBlocks,
+        boolean isCompaction, KeyValueContext kvContext)
         throws IOException {
       int rootLevelIndex = rootBlockContainingKey(key, keyOffset, keyLength);
       if (rootLevelIndex < 0 || rootLevelIndex >= blockOffsets.length) {
@@ -257,7 +260,7 @@ public class HFileBlockIndex {
           }
           block = cachingBlockReader.readBlock(currentOffset,
               currentOnDiskSize, shouldCache, isCompaction,
-              expectedBlockType);
+              expectedBlockType, kvContext);
         }
 
         if (block == null) {
@@ -333,7 +336,7 @@ public class HFileBlockIndex {
         // Caching, using pread, assuming this is not a compaction.
         HFileBlock midLeafBlock = cachingBlockReader.readBlock(
             midLeafBlockOffset, midLeafBlockOnDiskSize, true, false,
-            BlockType.LEAF_INDEX);
+            BlockType.LEAF_INDEX, null);
 
         ByteBuffer b = midLeafBlock.getBufferWithoutHeader();
         int numDataBlocks = b.getInt();
@@ -874,7 +877,7 @@ public class HFileBlockIndex {
 
       if (rootChunk.getNumEntries() > 0)
         throw new IOException("Root-level entries already added in " +
-			"single-level mode");
+            "single-level mode");
 
       rootChunk = curInlineChunk;
       curInlineChunk = new BlockIndexChunk();

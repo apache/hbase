@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -128,7 +129,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     HFile.writeTimeNano.addAndGet(System.nanoTime() - startTimeNs);
     HFile.writeOps.incrementAndGet();
 
-    if (cacheConf.shouldCacheDataOnWrite()) {
+    if (cacheConf.shouldCacheDataOnFlush() || cacheCurrentBlockDuringCompaction()) {
       baosDos.flush();
       // we do not do data block encoding on disk for HFile v1
       byte[] bytes = baos.toByteArray();
@@ -146,6 +147,11 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     blockNumber++;
   }
 
+  protected boolean cacheCurrentBlockDuringCompaction() {
+    return false;
+  }
+
+
   /**
    * Ready a new block for writing.
    *
@@ -157,7 +163,9 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     this.out = getCompressingStream();
     BlockType.DATA.write(out);
     firstKeyInBlock = null;
-    if (cacheConf.shouldCacheDataOnWrite()) {
+    this.numKeysInCurrentBlock = 0;
+    this.numCachedKeysInCurrentBlock = 0;
+    if (cacheConf.shouldCacheDataOnFlush()) {
       this.baos = new ByteArrayOutputStream();
       this.baosDos = new DataOutputStream(baos);
       baosDos.write(HFileBlock.DUMMY_HEADER);
@@ -245,8 +253,13 @@ public class HFileWriterV1 extends AbstractHFileWriter {
    * @throws IOException
    */
   public void append(final KeyValue kv) throws IOException {
+    append(kv, null);
+  }
+
+  @Override
+  public void append(KeyValue kv, final KeyValueContext cv) throws IOException {
     append(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
-        kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+        kv.getBuffer(), kv.getValueOffset(), kv.getValueLength(), cv);
   }
 
   /**
@@ -260,7 +273,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
    * @throws IOException
    */
   public void append(final byte[] key, final byte[] value) throws IOException {
-    append(key, 0, key.length, value, 0, value.length);
+    append(key, 0, key.length, value, 0, value.length, null);
   }
 
   /**
@@ -276,7 +289,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
    * @throws IOException
    */
   private void append(final byte[] key, final int koffset, final int klength,
-      final byte[] value, final int voffset, final int vlength)
+      final byte[] value, final int voffset, final int vlength, final KeyValueContext cv)
       throws IOException {
     boolean dupKey = checkKey(key, koffset, klength);
     checkValue(value, voffset, vlength);
@@ -300,8 +313,12 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     this.lastKeyOffset = koffset;
     this.lastKeyLength = klength;
     this.entryCount++;
+    this.numKeysInCurrentBlock++;
+    if (cv != null && cv.getObtainedFromCache()) {
+      this.numCachedKeysInCurrentBlock++;
+    }
     // If we are pre-caching blocks on write, fill byte array stream
-    if (cacheConf.shouldCacheDataOnWrite()) {
+    if (cacheConf.shouldCacheDataOnFlush()) {
       this.baosDos.writeInt(klength);
       this.baosDos.writeInt(vlength);
       this.baosDos.write(key, koffset, klength);
@@ -431,5 +448,4 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     }
     return pos;
   }
-
 }

@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -268,7 +269,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
    * @throws IOException
    */
   ByteBuffer readBlockBuffer(int block, boolean cacheBlock,
-      final boolean isCompaction) throws IOException {
+      final boolean isCompaction, KeyValueContext kvContext)
+          throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
     }
@@ -293,6 +295,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
               cacheConf.shouldCacheDataOnRead());
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
+          if (kvContext != null) {
+            kvContext.setObtainedFromCache(true);
+          }
           getSchemaMetrics().updateOnCacheHit(
               cachedBlock.getBlockType().getCategory(), isCompaction);
           return cachedBlock.getBufferWithoutHeader();
@@ -329,7 +334,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
       }
       getSchemaMetrics().updateOnCacheMiss(BlockCategory.DATA, isCompaction,
           delta);
-
+      if (kvContext != null) {
+        kvContext.setObtainedFromCache(false);
+      }
       // Cache the block
       if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
           hfileBlock.getBlockType().getCategory())) {
@@ -562,7 +569,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
           blockBuffer = null;
           return false;
         }
-        blockBuffer = reader.readBlockBuffer(currBlock, cacheBlocks, isCompaction);
+        blockBuffer = reader.readBlockBuffer(currBlock, cacheBlocks, isCompaction,
+            kvContext);
         currKeyLen = blockBuffer.getInt();
         currValueLen = blockBuffer.getInt();
         blockFetches++;
@@ -640,7 +648,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
         return true;
       }
       currBlock = 0;
-      blockBuffer = reader.readBlockBuffer(currBlock, cacheBlocks, isCompaction);
+      blockBuffer = reader.readBlockBuffer(currBlock, cacheBlocks, isCompaction,
+          kvContext);
       currKeyLen = blockBuffer.getInt();
       currValueLen = blockBuffer.getInt();
       blockFetches++;
@@ -650,12 +659,14 @@ public class HFileReaderV1 extends AbstractHFileReader {
     @Override
     protected void loadBlock(int bloc, boolean rewind) throws IOException {
       if (blockBuffer == null) {
-        blockBuffer = reader.readBlockBuffer(bloc, cacheBlocks, isCompaction);
+        blockBuffer = reader.readBlockBuffer(bloc, cacheBlocks, isCompaction,
+            kvContext);
         currBlock = bloc;
         blockFetches++;
       } else {
         if (bloc != currBlock) {
-          blockBuffer = reader.readBlockBuffer(bloc, cacheBlocks, isCompaction);
+          blockBuffer = reader.readBlockBuffer(bloc, cacheBlocks, isCompaction,
+              kvContext);
           currBlock = bloc;
           blockFetches++;
         } else {
@@ -671,12 +682,17 @@ public class HFileReaderV1 extends AbstractHFileReader {
       }
     }
 
+    @Override
+    public boolean currKeyValueObtainedFromCache() {
+      return this.kvContext.getObtainedFromCache();
+    }
+
   }
 
   @Override
   public HFileBlock readBlock(long offset, long onDiskBlockSize,
       boolean cacheBlock, boolean isCompaction,
-      BlockType expectedBlockType) {
+      BlockType expectedBlockType, KeyValueContext kvContext) {
     throw new UnsupportedOperationException();
   }
 

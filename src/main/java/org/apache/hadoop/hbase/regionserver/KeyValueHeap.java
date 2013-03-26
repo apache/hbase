@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -121,7 +122,19 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * @return true if there are more keys, false if all scanners are done
    */
   public boolean next(List<KeyValue> result, int limit) throws IOException {
-    return next(result, limit, null);
+    return next(result, limit, null, null);
+  }
+
+  @Override
+  public boolean next(List<KeyValue> kvs, int limit,
+      KeyValueContext kvContext) throws IOException {
+    return next(kvs, limit, null, kvContext);
+  }
+
+  @Override
+  public boolean next(List<KeyValue> result, int limit,
+      String metric) throws IOException {
+    return next(result, limit, metric, null);
   }
 
   /**
@@ -136,16 +149,18 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * @param metric the metric name
    * @return true if there are more keys, false if all scanners are done
    */
-  public boolean next(List<KeyValue> result, int limit, String metric) throws IOException {
+  public boolean next(List<KeyValue> result, int limit, String metric,
+      KeyValueContext kvContext) throws IOException {
     if (this.current == null) {
       return false;
     }
     InternalScanner currentAsInternal = (InternalScanner)this.current;
-    boolean mayContainsMoreRows = currentAsInternal.next(result, limit, metric);
+    boolean mayContainsMoreRows =
+        currentAsInternal.next(result, limit, metric, kvContext);
+
     KeyValue pee = this.current.peek();
     /*
      * By definition, any InternalScanner must return false only when it has no
-     * further rows to be fetched. So, we can close a scanner if it returns
      * false. All existing implementations seem to be fine with this. It is much
      * more efficient to close scanners which are not needed than keep them in
      * the heap. This is also required for certain optimizations.
@@ -155,7 +170,9 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
     } else {
       this.heap.add(this.current);
     }
+
     this.current = pollRealKV();
+
     return (this.current != null);
   }
 
@@ -418,5 +435,12 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
   @Override
   public boolean passesDeleteColumnCheck(KeyValue kv) {
     return true;
+  }
+  @Override
+  public boolean currKeyValueObtainedFromCache() {
+    if (this.current == null) {
+      return false;
+    }
+    return this.current.currKeyValueObtainedFromCache();
   }
 }

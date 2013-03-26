@@ -131,4 +131,8 @@ public class CollectionBackedScanner extends NonLazyKeyValueScanner {
     return true;
   }
 
+  @Override
+  public boolean currKeyValueObtainedFromCache() {
+    return false;
+  }
 }

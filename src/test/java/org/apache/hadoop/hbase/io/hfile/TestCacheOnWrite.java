@@ -88,7 +88,7 @@ public class TestCacheOnWrite {
   private static final BloomType BLOOM_TYPE = StoreFile.BloomType.ROWCOL;
 
   private static enum CacheOnWriteType {
-    DATA_BLOCKS(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY,
+    DATA_BLOCKS(CacheConfig.CACHE_BLOCKS_ON_FLUSH_KEY,
         BlockType.DATA, BlockType.ENCODED_DATA),
     BLOOM_BLOCKS(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
         BlockType.BLOOM_CHUNK),
@@ -179,7 +179,7 @@ public class TestCacheOnWrite {
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, INDEX_BLOCK_SIZE);
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZE);
-    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY,
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_FLUSH_KEY,
         cowType.shouldBeCached(BlockType.DATA));
     conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
         cowType.shouldBeCached(BlockType.LEAF_INDEX));
@@ -227,7 +227,7 @@ public class TestCacheOnWrite {
       // Flags: don't cache the block, use pread, this is not a compaction.
       // Also, pass null for expected block type to avoid checking it.
       HFileBlock block = reader.readBlock(offset, onDiskSize, false,
-          false, null);
+          false, null, null);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           offset, encodingInCache, block.getBlockType());
       boolean isCached = blockCache.getBlock(blockCacheKey, true) != null;

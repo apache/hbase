@@ -687,6 +687,11 @@ public class MemStore implements HeapSize {
         return true;
       return false;
     }
+
+    @Override
+    public boolean currKeyValueObtainedFromCache() {
+      return true;
+    }
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(

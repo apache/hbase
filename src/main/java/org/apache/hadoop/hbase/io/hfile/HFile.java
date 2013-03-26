@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
@@ -225,6 +226,8 @@ public class HFile {
 
     void append(KeyValue kv) throws IOException;
 
+    void append(KeyValue kv, KeyValueContext vc) throws IOException;
+
     void append(byte[] key, byte[] value) throws IOException;
 
     /** @return the path to this {@link HFile} */
@@ -392,7 +395,7 @@ public class HFile {
   public interface CachingBlockReader {
     HFileBlock readBlock(long offset, long onDiskBlockSize,
         boolean cacheBlock, final boolean isCompaction,
-        BlockType expectedBlockType)
+        BlockType expectedBlockType, KeyValueContext kvContext)
         throws IOException;
   }
 

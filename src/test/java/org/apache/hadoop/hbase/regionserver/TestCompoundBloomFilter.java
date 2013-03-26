@@ -290,7 +290,7 @@ public class TestCompoundBloomFilter {
       throws IOException {
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZES[t]);
-    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_FLUSH_KEY, true);
     cacheConf = new CacheConfig(conf);
 
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConf, fs,

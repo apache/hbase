@@ -4293,7 +4293,7 @@ public class TestFromClientSide {
         tableName).getOnlineRegionByFullName(regionName);
     Store store = region.getStores().values().iterator().next();
     CacheConfig cacheConf = store.getCacheConfig();
-    cacheConf.setCacheDataOnWrite(true);
+    cacheConf.setCacheDataOnFlush(true);
     cacheConf.setEvictOnClose(true);
     BlockCache cache = cacheConf.getBlockCache();
     // Get rid of blocks marked to be evicted.

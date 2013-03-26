@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
@@ -247,16 +248,18 @@ public class HFileReaderV2 extends AbstractHFileReader {
    *          read operation, or null to read whatever block type is available
    *          and avoid checking (that might reduce caching efficiency of
    *          encoded data blocks)
+   * @param obtainedFromCache
    * @return Block wrapped in a ByteBuffer.
    * @throws IOException
    */
   public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize,
       final boolean cacheBlock, final boolean isCompaction,
-      BlockType expectedBlockType)
+      BlockType expectedBlockType, KeyValueContext kvContext)
       throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
     }
+
     if (dataBlockOffset < 0
         || dataBlockOffset >= trailer.getLoadOnOpenDataOffset()) {
       throw new IOException("Requested block is out of range: "
@@ -278,6 +281,13 @@ public class HFileReaderV2 extends AbstractHFileReader {
     HFileBlock cachedBlock = this.getCachedBlock(cacheKey, cacheBlock, isCompaction,
         expectedBlockType, true);
     if (cachedBlock != null) {
+      if (kvContext != null) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Read block from file " + name + ", offset "
+              + dataBlockOffset + " from cache.");
+        }
+        kvContext.setObtainedFromCache(true);
+      }
       return cachedBlock;
     }
 
@@ -287,9 +297,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
       cachedBlock = this.getCachedBlock(cacheKey, cacheBlock, isCompaction,
           expectedBlockType, false);
       if (cachedBlock != null) {
+        if (kvContext != null) {
+          kvContext.setObtainedFromCache(true);
+        }
         return cachedBlock;
       }
-
       // Load block from filesystem.
       long startTimeNs = System.nanoTime();
       HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset,
@@ -309,10 +321,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
         HFile.preadTimeNano.addAndGet(deltaNs);
         HFile.preadOps.incrementAndGet();
       }
+      if (kvContext != null) {
+        kvContext.setObtainedFromCache(false);
+      }
       getSchemaMetrics().updateOnCacheMiss(blockCategory, isCompaction,
           TimeUnit.NANOSECONDS.toMillis(deltaNs));
 
       // Cache the block if necessary
+
       if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
               hfileBlock.getBlockType().getCategory())) {
         cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
@@ -490,7 +506,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           reader.getDataBlockIndexReader();
       BlockWithScanInfo blockWithScanInfo = 
         indexReader.loadDataBlockWithScanInfo(key, offset, length, block, 
-            cacheBlocks, isCompaction);
+            cacheBlocks, isCompaction, this.kvContext);
       if (blockWithScanInfo == null || blockWithScanInfo.getHFileBlock() == null) {
         // This happens if the key e.g. falls before the beginning of the file.
         return -1;
@@ -546,7 +562,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         throws IOException {
       HFileBlock seekToBlock =
           reader.getDataBlockIndexReader().seekToDataBlock(key, offset, length,
-              block, cacheBlocks, isCompaction);
+              block, cacheBlocks, isCompaction, this.kvContext);
       if (seekToBlock == null) {
         return false;
       }
@@ -567,7 +583,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         // figure out the size.
         seekToBlock = reader.readBlock(previousBlockOffset,
             seekToBlock.getOffset() - previousBlockOffset, cacheBlocks,
-            isCompaction, BlockType.DATA);
+            isCompaction, BlockType.DATA, this.kvContext);
         // TODO shortcut: seek forward in this block to the last key of the
         // block.
       }
@@ -604,7 +620,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         curBlock = reader.readBlock(curBlock.getOffset()
             + curBlock.getOnDiskSizeWithHeader(),
             curBlock.getNextBlockOnDiskSizeWithHeader(), cacheBlocks,
-            isCompaction, null);
+            isCompaction, null, this.kvContext);
       } while (!(curBlock.getBlockType().equals(BlockType.DATA) ||
           curBlock.getBlockType().equals(BlockType.ENCODED_DATA)));
 
@@ -695,7 +711,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
           setNonSeekedState();
           return false;
         }
-
         // read the next block
         HFileBlock nextBlock = readNextDataBlock();
         if (nextBlock == null) {
@@ -739,7 +754,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks,
-          isCompaction, BlockType.DATA);
+          isCompaction, BlockType.DATA, this.kvContext);
+
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());
       }
@@ -925,6 +941,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
           + blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen,
           currValueLen);
     }
+
+    @Override
+    public boolean currKeyValueObtainedFromCache() {
+      return this.kvContext.getObtainedFromCache();
+    }
   }
 
   /**
@@ -1004,7 +1025,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks,
-          isCompaction, BlockType.DATA);
+          isCompaction, BlockType.DATA, this.kvContext);
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());
       }
@@ -1081,6 +1102,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
       this.nextIndexedKey = nextIndexedKey;
       return seeker.seekToKeyInBlock(key, offset, length, seekBefore);
+    }
+
+    @Override
+    public boolean currKeyValueObtainedFromCache() {
+      return this.kvContext.getObtainedFromCache();
     }
   }
 

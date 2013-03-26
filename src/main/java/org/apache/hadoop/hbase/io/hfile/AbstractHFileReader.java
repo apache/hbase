@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
@@ -274,6 +275,7 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     protected int currValueLen;
     protected int currMemstoreTSLen;
     protected long currMemstoreTS;
+    protected KeyValueContext kvContext = new KeyValueContext();
 
     protected int blockFetches;
 

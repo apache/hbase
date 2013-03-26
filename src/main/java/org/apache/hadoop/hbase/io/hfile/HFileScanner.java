@@ -143,4 +143,6 @@ public interface HFileScanner {
    * Otherwise returns false.
    */
   public boolean isSeeked();
+
+  public boolean currKeyValueObtainedFromCache();
 }

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -77,6 +78,37 @@ public interface InternalScanner extends Closeable {
    * @throws IOException e
    */
   public boolean next(List<KeyValue> result, int limit, String metric) throws IOException;
+
+  /**
+   * Grab the next row's worth of values with a limit on the number of values
+   * to return.
+   * @param result return output array
+   * @param limit limit on row count to get
+   * @param kvContext more information about the KeyValues, can be null
+   * @return true if more rows exist after this one, false if scanner is done
+   * @throws IOException e
+   */
+  public boolean next(List<KeyValue> result, int limit,
+      KeyValueContext kvContext) throws IOException;
+
+  /**
+   * Grab the next row's worth of values with a limit on the number of values
+   * to return.
+   * @param result return output array
+   * @param limit limit on row count to get
+   * @param metric the metric name
+   * @param kvContext whether or not the KeyValues were obtained from cache, can be null
+   * @return true if more rows exist after this one, false if scanner is done
+   * @throws IOException e
+   */
+  public boolean next(List<KeyValue> result, int limit, String metric,
+      KeyValueContext kvContext) throws IOException;
+
+  /**
+   * Tells whether the current KeyValue is obtained from cache or not
+   * @return boolean whether the KeyValue exists or not
+   */
+  public boolean currKeyValueObtainedFromCache();
 
   /**
    * Closes the scanner and releases any resources it has allocated

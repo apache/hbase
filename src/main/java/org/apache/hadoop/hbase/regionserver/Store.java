@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -267,6 +268,7 @@ public class Store extends SchemaConfigured implements HeapSize {
           throw new IllegalArgumentException(e);
         }
       }
+
       try {
         this.compactHook = (CompactionHook) Class.forName(compactHookString).newInstance();
       } catch (InstantiationException e) {
@@ -781,7 +783,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     if (isCompaction) {
       // Don't cache data on write on compactions.
       writerCacheConf = new CacheConfig(cacheConf);
-      writerCacheConf.setCacheDataOnWrite(false);
+      writerCacheConf.setCacheDataOnFlush(false);
     } else {
       writerCacheConf = cacheConf;
     }
@@ -1209,8 +1211,10 @@ public class Store extends SchemaConfigured implements HeapSize {
         if (maxCompactingSequcenceId == this.getMaxSequenceId(true)) {
           writer = createWriterInTmp(maxKeyCount, compression, true);
         }
+        KeyValueContext kvContext = new KeyValueContext();
+
         do {
-          hasMore = scanner.next(kvs, 1);
+          hasMore = scanner.next(kvs, 1, kvContext);
           if (!kvs.isEmpty()) {
             if (writer == null) {
               writer = createWriterInTmp(maxKeyCount, compression, true);
@@ -1224,10 +1228,10 @@ public class Store extends SchemaConfigured implements HeapSize {
                 RestrictedKeyValue restrictedKv = new RestrictedKeyValue(kv);
                 RestrictedKeyValue modifiedKv = compactHook.transform(restrictedKv);
                 if (modifiedKv != null) {
-                  writer.append(modifiedKv.getKeyValue());
+                  writer.append(modifiedKv.getKeyValue(), kvContext);
                 }
               } else {
-                writer.append(kv);
+                writer.append(kv, kvContext);
               }
               // check periodically to see if a system stop is requested
               if (Store.closeCheckInterval > 0) {

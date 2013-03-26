@@ -66,6 +66,8 @@ public interface KeyValueScanner {
    */
   public long getSequenceID();
 
+  public boolean currKeyValueObtainedFromCache();
+
   /**
    * Close the KeyValue scanner.
    */

@@ -372,4 +372,8 @@ class StoreFileScanner implements KeyValueScanner {
   public boolean passesDeleteColumnCheck(KeyValue kv) {
     return this.reader.passesDeleteColumnBloomFilter(kv);
   }
+  @Override
+  public boolean currKeyValueObtainedFromCache() {
+    return this.hfs.currKeyValueObtainedFromCache();
+  }
 }

@@ -111,6 +111,16 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
    */
   protected final String name;
 
+  /**
+   * No of cached keys in the current block
+   */
+  protected int numCachedKeysInCurrentBlock;
+
+  /**
+   * No of keys in the current block
+   */
+  protected int numKeysInCurrentBlock;
+
   public AbstractHFileWriter(Configuration conf, CacheConfig cacheConf,
       FSDataOutputStream outputStream, Path path, int blockSize,
       Compression.Algorithm compressAlgo,
@@ -130,6 +140,8 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
 
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
+    this.numKeysInCurrentBlock = 0;
+    this.numCachedKeysInCurrentBlock = 0;
   }
 
   /**
@@ -303,5 +315,4 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
         fs.getDefaultReplication(), fs.getDefaultBlockSize(), bytesPerChecksum,
         null);
   }
-
 }

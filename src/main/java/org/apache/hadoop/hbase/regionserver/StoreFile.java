@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
@@ -1117,10 +1118,15 @@ public class StoreFile extends SchemaConfigured {
     }
 
     public void append(final KeyValue kv) throws IOException {
+      append(kv, null);
+    }
+
+    public void append(final KeyValue kv, final KeyValueContext cv) throws IOException{
       appendGeneralBloomfilter(kv);
       appendDeleteFamilyBloomFilter(kv);
       appendDeleteColumnBloomFilter(kv);
-      writer.append(kv);
+
+      writer.append(kv, cv);
       includeInTimeRangeTracker(kv);
     }
 

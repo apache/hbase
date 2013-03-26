@@ -38,7 +38,7 @@ public class CacheConfig {
    * Configuration key to cache data blocks on write. There are separate
    * switches for bloom blocks and non-root index blocks.
    */
-  public static final String CACHE_BLOCKS_ON_WRITE_KEY =
+  public static final String CACHE_BLOCKS_ON_FLUSH_KEY =
       "hbase.rs.cacheblocksonwrite";
 
   /**
@@ -67,16 +67,34 @@ public class CacheConfig {
    */
   public static final String EVICT_BLOCKS_ON_CLOSE_KEY =
       "hbase.rs.evictblocksonclose";
+  /**
+   * Configuration key to turn on cache hot blocks on compaction.
+   */
+  public static final String CACHE_DATA_BLOCKS_ON_COMPACTION =
+      "hfile.block.cacheoncompaction";
+
+  /**
+   * Configuration key to determine the threshold for hot blocks
+   * (No of KVs obtained from cache during compaction)/
+   * (Total number of KVs in the block)
+   * During compaction, the blocks in which the % of KVs cached exceed this
+   * threshold will be automatically cached on write. For scenarios, where cacheOnWrite
+   * is already set, this parameter will not have any effect.
+   */
+  public static final String CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD =
+      "hfile.block.cacheoncompaction.threshold";
 
   // Defaults
 
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
-  public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
+  public static final boolean DEFAULT_CACHE_DATA_ON_FLUSH = false;
   public static final boolean DEFAULT_IN_MEMORY = false;
   public static final boolean DEFAULT_CACHE_INDEXES_ON_WRITE = false;
   public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = false;
   public static final boolean DEFAULT_EVICT_ON_CLOSE = false;
   public static final boolean DEFAULT_COMPRESSED_CACHE = false;
+  public static final boolean DEFAULT_CACHE_DATA_BLOCKS_ON_COMPACTION = false;
+  public static final float DEFAULT_CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD = 0.75F;
 
   /** Local reference to the block cache, null if completely disabled */
   private final BlockCache blockCache;
@@ -90,8 +108,9 @@ public class CacheConfig {
   /** Whether blocks should be flagged as in-memory when being cached */
   private final boolean inMemory;
 
-  /** Whether data blocks should be cached when new files are written */
-  private boolean cacheDataOnWrite;
+  /** Whether data blocks should be cached when new files are written because
+   * of a memstore flush */
+  private boolean cacheDataOnFlush;
 
   /** Whether index blocks should be cached when new files are written */
   private final boolean cacheIndexesOnWrite;
@@ -105,6 +124,12 @@ public class CacheConfig {
   /** Whether data blocks should be stored in compressed form in the cache */
   private final boolean cacheCompressed;
 
+  /** Whether data blocks during compaction are cached */
+  private boolean cacheOnCompaction;
+
+  /** Threshold for caching hot data blocks during compaction */
+  private final float cacheOnCompactionThreshold;
+
   /**
    * Create a cache configuration using the specified configuration object and
    * family descriptor.
@@ -114,13 +139,17 @@ public class CacheConfig {
   public CacheConfig(Configuration conf, HColumnDescriptor family) {
     this(CacheConfig.instantiateBlockCache(conf),
         family.isBlockCacheEnabled(), family.isInMemory(),
-        conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE),
+        conf.getBoolean(CACHE_BLOCKS_ON_FLUSH_KEY, DEFAULT_CACHE_DATA_ON_FLUSH),
         conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
             DEFAULT_CACHE_INDEXES_ON_WRITE),
         conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
             DEFAULT_CACHE_BLOOMS_ON_WRITE),
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE),
-        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_COMPRESSED_CACHE)
+        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_COMPRESSED_CACHE),
+        conf.getBoolean(CACHE_DATA_BLOCKS_ON_COMPACTION,
+            DEFAULT_CACHE_DATA_BLOCKS_ON_COMPACTION),
+        conf.getFloat(CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD,
+            DEFAULT_CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD)
      );
   }
 
@@ -134,14 +163,18 @@ public class CacheConfig {
         DEFAULT_CACHE_DATA_ON_READ,
         DEFAULT_IN_MEMORY, // This is a family-level setting so can't be set
                            // strictly from conf
-        conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE),
+        conf.getBoolean(CACHE_BLOCKS_ON_FLUSH_KEY, DEFAULT_CACHE_DATA_ON_FLUSH),
         conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
             DEFAULT_CACHE_INDEXES_ON_WRITE),
             conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
                 DEFAULT_CACHE_BLOOMS_ON_WRITE),
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE),
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY,
-            DEFAULT_COMPRESSED_CACHE)
+            DEFAULT_COMPRESSED_CACHE),
+            conf.getBoolean(CACHE_DATA_BLOCKS_ON_COMPACTION,
+                DEFAULT_CACHE_DATA_BLOCKS_ON_COMPACTION),
+            conf.getFloat(CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD,
+                DEFAULT_CACHE_DATA_BLOCKS_ON_COMPACTION_THRESHOLD)
      );
   }
 
@@ -153,23 +186,28 @@ public class CacheConfig {
    * @param inMemory whether blocks should be flagged as in-memory
    * @param cacheDataOnWrite whether data blocks should be cached on write
    * @param cacheIndexesOnWrite whether index blocks should be cached on write
-   * @param cacheBloomsOnWrite whether blooms should be cached on write
+   * @param cacheBloomsOnFlush whether blooms should be cached on write
    * @param evictOnClose whether blocks should be evicted when HFile is closed
    * @param cacheCompressed whether to store blocks as compressed in the cache
+   * @param cacheOnCompaction whether to cache blocks during compaction
+   * @param cacheOnCompactionThreshold threshold used of caching of blocks during compaction
    */
   CacheConfig(final BlockCache blockCache,
       final boolean cacheDataOnRead, final boolean inMemory,
-      final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
+      final boolean cacheDataOnFlush, final boolean cacheIndexesOnWrite,
       final boolean cacheBloomsOnWrite, final boolean evictOnClose,
-      final boolean cacheCompressed) {
+      final boolean cacheCompressed, final boolean cacheOnCompaction,
+      final float cacheOnCompactionThreshold) {
     this.blockCache = blockCache;
     this.cacheDataOnRead = cacheDataOnRead;
     this.inMemory = inMemory;
-    this.cacheDataOnWrite = cacheDataOnWrite;
+    this.cacheDataOnFlush = cacheDataOnFlush;
     this.cacheIndexesOnWrite = cacheIndexesOnWrite;
     this.cacheBloomsOnWrite = cacheBloomsOnWrite;
     this.evictOnClose = evictOnClose;
     this.cacheCompressed = cacheCompressed;
+    this.cacheOnCompaction = cacheOnCompaction;
+    this.cacheOnCompactionThreshold = cacheOnCompactionThreshold;
   }
 
   /**
@@ -178,9 +216,10 @@ public class CacheConfig {
    */
   public CacheConfig(CacheConfig cacheConf) {
     this(cacheConf.blockCache, cacheConf.cacheDataOnRead, cacheConf.inMemory,
-        cacheConf.cacheDataOnWrite, cacheConf.cacheIndexesOnWrite,
+        cacheConf.cacheDataOnFlush, cacheConf.cacheIndexesOnWrite,
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
-        cacheConf.cacheCompressed);
+        cacheConf.cacheCompressed, cacheConf.cacheOnCompaction,
+        cacheConf.cacheOnCompactionThreshold);
   }
 
   /**
@@ -234,8 +273,8 @@ public class CacheConfig {
    * @return true if data blocks should be written to the cache when an HFile is
    *         written, false if not
    */
-  public boolean shouldCacheDataOnWrite() {
-    return isBlockCacheEnabled() && this.cacheDataOnWrite;
+  public boolean shouldCacheDataOnFlush() {
+    return isBlockCacheEnabled() && this.cacheDataOnFlush;
   }
 
   /**
@@ -243,8 +282,8 @@ public class CacheConfig {
    * @param cacheDataOnWrite whether data blocks should be written to the cache
    *                         when an HFile is written
    */
-  public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
-    this.cacheDataOnWrite = cacheDataOnWrite;
+  public void setCacheDataOnFlush(boolean cacheDataOnFlush) {
+    this.cacheDataOnFlush = cacheDataOnFlush;
   }
 
   /**
@@ -287,6 +326,22 @@ public class CacheConfig {
     return isBlockCacheEnabled() && this.cacheCompressed;
   }
 
+  public boolean shouldCacheOnCompaction() {
+    return isBlockCacheEnabled() && cacheOnCompaction;
+  }
+
+  public void setCacheDataOnRead(final boolean cacheDataOnRead) {
+    this.cacheDataOnRead = cacheDataOnRead;
+  }
+
+  public void setCacheOnCompaction(final boolean cacheOnCompaction) {
+    this.cacheOnCompaction = cacheOnCompaction;
+  }
+
+  public float getCacheOnCompactionThreshold() {
+    return cacheOnCompactionThreshold;
+  }
+
   @Override
   public String toString() {
     if (!isBlockCacheEnabled()) {
@@ -294,11 +349,13 @@ public class CacheConfig {
     }
     return "CacheConfig:enabled " +
       "[cacheDataOnRead=" + shouldCacheDataOnRead() + "] " +
-      "[cacheDataOnWrite=" + shouldCacheDataOnWrite() + "] " +
+      "[cacheDataOnWrite=" + shouldCacheDataOnFlush() + "] " +
       "[cacheIndexesOnWrite=" + shouldCacheIndexesOnWrite() + "] " +
       "[cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() + "] " +
       "[cacheEvictOnClose=" + shouldEvictOnClose() + "] " +
-      "[cacheCompressed=" + shouldCacheCompressed() + "]";
+      "[cacheCompressed=" + shouldCacheCompressed() + "] " +
+      "[cacheOnCompaction=" + shouldCacheOnCompaction() + "] " +
+      "[cacheOnCompactionThreshold=" + getCacheOnCompactionThreshold() + "]";
   }
 
   // Static block cache reference and methods

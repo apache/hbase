@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFile.WriterFactory;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
@@ -160,9 +161,31 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     HFile.writeTimeNano.addAndGet(System.nanoTime() - startTimeNs);
     HFile.writeOps.incrementAndGet();
 
-    if (cacheConf.shouldCacheDataOnWrite()) {
+    boolean cacheOnCompaction = cacheCurrentBlockForCompaction();
+    if (cacheConf.shouldCacheDataOnFlush() || cacheOnCompaction) {
       doCacheOnWrite(lastDataBlockOffset);
     }
+  }
+
+  protected boolean cacheCurrentBlockForCompaction() {
+
+    if (this.numKeysInCurrentBlock == 0) {
+      return false;
+    }
+
+    float blockCachingPercentage =
+        ((float)this.numCachedKeysInCurrentBlock)/this.numKeysInCurrentBlock;
+
+    LOG.debug("Block Caching %: " + blockCachingPercentage +
+        " CachingOnCompaction: " + this.cacheConf.shouldCacheOnCompaction() +
+        " Threshold: " + this.cacheConf.getCacheOnCompactionThreshold());
+
+    // Get the threshold from the config
+    if (this.cacheConf.shouldCacheOnCompaction() &&
+        blockCachingPercentage >= this.cacheConf.getCacheOnCompactionThreshold())  {
+      return true;
+    }
+    return false;
   }
 
   /** Gives inline block writers an opportunity to contribute blocks. */
@@ -190,8 +213,6 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    *          the cache key.
    */
   private void doCacheOnWrite(long offset) {
-    // We don't cache-on-write data blocks on compaction, so assume this is not
-    // a compaction.
     final boolean isCompaction = false;
     HFileBlock cacheFormatBlock = blockEncoder.diskToCacheFormat(
         fsBlockWriter.getBlockForCaching(), isCompaction);
@@ -210,6 +231,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     // This is where the next block begins.
     fsBlockWriter.startWriting(BlockType.DATA);
     firstKeyInBlock = null;
+    this.numKeysInCurrentBlock = 0;
+    this.numCachedKeysInCurrentBlock = 0;
   }
 
   /**
@@ -249,8 +272,22 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   @Override
   public void append(final KeyValue kv) throws IOException {
+    append(kv, null);
+    this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMemstoreTS());
+  }
+
+  /**
+   * Add key/value to file. Keys must be added in an order that agrees with the
+   * Comparator passed on construction.
+   *
+   * @param kv KeyValue to add. Cannot be empty nor null.
+   * @param appendForCompaction Whether the KV was read from cache or not
+   * @throws IOException
+   */
+  @Override
+  public void append(final KeyValue kv, KeyValueContext cv) throws IOException {
     append(kv.getMemstoreTS(), kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
-        kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+        kv.getBuffer(), kv.getValueOffset(), kv.getValueLength(), cv);
     this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMemstoreTS());
   }
 
@@ -266,7 +303,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   @Override
   public void append(final byte[] key, final byte[] value) throws IOException {
-    append(0, key, 0, key.length, value, 0, value.length);
+    append(0, key, 0, key.length, value, 0, value.length, null);
   }
 
   /**
@@ -279,11 +316,13 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * @param value
    * @param voffset
    * @param vlength
+   * @param KeyValueContext
    * @throws IOException
    */
   private void append(final long memstoreTS, final byte[] key,
       final int koffset, final int klength, final byte[] value,
-      final int voffset, final int vlength) throws IOException {
+      final int voffset, final int vlength, final KeyValueContext cv)
+          throws IOException {
     boolean dupKey = checkKey(key, koffset, klength);
     checkValue(value, voffset, vlength);
     if (!dupKey) {
@@ -299,6 +338,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         voffset, vlength);
     totalKeyLength += klength;
     totalValueLength += vlength;
+    this.numKeysInCurrentBlock++;
+    if (cv != null && cv.getObtainedFromCache()) {
+        this.numCachedKeysInCurrentBlock++;
+    }
 
     // Are we the first key in this block?
     if (firstKeyInBlock == null) {
@@ -435,5 +478,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       }
     });
   }
-
 }
+
+
+

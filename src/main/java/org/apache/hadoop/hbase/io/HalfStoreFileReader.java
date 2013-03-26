@@ -245,6 +245,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       public boolean isSeeked() {
         return this.delegate.isSeeked();
       }
+
+      @Override
+      public boolean currKeyValueObtainedFromCache() {
+        return this.delegate.currKeyValueObtainedFromCache();
+      }
     };
   }
 

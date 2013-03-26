@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Result;
@@ -123,7 +124,7 @@ public class RegionScanner implements InternalScanner {
   @Override
   public boolean next(List<KeyValue> outResults, int limit)
       throws IOException {
-    return next(outResults, limit, null);
+    return next(outResults, limit, null, null);
   }
 
   private void preCondition() throws IOException{
@@ -196,7 +197,7 @@ public class RegionScanner implements InternalScanner {
         getOriginalScan().setCurrentPartialResponseSize(0);
         int maxResponseSize = getOriginalScan().getMaxResponseSize();
         do {
-          moreRows = nextInternal(tmpList, limit, metric);
+          moreRows = nextInternal(tmpList, limit, metric, null);
           if (!tmpList.isEmpty()) {
             currentNbRows++;
             if (outResults != null) {
@@ -287,17 +288,23 @@ public class RegionScanner implements InternalScanner {
    * used by Scans
    */
   @Override
-  public synchronized boolean next(List<KeyValue> outResults, int limit,
+  public boolean next(List<KeyValue> outResults, int limit,
       String metric) throws IOException {
+    return next(outResults, limit, metric, null);
+  }
+
+  @Override
+  public synchronized boolean next(List<KeyValue> outResults, int limit, String metric,
+      KeyValueContext kvContext) throws IOException {
     preCondition();
     boolean returnResult;
     if (outResults.isEmpty()) {
        // Usually outResults is empty. This is true when next is called
        // to handle scan or get operation.
-      returnResult = nextInternal(outResults, limit, metric);
+      returnResult = nextInternal(outResults, limit, metric, kvContext);
     } else {
       List<KeyValue> tmpList = new ArrayList<KeyValue>();
-      returnResult = nextInternal(tmpList, limit, metric);
+      returnResult = nextInternal(tmpList, limit, metric, kvContext);
       outResults.addAll(tmpList);
     }
     rowReadCnt.incrementAndGet();
@@ -307,12 +314,12 @@ public class RegionScanner implements InternalScanner {
     }
     return returnResult;
   }
-
+  
   @Override
   public boolean next(List<KeyValue> outResults)
       throws IOException {
     // apply the batching limit by default
-    return next(outResults, batch, null);
+    return next(outResults, batch, null, null);
   }
 
   @Override
@@ -332,7 +339,8 @@ public class RegionScanner implements InternalScanner {
   /**
    * @param results empty list in which results will be stored
    */
-  private boolean nextInternal(List<KeyValue> results, int limit, String metric)
+  private boolean nextInternal(List<KeyValue> results, int limit, String metric,
+      KeyValueContext kvContext)
       throws IOException {
 
     if (!results.isEmpty()) {
@@ -358,7 +366,7 @@ public class RegionScanner implements InternalScanner {
       } else {
         byte [] nextRow;
         do {
-          this.storeHeap.next(results, limit - results.size(), metric);
+          this.storeHeap.next(results, limit - results.size(), metric, kvContext);
           if (limit > 0 && results.size() == limit) {
             if (this.filter != null && filter.hasFilterRow())
               throw new IncompatibleFilterException(
@@ -445,5 +453,18 @@ public class RegionScanner implements InternalScanner {
    */
   public Scan getOriginalScan() {
     return originalScan;
+  }
+
+  @Override
+  public boolean next(List<KeyValue> result, int limit,
+      KeyValueContext kvContext) throws IOException {
+    return next(result, limit, null, kvContext);
+  }
+
+  
+
+  @Override
+  public boolean currKeyValueObtainedFromCache() {
+    return this.storeHeap.currKeyValueObtainedFromCache();
   }
 }

@@ -69,7 +69,7 @@ public class RandomSeek {
     SimpleBlockCache cache = new SimpleBlockCache();
     //LruBlockCache cache = new LruBlockCache();
     CacheConfig cacheConf = new CacheConfig(cache, true, false, false, false,
-        false, false, false);
+        false, false, false, false, 1);
     Reader reader = HFile.createReader(lfs, path, cacheConf);
     reader.loadFileInfo();
     System.out.println(reader.getTrailer());

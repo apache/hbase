@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -329,19 +330,23 @@ public class StoreScanner extends NonLazyKeyValueScanner
    */
   @Override
   public synchronized boolean next(List<KeyValue> outResult, int limit) throws IOException {
-    return next(outResult, limit, null);
+    return next(outResult, limit, null, null);
   }
 
   /**
    * Get the next row of values from this Store.
    * @param outResult
    * @param limit
+   * @param metic
+   * @param kvContext
    * @return true if there are more rows, false if scanner is done
    */
-  @Override
   public synchronized boolean next(List<KeyValue> outResult, int limit,
-      String metric) throws IOException {
+      String metric, KeyValueContext kvContext) throws IOException {
 
+    if (kvContext != null) {
+      kvContext.setObtainedFromCache(false);
+    }
     checkReseek();
 
     // if the heap was left null, then the scanners had previously run out anyways, close and
@@ -368,7 +373,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
     Call call = HRegionServer.callContext.get();
     long quotaRemaining = (call == null) ? Long.MAX_VALUE
         : HRegionServer.getResponseSizeLimit() - call.getPartialResponseSize();
-
     // Only do a sanity-check if store and comparator are available.
     KeyValue.KVComparator comparator =
         store != null ? store.getComparator() : null;
@@ -413,7 +417,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
                 this.countPerRow > (storeLimit + storeOffset)) {
               // do what SEEK_NEXT_ROW does.
               if (!matcher.moreRowsMayExistAfter(kv)) {
-                numNewKeyValues += processLastKeyValue(outResult);
+                numNewKeyValues += processLastKeyValue(outResult, kvContext);
                 return false;
               }
               reseek(matcher.getKeyForNextRow(kv));
@@ -430,13 +434,21 @@ public class StoreScanner extends NonLazyKeyValueScanner
                     + HRegionServer.getResponseSizeLimit() + " bytes.");
                 throw new DoNotRetryIOException("Result too large");
               }
+              if (kvContext != null) {
+
+                // If any of the KV is obtained from cache, then lets tell the caller
+                // that all the KVs are obtained from cache
+                kvContext.setObtainedFromCache(
+                    kvContext.getObtainedFromCache() |
+                    this.currKeyValueObtainedFromCache());
+              }
               outResult.add(copyKv);
               numNewKeyValues++;
             }
 
             if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
               if (!matcher.moreRowsMayExistAfter(kv)) {
-                numNewKeyValues += processLastKeyValue(outResult);
+                numNewKeyValues += processLastKeyValue(outResult, kvContext);
                 return false;
               }
               reseek(matcher.getKeyForNextRow(kv));
@@ -464,19 +476,19 @@ public class StoreScanner extends NonLazyKeyValueScanner
             continue;
 
           case DONE:
-            numNewKeyValues += processLastKeyValue(outResult);
+            numNewKeyValues += processLastKeyValue(outResult, kvContext);
             return true;
 
           case DONE_SCAN:
             close();
-            numNewKeyValues += processLastKeyValue(outResult);
+            numNewKeyValues += processLastKeyValue(outResult, kvContext);
             return false;
 
           case SEEK_NEXT_ROW:
             // This is just a relatively simple end of scan fix, to short-cut end
             // us if there is an endKey in the scan.
             if (!matcher.moreRowsMayExistAfter(kv)) {
-              numNewKeyValues += processLastKeyValue(outResult);
+              numNewKeyValues += processLastKeyValue(outResult, kvContext);
               return false;
             }
 
@@ -550,7 +562,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
       }
     }
 
-    numNewKeyValues += processLastKeyValue(outResult);
+    numNewKeyValues += processLastKeyValue(outResult, kvContext);
     if (numNewKeyValues > 0) {
       return true;
     }
@@ -560,10 +572,16 @@ public class StoreScanner extends NonLazyKeyValueScanner
     return false;
   }
 
-  private byte processLastKeyValue(List<KeyValue> outResult){
+  private byte processLastKeyValue(List<KeyValue> outResult, KeyValueContext kvContext){
     KeyValue lastKV = keyValueAggregator.finalizeKeyValues();
     if (lastKV != null) {
       outResult.add(lastKV);
+      if (kvContext != null) {
+        // If any of the KV is obtained from cache, then lets tell the caller
+        // that all the KVs are obtained from cache
+        kvContext.setObtainedFromCache(kvContext.getObtainedFromCache() |
+            this.currKeyValueObtainedFromCache());
+      }
       return 1;
     }
     return 0;
@@ -571,7 +589,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
   @Override
   public synchronized boolean next(List<KeyValue> outResult) throws IOException {
-    return next(outResult, -1, null);
+    return next(outResult, -1, null, null);
   }
 
   @Override
@@ -677,5 +695,24 @@ public class StoreScanner extends NonLazyKeyValueScanner
   @Override
   public boolean passesDeleteColumnCheck(KeyValue kv) {
     return true;
+  }
+  @Override
+  public boolean next(List<KeyValue> kvs, int limit,
+      KeyValueContext kvContext) throws IOException {
+    return next(kvs, limit, null, kvContext);
+  }
+
+  @Override
+  public boolean currKeyValueObtainedFromCache() {
+    if (this.heap != null) {
+      return this.heap.currKeyValueObtainedFromCache();
+    }
+    return false;
+  }
+
+  @Override
+  public boolean next(List<KeyValue> result, int limit, String metric)
+      throws IOException {
+    return next(result, limit, metric, null);
   }
 }

@@ -747,7 +747,7 @@ public class TestStoreFile extends HBaseTestCase {
     long startEvicted = cs.getEvictedCount();
 
     // Let's write a StoreFile with three blocks, with cache on write off
-    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_FLUSH_KEY, false);
     CacheConfig cacheConf = new CacheConfig(conf);
     Path pathCowOff = new Path(baseDir, "123456789");
     StoreFile.Writer writer = writeStoreFile(conf, cacheConf, pathCowOff, 3);
@@ -771,7 +771,7 @@ public class TestStoreFile extends HBaseTestCase {
     CacheTestHelper.forceDelayedEviction(bc);
 
     // Now write a StoreFile with three blocks, with cache on write on
-    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_FLUSH_KEY, true);
     cacheConf = new CacheConfig(conf);
     Path pathCowOn = new Path(baseDir, "123456788");
     writer = writeStoreFile(conf, cacheConf, pathCowOn, 3);
