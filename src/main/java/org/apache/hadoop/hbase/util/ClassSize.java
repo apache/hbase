@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -127,10 +129,14 @@ public class ClassSize {
 
     TREEMAP = align(OBJECT + (2 * Bytes.SIZEOF_INT) + align(7 * REFERENCE));
 
-    STRING = align(OBJECT + ARRAY + REFERENCE + 3 * Bytes.SIZEOF_INT);
+    // STRING is different size in jdk6 and jdk7. Just use what we estimate as size rather than
+    // have a conditional on whether jdk7.
+    STRING = (int) estimateBase(String.class, false);
 
-    CONCURRENT_HASHMAP = align((2 * Bytes.SIZEOF_INT) + ARRAY +
-        (6 * REFERENCE) + OBJECT);
+    // CONCURRENT_HASHMAP is different size in jdk6 and jdk7; it looks like its different between
+    // 23.6-b03 and 23.0-b21. Just use what we estimate as size rather than have a conditional on
+    // whether jdk7.
+    CONCURRENT_HASHMAP = (int) estimateBase(ConcurrentHashMap.class, false);
 
     CONCURRENT_HASHMAP_ENTRY = align(REFERENCE + OBJECT + (3 * REFERENCE) +
         (2 * Bytes.SIZEOF_INT));

@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.TreeMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -50,6 +51,9 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.experimental.categories.Category;
+import org.junit.BeforeClass;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 
 /**
  * Testing the sizing that HeapSize offers and compares to the size given by
@@ -61,6 +65,20 @@ public class TestHeapSize extends TestCase {
   // List of classes implementing HeapSize
   // BatchOperation, BatchUpdate, BlockIndex, Entry, Entry<K,V>, HStoreKey
   // KeyValue, LruBlockCache, LruHashMap<K,V>, Put, HLogKey
+  
+  @BeforeClass
+  public void beforeClass() throws Exception {
+    // Print detail on jvm so we know what is different should below test fail.
+    RuntimeMXBean b = ManagementFactory.getRuntimeMXBean();
+    LOG.info("name=" + b.getName());
+    LOG.info("specname=" + b.getSpecName());
+    LOG.info("specvendor=" + b.getSpecVendor());
+    LOG.info("vmname=" + b.getVmName());
+    LOG.info("vmversion=" + b.getVmVersion());
+    LOG.info("vmvendor=" + b.getVmVendor());
+    Map<String, String> p = b.getSystemProperties();
+    LOG.info("properties=" + p);
+  }
 
   /**
    * Test our hard-coded sizing of native java objects
