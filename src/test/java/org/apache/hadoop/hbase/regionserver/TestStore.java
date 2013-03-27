@@ -52,7 +52,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -130,7 +133,7 @@ public class TestStore extends TestCase {
     hcd.setMaxVersions(4);
     init(methodName, conf, hcd);
   }
-  
+
   private void init(String methodName, Configuration conf,
       HColumnDescriptor hcd) throws IOException {
     //Setting up a Store
@@ -150,10 +153,39 @@ public class TestStore extends TestCase {
     store = new Store(basedir, region, hcd, fs, conf);
   }
 
+  /**
+   * Verify that compression and data block encoding are respected by the
+   * Store.createWriterInTmp() method, used on store flush.
+   */
+  public void testCreateWriter() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem fs = FileSystem.get(conf);
+
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setCompressionType(Compression.Algorithm.GZ);
+    hcd.setDataBlockEncoding(DataBlockEncoding.DIFF);
+    init(getName(), conf, hcd);
+
+    // Test createWriterInTmp()
+    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompression(), false);
+    Path path = writer.getPath();
+    writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
+    writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));
+    writer.append(new KeyValue(row2, family, qf1, Bytes.toBytes(3)));
+    writer.append(new KeyValue(row2, family, qf2, Bytes.toBytes(4)));
+    writer.close();
+
+    // Verify that compression and encoding settings are respected
+    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf));
+    assertEquals(hcd.getCompressionType(), reader.getCompressionAlgorithm());
+    assertEquals(hcd.getDataBlockEncoding(), reader.getEncodingOnDisk());
+    reader.close();
+  }
+
   public void testDeleteExpiredStoreFiles() throws Exception {
     int storeFileNum = 4;
     int ttl = 4;
-    
+
     Configuration conf = HBaseConfiguration.create();
     // Enable the expired store file deletion
     conf.setBoolean("hbase.store.delete.expired.storefile", true);
@@ -184,7 +216,7 @@ public class TestStore extends TestCase {
       // verify the expired store file.
       CompactionRequest cr = this.store.requestCompaction();
       assertEquals(1, cr.getFiles().size());
-      assertTrue(cr.getFiles().get(0).getReader().getMaxTimestamp() < 
+      assertTrue(cr.getFiles().get(0).getReader().getMaxTimestamp() <
           (System.currentTimeMillis() - this.store.scanInfo.getTtl()));
       // Verify that the expired the store has been deleted.
       this.store.compact(cr);
@@ -200,7 +232,7 @@ public class TestStore extends TestCase {
     FileSystem fs = FileSystem.get(conf);
     // Initialize region
     init(getName(), conf);
-    
+
     int storeFileNum = 4;
     for (int i = 1; i <= storeFileNum; i++) {
       LOG.info("Adding some data for the store file #"+i);
@@ -210,30 +242,30 @@ public class TestStore extends TestCase {
       flush(i);
     }
     // after flush; check the lowest time stamp
-    long lowestTimeStampFromStore = 
+    long lowestTimeStampFromStore =
         Store.getLowestTimestamp(store.getStorefiles());
-    long lowestTimeStampFromFS = 
+    long lowestTimeStampFromFS =
       getLowestTimeStampFromFS(fs,store.getStorefiles());
     assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
-    
+
     // after compact; check the lowest time stamp
     store.compact(store.requestCompaction());
     lowestTimeStampFromStore = Store.getLowestTimestamp(store.getStorefiles());
     lowestTimeStampFromFS = getLowestTimeStampFromFS(fs,store.getStorefiles());
-    assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS); 
+    assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
   }
-  
-  private static long getLowestTimeStampFromFS(FileSystem fs, 
+
+  private static long getLowestTimeStampFromFS(FileSystem fs,
       final List<StoreFile> candidates) throws IOException {
     long minTs = Long.MAX_VALUE;
     if (candidates.isEmpty()) {
-      return minTs; 
+      return minTs;
     }
     Path[] p = new Path[candidates.size()];
     for (int i = 0; i < candidates.size(); ++i) {
       p[i] = candidates.get(i).getPath();
     }
-    
+
     FileStatus[] stats = fs.listStatus(p);
     if (stats == null || stats.length == 0) {
       return minTs;
