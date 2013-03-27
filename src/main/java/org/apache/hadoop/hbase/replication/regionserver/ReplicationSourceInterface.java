@@ -93,4 +93,11 @@ public interface ReplicationSourceInterface {
    */
   public String getPeerClusterId();
 
+  /**
+   * Get a string representation of the current statistics
+   * for this source
+   * @return printable stats
+   */
+  public String getStats();
+
 }

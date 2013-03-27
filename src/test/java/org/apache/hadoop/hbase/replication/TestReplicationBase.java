@@ -89,6 +89,7 @@ public class TestReplicationBase {
     conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setInt("replication.stats.thread.period.seconds", 5);
+    conf1.setInt("replication.stats.thread.period.seconds", 5);
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();

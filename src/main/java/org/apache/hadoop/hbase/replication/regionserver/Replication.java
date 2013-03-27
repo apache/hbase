@@ -22,8 +22,14 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,6 +57,8 @@ import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
  */
 public class Replication implements WALActionsListener, 
   ReplicationSourceService, ReplicationSinkService {
+  private static final Log LOG =
+      LogFactory.getLog(Replication.class);
   private boolean replication;
   private ReplicationSourceManager replicationManager;
   private final AtomicBoolean replicating = new AtomicBoolean(true);
@@ -59,6 +67,9 @@ public class Replication implements WALActionsListener,
   private ReplicationSink replicationSink;
   // Hosting server
   private Server server;
+  /** Statistics thread schedule pool */
+  private ScheduledExecutorService scheduleThreadPool;
+  private int statsThreadPeriod;
 
   /**
    * Instantiate the replication management (if rep is enabled).
@@ -84,6 +95,11 @@ public class Replication implements WALActionsListener,
     this.server = server;
     this.conf = this.server.getConfiguration();
     this.replication = isReplication(this.conf);
+    this.scheduleThreadPool = Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder()
+        .setNameFormat(server.getServerName() + "Replication Statistics #%d")
+        .setDaemon(true)
+        .build());
     if (replication) {
       try {
         this.zkHelper = new ReplicationZookeeper(server, this.replicating);
@@ -93,6 +109,10 @@ public class Replication implements WALActionsListener,
       }
       this.replicationManager = new ReplicationSourceManager(zkHelper, conf,
           this.server, fs, this.replicating, logDir, oldLogDir) ;
+
+      this.statsThreadPeriod =
+        this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
+      LOG.debug("ReplicationStatisticsThread " + this.statsThreadPeriod);
     } else {
       this.replicationManager = null;
       this.zkHelper = null;
@@ -150,6 +170,9 @@ public class Replication implements WALActionsListener,
     if (this.replication) {
       this.replicationManager.init();
       this.replicationSink = new ReplicationSink(this.conf, this.server);
+      this.scheduleThreadPool.scheduleAtFixedRate(
+        new ReplicationStatisticsThread(this.replicationSink, this.replicationManager),
+        statsThreadPeriod, statsThreadPeriod, TimeUnit.SECONDS);
     }
   }
 
@@ -230,5 +253,33 @@ public class Replication implements WALActionsListener,
   @Override
   public void logCloseRequested() {
     // not interested
+  }
+
+  /*
+   * Statistics thread. Periodically prints the cache statistics to the log.
+   */
+  static class ReplicationStatisticsThread extends Thread {
+
+    private final ReplicationSink replicationSink;
+    private final ReplicationSourceManager replicationManager;
+
+    public ReplicationStatisticsThread(final ReplicationSink replicationSink,
+                            final ReplicationSourceManager replicationManager) {
+      super("ReplicationStatisticsThread");
+      this.replicationManager = replicationManager;
+      this.replicationSink = replicationSink;
+    }
+
+    @Override
+    public void run() {
+      printStats(this.replicationManager.getStats());
+      printStats(this.replicationSink.getStats());
+    }
+
+    private void printStats(String stats) {
+      if (!stats.isEmpty()) {
+        LOG.info(stats);
+      }
+    }
   }
 }

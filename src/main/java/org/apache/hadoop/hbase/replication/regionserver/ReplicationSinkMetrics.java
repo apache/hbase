@@ -36,6 +36,7 @@ public class ReplicationSinkMetrics implements Updater {
   private final MetricsRecord metricsRecord;
   private MetricsRegistry registry = new MetricsRegistry();
   private static ReplicationSinkMetrics instance;
+  private long lastTimestampForAge = System.currentTimeMillis();
 
   /** Rate of operations applied by the sink */
   public final MetricsRate appliedOpsRate =
@@ -67,11 +68,24 @@ public class ReplicationSinkMetrics implements Updater {
    * @param timestamp write time of the edit
    */
   public void setAgeOfLastAppliedOp(long timestamp) {
-    ageOfLastAppliedOp.set(System.currentTimeMillis() - timestamp);
+    lastTimestampForAge = timestamp;
+    ageOfLastAppliedOp.set(System.currentTimeMillis() - lastTimestampForAge);
   }
+
+  /**
+   * Refreshing the age makes sure the value returned is the actual one and
+   * not the one set a replication time
+   * @return refreshed age
+   */
+  public long refreshAgeOfLastAppliedOp() {
+    setAgeOfLastAppliedOp(lastTimestampForAge);
+    return ageOfLastAppliedOp.get();
+  }
+
   @Override
   public void doUpdates(MetricsContext metricsContext) {
     synchronized (this) {
+      refreshAgeOfLastAppliedOp();
       this.appliedOpsRate.pushMetric(this.metricsRecord);
       this.appliedBatchesRate.pushMetric(this.metricsRecord);
       this.ageOfLastAppliedOp.pushMetric(this.metricsRecord);

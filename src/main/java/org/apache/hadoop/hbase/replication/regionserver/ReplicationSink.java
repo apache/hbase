@@ -47,6 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class is responsible for replicating the edits coming
@@ -71,6 +72,7 @@ public class ReplicationSink {
   private final ExecutorService sharedThreadPool;
   private final HConnection sharedHtableCon;
   private final ReplicationSinkMetrics metrics;
+  private final AtomicLong totalReplicatedEdits = new AtomicLong();
 
   /**
    * Create a sink for replication
@@ -156,7 +158,7 @@ public class ReplicationSink {
       this.metrics.setAgeOfLastAppliedOp(
           entries[entries.length-1].getKey().getWriteTime());
       this.metrics.appliedBatchesRate.inc(1);
-      LOG.info("Total replicated: " + totalReplicated);
+      this.totalReplicatedEdits.addAndGet(totalReplicated);
     } catch (IOException ex) {
       LOG.error("Unable to accept edit because:", ex);
       throw ex;
@@ -223,5 +225,16 @@ public class ReplicationSink {
         table.close();
       }
     }
+  }
+
+  /**
+   * Get a string representation of this sink's metrics
+   * @return string with the total replicated edits count and the date
+   * of the last edit that was applied
+   */
+  public String getStats() {
+    return this.totalReplicatedEdits.get() == 0 ? "" : "Sink: " +
+      "age in ms of last applied edit: " + this.metrics.refreshAgeOfLastAppliedOp() +
+      ", total replicated edits: " + this.totalReplicatedEdits;
   }
 }

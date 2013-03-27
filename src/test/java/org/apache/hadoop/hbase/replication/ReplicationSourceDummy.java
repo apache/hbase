@@ -81,4 +81,9 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   public String getPeerClusterId() {
     return peerClusterId;
   }
+
+  @Override
+  public String getStats() {
+    return "";
+  }
 }
