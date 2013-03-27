@@ -47,7 +47,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
     MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
     // Update table descriptor
-    mfs.deleteColumn(tableName, familyName);
+    this.masterServices.getMasterFileSystem().deleteColumn(tableName, familyName);
     // Remove the column family from the file system
     for (HRegionInfo hri : hris) {
       // Delete the family directory in FS for all the regions one by one

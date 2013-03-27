@@ -47,11 +47,8 @@ public class TableModifyFamilyHandler extends TableEventHandler {
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions) throws IOException {
-    // Update table descriptor in HDFS
-    HTableDescriptor htd =
-      this.masterServices.getMasterFileSystem().modifyColumn(tableName, familyDesc);
-    // Update in-memory descriptor cache
-    this.masterServices.getTableDescriptors().add(htd);
+    // Update table descriptor
+    this.masterServices.getMasterFileSystem().modifyColumn(tableName, familyDesc);
   }
 
   @Override
