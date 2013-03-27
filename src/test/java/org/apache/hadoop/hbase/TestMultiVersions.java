@@ -58,9 +58,11 @@ public class TestMultiVersions {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private HBaseAdmin admin;
 
+  private static final int NUM_SLAVES = 3;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    UTIL.startMiniCluster();
+    UTIL.startMiniCluster(NUM_SLAVES);
   }
 
   @AfterClass
@@ -140,7 +142,7 @@ public class TestMultiVersions {
     table.close();
     UTIL.shutdownMiniHBaseCluster();
     LOG.debug("HBase cluster shut down -- restarting");
-    UTIL.startMiniHBaseCluster(1, 1);
+    UTIL.startMiniHBaseCluster(1, NUM_SLAVES);
     // Make a new connection.  Use new Configuration instance because old one
     // is tied to an HConnection that has since gone stale.
     table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);

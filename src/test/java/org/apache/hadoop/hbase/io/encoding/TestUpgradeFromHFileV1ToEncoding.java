@@ -52,12 +52,14 @@ public class TestUpgradeFromHFileV1ToEncoding {
   private static final int NUM_HFILE_V1_BATCHES = 10;
   private static final int NUM_HFILE_V2_BATCHES = 20;
 
+  private static final int NUM_SLAVES = 3;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Use a small flush size to create more HFiles.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt(HFile.FORMAT_VERSION_KEY, 1); // Use HFile v1 initially
-    TEST_UTIL.startMiniCluster();
+    TEST_UTIL.startMiniCluster(NUM_SLAVES);
     LOG.debug("Started an HFile v1 cluster");
   }
 
@@ -81,7 +83,7 @@ public class TestUpgradeFromHFileV1ToEncoding {
     TEST_UTIL.shutdownMiniHBaseCluster();
 
     conf.setInt(HFile.FORMAT_VERSION_KEY, 2);
-    TEST_UTIL.startMiniHBaseCluster(1, 1);
+    TEST_UTIL.startMiniHBaseCluster(1, NUM_SLAVES);
     LOG.debug("Started an HFile v2 cluster");
     admin = new HBaseAdmin(conf);
     htd = admin.getTableDescriptor(TABLE_BYTES);
