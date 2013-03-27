@@ -648,7 +648,7 @@ public class TestHFileOutputFormat  {
         Compression.Algorithm algo = Compression.getCompressionAlgorithmByName(algoName);
         algo.getCompressor();
         supportedAlgos.add(algo);
-      }catch (Exception e) {
+      } catch (Throwable t) {
         // this algo is not available
       }
     }
