@@ -179,6 +179,33 @@ public class TestHLogSplit {
     assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
   }
 
+  /**
+   * Test old recovered edits file doesn't break HLogSplitter.
+   * This is useful in upgrading old instances.
+   */
+  @Test 
+  public void testOldRecoveredEditsFileSidelined() throws IOException {
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+    Path tdir = new Path(hbaseDir, Bytes.toString(HConstants.META_TABLE_NAME));
+    Path regiondir = new Path(tdir,
+        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    fs.mkdirs(regiondir);
+    long now = System.currentTimeMillis();
+    HLog.Entry entry =
+        new HLog.Entry(new HLogKey(encoded,
+            HConstants.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
+      new WALEdit());
+    Path parent = HLog.getRegionDirRecoveredEditsDir(regiondir);
+    assertEquals(parent.getName(), HLog.RECOVERED_EDITS_DIR);
+    fs.createNewFile(parent); // create a recovered.edits file 
+
+    Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, hbaseDir, true);
+    String parentOfParent = p.getParent().getParent().getName();
+    assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    HLog.createWriter(fs, p, conf);
+  }
+
   @Test(expected = OrphanHLogAfterSplitException.class)
   public void testSplitFailsIfNewHLogGetsCreatedAfterSplitStarted()
   throws IOException {
@@ -1253,8 +1280,6 @@ public class TestHLogSplit {
 
         break;
     }
-
-
   }
 
   private void closeOrFlush(boolean close, FSDataOutputStream out)

@@ -626,10 +626,9 @@ public class HLogSplitter {
   static Path getRegionSplitEditsPath(final FileSystem fs,
       final Entry logEntry, final Path rootDir, boolean isCreate)
   throws IOException {
-    Path tableDir = HTableDescriptor.getTableDir(rootDir, logEntry.getKey()
-        .getTablename());
-    Path regiondir = HRegion.getRegionDir(tableDir,
-        Bytes.toString(logEntry.getKey().getEncodedRegionName()));
+    Path tableDir = HTableDescriptor.getTableDir(rootDir, logEntry.getKey().getTablename());
+    String encodedRegionName = Bytes.toString(logEntry.getKey().getEncodedRegionName());
+    Path regiondir = HRegion.getRegionDir(tableDir, encodedRegionName);
     Path dir = HLog.getRegionDirRecoveredEditsDir(regiondir);
 
     if (!fs.exists(regiondir)) {
@@ -638,6 +637,21 @@ public class HLogSplitter {
           " already split so it's safe to discard those edits.");
       return null;
     }
+    if (fs.exists(dir) && fs.isFile(dir)) {
+      Path tmp = new Path("/tmp");
+      if (!fs.exists(tmp)) {
+        fs.mkdirs(tmp);
+      }
+      tmp = new Path(tmp,
+        HLog.RECOVERED_EDITS_DIR + "_" + encodedRegionName);
+      LOG.warn("Found existing old file: " + dir + ". It could be some "
+        + "leftover of an old installation. It should be a folder instead. "
+        + "So moving it to " + tmp);
+      if (!fs.rename(dir, tmp)) {
+        LOG.warn("Failed to sideline old file " + dir);
+      }
+    }
+
     if (isCreate && !fs.exists(dir)) {
       if (!fs.mkdirs(dir)) LOG.warn("mkdir failed on " + dir);
     }
