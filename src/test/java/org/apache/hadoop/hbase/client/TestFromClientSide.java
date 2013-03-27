@@ -3907,6 +3907,7 @@ public class TestFromClientSide {
     return new HTable(tableName, conn, pool);
   }
 
+  
   /**
    * simple test that just executes parts of the client
    * API that accept a pre-created HConnction instance
