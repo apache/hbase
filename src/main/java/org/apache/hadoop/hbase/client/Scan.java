@@ -224,7 +224,6 @@ public class Scan extends OperationWithAttributes implements Writable {
     }
     set.add(qualifier);
     familyMap.put(family, set);
-
     return this;
   }
 

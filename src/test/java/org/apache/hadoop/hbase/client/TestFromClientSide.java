@@ -3556,6 +3556,29 @@ public class TestFromClientSide {
   }
 
   @Test
+  public void testGet_NullQualifier() throws IOException {
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testGet_NullQualifier"), FAMILY);
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
+
+    put = new Put(ROW);
+    put.add(FAMILY, null, VALUE);
+    table.put(put);
+    LOG.info("Row put");
+
+    Get get = new Get(ROW);
+    get.addColumn(FAMILY, null);
+    Result r = table.get(get);
+    assertEquals(1, r.size());
+
+    get = new Get(ROW);
+    get.addFamily(FAMILY);
+    r = table.get(get);
+    assertEquals(2, r.size());
+  }
+
+  @Test
   public void testGet_NonExistentRow() throws IOException {
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testGet_NonExistentRow"), FAMILY);
     Put put = new Put(ROW);
@@ -4859,6 +4882,35 @@ public class TestFromClientSide {
     ResultScanner scanner = foo.getScanner(scan);
     Result[] bar = scanner.next(100);
     assertEquals(1, bar.length);
+  }
+
+  @Test
+  public void testScan_NullQualifier() throws IOException {
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testScan_NullQualifier"), FAMILY);
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
+
+    put = new Put(ROW);
+    put.add(FAMILY, null, VALUE);
+    table.put(put);
+    LOG.info("Row put");
+
+    Scan scan = new Scan();
+    scan.addColumn(FAMILY, null);
+
+    ResultScanner scanner = table.getScanner(scan);
+    Result[] bar = scanner.next(100);
+    assertEquals(1, bar.length);
+    assertEquals(1, bar[0].size());
+
+    scan = new Scan();
+    scan.addFamily(FAMILY);
+
+    scanner = table.getScanner(scan);
+    bar = scanner.next(100);
+    assertEquals(1, bar.length);
+    assertEquals(2, bar[0].size());
   }
 
   @org.junit.Rule

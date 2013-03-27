@@ -27,6 +27,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -105,6 +106,15 @@ public class TestScan {
     Assert.assertNull(scan.getAttribute("attribute1"));
     Assert.assertTrue(scan.getAttributesMap().isEmpty());
     Assert.assertNull(scan.getAttributesMap().get("attribute1"));
+  }
+
+  @Test
+  public void testNullQualifier() {
+    Scan scan = new Scan();
+    byte[] family = Bytes.toBytes("family");
+    scan.addColumn(family, null);
+    Set<byte[]> qualifiers = scan.getFamilyMap().get(family);
+    Assert.assertEquals(1, qualifiers.size());
   }
 
   @org.junit.Rule

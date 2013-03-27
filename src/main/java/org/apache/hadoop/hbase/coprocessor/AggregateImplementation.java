@@ -60,7 +60,11 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         .getRegion().getScanner(scan);
     List<KeyValue> results = new ArrayList<KeyValue>();
     byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+    NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+    byte[] qualifier = null;
+    if (qualifiers != null && !qualifiers.isEmpty()) {
+      qualifier = qualifiers.pollFirst();
+    }
     // qualifier can be null.
     try {
       boolean hasMoreRows = false;
@@ -90,7 +94,11 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         .getRegion().getScanner(scan);
     List<KeyValue> results = new ArrayList<KeyValue>();
     byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+    NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+    byte[] qualifier = null;
+    if (qualifiers != null && !qualifiers.isEmpty()) {
+      qualifier = qualifiers.pollFirst();
+    }
     try {
       boolean hasMoreRows = false;
       do {
@@ -119,7 +127,11 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
     InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
         .getRegion().getScanner(scan);
     byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+    NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+    byte[] qualifier = null;
+    if (qualifiers != null && !qualifiers.isEmpty()) {
+      qualifier = qualifiers.pollFirst();
+    }
     List<KeyValue> results = new ArrayList<KeyValue>();
     try {
       boolean hasMoreRows = false;
@@ -147,7 +159,11 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
     long counter = 0l;
     List<KeyValue> results = new ArrayList<KeyValue>();
     byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+    NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+    byte[] qualifier = null;
+    if (qualifiers != null && !qualifiers.isEmpty()) {
+      qualifier = qualifiers.pollFirst();
+    }
     if (scan.getFilter() == null && qualifier == null)
       scan.setFilter(new FirstKeyOnlyFilter());
     InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
@@ -178,7 +194,11 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
     InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
         .getRegion().getScanner(scan);
     byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+    NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+    byte[] qualifier = null;
+    if (qualifiers != null && !qualifiers.isEmpty()) {
+      qualifier = qualifiers.pollFirst();
+    }
     List<KeyValue> results = new ArrayList<KeyValue>();
     boolean hasMoreRows = false;
     try {
@@ -206,7 +226,11 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
     InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
         .getRegion().getScanner(scan);
     byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+    NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+    byte[] qualifier = null;
+    if (qualifiers != null && !qualifiers.isEmpty()) {
+      qualifier = qualifiers.pollFirst();
+    }
     List<KeyValue> results = new ArrayList<KeyValue>();
 
     boolean hasMoreRows = false;
@@ -241,10 +265,13 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
     InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
     .getRegion().getScanner(scan);
     byte[] colFamily = scan.getFamilies()[0];
-    NavigableSet<byte[]> quals = scan.getFamilyMap().get(colFamily);
-    byte[] valQualifier = quals.pollFirst();
-    // if weighted median is requested, get qualifier for the weight column
-    byte[] weightQualifier = quals.size() > 1 ? quals.pollLast() : null;
+    NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+    byte[] valQualifier = null, weightQualifier = null;
+    if (qualifiers != null && !qualifiers.isEmpty()) {
+      valQualifier = qualifiers.pollFirst();
+      // if weighted median is requested, get qualifier for the weight column
+      weightQualifier = qualifiers.pollLast();
+    }
     List<KeyValue> results = new ArrayList<KeyValue>();
 
     boolean hasMoreRows = false;

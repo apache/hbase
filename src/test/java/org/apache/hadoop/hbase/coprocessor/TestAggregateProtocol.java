@@ -61,7 +61,6 @@ public class TestAggregateProtocol {
   private static byte[][] ROWS = makeN(ROW, ROWSIZE);
 
   private static HBaseTestingUtility util = new HBaseTestingUtility();
-  private static MiniHBaseCluster cluster = null;
   private static Configuration conf = util.getConfiguration();
 
   /**
@@ -76,7 +75,6 @@ public class TestAggregateProtocol {
         "org.apache.hadoop.hbase.coprocessor.AggregateImplementation");
 
     util.startMiniCluster(2);
-    cluster = util.getMiniHBaseCluster();
     HTable table = util.createTable(TEST_TABLE, TEST_FAMILY);
     util.createMultiRegions(util.getConfiguration(), table, TEST_FAMILY,
         new byte[][] { HConstants.EMPTY_BYTE_ARRAY, ROWS[rowSeperator1],
