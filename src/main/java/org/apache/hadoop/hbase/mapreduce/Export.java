@@ -48,7 +48,8 @@ import org.apache.commons.logging.LogFactory;
 public class Export {
   private static final Log LOG = LogFactory.getLog(Export.class);
   final static String NAME = "export";
-  final static String RAW_SCAN="hbase.mapreduce.include.deleted.rows";
+  final static String RAW_SCAN = "hbase.mapreduce.include.deleted.rows";
+  final static String EXPORT_BATCHING = "hbase.export.scanner.batch";
 
   /**
    * Mapper.
@@ -130,6 +131,15 @@ public class Export {
         LOG.info("Setting Scan Filter for Export.");
       s.setFilter(exportFilter);
     }
+
+    int batching = conf.getInt(EXPORT_BATCHING, -1);
+    if (batching !=  -1){
+      try{
+        s.setBatch(batching);
+	} catch (RuntimeException e) {
+	    LOG.error("Batching could not be set", e);
+      }
+    }
     LOG.info("versions=" + versions + ", starttime=" + startTime +
       ", endtime=" + endTime + ", keepDeletedCells=" + raw);
     return s;
@@ -170,6 +180,8 @@ public class Export {
         + "   -Dhbase.client.scanner.caching=100\n"
         + "   -Dmapred.map.tasks.speculative.execution=false\n"
         + "   -Dmapred.reduce.tasks.speculative.execution=false");
+    System.err.println("For tables with very wide rows consider setting the batch size as below:\n"
+        + "   -D" + EXPORT_BATCHING + "=10");
   }
 
   /**
