@@ -1326,7 +1326,7 @@ public class HRegion implements HeapSize { // , Writable{
           status.setStatus("Compacting store " + cr.getStore());
           cr.getStore().compact(cr);
         } catch (InterruptedIOException iioe) {
-          String msg = "compaction interrupted by user";
+          String msg = "compaction interrupted";
           LOG.info(msg, iioe);
           status.abort(msg);
           return false;

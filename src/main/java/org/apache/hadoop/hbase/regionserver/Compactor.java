@@ -228,7 +228,7 @@ class Compactor extends Configured {
     writer.close();
     store.getFileSystem().delete(writer.getPath(), false);
     throw new InterruptedIOException( "Aborting compaction of store " + store +
-      " in region " + store.getHRegion() + " because user requested stop.");
+      " in region " + store.getHRegion() + " because it was interrupted.");
   }
 
   CompactionProgress getProgress() {
