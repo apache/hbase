@@ -134,7 +134,7 @@ EOF
     #----------------------------------------------------------------------------------------------
     # Delete a cell
     def _delete_internal(row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
-      deleteall_internal(row, column, timestamp)
+      _deleteall_internal(row, column, timestamp)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -442,8 +442,6 @@ EOF
 
     #----------------------------------------------------------------------------------------
     # Helper methods
-    #everthing below here is 'private' - can only be called from within the class context
-    private
 
     # Returns a list of column names in the table
     def get_all_columns

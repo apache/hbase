@@ -18,7 +18,11 @@
 # limitations under the License.
 #
 
+require 'shell'
+require 'shell/formatter'
 require 'hbase'
+require 'hbase/hbase'
+require 'hbase/table'
 
 include HBaseConstants
 
@@ -175,10 +179,10 @@ module Hbase
     define_test "truncate should empty a table" do
       table(@test_name).put(1, "x:a", 1)
       table(@test_name).put(2, "x:a", 2)
-      assert_equal(2, table(@test_name).count)
+      assert_equal(2, table(@test_name)._count_internal)
       # This is hacky.  Need to get the configuration into admin instance
       admin.truncate(@test_name, $TEST_CLUSTER.getConfiguration)
-      assert_equal(0, table(@test_name).count)
+      assert_equal(0, table(@test_name)._count_internal)
     end
 
     define_test "truncate should yield log records" do

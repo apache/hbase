@@ -166,11 +166,11 @@ module Hbase
 
     define_test "get_counter should work with integer keys" do
       @test_table.incr(12345, 'x:cnt')
-      assert_kind_of(Fixnum, @test_table.get_counter(12345, 'x:cnt'))
+      assert_kind_of(Fixnum, @test_table._get_counter_internal(12345, 'x:cnt'))
     end
 
     define_test "get_counter should return nil for non-existent counters" do
-      assert_nil(@test_table.get_counter(12345, 'x:qqqq'))
+      assert_nil(@test_table._get_counter_internal(12345, 'x:qqqq'))
     end
   end
 
@@ -185,7 +185,7 @@ module Hbase
       create_test_table(@test_name)
       @test_table = table(@test_name)
 
-      # Test data
+      # Instert test data
       @test_ts = 12345678
       @test_table.put(1, "x:a", 1)
       @test_table.put(1, "x:b", 2, @test_ts)
@@ -195,12 +195,12 @@ module Hbase
     end
 
     define_test "count should work w/o a block passed" do
-      assert(@test_table.count > 0)
+      assert(@test_table._count_internal > 0)
     end
 
     define_test "count should work with a block passed (and yield)" do
       rows = []
-      cnt = @test_table.count(1) do |cnt, row|
+      cnt = @test_table._count_internal(1) do |cnt, row|
         rows << row
       end
       assert(cnt > 0)
@@ -210,7 +210,7 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "get should work w/o columns specification" do
-      res = @test_table.get('1')
+      res = @test_table._get_internal('1')
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -218,7 +218,7 @@ module Hbase
     end
 
     define_test "get should work with integer keys" do
-      res = @test_table.get(1)
+      res = @test_table._get_internal(1)
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -226,7 +226,7 @@ module Hbase
     end
 
     define_test "get should work with hash columns spec and a single string COLUMN parameter" do
-      res = @test_table.get('1', COLUMN => 'x:a')
+      res = @test_table._get_internal('1', COLUMN => 'x:a')
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -234,7 +234,7 @@ module Hbase
     end
 
     define_test "get should work with hash columns spec and a single string COLUMNS parameter" do
-      res = @test_table.get('1', COLUMNS => 'x:a')
+      res = @test_table._get_internal('1', COLUMNS => 'x:a')
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -242,7 +242,7 @@ module Hbase
     end
 
     define_test "get should work with hash columns spec and an array of strings COLUMN parameter" do
-      res = @test_table.get('1', COLUMN => [ 'x:a', 'x:b' ])
+      res = @test_table._get_internal('1', COLUMN => [ 'x:a', 'x:b' ])
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -250,7 +250,7 @@ module Hbase
     end
 
     define_test "get should work with hash columns spec and an array of strings COLUMNS parameter" do
-      res = @test_table.get('1', COLUMNS => [ 'x:a', 'x:b' ])
+      res = @test_table._get_internal('1', COLUMNS => [ 'x:a', 'x:b' ])
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -258,7 +258,7 @@ module Hbase
     end
 
     define_test "get should work with hash columns spec and TIMESTAMP only" do
-      res = @test_table.get('1', TIMESTAMP => @test_ts)
+      res = @test_table._get_internal('1', TIMESTAMP => @test_ts)
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_nil(res['x:a'])
@@ -267,24 +267,24 @@ module Hbase
 
     define_test "get should fail with hash columns spec and strange COLUMN value" do
       assert_raise(ArgumentError) do
-        @test_table.get('1', COLUMN => {})
+        @test_table._get_internal('1', COLUMN => {})
       end
     end
 
     define_test "get should fail with hash columns spec and strange COLUMNS value" do
       assert_raise(ArgumentError) do
-        @test_table.get('1', COLUMN => {})
+        @test_table._get_internal('1', COLUMN => {})
       end
     end
 
     define_test "get should fail with hash columns spec and no TIMESTAMP or COLUMN[S]" do
       assert_raise(ArgumentError) do
-        @test_table.get('1', { :foo => :bar })
+        @test_table._get_internal('1', { :foo => :bar })
       end
     end
 
     define_test "get should work with a string column spec" do
-      res = @test_table.get('1', 'x:b')
+      res = @test_table._get_internal('1', 'x:b')
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_nil(res['x:a'])
@@ -292,7 +292,7 @@ module Hbase
     end
 
     define_test "get should work with an array columns spec" do
-      res = @test_table.get('1', 'x:a', 'x:b')
+      res = @test_table._get_internal('1', 'x:a', 'x:b')
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -300,7 +300,7 @@ module Hbase
     end
 
     define_test "get should work with an array or arrays columns spec (yeah, crazy)" do
-      res = @test_table.get('1', ['x:a'], ['x:b'])
+      res = @test_table._get_internal('1', ['x:a'], ['x:b'])
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
@@ -309,19 +309,19 @@ module Hbase
 
     define_test "get with a block should yield (column, value) pairs" do
       res = {}
-      @test_table.get('1') { |col, val| res[col] = val }
+      @test_table._get_internal('1') { |col, val| res[col] = val }
       assert_equal(res.keys.sort, [ 'x:a', 'x:b' ])
     end
 
     define_test "get should support FILTER" do
       @test_table.put(1, "x:v", "thisvalue")
       begin
-        res = @test_table.get('1', FILTER => "ValueFilter(=, 'binary:thisvalue')")
+        res = @test_table._get_internal('1', FILTER => "ValueFilter(=, 'binary:thisvalue')")
         assert_not_nil(res)
         assert_kind_of(Hash, res)
         assert_not_nil(res['x:v'])
         assert_nil(res['x:a'])
-        res = @test_table.get('1', FILTER => "ValueFilter(=, 'binary:thatvalue')")
+        res = @test_table._get_internal('1', FILTER => "ValueFilter(=, 'binary:thatvalue')")
         assert_nil(res)
       ensure
         # clean up newly added columns for this test only.
@@ -332,7 +332,7 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "scan should work w/o any params" do
-      res = @test_table.scan
+      res = @test_table._scan_internal
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['1'])
@@ -344,7 +344,7 @@ module Hbase
     end
 
     define_test "scan should support STARTROW parameter" do
-      res = @test_table.scan STARTROW => '2'
+      res = @test_table._scan_internal STARTROW => '2'
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_nil(res['1'])
@@ -354,7 +354,7 @@ module Hbase
     end
 
     define_test "scan should support STOPROW parameter" do
-      res = @test_table.scan STOPROW => '2'
+      res = @test_table._scan_internal STOPROW => '2'
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['1'])
@@ -364,7 +364,7 @@ module Hbase
     end
 
     define_test "scan should support LIMIT parameter" do
-      res = @test_table.scan LIMIT => 1
+      res = @test_table._scan_internal LIMIT => 1
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['1'])
@@ -374,7 +374,7 @@ module Hbase
     end
 
     define_test "scan should support TIMESTAMP parameter" do
-      res = @test_table.scan TIMESTAMP => @test_ts
+      res = @test_table._scan_internal TIMESTAMP => @test_ts
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['1'])
@@ -386,7 +386,7 @@ module Hbase
     end
 
     define_test "scan should support TIMERANGE parameter" do
-      res = @test_table.scan TIMERANGE => [0, 1]
+      res = @test_table._scan_internal TIMERANGE => [0, 1]
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_nil(res['1'])
@@ -394,7 +394,7 @@ module Hbase
     end
 
     define_test "scan should support COLUMNS parameter with an array of columns" do
-      res = @test_table.scan COLUMNS => [ 'x:a', 'x:b' ]
+      res = @test_table._scan_internal COLUMNS => [ 'x:a', 'x:b' ]
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['1'])
@@ -406,7 +406,7 @@ module Hbase
     end
 
     define_test "scan should support COLUMNS parameter with a single column name" do
-      res = @test_table.scan COLUMNS => 'x:a'
+      res = @test_table._scan_internal COLUMNS => 'x:a'
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['1'])
@@ -419,33 +419,33 @@ module Hbase
 
     define_test "scan should fail on invalid COLUMNS parameter types" do
       assert_raise(ArgumentError) do
-        @test_table.scan COLUMNS => {}
+        @test_table._scan_internal COLUMNS => {}
       end
     end
 
     define_test "scan should fail on non-hash params" do
       assert_raise(ArgumentError) do
-        @test_table.scan 123
+        @test_table._scan_internal 123
       end
     end
 
     define_test "scan with a block should yield rows and return rows counter" do
       rows = {}
-      res = @test_table.scan { |row, cells| rows[row] = cells }
+      res = @test_table._scan_internal { |row, cells| rows[row] = cells }
       assert_equal(rows.keys.size, res)
     end
 
     define_test "scan should support FILTER" do
       @test_table.put(1, "x:v", "thisvalue")
       begin
-        res = @test_table.scan FILTER => "ValueFilter(=, 'binary:thisvalue')"
+        res = @test_table._scan_internal FILTER => "ValueFilter(=, 'binary:thisvalue')"
         assert_not_equal(res, {}, "Result is empty")
         assert_kind_of(Hash, res)
         assert_not_nil(res['1'])
         assert_not_nil(res['1']['x:v'])
         assert_nil(res['1']['x:a'])
         assert_nil(res['2'])
-        res = @test_table.scan FILTER => "ValueFilter(=, 'binary:thatvalue')"
+        res = @test_table._scan_internal FILTER => "ValueFilter(=, 'binary:thatvalue')"
         assert_equal(res, {}, "Result is not empty")
       ensure
         # clean up newly added columns for this test only.
