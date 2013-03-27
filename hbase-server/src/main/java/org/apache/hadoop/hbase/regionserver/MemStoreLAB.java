@@ -18,11 +18,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+
 import com.google.common.base.Preconditions;
 
 /**
@@ -49,6 +53,8 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class MemStoreLAB {
   private AtomicReference<Chunk> curChunk = new AtomicReference<Chunk>();
+  // A queue of chunks contained by this memstore
+  private BlockingQueue<Chunk> chunkQueue = new LinkedBlockingQueue<Chunk>();
 
   final static String CHUNK_SIZE_KEY = "hbase.hregion.memstore.mslab.chunksize";
   final static int CHUNK_SIZE_DEFAULT = 2048 * 1024;
@@ -58,13 +64,30 @@ public class MemStoreLAB {
   final static int MAX_ALLOC_DEFAULT = 256  * 1024; // allocs bigger than this don't go through allocator
   final int maxAlloc;
 
+  private final MemStoreChunkPool chunkPool;
+
+  // This flag is for closing this instance, its set when clearing snapshot of
+  // memstore
+  private volatile boolean closed = false;
+  // This flag is for reclaiming chunks. Its set when putting chunks back to
+  // pool
+  private AtomicBoolean reclaimed = new AtomicBoolean(false);
+  // Current count of open scanners which reading data from this MemStoreLAB
+  private final AtomicInteger openScannerCount = new AtomicInteger();
+
+  // Used in testing
   public MemStoreLAB() {
     this(new Configuration());
   }
 
-  public MemStoreLAB(Configuration conf) {
+  private MemStoreLAB(Configuration conf) {
+    this(conf, MemStoreChunkPool.getPool(conf));
+  }
+
+  public MemStoreLAB(Configuration conf, MemStoreChunkPool pool) {
     chunkSize = conf.getInt(CHUNK_SIZE_KEY, CHUNK_SIZE_DEFAULT);
     maxAlloc = conf.getInt(MAX_ALLOC_KEY, MAX_ALLOC_DEFAULT);
+    this.chunkPool = pool;
 
     // if we don't exclude allocations >CHUNK_SIZE, we'd infiniteloop on one!
     Preconditions.checkArgument(
@@ -105,6 +128,38 @@ public class MemStoreLAB {
   }
 
   /**
+   * Close this instance since it won't be used any more, try to put the chunks
+   * back to pool
+   */
+  void close() {
+    this.closed = true;
+    // We could put back the chunks to pool for reusing only when there is no
+    // opening scanner which will read their data
+    if (chunkPool != null && openScannerCount.get() == 0
+        && reclaimed.compareAndSet(false, true)) {
+      chunkPool.putbackChunks(this.chunkQueue);
+    }
+  }
+
+  /**
+   * Called when opening a scanner on the data of this MemStoreLAB
+   */
+  void incScannerCount() {
+    this.openScannerCount.incrementAndGet();
+  }
+
+  /**
+   * Called when closing a scanner on the data of this MemStoreLAB
+   */
+  void decScannerCount() {
+    int count = this.openScannerCount.decrementAndGet();
+    if (chunkPool != null && count == 0 && this.closed
+        && reclaimed.compareAndSet(false, true)) {
+      chunkPool.putbackChunks(this.chunkQueue);
+    }
+  }
+
+  /**
    * Try to retire the current chunk if it is still
    * <code>c</code>. Postcondition is that curChunk.get()
    * != c
@@ -134,12 +189,15 @@ public class MemStoreLAB {
       // No current chunk, so we want to allocate one. We race
       // against other allocators to CAS in an uninitialized chunk
       // (which is cheap to allocate)
-      c = new Chunk(chunkSize);
+      c = (chunkPool != null) ? chunkPool.getChunk() : new Chunk(chunkSize);
       if (curChunk.compareAndSet(null, c)) {
         // we won race - now we need to actually do the expensive
         // allocation step
         c.init();
+        this.chunkQueue.add(c);
         return c;
+      } else if (chunkPool != null) {
+        chunkPool.putbackChunk(c);
       }
       // someone else won race - that's fine, we'll try to grab theirs
       // in the next iteration of the loop.
@@ -149,7 +207,7 @@ public class MemStoreLAB {
   /**
    * A chunk of memory out of which allocations are sliced.
    */
-  private static class Chunk {
+  static class Chunk {
     /** Actual underlying data */
     private byte[] data;
 
@@ -172,7 +230,7 @@ public class MemStoreLAB {
      * this is cheap.
      * @param size in bytes
      */
-    private Chunk(int size) {
+    Chunk(int size) {
       this.size = size;
     }
 
@@ -184,7 +242,9 @@ public class MemStoreLAB {
     public void init() {
       assert nextFreeOffset.get() == UNINITIALIZED;
       try {
-        data = new byte[size];
+        if (data == null) {
+          data = new byte[size];
+        }
       } catch (OutOfMemoryError e) {
         boolean failInit = nextFreeOffset.compareAndSet(UNINITIALIZED, OOM);
         assert failInit; // should be true.
@@ -197,6 +257,16 @@ public class MemStoreLAB {
       // calls init()!
       Preconditions.checkState(initted,
           "Multiple threads tried to init same chunk");
+    }
+
+    /**
+     * Reset the offset to UNINITIALIZED before before reusing an old chunk
+     */
+    void reset() {
+      if (nextFreeOffset.get() != UNINITIALIZED) {
+        nextFreeOffset.set(UNINITIALIZED);
+        allocCount.set(0);
+      }
     }
 
     /**

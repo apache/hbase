@@ -93,7 +93,9 @@ public class MemStore implements HeapSize {
   TimeRangeTracker timeRangeTracker;
   TimeRangeTracker snapshotTimeRangeTracker;
 
-  MemStoreLAB allocator;
+  MemStoreChunkPool chunkPool;
+  volatile MemStoreLAB allocator;
+  volatile MemStoreLAB snapshotAllocator;
 
 
 
@@ -121,9 +123,11 @@ public class MemStore implements HeapSize {
     snapshotTimeRangeTracker = new TimeRangeTracker();
     this.size = new AtomicLong(DEEP_OVERHEAD);
     if (conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT)) {
-      this.allocator = new MemStoreLAB(conf);
+      this.chunkPool = MemStoreChunkPool.getPool(conf);
+      this.allocator = new MemStoreLAB(conf, chunkPool);
     } else {
       this.allocator = null;
+      this.chunkPool = null;
     }
   }
 
@@ -157,9 +161,10 @@ public class MemStore implements HeapSize {
           this.timeRangeTracker = new TimeRangeTracker();
           // Reset heap to not include any keys
           this.size.set(DEEP_OVERHEAD);
+          this.snapshotAllocator = this.allocator;
           // Reset allocator so we get a fresh buffer for the new memstore
           if (allocator != null) {
-            this.allocator = new MemStoreLAB(conf);
+            this.allocator = new MemStoreLAB(conf, chunkPool);
           }
         }
       }
@@ -188,6 +193,7 @@ public class MemStore implements HeapSize {
    */
   void clearSnapshot(final SortedSet<KeyValue> ss)
   throws UnexpectedException {
+    MemStoreLAB tmpAllocator = null;
     this.lock.writeLock().lock();
     try {
       if (this.snapshot != ss) {
@@ -200,8 +206,15 @@ public class MemStore implements HeapSize {
         this.snapshot = new KeyValueSkipListSet(this.comparator);
         this.snapshotTimeRangeTracker = new TimeRangeTracker();
       }
+      if (this.snapshotAllocator != null) {
+        tmpAllocator = this.snapshotAllocator;
+        this.snapshotAllocator = null;
+      }
     } finally {
       this.lock.writeLock().unlock();
+    }
+    if (tmpAllocator != null) {
+      tmpAllocator.close();
     }
   }
 
@@ -697,6 +710,10 @@ public class MemStore implements HeapSize {
     // the pre-calculated KeyValue to be returned by peek() or next()
     private KeyValue theNext;
 
+    // The allocator and snapshot allocator at the time of creating this scanner
+    volatile MemStoreLAB allocatorAtCreation;
+    volatile MemStoreLAB snapshotAllocatorAtCreation;
+
     /*
     Some notes...
 
@@ -723,6 +740,14 @@ public class MemStore implements HeapSize {
 
       kvsetAtCreation = kvset;
       snapshotAtCreation = snapshot;
+      if (allocator != null) {
+        this.allocatorAtCreation = allocator;
+        this.allocatorAtCreation.incScannerCount();
+      }
+      if (snapshotAllocator != null) {
+        this.snapshotAllocatorAtCreation = snapshotAllocator;
+        this.snapshotAllocatorAtCreation.incScannerCount();
+      }
     }
 
     private KeyValue getNext(Iterator<KeyValue> it) {
@@ -885,6 +910,15 @@ public class MemStore implements HeapSize {
 
       this.kvsetIt = null;
       this.snapshotIt = null;
+      
+      if (allocatorAtCreation != null) {
+        this.allocatorAtCreation.decScannerCount();
+        this.allocatorAtCreation = null;
+      }
+      if (snapshotAllocatorAtCreation != null) {
+        this.snapshotAllocatorAtCreation.decScannerCount();
+        this.snapshotAllocatorAtCreation = null;
+      }
 
       this.kvsetItRow = null;
       this.snapshotItRow = null;
@@ -907,7 +941,7 @@ public class MemStore implements HeapSize {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (11 * ClassSize.REFERENCE));
+      ClassSize.OBJECT + (13 * ClassSize.REFERENCE));
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
