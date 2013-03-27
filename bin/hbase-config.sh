@@ -81,6 +81,24 @@ if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   . "${HBASE_CONF_DIR}/hbase-env.sh"
 fi
 
+# Set default value for regionserver uid if not present
+if [ -z "$HBASE_REGIONSERVER_UID" ]; then
+  HBASE_REGIONSERVER_UID="hbase"
+fi
+
+# Verify if hbase has the mlock agent
+if [ "$HBASE_REGIONSERVER_MLOCK" = "true" ]; then
+  MLOCK_AGENT="$HBASE_HOME/native/libmlockall_agent.so"
+  if [ ! -f "$MLOCK_AGENT" ]; then
+    cat 1>&2 <<EOF
+Unable to find mlockall_agent, hbase must be compiled with -Pnative
+EOF
+    exit 1
+  fi  
+
+  HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -agentpath:$MLOCK_AGENT=user=$HBASE_REGIONSERVER_UID"
+fi
+
 # Newer versions of glibc use an arena memory allocator that causes virtual
 # memory usage to explode. Tune the variable down to prevent vmem explosion.
 export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}

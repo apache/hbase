@@ -904,6 +904,12 @@
                     if [ `ls $BUILD_DIR/nativelib | wc -l` -ne 0 ]; then
                       cp -PR $BUILD_DIR/nativelib/lib* $BUILD_DIR/${project.build.finalName}/${project.build.finalName}/lib/native/${build.platform}
                     fi
+                    if [ -d ${project.build.directory}/native ]; then 
+                      if [ `ls ${project.build.directory}/native | wc -l` -ne 0 ]; then 
+                        mkdir -p ${project.build.directory}/${project.build.finalName}/${project.build.finalName}/native
+                        cp -P ${project.build.directory}/native/lib*.so ${project.build.directory}/${project.build.finalName}/${project.build.finalName}/native
+                      fi   
+                    fi
                 </echo>
                 <exec executable="sh" dir="${project.build.directory}" failonerror="true">
                     <arg line="./copynativelibs.sh"/>
@@ -1563,6 +1569,40 @@
                       <destFileName>hadoop-snappy-nativelibs.tar</destFileName>
                     </artifactItem>
                   </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>native</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>make</id>
+                <phase>compile</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <mkdir dir="${project.build.directory}/native"/>
+                    <exec executable="cmake" dir="${project.build.directory}/native"
+                        failonerror="true">
+                      <arg line="${basedir}/src/main/native -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
+                    </exec>
+                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
+                      <arg line="VERBOSE=1"/>
+                    </exec>
+                  </target>
                 </configuration>
               </execution>
             </executions>

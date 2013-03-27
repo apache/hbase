@@ -73,6 +73,10 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC"
 # File naming hosts on which HRegionServers will run.  $HBASE_HOME/conf/regionservers by default.
 # export HBASE_REGIONSERVERS=${HBASE_HOME}/conf/regionservers
 
+# Uncomment and adjust to keep all the Region Server pages mapped to be memory resident
+#HBASE_REGIONSERVER_MLOCK=true
+#HBASE_REGIONSERVER_UID="hbase"
+
 # File naming hosts on which backup HMaster will run.  $HBASE_HOME/conf/backup-masters by default.
 # export HBASE_BACKUP_MASTERS=${HBASE_HOME}/conf/backup-masters
 
