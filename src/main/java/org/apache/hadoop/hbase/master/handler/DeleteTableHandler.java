@@ -92,11 +92,15 @@ public class DeleteTableHandler extends TableEventHandler {
       if (!fs.delete(tempTableDir, true)) {
         LOG.error("Couldn't delete " + tempTableDir);
       }
+
+      LOG.debug("Table '" + Bytes.toString(tableName) + "' archived!");
     } finally {
       // 6. Update table descriptor cache
+      LOG.debug("Removing '" + Bytes.toString(tableName) + "' descriptor.");
       this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));
 
       // 7. If entry for this table in zk, and up in AssignmentManager, remove it.
+      LOG.debug("Marking '" + Bytes.toString(tableName) + "' as deleted.");
       am.getZKTable().setDeletedTable(Bytes.toString(tableName));
     }
   }

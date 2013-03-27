@@ -244,6 +244,7 @@ public class TestHFileArchiving {
 
     // then delete the table so the hfiles get archived
     UTIL.deleteTable(TABLE_NAME);
+    LOG.debug("Deleted table");
 
     // then get the files in the archive directory.
     Path archiveDir = HFileArchiveUtil.getArchivePath(UTIL.getConfiguration());
