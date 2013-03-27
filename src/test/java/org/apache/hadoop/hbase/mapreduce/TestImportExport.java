@@ -65,6 +65,7 @@ public class TestImportExport {
   private static final byte[] FAMILYB = Bytes.toBytes(FAMILYB_STRING);
   private static final byte[] QUAL = Bytes.toBytes("q");
   private static final String OUTPUT_DIR = "outputdir";
+  private static final String EXPORT_BATCH_SIZE = "100";
 
   private static MiniHBaseCluster cluster;
   private static long now = System.currentTimeMillis();
@@ -131,7 +132,7 @@ public class TestImportExport {
     String[] args = new String[] {
         EXPORT_TABLE,
         OUTPUT_DIR,
-        "1000"
+        "1000", // max number of key versions per key to export
     };
 
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
@@ -200,6 +201,47 @@ public class TestImportExport {
     assertTrue(job.isSuccessful());
   }
 
+  /**
+   * Test export scanner batching
+   */
+   @Test
+   public void testExportScannerBatching() throws Exception {
+    String BATCH_TABLE = "exportWithBatch";
+    HTableDescriptor desc = new HTableDescriptor(BATCH_TABLE);
+    desc.addFamily(new HColumnDescriptor(FAMILYA)
+        .setMaxVersions(1)
+    );
+    UTIL.getHBaseAdmin().createTable(desc);
+    HTable t = new HTable(UTIL.getConfiguration(), BATCH_TABLE);
+
+    Put p = new Put(ROW1);
+    p.add(FAMILYA, QUAL, now, QUAL);
+    p.add(FAMILYA, QUAL, now+1, QUAL);
+    p.add(FAMILYA, QUAL, now+2, QUAL);
+    p.add(FAMILYA, QUAL, now+3, QUAL);
+    p.add(FAMILYA, QUAL, now+4, QUAL);
+    t.put(p);
+
+    String[] args = new String[] {
+        "-D" + Export.EXPORT_BATCHING + "=" + EXPORT_BATCH_SIZE,  // added scanner batching arg.
+        BATCH_TABLE,
+        OUTPUT_DIR
+    };
+ 
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    Configuration conf = opts.getConfiguration();
+    args = opts.getRemainingArgs();
+    assertEquals(conf.get(Export.EXPORT_BATCHING), EXPORT_BATCH_SIZE);
+
+    Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
+    job.waitForCompletion(false);
+    assertTrue(job.isSuccessful());
+    
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    fs.delete(new Path(OUTPUT_DIR), true);
+  }
+
   @Test
   public void testWithDeletes() throws Exception {
     String EXPORT_TABLE = "exportWithDeletes";
@@ -229,7 +271,7 @@ public class TestImportExport {
         "-D" + Export.RAW_SCAN + "=true",
         EXPORT_TABLE,
         OUTPUT_DIR,
-        "1000"
+        "1000", // max number of key versions per key to export
     };
 
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
