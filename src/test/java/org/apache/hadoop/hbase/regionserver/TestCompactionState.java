@@ -167,14 +167,11 @@ public class TestCompactionState {
           assertEquals(CompactionState.NONE, state);
         }
       } else {
-        curt = System.currentTimeMillis();
-        waitTime = 20000;
-        endt = curt + waitTime;
+        // Wait until the compaction is done
         state = admin.getCompactionState(table);
         while (state != CompactionState.NONE && curt < endt) {
           Thread.sleep(10);
           state = admin.getCompactionState(table);
-          curt = System.currentTimeMillis();
         }
         // Now, compaction should be done.
         assertEquals(CompactionState.NONE, state);
