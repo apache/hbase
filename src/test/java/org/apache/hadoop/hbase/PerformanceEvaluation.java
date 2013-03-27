@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Hash;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -78,6 +80,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.LineReader;
 
 /**
@@ -96,7 +100,7 @@ import org.apache.hadoop.util.LineReader;
  * <p>If number of clients > 1, we start up a MapReduce job. Each map task
  * runs an individual client. Each client does about 1GB of data.
  */
-public class PerformanceEvaluation {
+public class PerformanceEvaluation extends Configured implements Tool {
   protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
 
   private static final int ROW_LENGTH = 1000;
@@ -112,13 +116,13 @@ public class PerformanceEvaluation {
 
   protected Map<String, CmdDescriptor> commands = new TreeMap<String, CmdDescriptor>();
 
-  volatile Configuration conf;
   private boolean miniCluster = false;
   private boolean nomapred = false;
   private int N = 1;
   private int R = ROWS_PER_GB;
   private byte[] tableName = TABLE_NAME;
   private Compression.Algorithm compression = Compression.Algorithm.NONE;
+  private DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
   private boolean flushCommits = true;
   private boolean writeToWAL = true;
   private int presplitRegions = 0;
@@ -148,10 +152,10 @@ public class PerformanceEvaluation {
 
   /**
    * Constructor
-   * @param c Configuration object
+   * @param conf Configuration object
    */
-  public PerformanceEvaluation(final Configuration c) {
-    this.conf = c;
+  public PerformanceEvaluation(final Configuration conf) {
+    super(conf);
 
     addCommandDescriptor(RandomReadTest.class, "randomRead",
         "Run random read test");
@@ -495,6 +499,7 @@ public class PerformanceEvaluation {
     if (TABLE_DESCRIPTOR == null) {
       TABLE_DESCRIPTOR = new HTableDescriptor(tableName);
       HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);
+      family.setDataBlockEncoding(blockEncoding);
       family.setCompressionType(compression);
       TABLE_DESCRIPTOR.addFamily(family);
     }
@@ -527,7 +532,7 @@ public class PerformanceEvaluation {
    */
   private void runNIsMoreThanOne(final Class<? extends Test> cmd)
   throws IOException, InterruptedException, ClassNotFoundException {
-    checkTable(new HBaseAdmin(conf));
+    checkTable(new HBaseAdmin(getConf()));
     if (this.nomapred) {
       doMultipleClients(cmd);
     } else {
@@ -548,7 +553,7 @@ public class PerformanceEvaluation {
         @Override
         public void run() {
           super.run();
-          PerformanceEvaluation pe = new PerformanceEvaluation(conf);
+          PerformanceEvaluation pe = new PerformanceEvaluation(getConf());
           int index = Integer.parseInt(getName());
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
@@ -590,10 +595,11 @@ public class PerformanceEvaluation {
    */
   private void doMapReduce(final Class<? extends Test> cmd) throws IOException,
         InterruptedException, ClassNotFoundException {
-    Path inputDir = writeInputFile(this.conf);
-    this.conf.set(EvaluationMapTask.CMD_KEY, cmd.getName());
-    this.conf.set(EvaluationMapTask.PE_KEY, getClass().getName());
-    Job job = new Job(this.conf);
+    Configuration conf = getConf();
+    Path inputDir = writeInputFile(conf);
+    conf.set(EvaluationMapTask.CMD_KEY, cmd.getName());
+    conf.set(EvaluationMapTask.PE_KEY, getClass().getName());
+    Job job = new Job(conf);
     job.setJarByClass(PerformanceEvaluation.class);
     job.setJobName("HBase Performance Evaluation");
 
@@ -1151,7 +1157,7 @@ public class PerformanceEvaluation {
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
           Configuration.class, TestOptions.class, Status.class);
-      t = constructor.newInstance(this.conf, options, status);
+      t = constructor.newInstance(getConf(), options, status);
     } catch (NoSuchMethodException e) {
       throw new IllegalArgumentException("Invalid command class: " +
           cmd.getName() + ".  It does not provide a constructor as described by" +
@@ -1176,7 +1182,7 @@ public class PerformanceEvaluation {
 
     HBaseAdmin admin = null;
     try {
-      admin = new HBaseAdmin(this.conf);
+      admin = new HBaseAdmin(getConf());
       checkTable(admin);
       runOneClient(cmd, 0, this.R, this.R, this.flushCommits, this.writeToWAL,
         status);
@@ -1190,6 +1196,7 @@ public class PerformanceEvaluation {
     MiniHBaseCluster hbaseMiniCluster = null;
     MiniDFSCluster dfsCluster = null;
     MiniZooKeeperCluster zooKeeperCluster = null;
+    Configuration conf = getConf();
     if (this.miniCluster) {
       dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
       zooKeeperCluster = new MiniZooKeeperCluster();
@@ -1204,7 +1211,7 @@ public class PerformanceEvaluation {
       conf.set(HConstants.HBASE_DIR, parentdir.toString());
       fs.mkdirs(parentdir);
       FSUtils.setVersion(fs, parentdir);
-      hbaseMiniCluster = new MiniHBaseCluster(this.conf, N);
+      hbaseMiniCluster = new MiniHBaseCluster(conf, N);
     }
 
     try {
@@ -1235,7 +1242,7 @@ public class PerformanceEvaluation {
     }
     System.err.println("Usage: java " + this.getClass().getName() + " \\");
     System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] [--table=NAME] \\");
-    System.err.println("  [--compress=TYPE] <command> <nclients>");
+    System.err.println("  [--compress=TYPE] [--blockEncoding=TYPE] [-D<property=value>]* <command> <nclients>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" miniCluster     Run the test on an HBaseMiniCluster");
@@ -1244,9 +1251,15 @@ public class PerformanceEvaluation {
     System.err.println(" rows            Rows each client runs. Default: One million");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
+    System.err.println(" blockEncoding   Data Block Encoding type to use (PREFIX, FAST_DIFF, DIFF, ...). Default: 'NONE'");
     System.err.println(" flushCommits    Used to determine if the test should flush the table.  Default: false");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println(" presplit        Create presplit table. Recommended for accurate perf analysis (see guide).  Default: disabled");
+    System.err.println();
+    System.err.println(" Note: -D properties will be applied to the conf used. ");
+    System.err.println("  For example: ");
+    System.err.println("   -Dmapred.output.compress=true");
+    System.err.println("   -Dmapreduce.task.timeout=60000");
     System.err.println();
     System.err.println("Command:");
     for (CmdDescriptor command : commands.values()) {
@@ -1275,7 +1288,7 @@ public class PerformanceEvaluation {
     this.R = this.R * N;
   }
 
-  public int doCommandLine(final String[] args) {
+  public int run(String[] args) throws Exception {
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).
     int errCode = -1;
@@ -1323,6 +1336,12 @@ public class PerformanceEvaluation {
           continue;
         }
 
+        final String blockEncoding = "--blockEncoding=";
+        if (cmd.startsWith(blockEncoding)) {
+          this.blockEncoding = DataBlockEncoding.valueOf(cmd.substring(blockEncoding.length()));
+          continue;
+        }
+
         final String flushCommits = "--flushCommits=";
         if (cmd.startsWith(flushCommits)) {
           this.flushCommits = Boolean.parseBoolean(cmd.substring(flushCommits.length()));
@@ -1367,8 +1386,8 @@ public class PerformanceEvaluation {
   /**
    * @param args
    */
-  public static void main(final String[] args) {
-    Configuration c = HBaseConfiguration.create();
-    System.exit(new PerformanceEvaluation(c).doCommandLine(args));
+  public static void main(final String[] args) throws Exception {
+    int res = ToolRunner.run(new PerformanceEvaluation(HBaseConfiguration.create()), args);
+    System.exit(res);
   }
 }
