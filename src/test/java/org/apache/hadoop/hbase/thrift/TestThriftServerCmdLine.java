@@ -88,8 +88,8 @@ public class TestThriftServerCmdLine {
             continue;
           }
           for (boolean specifyCompact : new boolean[] {false, true}) {
-            parameters.add(new Object[]{implType, new Boolean(specifyFramed),
-                new Boolean(specifyBindIP), new Boolean(specifyCompact)});
+            parameters.add(new Object[]{implType, specifyFramed,
+                specifyBindIP, specifyCompact});
           }
         }
       }
@@ -164,7 +164,10 @@ public class TestThriftServerCmdLine {
 
     thriftServer = new ThriftServer(TEST_UTIL.getConfiguration());
     startCmdLineThread(args.toArray(new String[0]));
-    Threads.sleepWithoutInterrupt(2000);
+
+    while ( thriftServer.serverRunner == null || thriftServer.serverRunner.tserver == null ){
+      Thread.sleep(1);
+    }
 
     Class<? extends TServer> expectedClass = implType != null ?
         implType.serverClass : TBoundedThreadPoolServer.class;
