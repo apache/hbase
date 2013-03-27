@@ -25,8 +25,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -353,9 +355,8 @@ public class TestTableLockManager {
       @Override
       public void chore() {
         try {
-          Random random = new Random();
-          List<HRegionInfo> regions = admin.getTableRegions(tableName);
-          byte[] regionName = regions.get(random.nextInt(regions.size())).getRegionName();
+          HRegion region = TEST_UTIL.getSplittableRegion(tableName, -1);
+          byte[] regionName = region.getRegionName();
           admin.flush(regionName);
           admin.compact(regionName);
           admin.split(regionName);

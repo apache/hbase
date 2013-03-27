@@ -1920,6 +1920,41 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     closeRegion(hrl.getRegionInfo().getRegionName());
   }
 
+  /*
+   * Retrieves a splittable region randomly from tableName
+   * 
+   * @param tableName name of table
+   * @param maxAttempts maximum number of attempts, unlimited for value of -1
+   * @return the HRegion chosen, null if none was found within limit of maxAttempts
+   */
+  public HRegion getSplittableRegion(byte[] tableName, int maxAttempts) {
+    List<HRegion> regions = getHBaseCluster().getRegions(tableName);
+    int regCount = regions.size();
+    Set<Integer> attempted = new HashSet<Integer>();
+    int idx;
+    int attempts = 0;
+    do {
+      regions = getHBaseCluster().getRegions(tableName);
+      if (regCount != regions.size()) {
+        // if there was region movement, clear attempted Set
+        attempted.clear();
+      }
+      regCount = regions.size();
+      idx = random.nextInt(regions.size());
+      // if we have just tried this region, there is no need to try again
+      if (attempted.contains(idx)) continue;
+      try {
+        regions.get(idx).checkSplit();
+        return regions.get(idx);
+      } catch (Exception ex) {
+        LOG.warn("Caught exception", ex);
+        attempted.add(idx);
+      }
+      attempts++;
+    } while (maxAttempts == -1 || attempts < maxAttempts);
+    return null;
+  }
+  
   public MiniZooKeeperCluster getZkCluster() {
     return zkCluster;
   }
