@@ -39,11 +39,13 @@ t to table 't1', the corresponding command would be:
 EOF
       end
 
-      def command(table, row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+      def command(table, row, column = nil,
+                  timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
         deleteall(table(table), row, column, timestamp)
       end
 
-      def deleteall(table, row, column = nil, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+      def deleteall(table, row, column = nil,
+                    timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
         format_simple_command do
           table._deleteall_internal(row, column, timestamp)
         end
