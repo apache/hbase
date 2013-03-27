@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -747,68 +745,73 @@ public class TestMasterObserver {
     cp.resetStates();
 
     HTable table = UTIL.createTable(TEST_TABLE, TEST_FAMILY);
-    int countOfRegions = UTIL.createMultiRegions(table, TEST_FAMILY);
-    UTIL.waitUntilAllRegionsAssigned(countOfRegions);
-    
-    NavigableMap<HRegionInfo, ServerName> regions = table.getRegionLocations();
-    Map.Entry<HRegionInfo, ServerName> firstGoodPair = null;
-    for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
-      if (e.getValue() != null) {
-        firstGoodPair = e;
-        break;
-      }
-    }
-    assertNotNull("Found a non-null entry", firstGoodPair);
-    LOG.info("Found " + firstGoodPair.toString());
-    // Try to force a move
-    Collection<ServerName> servers = master.getClusterStatus().getServers();
-    String destName = null;
-    String firstRegionHostnamePortStr = firstGoodPair.getValue().toString();
-    LOG.info("firstRegionHostnamePortStr=" + firstRegionHostnamePortStr);
-    boolean found = false;
-    // Find server that is NOT carrying the first region
-    for (ServerName info : servers) {
-      LOG.info("ServerName=" + info);
-      if (!firstRegionHostnamePortStr.equals(info.getHostAndPort())) {
-        destName = info.toString();
-        found = true;
-        break;
-      }
-    }
-    assertTrue("Found server", found);
-    LOG.info("Found " + destName);
-    master.move(firstGoodPair.getKey().getEncodedNameAsBytes(),
-      Bytes.toBytes(destName));
-    assertTrue("Coprocessor should have been called on region move",
-      cp.wasMoveCalled());
 
-    // make sure balancer is on
-    master.balanceSwitch(true);
-    assertTrue("Coprocessor should have been called on balance switch",
-        cp.wasBalanceSwitchCalled());
-
-    // force region rebalancing
-    master.balanceSwitch(false);
-    // move half the open regions from RS 0 to RS 1
-    HRegionServer rs = cluster.getRegionServer(0);
-    byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());
-    //Make sure no regions are in transition now
-    waitForRITtoBeZero(master);
-    List<HRegionInfo> openRegions = rs.getOnlineRegions();
-    int moveCnt = openRegions.size()/2;
-    for (int i=0; i<moveCnt; i++) {
-      HRegionInfo info = openRegions.get(i);
-      if (!info.isMetaTable()) {
-        master.move(openRegions.get(i).getEncodedNameAsBytes(), destRS);
+    try {
+      int countOfRegions = UTIL.createMultiRegions(table, TEST_FAMILY);
+      UTIL.waitUntilAllRegionsAssigned(countOfRegions);
+      
+      NavigableMap<HRegionInfo, ServerName> regions = table.getRegionLocations();
+      Map.Entry<HRegionInfo, ServerName> firstGoodPair = null;
+      for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
+        if (e.getValue() != null) {
+          firstGoodPair = e;
+          break;
+        }
       }
+      assertNotNull("Found a non-null entry", firstGoodPair);
+      LOG.info("Found " + firstGoodPair.toString());
+      // Try to force a move
+      Collection<ServerName> servers = master.getClusterStatus().getServers();
+      String destName = null;
+      String firstRegionHostnamePortStr = firstGoodPair.getValue().toString();
+      LOG.info("firstRegionHostnamePortStr=" + firstRegionHostnamePortStr);
+      boolean found = false;
+      // Find server that is NOT carrying the first region
+      for (ServerName info : servers) {
+        LOG.info("ServerName=" + info);
+        if (!firstRegionHostnamePortStr.equals(info.getHostAndPort())) {
+          destName = info.toString();
+          found = true;
+          break;
+        }
+      }
+      assertTrue("Found server", found);
+      LOG.info("Found " + destName);
+      master.move(firstGoodPair.getKey().getEncodedNameAsBytes(),
+        Bytes.toBytes(destName));
+      assertTrue("Coprocessor should have been called on region move",
+        cp.wasMoveCalled());
+  
+      // make sure balancer is on
+      master.balanceSwitch(true);
+      assertTrue("Coprocessor should have been called on balance switch",
+          cp.wasBalanceSwitchCalled());
+  
+      // force region rebalancing
+      master.balanceSwitch(false);
+      // move half the open regions from RS 0 to RS 1
+      HRegionServer rs = cluster.getRegionServer(0);
+      byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());
+      //Make sure no regions are in transition now
+      waitForRITtoBeZero(master);
+      List<HRegionInfo> openRegions = rs.getOnlineRegions();
+      int moveCnt = openRegions.size()/2;
+      for (int i=0; i<moveCnt; i++) {
+        HRegionInfo info = openRegions.get(i);
+        if (!info.isMetaTable()) {
+          master.move(openRegions.get(i).getEncodedNameAsBytes(), destRS);
+        }
+      }
+      //Make sure no regions are in transition now
+      waitForRITtoBeZero(master);
+      // now trigger a balance
+      master.balanceSwitch(true);
+      boolean balanceRun = master.balance();
+      assertTrue("Coprocessor should be called on region rebalancing",
+          cp.wasBalanceCalled());
+    } finally {
+      UTIL.deleteTable(TEST_TABLE);
     }
-    //Make sure no regions are in transition now
-    waitForRITtoBeZero(master);
-    // now trigger a balance
-    master.balanceSwitch(true);
-    boolean balanceRun = master.balance();
-    assertTrue("Coprocessor should be called on region rebalancing",
-        cp.wasBalanceCalled());
   }
 
   @Test
