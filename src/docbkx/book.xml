@@ -2175,6 +2175,28 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           </para>
         </section>
       </section>
+      
+       <section>
+        <title>Online Region Merges</title>
+        
+        <para>Both Master and Regionserver participate in the event of online region merges.
+        Client sends merge RPC to master, then master moves the regions together to the
+        same regionserver where the more heavily loaded region resided, finally master
+        send merge request to this regionserver and regionserver run the region merges. 
+        Similar with process of region splits, region merges run as a local transaction
+        on the regionserver, offlines the regions and then merges two regions on the file
+        system, atomically delete merging regions from META and add merged region to the META,
+        opens merged region on the regionserver and reports the merge to Master at last.
+        </para>
+        <para>An example of region merges in the hbase shell
+          <programlisting>$ hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
+          hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
+          </programlisting>
+          It's an asynchronous operation and call returns immediately without waiting merge completed.
+          Passing 'true' as the optional third parameter will force a merge ('force' merges regardless 
+          else merge will fail unless passed adjacent regions. 'force' is for expert use only)
+        </para>
+      </section>
 
       <section xml:id="store">
           <title>Store</title>
