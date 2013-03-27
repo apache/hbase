@@ -299,5 +299,13 @@ module Hbase
       assert_no_match(eval("/" + key1 + "\\$(\\d+)/"), admin.describe(@test_name))
       assert_no_match(eval("/" + key2 + "/"), admin.describe(@test_name))
     end
+
+    define_test "get_table should get a real table" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      table = table(@test_name)
+      assert_not_equal(nil, table)
+    end
   end
 end

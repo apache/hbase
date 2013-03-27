@@ -37,14 +37,32 @@ a dictionary of column(s), timestamp, timerange and versions. Examples:
   hbase> get 't1', 'r1', 'c1'
   hbase> get 't1', 'r1', 'c1', 'c2'
   hbase> get 't1', 'r1', ['c1', 'c2']
+
+The same commands also can be run on a reference to a table (obtained via get_table or
+ create_table). Suppose you had a reference t to table 't1', the corresponding commands would be:
+
+  hbase> t.get 'r1'
+  hbase> t.get 'r1', {TIMERANGE => [ts1, ts2]}
+  hbase> t.get 'r1', {COLUMN => 'c1'}
+  hbase> t.get 'r1', {COLUMN => ['c1', 'c2', 'c3']}
+  hbase> t.get 'r1', {COLUMN => 'c1', TIMESTAMP => ts1}
+  hbase> t.get 'r1', {COLUMN => 'c1', TIMERANGE => [ts1, ts2], VERSIONS => 4}
+  hbase> t.get 'r1', {COLUMN => 'c1', TIMESTAMP => ts1, VERSIONS => 4}
+  hbase> t.get 'r1', 'c1'
+  hbase> t.get 'r1', 'c1', 'c2'
+  hbase> t.get 'r1', ['c1', 'c2']
 EOF
       end
 
       def command(table, row, *args)
+        get(table(table), row, *args)
+      end
+
+      def get(table, row, *args)
         now = Time.now
         formatter.header(["COLUMN", "CELL"])
 
-        table(table).get(row, *args) do |column, value|
+        table._get_internal(row, *args) do |column, value|
           formatter.row([ column, value ])
         end
 
@@ -53,3 +71,6 @@ EOF
     end
   end
 end
+
+#add get command to table
+::Hbase::Table.add_shell_command('get')

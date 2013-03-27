@@ -25,15 +25,102 @@ include Java
 module Hbase
   class Table
     include HBaseConstants
-    attr_reader :table
 
-    def initialize(configuration, table_name, formatter)
-      @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
+    # Add the command 'name' to table s.t. the shell command also called via 'name'
+    # and has an internal method also called 'name'.
+    #
+    # e.g. name = scan, adds table.scan which calls Scan.scan
+    def self.add_shell_command(name)
+      self.add_command(name, name, name)
     end
 
+    # add a named command to the table instance
+    #
+    # name - name of the command that should added to the table
+    #    (eg. sending 'scan' here would allow you to do table.scan)
+    # shell_command - name of the command in the shell
+    # internal_method_name - name of the method in the shell command to forward the call
+    def self.add_command(name, shell_command, internal_method_name)
+      method  = name.to_sym
+      self.class_eval do
+        define_method method do |*args|
+            @shell.internal_command(shell_command, internal_method_name, self, *args)
+         end
+      end
+    end
+    
+    # General help for the table
+    # class level so we can call it from anywhere
+    def self.help
+      return <<-EOF
+Help for table-reference commands.
+
+You can either create a table via 'create' and then manipulate the table via commands like 'put', 'get', etc.
+See the standard help information for how to use each of these commands.
+
+However, as of 0.96, you can also get a reference to a table, on which you can invoke commands.
+For instance, you can get create a table and keep around a reference to it via:
+
+   hbase> t = create 't', 'cf'
+
+Or, if you have already created the table, you can get a reference to it:
+
+   hbase> t = get_table 't'
+
+You can do things like call 'put' on the table:
+
+  hbase> t.put 'r', 'cf:q', 'v'
+
+which puts a row 'r' with column family 'cf', qualifier 'q' and value 'v' into table t.
+
+To read the data out, you can scan the table:
+
+  hbase> t.scan
+
+which will read all the rows in table 't'.
+
+Essentially, any command that takes a table name can also be done via table reference.
+Other commands include things like: get, delete, deleteall,
+get_all_columns, get_counter, count, incr. These functions, along with
+the standard JRuby object methods are also available via tab completion.
+
+For more information on how to use each of these commands, you can also just type:
+
+   hbase> t.help 'scan'
+
+which will output more information on how to use that command.
+
+You can also do general admin actions directly on a table; things like enable, disable,
+flush and drop just by typing:
+
+   hbase> t.enable
+   hbase> t.flush
+   hbase> t.disable
+   hbase> t.drop
+
+Note that after dropping a table, your reference to it becomes useless and further usage
+is undefined (and not recommended).
+EOF
+      end
+    
+    #---------------------------------------------------------------------------------------------
+
+    # let external objects read the underlying table object
+    attr_reader :table
+    # let external objects read the table name
+    attr_reader :name
+
+    def initialize(configuration, table_name, shell)
+      @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
+      @name = table_name
+      @shell = shell
+    end
+
+    # Note the below methods are prefixed with '_' to hide them from the average user, as
+    # they will be much less likely to tab complete to the 'dangerous' internal method
     #----------------------------------------------------------------------------------------------
     # Put a cell 'value' at specified table/row/column
-    def put(row, column, value, timestamp = nil)
+    def _put_internal(row, column, value, timestamp = nil)
       p = org.apache.hadoop.hbase.client.Put.new(row.to_s.to_java_bytes)
       family, qualifier = parse_column_name(column)
       if timestamp
@@ -46,13 +133,13 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Delete a cell
-    def delete(row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
-      deleteall(row, column, timestamp)
+    def _delete_internal(row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+      deleteall_internal(row, column, timestamp)
     end
 
     #----------------------------------------------------------------------------------------------
     # Delete a row
-    def deleteall(row, column = nil, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+    def _deleteall_internal(row, column = nil, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
       d = org.apache.hadoop.hbase.client.Delete.new(row.to_s.to_java_bytes, timestamp, nil)
       if column
         family, qualifier = parse_column_name(column)
@@ -63,7 +150,7 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Increment a counter atomically
-    def incr(row, column, value = nil)
+    def _incr_internal(row, column, value = nil)
       value ||= 1
       family, qualifier = parse_column_name(column)
       @table.incrementColumnValue(row.to_s.to_java_bytes, family, qualifier, value)
@@ -71,7 +158,7 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Count rows in a table
-    def count(interval = 1000, caching_rows = 10)
+    def _count_internal(interval = 1000, caching_rows = 10)
       # We can safely set scanner caching with the first key only filter
       scan = org.apache.hadoop.hbase.client.Scan.new
       scan.cache_blocks = false
@@ -99,7 +186,7 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Get from table
-    def get(row, *args)
+    def _get_internal(row, *args)
       get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
       maxlength = -1
 
@@ -196,7 +283,7 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Fetches and decodes a counter value from hbase
-    def get_counter(row, column)
+    def _get_counter_internal(row, column)
       family, qualifier = parse_column_name(column.to_s)
       # Format get request
       get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
@@ -213,8 +300,8 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Scans whole table or a range of keys and returns rows matching specific criterias
-    def scan(args = {})
+    # Scans whole table or a range of keys and returns rows matching specific criteria
+    def _scan_internal(args = {})
       unless args.kind_of?(Hash)
         raise ArgumentError, "Arguments should be a hash. Failed to parse #{args.inspect}, #{args.class}"
       end
@@ -308,8 +395,55 @@ module Hbase
       return ((block_given?) ? count : res)
     end
 
+    #----------------------------
+    # Add general administration utilities to the shell
+    # each of the names below adds this method name to the table
+    # by callling the corresponding method in the shell
+    # Add single method utilities to the current class
+    # Generally used for admin functions which just have one name and take the table name
+    def self.add_admin_utils(*args)
+      args.each do |method|
+        define_method method do
+          @shell.command(method, @name)
+        end
+      end
+    end
+
+    #Add the following admin utilities to the table
+    add_admin_utils :enable, :disable, :flush, :drop, :describe
+
+    #----------------------------
+    #give the general help for the table
+    # or the named command
+    def help (command = nil)
+      #if there is a command, get the per-command help from the shell
+      if command
+        begin
+          return @shell.help_command(command)
+        rescue NoMethodError
+          puts "Command \'#{command}\' does not exist. Please see general table help."
+          return nil
+        end
+      end
+      return @shell.help('table_help')
+    end
+
+    # Table to string
+    def to_s
+      cl = self.class()
+      return "#{cl} - #{@name}"
+    end
+
+    # Standard ruby call to get the return value for an object
+    # overriden here so we get sane semantics for printing a table on return
+    def inspect
+      to_s
+    end
+
     #----------------------------------------------------------------------------------------
     # Helper methods
+    #everthing below here is 'private' - can only be called from within the class context
+    private
 
     # Returns a list of column names in the table
     def get_all_columns
@@ -355,6 +489,5 @@ module Hbase
       end
       (maxlength != -1) ? val[0, maxlength] : val
     end
-
   end
 end

@@ -30,14 +30,26 @@ versions. To delete a cell from  't1' at row 'r1' under column 'c1'
 marked with the time 'ts1', do:
 
   hbase> delete 't1', 'r1', 'c1', ts1
+
+The same command can also be run on a table reference. Suppose you had a reference
+t to table 't1', the corresponding command would be:
+
+  hbase> t.delete 'r1', 'c1',  ts1
 EOF
       end
 
       def command(table, row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+        delete(table(table), row, column, timestamp)
+      end
+
+      def delete(table, row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
         format_simple_command do
-          table(table).delete(row, column, timestamp)
+          table._delete_internal(row, column, timestamp)
         end
       end
     end
   end
 end
+
+#Add the method table.delete that calls delete.delete
+::Hbase::Table.add_shell_command("delete")

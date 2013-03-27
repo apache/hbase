@@ -21,14 +21,18 @@
 module Shell
   module Commands
     class Command
-      attr_accessor :shell
 
       def initialize(shell)
-        self.shell = shell
+        @shell = shell
       end
 
-      def command_safe(debug, *args)
-        translate_hbase_exceptions(*args) { command(*args) }
+      #wrap an execution of cmd to catch hbase exceptions
+      # cmd - command name to execture
+      # args - arguments to pass to the command
+      def command_safe(debug, cmd = :command, *args)
+        # send is internal ruby method to call 'cmd' with *args
+        #(everything is a message, so this is just the formal semantics to support that idiom)
+        translate_hbase_exceptions(*args) { send(cmd,*args) }
       rescue => e
         puts
         puts "ERROR: #{e}"
@@ -37,30 +41,28 @@ module Shell
         puts "Here is some help for this command:"
         puts help
         puts
-      ensure
-        return nil
       end
 
       def admin
-        shell.hbase_admin
+        @shell.hbase_admin
       end
 
       def table(name)
-        shell.hbase_table(name)
+        @shell.hbase_table(name)
       end
 
       def replication_admin
-        shell.hbase_replication_admin
+        @shell.hbase_replication_admin
       end
 
       def security_admin
-        shell.hbase_security_admin
+        @shell.hbase_security_admin
       end
 
       #----------------------------------------------------------------------
 
       def formatter
-        shell.formatter
+        @shell.formatter
       end
 
       def format_simple_command
@@ -68,6 +70,14 @@ module Shell
         yield
         formatter.header
         formatter.footer(now)
+      end
+
+      def format_and_return_simple_command
+        now = Time.now
+        ret = yield
+        formatter.header
+        formatter.footer(now)
+        return ret
       end
 
       def translate_hbase_exceptions(*args)

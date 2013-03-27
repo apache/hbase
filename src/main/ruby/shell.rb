@@ -80,7 +80,7 @@ module Shell
     end
 
     def hbase_table(name)
-      hbase.table(name, formatter)
+      hbase.table(name, self)
     end
 
     def hbase_replication_admin
@@ -93,10 +93,15 @@ module Shell
 
     def export_commands(where)
       ::Shell.commands.keys.each do |cmd|
+        # here where is the IRB namespace
+        # this method just adds the call to the specified command
+        # which just references back to 'this' shell object
+        # a decently extensible way to add commands
         where.send :instance_eval, <<-EOF
           def #{cmd}(*args)
-            @shell.command('#{cmd}', *args)
+            ret = @shell.command('#{cmd}', *args)
             puts
+            return ret
           end
         EOF
       end
@@ -106,8 +111,17 @@ module Shell
       ::Shell.commands[command.to_s].new(self)
     end
 
+    #call the method 'command' on the specified command
     def command(command, *args)
-      command_instance(command).command_safe(self.debug, *args)
+      internal_command(command, :command, *args)
+    end
+
+    #call a specific internal method in the command instance
+    # command  - name of the command to call
+    # method_name - name of the method on the command to call. Defaults to just 'command'
+    # args - to be passed to the named method
+    def internal_command(command, method_name= :command, *args)
+      command_instance(command).command_safe(self.debug,method_name, *args)
     end
 
     def print_banner
@@ -212,6 +226,7 @@ Shell.load_command_group(
     status
     version
     whoami
+    table_help
   ]
 )
 
@@ -235,6 +250,7 @@ Shell.load_command_group(
     show_filters
     alter_status
     alter_async
+    get_table
   ]
 )
 

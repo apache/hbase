@@ -45,8 +45,8 @@ module Hbase
     end
 
     # Create new one each time
-    def table(table, formatter)
-      ::Hbase::Table.new(configuration, table, formatter)
+    def table(table, shell)
+      ::Hbase::Table.new(configuration, table, shell)
     end
 
     def replication_admin(formatter)
