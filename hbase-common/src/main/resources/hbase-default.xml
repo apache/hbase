@@ -922,14 +922,6 @@
 	</description>
   </property>
   <property>
-    <name>hbase.table.archive.directory</name>
-    <value>.archive</value>
-    <description>Per-table directory name under which to backup files for a
-      table. Files are moved to the same directories as they would be under the
-      table directory, but instead are just one level lower (under
-      table/.archive/... rather than table/...). Currently only applies to HFiles.</description>
-  </property>
-  <property>
     <name>hbase.master.hfilecleaner.plugins</name>
     <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
     <description>A comma-separated list of HFileCleanerDelegate invoked by
