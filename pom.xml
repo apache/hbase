@@ -462,11 +462,6 @@
           <version>${surefire.version}</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.avro</groupId>
-          <artifactId>avro-maven-plugin</artifactId>
-          <version>${avro.version}</version>
-        </plugin>
-        <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.5</version>
@@ -482,20 +477,6 @@
           <configuration>
             <lifecycleMappingMetadata>
               <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.avro</groupId>
-                    <artifactId>avro-maven-plugin</artifactId>
-                    <versionRange>[1.5.3,)</versionRange>
-                    <goals>
-                      <goal>protocol</goal>
-                      <goal>schema</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <execute></execute>
-                  </action>
-                </pluginExecution>
                 <pluginExecution>
                   <pluginExecutionFilter>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -591,23 +572,6 @@
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
           <templateFile>src/site/site.vm</templateFile>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>generate-avro-sources</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>schema</goal>
-              <goal>protocol</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <outputDirectory>${project.build.directory}/generated-sources/java</outputDirectory>
         </configuration>
       </plugin>
       <plugin>
@@ -1044,7 +1008,6 @@
     <compileSource>1.6</compileSource>
 
     <!-- Dependencies -->
-    <avro.version>1.5.3</avro.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.4</commons-codec.version>
     <commons-httpclient.version>3.1</commons-httpclient.version><!-- pretty outdated -->
@@ -1181,26 +1144,6 @@
       <version>${log4j.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
-      <version>${avro.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.thoughtworks.paranamer</groupId>
-          <artifactId>paranamer</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.thoughtworks.paranamer</groupId>
-          <artifactId>paranamer-ant</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro-ipc</artifactId>
-      <version>${avro.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
       <version>${zookeeper.version}</version>
@@ -1264,7 +1207,7 @@
       <artifactId>servlet-api-2.5</artifactId>
       <version>${jetty.jspapi.version}</version>
     </dependency>
-    <!-- While jackson is also a dependency of both jersey and avro, these
+    <!-- While jackson is also a dependency of both jersey it
          can bring in jars from different, incompatible versions. We force
          the same version with these dependencies -->
     <dependency>
