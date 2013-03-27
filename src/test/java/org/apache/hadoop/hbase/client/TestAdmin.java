@@ -377,7 +377,7 @@ public class TestAdmin {
     copy.setValue(key, key);
     boolean expectedException = false;
     try {
-      modifyTable(tableName, copy);
+      admin.modifyTable(tableName, copy);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
@@ -468,36 +468,11 @@ public class TestAdmin {
     copy.setValue(key, key);
     boolean expectedException = false;
     try {
-      modifyTable(tableName, copy);
+      admin.modifyTable(tableName, copy);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
     assertTrue("Online schema update should not happen.", expectedException);
-  }
-
-  /**
-   * Modify table is async so wait on completion of the table operation in master.
-   * @param tableName
-   * @param htd
-   * @throws IOException
-   */
-  private void modifyTable(final byte [] tableName, final HTableDescriptor htd)
-  throws IOException {
-    MasterServices services = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    ExecutorService executor = services.getExecutorService();
-    AtomicBoolean done = new AtomicBoolean(false);
-    executor.registerListener(EventType.C_M_MODIFY_TABLE, new DoneListener(done));
-    this.admin.modifyTable(tableName, htd);
-    while (!done.get()) {
-      synchronized (done) {
-        try {
-          done.wait(100);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-    }
-    executor.unregisterListener(EventType.C_M_MODIFY_TABLE);
   }
 
   /**
