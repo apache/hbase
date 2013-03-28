@@ -253,6 +253,10 @@ public class RegionStates {
       newServerName = null;
     }
 
+    if (state == State.FAILED_CLOSE || state == State.FAILED_OPEN) {
+      LOG.warn("Failed to transition " + hri + " on " + serverName + ": " + state);
+    }
+
     String regionName = hri.getEncodedName();
     RegionState regionState = new RegionState(
       hri, state, System.currentTimeMillis(), newServerName);
