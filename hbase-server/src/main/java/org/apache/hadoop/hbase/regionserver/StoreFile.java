@@ -1357,7 +1357,7 @@ public class StoreFile {
      * @param scan the scan specification. Used to determine the rowkey range.
      * @return true if there is overlap, false otherwise
      */
-    boolean passesKeyRangeFilter(Scan scan) {
+    public boolean passesKeyRangeFilter(Scan scan) {
       if (this.getFirstKey() == null || this.getLastKey() == null) {
         // the file is empty
         return false;
