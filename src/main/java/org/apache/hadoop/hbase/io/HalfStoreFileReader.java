@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -282,6 +283,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
     };
   }
 
+  @Override
+  public boolean passesKeyRangeFilter(Scan scan) {
+    return true;
+  }
+  
   @Override
   public byte[] getLastKey() {
     if (top) {
