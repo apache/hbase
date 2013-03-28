@@ -274,16 +274,24 @@ Server {
       conf.get("hbase.master.dns.interface", "default"),
       conf.get("hbase.master.dns.nameserver", "default")));
     int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
-    // Creation of a HSA will force a resolve.
+    // Test that the hostname is reachable
     InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
     if (initialIsa.getAddress() == null) {
-      throw new IllegalArgumentException("Failed resolve of " + initialIsa);
+      throw new IllegalArgumentException("Failed resolve of hostname " + initialIsa);
+    }
+    // Verify that the bind address is reachable if set
+    String bindAddress = conf.get("hbase.master.ipc.address");
+    if (bindAddress != null) {
+      initialIsa = new InetSocketAddress(bindAddress, port);
+      if (initialIsa.getAddress() == null) {
+        throw new IllegalArgumentException("Failed resolve of bind address " + initialIsa);
+      }
     }
     int numHandlers = conf.getInt("hbase.master.handler.count",
       conf.getInt("hbase.regionserver.handler.count", 25));
     this.rpcServer = HBaseRPC.getServer(this,
       new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
-        initialIsa.getHostName(), // BindAddress is IP we got for this server.
+        initialIsa.getHostName(), // This is bindAddress if set else it's hostname
         initialIsa.getPort(),
         numHandlers,
         0, // we dont use high priority handlers in master
@@ -291,7 +299,7 @@ Server {
         0); // this is a DNC w/o high priority handlers
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
-    this.serverName = new ServerName(this.isa.getHostName(),
+    this.serverName = new ServerName(hostname,
       this.isa.getPort(), System.currentTimeMillis());
     this.rsFatals = new MemoryBoundedLogMessageBuffer(
         conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
