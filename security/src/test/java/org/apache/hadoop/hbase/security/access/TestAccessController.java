@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -69,7 +70,9 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -105,9 +108,9 @@ public class TestAccessController {
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
   private static MasterCoprocessorEnvironment CP_ENV;
-  private static RegionCoprocessorEnvironment RCP_ENV;
   private static RegionServerCoprocessorEnvironment RSCP_ENV;
   private static AccessController ACCESS_CONTROLLER;
+  private RegionCoprocessorEnvironment RCP_ENV;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -143,12 +146,32 @@ public class TestAccessController {
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
+  }
 
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  public void verifyAllowed(User user, PrivilegedExceptionAction... actions) throws Exception {
+    for (PrivilegedExceptionAction action : actions) {
+      try {
+        user.runAs(action);
+      } catch (AccessDeniedException ade) {
+        fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
+      }
+    }
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    // Create the test table (owner added to the _acl_ table)
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     htd.setOwner(USER_OWNER);
     admin.createTable(htd);
+    TEST_UTIL.waitTableAvailable(TEST_TABLE, 5000);
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -176,26 +199,18 @@ public class TestAccessController {
     
       protocol.grant(new UserPermission(Bytes.toBytes(USER_RW_ON_TABLE.getShortName()), TEST_TABLE,
         null, Permission.Action.READ, Permission.Action.WRITE));
+
+      assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
     } finally {
       acl.close();
     }
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  public void verifyAllowed(User user, PrivilegedExceptionAction... actions) throws Exception {
-    for (PrivilegedExceptionAction action : actions) {
-      try {
-        user.runAs(action);
-      } catch (AccessDeniedException ade) {
-        fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
-      } catch (UnknownRowLockException exp){
-        //expected
-      }
-    }
+  @After
+  public void tearDown() throws Exception {
+    // Clean the _acl_ table
+    TEST_UTIL.deleteTable(TEST_TABLE);
+    assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
   }
 
   public void verifyAllowed(PrivilegedExceptionAction action, User... users) throws Exception {
