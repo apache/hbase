@@ -53,8 +53,11 @@
     </para>
           <section xml:id="thrift.filter-language"><title>Filter Language</title>
              <section xml:id="use-case"><title>Use Case</title>
-               <para>Note:  this feature was introduced in Apache HBase 0.92</para>
-               <para>This allows the user to perform server-side filtering when accessing HBase over Thrift. The user specifies a filter via a string. The string is parsed on the server to construct the filter</para>
+                 <note>
+               <para>this feature was introduced in Apache HBase 0.92</para>
+           </note>
+           <para>This allows the user to perform server-side filtering when accessing HBase over Thrift (or in the shell -- see the 'scan' help in the shell).
+               The user specifies a filter via a string. The string is parsed on the server to construct the filter</para>
              </section>
 
              <section xml:id="general-syntax"><title>General Filter String Syntax</title>
