@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.Reference;
@@ -519,6 +520,27 @@ public class HRegionFileSystem {
    */
   Path splitStoreFile(final HRegionInfo hri, final String familyName,
       final StoreFile f, final byte[] splitRow, final boolean top) throws IOException {
+    
+    // Check whether the split row lies in the range of the store file
+    // If it is outside the range, return directly.
+    if (top) {
+      //check if larger than last key.
+      KeyValue splitKey = KeyValue.createFirstOnRow(splitRow);
+      byte[] lastKey = f.createReader().getLastKey();      
+      if (f.getReader().getComparator().compare(splitKey.getBuffer(), 
+          splitKey.getKeyOffset(), splitKey.getKeyLength(), lastKey, 0, lastKey.length) > 0) {
+        return null;
+      }
+    } else {
+      //check if smaller than first key
+      KeyValue splitKey = KeyValue.createLastOnRow(splitRow);
+      byte[] firstKey = f.createReader().getFirstKey();
+      if (f.getReader().getComparator().compare(splitKey.getBuffer(), 
+          splitKey.getKeyOffset(), splitKey.getKeyLength(), firstKey, 0, firstKey.length) < 0) {
+        return null;
+      }      
+    }
+    
     Path splitDir = new Path(getSplitsDir(hri), familyName);
     // A reference to the bottom half of the hsf store file.
     Reference r =
