@@ -306,6 +306,15 @@ row10	c1	c2
        <para>Note: just like RowCounter, caching for the input Scan is configured via <code>hbase.client.scanner.caching</code> in the
        job configuration. </para>
     </section>
+    <section xml:id="mlockall">
+        <title>mlockall</title>
+        <para>It is possible to optionally pin your servers in physical memory making them less likely
+            to be swapped out in oversubscribed environments by having the servers call
+            <link xlink:href="http://linux.die.net/man/2/mlockall">mlockall</link> on startup.
+            See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-4391">HBASE-4391 Add ability to start RS as root and call mlockall</link>
+            for how to build the optional library and have it run on startup.
+        </para>
+    </section>
 
     </section>  <!--  tools -->
 
