@@ -22,11 +22,15 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -78,8 +82,11 @@ public final class Compression {
   public static enum Algorithm {
     LZO("lzo") {
       // Use base type to avoid compile-time dependencies.
-      private transient CompressionCodec lzoCodec;
-
+      private volatile transient CompressionCodec lzoCodec;
+      @Override
+      protected void deleteCodec() {
+        lzoCodec = null;
+      }
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (lzoCodec == null) {
@@ -95,23 +102,35 @@ public final class Compression {
       }
     },
     GZ("gz") {
-      private transient GzipCodec codec;
+      private volatile transient GzipCodec codec;
+      private transient Object lock = new Object();
 
       @Override
       DefaultCodec getCodec(Configuration conf) {
         if (codec == null) {
-          codec = new ReusableStreamGzipCodec();
-          codec.setConf(new Configuration(conf));
-
+          synchronized (lock) {
+            if (codec == null) {
+              GzipCodec tmpCodec = new ReusableStreamGzipCodec();
+              tmpCodec.setConf(new Configuration(conf));
+              codec = tmpCodec;
+            }
+          }
         }
-
         return codec;
+      }
+      @Override
+      protected void deleteCodec() {
+        codec = null;
       }
     },
     NONE("none") {
       @Override
       DefaultCodec getCodec(Configuration conf) {
         return null;
+      }
+      @Override
+      protected void deleteCodec() {
+        return;
       }
 
       @Override
@@ -141,28 +160,39 @@ public final class Compression {
       }
     },
     SNAPPY("snappy") {
-      private transient CompressionCodec snappyCodec;
+      private volatile transient CompressionCodec snappyCodec;
+      private transient Object lock = new Object();
 
+      @Override
+      protected void deleteCodec() {
+        snappyCodec = null;
+      }
       @SuppressWarnings("unchecked")
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (snappyCodec == null) {
-          try {
-            Class<? extends CompressionCodec> snappyCodecClass = 
-                (Class<? extends CompressionCodec>) 
-                Class.forName(CompressionCodec.class.getPackage().getName() + ".SnappyCodec");
-            snappyCodec = snappyCodecClass.newInstance();
-          } catch (InstantiationException e) {
-            LOG.error(e);
-            throw new RuntimeException(e);
-          } catch (IllegalAccessException e) {
-            LOG.error(e);
-            throw new RuntimeException(e);
-          } catch (ClassNotFoundException e) {
-            LOG.error(e);
-            throw new RuntimeException(e);
+          synchronized (lock) {
+            if (snappyCodec == null) {
+              CompressionCodec tmpCodec;
+              try {
+                Class<? extends CompressionCodec> snappyCodecClass =
+                    (Class<? extends CompressionCodec>)
+                    Class.forName(CompressionCodec.class.getPackage().getName() + ".SnappyCodec");
+                tmpCodec = snappyCodecClass.newInstance();
+              } catch (InstantiationException e) {
+                LOG.error(e);
+                throw new RuntimeException(e);
+              } catch (IllegalAccessException e) {
+                LOG.error(e);
+                throw new RuntimeException(e);
+              } catch (ClassNotFoundException e) {
+                LOG.error(e);
+                throw new RuntimeException(e);
+              }
+              ((Configurable) tmpCodec).setConf(new Configuration(conf));
+              snappyCodec = tmpCodec;
+            }
           }
-          ((Configurable) snappyCodec).setConf(new Configuration(conf));
         }
         return (CompressionCodec) snappyCodec;
       }
@@ -170,9 +200,9 @@ public final class Compression {
 
     private final Configuration conf;
     private final String compressName;
-	// data input buffer size to absorb small reads from application.
+    // data input buffer size to absorb small reads from application.
     private static final int DATA_IBUF_SIZE = 1 * 1024;
-	// data output buffer size to absorb small writes from application.
+    // data output buffer size to absorb small writes from application.
     private static final int DATA_OBUF_SIZE = 4 * 1024;
 
     Algorithm(String name) {
@@ -284,6 +314,8 @@ public final class Compression {
     public String getName() {
       return compressName;
     }
+
+    protected abstract void deleteCodec();
   }
 
   public static Algorithm getCompressionAlgorithmByName(String compressName) {
