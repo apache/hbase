@@ -187,6 +187,16 @@ public class AssignmentManager extends ZooKeeperListener {
   private final boolean tomActivated;
 
   /**
+   * A map to track the count a region fails to open in a row.
+   * So that we don't try to open a region forever if the failure is
+   * unrecoverable.  We don't put this information in region states
+   * because we don't expect this to happen frequently; we don't
+   * want to copy this information over during each state transition either.
+   */
+  private final ConcurrentHashMap<String, AtomicInteger>
+    failedOpenTracker = new ConcurrentHashMap<String, AtomicInteger>();
+
+  /**
    * Constructs a new assignment manager.
    *
    * @param server
@@ -541,7 +551,7 @@ public class AssignmentManager extends ZooKeeperListener {
                 public void process() throws IOException {
                   ReentrantLock lock = locker.acquireLock(regionInfo.getEncodedName());
                   try {
-                    unassign(regionInfo, rs, expectedVersion, sn, true);
+                    unassign(regionInfo, rs, expectedVersion, sn, true, null);
                   } finally {
                     lock.unlock();
                   }
@@ -880,9 +890,25 @@ public class AssignmentManager extends ZooKeeperListener {
           // When there are more than one region server a new RS is selected as the
           // destination and the same is updated in the regionplan. (HBASE-5546)
           if (regionState != null) {
-            getRegionPlan(regionState.getRegion(), sn, true);
-            this.executorService.submit(new ClosedRegionHandler(server,
-              this, regionState.getRegion()));
+            AtomicInteger failedOpenCount = failedOpenTracker.get(encodedName);
+            if (failedOpenCount == null) {
+              failedOpenCount = new AtomicInteger();
+              // No need to use putIfAbsent, or extra synchronization since
+              // this whole handleRegion block is locked on the encoded region
+              // name, and failedOpenTracker is updated only in this block
+              failedOpenTracker.put(encodedName, failedOpenCount);
+            }
+            if (failedOpenCount.incrementAndGet() >= maximumAttempts) {
+              regionStates.updateRegionState(
+                regionState.getRegion(), RegionState.State.FAILED_OPEN);
+              // remove the tracking info to save memory, also reset
+              // the count for next open initiative
+              failedOpenTracker.remove(encodedName);
+            } else {
+              getRegionPlan(regionState.getRegion(), sn, true);
+              this.executorService.submit(new ClosedRegionHandler(server,
+                this, regionState.getRegion()));
+            }
           }
           break;
 
@@ -909,11 +935,16 @@ public class AssignmentManager extends ZooKeeperListener {
               + " from server " + sn + " but region was in the state " + regionState
               + " and not in expected PENDING_OPEN or OPENING states,"
               + " or not on the expected server");
+            // Close it without updating the internal region states,
+            // so as not to create double assignments in unlucky scenarios
+            // mentioned in OpenRegionHandler#process
+            unassign(regionState.getRegion(), null, -1, null, false, sn);
             return;
           }
           // Handle OPENED by removing from transition and deleted zk node
           regionState = regionStates.updateRegionState(rt, RegionState.State.OPEN);
           if (regionState != null) {
+            failedOpenTracker.remove(encodedName); // reset the count, if any
             this.executorService.submit(new OpenedRegionHandler(
               server, this, regionState.getRegion(), sn, expectedVersion));
           }
@@ -1571,12 +1602,23 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Send CLOSE RPC if the server is online, otherwise, offline the region
+   * Send CLOSE RPC if the server is online, otherwise, offline the region.
+   *
+   * The RPC will be sent only to the region sever found in the region state
+   * if it is passed in, otherwise, to the src server specified. If region
+   * state is not specified, we don't update region state at all, instead
+   * we just send the RPC call. This is useful for some cleanup without
+   * messing around the region states (see handleRegion, on region opened
+   * on an unexpected server scenario, for an example)
    */
   private void unassign(final HRegionInfo region,
       final RegionState state, final int versionOfClosingNode,
-      final ServerName dest, final boolean transitionInZK) {
-    ServerName server = state.getServerName();
+      final ServerName dest, final boolean transitionInZK,
+      final ServerName src) {
+    ServerName server = src;
+    if (state != null) {
+      server = state.getServerName();
+    }
     for (int i = 1; i <= this.maximumAttempts; i++) {
       // ClosedRegionhandler can remove the server from this.regions
       if (!serverManager.isServerOnline(server)) {
@@ -1584,7 +1626,9 @@ public class AssignmentManager extends ZooKeeperListener {
           // delete the node. if no node exists need not bother.
           deleteClosingOrClosedNode(region);
         }
-        regionOffline(region);
+        if (state != null) {
+          regionOffline(region);
+        }
         return;
       }
       try {
@@ -1608,9 +1652,12 @@ public class AssignmentManager extends ZooKeeperListener {
           if (transitionInZK) {
             deleteClosingOrClosedNode(region);
           }
-          regionOffline(region);
+          if (state != null) {
+            regionOffline(region);
+          }
           return;
-        } else if (t instanceof RegionAlreadyInTransitionException) {
+        } else if (state != null
+            && t instanceof RegionAlreadyInTransitionException) {
           // RS is already processing this region, only need to update the timestamp
           LOG.debug("update " + state + " the timestamp.");
           state.updateTimestampToNow();
@@ -1622,7 +1669,7 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
     // Run out of attempts
-    if (!tomActivated) {
+    if (!tomActivated && state != null) {
       regionStates.updateRegionState(region, RegionState.State.FAILED_CLOSE);
     }
   }
@@ -1649,7 +1696,7 @@ public class AssignmentManager extends ZooKeeperListener {
       case CLOSING:
       case PENDING_CLOSE:
       case FAILED_CLOSE:
-        unassign(region, state, -1, null, false);
+        unassign(region, state, -1, null, false, null);
         state = regionStates.getRegionState(region);
         if (state.isOffline()) break;
       case FAILED_OPEN:
@@ -1717,14 +1764,17 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
       if (setOfflineInZK && versionOfOfflineNode == -1) {
-        LOG.warn("Unable to set offline in ZooKeeper to assign " + region);
-        if (!tomActivated) {
-          regionStates.updateRegionState(region, RegionState.State.FAILED_OPEN);
+        LOG.info("Unable to set offline in ZooKeeper to assign " + region);
+        // Setting offline in ZK must have been failed due to ZK racing or some
+        // exception which may make the server to abort. If it is ZK racing,
+        // we should retry since we already reset the region state,
+        // existing (re)assignment will fail anyway.
+        if (!server.isAborted()) {
+          continue;
         }
-        return;
       }
-      if (this.server.isStopped()) {
-        LOG.debug("Server stopped; skipping assign of " + region);
+      if (this.server.isStopped() || this.server.isAborted()) {
+        LOG.debug("Server stopped/aborted; skipping assign of " + region);
         return;
       }
       LOG.info("Assigning region " + region.getRegionNameAsString() +
@@ -2144,7 +2194,7 @@ public class AssignmentManager extends ZooKeeperListener {
         return;
       }
 
-      unassign(region, state, versionOfClosingNode, dest, true);
+      unassign(region, state, versionOfClosingNode, dest, true, null);
     } finally {
       lock.unlock();
     }
