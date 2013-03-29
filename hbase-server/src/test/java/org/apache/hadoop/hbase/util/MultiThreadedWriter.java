@@ -142,7 +142,7 @@ public class MultiThreadedWriter extends MultiThreadedAction {
               put.add(cf, column, value);
               ++columnCount;
               if (!isMultiPut) {
-                insert(put, rowKeyBase);
+                insert(table, put, rowKeyBase);
                 numCols.addAndGet(1);
                 put = new Put(rowKey);
               }
@@ -152,7 +152,7 @@ public class MultiThreadedWriter extends MultiThreadedAction {
             if (verbose) {
               LOG.debug("Preparing put for key = [" + rowKey + "], " + columnCount + " columns");
             }
-            insert(put, rowKeyBase);
+            insert(table, put, rowKeyBase);
             numCols.addAndGet(columnCount);
           }
           if (trackInsertedKeys) {
@@ -168,53 +168,53 @@ public class MultiThreadedWriter extends MultiThreadedAction {
         numThreadsWorking.decrementAndGet();
       }
     }
+  }
 
-    public void insert(Put put, long keyBase) {
-      try {
-        long start = System.currentTimeMillis();
-        table.put(put);
-        totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
-      } catch (IOException e) {
-        failedKeySet.add(keyBase);
-        String exceptionInfo;
-        if (e instanceof RetriesExhaustedWithDetailsException) {
-          RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException)e;
-          exceptionInfo = aggEx.getExhaustiveDescription();
-        } else {
-          StringWriter stackWriter = new StringWriter();
-          PrintWriter pw = new PrintWriter(stackWriter);
-          e.printStackTrace(pw);
-          pw.flush();
-          exceptionInfo = StringUtils.stringifyException(e);
-        }
-        LOG.error("Failed to insert: " + keyBase + "; region information: "
-            + getRegionDebugInfoSafe(put.getRow()) + "; errors: "
-            + exceptionInfo);
+  public void insert(HTable table, Put put, long keyBase) {
+    try {
+      long start = System.currentTimeMillis();
+      table.put(put);
+      totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+    } catch (IOException e) {
+      failedKeySet.add(keyBase);
+      String exceptionInfo;
+      if (e instanceof RetriesExhaustedWithDetailsException) {
+        RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException)e;
+        exceptionInfo = aggEx.getExhaustiveDescription();
+      } else {
+        StringWriter stackWriter = new StringWriter();
+        PrintWriter pw = new PrintWriter(stackWriter);
+        e.printStackTrace(pw);
+        pw.flush();
+        exceptionInfo = StringUtils.stringifyException(e);
+      }
+      LOG.error("Failed to insert: " + keyBase + "; region information: "
+          + getRegionDebugInfoSafe(table, put.getRow()) + "; errors: "
+          + exceptionInfo);
+    }
+  }
+
+  private String getRegionDebugInfoSafe(HTable table, byte[] rowKey) {
+    HRegionLocation cached = null, real = null;
+    try {
+      cached = table.getRegionLocation(rowKey, false);
+      real = table.getRegionLocation(rowKey, true);
+    } catch (Throwable t) {
+      // Cannot obtain region information for another catch block - too bad!
+    }
+    String result = "no information can be obtained";
+    if (cached != null) {
+      result = "cached: " + cached.toString();
+    }
+    if (real != null) {
+      if (real.equals(cached)) {
+        result += "; cache is up to date";
+      } else {
+        result = (cached != null) ? (result + "; ") : "";
+        result += "real: " + real.toString();
       }
     }
-
-    private String getRegionDebugInfoSafe(byte[] rowKey) {
-      HRegionLocation cached = null, real = null;
-      try {
-        cached = table.getRegionLocation(rowKey, false);
-        real = table.getRegionLocation(rowKey, true);
-      } catch (Throwable t) {
-        // Cannot obtain region information for another catch block - too bad!
-      }
-      String result = "no information can be obtained";
-      if (cached != null) {
-        result = "cached: " + cached.toString();
-      }
-      if (real != null) {
-        if (real.equals(cached)) {
-          result += "; cache is up to date";
-        } else {
-          result = (cached != null) ? (result + "; ") : "";
-          result += "real: " + real.toString();
-        }
-      }
-      return result;
-    }
+    return result;
   }
 
   /**

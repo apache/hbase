@@ -102,7 +102,7 @@ public class TestHLogFiltering {
         table.flushCommits();
       }
     }
-    TEST_UTIL.waitUntilAllRegionsAssigned(NUM_RS);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME, NUM_RS);
   }
 
   @Test
