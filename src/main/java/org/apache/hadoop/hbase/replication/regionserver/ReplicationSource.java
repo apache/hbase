@@ -26,6 +26,7 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -122,7 +123,7 @@ public class ReplicationSource extends Thread
   // Indicates if this queue is recovered (and will be deleted when depleted)
   private boolean queueRecovered;
   // List of all the dead region servers that had this queue (if recovered)
-  private String[] deadRegionServers;
+  private List<String> deadRegionServers = new ArrayList<String>();
   // Maximum number of retries before taking bold actions
   private int maxRetriesMultiplier;
   // Socket timeouts require even bolder actions since we don't want to DDOS
@@ -200,17 +201,71 @@ public class ReplicationSource extends Thread
 
   // The passed znode will be either the id of the peer cluster or
   // the handling story of that queue in the form of id-servername-*
-  private void checkIfQueueRecovered(String peerClusterZnode) {
-    String[] parts = peerClusterZnode.split("-");
+  //
+  // package access for testing
+  void checkIfQueueRecovered(String peerClusterZnode) {
+    String[] parts = peerClusterZnode.split("-", 2);
     this.queueRecovered = parts.length != 1;
     this.peerId = this.queueRecovered ?
         parts[0] : peerClusterZnode;
     this.peerClusterZnode = peerClusterZnode;
-    this.deadRegionServers = new String[parts.length-1];
-    // Extract all the places where we could find the hlogs
-    for (int i = 1; i < parts.length; i++) {
-      this.deadRegionServers[i-1] = parts[i];
+
+    if (parts.length < 2) {
+      // not queue recovered situation
+      return;
     }
+
+    // extract dead servers
+    extracDeadServersFromZNodeString(parts[1], this.deadRegionServers);
+  }
+
+  /**
+   * for tests only
+   */
+  List<String> getDeadRegionServers() {
+    return Collections.unmodifiableList(this.deadRegionServers);
+  }
+
+  /**
+   * Parse dead server names from znode string servername can contain "-" such as
+   * "ip-10-46-221-101.ec2.internal", so we need skip some "-" during parsing for the following
+   * cases: 2-ip-10-46-221-101.ec2.internal,52170,1364333181125-<server name>-...
+   */
+  private static void
+      extracDeadServersFromZNodeString(String deadServerListStr, List<String> result) {
+
+    if (deadServerListStr == null || result == null || deadServerListStr.isEmpty()) return;
+
+    // valid server name delimiter "-" has to be after "," in a server name
+    int seenCommaCnt = 0;
+    int startIndex = 0;
+    int len = deadServerListStr.length();
+
+    for (int i = 0; i < len; i++) {
+      switch (deadServerListStr.charAt(i)) {
+      case ',':
+        seenCommaCnt += 1;
+        break;
+      case '-':
+        if (seenCommaCnt >= 2) {
+          if (i > startIndex) {
+            result.add(deadServerListStr.substring(startIndex, i));
+            startIndex = i + 1;
+          }
+          seenCommaCnt = 0;
+        }
+        break;
+      default:
+        break;
+      }
+    }
+
+    // add tail
+    if (startIndex < len - 1) {
+      result.add(deadServerListStr.substring(startIndex, len));
+    }
+
+    LOG.debug("Found dead servers:" + result);
   }
 
   /**
@@ -505,11 +560,10 @@ public class ReplicationSource extends Thread
           // We didn't find the log in the archive directory, look if it still
           // exists in the dead RS folder (there could be a chain of failures
           // to look at)
-          LOG.info("NB dead servers : " + deadRegionServers.length);
-          for (int i = this.deadRegionServers.length - 1; i >= 0; i--) {
-
+          LOG.info("NB dead servers : " + deadRegionServers.size());
+          for (String curDeadServerName : deadRegionServers) {
             Path deadRsDirectory =
-                new Path(manager.getLogDir().getParent(), this.deadRegionServers[i]);
+                new Path(manager.getLogDir().getParent(), curDeadServerName);
             Path[] locs = new Path[] {
                 new Path(deadRsDirectory, currentPath.getName()),
                 new Path(deadRsDirectory.suffix(HLog.SPLITTING_EXT),

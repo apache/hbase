@@ -20,10 +20,16 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -93,6 +99,9 @@ public class TestReplicationSourceManager {
 
   private static Path logDir;
 
+  private static CountDownLatch latch;
+
+  private static List<String> files = new ArrayList<String>();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -168,7 +177,7 @@ public class TestReplicationSourceManager {
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     listeners.add(replication);
     HLog hlog = new HLog(fs, logDir, oldLogDir, conf, listeners,
-      URLEncoder.encode("regionserver:60020", "UTF8"));
+        URLEncoder.encode("regionserver:60020", "UTF8"));
 
     manager.init();
     HTableDescriptor htd = new HTableDescriptor();
@@ -214,7 +223,143 @@ public class TestReplicationSourceManager {
     // TODO Need a case with only 2 HLogs and we only want to delete the first one
   }
 
+  @Test
+  public void testNodeFailoverWorkerCopyQueuesFromRSUsingMulti() throws Exception {
+    LOG.debug("testNodeFailoverWorkerCopyQueuesFromRSUsingMulti");
+    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
+    final Server server = new DummyServer("hostname0.example.org");
+    AtomicBoolean replicating = new AtomicBoolean(true);
+    ReplicationZookeeper rz = new ReplicationZookeeper(server, replicating);
+    // populate some znodes in the peer znode
+    files.add("log1");
+    files.add("log2");
+    for (String file : files) {
+      rz.addLogToList(file, "1");
+    }
+    // create 3 DummyServers
+    Server s1 = new DummyServer("dummyserver1.example.org");
+    Server s2 = new DummyServer("dummyserver2.example.org");
+    Server s3 = new DummyServer("dummyserver3.example.org");
+
+    // create 3 DummyNodeFailoverWorkers
+    DummyNodeFailoverWorker w1 = new DummyNodeFailoverWorker(
+        server.getServerName().getServerName(), s1);
+    DummyNodeFailoverWorker w2 = new DummyNodeFailoverWorker(
+        server.getServerName().getServerName(), s2);
+    DummyNodeFailoverWorker w3 = new DummyNodeFailoverWorker(
+        server.getServerName().getServerName(), s3);
+
+    latch = new CountDownLatch(3);
+    // start the threads
+    w1.start();
+    w2.start();
+    w3.start();
+    // make sure only one is successful
+    int populatedMap = 0;
+    // wait for result now... till all the workers are done.
+    latch.await();
+    populatedMap += w1.isLogZnodesMapPopulated() + w2.isLogZnodesMapPopulated()
+        + w3.isLogZnodesMapPopulated();
+    assertEquals(1, populatedMap);
+    // close out the resources.
+    server.abort("", null);
+  }
+
+  @Test
+  public void testNodeFailoverDeadServerParsing() throws Exception {
+    LOG.debug("testNodeFailoverDeadServerParsing");
+    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
+    final Server server = new DummyServer("ec2-54-234-230-108.compute-1.amazonaws.com");
+    AtomicBoolean replicating = new AtomicBoolean(true);
+    ReplicationZookeeper rz = new ReplicationZookeeper(server, replicating);
+    // populate some znodes in the peer znode
+    files.add("log1");
+    files.add("log2");
+    for (String file : files) {
+      rz.addLogToList(file, "1");
+    }
+    // create 3 DummyServers
+    Server s1 = new DummyServer("ip-10-8-101-114.ec2.internal");
+    Server s2 = new DummyServer("ec2-107-20-52-47.compute-1.amazonaws.com");
+    Server s3 = new DummyServer("ec2-23-20-187-167.compute-1.amazonaws.com");
+
+    // simulate three server fail sequentially
+    ReplicationZookeeper rz1 = new ReplicationZookeeper(s1, new AtomicBoolean(true));
+    SortedMap<String, SortedSet<String>> testMap =
+        rz1.copyQueuesFromRSUsingMulti(server.getServerName().getServerName());
+    ReplicationZookeeper rz2 = new ReplicationZookeeper(s2, new AtomicBoolean(true));
+    testMap = rz2.copyQueuesFromRSUsingMulti(s1.getServerName().getServerName());
+    ReplicationZookeeper rz3 = new ReplicationZookeeper(s3, new AtomicBoolean(true));
+    testMap = rz3.copyQueuesFromRSUsingMulti(s2.getServerName().getServerName());
+
+    ReplicationSource s = new ReplicationSource();
+    s.checkIfQueueRecovered(testMap.firstKey());
+    List<String> result = s.getDeadRegionServers();
+
+    // verify
+    assertTrue(result.contains(server.getServerName().getServerName()));
+    assertTrue(result.contains(s1.getServerName().getServerName()));
+    assertTrue(result.contains(s2.getServerName().getServerName()));
+
+    server.abort("", null);
+  }
+
+  static class DummyNodeFailoverWorker extends Thread {
+    private SortedMap<String, SortedSet<String>> logZnodesMap;
+    Server server;
+    private String deadRsZnode;
+    ReplicationZookeeper rz;
+
+    public DummyNodeFailoverWorker(String znode, Server s) throws Exception {
+      this.deadRsZnode = znode;
+      this.server = s;
+      rz = new ReplicationZookeeper(server, new AtomicBoolean(true));
+    }
+
+    @Override
+    public void run() {
+      try {
+        logZnodesMap = rz.copyQueuesFromRSUsingMulti(deadRsZnode);
+        server.abort("Done with testing", null);
+      } catch (Exception e) {
+        LOG.error("Got exception while running NodeFailoverWorker", e);
+      } finally {
+        latch.countDown();
+      }
+    }
+
+    /**
+     * @return 1 when the map is not empty.
+     */
+    private int isLogZnodesMapPopulated() {
+      Collection<SortedSet<String>> sets = logZnodesMap.values();
+      if (sets.size() > 1) {
+        throw new RuntimeException("unexpected size of logZnodesMap: " + sets.size());
+      }
+      if (sets.size() == 1) {
+        SortedSet<String> s = sets.iterator().next();
+        for (String file : files) {
+          // at least one file was missing
+          if (!s.contains(file)) {
+            return 0;
+          }
+        }
+        return 1; // we found all the files
+      }
+      return 0;
+    }
+  }
+
   static class DummyServer implements Server {
+    String hostname;
+
+    DummyServer() {
+      hostname = "hostname.example.org";
+    }
+
+    DummyServer(String hostname) {
+      this.hostname = hostname;
+    }
 
     @Override
     public Configuration getConfiguration() {
@@ -228,19 +373,19 @@ public class TestReplicationSourceManager {
 
     @Override
     public CatalogTracker getCatalogTracker() {
-      return null;  //To change body of implemented methods use File | Settings | File Templates.
+      return null; // To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override
     public ServerName getServerName() {
-      return new ServerName("hostname.example.org", 1234, -1L);
+      return new ServerName(hostname, 1234, 1L);
     }
 
     @Override
     public void abort(String why, Throwable e) {
-      //To change body of implemented methods use File | Settings | File Templates.
+      // To change body of implemented methods use File | Settings | File Templates.
     }
-    
+
     @Override
     public boolean isAborted() {
       return false;
@@ -260,6 +405,5 @@ public class TestReplicationSourceManager {
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
+      new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-

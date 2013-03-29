@@ -679,7 +679,10 @@ public class ReplicationZookeeper {
         // check the logs queue for the old peer cluster
         String oldClusterZnode = ZKUtil.joinZNode(deadRSZnodePath, peerId);
         List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
-        if (hlogs == null || hlogs.size() == 0) continue; // empty log queue.
+        if (hlogs == null || hlogs.size() == 0) {
+          listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
+          continue; // empty log queue.
+        }
         // create the new cluster znode
         SortedSet<String> logQueue = new TreeSet<String>();
         queues.put(newPeerId, logQueue);

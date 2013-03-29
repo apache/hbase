@@ -79,7 +79,7 @@ public class TestReplicationBase {
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     // smaller log roll size to trigger more events
     conf1.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
-    conf1.setInt("replication.source.size.capacity", 1024);
+    conf1.setInt("replication.source.size.capacity", 10240);
     conf1.setLong("replication.source.sleepforretries", 100);
     conf1.setInt("hbase.regionserver.maxlogs", 10);
     conf1.setLong("hbase.master.logcleaner.ttl", 10);
