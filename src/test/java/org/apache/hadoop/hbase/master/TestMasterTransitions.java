@@ -62,7 +62,7 @@ public class TestMasterTransitions {
     TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
-    TEST_UTIL.waitUntilAllRegionsAssigned(Bytes.toBytes(TABLENAME), countOfRegions);
+    TEST_UTIL.waitUntilAllRegionsAssigned(countOfRegions);
     addToEachStartKey(countOfRegions);
     t.close();
   }
