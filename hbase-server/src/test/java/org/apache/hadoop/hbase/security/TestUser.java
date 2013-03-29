@@ -101,6 +101,8 @@ public class TestUser {
       User u = User.getCurrent();
       assertNotNull(u);
       assertEquals(user1.getName(), u.getName());
+      assertEquals(user1, u);
+      assertEquals(user1.hashCode(), u.hashCode());
     }
   }
 
