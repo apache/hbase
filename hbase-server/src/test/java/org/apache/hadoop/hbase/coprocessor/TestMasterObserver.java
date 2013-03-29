@@ -1110,7 +1110,7 @@ public class TestMasterObserver {
 
     try {
       int countOfRegions = UTIL.createMultiRegions(table, TEST_FAMILY);
-      UTIL.waitUntilAllRegionsAssigned(TEST_TABLE, countOfRegions);
+      UTIL.waitUntilAllRegionsAssigned(countOfRegions);
   
       NavigableMap<HRegionInfo, ServerName> regions = table.getRegionLocations();
       Map.Entry<HRegionInfo, ServerName> firstGoodPair = null;

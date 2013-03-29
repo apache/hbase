@@ -91,7 +91,7 @@ public class TestCoprocessorEndpoint {
     HTableDescriptor desc = new HTableDescriptor(TEST_TABLE);
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
-    util.waitUntilAllRegionsAssigned(TEST_TABLE, 3);
+    util.waitUntilAllRegionsAssigned(3);
     admin.close();
 
     HTable table = new HTable(conf, TEST_TABLE);

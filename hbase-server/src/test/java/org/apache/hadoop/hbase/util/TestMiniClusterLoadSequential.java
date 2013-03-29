@@ -141,7 +141,7 @@ public class TestMiniClusterLoadSequential {
   protected void createPreSplitLoadTestTable(HTableDescriptor htd, HColumnDescriptor hcd)
       throws IOException {
     int numRegions = HBaseTestingUtility.createPreSplitLoadTestTable(conf, htd, hcd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getName(), numRegions);
+    TEST_UTIL.waitUntilAllRegionsAssigned(numRegions);
   }
 
   protected void prepareForLoadTest() throws IOException {
