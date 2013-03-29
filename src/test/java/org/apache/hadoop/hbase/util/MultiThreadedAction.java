@@ -265,6 +265,14 @@ public abstract class MultiThreadedAction {
     sb.append(v);
   }
 
+  protected static void appendToStatus(StringBuilder sb, String desc,
+      String v) {
+    sb.append(", ");
+    sb.append(desc);
+    sb.append("=");
+    sb.append(v);
+  }
+
   /**
    * See {@link #verifyResultAgainstDataGenerator(Result, boolean, boolean)}.
    * Does not verify cf/column integrity.
@@ -338,4 +346,5 @@ public abstract class MultiThreadedAction {
     }
     return true;
   }
+
 }

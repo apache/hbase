@@ -132,7 +132,7 @@ public class MultiThreadedWriter extends MultiThreadedAction {
               put.add(cf, column, value);
               ++columnCount;
               if (!isMultiPut) {
-                insert(put, rowKeyBase);
+                insert(table, put, rowKeyBase);
                 numCols.addAndGet(1);
                 put = new Put(rowKey);
               }
@@ -142,7 +142,7 @@ public class MultiThreadedWriter extends MultiThreadedAction {
             if (verbose) {
               LOG.debug("Preparing put for key = [" + rowKey + "], " + columnCount + " columns");
             }
-            insert(put, rowKeyBase);
+            insert(table, put, rowKeyBase);
             numCols.addAndGet(columnCount);
           }
           if (trackInsertedKeys) {
@@ -158,17 +158,17 @@ public class MultiThreadedWriter extends MultiThreadedAction {
         numThreadsWorking.decrementAndGet();
       }
     }
+  }
 
-    public void insert(Put put, long keyBase) {
-      try {
-        long start = System.currentTimeMillis();
-        table.put(put);
-        totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
-      } catch (IOException e) {
-        failedKeySet.add(keyBase);
-        LOG.error("Failed to insert: " + keyBase);
-        e.printStackTrace();
-      }
+  public void insert(HTable table, Put put, long keyBase) {
+    try {
+      long start = System.currentTimeMillis();
+      table.put(put);
+      totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+    } catch (IOException e) {
+      failedKeySet.add(keyBase);
+      LOG.error("Failed to insert: " + keyBase);
+      e.printStackTrace();
     }
   }
 
