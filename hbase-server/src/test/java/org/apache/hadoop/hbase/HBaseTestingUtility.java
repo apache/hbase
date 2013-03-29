@@ -2167,29 +2167,45 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param countOfRegions How many regions in .META.
    * @throws IOException
    */
-  public void waitUntilAllRegionsAssigned(final int countOfRegions)
+  public void waitUntilAllRegionsAssigned(final byte[] tableName, final int countOfRegions)
   throws IOException {
+    int retries = 30; // We may wait up to 30 seconds
+    int rows = 0;
     HTable meta = new HTable(getConfiguration(), HConstants.META_TABLE_NAME);
-    while (true) {
-      int rows = 0;
-      Scan scan = new Scan();
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      ResultScanner s = meta.getScanner(scan);
-      for (Result r = null; (r = s.next()) != null;) {
-        byte [] b =
-          r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-        if (b == null || b.length <= 0) {
+    try {
+      do {
+        Scan scan = new Scan();
+        scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+        scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+        ResultScanner s = meta.getScanner(scan);
+        try {
+          for (Result r = null; (r = s.next()) != null;) {
+            byte[] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+            HRegionInfo hri = HRegionInfo.parseFromOrNull(b);
+            if (hri != null && Bytes.equals(hri.getTableName(), tableName)) {
+              b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+              if (b == null || b.length <= 0) {
+                continue;
+              }
+              rows++;
+            }
+          }
+        } finally {
+          s.close();
+        }
+        // If I get to here and all rows have a Server, then all have been assigned.
+        if (rows == countOfRegions) {
           break;
         }
-        rows++;
-      }
-      s.close();
-      // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions) {
-        break;
-      }
-      LOG.info("Found=" + rows);
-      Threads.sleep(200);
+        LOG.info("Found=" + rows);
+        Threads.sleep(1000);
+      } while (--retries > 0);
+    } finally {
+      meta.close();
+    }
+    if (rows != countOfRegions) {
+      throw new IOException("Timed out waiting for " + countOfRegions + " regions of " +
+        Bytes.toStringBinary(tableName) + " to come online");
     }
   }
 
@@ -2488,12 +2504,23 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
     hcd.setDataBlockEncoding(dataBlockEncoding);
     hcd.setCompressionType(compression);
-    desc.addFamily(hcd);
+    return createPreSplitLoadTestTable(conf, desc, hcd);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      HTableDescriptor desc, HColumnDescriptor hcd) throws IOException {
+    if (!desc.hasFamily(hcd.getName())) {
+      desc.addFamily(hcd);
+    }
 
     int totalNumberOfRegions = 0;
+    HBaseAdmin admin = new HBaseAdmin(conf);
     try {
-      HBaseAdmin admin = new HBaseAdmin(conf);
-
       // create a table a pre-splits regions.
       // The number of splits is set as:
       //    region servers * regions per region server).
@@ -2516,8 +2543,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       LOG.error("Master not running", e);
       throw new IOException(e);
     } catch (TableExistsException e) {
-      LOG.warn("Table " + Bytes.toStringBinary(tableName) +
+      LOG.warn("Table " + Bytes.toStringBinary(desc.getName()) +
           " already exists, continuing");
+    } finally {
+      admin.close();
     }
     return totalNumberOfRegions;
   }
