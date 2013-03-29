@@ -59,12 +59,11 @@ public class TestMasterTransitions {
   @BeforeClass public static void beforeAllTests() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.startMiniCluster(2);
-    byte[] tableName = Bytes.toBytes(TABLENAME);
     // Create a table of three families.  This will assign a region.
-    TEST_UTIL.createTable(tableName, FAMILIES);
+    TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName, countOfRegions);
+    TEST_UTIL.waitUntilAllRegionsAssigned(countOfRegions);
     addToEachStartKey(countOfRegions);
     t.close();
   }
