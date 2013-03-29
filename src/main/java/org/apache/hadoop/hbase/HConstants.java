@@ -414,6 +414,7 @@ public final class HConstants {
   public static final String NAME = "NAME";
   public static final String VERSIONS = "VERSIONS";
   public static final String IN_MEMORY = "IN_MEMORY";
+  public static final String CONFIG = "CONFIG";
 
   /**
    * This is a retry backoff multiplier table similar to the BSD TCP syn

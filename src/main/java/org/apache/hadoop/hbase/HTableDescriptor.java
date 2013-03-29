@@ -30,6 +30,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.TreeSet;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 
@@ -65,7 +67,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * includes values like IS_ROOT, IS_META, DEFERRED_LOG_FLUSH, SPLIT_POLICY,
    * MAX_FILE_SIZE, READONLY, MEMSTORE_FLUSHSIZE etc...
    */
-  protected Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
+  protected final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable, ImmutableBytesWritable>();
 
   private static final String FAMILIES = "FAMILIES";
@@ -160,6 +162,26 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * the contents are flushed to the store files
    */
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*128L;
+  private final static Map<String, String> DEFAULT_VALUES
+    = new HashMap<String, String>();
+  private final static Set<ImmutableBytesWritable> RESERVED_KEYWORDS
+    = new HashSet<ImmutableBytesWritable>();
+  static {
+    DEFAULT_VALUES.put(MAX_FILESIZE,
+        String.valueOf(HConstants.DEFAULT_MAX_FILE_SIZE));
+    DEFAULT_VALUES.put(READONLY, String.valueOf(DEFAULT_READONLY));
+    DEFAULT_VALUES.put(MEMSTORE_FLUSHSIZE,
+        String.valueOf(DEFAULT_MEMSTORE_FLUSH_SIZE));
+    DEFAULT_VALUES.put(DEFERRED_LOG_FLUSH,
+        String.valueOf(DEFAULT_DEFERRED_LOG_FLUSH));
+    for (String s : DEFAULT_VALUES.keySet()) {
+      RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
+    }
+    RESERVED_KEYWORDS.add(IS_ROOT_KEY);
+    RESERVED_KEYWORDS.add(IS_META_KEY);
+  }
+
+  
 
   private volatile Boolean meta = null;
   private volatile Boolean root = null;
@@ -429,7 +451,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #values
    */
   public Map<ImmutableBytesWritable,ImmutableBytesWritable> getValues() {
-     return Collections.unmodifiableMap(values);
+    // shallow pointer copy 
+    return Collections.unmodifiableMap(values);
   }
 
   /**
@@ -469,7 +492,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #values
    */
   public void setValue(String key, String value) {
-    setValue(Bytes.toBytes(key), Bytes.toBytes(value));
+    if (value == null) {
+      remove(Bytes.toBytes(key));
+    } else {
+      setValue(Bytes.toBytes(key), Bytes.toBytes(value));
+    }
   }
 
   /**
@@ -681,36 +708,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   @Override
   public String toString() {
     StringBuilder s = new StringBuilder();
-    s.append('{');
-    s.append(HConstants.NAME);
-    s.append(" => '");
-    s.append(Bytes.toString(name));
-    s.append("'");
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      String key = Bytes.toString(e.getKey().get());
-      String value = Bytes.toString(e.getValue().get());
-      if (key == null) {
-        continue;
-      }
-      String upperCase = key.toUpperCase();
-      if (upperCase.equals(IS_ROOT) || upperCase.equals(IS_META)) {
-        // Skip. Don't bother printing out read-only values if false.
-        if (value.toLowerCase().equals(Boolean.FALSE.toString())) {
-          continue;
-        }
-      }
-      s.append(", ");
-      s.append(Bytes.toString(e.getKey().get()));
-      s.append(" => '");
-      s.append(Bytes.toString(e.getValue().get()));
-      s.append("'");
+    s.append('\'').append(Bytes.toString(name)).append('\'');
+    s.append(getValues(true));
+    for (HColumnDescriptor f : families.values()) {
+      s.append(", ").append(f);
     }
-    s.append(", ");
-    s.append(FAMILIES);
-    s.append(" => ");
-    s.append(families.values());
-    s.append('}');
     return s.toString();
   }
 
@@ -720,44 +722,87 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public String toStringCustomizedValues() {
     StringBuilder s = new StringBuilder();
-    s.append('{');
-    s.append(HConstants.NAME);
-    s.append(" => '");
-    s.append(Bytes.toString(name));
-    s.append("'");
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      String key = Bytes.toString(e.getKey().get());
-      String value = Bytes.toString(e.getValue().get());
-      if (key == null) {
+    s.append('\'').append(Bytes.toString(name)).append('\'');
+    s.append(getValues(false));
+    for(HColumnDescriptor hcd : families.values()) {
+      s.append(", ").append(hcd.toStringCustomizedValues());
+    }
+    return s.toString();
+  }
+
+  private StringBuilder getValues(boolean printDefaults) {
+    StringBuilder s = new StringBuilder();
+
+    // step 1: set partitioning and pruning
+    Set<ImmutableBytesWritable> reservedKeys = new TreeSet<ImmutableBytesWritable>();
+    Set<ImmutableBytesWritable> configKeys = new TreeSet<ImmutableBytesWritable>();
+    for (ImmutableBytesWritable k : values.keySet()) {
+      if (k == null || k.get() == null) continue;
+      String key = Bytes.toString(k.get());
+      // in this section, print out reserved keywords + coprocessor info
+      if (!RESERVED_KEYWORDS.contains(k) && !key.startsWith("coprocessor$")) {
+        configKeys.add(k);        
         continue;
       }
-      String upperCase = key.toUpperCase();
-      if (upperCase.equals(IS_ROOT) || upperCase.equals(IS_META)) {
+      // only print out IS_ROOT/IS_META if true
+      String value = Bytes.toString(values.get(k).get());
+      if (key.equalsIgnoreCase(IS_ROOT) || key.equalsIgnoreCase(IS_META)) {
         // Skip. Don't bother printing out read-only values if false.
         if (value.toLowerCase().equals(Boolean.FALSE.toString())) {
           continue;
         }
       }
+
+      // see if a reserved key is a default value. may not want to print it out
+      if (printDefaults
+          || !DEFAULT_VALUES.containsKey(key)
+          || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
+        reservedKeys.add(k);
+      }
+    }
+
+
+
+    // early exit optimization
+    if (reservedKeys.isEmpty() && configKeys.isEmpty()) return s;
+
+    // step 2: printing
+    s.append(", {METHOD => 'table_att'");
+
+    // print all reserved keys first
+    for (ImmutableBytesWritable k : reservedKeys) {
+      String key = Bytes.toString(k.get());
+      String value = Bytes.toString(values.get(k).get());
+
       s.append(", ");
-      s.append(Bytes.toString(e.getKey().get()));
-      s.append(" => '");
-      s.append(Bytes.toString(e.getValue().get()));
-      s.append("'");
+      s.append(key);
+      s.append(" => ");
+      s.append('\'').append(value).append('\'');
     }
-    s.append(", ");
-    s.append(FAMILIES);
-    s.append(" => [");
-    int size = families.values().size();
-    int i = 0;
-    for(HColumnDescriptor hcd : families.values()) {
-      s.append(hcd.toStringCustomizedValues());
-      i++;
-      if( i != size)
-        s.append(", ");
+    if (!configKeys.isEmpty()) {
+      // print all non-reserved, advanced config keys as a separate subset
+      s.append(", ");
+      s.append(HConstants.CONFIG).append(" => ");
+      s.append("{");
+      boolean printComma = false;
+      for (ImmutableBytesWritable k : configKeys) {
+        String key = Bytes.toString(k.get());
+        String value = Bytes.toString(values.get(k).get());
+        if (printComma) s.append(", ");
+        printComma = true;
+        s.append('\'').append(key).append('\'');
+        s.append(" => ");
+        s.append('\'').append(value).append('\'');
+      }
+      s.append("}");
     }
-    s.append("]}");
-    return s.toString();
+
+    s.append('}'); // end METHOD
+    return s;
+  }
+                
+  public static Map<String, String> getDefaultValues() {
+    return Collections.unmodifiableMap(DEFAULT_VALUES);
   }
 
   /**

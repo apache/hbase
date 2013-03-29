@@ -697,7 +697,7 @@ public class SplitTransaction {
     Path regionDir = getSplitDirForDaughter(this.parent.getFilesystem(),
       this.splitdir, hri);
     HRegion r = HRegion.newHRegion(this.parent.getTableDir(),
-      this.parent.getLog(), fs, this.parent.getConf(),
+      this.parent.getLog(), fs, this.parent.getBaseConf(),
       hri, this.parent.getTableDesc(), rsServices);
     long halfParentReadRequestCount = this.parent.getReadRequestsCount() / 2;
     r.readRequestsCount.set(halfParentReadRequestCount);

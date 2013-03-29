@@ -24,8 +24,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
-
+import java.util.Set;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
@@ -179,6 +180,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final boolean DEFAULT_EVICT_BLOCKS_ON_CLOSE = false;
 
   private final static Map<String, String> DEFAULT_VALUES = new HashMap<String, String>();
+  private final static Set<ImmutableBytesWritable> RESERVED_KEYWORDS
+    = new HashSet<ImmutableBytesWritable>();
   static {
       DEFAULT_VALUES.put(BLOOMFILTER, DEFAULT_BLOOMFILTER);
       DEFAULT_VALUES.put(REPLICATION_SCOPE, String.valueOf(DEFAULT_REPLICATION_SCOPE));
@@ -202,13 +205,16 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
           String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
       DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE,
           String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
+      for (String s : DEFAULT_VALUES.keySet()) {
+        RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
+      }
   }
 
   // Column family name
   private byte [] name;
 
   // Column metadata
-  protected Map<ImmutableBytesWritable,ImmutableBytesWritable> values =
+  protected final Map<ImmutableBytesWritable,ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable,ImmutableBytesWritable>();
 
   /*
@@ -469,6 +475,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return All values.
    */
   public Map<ImmutableBytesWritable,ImmutableBytesWritable> getValues() {
+    // shallow pointer copy
     return Collections.unmodifiableMap(values);
   }
 
@@ -496,7 +503,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setValue(String key, String value) {
-    setValue(Bytes.toBytes(key), Bytes.toBytes(value));
+    if (value == null) {
+      remove(Bytes.toBytes(key));
+    } else {
+      setValue(Bytes.toBytes(key), Bytes.toBytes(value));
+    }
     return this;
   }
 
@@ -863,16 +874,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     s.append(" => '");
     s.append(Bytes.toString(name));
     s.append("'");
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      String key = Bytes.toString(e.getKey().get());
-      String value = Bytes.toString(e.getValue().get());
-      s.append(", ");
-      s.append(key);
-      s.append(" => '");
-      s.append(value);
-      s.append("'");
-    }
+    s.append(getValues(true));
     s.append('}');
     return s.toString();
   }
@@ -887,20 +889,62 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     s.append(" => '");
     s.append(Bytes.toString(name));
     s.append("'");
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      String key = Bytes.toString(e.getKey().get());
-      String value = Bytes.toString(e.getValue().get());
-      if(DEFAULT_VALUES.get(key) == null || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
-        s.append(", ");
-        s.append(key);
-        s.append(" => '");
-        s.append(value);
-        s.append("'");
-      }
-    }
+    s.append(getValues(false));
     s.append('}');
     return s.toString();
+  }
+
+  private StringBuilder getValues(boolean printDefaults) {
+    StringBuilder s = new StringBuilder();
+
+    boolean hasConfigKeys = false;
+
+    // print all reserved keys first
+    for (ImmutableBytesWritable k : values.keySet()) {
+      if (!RESERVED_KEYWORDS.contains(k)) {
+        hasConfigKeys = true;
+        continue;
+      }
+      String key = Bytes.toString(k.get());
+      String value = Bytes.toString(values.get(k).get());
+      if (printDefaults
+          || !DEFAULT_VALUES.containsKey(key)
+          || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
+        s.append(", ");
+        s.append(key);
+
+        s.append(" => ");
+        s.append('\'').append(value).append('\'');
+      }
+    }
+
+    // print all non-reserved, advanced config keys as a separate subset
+    if (hasConfigKeys) {
+      s.append(", ");
+      s.append(HConstants.CONFIG).append(" => ");
+      s.append('{');
+      boolean printComma = false;
+      for (ImmutableBytesWritable k : values.keySet()) {
+        if (RESERVED_KEYWORDS.contains(k)) {
+          continue;
+        }
+        String key = Bytes.toString(k.get());
+        String value = Bytes.toString(values.get(k).get());
+        if (printComma) {
+          s.append(", ");
+        }
+        printComma = true;
+        s.append('\'').append(key).append('\'');
+        s.append(" => ");
+        s.append('\'').append(value).append('\'');
+      }
+      s.append('}');
+    }
+    return s;
+  }
+    
+  public static Map<String, String> getDefaultValues() {
+    return Collections.unmodifiableMap(DEFAULT_VALUES);
   }
 
   /**

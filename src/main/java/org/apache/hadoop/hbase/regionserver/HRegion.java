@@ -243,6 +243,7 @@ public class HRegion implements HeapSize { // , Writable{
   private final HLog log;
   private final FileSystem fs;
   private final Configuration conf;
+  final Configuration baseConf;
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
@@ -378,6 +379,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.conf = null;
     this.rowLockWaitDuration = DEFAULT_ROWLOCK_WAIT_DURATION;
     this.rsServices = null;
+    this.baseConf = null;
     this.fs = null;
     this.timestampSlop = HConstants.LATEST_TIMESTAMP;
     this.memstoreFlushSize = 0L;
@@ -396,6 +398,17 @@ public class HRegion implements HeapSize { // , Writable{
     this.deferredLogSyncDisabled = false;
   }
 
+  
+  /**
+   * HRegion copy constructor. Useful when reopening a closed region (normally
+   * for unit tests)
+   * @param other original object
+   */
+  public HRegion(HRegion other) {
+    this(other.getTableDir(), other.getLog(), other.getFilesystem(),
+        other.baseConf, other.getRegionInfo(), other.getTableDesc(), null);
+  }
+  
   /**
    * HRegion constructor.  his constructor should only be used for testing and
    * extensions.  Instances of HRegion should be instantiated with the
@@ -419,14 +432,24 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @see HRegion#newHRegion(Path, HLog, FileSystem, Configuration, HRegionInfo, HTableDescriptor, RegionServerServices)
    */
-  public HRegion(Path tableDir, HLog log, FileSystem fs, Configuration conf,
+  public HRegion(Path tableDir, HLog log, FileSystem fs, Configuration confParam,
     final HRegionInfo regionInfo, final HTableDescriptor htd,
       RegionServerServices rsServices) {
     this.tableDir = tableDir;
     this.comparator = regionInfo.getComparator();
     this.log = log;
     this.fs = fs;
-    this.conf = conf;
+    if (confParam instanceof CompoundConfiguration) {
+       throw new IllegalArgumentException("Need original base configuration");
+    }
+    // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
+    this.baseConf = confParam;
+    if (htd != null) {
+      this.conf = new CompoundConfiguration().add(confParam).add(htd.getValues());
+    }
+    else {
+      this.conf = new CompoundConfiguration().add(confParam);
+    }
     this.rowLockWaitDuration = conf.getInt("hbase.rowlock.wait.duration",
                     DEFAULT_ROWLOCK_WAIT_DURATION);
 
@@ -1157,6 +1180,17 @@ public class HRegion implements HeapSize { // , Writable{
   /** @return Configuration object */
   public Configuration getConf() {
     return this.conf;
+  }
+
+    /**
+   * A split takes the config from the parent region & passes it to the daughter
+   * region's constructor. If 'conf' was passed, you would end up using the HTD
+   * of the parent region in addition to the new daughter HTD. Pass 'baseConf'
+   * to the daughter regions to avoid this tricky dedupe problem.
+   * @return Configuration object
+   */
+  Configuration getBaseConf() {
+    return this.baseConf;
   }
 
   /** @return region directory Path */
@@ -4493,7 +4527,7 @@ public class HRegion implements HeapSize { // , Writable{
       listPaths(fs, b.getRegionDir());
     }
 
-    Configuration conf = a.getConf();
+    Configuration conf = a.getBaseConf();
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
     Path tableDir = a.getTableDir();
@@ -5354,7 +5388,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      35 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      36 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (7 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 

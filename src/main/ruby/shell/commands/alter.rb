@@ -40,6 +40,9 @@ To delete the 'f1' column family in table 't1', do:
 or a shorter version:
 
   hbase> alter 't1', 'delete' => 'f1'
+  
+You can also change the column family config by set attribute CONFIG like this:
+  hbase> alter 'test',  NAME=>'f', CONFIG => {'hbase.hstore.compaction.min' => '5'}
 
 You can also change table-scope attributes like MAX_FILESIZE
 MEMSTORE_FLUSHSIZE, READONLY, and DEFERRED_LOG_FLUSH.
@@ -47,6 +50,9 @@ MEMSTORE_FLUSHSIZE, READONLY, and DEFERRED_LOG_FLUSH.
 For example, to change the max size of a family to 128MB, do:
 
   hbase> alter 't1', METHOD => 'table_att', MAX_FILESIZE => '134217728'
+  
+You can also change the table-scope by set attribute CONFIG like this:
+  hbase> alter 'test', METHOD=>'table_att', CONFIG => {'hbase.hstore.compaction.min' => '5'}  
 
 You can add a table coprocessor by setting a table coprocessor attribute:
 
