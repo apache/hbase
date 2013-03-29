@@ -59,7 +59,7 @@
   <property>
     <name>hbase.local.dir</name>
     <value>${hbase.tmp.dir}/local/</value>
-    <description>Directory on the local filesystem to be used 
+    <description>Directory on the local filesystem to be used
     as a local storage.
     </description>
   </property>
@@ -129,7 +129,7 @@
     server, getting a cell's value, starting a row update, etc.
     Default: 10.
     </description>
-  </property> 
+  </property>
   <property>
     <name>hbase.bulkload.retries.number</name>
     <value>0</value>
@@ -453,7 +453,7 @@
     <name>hbase.storescanner.parallel.seek.threads</name>
     <value>10</value>
     <description>
-      The default thread pool size if parallel-seeking feature enabled. 
+      The default thread pool size if parallel-seeking feature enabled.
     </description>
   </property>
   <property>
@@ -612,7 +612,7 @@
   <property>
     <name>hbase.auth.key.update.interval</name>
     <value>86400000</value>
-    <description>The update interval for master key for authentication tokens 
+    <description>The update interval for master key for authentication tokens
     in servers in milliseconds.  Only used when HBase security is enabled.
     </description>
   </property>
@@ -659,7 +659,7 @@
     <value>acl</value>
     <description>Root ZNode for access control lists.</description>
   </property>
-  
+
   <property>
     <name>hbase.coprocessor.region.classes</name>
     <value></value>
@@ -719,7 +719,7 @@
     <value>false</value>
     <description>Instructs HBase to make use of ZooKeeper's multi-update functionality.
     This allows certain ZooKeeper operations to complete more quickly and prevents some issues
-    with rare Replication failure scenarios (see the release note of HBASE-2611 for an example). 
+    with rare Replication failure scenarios (see the release note of HBASE-2611 for an example).
     IMPORTANT: only set this to true if all ZooKeeper servers in the cluster are on version 3.4+
     and will not be downgraded.  ZooKeeper versions before 3.4 do not support multi-update and will
     not fail gracefully if multi-update is invoked (see ZOOKEEPER-1495).
@@ -795,9 +795,9 @@
 
   <property skipInDoc="true">
     <name>hbase.defaults.for.version</name>
-    <value>${hbase.version}</value>
+    <value>${pom.version}</value>
     <description>
-    This defaults file was compiled for version ${hbase.version}. This variable is used
+    This defaults file was compiled for version ${pom.version}. This variable is used
     to make sure that a user doesn't have an old version of hbase-default.xml on the
     classpath.
     </description>
@@ -830,7 +830,7 @@
     <name>hbase.online.schema.update.enable</name>
     <value>false</value>
     <description>
-    Set true to enable online schema changes.  This is an experimental feature.  
+    Set true to enable online schema changes.  This is an experimental feature.
     There are known issues modifying table schemas at the same time a region
     split is happening so your table needs to be quiescent or else you have to
     be running with splits disabled.

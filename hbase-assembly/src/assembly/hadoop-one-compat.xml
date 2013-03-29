@@ -1,7 +1,5 @@
 <?xml version="1.0"?>
-<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1 http://maven.apache.org/xsd/assembly-1.1.1.xsd">
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1 http://maven.apache.org/xsd/assembly-1.1.1.xsd">
 <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -23,7 +21,7 @@
 -->
 
   <!--This 'all' id is not appended to the produced bundle because we do this: http://maven.apache.org/plugins/maven-assembly-plugin/faq.html#required-classifiers -->
-  <id>all</id>
+  <id>bin</id>
   <formats>
     <format>tar.gz</format>
   </formats>
@@ -32,42 +30,15 @@
   </componentDescriptors>
   <moduleSets>
     <moduleSet>
-      <!-- Enable access to all projects in the current multimodule build. Eclipse 
+      <!-- Enable access to all projects in the current multimodule build. Eclipse
         says this is an error, but builds from the command line just fine. -->
       <useAllReactorProjects>true</useAllReactorProjects>
-      <!-- This should work with more than 1 source module -->
-      <!-- For now, select which projects to include in this module-set. -->
-      <includes>
-        <include>org.apache.hbase:hbase-prefix-tree</include>
-        <include>org.apache.hbase:hbase-it</include>
-        <include>org.apache.hbase:hbase-protocol</include>
-        <include>org.apache.hbase:hbase-common</include>
-        <include>org.apache.hbase:hbase-client</include>
-        <include>org.apache.hbase:hbase-hadoop-compat</include>
-        <include>org.apache.hbase:hbase-server</include>
-        <include>org.apache.hbase:hbase-hadoop1-compat</include>
-        <include>org.apache.hbase:hbase-examples</include>
-      </includes>
-      <!-- Include all the sources in the top directory -->
-      <sources>
-        <fileSets>
-          <fileSet>
-            <excludes>
-              <exclude>target/</exclude>
-              <exclude>test/</exclude>
-              <exclude>.classpath</exclude>
-              <exclude>.project</exclude>
-              <exclude>.settings/</exclude>
-            </excludes>
-          </fileSet>
-        </fileSets>
-      </sources>
       <!-- Binaries for the dependencies also go in the lib directory -->
       <binaries>
         <outputDirectory>lib</outputDirectory>
         <unpack>false</unpack>
         <dependencySets>
-          <dependencySet />
+          <dependencySet/>
         </dependencySets>
       </binaries>
     </moduleSet>
