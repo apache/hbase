@@ -32,14 +32,11 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
-import org.apache.hadoop.hbase.util.MultiThreadedWriter;
+
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -101,17 +98,18 @@ public class TestEncodedSeekers {
             .setDataBlockEncoding(encoding)
             .setEncodeOnDisk(encodeOnDisk)
     );
+
     LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(
         MIN_VALUE_SIZE, MAX_VALUE_SIZE);
 
     // Write
     for (int i = 0; i < NUM_ROWS; ++i) {
-      byte[] key = MultiThreadedWriter.longToByteArrayKey(i);
+      byte[] key = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         Put put = new Put(key);
-        String colAsStr = String.valueOf(j);
-        byte[] value = dataGenerator.generateRandomSizeValue(i, colAsStr);
-        put.add(CF_BYTES, Bytes.toBytes(colAsStr), value);
+        byte[] col = Bytes.toBytes(String.valueOf(j));
+        byte[] value = dataGenerator.generateRandomSizeValue(key, col);
+        put.add(CF_BYTES, col, value);
         region.put(put);
       }
       if (i % NUM_ROWS_PER_FLUSH == 0) {
@@ -122,7 +120,7 @@ public class TestEncodedSeekers {
     for (int doneCompaction = 0; doneCompaction <= 1; ++doneCompaction) {
       // Read
       for (int i = 0; i < NUM_ROWS; ++i) {
-        final byte[] rowKey = MultiThreadedWriter.longToByteArrayKey(i);
+        byte[] rowKey = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
         for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
           if (VERBOSE) {
             System.err.println("Reading row " + i + ", column " +  j);
@@ -131,10 +129,10 @@ public class TestEncodedSeekers {
           final byte[] qualBytes = Bytes.toBytes(qualStr);
           Get get = new Get(rowKey);
           get.addColumn(CF_BYTES, qualBytes);
-          Result result = region.get(get, null);
+          Result result = region.get(get);
           assertEquals(1, result.size());
-          assertTrue(LoadTestKVGenerator.verify(Bytes.toString(rowKey), qualStr,
-              result.getValue(CF_BYTES, qualBytes)));
+          byte[] value = result.getValue(CF_BYTES, qualBytes);
+          assertTrue(LoadTestKVGenerator.verify(value, rowKey, qualBytes));
         }
       }
 

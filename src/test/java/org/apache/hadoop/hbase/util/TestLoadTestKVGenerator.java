@@ -39,8 +39,8 @@ public class TestLoadTestKVGenerator {
   @Test
   public void testValueLength() {
     for (int i = 0; i < 1000; ++i) {
-      byte[] v = gen.generateRandomSizeValue(i,
-          String.valueOf(rand.nextInt()));
+      byte[] v = gen.generateRandomSizeValue(Integer.toString(i).getBytes(),
+        String.valueOf(rand.nextInt()).getBytes());
       assertTrue(MIN_LEN <= v.length);
       assertTrue(v.length <= MAX_LEN);
     }
@@ -50,12 +50,12 @@ public class TestLoadTestKVGenerator {
   public void testVerification() {
     for (int i = 0; i < 1000; ++i) {
       for (int qualIndex = 0; qualIndex < 20; ++qualIndex) {
-        String qual = String.valueOf(qualIndex);
-        byte[] v = gen.generateRandomSizeValue(i, qual);
-        String rowKey = LoadTestKVGenerator.md5PrefixedKey(i);
-        assertTrue(LoadTestKVGenerator.verify(rowKey, qual, v));
+        byte[] qual = String.valueOf(qualIndex).getBytes();
+        byte[] rowKey = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
+        byte[] v = gen.generateRandomSizeValue(rowKey, qual);
+        assertTrue(LoadTestKVGenerator.verify(v, rowKey, qual));
         v[0]++;
-        assertFalse(LoadTestKVGenerator.verify(rowKey, qual, v));
+        assertFalse(LoadTestKVGenerator.verify(v, rowKey, qual));
       }
     }
   }

@@ -18,7 +18,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,14 +26,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 
 /** Creates multiple threads that read and verify previously written data */
-public class MultiThreadedReader extends MultiThreadedAction
-{
+public class MultiThreadedReader extends MultiThreadedAction {
+
   private static final Log LOG = LogFactory.getLog(MultiThreadedReader.class);
 
   private Set<HBaseReaderThread> readers = new HashSet<HBaseReaderThread>();
@@ -71,9 +69,9 @@ public class MultiThreadedReader extends MultiThreadedAction
   private int maxErrors = DEFAULT_MAX_ERRORS;
   private int keyWindow = DEFAULT_KEY_WINDOW;
 
-  public MultiThreadedReader(Configuration conf, byte[] tableName,
-      byte[] columnFamily, double verifyPercent) {
-    super(conf, tableName, columnFamily, "R");
+  public MultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf,
+      byte[] tableName, double verifyPercent) {
+    super(dataGen, conf, tableName, "R");
     this.verifyPercent = verifyPercent;
   }
 
@@ -222,14 +220,22 @@ public class MultiThreadedReader extends MultiThreadedAction
     }
 
     private Get readKey(long keyToRead) {
-      Get get = new Get(
-          LoadTestKVGenerator.md5PrefixedKey(keyToRead).getBytes());
-      get.addFamily(columnFamily);
+      Get get = new Get(dataGenerator.getDeterministicUniqueKey(keyToRead));
+      String cfsString = "";
+      byte[][] columnFamilies = dataGenerator.getColumnFamilies();
+      for (byte[] cf : columnFamilies) {
+        get.addFamily(cf);
+        if (verbose) {
+          if (cfsString.length() > 0) {
+            cfsString += ", ";
+          }
+          cfsString += "[" + Bytes.toStringBinary(cf) + "]";
+        }
+      }
 
       try {
         if (verbose) {
-          LOG.info("[" + readerId + "] " + "Querying key " + keyToRead
-              + ", cf " + Bytes.toStringBinary(columnFamily));
+          LOG.info("[" + readerId + "] " + "Querying key " + keyToRead + ", cfs " + cfsString);
         }
         queryKey(get, random.nextInt(100) < verifyPercent);
       } catch (IOException e) {
@@ -251,45 +257,37 @@ public class MultiThreadedReader extends MultiThreadedAction
       numKeys.addAndGet(1);
 
       // if we got no data report error
-      if (result.isEmpty()) {
-         HRegionLocation hloc = table.getRegionLocation(
-             Bytes.toBytes(rowKey));
+      if (!result.isEmpty()) {
+        if (verify) {
+          numKeysVerified.incrementAndGet();
+        }
+      } else {
+        HRegionLocation hloc = table.getRegionLocation(Bytes.toBytes(rowKey));
         LOG.info("Key = " + rowKey + ", RegionServer: "
             + hloc.getHostname());
-        numReadErrors.addAndGet(1);
-        LOG.error("No data returned, tried to get actions for key = "
-            + rowKey + (writer == null ? "" : ", keys inserted by writer: " +
-                writer.numKeys.get() + ")"));
-
-         if (numReadErrors.get() > maxErrors) {
-          LOG.error("Aborting readers -- found more than " + maxErrors
-              + " errors\n");
-           aborted = true;
-         }
       }
 
-      if (result.getFamilyMap(columnFamily) != null) {
-        // increment number of columns read
-        numCols.addAndGet(result.getFamilyMap(columnFamily).size());
-
-        if (verify) {
-          // verify the result
-          List<KeyValue> keyValues = result.list();
-          for (KeyValue kv : keyValues) {
-            String qual = new String(kv.getQualifier());
-
-            // if something does not look right report it
-            if (!LoadTestKVGenerator.verify(rowKey, qual, kv.getValue())) {
-              numReadErrors.addAndGet(1);
-              LOG.error("Error checking data for key = " + rowKey
-                  + ", actionId = " + qual);
-            }
-          }
-          numKeysVerified.addAndGet(1);
+      boolean isOk = verifyResultAgainstDataGenerator(result, verify);
+      long numErrorsAfterThis = 0;
+      if (isOk) {
+        long cols = 0;
+        // Count the columns for reporting purposes.
+        for (byte[] cf : result.getMap().keySet()) {
+          cols += result.getFamilyMap(cf).size();
         }
+        numCols.addAndGet(cols);
+      } else {
+        if (writer != null) {
+          LOG.error("At the time of failure, writer inserted " + writer.numKeys.get() + " keys");
+        }
+        numErrorsAfterThis = numReadErrors.incrementAndGet();
+      }
+
+      if (numErrorsAfterThis > maxErrors) {
+        LOG.error("Aborting readers -- found more than " + maxErrors + " errors");
+        aborted = true;
       }
     }
-
   }
 
   public long getNumReadFailures() {

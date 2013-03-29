@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -38,8 +37,6 @@ import org.apache.hadoop.hbase.client.Put;
 public class MultiThreadedWriter extends MultiThreadedAction {
   private static final Log LOG = LogFactory.getLog(MultiThreadedWriter.class);
 
-  private long minColumnsPerKey = 1;
-  private long maxColumnsPerKey = 10;
   private Set<HBaseWriterThread> writers = new HashSet<HBaseWriterThread>();
 
   private boolean isMultiPut = false;
@@ -50,8 +47,7 @@ public class MultiThreadedWriter extends MultiThreadedAction {
    * {@link #insertedUpToKey}, the maximum key in the contiguous range of keys
    * being inserted. This queue is supposed to stay small.
    */
-  private BlockingQueue<Long> insertedKeys =
-      new ArrayBlockingQueue<Long>(10000);
+  private BlockingQueue<Long> insertedKeys = new ArrayBlockingQueue<Long>(10000);
 
   /**
    * This is the current key to be inserted by any thread. Each thread does an
@@ -77,19 +73,14 @@ public class MultiThreadedWriter extends MultiThreadedAction {
   /** Enable this if used in conjunction with a concurrent reader. */
   private boolean trackInsertedKeys;
 
-  public MultiThreadedWriter(Configuration conf, byte[] tableName,
-      byte[] columnFamily) {
-    super(conf, tableName, columnFamily, "W");
+  public MultiThreadedWriter(LoadTestDataGenerator dataGen, Configuration conf,
+      byte[] tableName) {
+    super(dataGen, conf, tableName, "W");
   }
 
   /** Use multi-puts vs. separate puts for every column in a row */
   public void setMultiPut(boolean isMultiPut) {
     this.isMultiPut = isMultiPut;
-  }
-
-  public void setColumnsPerKey(long minColumnsPerKey, long maxColumnsPerKey) {
-    this.minColumnsPerKey = minColumnsPerKey;
-    this.maxColumnsPerKey = maxColumnsPerKey;
   }
 
   @Override
@@ -117,16 +108,8 @@ public class MultiThreadedWriter extends MultiThreadedAction {
     startThreads(writers);
   }
 
-  public static byte[] longToByteArrayKey(long rowKey) {
-    return LoadTestKVGenerator.md5PrefixedKey(rowKey).getBytes();
-  }
-
   private class HBaseWriterThread extends Thread {
     private final HTable table;
-
-    private final Random random = new Random();
-    private final LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(
-        minDataSize, maxDataSize);
 
     public HBaseWriterThread(int writerId) throws IOException {
       setName(getClass().getSimpleName() + "_" + writerId);
@@ -135,20 +118,35 @@ public class MultiThreadedWriter extends MultiThreadedAction {
 
     public void run() {
       try {
-        long rowKey;
-        while ((rowKey = nextKeyToInsert.getAndIncrement()) < endKey) {
-          long numColumns = minColumnsPerKey + Math.abs(random.nextLong())
-              % (maxColumnsPerKey - minColumnsPerKey);
+        long rowKeyBase;
+        byte[][] columnFamilies = dataGenerator.getColumnFamilies();
+        while ((rowKeyBase = nextKeyToInsert.getAndIncrement()) < endKey) {
+          byte[] rowKey = dataGenerator.getDeterministicUniqueKey(rowKeyBase);
+          Put put = new Put(rowKey);
           numKeys.addAndGet(1);
-          if (isMultiPut) {
-            multiPutInsertKey(rowKey, 0, numColumns);
-          } else {
-            for (long col = 0; col < numColumns; ++col) {
-              insert(rowKey, col);
+          int columnCount = 0;
+          for (byte[] cf : columnFamilies) {
+            byte[][] columns = dataGenerator.generateColumnsForCf(rowKey, cf);
+            for (byte[] column : columns) {
+              byte[] value = dataGenerator.generateValue(rowKey, cf, column);
+              put.add(cf, column, value);
+              ++columnCount;
+              if (!isMultiPut) {
+                insert(put, rowKeyBase);
+                numCols.addAndGet(1);
+                put = new Put(rowKey);
+              }
             }
           }
+          if (isMultiPut) {
+            if (verbose) {
+              LOG.debug("Preparing put for key = [" + rowKey + "], " + columnCount + " columns");
+            }
+            insert(put, rowKeyBase);
+            numCols.addAndGet(columnCount);
+          }
           if (trackInsertedKeys) {
-            insertedKeys.add(rowKey);
+            insertedKeys.add(rowKeyBase);
           }
         }
       } finally {
@@ -161,52 +159,14 @@ public class MultiThreadedWriter extends MultiThreadedAction {
       }
     }
 
-    public void insert(long rowKey, long col) {
-      Put put = new Put(longToByteArrayKey(rowKey));
-      String colAsStr = String.valueOf(col);
-      put.add(columnFamily, Bytes.toBytes(colAsStr),
-          dataGenerator.generateRandomSizeValue(rowKey, colAsStr));
+    public void insert(Put put, long keyBase) {
       try {
         long start = System.currentTimeMillis();
         table.put(put);
-        numCols.addAndGet(1);
         totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
       } catch (IOException e) {
-        failedKeySet.add(rowKey);
-        LOG.error("Failed to insert: " + rowKey);
-        e.printStackTrace();
-      }
-    }
-
-    public void multiPutInsertKey(long rowKey, long startCol, long endCol) {
-      if (verbose) {
-        LOG.debug("Preparing put for key = " + rowKey + ", cols = ["
-            + startCol + ", " + endCol + ")");
-      }
-
-      if (startCol >= endCol) {
-        return;
-      }
-
-      Put put = new Put(LoadTestKVGenerator.md5PrefixedKey(
-          rowKey).getBytes());
-      byte[] columnQualifier;
-      byte[] value;
-      for (long i = startCol; i < endCol; ++i) {
-        String qualStr = String.valueOf(i);
-        columnQualifier = qualStr.getBytes();
-        value = dataGenerator.generateRandomSizeValue(rowKey, qualStr);
-        put.add(columnFamily, columnQualifier, value);
-      }
-
-      try {
-        long start = System.currentTimeMillis();
-        table.put(put);
-        numCols.addAndGet(endCol - startCol);
-        totalOpTimeMs.addAndGet(
-            System.currentTimeMillis() - start);
-      } catch (IOException e) {
-        failedKeySet.add(rowKey);
+        failedKeySet.add(keyBase);
+        LOG.error("Failed to insert: " + keyBase);
         e.printStackTrace();
       }
     }
@@ -301,7 +261,7 @@ public class MultiThreadedWriter extends MultiThreadedAction {
    * key, which requires a blocking queue and a consumer thread.
    * @param enable whether to enable tracking the last inserted key
    */
-  void setTrackInsertedKeys(boolean enable) {
+  public void setTrackInsertedKeys(boolean enable) {
     trackInsertedKeys = enable;
   }
 

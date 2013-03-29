@@ -136,9 +136,10 @@ public class TestMiniClusterLoadSequential {
 
     TEST_UTIL.waitUntilAllRegionsAssigned(numRegions);
 
-    writerThreads = new MultiThreadedWriter(conf, TABLE, CF);
+    LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(CF);
+    writerThreads = new MultiThreadedWriter(dataGen, conf, TABLE);
     writerThreads.setMultiPut(isMultiPut);
-    readerThreads = new MultiThreadedReader(conf, TABLE, CF, 100);
+    readerThreads = new MultiThreadedReader(dataGen, conf, TABLE, 100);
   }
 
   protected int numKeys() {

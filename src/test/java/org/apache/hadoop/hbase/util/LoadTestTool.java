@@ -118,7 +118,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   // Writer options
   private int numWriterThreads = DEFAULT_NUM_THREADS;
-  private long minColsPerKey, maxColsPerKey;
+  private int minColsPerKey, maxColsPerKey;
   private int minColDataSize, maxColDataSize;
   private boolean isMultiPut;
 
@@ -259,7 +259,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
       int colIndex = 0;
       minColsPerKey = 1;
-      maxColsPerKey = 2 * Long.parseLong(writeOpts[colIndex++]);
+      maxColsPerKey = 2 * Integer.parseInt(writeOpts[colIndex++]);
       int avgColDataSize =
           parseInt(writeOpts[colIndex++], 1, Integer.MAX_VALUE);
       minColDataSize = avgColDataSize / 2;
@@ -341,16 +341,16 @@ public class LoadTestTool extends AbstractHBaseTool {
       initTestTable();
     }
 
+    LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(
+      minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey, COLUMN_FAMILY);
+
     if (isWrite) {
-      writerThreads = new MultiThreadedWriter(conf, tableName, COLUMN_FAMILY);
+      writerThreads = new MultiThreadedWriter(dataGen, conf, tableName);
       writerThreads.setMultiPut(isMultiPut);
-      writerThreads.setColumnsPerKey(minColsPerKey, maxColsPerKey);
-      writerThreads.setDataSize(minColDataSize, maxColDataSize);
     }
 
     if (isRead) {
-      readerThreads = new MultiThreadedReader(conf, tableName, COLUMN_FAMILY,
-          verifyPercent);
+      readerThreads = new MultiThreadedReader(dataGen, conf, tableName, verifyPercent);
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
     }
