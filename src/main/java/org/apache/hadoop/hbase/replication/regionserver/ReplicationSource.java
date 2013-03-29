@@ -216,7 +216,7 @@ public class ReplicationSource extends Thread
     }
 
     // extract dead servers
-    extracDeadServersFromZNodeString(parts[1], this.deadRegionServers);
+    extractDeadServersFromZNodeString(parts[1], this.deadRegionServers);
   }
 
   /**
@@ -232,7 +232,7 @@ public class ReplicationSource extends Thread
    * cases: 2-ip-10-46-221-101.ec2.internal,52170,1364333181125-<server name>-...
    */
   private static void
-      extracDeadServersFromZNodeString(String deadServerListStr, List<String> result) {
+      extractDeadServersFromZNodeString(String deadServerListStr, List<String> result) {
 
     if (deadServerListStr == null || result == null || deadServerListStr.isEmpty()) return;
 
