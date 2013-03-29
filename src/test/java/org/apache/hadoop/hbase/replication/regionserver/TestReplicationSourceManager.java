@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -264,6 +265,45 @@ public class TestReplicationSourceManager {
     server.abort("", null);
   }
 
+  @Test
+  public void testNodeFailoverDeadServerParsing() throws Exception {
+    LOG.debug("testNodeFailoverDeadServerParsing");
+    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
+    final Server server = new DummyServer("ec2-54-234-230-108.compute-1.amazonaws.com");
+    AtomicBoolean replicating = new AtomicBoolean(true);
+    ReplicationZookeeper rz = new ReplicationZookeeper(server, replicating);
+    // populate some znodes in the peer znode
+    files.add("log1");
+    files.add("log2");
+    for (String file : files) {
+      rz.addLogToList(file, "1");
+    }
+    // create 3 DummyServers
+    Server s1 = new DummyServer("ip-10-8-101-114.ec2.internal");
+    Server s2 = new DummyServer("ec2-107-20-52-47.compute-1.amazonaws.com");
+    Server s3 = new DummyServer("ec2-23-20-187-167.compute-1.amazonaws.com");
+
+    // simulate three server fail sequentially
+    ReplicationZookeeper rz1 = new ReplicationZookeeper(s1, new AtomicBoolean(true));
+    SortedMap<String, SortedSet<String>> testMap =
+        rz1.copyQueuesFromRSUsingMulti(server.getServerName().getServerName());
+    ReplicationZookeeper rz2 = new ReplicationZookeeper(s2, new AtomicBoolean(true));
+    testMap = rz2.copyQueuesFromRSUsingMulti(s1.getServerName().getServerName());
+    ReplicationZookeeper rz3 = new ReplicationZookeeper(s3, new AtomicBoolean(true));
+    testMap = rz3.copyQueuesFromRSUsingMulti(s2.getServerName().getServerName());
+
+    ReplicationSource s = new ReplicationSource();
+    s.checkIfQueueRecovered(testMap.firstKey());
+    List<String> result = s.getDeadRegionServers();
+
+    // verify
+    assertTrue(result.contains(server.getServerName().getServerName()));
+    assertTrue(result.contains(s1.getServerName().getServerName()));
+    assertTrue(result.contains(s2.getServerName().getServerName()));
+
+    server.abort("", null);
+  }
+
   static class DummyNodeFailoverWorker extends Thread {
     private SortedMap<String, SortedSet<String>> logZnodesMap;
     Server server;
@@ -338,7 +378,7 @@ public class TestReplicationSourceManager {
 
     @Override
     public ServerName getServerName() {
-      return new ServerName(hostname, 1234, -1L);
+      return new ServerName(hostname, 1234, 1L);
     }
 
     @Override
