@@ -1164,7 +1164,7 @@ public class ServerManager {
   boolean expireTimedOutServers(long timeout, int maxServersToExpire) {
     long curTime = EnvironmentEdgeManager.currentTimeMillis();
     boolean waitingForMoreServersInRackToTimeOut = false;
-    boolean reportDetails = false;
+    boolean reportDetails = LOG.isTraceEnabled();
     int serverCount = serversToLoad.size();
     if ((curTime > lastDetailedLogAt + (3600 * 1000)) ||
         lastLoggedServerCount != serverCount) {
@@ -1215,7 +1215,10 @@ public class ServerManager {
       if (reportDetails) {
         LOG.debug("server=" + si.getServerName() + " rack=" + rack +
             " timed-out=" + timedOut + " expired=" + expired +
-            " timeOfLastPingFromServer=" + timeOfLastPingFromThisServer);
+            " timeOfLastPingFromServer=" + timeOfLastPingFromThisServer +
+            " timeOfLastPingFromThisRack=" + timeOfLastPingFromThisRack +
+            " load.expireAfter =" + load.expireAfter
+            );
       }
       if (!timedOut) {
         continue;
@@ -1242,7 +1245,7 @@ public class ServerManager {
     // this rack was received
 
     for (String rack : rackLastReportAtMap.keySet()) {
-      if (! rackTimedOutServersMap.keySet().contains(rack)) {
+      if (!rackTimedOutServersMap.keySet().contains(rack)) {
         if (inaccessibleRacks.remove(rack)) {
           LOG.info("rack " + rack + " has become accessible");
         }
@@ -1251,7 +1254,6 @@ public class ServerManager {
 
     Set<HServerAddress> specialServers = this.getRootAndMetaServers();
 
-    next_rack:
     for (Map.Entry<String, List<HServerInfo>> e:
       rackTimedOutServersMap.entrySet()) {
       String rack = e.getKey();
@@ -1273,6 +1275,9 @@ public class ServerManager {
         if (load.expireAfter == Long.MAX_VALUE) {
           load.expireAfter = lastHeardFromRackAt + timeout;
           long timeToExpiry = load.expireAfter - curTime;
+          LOG.debug("Setting load.expireAfter to " + load.expireAfter +
+              " for " + si.getServerName() +
+              " timeToExpiry  is " + timeToExpiry);
           if (timeToExpiry > 0) { // is first time
             LOG.info("No report from server " + si.getServerName() +
                 " for last " + (curTime - load.lastLoadRefreshTime) +
@@ -1281,10 +1286,18 @@ public class ServerManager {
         }
         if (curTime > load.expireAfter) {
           numExpired++;
+          LOG.debug("server=" + si.getServerName() + " rack=" + rack +
+              " curTime=" + curTime +
+              " load.expireAfter =" + load.expireAfter
+              + "numExpired++"
+              );
         } else {
           // wait for all the timed-out servers to become ready to expire
           waitingForMoreServersInRackToTimeOut = true;
-          continue next_rack;
+          LOG.debug("server=" + si.getServerName() + " rack=" + rack +
+            " curTime=" + curTime +
+            " load.expireAfter =" + load.expireAfter
+            + " waitingForMoreServersInRackToTimeOut set to true");
         }
       }
       int cappedMaxServersToExpire = Math.min(maxServersToExpire,
@@ -1311,6 +1324,8 @@ public class ServerManager {
             specialServersInRack = true;
           } else  {
             load.expireAfter = Long.MAX_VALUE;
+            LOG.debug("Resetting load.expireAfter : to Long.MAX_VALUE for " +
+                  si.getServerName());
           }
         }
         if (!inaccessibleRacks.contains(rack)) {
@@ -1323,8 +1338,6 @@ public class ServerManager {
               + (specialServersInRack? " the rest": " any")
               + ", hoping for rack" + " to become accessible");
         }
-        if (specialServersInRack)
-          continue next_rack;
       }
       for (HServerInfo si : timedOutServers) {
         HServerLoad load = serversToLoad.get(si.getServerName());
@@ -1339,6 +1352,9 @@ public class ServerManager {
               " no report for last " + (curTime - load.lastLoadRefreshTime)
               + " (no znode expired yet)");
           this.expireServer(si);
+        } else {
+          LOG.debug("Checking again server=" + si.getServerName() +
+              " curTime=" + curTime + " load.expireAfter =" + load.expireAfter);
         }
       }
     }
