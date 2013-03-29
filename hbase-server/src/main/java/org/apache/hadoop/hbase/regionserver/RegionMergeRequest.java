@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
@@ -39,6 +40,7 @@ class RegionMergeRequest implements Runnable {
   private final HRegion region_b;
   private final HRegionServer server;
   private final boolean forcible;
+  private TableLock tableLock;
 
   RegionMergeRequest(HRegion a, HRegion b, HRegionServer hrs, boolean forcible) {
     Preconditions.checkNotNull(hrs);
@@ -65,6 +67,18 @@ class RegionMergeRequest implements Runnable {
       final long startTime = EnvironmentEdgeManager.currentTimeMillis();
       RegionMergeTransaction mt = new RegionMergeTransaction(region_a,
           region_b, forcible);
+
+      //acquire a shared read lock on the table, so that table schema modifications
+      //do not happen concurrently
+      tableLock = server.getTableLockManager().readLock(region_a.getTableDesc().getName()
+          , "MERGE_REGIONS:" + region_a.getRegionNameAsString() + ", " + region_b.getRegionNameAsString());
+      try {
+        tableLock.acquire();
+      } catch (IOException ex) {
+        tableLock = null;
+        throw ex;
+      }
+
       // If prepare does not return true, for some reason -- logged inside in
       // the prepare call -- we are not ready to merge just now. Just return.
       if (!mt.prepare(this.server)) return;
@@ -107,6 +121,19 @@ class RegionMergeRequest implements Runnable {
       LOG.error("Merge failed " + this,
           RemoteExceptionHandler.checkIOException(ex));
       server.checkFileSystem();
+    } finally {
+      releaseTableLock();
+    }
+  }
+
+  protected void releaseTableLock() {
+    if (this.tableLock != null) {
+      try {
+        this.tableLock.release();
+      } catch (IOException ex) {
+        LOG.warn("Could not release the table lock", ex);
+        //TODO: if we get here, and not abort RS, this lock will never be released
+      }
     }
   }
 }
