@@ -778,10 +778,17 @@ public class HRegion implements HeapSize { // , Writable{
   public static void writeRegioninfoOnFilesystem(HRegionInfo regionInfo, Path regiondir,
       FileSystem fs, Configuration conf) throws IOException {
     Path regioninfoPath = new Path(regiondir, REGIONINFO_FILE);
-    if (fs.exists(regioninfoPath) &&
-        fs.getFileStatus(regioninfoPath).getLen() > 0) {
-      return;
+    if (fs.exists(regioninfoPath)) {
+      if (fs.getFileStatus(regioninfoPath).getLen() > 0) {
+        return;
+      }
+
+      LOG.info("Rewriting .regioninfo file at: " + regioninfoPath);
+      if (!fs.delete(regioninfoPath, false)) {
+        throw new IOException("Unable to remove existing " + regioninfoPath);
+      }
     }
+
     // Create in tmpdir and then move into place in case we crash after
     // create but before close.  If we don't successfully close the file,
     // subsequent region reopens will fail the below because create is
