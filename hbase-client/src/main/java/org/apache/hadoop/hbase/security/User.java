@@ -114,6 +114,23 @@ public abstract class User {
   public abstract void obtainAuthTokenForJob(JobConf job)
       throws IOException, InterruptedException;
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    return ugi.equals(((User) o).ugi);
+  }
+  
+  @Override
+  public int hashCode() {
+    return ugi.hashCode();
+  }
+  
+  @Override
   public String toString() {
     return ugi.toString();
   }
