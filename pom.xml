@@ -39,9 +39,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <!--Version is defined below in properties section so can be shared by all sub modules.
-   -->
-  <version>0.97-SNAPSHOT</version>
+  <version>0.97.0-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -59,6 +57,7 @@
     <module>hbase-it</module>
     <module>hbase-examples</module>
     <module>hbase-prefix-tree</module>
+    <module>hbase-assembly</module>
   </modules>
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
@@ -421,10 +420,7 @@
           <!--Intentionally, this is not bound to a phase because it is an
            'aggregating' plugin; it expects to be run from the top-level only; see
            http://www.sonatype.com/books/mvnref-book/reference/assemblies-sect-basics.html.
-           When it was bound to pre-site, we were descending into modules expecting
-           dependencies like hbase-*.jar to be already built.  It was messing us up,
-           particular on clean checkouts.  To get javadoc into your site, you must
-           precede site build by invocation of javadoc:aggregate expplicitly.
+           To get javadoc into your site, you must precede site build by invocation of javadoc:aggregate expplicitly.
            -->
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
@@ -684,166 +680,23 @@
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>${maven.assembly.version}</version>
-        <inherited>false</inherited>
         <configuration>
-          <skipAssembly>false</skipAssembly>
+          <!--Defer to the hbase-assembly sub-module.  It
+             does all assembly-->
+          <skipAssembly>true</skipAssembly>
+          <!--Do not attach assembly to project.-->
+          <!--
           <attach>false</attach>
           <tarLongFileMode>gnu</tarLongFileMode>
+          -->
+          <!--
           <appendAssemblyId>false</appendAssemblyId>
+          -->
+          <!--
           <descriptors>
             <descriptor>${assembly.file}</descriptor>
           </descriptors>
-        </configuration>
-      </plugin>
-       <!--The below plugins are about site generation.
-            They are all marked as not to be in herited by child
-            modules.  The plugins are meant to run here in the
-            parent project only.
-        -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0</version>
-        <inherited>false</inherited>
-        <executions>
-          <execution>
-            <goals>
-              <goal>transform</goal>
-            </goals>
-            <phase>pre-site</phase>
-          </execution>
-        </executions>
-        <configuration>
-          <transformationSets>
-            <transformationSet>
-              <!--Reaching down into sub-module for docs-->
-              <dir>${basedir}/hbase-common/src/main/resources/</dir>
-              <includes>
-                <include>hbase-default.xml</include>
-              </includes>
-              <stylesheet>${basedir}/src/xslt/configuration_to_docbook_section.xsl</stylesheet>
-              <outputDir>${basedir}/target/docbkx</outputDir>
-            </transformationSet>
-          </transformationSets>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>com.agilejava.docbkx</groupId>
-        <artifactId>docbkx-maven-plugin</artifactId>
-        <version>2.0.14</version>
-        <inherited>false</inherited>
-        <dependencies>
-          <dependency>
-            <groupId>org.docbook</groupId>
-            <artifactId>docbook-xml</artifactId>
-            <version>4.4</version>
-            <scope>runtime</scope>
-          </dependency>
-        </dependencies>
-        <configuration>
-          <xincludeSupported>true</xincludeSupported>
-          <useIdAsFilename>true</useIdAsFilename>
-          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
-          <sectionAutolabel>true</sectionAutolabel>
-          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
-          <htmlCustomization>${basedir}/src/docbkx/customization.xsl</htmlCustomization>
-          <tocMaxDepth>2</tocMaxDepth>
-          <insertXrefPageNumber>yes</insertXrefPageNumber>
-          <targetDirectory>${basedir}/target/docbkx</targetDirectory>
-          <chunkerOutputEncoding>UTF-8</chunkerOutputEncoding>
-        </configuration>
-        <executions>
-          <execution>
-            <id>multipage</id>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <navigShowtitles>true</navigShowtitles>
-              <chunkedOutput>true</chunkedOutput>
-              <imgSrcPath>../images/</imgSrcPath>
-              <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
-            </configuration>
-          </execution>
-          <execution>
-            <id>onepage</id>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <imgSrcPath>images/</imgSrcPath>
-              <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>${maven.resources.plugin.version}</version>
-        <!--$NO-MVN-MAN-VER$ -->
-        <inherited>false</inherited>
-        <executions>
-          <execution>
-            <id>copy-javadocs</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <outputDirectory>target/site/apidocs</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/target/apidocs</directory>
-                  <includes>
-                    <include>**/**</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-docbkx</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <outputDirectory>target/site</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/target/docbkx</directory>
-                  <includes>
-                    <include>**/**</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-        <configuration>
-          <escapeString>\</escapeString>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>${maven.site.version}</version>
-        <inherited>false</inherited>
-        <dependencies>
-          <dependency>
-            <!-- add support for ssh/scp -->
-            <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-ssh</artifactId>
-            <version>2.2</version>
-          </dependency>
-        </dependencies>
-        <configuration>
-          <inputEncoding>UTF-8</inputEncoding>
-          <outputEncoding>UTF-8</outputEncoding>
-          <templateFile>${basedir}/src/site/site.vm</templateFile>
+          -->
         </configuration>
       </plugin>
       <!-- Special configuration for findbugs just in the parent so
@@ -878,7 +731,6 @@
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.6</compileSource>
-    <hbase.version>${project.version}</hbase.version>
     <!-- Dependencies -->
     <hadoop-two.version>2.0.2-alpha</hadoop-two.version>
     <hadoop-one.version>1.1.2</hadoop-one.version>
@@ -913,7 +765,7 @@
     <jettison.version>1.3.1</jettison.version>
     <netty.version>3.5.9.Final</netty.version>
     <!-- Plugin Dependencies -->
-    <maven.assembly.version>2.3</maven.assembly.version>
+    <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
     <findbugs-maven-plugin.version>2.5.2</findbugs-maven-plugin.version>
@@ -1496,8 +1348,8 @@
         <module>hbase-hadoop2-compat</module>
       </modules>
       <properties>
-        <slf4j.version>1.6.1</slf4j.version>
         <hadoop.version>${hadoop-two.version}</hadoop.version>
+        <slf4j.version>1.6.1</slf4j.version>
         <compat.module>hbase-hadoop2-compat</compat.module>
         <assembly.file>src/assembly/hadoop-two-compat.xml</assembly.file>
       </properties>
