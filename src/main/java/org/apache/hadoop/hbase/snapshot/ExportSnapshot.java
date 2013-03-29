@@ -642,9 +642,13 @@ public final class ExportSnapshot extends Configured implements Tool {
     // The snapshot references must be copied before the files otherwise the files gets removed
     // by the HFileArchiver, since they have no references.
     try {
-      if (!runCopyJob(inputRoot, outputRoot, files, verifyChecksum,
-          filesUser, filesGroup, filesMode, mappers)) {
-        throw new ExportSnapshotException("Snapshot export failed!");
+      if (files.size() == 0) {
+        LOG.warn("There are 0 store file to be copied. There may be no data in the table.");
+      } else {
+        if (!runCopyJob(inputRoot, outputRoot, files, verifyChecksum,
+            filesUser, filesGroup, filesMode, mappers)) {
+          throw new ExportSnapshotException("Snapshot export failed!");
+        }
       }
 
       // Step 3 - Rename fs2:/.snapshot/.tmp/<snapshot> fs2:/.snapshot/<snapshot>
