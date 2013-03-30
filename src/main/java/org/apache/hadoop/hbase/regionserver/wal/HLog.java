@@ -1178,8 +1178,9 @@ public class HLog implements Syncable {
     /**
      * This method first signals the thread that there's a sync needed
      * and then waits for it to happen before returning.
+     * @throws IOException
      */
-    public void addToSyncQueue(boolean force, long txid) {
+    public void addToSyncQueue(boolean force, long txid) throws IOException {
       while (true) {
         // Don't bother if somehow our append was already hflushed
         // Check this without even acquiring the lock, in the hope
@@ -1193,6 +1194,11 @@ public class HLog implements Syncable {
         }
         lock.lock();
         try {
+
+          if (syncerShuttingDown) {
+            throw (new IOException("LogSyncer closing. Aborting the sync"));
+          }
+
           // Wake the thread
           queueEmpty.signal();
 
@@ -1210,7 +1216,7 @@ public class HLog implements Syncable {
     }
   }
 
-  public void sync() {
+  public void sync() throws IOException {
     sync(false);
   }
 
@@ -1218,8 +1224,9 @@ public class HLog implements Syncable {
    * This method calls the LogSyncer in order to group commit the sync
    * with other threads.
    * @param force For catalog regions, force the sync to happen
+   * @throws IOException
    */
-  public void sync(boolean force) {
+  public void sync(boolean force) throws IOException {
     sync(force, this.unflushedEntries.get());
   }
 
@@ -1228,8 +1235,9 @@ public class HLog implements Syncable {
    *
    * @param txid
    *          The transaction id that this call is interested in.
+   * @throws IOException
    */
-  public void sync(boolean force, long txid) {
+  public void sync(boolean force, long txid) throws IOException {
     logSyncerThread.addToSyncQueue(force, txid);
   }
 
