@@ -1648,6 +1648,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     forceChangeTaskLogDir();
 
+    conf.setBoolean("yarn.nodemanager.pmem-check-enabled", false);
+    conf.setBoolean("yarn.nodemanager.vmem-check-enabled", false);    
     // Allow the user to override FS URI for this map-reduce cluster to use.
     mrCluster = new MiniMRCluster(servers,
       FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(), 1,
