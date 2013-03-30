@@ -1382,6 +1382,7 @@ public class HRegion implements HeapSize {
     // rows then)
     status.setStatus("Obtaining lock to block concurrent updates");
     long t0, t1;
+    long t01 = 0, t02 = 0, t03 = 0, t04 = 0, t05 = 0;
     this.updatesLock.writeLock().lock();
     t0 = EnvironmentEdgeManager.currentTimeMillis();
     status.setStatus("Preparing to flush by snapshotting stores");
@@ -1389,23 +1390,36 @@ public class HRegion implements HeapSize {
     //copy the array of per column family memstore values
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(
         stores.size());
+    t01 = EnvironmentEdgeManager.currentTimeMillis();
     try {
       sequenceId = (wal == null)? myseqid :
         wal.startCacheFlush(this.regionInfo.getRegionName());
+      t02 = EnvironmentEdgeManager.currentTimeMillis();
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
+      t03 = EnvironmentEdgeManager.currentTimeMillis();
       for (Store s : stores.values()) {
         storeFlushers.add(s.getStoreFlusher(completeSequenceId));
       }
+      t04 = EnvironmentEdgeManager.currentTimeMillis();
 
       // prepare flush (take a snapshot)
       for (StoreFlusher flusher : storeFlushers) {
         flusher.prepare();
       }
+      t05 = EnvironmentEdgeManager.currentTimeMillis();
     } finally {
       this.updatesLock.writeLock().unlock();
       t1 = EnvironmentEdgeManager.currentTimeMillis();
       LOG.debug("Finished snapshotting. Held region-wide updates lock for "
-        + (t1-t0) + " ms.");
+        + (t1-t0) + " ms."
+        + " parts: "
+        + (t01-t0) +  " ms. "
+        + (t02-t01) +  " ms. "
+        + (t03-t02) +  " ms. "
+        + (t04-t03) +  " ms. "
+        + (t05-t04) +  " ms. "
+        + (t1-t05) +  " ms. "
+        );
     }
 
     status.setStatus("Flushing stores");
