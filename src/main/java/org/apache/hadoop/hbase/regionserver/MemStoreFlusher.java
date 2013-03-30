@@ -152,7 +152,7 @@ class MemStoreFlusher implements FlushRequester {
 
     @Override
     public void run() {
-      while (!server.isStopRequested()) {
+      while (!server.isStopRequestedAtStageTwo()) {
         FlushQueueEntry fqe = null;
         try {
           fqe = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);

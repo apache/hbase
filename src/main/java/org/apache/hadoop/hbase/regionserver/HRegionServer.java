@@ -181,7 +181,19 @@ public class HRegionServer implements HRegionInterface,
   // of HRegionServer in isolation. We use AtomicBoolean rather than
   // plain boolean so we can pass a reference to Chore threads.  Otherwise,
   // Chore threads need to know about the hosting class.
-  protected final AtomicBoolean stopRequested = new AtomicBoolean(false);
+  // Stop is going to happen in 2 stages:
+  // In Stage 1: we will close all non-essential chores, and start closing the regions.
+  //    To reduce downtime, closing a region involves two flushes: a pre-flush,
+  //    and a second flush. The pre-flush is going to flush all the data in
+  //    memstore so far, while serving client requests in parallel. The second
+  //    flush will flush the puts received during the pre-flush. It is essential
+  //    that the chores corresponding to MemstoreFlusher, and the LogRoller are
+  //    active at this stage.
+  // In Stage 2: we have closed all the regions. So, we will close out the remaining
+  //    threads and chores that need to be up during stage 1 (Memstore flusher,
+  //    and log roller).
+  protected final AtomicBoolean stopRequestedAtStageOne = new AtomicBoolean(false);
+  protected final AtomicBoolean stopRequestedAtStageTwo = new AtomicBoolean(false);
 
   protected final AtomicBoolean quiesced = new AtomicBoolean(false);
 
@@ -463,7 +475,8 @@ public class HRegionServer implements HRegionInterface,
   private void reinitialize() throws IOException {
     this.restartRequested = false;
     this.abortRequested = false;
-    this.stopRequested.set(false);
+    this.stopRequestedAtStageOne.set(false);
+    this.stopRequestedAtStageTwo.set(false);
 
     // Address is giving a default IP for the moment. Will be changed after
     // calling the master.
@@ -569,7 +582,7 @@ public class HRegionServer implements HRegionInterface,
     EventType type = event.getType();
 
     // Ignore events if we're shutting down.
-    if (this.stopRequested.get()) {
+    if (this.stopRequestedAtStageOne.get()) {
       LOG.debug("Ignoring ZooKeeper event while shutting down");
       return;
     }
@@ -621,7 +634,7 @@ public class HRegionServer implements HRegionInterface,
     boolean quiesceRequested = false;
     try {
       MapWritable w = null;
-      while (!stopRequested.get()) {
+      while (!stopRequestedAtStageOne.get()) {
         w = reportForDuty();
         if (w != null) {
           init(w);
@@ -634,7 +647,7 @@ public class HRegionServer implements HRegionInterface,
       List<HMsg> outboundMessages = new ArrayList<HMsg>();
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
-      for (int tries = 0; !stopRequested.get() && isHealthy();) {
+      for (int tries = 0; !stopRequestedAtStageOne.get() && isHealthy();) {
         // Try to get the root region location from the master.
         if (!haveRootRegion.get()) {
           HServerAddress rootServer = zooKeeperWrapper.readRootRegionLocation();
@@ -676,7 +689,7 @@ public class HRegionServer implements HRegionInterface,
               // serving any regions. So set the stop bit and exit.
               LOG.info("Server quiesced and not serving any regions. " +
                 "Starting shutdown");
-              stopRequested.set(true);
+              stopRequestedAtStageOne.set(true);
               this.outboundMsgs.clear();
               continue;
             }
@@ -684,14 +697,14 @@ public class HRegionServer implements HRegionInterface,
             // Queue up the HMaster's instruction stream for processing
             boolean restart = false;
             for(int i = 0;
-                !restart && !stopRequested.get() && i < msgs.length;
+                !restart && !stopRequestedAtStageOne.get() && i < msgs.length;
                 i++) {
               LOG.info(msgs[i].toString());
               this.connection.unsetRootRegionLocation();
               switch(msgs[i].getType()) {
 
               case MSG_REGIONSERVER_STOP:
-                stopRequested.set(true);
+                stopRequestedAtStageOne.set(true);
                 break;
 
               case MSG_REGIONSERVER_QUIESCE:
@@ -718,7 +731,7 @@ public class HRegionServer implements HRegionInterface,
             // Reset tries count if we had a successful transaction.
             tries = 0;
 
-            if (restart || this.stopRequested.get()) {
+            if (restart || this.stopRequestedAtStageOne.get()) {
               toDo.clear();
               continue;
             }
@@ -737,7 +750,7 @@ public class HRegionServer implements HRegionInterface,
               // Check filesystem every so often.
               checkFileSystem();
             }
-            if (this.stopRequested.get()) {
+            if (this.stopRequestedAtStageOne.get()) {
               LOG.info("Stop requested, clearing toDo despite exception");
               toDo.clear();
               continue;
@@ -785,47 +798,6 @@ public class HRegionServer implements HRegionInterface,
     t.setName("reporting-start-of-exit-to-master");
     t.setDaemon(true);
     t.start();
-
-
-    // shutdown thriftserver
-    if (thriftServer != null) {
-      thriftServer.shutdown();
-    }
-    this.leases.closeAfterLeasesExpire();
-    isRpcServerRunning = false;
-    this.worker.stop();
-    if (this.server != null) {
-      this.server.stop();
-    }
-    if (this.splitLogWorkers != null) {
-      for(SplitLogWorker splitLogWorker: splitLogWorkers) {
-        splitLogWorker.stop();
-      }
-    }
-    if (this.infoServer != null) {
-      LOG.info("Stopping infoServer");
-      try {
-        this.infoServer.stop();
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    }
-    // Send cache a shutdown.
-    if (cacheConfig.isBlockCacheEnabled()) {
-      cacheConfig.getBlockCache().shutdown();
-    }
-
-    // Send interrupts to wake up threads if sleeping so they notice shutdown.
-    // TODO: Should we check they are alive?  If OOME could have exited already
-    cacheFlusher.interruptIfNecessary();
-    compactSplitThread.interruptIfNecessary();
-    for (int i = 0; i < hlogRollers.length; i++) {  
-      hlogRollers[i].interruptIfNecessary();  
-    }
-    this.majorCompactionChecker.interrupt();
-    
-    // shutdown the prefetch threads
-    scanPrefetchThreadPool.shutdownNow();
 
     if (killed) {
       // Just skip out w/o closing regions.
@@ -889,6 +861,10 @@ public class HRegionServer implements HRegionInterface,
       LOG.info("stopping server at: " + this.serverInfo.getServerName());
     }
 
+    // Let us close the server threads after all the regions are closed. This way, we
+    // will have lesser errors (since the server is responsive during the pre-flush).
+    shutdownServers();
+
     // Make sure the proxy is down.
     if (this.hbaseMaster != null) {
       HBaseRPC.stopProxy(this.hbaseMaster);
@@ -898,7 +874,7 @@ public class HRegionServer implements HRegionInterface,
     this.zooKeeperWrapper.close();
     if (!killed) {
       join();
-      if ((this.fs != null) && (stopRequested.get() || abortRequested)) {
+      if ((this.fs != null) && (stopRequestedAtStageOne.get() || abortRequested)) {
         // Finally attempt to close the Filesystem, to flush out any open streams.
         try {
           this.fs.close();
@@ -908,6 +884,60 @@ public class HRegionServer implements HRegionInterface,
       }
     }
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  private void shutdownServers() {
+    // We should start ignoring client requests now.
+    // So, shutdown the MemstoreFlusher and LogRoller
+    this.stopRequestedAtStageTwo.set(true);
+
+    // shutdown thriftserver
+    if (thriftServer != null) {
+      thriftServer.shutdown();
+    }
+
+    this.leases.closeAfterLeasesExpire();
+    isRpcServerRunning = false;
+    this.worker.stop();
+    // Don't let the worker thread delay us for 10 secs.
+    this.workerThread.interrupt();
+
+    if (this.server != null) {
+      this.server.stop();
+    }
+    if (this.splitLogWorkers != null) {
+      for(SplitLogWorker splitLogWorker: splitLogWorkers) {
+        splitLogWorker.stop();
+      }
+    }
+    if (this.infoServer != null) {
+      LOG.info("Stopping infoServer");
+      try {
+        this.infoServer.stop();
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    }
+
+    // interrupt the lease handler thread;
+    this.leases.interrupt();
+
+    // Send cache a shutdown.
+    if (cacheConfig.isBlockCacheEnabled()) {
+      cacheConfig.getBlockCache().shutdown();
+    }
+
+    // Send interrupts to wake up threads if sleeping so they notice shutdown.
+    // TODO: Should we check they are alive?  If OOME could have exited already
+    cacheFlusher.interruptIfNecessary();
+    compactSplitThread.interruptIfNecessary();
+    for (int i = 0; i < hlogRollers.length; i++) {
+      hlogRollers[i].interruptIfNecessary();
+    }
+    this.majorCompactionChecker.interrupt();
+
+    // shutdown the prefetch threads
+    scanPrefetchThreadPool.shutdownNow();
   }
 
   /**
@@ -1034,7 +1064,7 @@ public class HRegionServer implements HRegionInterface,
       }
     } catch (Throwable e) {
       this.isOnline = false;
-      this.stopRequested.set(true);
+      this.stopRequestedAtStageOne.set(true);
       throw convertThrowableToIOE(cleanup(e, "Failed init"),
         "Region server startup failed");
     }
@@ -1696,7 +1726,7 @@ public class HRegionServer implements HRegionInterface,
    */
   @Override
   public void stop(String why) {
-    this.stopRequested.set(true);
+    this.stopRequestedAtStageOne.set(true);
     stopReason = why;
     synchronized(this) {
       // Wakes run() if it is sleeping
@@ -1781,7 +1811,7 @@ public class HRegionServer implements HRegionInterface,
     HServerAddress prevMasterAddress = null;
     HServerAddress masterAddress = null;
     HMasterRegionInterface master = null;
-    while (!stopRequested.get() && master == null) {
+    while (!stopRequestedAtStageOne.get() && master == null) {
       // Re-read master address from ZK as it might have changed.
       masterAddress = readMasterAddressFromZK();
       if (masterAddress == null) {
@@ -1827,7 +1857,7 @@ public class HRegionServer implements HRegionInterface,
    * Run initialization using parameters passed us by the master.
    */
   private MapWritable reportForDuty() throws YouAreDeadException {
-    while (!stopRequested.get() && !getMaster()) {
+    while (!stopRequestedAtStageOne.get() && !getMaster()) {
       sleeper.sleep();
       LOG.warn("Unable to get master for initialization");
     }
@@ -1835,7 +1865,7 @@ public class HRegionServer implements HRegionInterface,
     MapWritable result = null;
     long lastMsg = 0;
     boolean znodeWritten = false;
-    while(!stopRequested.get()) {
+    while(!stopRequestedAtStageOne.get()) {
       try {
         MemoryUsage memory =
           ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
@@ -1915,11 +1945,11 @@ public class HRegionServer implements HRegionInterface,
     @Override
     public void run() {
       try {
-        while(!stopRequested.get()) {
+        while(!stopRequestedAtStageOne.get()) {
           ToDoEntry e = null;
           try {
             e = toDo.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
-            if(e == null || stopRequested.get()) {
+            if(e == null || stopRequestedAtStageOne.get()) {
               continue;
             }
             LOG.info("Worker: " + e.msg);
@@ -2008,10 +2038,10 @@ public class HRegionServer implements HRegionInterface,
               break;
 
             case TESTING_MSG_BLOCK_RS:
-              while (!stopRequested.get()) {
+              while (!stopRequestedAtStageOne.get()) {
                 Threads.sleep(1000);
                 LOG.info("Regionserver blocked by " +
-                  HMsg.Type.TESTING_MSG_BLOCK_RS + "; " + stopRequested.get());
+                  HMsg.Type.TESTING_MSG_BLOCK_RS + "; " + stopRequestedAtStageOne.get());
               }
               break;
 
@@ -2907,7 +2937,14 @@ public class HRegionServer implements HRegionInterface,
    * @return true if a stop or abort has been requested.
    */
   public boolean isStopRequested() {
-    return this.stopRequested.get() || abortRequested;
+    return this.stopRequestedAtStageOne.get() || abortRequested;
+  }
+
+  /**
+   * @return true if a stop or abort has been requested.
+   */
+  public boolean isStopRequestedAtStageTwo() {
+    return this.stopRequestedAtStageTwo.get() || abortRequested;
   }
 
   /**
@@ -3186,7 +3223,7 @@ public class HRegionServer implements HRegionInterface,
    * @throws IOException
    */
   protected void checkOpen() throws IOException {
-    if (this.stopRequested.get() || this.abortRequested) {
+    if (this.stopRequestedAtStageTwo.get() || this.abortRequested) {
       throw new IOException("Server not running" +
         (this.abortRequested? ", aborting": ""));
     }
@@ -3584,7 +3621,7 @@ public class HRegionServer implements HRegionInterface,
 
   @Override
   public boolean isStopped() {
-    return stopRequested.get();
+    return stopRequestedAtStageOne.get();
   }
 
   @Override

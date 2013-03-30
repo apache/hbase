@@ -1158,10 +1158,13 @@ public abstract class HBaseServer {
     }
 
     private void queueRawCall() throws InterruptedException {
+      // To ensure that the received timestamp is set
+      // accurately create the call before the throttler.
+      RawCall call = new RawCall(this, data);
       callQueueThrottler.increase(data.limit());
       try {
         // queue the call
-        callQueue.put(new RawCall(this, data));
+        callQueue.put(call);
       } catch (InterruptedException e)  {
         callQueueThrottler.decrease(data.limit());
       }

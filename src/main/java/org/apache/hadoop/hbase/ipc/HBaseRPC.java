@@ -618,6 +618,13 @@ public class HBaseRPC {
             HRegion.incrNumericPersistentMetric("slowResponse."
                 + call.getMethodName() + ".cumulative", 1);
           }
+          if (tooLarge) {
+            // increment global slow RPC response counter
+            rpcMetrics.inc("largeResponse.kb.", (int)(responseSize/1024));
+            HRegion.incrNumericPersistentMetric("largeResponse.all.cumulative", 1);
+            HRegion.incrNumericPersistentMetric("largeResponse."
+                + call.getMethodName() + ".cumulative", 1);
+          }
         }
         if (processingTime > 1000) {
           // we use a hard-coded one second period so that we can clearly

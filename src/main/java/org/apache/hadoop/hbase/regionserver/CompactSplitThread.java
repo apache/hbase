@@ -143,7 +143,7 @@ public class CompactSplitThread {
   public synchronized void requestCompaction(final HRegion r, final Store s,
       final String why, int priority) {
 
-    if (this.server.stopRequested.get()) {
+    if (this.server.stopRequestedAtStageOne.get()) {
       return;
     }
 

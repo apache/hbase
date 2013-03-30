@@ -65,7 +65,7 @@ class LogRoller extends HasThread implements LogRollListener {
   public void run() {
     MonitoredTask status = null;
     int retried = -1;
-    while (!server.isStopRequested()) {
+    while (!server.isStopRequestedAtStageTwo()) {
       long now = System.currentTimeMillis();
       boolean periodic = false;
       long modifiedRollPeriod;
