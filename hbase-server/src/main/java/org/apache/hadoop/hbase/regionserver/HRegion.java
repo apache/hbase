@@ -486,7 +486,7 @@ public class HRegion implements HeapSize { // , Writable{
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
       // TODO: revisit if coprocessors should load in other cases
-      this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
+      this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, baseConf);
       this.metricsRegionWrapper = new MetricsRegionWrapperImpl(this);
       this.metricsRegion = new MetricsRegion(this.metricsRegionWrapper);
     } else {

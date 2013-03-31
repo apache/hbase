@@ -228,8 +228,11 @@ public class TestImportExport {
         OUTPUT_DIR
     };
  
-    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
+      cluster.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
+    // copy or add the necessary configuration values from the map reduce config to the hbase config
+    copyConfigurationValues(UTIL.getConfiguration(), conf);
     args = opts.getRemainingArgs();
     assertEquals(conf.get(Export.EXPORT_BATCHING), EXPORT_BATCH_SIZE);
 
@@ -350,6 +353,8 @@ public class TestImportExport {
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
         cluster.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
+    // copy or add the necessary configuration values from the map reduce config to the hbase config
+    copyConfigurationValues(UTIL.getConfiguration(), conf);
     args = opts.getRemainingArgs();
 
     Job job = Export.createSubmittableJob(conf, args);
@@ -369,6 +374,8 @@ public class TestImportExport {
 
     opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     conf = opts.getConfiguration();
+    // copy or add the necessary configuration values from the map reduce config to the hbase config
+    copyConfigurationValues(UTIL.getConfiguration(), conf);
     args = opts.getRemainingArgs();
 
     job = Import.createSubmittableJob(conf, args);
@@ -392,6 +399,8 @@ public class TestImportExport {
 
     opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     conf = opts.getConfiguration();
+    // copy or add the necessary configuration values from the map reduce config to the hbase config
+    copyConfigurationValues(UTIL.getConfiguration(), conf);
     args = opts.getRemainingArgs();
 
     job = Import.createSubmittableJob(conf, args);
