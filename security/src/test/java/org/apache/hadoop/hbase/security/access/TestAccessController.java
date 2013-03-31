@@ -149,6 +149,7 @@ public class TestAccessController {
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     htd.setOwner(USER_OWNER);
     admin.createTable(htd);
+    TEST_UTIL.waitTableEnabled(TEST_TABLE, 5000);
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
