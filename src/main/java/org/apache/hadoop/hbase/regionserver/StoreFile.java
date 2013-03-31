@@ -945,6 +945,30 @@ public class StoreFile extends SchemaConfigured {
                     final byte [] splitRow,
                     final Reference.Range range)
       throws IOException {
+	    
+    // Check whether the split row lies in the range of the store file
+    // If it is outside the range, return directly.
+    if (range == Reference.Range.bottom) {
+      //check if smaller than first key
+      KeyValue splitKey = KeyValue.createLastOnRow(splitRow);
+      byte[] firstKey = f.createReader().getFirstKey();
+      if (f.getReader().getComparator().compare(splitKey.getBuffer(), 
+          splitKey.getKeyOffset(), splitKey.getKeyLength(), 
+          firstKey, 0, firstKey.length) < 0) {
+        return null;
+      }      
+    }
+    else {
+      //check if larger than last key.
+      KeyValue splitKey = KeyValue.createFirstOnRow(splitRow);
+      byte[] lastKey = f.createReader().getLastKey();      
+      if (f.getReader().getComparator().compare(splitKey.getBuffer(), 
+          splitKey.getKeyOffset(), splitKey.getKeyLength(), 
+          lastKey, 0, lastKey.length) > 0) {
+        return null;
+      }
+    }
+    
     // A reference to the bottom half of the hsf store file.
     Reference r = new Reference(splitRow, range);
     // Add the referred-to regions name as a dot separated suffix.

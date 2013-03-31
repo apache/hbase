@@ -116,7 +116,7 @@ public class TestStoreFile extends HBaseTestCase {
   }
 
   // pick an split point (roughly halfway)
-  byte[] SPLITKEY = new byte[] { (LAST_CHAR-FIRST_CHAR)/2, FIRST_CHAR};
+  byte[] SPLITKEY = new byte[] { (LAST_CHAR + FIRST_CHAR)/2, FIRST_CHAR};
 
   /*
    * Writes HStoreKey and ImmutableBytes data to passed writer and
@@ -315,6 +315,9 @@ public class TestStoreFile extends HBaseTestCase {
     // Now confirm that I can read from the ref to link
     HFileScanner sB = hsfB.createReader().getScanner(false, false);
     sB.seekTo();
+    
+    //count++ as seekTo() will advance the scanner
+    count++;
     while (sB.next()) {
       count++;
     }
@@ -404,20 +407,12 @@ public class TestStoreFile extends HBaseTestCase {
       topPath = StoreFile.split(this.fs, topDir, f, badmidkey, Range.top);
       bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey,
         Range.bottom);
+      
+      assertNull(bottomPath);
+      
       top = new StoreFile(this.fs, topPath, conf, cacheConf,
           StoreFile.BloomType.NONE,
           NoOpDataBlockEncoder.INSTANCE).createReader();
-      bottom = new StoreFile(this.fs, bottomPath, conf, cacheConf,
-          StoreFile.BloomType.NONE,
-          NoOpDataBlockEncoder.INSTANCE).createReader();
-      bottomScanner = bottom.getScanner(false, false);
-      int count = 0;
-      while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
-          bottomScanner.next()) {
-        count++;
-      }
-      // When badkey is < than the bottom, should return no values.
-      assertTrue(count == 0);
       // Now read from the top.
       first = true;
       topScanner = top.getScanner(false, false);
@@ -444,16 +439,15 @@ public class TestStoreFile extends HBaseTestCase {
       }
       // Remove references.
       this.fs.delete(topPath, false);
-      this.fs.delete(bottomPath, false);
 
       // Test when badkey is > than last key in file ('||' > 'zz').
       badmidkey = Bytes.toBytes("|||");
       topPath = StoreFile.split(this.fs, topDir, f, badmidkey, Range.top);
       bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey,
         Range.bottom);
-      top = new StoreFile(this.fs, topPath, conf, cacheConf,
-          StoreFile.BloomType.NONE,
-          NoOpDataBlockEncoder.INSTANCE).createReader();
+
+      assertNull(topPath);
+      
       bottom = new StoreFile(this.fs, bottomPath, conf, cacheConf,
           StoreFile.BloomType.NONE,
           NoOpDataBlockEncoder.INSTANCE).createReader();
@@ -477,14 +471,6 @@ public class TestStoreFile extends HBaseTestCase {
       for (int i = 0; i < tmp.length(); i++) {
         assertTrue(Bytes.toString(keyKV.getRow()).charAt(i) == 'z');
       }
-      count = 0;
-      topScanner = top.getScanner(false, false);
-      while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
-          (topScanner.isSeeked() && topScanner.next())) {
-        count++;
-      }
-      // When badkey is < than the bottom, should return no values.
-      assertTrue(count == 0);
     } finally {
       if (top != null) {
         top.close(true); // evict since we are about to delete the file
