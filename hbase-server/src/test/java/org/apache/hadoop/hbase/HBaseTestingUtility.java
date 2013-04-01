@@ -1943,15 +1943,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         attempted.clear();
       }
       regCount = regions.size();
-      idx = random.nextInt(regions.size());
-      // if we have just tried this region, there is no need to try again
-      if (attempted.contains(idx)) continue;
-      try {
-        regions.get(idx).checkSplit();
-        return regions.get(idx);
-      } catch (Exception ex) {
-        LOG.warn("Caught exception", ex);
-        attempted.add(idx);
+      // There are chances that before we get the region for the table from an RS the region may
+      // be going for CLOSE.  This may be because online schema change is enabled 
+      if (regCount > 0) {
+        idx = random.nextInt(regCount);
+        // if we have just tried this region, there is no need to try again
+        if (attempted.contains(idx))
+          continue;
+        try {
+          regions.get(idx).checkSplit();
+          return regions.get(idx);
+        } catch (Exception ex) {
+          LOG.warn("Caught exception", ex);
+          attempted.add(idx);
+        }
       }
       attempts++;
     } while (maxAttempts == -1 || attempts < maxAttempts);

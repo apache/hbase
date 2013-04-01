@@ -355,10 +355,16 @@ public class TestTableLockManager {
       public void chore() {
         try {
           HRegion region = TEST_UTIL.getSplittableRegion(tableName, -1);
-          byte[] regionName = region.getRegionName();
-          admin.flush(regionName);
-          admin.compact(regionName);
-          admin.split(regionName);
+          if (region != null) {
+            byte[] regionName = region.getRegionName();
+            admin.flush(regionName);
+            admin.compact(regionName);
+            admin.split(regionName);
+          } else {
+            LOG.warn("Could not find suitable region for the table.  Possibly the " +
+              "region got closed and the attempts got over before " +
+              "the region could have got reassigned.");
+          }
         } catch (NotServingRegionException nsre) {
           // the region may be in transition
           LOG.warn("Caught exception", nsre);
