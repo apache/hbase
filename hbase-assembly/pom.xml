@@ -182,6 +182,24 @@
               </resources>
             </configuration>
           </execution>
+          <execution>
+            <id>copy-xref</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>site</phase>
+            <configuration>
+                <outputDirectory>target/site/xref</outputDirectory>
+              <resources>
+                <resource>
+                    <directory>${basedir}/../target/site/xref</directory>
+                  <includes>
+                    <include>**/**</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
         </executions>
         <configuration>
           <escapeString>\</escapeString>
