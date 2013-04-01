@@ -40,7 +40,7 @@
           <version>${maven.assembly.version}</version>
           <configuration>
           <!--Else will use hbase-assembly as final name.-->
-          <finalName>hbase</finalName>
+          <finalName>hbase-${pom.version}</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
           <!--We do not want assembly attached; run on command-line explicitly
