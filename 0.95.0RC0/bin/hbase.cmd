@@ -1,0 +1,382 @@
+@echo off
+@rem/*
+@rem * Licensed to the Apache Software Foundation (ASF) under one
+@rem * or more contributor license agreements.  See the NOTICE file
+@rem * distributed with this work for additional information
+@rem * regarding copyright ownership.  The ASF licenses this file
+@rem * to you under the Apache License, Version 2.0 (the
+@rem * "License"); you may not use this file except in compliance
+@rem * with the License.  You may obtain a copy of the License at
+@rem *
+@rem *     http://www.apache.org/licenses/LICENSE-2.0
+@rem *
+@rem * Unless required by applicable law or agreed to in writing, software
+@rem * distributed under the License is distributed on an "AS IS" BASIS,
+@rem * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+@rem * See the License for the specific language governing permissions and
+@rem * limitations under the License.
+@rem */
+@rem 
+@rem The hbase command script.  Based on the hadoop command script putting
+@rem in hbase classes, libs and configurations ahead of hadoop's.
+@rem
+@rem TODO: Narrow the amount of duplicated code.
+@rem
+@rem Environment Variables:
+@rem
+@rem   JAVA_HOME        The java implementation to use.  Overrides JAVA_HOME.
+@rem
+@rem   HBASE_CLASSPATH  Extra Java CLASSPATH entries.
+@rem
+@rem   HBASE_HEAPSIZE   The maximum amount of heap to use, in MB. 
+@rem                    Default is 1000.
+@rem
+@rem   HBASE_OPTS       Extra Java runtime options.
+@rem
+@rem   HBASE_CONF_DIR   Alternate conf dir. Default is ${HBASE_HOME}/conf.
+@rem
+@rem   HBASE_ROOT_LOGGER The root appender. Default is INFO,console
+@rem
+
+setlocal enabledelayedexpansion
+
+for %%i in (%0) do (
+  if not defined HBASE_BIN_PATH (
+    set HBASE_BIN_PATH=%%~dpi
+  )
+)
+
+if "%HBASE_BIN_PATH:~-1%" == "\" (
+  set HBASE_BIN_PATH=%HBASE_BIN_PATH:~0,-1%
+)
+
+rem This will set HBASE_HOME, etc.
+set hbase-config-script=%HBASE_BIN_PATH%\hbase-config.cmd
+call %hbase-config-script%
+
+rem Detect if we are in hbase sources dir
+set in_dev_env=false
+
+if EXIST %HBASE_HOME%\target set in_dev_env=true
+
+rem --service is an internal option. used by msi setup only.
+if "%1" == "--service" (
+   set service_entry=true
+   shift
+)
+
+set hbase-command=%1
+shift
+
+@rem if no args specified, show usage
+if "%hbase-command%"=="" (
+  goto :print_usage
+  endlocal
+  goto :eof
+)
+
+set JAVA_HEAP_MAX=-Xmx1000m
+
+rem check envvars which might override default args
+if not "%HBASE_HEAPSIZE%" == "" (
+  set JAVA_HEAP_MAX=-Xmx%HBASE_HEAPSIZE%m
+)
+
+set CLASSPATH=%HBASE_CONF_DIR%;%JAVA_HOME%\lib\tools.jar
+
+rem Add maven target directory
+set cached_classpath_filename=%HBASE_HOME%\target\cached_classpath.txt
+if "%in_dev_env%"=="true" (
+
+  rem adding maven main classes to classpath
+  for /f %%i in ('dir /b %HBASE_HOME%\hbase-*') do (
+    if exist %%i\target\classes set CLASSPATH=!CLASSPATH!;%%i\target\classes
+  )
+
+  rem adding maven test classes to classpath
+  rem For developers, add hbase classes to CLASSPATH
+  for /f %%i in ('dir /b %HBASE_HOME%\hbase-*') do (
+    if exist %%i\target\test-classes set CLASSPATH=!CLASSPATH!;%%i\target\test-classes
+  )
+  rem Need to generate classpath from maven pom. This is costly so generate it
+  rem and cache it. Save the file into our target dir so a mvn clean will get
+  rem clean it up and force us create a new one.
+
+  if NOT exist "%cached_classpath_filename%" (
+      echo "As this is a development environment, we need %cached_classpath_filename% to be generated from maven (command: mvn compile)"
+	  goto :eof
+  )
+
+  for /f "delims=" %%i in ('type %cached_classpath_filename%') do set CLASSPATH=%CLASSPATH%;%%i
+
+)
+
+@rem For releases add hbase webapps to CLASSPATH
+@rem Webapps must come first else it messes up Jetty
+if exist "%HBASE_HOME%\hbase-webapps" (
+  set CLASSPATH=%CLASSPATH%;%HBASE_HOME%
+)
+
+if exist "%HBASE_HOME%\target\hbase-webapps" (
+  set CLASSPATH=%CLASSPATH%;%HBASE_HOME%\target
+)
+
+for /F %%f in ('dir /b %HBASE_HOME%\hbase*.jar 2^>nul') do (
+  if NOT "%%f:~-11"=="sources.jar" (
+    set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\%%f
+  )
+)
+
+@rem Add libs to CLASSPATH
+if exist %HBASE_HOME%\lib (
+  for /F %%f in ('dir /b %HBASE_HOME%\lib\*.jar') do (
+    set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\lib\%%f
+  )
+)
+
+@rem Add user-specified CLASSPATH last
+if NOT "%HBASE_CLASSPATH%" == "" (
+  set CLASSPATH=%CLASSPATH%;%HBASE_CLASSPATH%
+)
+
+@rem Default log directory and file
+if "%HBASE_LOG_DIR%" == "" (
+  set HBASE_LOG_DIR=%HBASE_HOME%\logs
+)
+
+if "%HBASE_LOGFILE%"=="" (
+  set HBASE_LOGFILE=hbase.log
+)
+
+set JAVA_PLATFORM=
+
+rem If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
+set PATH=%PATH%;%HADOOP_HOME%\bin
+set HADOOP_IN_PATH=hadoop.cmd
+
+if exist "%HADOOP_HOME%\bin\%HADOOP_IN_PATH%" (
+  if "%in_dev_env%"=="true" (
+    set HADOOP_CLASSPATH=%HBASE_HOME%\target\classes
+  ) else (
+    for /f %%i in ('dir /b %HBASE_HOME%\hbase-*.jar ^| findstr /vi tests') do set HADOOP_CLASSPATH=%HBASE_HOME%\%%i
+  )
+
+  set hadoopJLPCommand=call %HADOOP_IN_PATH% org.apache.hadoop.hbase.util.GetJavaProperty java.library.path 2^>nul
+  for /f "eol= delims=" %%i in ('!hadoopJLPCommand!') do set HADOOP_JAVA_LIBRARY_PATH=%%i
+  if [%JAVA_LIBRARY_PATH%]==[] (
+     set JAVA_LIBRARY_PATH=!HADOOP_JAVA_LIBRARY_PATH!
+  ) else (
+     set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;!HADOOP_JAVA_LIBRARY_PATH!
+  )
+)
+
+if exist "%HBASE_HOME%\build\native" (
+  for /f "eol= delims=" %%i in ('%JAVA% org.apache.hadoop.util.PlatformName') do set JAVA_PLATFORM=%%i
+  set _PATH_TO_APPEND=%HBASE_HOME%\build\native\!JAVA_PLATFORM!;%HBASE_HOME%\build\native\!JAVA_PLATFORM!\lib
+  if "%JAVA_LIBRARY_PATH%"=="" (
+     set JAVA_LIBRARY_PATH=!_PATH_TO_APPEND!
+   ) else (
+     set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;!_PATH_TO_APPEND!
+   )
+)
+
+rem This loop would set %hbase-command-arguments%
+set _hbasearguments=
+:MakeCmdArgsLoop
+  if [%1]==[] goto :EndLoop 
+
+  if not defined _hbasearguments (
+    set _hbasearguments=%1
+  ) else (
+    set _hbasearguments=!_hbasearguments! %1
+  )
+  shift
+goto :MakeCmdArgsLoop 
+:EndLoop 
+
+set hbase-command-arguments=%_hbasearguments%
+
+@rem figure out which class to run
+set corecommands=shell master regionserver thrift thrift2 rest avro hlog hbck hfile zookeeper zkcli
+for %%i in ( %corecommands% ) do (
+  if "%hbase-command%"=="%%i" set corecommand=true
+)
+
+if defined corecommand (
+  call :%hbase-command% %hbase-command-arguments%
+) else (
+  if "%hbase-command%" == "classpath" (
+    echo %CLASSPATH%
+    goto :eof
+  )
+  if "%hbase-command%" == "version" (
+    set CLASS=org.apache.hadoop.hbase.util.VersionInfo
+  ) else (
+    set CLASS=%hbase-command%
+  )
+  set CLASSPATH=%CLASSPATH%;%CD%
+)
+
+@rem Have JVM dump heap if we run out of memory.  Files will be 'launch directory'
+@rem and are named like the following: java_pid21612.hprof. Apparently it does not
+@rem 'cost' to have this flag enabled. Its a 1.6 flag only. See:
+@rem http://blogs.sun.com/alanb/entry/outofmemoryerror_looks_a_bit_better
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.log.dir=%HBASE_LOG_DIR%
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.log.file=%HBASE_LOGFILE%
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.home.dir=%HBASE_HOME%
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.id.str=%HBASE_IDENT_STRING%
+set HBASE_OPTS=%HBASE_OPTS% -XX:OnOutOfMemoryError="taskkill /F /PID %p"
+
+if "%BASE_ROOT_LOGGER%"=="" (
+  set BASE_ROOT_LOGGER=INFO,console
+)
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.root.logger="%BASE_ROOT_LOGGER%"
+
+if NOT "x%JAVA_LIBRARY_PATH%" == "x" (
+  set HBASE_OPTS=%HBASE_OPTS% -Djava.library.path=%JAVA_LIBRARY_PATH%
+)
+
+rem Enable security logging on the master and regionserver only
+if "%HBASE_SECURITY_LOGGER%"=="" (
+  set HBASE_SECURITY_LOGGER=INFO,NullAppender
+  if "%hbase-command%"=="master" (
+    set HBASE_SECURITY_LOGGER=INFO,DRFAS
+  )
+  if "%hbase-command%"=="regionserver" (
+    set HBASE_SECURITY_LOGGER=INFO,DRFAS
+  )
+)
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.security.logger="%HBASE_SECURITY_LOGGER%"
+
+set java_arguments=%JAVA_HEAP_MAX% %HBASE_OPTS% -classpath %CLASSPATH% %CLASS% %hbase-command-arguments%
+
+if defined service_entry (
+  call :makeServiceXml %java_arguments%
+) else (
+  call %JAVA% %java_arguments%
+)
+
+endlocal
+goto :eof
+
+:shell
+  rem eg export JRUBY_HOME=/usr/local/share/jruby
+  if NOT "%JRUBY_HOME%"=="" (
+    set CLASSPATH=%$CLASSPATH%;%JRUBY_HOME%\lib\jruby.jar
+    set HBASE_OPTS=%HBASE_OPTS% -Djruby.home=%JRUBY_HOME% -Djruby.lib=%JRUBY_HOME%\lib
+  )
+  rem find the hbase ruby sources
+  if EXIST %HBASE_HOME%\lib\ruby (
+    set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources=%HBASE_HOME%\lib\ruby
+  ) else (
+    set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources=%HBASE_HOME%\hbase-server\src\main\ruby
+  )
+
+  set CLASS=org.jruby.Main -X+O %HBASE_HOME%\bin\hirb.rb
+  goto :eof
+
+:master
+  set CLASS=org.apache.hadoop.hbase.master.HMaster
+  if NOT "%1"=="stop" (
+    set HBASE_OPTS=%HBASE_OPTS% %HBASE_MASTER_OPTS%
+  )
+  goto :eof
+
+:regionserver
+  set CLASS=org.apache.hadoop.hbase.regionserver.HRegionServer
+  if NOT "%1"=="stop" (
+    set HBASE_OPTS=%HBASE_OPTS% %HBASE_REGIONSERVER_OPTS%
+  )
+  goto :eof
+
+:thrift
+  set CLASS=org.apache.hadoop.hbase.thrift.ThriftServer
+  if NOT "%1" == "stop" (
+    set HBASE_OPTS=%HBASE_OPTS% %HBASE_THRIFT_OPTS%
+  )
+  goto :eof
+
+:thrift2
+  set CLASS=org.apache.hadoop.hbase.thrift2.ThriftServer
+  if NOT "%1" == "stop" (
+    set HBASE_OPTS=%HBASE_OPTS% %HBASE_THRIFT_OPTS%
+  )
+  goto :eof
+
+:rest
+  set CLASS=org.apache.hadoop.hbase.rest.Main
+  if NOT "%1"=="stop" (
+    set HBASE_OPTS=%HBASE_OPTS% %HBASE_REST_OPTS%
+  )
+  goto :eof
+
+:avro
+  set CLASS=org.apache.hadoop.hbase.avro.AvroServer
+  if NOT "%1"== "stop" (
+    set HBASE_OPTS=%HBASE_OPTS% %HBASE_AVRO_OPTS%
+  )
+  goto :eof
+
+:zookeeper
+  set CLASS=org.apache.hadoop.hbase.zookeeper.HQuorumPeer
+  if NOT "%1"=="stop" (
+    set HBASE_OPTS=%HBASE_OPTS% %HBASE_ZOOKEEPER_OPTS%
+  )
+  goto :eof
+
+:hbck
+  set CLASS=org.apache.hadoop.hbase.util.HBaseFsck
+  goto :eof
+
+:hlog
+  set CLASS=org.apache.hadoop.hbase.regionserver.wal.HLogPrettyPrinter
+  goto :eof
+
+:hfile
+  set CLASS=org.apache.hadoop.hbase.io.hfile.HFile
+  goto :eof
+
+:zkcli
+  rem ZooKeeperMainServerArg returns '-server HOST:PORT' or empty string.
+  set SERVER_ARG=%HADOOP_BIN_PATH%\hbase org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServerArg
+  set CLASS=org.apache.zookeeper.ZooKeeperMain %SERVER_ARG%
+  goto :eof
+
+:makeServiceXml
+  set arguments=%*
+  @echo ^<service^>
+  @echo   ^<id^>hbase-%hbase-command%^</id^>
+  @echo   ^<name^>hbase-%hbase-command%^</name^>
+  @echo   ^<description^>This service runs Isotope hbase-%hbase-command%^</description^>
+  @echo   ^<executable^>%JAVA%^</executable^>
+  @echo   ^<arguments^>%arguments%^</arguments^>
+  @echo ^</service^>
+  goto :eof
+
+:print_usage
+  echo Usage: hbase ^<command^>
+  echo where ^<command^> an option from one of these categories::
+  echo DBA TOOLS
+  echo   shell            run the HBase shell
+  echo   hbck             run the hbase 'fsck' tool
+  echo   hlog             write-ahead-log analyzer
+  echo   hfile            store file analyzer
+  echo   zkcli            run the ZooKeeper shell
+  echo. 
+  echo PROCESS MANAGEMENT
+  echo   master           run an HBase HMaster node 
+  echo   regionserver     run an HBase HRegionServer node 
+  echo   zookeeper        run a Zookeeper server
+  echo   rest             run an HBase REST server 
+  echo   thrift           run the HBase Thrift server 
+  echo   thrift2          run the HBase Thrift2 server 
+  echo   avro             run an HBase Avro server 
+  echo. 
+  echo PACKAGE MANAGEMENT
+  echo   classpath        dump hbase CLASSPATH
+  echo   version          print the version
+  echo. 
+  echo  or
+  echo   CLASSNAME        run the class named CLASSNAME
+  echo Most commands print help when invoked w/o parameters.
+  goto :eof
