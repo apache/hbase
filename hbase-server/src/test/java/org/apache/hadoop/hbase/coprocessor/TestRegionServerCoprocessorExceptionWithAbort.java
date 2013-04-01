@@ -75,7 +75,8 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     byte[] TEST_FAMILY = Bytes.toBytes("aaa");
 
     HTable table = TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
-    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_UTIL.createMultiRegions(table, TEST_FAMILY));
+    TEST_UTIL.createMultiRegions(table, TEST_FAMILY);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
 
     // Note which regionServer will abort (after put is attempted).
     final HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);

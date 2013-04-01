@@ -77,7 +77,7 @@ public class TestHTableMultiplexer {
 
     HTable ht = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, VERSION,
         Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
-    TEST_UTIL.waitUntilAllRegionsAssigned(NUM_REGIONS);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE);
 
     byte[][] startRows = ht.getStartKeys();
     byte[][] endRows = ht.getEndKeys();
