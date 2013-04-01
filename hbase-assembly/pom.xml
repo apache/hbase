@@ -39,6 +39,8 @@
           <artifactId>maven-assembly-plugin</artifactId>
           <version>${maven.assembly.version}</version>
           <configuration>
+          <!--Else will use hbase-assembly as final name.-->
+          <finalName>hbase</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
           <!--We do not want assembly attached; run on command-line explicitly
