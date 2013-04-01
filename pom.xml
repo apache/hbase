@@ -1632,6 +1632,13 @@
         <version>2.3</version>
         <configuration>
           <aggregate>true</aggregate>
+          <linkJavadoc>true</linkJavadoc>
+          <javadocDir>hbase-assembly/target/site/apidocs</javadocDir>
+          <reportOutputDirectory>hbase-assembly/target/site/xref</reportOutputDirectory>
+          <destDir>hbase-assembly/target/site/xref</destDir>
+          <excludes>
+            <exclude>**/generated/**</exclude>
+          </excludes>
         </configuration>
       </plugin>
     </plugins>
