@@ -294,6 +294,9 @@ public interface HMasterInterface extends VersionedProtocol {
   public List<HSnapshotDescription> getCompletedSnapshots()
     throws IOException;
 
+  public List<HSnapshotDescription> listSnapshots()
+    throws IOException;
+
   public void deleteSnapshot(final HSnapshotDescription snapshot)
     throws IOException;
 

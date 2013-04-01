@@ -2273,7 +2273,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public List<SnapshotDescription> listSnapshots() throws IOException {
     List<SnapshotDescription> snapshots = new LinkedList<SnapshotDescription>();
     try {
-      for (HSnapshotDescription snapshot: getMaster().getCompletedSnapshots()) {
+      for (HSnapshotDescription snapshot: getMaster().listSnapshots()) {
         snapshots.add(snapshot.getProto());
       }
     } catch (RemoteException e) {

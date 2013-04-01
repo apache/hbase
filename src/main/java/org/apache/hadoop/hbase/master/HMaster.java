@@ -2028,6 +2028,15 @@ Server {
   }
 
   /**
+   * List the currently available/stored snapshots. Any in-progress snapshots are ignored
+   * Used for compatibility with CDH-4.2
+   */
+  @Override
+  public List<HSnapshotDescription> listSnapshots() throws IOException {
+    return getCompletedSnapshots();
+  }
+
+  /**
    * Execute Delete Snapshot operation.
    * @throws ServiceException wrapping SnapshotDoesNotExistException if specified snapshot did not
    * exist.
