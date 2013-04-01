@@ -1,3 +1,5 @@
+
+
 /**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -36,10 +38,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
@@ -1648,8 +1648,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     forceChangeTaskLogDir();
 
-    conf.setBoolean("yarn.nodemanager.pmem-check-enabled", false);
-    conf.setBoolean("yarn.nodemanager.vmem-check-enabled", false);    
     // Allow the user to override FS URI for this map-reduce cluster to use.
     mrCluster = new MiniMRCluster(servers,
       FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(), 1,
@@ -1658,7 +1656,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     if (jobConf == null) {
       jobConf = mrCluster.createJobConf();
     }
-    HBaseConfiguration.merge(this.conf, jobConf);
     jobConf.set("mapred.local.dir",
       conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
     LOG.info("Mini mapreduce cluster started");
