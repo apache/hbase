@@ -631,6 +631,7 @@
           <version>0.8</version>
           <configuration>
             <excludes>
+              <exclude>**/*.versionsBackup</exclude>
               <exclude>**/*.log</exclude>
               <exclude>**/.*</exclude>
               <exclude>**/*.tgz</exclude>
