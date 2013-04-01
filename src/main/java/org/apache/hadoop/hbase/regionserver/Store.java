@@ -109,6 +109,9 @@ import com.google.common.collect.Lists;
  */
 public class Store extends SchemaConfigured implements HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
+  
+  public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
+  public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 7;
 
   protected final MemStore memstore;
   // This stores directory in the filesystem.
@@ -134,6 +137,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final Object flushLock = new Object();
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final boolean verifyBulkLoads;
+  
+  private long blockingFileCount;
 
   /* The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)
@@ -237,7 +242,10 @@ public class Store extends SchemaConfigured implements HeapSize {
       = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify", false);
-
+    
+    this.blockingFileCount =
+                conf.getInt(BLOCKING_STOREFILES_KEY, DEFAULT_BLOCKING_STOREFILE_COUNT);
+    
     if (Store.closeCheckInterval == 0) {
       Store.closeCheckInterval = conf.getInt(
           "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
@@ -2271,7 +2279,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (17 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
+          + (17 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
           + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
@@ -2291,6 +2299,10 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public ScanInfo getScanInfo() {
     return scanInfo;
+  }
+  
+  public boolean hasTooManyStoreFiles() {
+    return getStorefilesCount() > this.blockingFileCount;
   }
 
   /**
