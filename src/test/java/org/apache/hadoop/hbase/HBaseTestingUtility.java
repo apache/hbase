@@ -1827,37 +1827,66 @@ public class HBaseTestingUtility {
     }
   }
 
-
   /**
-   * Wait until <code>countOfRegion</code> in .META. have a non-empty
-   * info:server.  This means all regions have been deployed, master has been
-   * informed and updated .META. with the regions deployed server.
-   * @param countOfRegions How many regions in .META.
+   * Wait until all regions for a table in .META. have a non-empty
+   * info:server, up to 60 seconds.  This means all regions have been deployed,
+   * master has been informed and updated .META. with the regions deployed
+   * server.
+   * @param tableName the table name
    * @throws IOException
    */
-  public void waitUntilAllRegionsAssigned(final int countOfRegions)
-  throws IOException {
+  public void waitUntilAllRegionsAssigned(final byte[] tableName) throws IOException {
+    waitUntilAllRegionsAssigned(tableName, 60000);
+  }
+
+  /**
+   * Wait until all regions for a table in .META. have a non-empty
+   * info:server, or until timeout.  This means all regions have been
+   * deployed, master has been informed and updated .META. with the regions
+   * deployed server.
+   * @param tableName the table name
+   * @param timeout timeout, in milliseconds
+   * @throws IOException
+   */
+  public void waitUntilAllRegionsAssigned(final byte[] tableName, final long timeout)
+      throws IOException {
+    long deadline = System.currentTimeMillis() + timeout;
     HTable meta = new HTable(getConfiguration(), HConstants.META_TABLE_NAME);
-    while (true) {
-      int rows = 0;
-      Scan scan = new Scan();
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      ResultScanner s = meta.getScanner(scan);
-      for (Result r = null; (r = s.next()) != null;) {
-        byte [] b =
-          r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-        if (b == null || b.length <= 0) {
-          break;
+    try {
+      while (true) {
+        boolean allRegionsAssigned = true;
+        Scan scan = new Scan();
+        scan.addFamily(HConstants.CATALOG_FAMILY);
+        ResultScanner s = meta.getScanner(scan);
+        try {
+          Result r;
+          while ((r = s.next()) != null) {
+            byte [] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+            HRegionInfo info = Writables.getHRegionInfoOrNull(b);
+            if (info != null && Bytes.equals(info.getTableName(), tableName)) {
+              b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+              allRegionsAssigned &= (b != null);
+            }
+          }
+        } finally {
+          s.close();
         }
-        rows++;
+        if (allRegionsAssigned) {
+          return;
+        }
+        long now = System.currentTimeMillis();
+        if (now > deadline) {
+          throw new IOException("Timeout waiting for all regions of " +
+            Bytes.toStringBinary(tableName) + " to be assigned");
+        }
+        try {
+          Thread.sleep(deadline - now < 200 ? deadline - now : 200);
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        }
       }
-      s.close();
-      // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions) {
-        break;
-      }
-      LOG.info("Found=" + rows);
-      Threads.sleep(200);
+    } finally {
+      meta.close();
     }
   }
 
