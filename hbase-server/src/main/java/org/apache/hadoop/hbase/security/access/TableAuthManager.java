@@ -101,15 +101,16 @@ public class TableAuthManager {
   private TableAuthManager(ZooKeeperWatcher watcher, Configuration conf)
       throws IOException {
     this.conf = conf;
+
+    // initialize global permissions based on configuration
+    globalCache = initGlobal(conf);
+
     this.zkperms = new ZKPermissionWatcher(watcher, this, conf);
     try {
       this.zkperms.start();
     } catch (KeeperException ke) {
       LOG.error("ZooKeeper initialization failed", ke);
     }
-
-    // initialize global permissions based on configuration
-    globalCache = initGlobal(conf);
   }
 
   /**
