@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -216,7 +217,7 @@ public class HFileArchiver {
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, parent, family);
 
     // make sure we don't archive if we can't and that the archive dir exists
-    if (!fs.mkdirs(storeArchiveDir)) {
+    if (!HBaseFileSystem.makeDirOnFileSystem(fs, conf, storeArchiveDir)) {
       throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
           + Bytes.toString(family) + ", deleting compacted files instead.");
     }
@@ -250,7 +251,7 @@ public class HFileArchiver {
       Configuration conf, Path tableDir, byte[] family, Path storeFile) throws IOException {
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
     // make sure we don't archive if we can't and that the archive dir exists
-    if (!fs.mkdirs(storeArchiveDir)) {
+    if (!HBaseFileSystem.makeDirOnFileSystem(fs, conf, storeArchiveDir)) {
       throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
           + Bytes.toString(family) + ", deleting compacted files instead.");
     }
@@ -318,7 +319,7 @@ public class HFileArchiver {
 
     // make sure the archive directory exists
     if (!fs.exists(baseArchiveDir)) {
-      if (!fs.mkdirs(baseArchiveDir)) {
+      if (!HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), baseArchiveDir)) {
         throw new IOException("Failed to create the archive directory:" + baseArchiveDir
             + ", quitting archive attempt.");
       }
@@ -385,11 +386,12 @@ public class HFileArchiver {
 
       // move the archive file to the stamped backup
       Path backedupArchiveFile = new Path(archiveDir, filename + SEPARATOR + archiveStartTime);
-      if (!fs.rename(archiveFile, backedupArchiveFile)) {
+      if (!HBaseFileSystem.renameDirForFileSystem(fs, fs.getConf(), archiveFile,
+        backedupArchiveFile)) {
         LOG.error("Could not rename archive file to backup: " + backedupArchiveFile
             + ", deleting existing file in favor of newer.");
         // try to delete the exisiting file, if we can't rename it
-        if (!fs.delete(archiveFile, false)) {
+        if (!HBaseFileSystem.deleteFileFromFileSystem(fs, fs.getConf(), archiveFile)) {
           throw new IOException("Couldn't delete existing archive file (" + archiveFile
               + ") or rename it to the backup file (" + backedupArchiveFile
               + ") to make room for similarly named file.");
@@ -410,10 +412,9 @@ public class HFileArchiver {
         // the cleaner has removed our archive directory (HBASE-7643).
         // (we're in a retry loop, so don't worry too much about the exception)
         try {
-          if (!fs.exists(archiveDir)) {
-            if (fs.mkdirs(archiveDir)) {
-              LOG.debug("Created archive directory:" + archiveDir);
-            }
+          if (!fs.exists(archiveDir)
+              && HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), archiveDir)) {
+            LOG.debug("Created archive directory:" + archiveDir);
           }
         } catch (IOException e) {
           LOG.warn("Failed to create the archive directory: " + archiveDir, e);
@@ -476,7 +477,7 @@ public class HFileArchiver {
    */
   private static boolean deleteRegionWithoutArchiving(FileSystem fs, Path regionDir)
       throws IOException {
-    if (fs.delete(regionDir, true)) {
+    if (HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), regionDir)) {
       LOG.debug("Deleted all region files in: " + regionDir);
       return true;
     }
@@ -610,7 +611,7 @@ public class HFileArchiver {
     public boolean moveAndClose(Path dest) throws IOException {
       this.close();
       Path p = this.getPath();
-      return fs.rename(p, dest);
+      return HBaseFileSystem.renameDirForFileSystem(fs, fs.getConf(), p, dest);
     }
 
     /**
@@ -641,7 +642,8 @@ public class HFileArchiver {
 
     @Override
     public void delete() throws IOException {
-      if (!fs.delete(file, true)) throw new IOException("Failed to delete:" + this.file);
+      if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), file)) 
+        throw new IOException("Failed to delete:" + this.file);
     }
 
     @Override

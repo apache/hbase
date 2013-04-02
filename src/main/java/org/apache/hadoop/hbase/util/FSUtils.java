@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -106,7 +107,7 @@ public abstract class FSUtils {
    */
   public Path checkdir(final FileSystem fs, final Path dir) throws IOException {
     if (!fs.exists(dir)) {
-      fs.mkdirs(dir);
+      HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), dir);
     }
     return dir;
   }
@@ -151,13 +152,10 @@ public abstract class FSUtils {
    * @return output stream to the created file
    * @throws IOException if the file cannot be created
    */
-  public static FSDataOutputStream create(FileSystem fs, Path path,
-      FsPermission perm, boolean overwrite) throws IOException {
+  public static FSDataOutputStream create(FileSystem fs, Path path, FsPermission perm,
+      boolean overwrite) throws IOException {
     LOG.debug("Creating file=" + path + " with permission=" + perm);
-
-    return fs.create(path, perm, overwrite,
-        fs.getConf().getInt("io.file.buffer.size", 4096),
-        fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
+    return HBaseFileSystem.createPathWithPermsOnFileSystem(fs, fs.getConf(), path, perm, overwrite);
   }
 
   /**

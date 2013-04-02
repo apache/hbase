@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -675,7 +676,7 @@ public class StoreFile extends SchemaConfigured {
    */
   public void deleteReader() throws IOException {
     closeReader(true);
-    this.fs.delete(getPath(), true);
+    HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), getPath());
   }
 
   @Override
@@ -718,7 +719,7 @@ public class StoreFile extends SchemaConfigured {
     if (!fs.exists(src)) {
       throw new FileNotFoundException(src.toString());
     }
-    if (!fs.rename(src, tgt)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, fs.getConf(), src, tgt)) {
       throw new IOException("Failed rename of " + src + " to " + tgt);
     }
     return tgt;
@@ -841,7 +842,7 @@ public class StoreFile extends SchemaConfigured {
       }
 
       if (!fs.exists(dir)) {
-        fs.mkdirs(dir);
+        HBaseFileSystem.makeDirOnFileSystem(fs, conf, dir);
       }
 
       if (filePath == null) {

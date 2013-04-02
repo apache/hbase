@@ -71,6 +71,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -657,7 +658,7 @@ public class HRegion implements HeapSize { // , Writable{
     final Path initialFiles, final Path regiondir)
   throws IOException {
     if (initialFiles != null && fs.exists(initialFiles)) {
-      if (!fs.rename(initialFiles, regiondir)) {
+      if (!HBaseFileSystem.renameDirForFileSystem(fs, fs.getConf(), initialFiles, regiondir)) {
         LOG.warn("Unable to rename " + initialFiles + " to " + regiondir);
       }
     }
@@ -819,7 +820,7 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       out.close();
     }
-    if (!fs.rename(tmpPath, regioninfoPath)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, tmpPath, regioninfoPath)) {
       throw new IOException("Unable to rename " + tmpPath + " to " +
         regioninfoPath);
     }
@@ -2663,7 +2664,7 @@ public class HRegion implements HeapSize { // , Writable{
         // open and read the files as well).
         LOG.debug("Creating reference for file (" + (i+1) + "/" + sz + ") : " + file);
         Path referenceFile = new Path(dstStoreDir, file.getName());
-        boolean success = fs.createNewFile(referenceFile);
+        boolean success = HBaseFileSystem.createNewFileOnFileSystem(fs, conf, referenceFile);
         if (!success) {
           throw new IOException("Failed to create reference file:" + referenceFile);
         }
@@ -3072,7 +3073,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     // Now delete the content of recovered edits.  We're done w/ them.
     for (Path file: files) {
-      if (!this.fs.delete(file, false)) {
+      if (!HBaseFileSystem.deleteFileFromFileSystem(fs, conf, file)) {
         LOG.error("Failed delete of " + file);
       } else {
         LOG.debug("Deleted recovered.edits file=" + file);
@@ -3264,7 +3265,7 @@ public class HRegion implements HeapSize { // , Writable{
     FileStatus stat = fs.getFileStatus(p);
     if (stat.getLen() > 0) return false;
     LOG.warn("File " + p + " is zero-length, deleting.");
-    fs.delete(p, false);
+    HBaseFileSystem.deleteFileFromFileSystem(fs, fs.getConf(), p);
     return true;
   }
 
@@ -4179,7 +4180,7 @@ public class HRegion implements HeapSize { // , Writable{
         HTableDescriptor.getTableDir(rootDir, info.getTableName());
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
-    fs.mkdirs(regionDir);
+    HBaseFileSystem.makeDirOnFileSystem(fs, conf, regionDir);
     // Write HRI to a file in case we need to recover .META.
     writeRegioninfoOnFilesystem(info, regionDir, fs, conf);
     HLog effectiveHLog = hlog;
@@ -4375,7 +4376,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETING region " + regiondir.toString());
     }
-    if (!fs.delete(regiondir, true)) {
+    if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), regiondir)) {
       LOG.warn("Failed delete of " + regiondir);
     }
   }
@@ -4421,7 +4422,7 @@ public class HRegion implements HeapSize { // , Writable{
     final HRegionInfo hri, byte [] colFamily)
   throws IOException {
     Path dir = Store.getStoreHomedir(tabledir, hri.getEncodedName(), colFamily);
-    if (!fs.mkdirs(dir)) {
+    if (!HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), dir)) {
       LOG.warn("Failed to create " + dir);
     }
   }
@@ -4531,7 +4532,7 @@ public class HRegion implements HeapSize { // , Writable{
       throw new IOException("Cannot merge; target file collision at " +
           newRegionDir);
     }
-    fs.mkdirs(newRegionDir);
+    HBaseFileSystem.makeDirOnFileSystem(fs, conf, newRegionDir);
 
     LOG.info("starting merge of regions: " + a + " and " + b +
       " into new region " + newRegionInfo.toString() +

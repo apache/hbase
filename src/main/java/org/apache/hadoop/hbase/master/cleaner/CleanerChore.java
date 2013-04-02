@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -153,7 +154,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     // if the directory doesn't exist, then we are done
     if (children == null) {
       try {
-        return fs.delete(toCheck, false);
+        return HBaseFileSystem.deleteFileFromFileSystem(fs, conf, toCheck);
       } catch (IOException e) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Couldn't delete directory: " + toCheck, e);
@@ -185,7 +186,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     // delete this directory. However, don't do so recursively so we don't delete files that have
     // been added since we last checked.
     try {
-      return fs.delete(toCheck, false);
+      return HBaseFileSystem.deleteFileFromFileSystem(fs, conf, toCheck);
     } catch (IOException e) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Couldn't delete directory: " + toCheck, e);
@@ -207,7 +208,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     // first check to see if the path is valid
     if (!validate(filePath)) {
       LOG.warn("Found a wrongly formatted file: " + filePath.getName() + " deleting it.");
-      boolean success = this.fs.delete(filePath, true);
+      boolean success = HBaseFileSystem.deleteDirFromFileSystem(fs, conf, filePath);
       if (!success) LOG.warn("Attempted to delete:" + filePath
           + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
 
@@ -233,7 +234,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     if (LOG.isTraceEnabled()) {
       LOG.trace("Removing:" + filePath + " from archive");
     }
-    boolean success = this.fs.delete(filePath, false);
+    boolean success = HBaseFileSystem.deleteFileFromFileSystem(fs, conf, filePath);
     if (!success) {
       LOG.warn("Attempted to delete:" + filePath
           + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
