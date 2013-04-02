@@ -3544,7 +3544,6 @@ public class HRegion implements HeapSize { // , Writable{
           IOException ioe = new DoNotRetryIOException(
               "No such column family " + Bytes.toStringBinary(familyName));
           ioes.add(ioe);
-          failures.add(p);
         } else {
           try {
             store.assertBulkLoadHFileOk(new Path(path));
@@ -3558,6 +3557,13 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
 
+      // validation failed because of some sort of IO problem.
+      if (ioes.size() != 0) {
+        IOException e = MultipleIOException.createIOException(ioes);
+        LOG.error("There were one or more IO errors when checking if the bulk load is ok.", e);
+        throw e;
+      }
+
       // validation failed, bail out before doing anything permanent.
       if (failures.size() != 0) {
         StringBuilder list = new StringBuilder();
@@ -3569,13 +3575,6 @@ public class HRegion implements HeapSize { // , Writable{
         LOG.warn("There was a recoverable bulk load failure likely due to a" +
             " split.  These (family, HFile) pairs were not loaded: " + list);
         return false;
-      }
-
-      // validation failed because of some sort of IO problem.
-      if (ioes.size() != 0) {
-        LOG.error("There were IO errors when checking if bulk load is ok.  " +
-            "throwing exception!");
-        throw MultipleIOException.createIOException(ioes);
       }
 
       for (Pair<byte[], String> p : familyPaths) {
