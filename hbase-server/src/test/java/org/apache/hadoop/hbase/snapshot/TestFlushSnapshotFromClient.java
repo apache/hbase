@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -233,14 +232,16 @@ public class TestFlushSnapshotFromClient {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     SnapshotTestingUtils.waitForSnapshotToComplete(master, snapshot, 200);
     LOG.info(" === Async Snapshot Completed ===");
-    HBaseFsck.debugLsr(UTIL.getHBaseCluster().getConfiguration(), FSUtils.getRootDir(UTIL.getConfiguration()));
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     // make sure we get the snapshot
     SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot);
 
     // test that we can delete the snapshot
     admin.deleteSnapshot(snapshot.getName());
     LOG.info(" === Async Snapshot Deleted ===");
-    HBaseFsck.debugLsr(UTIL.getHBaseCluster().getConfiguration(), FSUtils.getRootDir(UTIL.getConfiguration()));
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     // make sure we don't have any snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
     LOG.info(" === Async Snapshot Test Completed ===");
@@ -278,7 +279,7 @@ public class TestFlushSnapshotFromClient {
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshots.get(0), rootDir);
     assertTrue(fs.exists(snapshotDir));
-    HBaseFsck.debugLsr(UTIL.getHBaseCluster().getConfiguration(),  snapshotDir);
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(), snapshotDir, LOG);
     Path snapshotinfo = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
     assertTrue(fs.exists(snapshotinfo));
 
@@ -304,7 +305,8 @@ public class TestFlushSnapshotFromClient {
 
     // test that we can delete the snapshot
     admin.deleteSnapshot(snapshotName);
-    HBaseFsck.debugLsr(UTIL.getHBaseCluster().getConfiguration(), FSUtils.getRootDir(UTIL.getConfiguration()));
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
     // make sure we don't have any snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
