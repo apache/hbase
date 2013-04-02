@@ -157,6 +157,49 @@ public class TestLoadIncrementalHFiles {
     assertEquals(expectedRows, util.countRows(table));
   }
 
+  /**
+   * Test loading into a column family that does not exist.
+   */
+  @Test
+  public void testNonexistentColumnFamilyLoad() throws Exception {
+    String testName = "testNonexistentColumnFamilyLoad";
+    byte[][][] hfileRanges = new byte[][][] {
+      new byte[][]{ Bytes.toBytes("aaa"), Bytes.toBytes("ccc") },
+      new byte[][]{ Bytes.toBytes("ddd"), Bytes.toBytes("ooo") },
+    }; 
+
+    Path dir = util.getDataTestDir(testName);
+    FileSystem fs = util.getTestFileSystem();
+    dir = dir.makeQualified(fs);
+    Path familyDir = new Path(dir, Bytes.toString(FAMILY));
+
+    int hfileIdx = 0;
+    for (byte[][] range : hfileRanges) {
+      byte[] from = range[0];
+      byte[] to = range[1];
+      createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
+          + hfileIdx++), FAMILY, QUALIFIER, from, to, 1000);
+    }
+
+    final byte[] TABLE = Bytes.toBytes("mytable_"+testName);
+
+    HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    admin.createTable(htd, SPLIT_KEYS);
+
+    HTable table = new HTable(util.getConfiguration(), TABLE);
+    util.waitTableAvailable(TABLE, 30000);
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration(), false);
+    try {
+      loader.doBulkLoad(dir, table);
+      assertTrue("Loading into table with non-existent family should have failed", false);
+    } catch (Exception e) {
+      assertTrue("IOException expected", e instanceof IOException);
+    }
+    table.close();
+    admin.close();
+  }
+
   @Test
   public void testSplitStoreFile() throws IOException {
     Path dir = util.getDataTestDir("testSplitHFile");
