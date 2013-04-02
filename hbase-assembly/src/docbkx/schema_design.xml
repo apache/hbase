@@ -431,16 +431,20 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
    can be approached.  Note:  this is just an illustration of potential approaches, not an exhaustive list. 
    Know your data, and know your processing requirements.
   </para>  
-  <para>There are 3 case studies described:    
+  <para>It is highly recommended that you read the rest of the <xref linkend="schema">Schema Design Chapter</xref> first, before reading
+  these case studies.
+  </para>
+  <para>Thee following case studies are described:    
       <itemizedlist>
          <listitem>Log Data / Timeseries Data</listitem>
          <listitem>Log Data / Timeseries on Steroids</listitem>
          <listitem>Customer/Sales</listitem>
+         <listitem>Tall/Wide/Middle Schema Design</listitem>
+         <listitem>List Data</listitem>
      </itemizedlist> 
-    ... and then a brief section on "Tall/Wide/Middle" in terms of schema design approaches.
   </para>
     <section xml:id="schema.casestudies.log-timeseries">
-      <title>Log Data and Timeseries Data Case Study</title>
+      <title>Case Study - Log Data and Timeseries Data</title>
       <para>Assume that the following data elements are being collected.
         <itemizedlist>
           <listitem>Hostname</listitem>
@@ -524,9 +528,11 @@ long bucket = timestamp % numBuckets;
       </section>  <!--  varkeys -->
     </section>  <!--  log data and timeseries -->
     <section xml:id="schema.casestudies.log-timeseries.log-steroids">
-      <title>Log Data and Timeseries Data on Steroids Case Study</title>
+      <title>Case Study - Log Data and Timeseries Data on Steroids</title>
       <para>This effectively is the OpenTSDB approach.  What OpenTSDB does is re-write data and pack rows into columns for 
-        certain time-periods.  For a detailed explanation, see:  <link xlink:href="http://opentsdb.net/schema.html">http://opentsdb.net/schema.html</link>.
+        certain time-periods.  For a detailed explanation, see:  <link xlink:href="http://opentsdb.net/schema.html">http://opentsdb.net/schema.html</link>, 
+        and <link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</link>
+	    from HBaseCon2012.
       </para>
       <para>But this is how the general concept works:  data is ingested, for example, in this manner…
 <programlisting>
@@ -544,7 +550,7 @@ long bucket = timestamp % numBuckets;
     </section>  <!--  log data timeseries steroids -->
     
     <section xml:id="schema.casestudies.log-timeseries.custsales">
-      <title>Customer / Sales Case Study</title>
+      <title>Case Study - Customer / Sales</title>
       <para>Assume that HBase is used to store customer and sales information.  There are two core record-types being ingested:  
         a Customer record type, and Sales record type.
       </para>
@@ -612,7 +618,7 @@ reasonable spread in the keyspace, similar options appear:
             </para>
         </section>
     </section>  <!--  cust/sales -->   
-	<section xml:id="schema.smackdown"><title>"Tall/Wide/Middle" Schema Design Smackdown</title>
+	<section xml:id="schema.smackdown"><title>Case Study - "Tall/Wide/Middle" Schema Design Smackdown</title>
 	  <para>This section will describe additional schema design questions that appear on the dist-list, specifically about
 	  tall and wide tables.  These are general guidelines and not laws - each application must consider its own needs.
 	  </para>
@@ -638,11 +644,145 @@ reasonable spread in the keyspace, similar options appear:
 	    OpenTSDB is the best example of this case where a single row represents a defined time-range, and then discrete events are treated as
 	    columns.  This approach is often more complex, and may require the additional complexity of re-writing your data, but has the
 	    advantage of being I/O efficient.  For an overview of this approach, see
-	    <link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</link>
-	    from HBaseCon2012.
+	    <xref linkend="schema.casestudies.log-timeseries.log-steroids"/>.
 	    </para>
 	  </section>
 	</section>  
+	    <!--  note:  the following id is not consistent with the others becaus it was formerly in the Case Studies chapter,
+	    but I didn't want to break backward compatibility of the link.  But future entries should look like the above case-study
+	    links (schema.casestudies. ...)  -->
+    	<section xml:id="casestudies.schema.listdata">
+    		<title>Case Study - List Data</title>
+    		<para>The following is an exchange from the user dist-list regarding a fairly common question:  
+    		how to handle per-user list data in Apache HBase. 
+    		</para>
+    		<para>*** QUESTION ***</para>
+    		<para>
+    		We're looking at how to store a large amount of (per-user) list data in
+HBase, and we were trying to figure out what kind of access pattern made
+the most sense.  One option is store the majority of the data in a key, so
+we could have something like:
+    		</para>
+
+    		<programlisting>
+&lt;FixedWidthUserName&gt;&lt;FixedWidthValueId1&gt;:"" (no value)
+&lt;FixedWidthUserName&gt;&lt;FixedWidthValueId2&gt;:"" (no value)
+&lt;FixedWidthUserName&gt;&lt;FixedWidthValueId3&gt;:"" (no value)
+			</programlisting>
+
+The other option we had was to do this entirely using:
+    		<programlisting>
+&lt;FixedWidthUserName&gt;&lt;FixedWidthPageNum0&gt;:&lt;FixedWidthLength&gt;&lt;FixedIdNextPageNum&gt;&lt;ValueId1&gt;&lt;ValueId2&gt;&lt;ValueId3&gt;...
+&lt;FixedWidthUserName&gt;&lt;FixedWidthPageNum1&gt;:&lt;FixedWidthLength&gt;&lt;FixedIdNextPageNum&gt;&lt;ValueId1&gt;&lt;ValueId2&gt;&lt;ValueId3&gt;...
+    		</programlisting>
+			<para>
+where each row would contain multiple values.
+So in one case reading the first thirty values would be:
+			</para>
+    		<programlisting>
+scan { STARTROW =&gt; 'FixedWidthUsername' LIMIT =&gt; 30}
+    		</programlisting>
+And in the second case it would be
+    		<programlisting>
+get 'FixedWidthUserName\x00\x00\x00\x00'
+    		</programlisting>
+			<para>
+The general usage pattern would be to read only the first 30 values of
+these lists, with infrequent access reading deeper into the lists.  Some
+users would have &lt;= 30 total values in these lists, and some users would
+have millions (i.e. power-law distribution)
+			</para>			
+			<para>
+ The single-value format seems like it would take up more space on HBase,
+but would offer some improved retrieval / pagination flexibility.  Would
+there be any significant performance advantages to be able to paginate via
+gets vs paginating with scans?
+			</para>
+			<para>
+  My initial understanding was that doing a scan should be faster if our
+paging size is unknown (and caching is set appropriately), but that gets
+should be faster if we'll always need the same page size.  I've ended up
+hearing different people tell me opposite things about performance.  I
+assume the page sizes would be relatively consistent, so for most use cases
+we could guarantee that we only wanted one page of data in the
+fixed-page-length case.  I would also assume that we would have infrequent
+updates, but may have inserts into the middle of these lists (meaning we'd
+need to update all subsequent rows).
+			</para>
+			<para>
+Thanks for help / suggestions / follow-up questions.
+			</para>
+			<para>*** ANSWER ***</para>
+			<para>
+If I understand you correctly, you're ultimately trying to store
+triples in the form "user, valueid, value", right? E.g., something
+like:
+			</para>
+			<programlisting>
+"user123, firstname, Paul",
+"user234, lastname, Smith"
+			</programlisting>
+			<para>
+(But the usernames are fixed width, and the valueids are fixed width).
+			</para>
+			<para>
+And, your access pattern is along the lines of: "for user X, list the
+next 30 values, starting with valueid Y". Is that right? And these
+values should be returned sorted by valueid?
+			</para>
+			<para>
+The tl;dr version is that you should probably go with one row per
+user+value, and not build a complicated intra-row pagination scheme on
+your own unless you're really sure it is needed.
+			</para>
+			<para>
+Your two options mirror a common question people have when designing
+HBase schemas: should I go "tall" or "wide"? Your first schema is
+"tall": each row represents one value for one user, and so there are
+many rows in the table for each user; the row key is user + valueid,
+and there would be (presumably) a single column qualifier that means
+"the value". This is great if you want to scan over rows in sorted
+order by row key (thus my question above, about whether these ids are
+sorted correctly). You can start a scan at any user+valueid, read the
+next 30, and be done. What you're giving up is the ability to have
+transactional guarantees around all the rows for one user, but it
+doesn't sound like you need that. Doing it this way is generally
+recommended (see
+here <link xlink:href="http://hbase.apache.org/book.html#schema.smackdown">http://hbase.apache.org/book.html#schema.smackdown</link>).
+			</para>
+			<para>
+Your second option is "wide": you store a bunch of values in one row,
+using different qualifiers (where the qualifier is the valueid). The
+simple way to do that would be to just store ALL values for one user
+in a single row. I'm guessing you jumped to the "paginated" version
+because you're assuming that storing millions of columns in a single
+row would be bad for performance, which may or may not be true; as
+long as you're not trying to do too much in a single request, or do
+things like scanning over and returning all of the cells in the row,
+it shouldn't be fundamentally worse. The client has methods that allow
+you to get specific slices of columns.
+			</para>
+			<para>
+Note that neither case fundamentally uses more disk space than the
+other; you're just "shifting" part of the identifying information for
+a value either to the left (into the row key, in option one) or to the
+right (into the column qualifiers in option 2). Under the covers,
+every key/value still stores the whole row key, and column family
+name. (If this is a bit confusing, take an hour and watch Lars
+George's excellent video about understanding HBase schema design:
+<link xlink:href="http://www.youtube.com/watch?v=_HLoH_PgrLk)">http://www.youtube.com/watch?v=_HLoH_PgrLk)</link>.
+			</para>
+			<para>
+A manually paginated version has lots more complexities, as you note,
+like having to keep track of how many things are in each page,
+re-shuffling if new values are inserted, etc. That seems significantly
+more complex. It might have some slight speed advantages (or
+disadvantages!) at extremely high throughput, and the only way to
+really know that would be to try it out. If you don't have time to
+build it both ways and compare, my advice would be to start with the
+simplest option (one row per user+value). Start simple and iterate! :)
+			</para>
+		</section>  <!--  listdata -->
 
   </section> <!--  schema design cases -->
   <section xml:id="schema.ops"><title>Operational and Performance Configuration Options</title>
@@ -652,4 +792,3 @@ reasonable spread in the keyspace, similar options appear:
   </section>
 
   </chapter>   <!--  schema design -->
-
