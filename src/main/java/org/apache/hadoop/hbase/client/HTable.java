@@ -120,6 +120,43 @@ public class HTable implements HTableInterface {
 
   /**
    * Creates an object to access a HBase table.
+   * Internally it creates a new instance of {@link Configuration} and a new
+   * client to zookeeper as well as other resources.  It also comes up with
+   * a fresh view of the cluster and must do discovery from scratch of region
+   * locations; i.e. it will not make use of already-cached region locations if
+   * available. Use only when being quick and dirty.
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated use {@link #HTable(Configuration, String)}
+   */
+  @Deprecated
+  public HTable(final String tableName)
+  throws IOException {
+    this(HBaseConfiguration.create(), Bytes.toBytes(tableName));
+    LOG.warn("This constructor HTable(byte[]) is deprecated and it will be removed. " +
+             "Please use HTable(Configuration, byte[]) to construct an HTable");
+  }
+
+  /**
+   * Creates an object to access a HBase table.
+   * Internally it creates a new instance of {@link Configuration} and a new
+   * client to zookeeper as well as other resources.  It also comes up with
+   * a fresh view of the cluster and must do discovery from scratch of region
+   * locations; i.e. it will not make use of already-cached region locations if
+   * available. Use only when being quick and dirty.
+   * @param tableName Name of the table.
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated use {@link #HTable(Configuration, byte[])}
+   */
+  @Deprecated
+  public HTable(final byte [] tableName)
+  throws IOException {
+    this(HBaseConfiguration.create(), tableName);
+    LOG.warn("This constructor HTable(byte[]) is deprecated and it will be removed. " +
+             "Please use HTable(Configuration, byte[]) to construct an HTable");
+  }
+
+  /**
+   * Creates an object to access a HBase table.
    * Shares zookeeper connection and other resources with other HTable instances
    * created with the same <code>conf</code> instance.  Uses already-populated
    * region cache if one is available, populated by any other HTable instances
