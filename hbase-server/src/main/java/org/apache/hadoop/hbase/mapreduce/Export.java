@@ -56,31 +56,6 @@ public class Export {
   final static String EXPORT_BATCHING = "hbase.export.scanner.batch";
 
   /**
-   * Mapper.
-   */
-  static class Exporter
-  extends TableMapper<ImmutableBytesWritable, Result> {
-    /**
-     * @param row  The current table row key.
-     * @param value  The columns.
-     * @param context  The current context.
-     * @throws IOException When something is broken with the data.
-     * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN,
-     *   org.apache.hadoop.mapreduce.Mapper.Context)
-     */
-    @Override
-    public void map(ImmutableBytesWritable row, Result value,
-      Context context)
-    throws IOException {
-      try {
-        context.write(row, value);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    }
-  }
-
-  /**
    * Sets up the actual job.
    *
    * @param conf  The current configuration.
@@ -94,11 +69,10 @@ public class Export {
     Path outputDir = new Path(args[1]);
     Job job = new Job(conf, NAME + "_" + tableName);
     job.setJobName(NAME + "_" + tableName);
-    job.setJarByClass(Exporter.class);
+    job.setJarByClass(Export.class);
     // Set optional scan parameters
     Scan s = getConfiguredScanForJob(conf, args);
-    TableMapReduceUtil.initTableMapperJob(tableName, s, Exporter.class, null,
-      null, job);
+    IdentityTableMapper.initJob(tableName, s, IdentityTableMapper.class, job);
     // No reducers.  Just write straight to output files.
     job.setNumReduceTasks(0);
     job.setOutputFormatClass(SequenceFileOutputFormat.class);
