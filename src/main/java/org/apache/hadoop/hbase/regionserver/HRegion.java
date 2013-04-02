@@ -1383,6 +1383,7 @@ public class HRegion implements HeapSize {
     status.setStatus("Obtaining lock to block concurrent updates");
     long t0, t1;
     long t01 = 0, t02 = 0, t03 = 0, t04 = 0, t05 = 0;
+    StringBuilder sb = new StringBuilder();
     this.updatesLock.writeLock().lock();
     t0 = EnvironmentEdgeManager.currentTimeMillis();
     status.setStatus("Preparing to flush by snapshotting stores");
@@ -1391,35 +1392,40 @@ public class HRegion implements HeapSize {
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(
         stores.size());
     t01 = EnvironmentEdgeManager.currentTimeMillis();
+    sb.append("setStatus : " + (t01-t0) + ", ");
     try {
       sequenceId = (wal == null)? myseqid :
         wal.startCacheFlush(this.regionInfo.getRegionName());
       t02 = EnvironmentEdgeManager.currentTimeMillis();
+      sb.append("startCacheFlush : " + (t02-t01) + ", ");
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
       t03 = EnvironmentEdgeManager.currentTimeMillis();
+      sb.append("getCompleteCacheFlushSeqId : " + (t03-t02) + ", ");
+      long tmp0, tmp1;
       for (Store s : stores.values()) {
+        tmp0 = EnvironmentEdgeManager.currentTimeMillis();
         storeFlushers.add(s.getStoreFlusher(completeSequenceId));
+        tmp1 = EnvironmentEdgeManager.currentTimeMillis();
+        sb.append("getFlusher : " + s.getColumnFamilyName() + " : " + (tmp1-tmp0));
       }
       t04 = EnvironmentEdgeManager.currentTimeMillis();
+      sb.append(" all getStoreFlusher : " + (t04-t03) + ", ");
 
       // prepare flush (take a snapshot)
       for (StoreFlusher flusher : storeFlushers) {
+        tmp0 = EnvironmentEdgeManager.currentTimeMillis();
         flusher.prepare();
+        tmp1 = EnvironmentEdgeManager.currentTimeMillis();
+        sb.append("prepare : " + flusher.toString() + " : " + (tmp1-tmp0));
       }
       t05 = EnvironmentEdgeManager.currentTimeMillis();
+      sb.append(" all prepare() : " + (t05-t04) + " ms. ");
     } finally {
       this.updatesLock.writeLock().unlock();
       t1 = EnvironmentEdgeManager.currentTimeMillis();
       LOG.debug("Finished snapshotting. Held region-wide updates lock for "
         + (t1-t0) + " ms."
-        + " parts: "
-        + (t01-t0) +  " ms. "
-        + (t02-t01) +  " ms. "
-        + (t03-t02) +  " ms. "
-        + (t04-t03) +  " ms. "
-        + (t05-t04) +  " ms. "
-        + (t1-t05) +  " ms. "
-        );
+        + sb.toString());
     }
 
     status.setStatus("Flushing stores");
