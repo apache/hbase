@@ -795,7 +795,7 @@
 
   <property skipInDoc="true">
     <name>hbase.defaults.for.version</name>
-    <value>${pom.version}</value>
+    <value>@@@VERSION@@@</value>
     <description>
     This defaults file was compiled for version ${pom.version}. This variable is used
     to make sure that a user doesn't have an old version of hbase-default.xml on the
