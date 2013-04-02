@@ -216,9 +216,9 @@ public class Replication implements WALActionsListener,
       return;
     }
     String plugins = conf.get(HBASE_MASTER_LOGCLEANER_PLUGINS);
-    if (!plugins.contains(ReplicationLogCleaner.class.toString())) {
-      conf.set(HBASE_MASTER_LOGCLEANER_PLUGINS,
-          plugins + "," + ReplicationLogCleaner.class.getCanonicalName());
+    String cleanerClass = ReplicationLogCleaner.class.getCanonicalName();
+    if (!plugins.contains(cleanerClass)) {
+      conf.set(HBASE_MASTER_LOGCLEANER_PLUGINS, plugins + "," + cleanerClass);
     }
   }
 
