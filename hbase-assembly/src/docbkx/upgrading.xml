@@ -28,11 +28,35 @@
 -->
     <title>Upgrading</title>
     <para>You cannot skip major verisons upgrading.  If you are upgrading from
-    version 0.20.x to 0.92.x, you must first go from 0.20.x to 0.90.x and then go
-    from 0.90.x to 0.92.x.</para>
+    version 0.90.x to 0.94.x, you must first go from 0.90.x to 0.92.x and then go
+    from 0.92.x to 0.94.x.</para>
     <para>
         Review <xref linkend="configuration" />, in particular the section on Hadoop version.
     </para>
+    <section xml:id="hbase.versioning">
+        <title>HBase version numbers</title>
+        <para>HBase has not walked a straight line where version numbers are concerned.
+            Since we came up out of hadoop itself, we originally tracked hadoop versioning.
+            Later we left hadoop versioning behind because we were moving at a different rate
+            to that of our parent.  If you are into the arcane, checkout our old wiki page
+            on <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HBaseVersions">HBase Versioning</link>
+            which tries to connect the HBase version dots.</para>
+        <section xml:id="hbase.development.series"><title>Odd/Even Versioning or "Development"" Series Releases</title>
+            <para>Ahead of big releases, we have been putting up preview versions to start the
+                feedback cycle turning-over  earlier.  These "Development" Series releases,
+                always odd-numbered, come with no guarantees, not even regards being able
+                to upgrade between two sequential releases (we reserve the right to break compatibility across
+                "Development" Series releases).  Needless to say, these releases are not for
+                production deploys.  They are a preview of what is coming in the hope that
+                interested parties will take the release for a test drive and flag us early if we
+                there are issues we've missed ahead of our rolling a production-worthy release.
+            </para>
+            <para>Our first "Development" Series was the 0.89 set that came out ahead of
+                HBase 0.90.0.  HBase 0.95 is another "Development" Series that portends
+                HBase 0.96.0.
+            </para>
+        </section>
+</section>
     <section xml:id="upgrade0.96">
       <title>Upgrading from 0.94.x to 0.96.x</title>
       <subtitle>The Singularity</subtitle>
