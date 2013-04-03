@@ -656,6 +656,12 @@ public final class HConstants {
 
   public static final String ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING = "enable_delete_column_bloom_filter";
 
+  // Delaying the region server load balancing by the following amount for a
+  // load balancing where source is a favored region server.
+  public static final String HBASE_REGION_ASSIGNMENT_LOADBALANCER_WAITTIME_MS
+                                = "hbase.master.assignment.load.balancer.waittime.ms";
+  public static final int DEFAULT_HBASE_REGION_ASSIGNMENT_LOADBALANCER_WAITTIME_MS = 60000;
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

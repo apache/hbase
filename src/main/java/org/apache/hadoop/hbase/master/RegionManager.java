@@ -26,8 +26,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
@@ -192,6 +194,7 @@ public class RegionManager {
   private boolean stoppedScanners = false;
 
   private LegacyRootZNodeUpdater legacyRootZNodeUpdater;
+
   
   RegionManager(HMaster master) throws IOException {
     Configuration conf = master.getConfiguration();
@@ -202,7 +205,7 @@ public class RegionManager {
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
 
     if (master.shouldAssignRegionsWithFavoredNodes()) {
-      this.loadBalancer = new AssignmentLoadBalancer();
+      this.loadBalancer = new AssignmentLoadBalancer(conf);
     } else {
       this.loadBalancer = new DefaultLoadBalancer();
     }
@@ -1899,8 +1902,15 @@ public class RegionManager {
    * consider secondary and tertiary preferred hosts if the primary is dead.
    */
   class AssignmentLoadBalancer extends LoadBalancer {
-    AssignmentLoadBalancer() {
+    long timeDelta =
+        HConstants.DEFAULT_HBASE_REGION_ASSIGNMENT_LOADBALANCER_WAITTIME_MS;
+    Map<HServerAddress, Long> lastAssignedForTime;
+
+    AssignmentLoadBalancer(Configuration conf) {
       super();
+      timeDelta = conf.getLong(HConstants.HBASE_REGION_ASSIGNMENT_LOADBALANCER_WAITTIME_MS,
+          HConstants.DEFAULT_HBASE_REGION_ASSIGNMENT_LOADBALANCER_WAITTIME_MS);
+      lastAssignedForTime = new HashMap<HServerAddress, Long>();
     }
 
     /**
@@ -1954,6 +1964,10 @@ public class RegionManager {
             // Primary server is not alive, try next region.
             continue;
           }
+          if (canOffloadTo(preferences.get(0)) == false) {
+            // Primary server is not ready to accept a new region.
+            continue;
+          }
 
           // Primary server is alive, unassign this region.
           if (unassignRegion(info, region, returnMsgs)) {
@@ -1963,6 +1977,7 @@ public class RegionManager {
                   + " from the server " + info.getHostnamePort()
                   + " because the primary server: " + preferences.get(0)
                   + " is a live");
+              unassignedFor(preferences.get(0));
               return regionsUnassigned;
             }
           }
@@ -2003,6 +2018,7 @@ public class RegionManager {
         for (int i = 1; i < preferences.size(); i++) {
           HServerLoad secondaryLoad = getLoadIfAlive(preferences.get(i));
           if (secondaryLoad != null &&
+              canOffloadTo(preferences.get(i)) &&
               secondaryLoad.getNumberOfRegions() < leastLoad) {
             leastLoad = secondaryLoad.getNumberOfRegions();
             leastLoadedSecondary = preferences.get(i);
@@ -2014,6 +2030,7 @@ public class RegionManager {
           // for that region.
           if (unassignRegion(info, region, returnMsgs)) {
             regionsUnassigned++;
+            unassignedFor(leastLoadedSecondary);
             if (regionsUnassigned >= maxRegToClose && maxRegToClose > 0) {
               LOG.debug("Unassigned " + region.getRegionNameAsString()
                   + " from the unfavoraed server " + info.getHostnamePort()
@@ -2070,11 +2087,17 @@ public class RegionManager {
             continue;
           }
 
+          if (!canOffloadTo(preferences.get(i))) {
+            // Other server is not accepting new regions.
+            continue;
+          }
+
           // Only move the region if the other server is under-loaded and the
           // current server is overloaded.
           if (serverLoad - regionsUnassigned > avgLoadPlusSlop && 
               otherLoad.getNumberOfRegions() < avgLoadMinusSlop) {
             if (unassignRegion(info, region, returnMsgs)) {
+              unassignedFor(preferences.get(i));
               // Need to override transient assignment that may have been added
               // for the region to its current server when unassigning.
               assignmentManager.removeTransientAssignment(
@@ -2095,6 +2118,23 @@ public class RegionManager {
         }
       }
       return regionsUnassigned;
+    }
+
+    private boolean canOffloadTo(HServerAddress hServerAddress) {
+      Map<HServerAddress, Long> map = lastAssignedForTime;
+      Long ts = map.get(hServerAddress);
+      long tscur = EnvironmentEdgeManager.currentTimeMillis();
+
+      if (ts == null || (tscur - ts) > timeDelta) {
+        return true;
+      }
+      return false;
+    }
+
+    private void unassignedFor(HServerAddress hServerAddress) {
+      Map<HServerAddress, Long> map = this.lastAssignedForTime;
+      long currentTime = EnvironmentEdgeManager.currentTimeMillis();
+      map.put(hServerAddress, currentTime);
     }
 
     /**
