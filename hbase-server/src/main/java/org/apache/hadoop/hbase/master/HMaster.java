@@ -2267,11 +2267,14 @@ Server {
           return urr;
         }
       }
-      if (force) {
-        this.assignmentManager.regionOffline(hri);
+      LOG.debug("Close region " + hri.getRegionNameAsString()
+          + " on current location if it is online and reassign.force=" + force);
+      this.assignmentManager.unassign(hri, force);
+      if (!this.assignmentManager.getRegionStates().isRegionInTransition(hri)
+          && !this.assignmentManager.getRegionStates().isRegionAssigned(hri)) {
+        LOG.debug("Region " + hri.getRegionNameAsString()
+            + " is not online on any region server, reassigning it.");
         assignRegion(hri);
-      } else {
-        this.assignmentManager.unassign(hri, force);
       }
       if (cpHost != null) {
         cpHost.postUnassign(hri, force);
