@@ -37,9 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -196,7 +194,7 @@ public class TestHLog  {
       }
       log.close();
       HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
-          hbaseDir, logdir, this.oldLogDir, this.fs);
+          hbaseDir, logdir, oldLogDir, fs);
       List<Path> splits =
         logSplitter.splitLog();
       verifySplits(splits, howmany);
@@ -382,19 +380,11 @@ public class TestHLog  {
    */
   @Test
   public void testAppendClose() throws Exception {
-    testAppendClose(true);
-    testAppendClose(false);
-  }
-  
-  /*
-   * @param triggerDirectAppend whether to trigger direct call of fs.append()
-   */
-  public void testAppendClose(final boolean triggerDirectAppend) throws Exception {
     byte [] tableName = Bytes.toBytes(getName());
     HRegionInfo regioninfo = new HRegionInfo(tableName,
              HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false);
 
-    HLog wal = HLogFactory.createHLog(fs, dir, "hlogdir" + triggerDirectAppend, 
+    HLog wal = HLogFactory.createHLog(fs, dir, "hlogdir",
         "hlogdir_archive", conf);
     final int total = 20;
 
@@ -410,7 +400,7 @@ public class TestHLog  {
     wal.sync();
      int namenodePort = cluster.getNameNodePort();
     final Path walPath = ((FSHLog) wal).computeFilename();
-    
+
 
     // Stop the cluster.  (ensure restart since we're sharing MiniDFSCluster)
     try {
@@ -453,23 +443,21 @@ public class TestHLog  {
     Method setLeasePeriod = cluster.getClass()
       .getDeclaredMethod("setLeasePeriod", new Class[]{Long.TYPE, Long.TYPE});
     setLeasePeriod.setAccessible(true);
-    setLeasePeriod.invoke(cluster,
-                          new Object[]{new Long(1000), new Long(1000)});
+    setLeasePeriod.invoke(cluster, 1000L, 1000L);
     try {
       Thread.sleep(1000);
     } catch (InterruptedException e) {
       LOG.info(e);
     }
-    
+
     // Now try recovering the log, like the HMaster would do
     final FileSystem recoveredFs = fs;
     final Configuration rlConf = conf;
-    
+
     class RecoverLogThread extends Thread {
       public Exception exception = null;
       public void run() {
           try {
-            rlConf.setBoolean(FSHDFSUtils.TEST_TRIGGER_DFS_APPEND, triggerDirectAppend);
             FSUtils.getInstance(fs, rlConf)
               .recoverFileLease(recoveredFs, walPath, rlConf);
           } catch (IOException e) {
