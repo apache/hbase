@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter version="5.0" xml:id="casestudies"
+         xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+<!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+  <title>Apache HBase (TM) Case Studies</title>
+    <section xml:id="casestudies.overview">
+      <title>Overview</title>
+      <para>This chapter will describe a variety of performance and troubleshooting case studies that can 
+      provide a useful blueprint on diagnosing Apache HBase (TM) cluster issues.</para>
+      <para>For more information on Performance and Troubleshooting, see <xref linkend="performance"/> and <xref linkend="trouble"/>.
+      </para>
+    </section>
+
+    <section xml:id="casestudies.schema">
+    	<title>Schema Design</title>
+
+    	<section xml:id="casestudies.schema.listdata">
+    		<title>List Data</title>
+    		<para>The following is an exchange from the user dist-list regarding a fairly common question:  
+    		how to handle per-user list data in Apache HBase. 
+    		</para>
+    		<para>*** QUESTION ***</para>
+    		<para>
+    		We're looking at how to store a large amount of (per-user) list data in
+HBase, and we were trying to figure out what kind of access pattern made
+the most sense.  One option is store the majority of the data in a key, so
+we could have something like:
+    		</para>
+
+    		<programlisting>
+&lt;FixedWidthUserName&gt;&lt;FixedWidthValueId1&gt;:"" (no value)
+&lt;FixedWidthUserName&gt;&lt;FixedWidthValueId2&gt;:"" (no value)
+&lt;FixedWidthUserName&gt;&lt;FixedWidthValueId3&gt;:"" (no value)
+			</programlisting>
+
+The other option we had was to do this entirely using:
+    		<programlisting>
+&lt;FixedWidthUserName&gt;&lt;FixedWidthPageNum0&gt;:&lt;FixedWidthLength&gt;&lt;FixedIdNextPageNum&gt;&lt;ValueId1&gt;&lt;ValueId2&gt;&lt;ValueId3&gt;...
+&lt;FixedWidthUserName&gt;&lt;FixedWidthPageNum1&gt;:&lt;FixedWidthLength&gt;&lt;FixedIdNextPageNum&gt;&lt;ValueId1&gt;&lt;ValueId2&gt;&lt;ValueId3&gt;...
+    		</programlisting>
+			<para>
+where each row would contain multiple values.
+So in one case reading the first thirty values would be:
+			</para>
+    		<programlisting>
+scan { STARTROW =&gt; 'FixedWidthUsername' LIMIT =&gt; 30}
+    		</programlisting>
+And in the second case it would be
+    		<programlisting>
+get 'FixedWidthUserName\x00\x00\x00\x00'
+    		</programlisting>
+			<para>
+The general usage pattern would be to read only the first 30 values of
+these lists, with infrequent access reading deeper into the lists.  Some
+users would have &lt;= 30 total values in these lists, and some users would
+have millions (i.e. power-law distribution)
+			</para>			
+			<para>
+ The single-value format seems like it would take up more space on HBase,
+but would offer some improved retrieval / pagination flexibility.  Would
+there be any significant performance advantages to be able to paginate via
+gets vs paginating with scans?
+			</para>
+			<para>
+  My initial understanding was that doing a scan should be faster if our
+paging size is unknown (and caching is set appropriately), but that gets
+should be faster if we'll always need the same page size.  I've ended up
+hearing different people tell me opposite things about performance.  I
+assume the page sizes would be relatively consistent, so for most use cases
+we could guarantee that we only wanted one page of data in the
+fixed-page-length case.  I would also assume that we would have infrequent
+updates, but may have inserts into the middle of these lists (meaning we'd
+need to update all subsequent rows).
+			</para>
+			<para>
+Thanks for help / suggestions / follow-up questions.
+			</para>
+			<para>*** ANSWER ***</para>
+			<para>
+If I understand you correctly, you're ultimately trying to store
+triples in the form "user, valueid, value", right? E.g., something
+like:
+			</para>
+			<programlisting>
+"user123, firstname, Paul",
+"user234, lastname, Smith"
+			</programlisting>
+			<para>
+(But the usernames are fixed width, and the valueids are fixed width).
+			</para>
+			<para>
+And, your access pattern is along the lines of: "for user X, list the
+next 30 values, starting with valueid Y". Is that right? And these
+values should be returned sorted by valueid?
+			</para>
+			<para>
+The tl;dr version is that you should probably go with one row per
+user+value, and not build a complicated intra-row pagination scheme on
+your own unless you're really sure it is needed.
+			</para>
+			<para>
+Your two options mirror a common question people have when designing
+HBase schemas: should I go "tall" or "wide"? Your first schema is
+"tall": each row represents one value for one user, and so there are
+many rows in the table for each user; the row key is user + valueid,
+and there would be (presumably) a single column qualifier that means
+"the value". This is great if you want to scan over rows in sorted
+order by row key (thus my question above, about whether these ids are
+sorted correctly). You can start a scan at any user+valueid, read the
+next 30, and be done. What you're giving up is the ability to have
+transactional guarantees around all the rows for one user, but it
+doesn't sound like you need that. Doing it this way is generally
+recommended (see
+here <link xlink:href="http://hbase.apache.org/book.html#schema.smackdown">http://hbase.apache.org/book.html#schema.smackdown</link>).
+			</para>
+			<para>
+Your second option is "wide": you store a bunch of values in one row,
+using different qualifiers (where the qualifier is the valueid). The
+simple way to do that would be to just store ALL values for one user
+in a single row. I'm guessing you jumped to the "paginated" version
+because you're assuming that storing millions of columns in a single
+row would be bad for performance, which may or may not be true; as
+long as you're not trying to do too much in a single request, or do
+things like scanning over and returning all of the cells in the row,
+it shouldn't be fundamentally worse. The client has methods that allow
+you to get specific slices of columns.
+			</para>
+			<para>
+Note that neither case fundamentally uses more disk space than the
+other; you're just "shifting" part of the identifying information for
+a value either to the left (into the row key, in option one) or to the
+right (into the column qualifiers in option 2). Under the covers,
+every key/value still stores the whole row key, and column family
+name. (If this is a bit confusing, take an hour and watch Lars
+George's excellent video about understanding HBase schema design:
+<link xlink:href="http://www.youtube.com/watch?v=_HLoH_PgrLk)">http://www.youtube.com/watch?v=_HLoH_PgrLk)</link>.
+			</para>
+			<para>
+A manually paginated version has lots more complexities, as you note,
+like having to keep track of how many things are in each page,
+re-shuffling if new values are inserted, etc. That seems significantly
+more complex. It might have some slight speed advantages (or
+disadvantages!) at extremely high throughput, and the only way to
+really know that would be to try it out. If you don't have time to
+build it both ways and compare, my advice would be to start with the
+simplest option (one row per user+value). Start simple and iterate! :)
+			</para>
+    		
+		</section>  <!--  listdata -->
+
+		
+	</section>   <!--  schema design -->
+
+    <section xml:id="casestudies.perftroub">
+    	<title>Performance/Troubleshooting</title>
+   
+    <section xml:id="casestudies.slownode">
+      <title>Case Study #1 (Performance Issue On A Single Node)</title>
+      <section><title>Scenario</title>
+        <para>Following a scheduled reboot, one data node began exhibiting unusual behavior.  Routine MapReduce 
+         jobs run against HBase tables which regularly completed in five or six minutes began taking 30 or 40 minutes 
+         to finish. These jobs were consistently found to be waiting on map and reduce tasks assigned to the troubled data node 
+         (e.g., the slow map tasks all had the same Input Split).           
+         The situation came to a head during a distributed copy, when the copy was severely prolonged by the lagging node.
+		</para>
+       </section>
+      <section><title>Hardware</title>
+        <para>Datanodes:
+        <itemizedlist>
+          <listitem>Two 12-core processors</listitem>
+          <listitem>Six Enerprise SATA disks</listitem>
+          <listitem>24GB of RAM</listitem>
+          <listitem>Two bonded gigabit NICs</listitem>
+        </itemizedlist>
+        </para>		
+        <para>Network:
+        <itemizedlist>
+          <listitem>10 Gigabit top-of-rack switches</listitem>
+          <listitem>20 Gigabit bonded interconnects between racks.</listitem>
+        </itemizedlist>
+        </para>
+      </section>
+      <section><title>Hypotheses</title>
+		<section><title>HBase "Hot Spot" Region</title>
+		  <para>We hypothesized that we were experiencing a familiar point of pain: a "hot spot" region in an HBase table, 
+		  where uneven key-space distribution can funnel a huge number of requests to a single HBase region, bombarding the RegionServer 
+		  process and cause slow response time. Examination of the HBase Master status page showed that the number of HBase requests to the 
+		  troubled node was almost zero.  Further, examination of the HBase logs showed that there were no region splits, compactions, or other region transitions 
+		  in progress.  This effectively ruled out a "hot spot" as the root cause of the observed slowness.
+          </para>		
+        </section>
+		<section><title>HBase Region With Non-Local Data</title>
+		  <para>Our next hypothesis was that one of the MapReduce tasks was requesting data from HBase that was not local to the datanode, thus 
+		  forcing HDFS to request data blocks from other servers over the network.  Examination of the datanode logs showed that there were very 
+		  few blocks being requested over the network, indicating that the HBase region was correctly assigned, and that the majority of the necessary 
+		  data was located on the node. This ruled out the possibility of non-local data causing a slowdown.
+          </para>
+        </section>		
+		<section><title>Excessive I/O Wait Due To Swapping Or An Over-Worked Or Failing Hard Disk</title>
+          <para>After concluding that the Hadoop and HBase were not likely to be the culprits, we moved on to troubleshooting the datanode's hardware. 
+          Java, by design, will periodically scan its entire memory space to do garbage collection.  If system memory is heavily overcommitted, the Linux 
+          kernel may enter a vicious cycle, using up all of its resources swapping Java heap back and forth from disk to RAM as Java tries to run garbage 
+          collection.  Further, a failing hard disk will often retry reads and/or writes many times before giving up and returning an error. This can manifest 
+          as high iowait, as running processes wait for reads and writes to complete.  Finally, a disk nearing the upper edge of its performance envelope will 
+          begin to cause iowait as it informs the kernel that it cannot accept any more data, and the kernel queues incoming data into the dirty write pool in memory.  
+          However, using <code>vmstat(1)</code> and <code>free(1)</code>, we could see that no swap was being used, and the amount of disk IO was only a few kilobytes per second.
+          </para>		
+        </section>
+		<section><title>Slowness Due To High Processor Usage</title>
+          <para>Next, we checked to see whether the system was performing slowly simply due to very high computational load.  <code>top(1)</code> showed that the system load 
+          was higher than normal, but <code>vmstat(1)</code> and <code>mpstat(1)</code> showed that the amount of processor being used for actual computation was low.
+          </para>	
+        </section>	
+		<section><title>Network Saturation (The Winner)</title>
+          <para>Since neither the disks nor the processors were being utilized heavily, we moved on to the performance of the network interfaces.  The datanode had two 
+          gigabit ethernet adapters, bonded to form an active-standby interface.  <code>ifconfig(8)</code> showed some unusual anomalies, namely interface errors, overruns, framing errors. 
+          While not unheard of, these kinds of errors are exceedingly rare on modern hardware which is operating as it should:
+<programlisting>		
+$ /sbin/ifconfig bond0
+bond0  Link encap:Ethernet  HWaddr 00:00:00:00:00:00  
+inet addr:10.x.x.x  Bcast:10.x.x.255  Mask:255.255.255.0
+UP BROADCAST RUNNING MASTER MULTICAST  MTU:1500  Metric:1
+RX packets:2990700159 errors:12 dropped:0 overruns:1 frame:6          &lt;--- Look Here! Errors!
+TX packets:3443518196 errors:0 dropped:0 overruns:0 carrier:0
+collisions:0 txqueuelen:0 
+RX bytes:2416328868676 (2.4 TB)  TX bytes:3464991094001 (3.4 TB)
+</programlisting>
+          </para>		
+          <para>These errors immediately lead us to suspect that one or more of the ethernet interfaces might have negotiated the wrong line speed.  This was confirmed both by running an ICMP ping 
+          from an external host and observing round-trip-time in excess of 700ms, and by running <code>ethtool(8)</code> on the members of the bond interface and discovering that the active interface 
+          was operating at 100Mbs/, full duplex.
+<programlisting>		
+$ sudo ethtool eth0
+Settings for eth0:
+Supported ports: [ TP ]
+Supported link modes:   10baseT/Half 10baseT/Full 
+                       100baseT/Half 100baseT/Full 
+                       1000baseT/Full 
+Supports auto-negotiation: Yes
+Advertised link modes:  10baseT/Half 10baseT/Full 
+                       100baseT/Half 100baseT/Full 
+                       1000baseT/Full 
+Advertised pause frame use: No
+Advertised auto-negotiation: Yes
+Link partner advertised link modes:  Not reported
+Link partner advertised pause frame use: No
+Link partner advertised auto-negotiation: No
+Speed: 100Mb/s                                     &lt;--- Look Here!  Should say 1000Mb/s!
+Duplex: Full
+Port: Twisted Pair
+PHYAD: 1
+Transceiver: internal
+Auto-negotiation: on
+MDI-X: Unknown
+Supports Wake-on: umbg
+Wake-on: g
+Current message level: 0x00000003 (3)
+Link detected: yes
+</programlisting>		
+		  </para>
+		  <para>In normal operation, the ICMP ping round trip time should be around 20ms, and the interface speed and duplex should read, "1000MB/s", and, "Full", respectively.  
+		  </para>
+	    </section>
+     </section>  
+   	<section><title>Resolution</title>
+   	  <para>After determining that the active ethernet adapter was at the incorrect speed, we used the <code>ifenslave(8)</code> command to make the standby interface 
+   	  the active interface, which yielded an immediate improvement in MapReduce performance, and a 10 times improvement in network throughput:
+	  </para>
+	  <para>On the next trip to the datacenter, we determined that the line speed issue was ultimately caused by a bad network cable, which was replaced.
+	  </para>
+	</section>
+   </section>  <!--  case study -->
+    <section xml:id="casestudies.perf.1">
+      <title>Case Study #2 (Performance Research 2012)</title>
+      <para>Investigation results of a self-described "we're not sure what's wrong, but it seems slow" problem. 
+      <link xlink:href="http://gbif.blogspot.com/2012/03/hbase-performance-evaluation-continued.html">http://gbif.blogspot.com/2012/03/hbase-performance-evaluation-continued.html</link>
+      </para>
+    </section>
+
+    <section xml:id="casestudies.perf.2">
+      <title>Case Study #3 (Performance Research 2010))</title>
+      <para>
+      Investigation results of general cluster performance from 2010.  Although this research is on an older version of the codebase, this writeup
+      is still very useful in terms of approach.
+      <link xlink:href="http://hstack.org/hbase-performance-testing/">http://hstack.org/hbase-performance-testing/</link>
+      </para>
+    </section>
+
+    <section xml:id="casestudies.xceivers">
+      <title>Case Study #4 (xcievers Config)</title>
+      <para>Case study of configuring <code>xceivers</code>, and diagnosing errors from mis-configurations.
+      <link xlink:href="http://www.larsgeorge.com/2012/03/hadoop-hbase-and-xceivers.html">http://www.larsgeorge.com/2012/03/hadoop-hbase-and-xceivers.html</link>
+      </para>
+      <para>See also <xref linkend="dfs.datanode.max.xcievers"/>.
+      </para>
+    </section>
+
+    </section>    <!--  performance/troubleshooting -->
+	
+  </chapter>

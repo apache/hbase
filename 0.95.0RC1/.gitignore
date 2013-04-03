@@ -1,0 +1,16 @@
+/.arc_jira_lib
+/.externalToolBuilders
+.project
+*.settings/
+.classpath
+/build
+/.idea/
+/logs
+*target/
+*.iml
+*.orig
+*~
+hbase-*/test
+*.iws
+*.iml
+*.ipr
