@@ -25,10 +25,13 @@ import org.apache.hadoop.metrics2.MetricsBuilder;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 
 import java.util.TreeSet;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
     implements MetricsRegionAggregateSource {
   private final Log LOG = LogFactory.getLog(this.getClass());
+  // lock to guard against concurrent access to regionSources
+  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   private final TreeSet<MetricsRegionSourceImpl> regionSources =
       new TreeSet<MetricsRegionSourceImpl>();
@@ -47,12 +50,22 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
 
   @Override
   public void register(MetricsRegionSource source) {
-    regionSources.add((MetricsRegionSourceImpl) source);
+    lock.writeLock().lock();
+    try {
+      regionSources.add((MetricsRegionSourceImpl) source);
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   @Override
   public void deregister(MetricsRegionSource source) {
-    regionSources.remove(source);
+    lock.writeLock().lock();
+    try {
+      regionSources.remove(source);
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   /**
@@ -66,16 +79,19 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
   @Override
   public void getMetrics(MetricsBuilder metricsBuilder, boolean all) {
 
-
     MetricsRecordBuilder mrb = metricsBuilder.addRecord(metricsName)
         .setContext(metricsContext);
 
     if (regionSources != null) {
-      for (MetricsRegionSourceImpl regionMetricSource : regionSources) {
-        regionMetricSource.snapshot(mrb, all);
+      lock.readLock().lock();
+      try {
+        for (MetricsRegionSourceImpl regionMetricSource : regionSources) {
+          regionMetricSource.snapshot(mrb, all);
+        }
+      } finally {
+        lock.readLock().unlock();
       }
     }
-
 
     metricsRegistry.snapshot(mrb, all);
   }
