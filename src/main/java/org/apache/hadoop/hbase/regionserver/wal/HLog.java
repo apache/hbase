@@ -573,40 +573,40 @@ public class HLog implements Syncable {
       return null;
     }
     byte [][] regionsToFlush = null;
-    this.cacheFlushLock.writeLock().lock();
+    // Creating the new file can be done earlier.
+    long newFileNum = System.currentTimeMillis();
+    Path newPath = computeFilename(newFileNum);
+    Writer newWriter;
+    int newFileReplication;
+    OutputStream newOutStream = null;
+    try {
+      newWriter = createWriter(fs, newPath, conf);
+      newFileReplication = fs.getFileStatus(newPath).getReplication();
+      if (newWriter instanceof SequenceFileLogWriter) {
+        newOutStream = ((SequenceFileLogWriter) newWriter)
+            .getDFSCOutputStream();
+        // append a dummy entry and sync. So we perform the costly
+        // allocateBlock and sync before we get the lock to roll writers.
+        WALEdit edit = new WALEdit();
+        HLogKey key = makeKey(DUMMY /* regionName */, DUMMY /* tableName */,
+            0, System.currentTimeMillis());
+        newWriter.append(new HLog.Entry(key, edit));
+        syncWriter(newWriter);
+      }
+    } catch (IOException ioe) {
+      // If we fail to create a new writer, let us clean up the file.
+      // Do not worry if the delete fails.
+      fs.delete(newPath, false);
+      throw ioe;
+    }
+
+    Writer oldWriter;
+    long oldFileLogSeqNum, oldFileNum;
+    int oldNumEntries;
     long t0 = 0;
     long t1 = 0;
+    this.cacheFlushLock.writeLock().lock();
     try {
-      // Creating the new file can be done earlier.
-      long newFileNum = System.currentTimeMillis();
-      Path newPath = computeFilename(newFileNum);
-      Writer newWriter;
-      int newFileReplication;
-      OutputStream newOutStream = null;
-      try {
-        newWriter = createWriter(fs, newPath, conf);
-        newFileReplication = fs.getFileStatus(newPath).getReplication();
-        if (newWriter instanceof SequenceFileLogWriter) {
-          newOutStream = ((SequenceFileLogWriter) newWriter)
-              .getDFSCOutputStream();
-          // append a dummy entry and sync. So we perform the costly
-          // allocateBlock and sync before we get the lock to roll writers.
-          WALEdit edit = new WALEdit();
-          HLogKey key = makeKey(DUMMY /* regionName */, DUMMY /* tableName */,
-              0, System.currentTimeMillis());
-          newWriter.append(new HLog.Entry(key, edit));
-          syncWriter(newWriter);
-        }
-      } catch (IOException ioe) {
-        // If we fail to create a new writer, let us clean up the file.
-        // Do not worry if the delete fails.
-        fs.delete(newPath, false);
-        throw ioe;
-      }
-
-      Writer oldWriter;
-      long oldFileLogSeqNum, oldFileNum;
-      int oldNumEntries;
       synchronized (updateLock) {
         t0 = EnvironmentEdgeManager.currentTimeMillis();
         if (closed) {
@@ -632,46 +632,47 @@ public class HLog implements Syncable {
         lastLogRollStartTimeMillis = t0;
         lastLogRollDurationMillis = (t1 - t0);
       }
-
-      Path oldFile = null;
-      try {
-        oldFile = closeWriter(oldWriter, oldFileNum, oldFileLogSeqNum);
-      } catch (IOException e) {
-        LOG.info("Ignoring Exception while closing old Log file "
-            + FSUtils.getPath(oldFile), e);
-      }
-
-      LOG.info(hlogName + (oldFile != null ? "Roll " + FSUtils.getPath(oldFile)
-          + ", entries=" + oldNumEntries + ", filesize="
-          + this.fs.getFileStatus(oldFile).getLen() + ". " : "")
-          + "New hlog " + FSUtils.getPath(newPath)
-          + " Held updateLock for " + (t1 -t0) + " ms.");
-      // Tell our listeners that a new log was created
-      if (!this.actionListeners.isEmpty()) {
-        for (LogActionsListener list : this.actionListeners) {
-          list.logRolled(newPath);
-        }
-      }
-      // Can we delete any of the old log files?
-      if (this.outputfiles.size() > 0) {
-        if (this.firstSeqWrittenInCurrentMemstore.size() <= 0
-            && this.firstSeqWrittenInSnapshotMemstore.size() <= 0) {
-          LOG.debug("Last sequence written is empty. Deleting all old hlogs");
-         // If so, then no new writes have come in since all regions were
-          // flushed (and removed from the firstSeqWrittenInXXX maps). Means can
-          // remove all but currently open log file.
-          TreeSet<Long> tempSet = new TreeSet<Long>(outputfiles.keySet());
-          for (Long seqNum : tempSet) {
-            archiveLogFile(outputfiles.get(seqNum), seqNum);
-            outputfiles.remove(seqNum);
-          }
-          assert outputfiles.size() == 0 : "Someone added new log files? How?";
-        } else {
-          regionsToFlush = cleanOldLogs();
-        }
-      }
     } finally {
       this.cacheFlushLock.writeLock().unlock();
+    }
+
+    Path oldFile = null;
+    try {
+      oldFile = closeWriter(oldWriter, oldFileNum, oldFileLogSeqNum);
+    } catch (IOException e) {
+      LOG.info("Ignoring Exception while closing old Log file "
+          + FSUtils.getPath(oldFile), e);
+    }
+
+    LOG.info(hlogName + (oldFile != null ? "Roll " + FSUtils.getPath(oldFile)
+        + ", entries=" + oldNumEntries + ", filesize="
+        + this.fs.getFileStatus(oldFile).getLen() + ". " : "")
+        + "New hlog " + FSUtils.getPath(newPath)
+        + " Held updateLock for " + (t1 -t0) + " ms.");
+    // Tell our listeners that a new log was created
+    if (!this.actionListeners.isEmpty()) {
+      for (LogActionsListener list : this.actionListeners) {
+        list.logRolled(newPath);
+      }
+    }
+
+    // Can we delete any of the old log files?
+    if (this.outputfiles.size() > 0) {
+      if (this.firstSeqWrittenInCurrentMemstore.size() <= 0
+          && this.firstSeqWrittenInSnapshotMemstore.size() <= 0) {
+        LOG.debug("Last sequence written is empty. Deleting all old hlogs");
+       // If so, then no new writes have come in since all regions were
+        // flushed (and removed from the firstSeqWrittenInXXX maps). Means can
+        // remove all but currently open log file.
+        TreeSet<Long> tempSet = new TreeSet<Long>(outputfiles.keySet());
+        for (Long seqNum : tempSet) {
+          archiveLogFile(outputfiles.get(seqNum), seqNum);
+          outputfiles.remove(seqNum);
+        }
+        assert outputfiles.size() == 0 : "Someone added new log files? How?";
+      } else {
+        regionsToFlush = cleanOldLogs();
+      }
     }
     return regionsToFlush;
   }
