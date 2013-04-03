@@ -438,7 +438,7 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       <itemizedlist>
          <listitem>Log Data / Timeseries Data</listitem>
          <listitem>Log Data / Timeseries on Steroids</listitem>
-         <listitem>Customer/Sales</listitem>
+         <listitem>Customer/Order</listitem>
          <listitem>Tall/Wide/Middle Schema Design</listitem>
          <listitem>List Data</listitem>
      </itemizedlist> 
@@ -527,7 +527,7 @@ long bucket = timestamp % numBuckets;
         </para>      
       </section>  <!--  varkeys -->
     </section>  <!--  log data and timeseries -->
-    <section xml:id="schema.casestudies.log-timeseries.log-steroids">
+    <section xml:id="schema.casestudies.log-steroids">
       <title>Case Study - Log Data and Timeseries Data on Steroids</title>
       <para>This effectively is the OpenTSDB approach.  What OpenTSDB does is re-write data and pack rows into columns for 
         certain time-periods.  For a detailed explanation, see:  <link xlink:href="http://opentsdb.net/schema.html">http://opentsdb.net/schema.html</link>, 
@@ -549,10 +549,10 @@ long bucket = timestamp % numBuckets;
       </para>
     </section>  <!--  log data timeseries steroids -->
     
-    <section xml:id="schema.casestudies.log-timeseries.custsales">
-      <title>Case Study - Customer / Sales</title>
-      <para>Assume that HBase is used to store customer and sales information.  There are two core record-types being ingested:  
-        a Customer record type, and Sales record type.
+    <section xml:id="schema.casestudies.custorder">
+      <title>Case Study - Customer/Order</title>
+      <para>Assume that HBase is used to store customer and order information.  There are two core record-types being ingested:  
+        a Customer record type, and Order record type.
       </para>
       <para>The Customer record type would include all the things that you’d typically expect:
         <itemizedlist>
@@ -562,21 +562,21 @@ long bucket = timestamp % numBuckets;
           <listitem>Phone numbers, etc.</listitem>
         </itemizedlist>
      </para>
-     <para>The Sales record type would include things like:
+     <para>The Order record type would include things like:
         <itemizedlist>
           <listitem>Customer number</listitem>
-          <listitem>Sales/order number</listitem>
+          <listitem>Order number</listitem>
           <listitem>Sales date</listitem>
-          <listitem>A series of nested objects for shipping locations and line-items (this itself is a design case study)</listitem>
+          <listitem>A series of nested objects for shipping locations and line-items (see <xref linkend="schema.casestudies.custorder.obj"/>
+           for details)</listitem>
         </itemizedlist>
     </para>
     <para>Assuming that the combination of customer number and sales order uniquely identify an order, these two attributes will compose
  the rowkey, and specifically a composite key such as:
     </para>
-    <para><code>[customer number][sales number]</code>
+    <para><code>[customer number][order number]</code>
     </para>
-    <para>
-… for a SALES table.  However, there are more design decisions to make:  are the <emphasis>raw</emphasis> values the best choices for rowkeys?
+    <para>… for a ORDER table.  However, there are more design decisions to make:  are the <emphasis>raw</emphasis> values the best choices for rowkeys?
     </para>
     <para>The same design questions in the Log Data use-case confront us here.  What is the keyspace of the customer number, and what is the 
 format (e.g., numeric?  alphanumeric?) As it is advantageous to use fixed-length keys in HBase, as well as keys that can support a 
@@ -585,16 +585,16 @@ reasonable spread in the keyspace, similar options appear:
     <para>Composite Rowkey With Hashes:  
       <itemizedlist>
         <listitem>[MD5 of customer number] = 16 bytes</listitem>
-        <listitem>[MD5 of sales number] = 16 bytes</listitem>
+        <listitem>[MD5 of order number] = 16 bytes</listitem>
       </itemizedlist>
     </para>
     <para>Composite Numeric/Hash Combo Rowkey: 
       <itemizedlist>
         <listitem>[substituted long for customer number] = 8 bytes</listitem>
-        <listitem>[MD5 of sales number] = 16 bytes</listitem>
+        <listitem>[MD5 of order number] = 16 bytes</listitem>
       </itemizedlist>
      </para>
-        <section xml:id="schema.casestudies.log-timeseries.custsales.tables">
+        <section xml:id="schema.casestudies.custorder.tables">
           <title>Single Table?  Multiple Tables?</title>
             <para>A traditional design approach would have separate tables for CUSTOMER and SALES.  Another option is to pack multiple 
             record types into a single table (e.g., CUSTOMER++).            
@@ -605,11 +605,11 @@ reasonable spread in the keyspace, similar options appear:
                 <listitem>[type] = type indicating ‘1’ for customer record type</listitem>
               </itemizedlist>
             </para>
-            <para>Sales Record Type Rowkey:
+            <para>Order Record Type Rowkey:
               <itemizedlist>
                 <listitem>[customer-id]</listitem>
-                <listitem>[type] = type indicating ‘2’ for sales record type</listitem>
-                <listitem>[sales-order]</listitem>
+                <listitem>[type] = type indicating ‘2’ for order record type</listitem>
+                <listitem>[order]</listitem>
               </itemizedlist>
             </para>
             <para>The advantage of this particular CUSTOMER++ approach is that organizes many different record-types by customer-id 
@@ -617,7 +617,121 @@ reasonable spread in the keyspace, similar options appear:
             a particular record-type.
             </para>
         </section>
-    </section>  <!--  cust/sales -->   
+        <section xml:id="schema.casestudies.custorder.obj">
+	      <title>Order Object Design</title>
+	      <para>Now we need to address how to model the Order object.  Assume that the class structure is as follows:
+<programlisting>
+<filename>Order</filename>
+     <filename>ShippingLocation</filename>     (an Order can have multiple ShippingLocations)
+          <filename>LineItem</filename>               (a ShippingLocation can have multiple LineItems)
+</programlisting>
+	       ... there are multiple options on storing this data.
+	      </para>
+	      <section xml:id="schema.casestudies.custorder.obj.norm">
+	        <title>Completely Normalized</title>
+	        <para>With this approach, there would be separate tables for ORDER, SHIPPING_LOCATION, and LINE_ITEM.          
+	        </para>
+	        <para>The ORDER table's rowkey was described above: <xref linkend="schema.casestudies.custorder"/>
+	        </para>
+	        <para>The SHIPPING_LOCATION's composite rowkey would be something like this:
+	          <itemizedlist>
+	            <listitem>[order-rowkey]</listitem>
+	            <listitem>[shipping location number] (e.g., 1st location, 2nd, etc.)</listitem>
+	          </itemizedlist>
+	        </para>
+	        <para>The LINE_ITEM table's composite rowkey would be something like this:
+	          <itemizedlist>
+	            <listitem>[order-rowkey]</listitem>
+	            <listitem>[shipping location number] (e.g., 1st location, 2nd, etc.)</listitem>
+	            <listitem>[line item number] (e.g., 1st lineitem, 2nd, etc.)</listitem>
+	          </itemizedlist>
+	        </para>
+	        <para>Such a normalized model is likely to be the approach with an RDBMS, but that's not your only option with HBase.
+	        The cons of such an approach is that to retrieve information about any Order, you will need:
+	          <itemizedlist>
+	            <listitem>Get on the ORDER table for the Order</listitem>
+	            <listitem>Scan on the SHIPPING_LOCATION table for that order to get the ShippingLocation instances</listitem>
+	            <listitem>Scan on the LINE_ITEM for each ShippingLocation</listitem>
+	          </itemizedlist>
+	          ... granted, this is what an RDBMS would do under the covers anyway, but since there are no joins in HBase
+	          you're just more aware of this fact.
+	        </para>
+	      </section>
+	      <section xml:id="schema.casestudies.custorder.obj.rectype">
+	        <title>Single Table With Record Types</title>
+	        <para>With this approach, there would exist a single table ORDER that would contain 
+	        </para>
+	        <para>The Order rowkey was described above: <xref linkend="schema.casestudies.custorder"/>
+	          <itemizedlist>
+	            <listitem>[order-rowkey]</listitem>
+	            <listitem>[ORDER record type]</listitem>
+	          </itemizedlist>
+	        </para>
+	        <para>The ShippingLocation composite rowkey would be something like this:
+	          <itemizedlist>
+	            <listitem>[order-rowkey]</listitem>
+	            <listitem>[SHIPPING record type]</listitem>
+	            <listitem>[shipping location number] (e.g., 1st location, 2nd, etc.)</listitem>
+	          </itemizedlist>
+	        </para>
+	        <para>The LineItem composite rowkey would be something like this:
+	          <itemizedlist>
+	            <listitem>[order-rowkey]</listitem>
+	            <listitem>[LINE record type]</listitem>
+	            <listitem>[shipping location number] (e.g., 1st location, 2nd, etc.)</listitem>
+	            <listitem>[line item number] (e.g., 1st lineitem, 2nd, etc.)</listitem>
+	          </itemizedlist>
+	        </para>
+	      </section>
+	      <section xml:id="schema.casestudies.custorder.obj.denorm">
+	        <title>Denormalized</title>
+	        <para>A variant of the Single Table With Record Types approach is to denormalize and flatten some of the object 
+	        hierarchy, such as collapsing the ShippingLocation attributes onto each LineItem instance.
+	        </para>
+	        <para>The LineItem composite rowkey would be something like this:
+	          <itemizedlist>
+	            <listitem>[order-rowkey]</listitem>
+	            <listitem>[LINE record type]</listitem>
+	            <listitem>[line item number] (e.g., 1st lineitem, 2nd, etc. - care must be taken that there are unique across the entire order)</listitem>
+	          </itemizedlist>
+	        </para>
+	        <para>... and the LineItem columns would be something like this:
+	          <itemizedlist>
+	            <listitem>itemNumber</listitem>
+	            <listitem>quantity</listitem>
+	            <listitem>price</listitem>
+	            <listitem>shipToLine1 (denormalized from ShippingLocation)</listitem>
+	            <listitem>shipToLine2 (denormalized from ShippingLocation)</listitem>
+	            <listitem>shipToCity (denormalized from ShippingLocation)</listitem>
+	            <listitem>shipToState (denormalized from ShippingLocation)</listitem>
+	            <listitem>shipToZip (denormalized from ShippingLocation)</listitem>
+	          </itemizedlist>
+	        </para>
+	        <para>The pros of this approach include a less complex object heirarchy, but one of the cons is that updating gets more 
+	        complicated in case any of this information changes.
+	        </para>
+	      </section>
+	      <section xml:id="schema.casestudies.custorder.obj.singleobj">
+	        <title>Object BLOB</title>
+	        <para>With this approach, the entire Order object graph is treated, in one way or another, as a BLOB.  For example, the 
+	        ORDER table's rowkey was described above: <xref linkend="schema.casestudies.custorder"/>, and a 
+	        single column called "order" would contain an object that could be deserialized that contained a container Order, 
+	        ShippingLocations, and LineItems.
+	        </para>
+	        <para>There are many options here:  JSON, XML, Java Serialization, Avro, Hadoop Writables, etc.  All of them are variants
+	        of the same approach:  encode the object graph to a byte-array.  Care should be taken with this approach to ensure backward 
+	        compatibilty in case the object model changes such that older persisted structures can still be read back out of HBase.
+	        </para>
+	        <para>Pros are being able to manage complex object graphs with minimal I/O (e.g., a single HBase Get per
+	        Order in this example), but the cons include the aforementioned warning about backward compatiblity of serialization,
+	        language dependencies of serialization (e.g., Java Serialization only works with Java clients), the fact that
+	        you have to deserialize the entire object to get any piece of information inside the BLOB, and the difficulty in 
+	        getting frameworks like Hive to work with custom objects like this.
+	        </para>
+	      </section>
+	    </section>  <!--  cust/order order object -->
+    </section>  <!--  cust/order -->   
+      
 	<section xml:id="schema.smackdown"><title>Case Study - "Tall/Wide/Middle" Schema Design Smackdown</title>
 	  <para>This section will describe additional schema design questions that appear on the dist-list, specifically about
 	  tall and wide tables.  These are general guidelines and not laws - each application must consider its own needs.
