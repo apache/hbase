@@ -41,8 +41,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -73,6 +73,7 @@ public class ReplicationSourceManager {
   private final AtomicBoolean replicating;
   // Helper for zookeeper
   private final ReplicationZookeeper zkHelper;
+  private final ReplicationQueues replicationQueues;
   // All about stopping
   private final Stoppable stopper;
   // All logs we are currently tracking
@@ -91,14 +92,14 @@ public class ReplicationSourceManager {
   private final long sleepBeforeFailover;
   // Homemade executer service for replication
   private final ThreadPoolExecutor executor;
-  
+
   private final Random rand;
 
 
   /**
-   * Creates a replication manager and sets the watch on all the other
-   * registered region servers
+   * Creates a replication manager and sets the watch on all the other registered region servers
    * @param zkHelper the zk helper for replication
+   * @param replicationQueues the interface for manipulating replication queues
    * @param conf the configuration to use
    * @param stopper the stopper object for this region server
    * @param fs the file system to use
@@ -107,15 +108,13 @@ public class ReplicationSourceManager {
    * @param oldLogDir the directory where old logs are archived
    */
   public ReplicationSourceManager(final ReplicationZookeeper zkHelper,
-                                  final Configuration conf,
-                                  final Stoppable stopper,
-                                  final FileSystem fs,
-                                  final AtomicBoolean replicating,
-                                  final Path logDir,
-                                  final Path oldLogDir) {
+      final ReplicationQueues replicationQueues, final Configuration conf, final Stoppable stopper,
+      final FileSystem fs, final AtomicBoolean replicating, final Path logDir,
+      final Path oldLogDir) {
     this.sources = new ArrayList<ReplicationSourceInterface>();
     this.replicating = replicating;
     this.zkHelper = zkHelper;
+    this.replicationQueues = replicationQueues;
     this.stopper = stopper;
     this.hlogsById = new HashMap<String, SortedSet<String>>();
     this.oldsources = new ArrayList<ReplicationSourceInterface>();
@@ -181,7 +180,7 @@ public class ReplicationSourceManager {
     for (String id : this.zkHelper.getPeerClusters().keySet()) {
       addSource(id);
     }
-    List<String> currentReplicators = this.zkHelper.getListOfReplicators();
+    List<String> currentReplicators = this.replicationQueues.getListOfReplicators();
     if (currentReplicators == null || currentReplicators.size() == 0) {
       return;
     }
@@ -350,13 +349,12 @@ public class ReplicationSourceManager {
    * It creates one old source for any type of source of the old rs.
    * @param rsZnode
    */
-  public void transferQueues(String rsZnode) {
+  private void transferQueues(String rsZnode) {
     NodeFailoverWorker transfer = new NodeFailoverWorker(rsZnode);
     try {
       this.executor.execute(transfer);
     } catch (RejectedExecutionException ex) {
-      LOG.info("Cancelling the transfer of " + rsZnode +
-          " because of " + ex.getMessage());
+      LOG.info("Cancelling the transfer of " + rsZnode + " because of " + ex.getMessage());
     }
   }
 
@@ -589,20 +587,12 @@ public class ReplicationSourceManager {
       }
       SortedMap<String, SortedSet<String>> newQueues = null;
 
-      // check whether there is multi support. If yes, use it.
-      if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
-        LOG.info("Atomically moving " + rsZnode + "'s hlogs to my queue");
-        newQueues = zkHelper.copyQueuesFromRSUsingMulti(rsZnode);
-      } else {
-        LOG.info("Moving " + rsZnode + "'s hlogs to my queue");
-        if (!zkHelper.lockOtherRS(rsZnode)) {
-          return;
-        }
-        newQueues = zkHelper.copyQueuesFromRS(rsZnode);
-        zkHelper.deleteRsQueues(rsZnode);
-      }
-      // process of copying over the failed queue is completed.
+      newQueues = zkHelper.claimQueues(rsZnode);
+
+      // Copying over the failed queue is completed.
       if (newQueues.isEmpty()) {
+        // We either didn't get the lock or the failed region server didn't have any outstanding
+        // HLogs to replicate, so we are done.
         return;
       }
 

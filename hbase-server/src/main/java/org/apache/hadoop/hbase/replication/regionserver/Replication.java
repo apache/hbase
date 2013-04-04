@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,6 +66,7 @@ public class Replication implements WALActionsListener,
   private ReplicationSourceManager replicationManager;
   private final AtomicBoolean replicating = new AtomicBoolean(true);
   private ReplicationZookeeper zkHelper;
+  private ReplicationQueues replicationQueues;
   private Configuration conf;
   private ReplicationSink replicationSink;
   // Hosting server
@@ -104,18 +107,23 @@ public class Replication implements WALActionsListener,
     if (replication) {
       try {
         this.zkHelper = new ReplicationZookeeper(server, this.replicating);
+        this.replicationQueues =
+            new ReplicationQueuesZKImpl(server.getZooKeeper(), this.conf, this.server);
+        this.replicationQueues.init(this.server.getServerName().toString());
       } catch (KeeperException ke) {
         throw new IOException("Failed replication handler create " +
            "(replicating=" + this.replicating, ke);
       }
-      this.replicationManager = new ReplicationSourceManager(zkHelper, conf, this.server, fs,
-          this.replicating, logDir, oldLogDir);
+      this.replicationManager =
+          new ReplicationSourceManager(zkHelper, replicationQueues, conf, this.server, fs,
+              this.replicating, logDir, oldLogDir);
       this.statsThreadPeriod =
           this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
       LOG.debug("ReplicationStatisticsThread " + this.statsThreadPeriod);
     } else {
       this.replicationManager = null;
       this.zkHelper = null;
+      this.replicationQueues = null;
     }
   }
 

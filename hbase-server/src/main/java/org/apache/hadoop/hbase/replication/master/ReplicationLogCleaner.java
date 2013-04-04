@@ -27,7 +27,10 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClientZKImpl;
+import org.apache.hadoop.hbase.replication.ReplicationStateImpl;
+import org.apache.hadoop.hbase.replication.ReplicationStateInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -43,8 +46,10 @@ import java.util.Set;
 @InterfaceAudience.Private
 public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abortable {
   private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
-  private ReplicationZookeeper zkHelper;
-  private Set<String> hlogs = new HashSet<String>();
+  private ZooKeeperWatcher zkw;
+  private ReplicationQueuesClient replicationQueues;
+  private ReplicationStateInterface replicationState;
+  private final Set<String> hlogs = new HashSet<String>();
   private boolean stopped = false;
   private boolean aborted;
 
@@ -53,7 +58,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
   public boolean isLogDeletable(Path filePath) {
 
     try {
-      if (!zkHelper.getReplication()) {
+      if (!replicationState.getState()) {
         return false;
       }
     } catch (KeeperException e) {
@@ -89,20 +94,20 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
   private boolean refreshHLogsAndSearch(String searchedLog) {
     this.hlogs.clear();
     final boolean lookForLog = searchedLog != null;
-    List<String> rss = zkHelper.getListOfReplicators();
+    List<String> rss = replicationQueues.getListOfReplicators();
     if (rss == null) {
       LOG.debug("Didn't find any region server that replicates, deleting: " +
           searchedLog);
       return false;
     }
     for (String rs: rss) {
-      List<String> listOfPeers = zkHelper.getListPeersForRS(rs);
+      List<String> listOfPeers = replicationQueues.getAllQueues(rs);
       // if rs just died, this will be null
       if (listOfPeers == null) {
         continue;
       }
       for (String id : listOfPeers) {
-        List<String> peersHlogs = zkHelper.getListHLogsForPeerForRS(rs, id);
+        List<String> peersHlogs = replicationQueues.getLogsInQueue(rs, id);
         if (peersHlogs != null) {
           this.hlogs.addAll(peersHlogs);
         }
@@ -128,8 +133,9 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
     Configuration conf = new Configuration(config);
     super.setConf(conf);
     try {
-      ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "replicationLogCleaner", null);
-      this.zkHelper = new ReplicationZookeeper(this, conf, zkw);
+      this.zkw = new ZooKeeperWatcher(conf, "replicationLogCleaner", null);
+      this.replicationQueues = new ReplicationQueuesClientZKImpl(zkw, conf, this);
+      this.replicationState = new ReplicationStateImpl(zkw, conf, this);
     } catch (KeeperException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     } catch (IOException e) {
@@ -143,9 +149,17 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
   public void stop(String why) {
     if (this.stopped) return;
     this.stopped = true;
-    if (this.zkHelper != null) {
-      LOG.info("Stopping " + this.zkHelper.getZookeeperWatcher());
-      this.zkHelper.getZookeeperWatcher().close();
+    if (this.zkw != null) {
+      LOG.info("Stopping " + this.zkw);
+      this.zkw.close();
+    }
+    if (this.replicationState != null) {
+      LOG.info("Stopping " + this.replicationState);
+      try {
+        this.replicationState.close();
+      } catch (IOException e) {
+        LOG.error("Error while stopping " + this.replicationState, e);
+      }
     }
     // Not sure why we're deleting a connection that we never acquired or used
     HConnectionManager.deleteConnection(this.getConf());
