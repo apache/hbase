@@ -1738,14 +1738,14 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           </para>
         </section>
       </section>
-      
+
        <section>
         <title>Online Region Merges</title>
-        
+
         <para>Both Master and Regionserver participate in the event of online region merges.
         Client sends merge RPC to master, then master moves the regions together to the
         same regionserver where the more heavily loaded region resided, finally master
-        send merge request to this regionserver and regionserver run the region merges. 
+        send merge request to this regionserver and regionserver run the region merges.
         Similar with process of region splits, region merges run as a local transaction
         on the regionserver, offlines the regions and then merges two regions on the file
         system, atomically delete merging regions from META and add merged region to the META,
@@ -1756,7 +1756,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
           </programlisting>
           It's an asynchronous operation and call returns immediately without waiting merge completed.
-          Passing 'true' as the optional third parameter will force a merge ('force' merges regardless 
+          Passing 'true' as the optional third parameter will force a merge ('force' merges regardless
           else merge will fail unless passed adjacent regions. 'force' is for expert use only)
         </para>
       </section>
@@ -2684,19 +2684,22 @@ hbase> describe 't1'</programlisting>
     <para>
         You will find the snappy library file under the .libs directory from your Snappy build (For example
         /home/hbase/snappy-1.0.5/.libs/). The file is called libsnappy.so.1.x.x where 1.x.x is the version of the snappy
-        code you are building. You can either copy this file into your hbase directory under libsnappy.so name, or simply
-        create a symbolic link to it.
+        code you are building. You can either copy this file into your hbase lib directory -- under lib/native/PLATFORM --
+        naming the file as libsnappy.so,
+        or simply create a symbolic link to it (See ./bin/hbase for how it does library path for native libs).
     </para>
 
     <para>
         The second file you need is the hadoop native library. You will find this file in your hadoop installation directory
         under lib/native/Linux-amd64-64/ or lib/native/Linux-i386-32/. The file you are looking for is libhadoop.so.1.x.x.
-        Again, you can simply copy this file or link to it, under the name libhadoop.so.
+        Again, you can simply copy this file or link to it from under hbase in lib/native/PLATFORM (e.g. Linux-amd64-64, etc.),
+        using the name libhadoop.so.
     </para>
 
     <para>
         At the end of the installation, you should have both libsnappy.so and libhadoop.so links or files present into
-        lib/native/Linux-amd64-64 or into lib/native/Linux-i386-32
+        lib/native/Linux-amd64-64 or into lib/native/Linux-i386-32 (where the last part of the directory path is the
+        PLATFORM you built and rare running the native lib on)
     </para>
     <para>To point hbase at snappy support, in hbase-env.sh set
         <programlisting>export HBASE_LIBRARY_PATH=/pathtoyourhadoop/lib/native/Linux-amd64-64</programlisting>
