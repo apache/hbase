@@ -431,10 +431,18 @@ public class TestAssignmentManager {
   @Test
   public void testSSHWhenDisableTableInProgress()
       throws KeeperException, IOException {
-    testCaseWithPartiallyDisabledState(TableState.DISABLING);
-    testCaseWithPartiallyDisabledState(TableState.DISABLED);
+    testCaseWithPartiallyDisabledState(TableState.DISABLING, false);
+    testCaseWithPartiallyDisabledState(TableState.DISABLED, false);
   }
 
+  @Test
+  public void testSSHWhenDisablingTableRegionsInOpeningState()
+      throws KeeperException, IOException {
+    testCaseWithPartiallyDisabledState(TableState.DISABLING, true);
+    testCaseWithPartiallyDisabledState(TableState.DISABLED, true);
+  }
+
+  
   /**
    * To test if the split region is removed from RIT if the region was in SPLITTING state
    * but the RS has actually completed the splitting in META but went down. See HBASE-6070
@@ -500,7 +508,8 @@ public class TestAssignmentManager {
     }
   }
 
-  private void testCaseWithPartiallyDisabledState(TableState state) throws KeeperException, IOException, NodeExistsException {
+  private void testCaseWithPartiallyDisabledState(TableState state, boolean opening)
+      throws KeeperException, IOException, NodeExistsException {
     // Create and startup an executor. This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testSSHWhenDisableTableInProgress");
@@ -511,20 +520,32 @@ public class TestAssignmentManager {
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server, this.serverManager, ct, balancer,
         executor);
-    // adding region to regions and servers maps.
-    am.regionOnline(REGIONINFO, SERVERNAME_A);
-    // adding region in pending close.
-    am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
-        State.PENDING_CLOSE, System.currentTimeMillis(), SERVERNAME_A));
-
+    if (opening) {
+      am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
+          State.OPENING, System.currentTimeMillis(), SERVERNAME_A));
+    } else {
+      // adding region to regions and servers maps.
+      am.regionOnline(REGIONINFO, SERVERNAME_A);
+      // adding region in pending close.
+      am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
+          State.PENDING_CLOSE, System.currentTimeMillis(), SERVERNAME_A));
+    }
     if (state == TableState.DISABLING) {
       am.getZKTable().setDisablingTable(REGIONINFO.getTableNameAsString());
     } else {
       am.getZKTable().setDisabledTable(REGIONINFO.getTableNameAsString());
     }
+    RegionTransitionData data = null;
+    if (opening) {
+      data =
+          new RegionTransitionData(EventType.RS_ZK_REGION_OPENING, REGIONINFO.getRegionName(),
+              SERVERNAME_A);
 
-    RegionTransitionData data = new RegionTransitionData(EventType.M_ZK_REGION_CLOSING,
-        REGIONINFO.getRegionName(), SERVERNAME_A);
+    } else {
+      data =
+          new RegionTransitionData(EventType.M_ZK_REGION_CLOSING, REGIONINFO.getRegionName(),
+              SERVERNAME_A);
+    }
     String node = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
     // create znode in M_ZK_REGION_CLOSING state.
     ZKUtil.createAndWatch(this.watcher, node, data.getBytes());
@@ -534,12 +555,8 @@ public class TestAssignmentManager {
       // check znode deleted or not.
       // In both cases the znode should be deleted.
       assertTrue("The znode should be deleted.",ZKUtil.checkExists(this.watcher, node) == -1);
-      // check whether in rit or not.  In the DISABLING case also the below assert will be true
-      // but the piece of code added for HBASE-5927 will not do that.
-      if (state == TableState.DISABLED) {
-        assertTrue("Region state of region in pending close should be removed from rit.",
-            am.regionsInTransition.isEmpty());
-      }
+      assertTrue("Region state of region in pending close should be removed from rit.",
+        am.regionsInTransition.isEmpty());
     } finally {
       executor.shutdown();
       am.shutdown();

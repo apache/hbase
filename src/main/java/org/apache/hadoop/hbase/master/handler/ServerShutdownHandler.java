@@ -288,31 +288,29 @@ public class ServerShutdownHandler extends EventHandler {
       // If the table was partially disabled and the RS went down, we should clear the RIT
       // and remove the node for the region. The rit that we use may be stale in case the table
       // was in DISABLING state but though we did assign we will not be clearing the znode in
-      // CLOSING state. Doing this will have no harm. See HBASE-5927
-      toAssign = checkForDisablingOrDisabledTables(ritsGoingToServer, toAssign, rit, assignmentManager);
+      // CLOSING state. Doing this will have no harm. The rit can be null if region server went
+      // down during master startup. In that case If any znodes' exists for partially disabled 
+      // table regions deleting them during startup only. See HBASE-8127. 
+      toAssign =
+          checkForDisablingOrDisabledTables(ritsGoingToServer, toAssign, rit, e.getKey(),
+            assignmentManager);
     }
     return toAssign;
   }
 
   private List<HRegionInfo> checkForDisablingOrDisabledTables(Set<HRegionInfo> regionsFromRIT,
-      List<HRegionInfo> toAssign, RegionState rit, AssignmentManager assignmentManager) {
-    if (rit == null) {
-      return toAssign;
+      List<HRegionInfo> toAssign, RegionState rit, HRegionInfo hri,
+      AssignmentManager assignmentManager) {
+    boolean disabled =
+        assignmentManager.getZKTable().isDisablingOrDisabledTable(hri.getTableNameAsString());
+    if (disabled) {
+      // To avoid region assignment if table is in disabling or disabled state.
+      toAssign.remove(hri);
+      regionsFromRIT.remove(hri);
     }
-    if (!rit.isClosing() && !rit.isPendingClose()) {
-      return toAssign;
+    if (rit != null && disabled) {
+      assignmentManager.deleteNodeAndOfflineRegion(hri);
     }
-    if (!assignmentManager.getZKTable().isDisablingOrDisabledTable(
-        rit.getRegion().getTableNameAsString())) {
-      return toAssign;
-    }
-    HRegionInfo hri = rit.getRegion();
-    AssignmentManager am = assignmentManager;
-    am.deleteClosingOrClosedNode(hri);
-    am.regionOffline(hri);
-    // To avoid region assignment if table is in disabling or disabled state.
-    toAssign.remove(hri);
-    regionsFromRIT.remove(hri);
     return toAssign;
   }
 

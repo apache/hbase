@@ -2836,6 +2836,12 @@ public class AssignmentManager extends ZooKeeperListener {
         // see HBASE-5916
         if (actualDeadServers.contains(deadServer.getKey())) {
           for (Pair<HRegionInfo, Result> deadRegion : deadServer.getValue()) {
+            HRegionInfo hri = deadRegion.getFirst();
+            // Delete znode of region in transition if table is disabled or disabling. If a region
+            // server went down during master initialization then SSH cannot handle the regions of
+            // partially disabled tables because in memory region state information may not be
+            // available with master.
+            deleteNodeAndOfflineRegion(hri);
             nodes.remove(deadRegion.getFirst().getEncodedName());
           }
           continue;
@@ -2881,6 +2887,22 @@ public class AssignmentManager extends ZooKeeperListener {
       for (String encodedRegionName : nodes) {
         processRegionInTransition(encodedRegionName, null, deadServers);
       }
+    }
+  }
+
+  /**
+   * Delete znode of region in transition if table is disabling/disabled and offline the region.
+   * @param hri region to offline.
+   */
+  public void deleteNodeAndOfflineRegion(HRegionInfo hri) {
+    if (zkTable.isDisablingOrDisabledTable(hri.getTableNameAsString())) {
+      try {
+        // If table is partially disabled then delete znode if exists in any state.
+        ZKAssign.deleteNodeFailSilent(this.master.getZooKeeper(), hri);
+      } catch (KeeperException ke) {
+        this.master.abort("Unexpected ZK exception deleting unassigned node " + hri, ke);
+      }
+      regionOffline(hri);
     }
   }
 
@@ -3580,7 +3602,7 @@ public class AssignmentManager extends ZooKeeperListener {
       out.writeLong(stamp.get());
     }
   }
-
+  
   public void stop() {
     this.timeoutMonitor.interrupt();
     this.timerUpdater.interrupt();

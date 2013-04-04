@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
@@ -64,7 +65,7 @@ public class TestRSKilledWhenMasterInitializing {
 
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
   private static final int NUM_MASTERS = 1;
-  private static final int NUM_RS = 4;
+  private static final int NUM_RS = 5;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -72,7 +73,7 @@ public class TestRSKilledWhenMasterInitializing {
     Configuration conf = TESTUTIL.getConfiguration();
     conf.setClass(HConstants.MASTER_IMPL, TestingMaster.class, HMaster.class);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 3);
-    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 4);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 5);
 
     // Start up the cluster.
     TESTUTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
@@ -232,6 +233,61 @@ public class TestRSKilledWhenMasterInitializing {
     resultScanner.close();
     table.close();
     assertEquals(3, count);
+  }
+
+  @Test (timeout=180000)
+  public void testMasterFailoverWhenDisablingTableRegionsInRITOnDeadRS() throws Exception {
+    MiniHBaseCluster cluster = TESTUTIL.getHBaseCluster();
+    HMaster master = cluster.getMaster();
+    // disable load balancing on this master
+    master.balanceSwitch(false);
+
+    final String table = "testMasterFailoverWhenDisablingTableRegionsInRITOnDeadRS";
+    byte [] FAMILY = Bytes.toBytes("family");
+    byte[][] SPLIT_KEYS =
+        new byte[][] {Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
+            Bytes.toBytes("d") };
+    HTableDescriptor htd = new HTableDescriptor(table);
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
+    htd.addFamily(hcd);
+    TESTUTIL.getHBaseAdmin().createTable(htd, SPLIT_KEYS);
+    AssignmentManager am = cluster.getMaster().getAssignmentManager();
+    List<HRegionInfo> regionsOfTable = null;
+    while ((regionsOfTable = am.getRegionsOfTable(table.getBytes())).size()
+        != (SPLIT_KEYS.length + 1)) {
+      Thread.sleep(10);
+    }
+    HRegionInfo closingRegion = regionsOfTable.get(0);
+    ServerName serverName = am.getRegionServerOfRegion(closingRegion);
+    HRegionServer deadRS = null;
+    for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
+      deadRS = cluster.getRegionServer(i);
+      if (deadRS.getServerName().equals(serverName)) {
+        break;
+      }
+    }
+
+    // Disable the table in ZK
+    ZKTable zkTable = am.getZKTable();
+    zkTable.setDisablingTable(table);
+    ZKAssign.createNodeClosing(master.getZooKeeper(), closingRegion, serverName);
+
+    // Stop the master
+    abortMaster(cluster);
+    master = startMasterAndWaitUntilLogSplit(cluster);
+    deadRS.kill();
+    deadRS.join();
+    waitUntilMasterIsInitialized(master);
+    am = cluster.getMaster().getAssignmentManager();
+    zkTable = am.getZKTable();
+    // wait for no more RIT
+    ZKAssign.blockUntilNoRIT(master.getZooKeeper());
+    while (!master.getAssignmentManager().getZKTable().isDisabledTable(table)) {
+      Thread.sleep(10);
+    }
+    assertTrue("Table should be disabled state.", zkTable.isDisabledTable(table));
+    HBaseAdmin admin = new HBaseAdmin(master.getConfiguration());
+    admin.deleteTable(table);
   }
 
   private void abortMaster(MiniHBaseCluster cluster)
