@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -77,8 +79,8 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
   // TODO consider parallelizing these operations since they are independent. Right now its just
   // easier to keep them serial though
   @Override
-  public void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regionsAndLocations) throws IOException,
-  KeeperException {
+  public void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regionsAndLocations)
+      throws IOException, KeeperException {
     try {
       timeoutInjector.start();
 
@@ -95,8 +97,10 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
       }
 
       // 2. for each region, write all the info to disk
-      LOG.info("Starting to write region info and WALs for regions for offline snapshot:"
-          + ClientSnapshotDescriptionUtils.toString(snapshot));
+      String msg = "Starting to write region info and WALs for regions for offline snapshot:"
+          + ClientSnapshotDescriptionUtils.toString(snapshot);
+      LOG.info(msg);
+      status.setStatus(msg);
       for (HRegionInfo regionInfo : regions) {
         // 2.1 copy the regionInfo files to the snapshot
         HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
@@ -110,10 +114,14 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
         Path snapshotRegionDir = regionFs.getRegionDir();
         new CopyRecoveredEditsTask(snapshot, monitor, fs, regionDir, snapshotRegionDir).call();
         monitor.rethrowException();
+        status.setStatus("Completed copying recovered edits for offline snapshot of table: "
+            + snapshot.getTable());
 
         // 2.3 reference all the files in the region
         new ReferenceRegionHFilesTask(snapshot, monitor, regionDir, fs, snapshotRegionDir).call();
         monitor.rethrowException();
+        status.setStatus("Completed referencing HFiles for offline snapshot of table: " +
+          snapshot.getTable());
       }
 
       // 3. write the table info to disk
@@ -123,12 +131,14 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
           FSUtils.getRootDir(conf));
       tableInfoCopyTask.call();
       monitor.rethrowException();
+      status.setStatus("Finished copying tableinfo for snapshot of table: " + snapshot.getTable());
     } catch (Exception e) {
       // make sure we capture the exception to propagate back to the client later
       String reason = "Failed snapshot " + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " due to exception:" + e.getMessage();
       ForeignException ee = new ForeignException(reason, e);
       monitor.receive(ee);
+      status.abort("Snapshot of table: "+ snapshot.getTable() +" failed because " + e.getMessage());
     } finally {
       LOG.debug("Marking snapshot" + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " as finished.");

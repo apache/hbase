@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.exceptions.RestoreSnapshotException;
@@ -60,6 +62,8 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   private final SnapshotDescription snapshot;
 
   private final ForeignExceptionDispatcher monitor;
+  private final MonitoredTask status;
+
   private volatile boolean stopped = false;
 
   public RestoreSnapshotHandler(final MasterServices masterServices,
@@ -78,6 +82,10 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
 
     // This is the new schema we are going to write out as this modification.
     this.hTableDescriptor = htd;
+
+    this.status = TaskMonitor.get().createStatus(
+      "Restoring  snapshot '" + snapshot.getName() + "' to table "
+          + hTableDescriptor.getNameAsString());
   }
 
   /**
@@ -106,27 +114,37 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
           masterServices.getConfiguration(), fs,
-          snapshot, snapshotDir, hTableDescriptor, tableDir, monitor);
+          snapshot, snapshotDir, hTableDescriptor, tableDir, monitor, status);
       RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
 
       // 3. Applies changes to .META.
       hris.clear();
+      status.setStatus("Preparing to restore each region");
       if (metaChanges.hasRegionsToAdd()) hris.addAll(metaChanges.getRegionsToAdd());
       if (metaChanges.hasRegionsToRestore()) hris.addAll(metaChanges.getRegionsToRestore());
       List<HRegionInfo> hrisToRemove = metaChanges.getRegionsToRemove();
       MetaEditor.mutateRegions(catalogTracker, hrisToRemove, hris);
 
       // At this point the restore is complete. Next step is enabling the table.
-      LOG.info("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) + " on table=" +
-        Bytes.toString(tableName) + " completed!");
+      LOG.info("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
+        " on table=" + Bytes.toString(tableName) + " completed!");
     } catch (IOException e) {
       String msg = "restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " failed. Try re-running the restore command.";
       LOG.error(msg, e);
       monitor.receive(new ForeignException(masterServices.getServerName().toString(), e));
       throw new RestoreSnapshotException(msg, e);
-    } finally {
-      this.stopped = true;
+    }
+  }
+
+  @Override
+  protected void completed(final Throwable exception) {
+    this.stopped = true;
+    if (exception != null) {
+      status.abort("Restore snapshot '" + snapshot.getName() + "' failed because " +
+          exception.getMessage());
+    } else {
+      status.markComplete("Restore snapshot '"+ snapshot.getName() +"'!");
     }
   }
 

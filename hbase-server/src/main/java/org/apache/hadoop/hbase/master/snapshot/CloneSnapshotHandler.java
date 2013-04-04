@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.exceptions.TableExistsException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
@@ -60,6 +62,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   private final SnapshotDescription snapshot;
 
   private final ForeignExceptionDispatcher monitor;
+  private final MonitoredTask status;
 
   private volatile boolean stopped = false;
 
@@ -74,6 +77,8 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
 
     // Monitor
     this.monitor = new ForeignExceptionDispatcher();
+    this.status = TaskMonitor.get().createStatus("Cloning  snapshot '" + snapshot.getName() +
+      "' to table " + hTableDescriptor.getNameAsString());
   }
 
   @Override
@@ -88,8 +93,9 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
    * will be responsible to add the regions returned by this method to META and do the assignment.
    */
   @Override
-  protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir, final String tableName)
-      throws IOException {
+  protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir,
+      final String tableName) throws IOException {
+    status.setStatus("Creating regions for table: " + tableName);
     FileSystem fs = fileSystemManager.getFileSystem();
     Path rootDir = fileSystemManager.getRootDir();
     Path tableDir = new Path(tableRootDir, tableName);
@@ -98,7 +104,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
       // 1. Execute the on-disk Clone
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(conf, fs,
-          snapshot, snapshotDir, hTableDescriptor, tableDir, monitor);
+          snapshot, snapshotDir, hTableDescriptor, tableDir, monitor, status);
       RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
 
       // Clone operation should not have stuff to restore or remove
@@ -108,12 +114,15 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
           "A clone should not have regions to remove");
 
       // At this point the clone is complete. Next step is enabling the table.
-      LOG.info("Clone snapshot=" + snapshot.getName() + " on table=" + tableName + " completed!");
+      String msg = "Clone snapshot="+ snapshot.getName() +" on table=" + tableName + " completed!";
+      LOG.info(msg);
+      status.setStatus(msg + " Waiting for table to be enabled...");
 
       // 2. let the CreateTableHandler add the regions to meta
       return metaChanges.getRegionsToAdd();
     } catch (Exception e) {
-      String msg = "clone snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) + " failed";
+      String msg = "clone snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
+        " failed because " + e.getMessage();
       LOG.error(msg, e);
       IOException rse = new RestoreSnapshotException(msg, e, snapshot);
 
@@ -126,6 +135,12 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   @Override
   protected void completed(final Throwable exception) {
     this.stopped = true;
+    if (exception != null) {
+      status.abort("Snapshot '" + snapshot.getName() + "' clone failed because " +
+          exception.getMessage());
+    } else {
+      status.markComplete("Snapshot '"+ snapshot.getName() +"' clone completed and table enabled!");
+    }
     super.completed(exception);
   }
 
@@ -143,7 +158,9 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   public void cancel(String why) {
     if (this.stopped) return;
     this.stopped = true;
-    LOG.info("Stopping clone snapshot=" + snapshot + " because: " + why);
+    String msg = "Stopping clone snapshot=" + snapshot + " because: " + why;
+    LOG.info(msg);
+    status.abort(msg);
     this.monitor.receive(new ForeignException(NAME, new CancellationException(why)));
   }
 

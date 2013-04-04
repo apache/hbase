@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -102,6 +103,7 @@ public class RestoreSnapshotHelper {
         new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
 
   private final ForeignExceptionDispatcher monitor;
+  private final MonitoredTask status;
 
   private final SnapshotDescription snapshotDesc;
   private final Path snapshotDir;
@@ -115,7 +117,7 @@ public class RestoreSnapshotHelper {
   public RestoreSnapshotHelper(final Configuration conf, final FileSystem fs,
       final SnapshotDescription snapshotDescription, final Path snapshotDir,
       final HTableDescriptor tableDescriptor, final Path tableDir,
-      final ForeignExceptionDispatcher monitor)
+      final ForeignExceptionDispatcher monitor, final MonitoredTask status)
   {
     this.fs = fs;
     this.conf = conf;
@@ -124,6 +126,7 @@ public class RestoreSnapshotHelper {
     this.tableDesc = tableDescriptor;
     this.tableDir = tableDir;
     this.monitor = monitor;
+    this.status = status;
   }
 
   /**
@@ -159,11 +162,15 @@ public class RestoreSnapshotHelper {
 
       // Restore regions using the snapshot data
       monitor.rethrowException();
+      status.setStatus("Restoring table regions...");
       restoreHdfsRegions(metaChanges.getRegionsToRestore());
+      status.setStatus("Finished restoring all table regions.");
 
       // Remove regions from the current table
       monitor.rethrowException();
+      status.setStatus("Starting to delete excess regions from table");
       removeHdfsRegions(metaChanges.getRegionsToRemove());
+      status.setStatus("Finished deleting excess regions from table.");
     }
 
     // Regions to Add: present in the snapshot but not in the current table
@@ -179,13 +186,17 @@ public class RestoreSnapshotHelper {
 
       // Create new regions cloning from the snapshot
       monitor.rethrowException();
+      status.setStatus("Cloning regions...");
       HRegionInfo[] clonedRegions = cloneHdfsRegions(regionsToAdd);
       metaChanges.setNewRegions(clonedRegions);
+      status.setStatus("Finished cloning regions.");
     }
 
     // Restore WALs
     monitor.rethrowException();
+    status.setStatus("Restoring WALs to table...");
     restoreWALs();
+    status.setStatus("Finished restoring WALs to table.");
 
     return metaChanges;
   }
