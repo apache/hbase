@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -722,6 +723,12 @@ public class ReplicationSource extends Thread
         if (ioe instanceof RemoteException) {
           ioe = ((RemoteException) ioe).unwrapRemoteException();
           LOG.warn("Can't replicate because of an error on the remote cluster: ", ioe);
+          if (ioe instanceof TableNotFoundException) {
+            if (sleepForRetries("A table is missing in the peer cluster. "
+                + "Replication cannot proceed without losing data.", sleepMultiplier)) {
+              sleepMultiplier++;
+            }
+          }
         } else {
           if (ioe instanceof SocketTimeoutException) {
             // This exception means we waited for more than 60s and nothing
