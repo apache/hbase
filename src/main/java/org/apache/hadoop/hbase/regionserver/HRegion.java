@@ -1400,7 +1400,7 @@ public class HRegion implements HeapSize {
       sb.append("startCacheFlush : " + (t02-t01) + ", ");
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
       t03 = EnvironmentEdgeManager.currentTimeMillis();
-      sb.append("getCompleteCacheFlushSeqId : " + (t03-t02) + ", ");
+      sb.append("getCompleteCacheFlushSeqId : " + (t03-t02) + ", [");
       long tmp0, tmp1;
       for (Store s : stores.values()) {
         tmp0 = EnvironmentEdgeManager.currentTimeMillis();
@@ -1409,7 +1409,7 @@ public class HRegion implements HeapSize {
         sb.append("getFlusher : " + s.getColumnFamilyName() + " : " + (tmp1-tmp0));
       }
       t04 = EnvironmentEdgeManager.currentTimeMillis();
-      sb.append(" all getStoreFlusher : " + (t04-t03) + ", ");
+      sb.append("] all getStoreFlusher : " + (t04-t03) + ", [");
 
       // prepare flush (take a snapshot)
       for (StoreFlusher flusher : storeFlushers) {
@@ -1419,7 +1419,7 @@ public class HRegion implements HeapSize {
         sb.append("prepare : " + flusher.toString() + " : " + (tmp1-tmp0));
       }
       t05 = EnvironmentEdgeManager.currentTimeMillis();
-      sb.append(" all prepare() : " + (t05-t04) + " ms. ");
+      sb.append("] all prepare() : " + (t05-t04) + " ms. ");
     } finally {
       this.updatesLock.writeLock().unlock();
       t1 = EnvironmentEdgeManager.currentTimeMillis();
