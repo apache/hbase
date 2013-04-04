@@ -89,4 +89,28 @@ public class MetricsMaster {
   public void updateRITOldestAge(long timestamp) {
     masterSource.setRITOldestAge(timestamp);
   }
+
+  /**
+   * Record a single instance of a snapshot
+   * @param time time that the snapshot took
+   */
+  public void addSnapshot(long time) {
+    masterSource.updateSnapshotTime(time);
+  }
+
+  /**
+   * Record a single instance of a snapshot
+   * @param time time that the snapshot restore took
+   */
+  public void addSnapshotRestore(long time) {
+    masterSource.updateSnapshotRestoreTime(time);
+  }
+
+  /**
+   * Record a single instance of a snapshot cloned table
+   * @param time time that the snapshot clone took
+   */
+  public void addSnapshotClone(long time) {
+    masterSource.updateSnapshotCloneTime(time);
+  }
 }

@@ -25,6 +25,7 @@ import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
+import org.apache.hadoop.metrics2.lib.MutableStat;
 
 /**
  * Hadoop2 implementation of MetricsMasterSource.
@@ -41,6 +42,9 @@ public class MetricsMasterSourceImpl
   private MutableGaugeLong ritOldestAgeGauge;
   private MutableHistogram splitTimeHisto;
   private MutableHistogram splitSizeHisto;
+  private MutableStat snapshotTimeHisto;
+  private MutableStat snapshotCloneTimeHisto;
+  private MutableStat snapshotRestoreTimeHisto;
 
   public MetricsMasterSourceImpl(MetricsMasterWrapper masterWrapper) {
     this(METRICS_NAME,
@@ -69,6 +73,12 @@ public class MetricsMasterSourceImpl
     ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, "", 0l);
     splitSizeHisto = metricsRegistry.newHistogram(SPLIT_SIZE_NAME, SPLIT_SIZE_DESC);
     splitTimeHisto = metricsRegistry.newHistogram(SPLIT_TIME_NAME, SPLIT_TIME_DESC);
+    snapshotTimeHisto = metricsRegistry.newStat(
+        SNAPSHOT_TIME_NAME, SNAPSHOT_TIME_DESC, "Ops", "Time", true);
+    snapshotCloneTimeHisto = metricsRegistry.newStat(
+        SNAPSHOT_CLONE_TIME_NAME, SNAPSHOT_CLONE_TIME_DESC, "Ops", "Time", true);
+    snapshotRestoreTimeHisto = metricsRegistry.newStat(
+        SNAPSHOT_RESTORE_TIME_NAME, SNAPSHOT_RESTORE_TIME_DESC, "Ops", "Time", true);
   }
 
   public void incRequests(final int inc) {
@@ -95,6 +105,21 @@ public class MetricsMasterSourceImpl
   @Override
   public void updateSplitSize(long size) {
     splitSizeHisto.add(size);
+  }
+
+  @Override
+  public void updateSnapshotTime(long time) {
+    snapshotTimeHisto.add(time);
+  }
+
+  @Override
+  public void updateSnapshotCloneTime(long time) {
+    snapshotCloneTimeHisto.add(time);
+  }
+
+  @Override
+  public void updateSnapshotRestoreTime(long time) {
+    snapshotRestoreTimeHisto.add(time);
   }
 
   @Override

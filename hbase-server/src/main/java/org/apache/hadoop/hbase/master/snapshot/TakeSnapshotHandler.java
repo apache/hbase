@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.exceptions.SnapshotCreationException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -70,6 +71,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
   // none of these should ever be null
   protected final MasterServices master;
+  protected final MetricsMaster metricsMaster;
   protected final SnapshotDescription snapshot;
   protected final Configuration conf;
   protected final FileSystem fs;
@@ -87,13 +89,14 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
    * @param masterServices master services provider
    * @throws IOException on unexpected error
    */
-  public TakeSnapshotHandler(SnapshotDescription snapshot,
-      final MasterServices masterServices) throws IOException {
+  public TakeSnapshotHandler(SnapshotDescription snapshot, final MasterServices masterServices,
+      final MetricsMaster metricsMaster) throws IOException {
     super(masterServices, EventType.C_M_SNAPSHOT_TABLE);
     assert snapshot != null : "SnapshotDescription must not be nul1";
     assert masterServices != null : "MasterServices must not be nul1";
 
     this.master = masterServices;
+    this.metricsMaster = metricsMaster;
     this.snapshot = snapshot;
     this.conf = this.master.getConfiguration();
     this.fs = this.master.getMasterFileSystem().getFileSystem();
@@ -173,6 +176,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       completeSnapshot(this.snapshotDir, this.workingDir, this.fs);
       status.markComplete("Snapshot " + snapshot.getName() + " of table " + snapshot.getTable()
           + " completed");
+      metricsMaster.addSnapshot(status.getCompletionTimestamp() - status.getStartTime());
     } catch (Exception e) {
       status.abort("Failed to complete snapshot " + snapshot.getName() + " on table " +
           snapshot.getTable() + " because " + e.getMessage());
