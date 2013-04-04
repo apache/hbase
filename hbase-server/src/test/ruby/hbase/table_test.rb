@@ -101,6 +101,22 @@ module Hbase
       @test_name = "hbase_shell_tests_table"
       create_test_table(@test_name)
       @test_table = table(@test_name)
+      
+      # Insert data to perform delete operations
+      @test_table.put("101", "x:a", "1")
+      @test_table.put("101", "x:a", "2", Time.now.to_i)
+      
+      @test_table.put("102", "x:a", "1",1212)
+      @test_table.put("102", "x:a", "2", 1213)
+      
+      @test_table.put(103, "x:a", "3")
+      @test_table.put(103, "x:a", "4")
+      
+      @test_table.put("104", "x:a", 5)
+      @test_table.put("104", "x:b", 6)
+      
+      @test_table.put(105, "x:a", "3")
+      @test_table.put(105, "x:a", "4")
     end
 
     define_test "put should work without timestamp" do
@@ -122,25 +138,35 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "delete should work without timestamp" do
-      @test_table.delete("123", "x:a")
+      @test_table.delete("101", "x:a")
+      res = @test_table._get_internal('101', 'x:a')
+      assert_nil(res)
     end
 
     define_test "delete should work with timestamp" do
-      @test_table.delete("123", "x:a", Time.now.to_i)
+      @test_table.delete("102", "x:a", 1214)
+      res = @test_table._get_internal('102', 'x:a')
+      assert_nil(res)
     end
 
     define_test "delete should work with integer keys" do
-      @test_table.delete(123, "x:a")
+      @test_table.delete(103, "x:a")
+      res = @test_table._get_internal('103', 'x:a')
+      assert_nil(res)
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "deleteall should work w/o columns and timestamps" do
-      @test_table.deleteall("123")
+      @test_table.deleteall("104")
+      res = @test_table._get_internal('104', 'x:a', 'x:b')
+      assert_nil(res)
     end
 
     define_test "deleteall should work with integer keys" do
-      @test_table.deleteall(123)
+      @test_table.deleteall(105)
+      res = @test_table._get_internal('105', 'x:a')
+      assert_nil(res)
     end
 
     #-------------------------------------------------------------------------------
