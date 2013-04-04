@@ -28,10 +28,12 @@
   import="org.apache.hadoop.hbase.ServerLoad"
   import="org.apache.hadoop.hbase.RegionLoad"
   import="org.apache.hadoop.hbase.master.HMaster"
+  import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.protobuf.ProtobufUtil"
   import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription"
+  import="org.apache.hadoop.util.StringUtils"
   import="java.util.List"
   import="java.util.Map"
   import="org.apache.hadoop.hbase.HConstants"%><%
@@ -41,9 +43,11 @@
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
   String snapshotName = request.getParameter("name");
   SnapshotDescription snapshot = null;
+  SnapshotInfo.SnapshotStats stats = null;
   for (SnapshotDescription snapshotDesc: hbadmin.listSnapshots()) {
     if (snapshotName.equals(snapshotDesc.getName())) {
       snapshot = snapshotDesc;
+      stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
       break;
     }
   }
@@ -158,14 +162,44 @@
         <th>Creation Time</th>
         <th>Type</th>
         <th>Format Version</th>
+        <th>State</th>
     </tr>
     <tr>
         <td><a href="table.jsp?name=<%= snapshot.getTable() %>"><%= snapshot.getTable() %></a></td>
         <td><%= new Date(snapshot.getCreationTime()) %></td>
         <td><%= snapshot.getType() %></td>
         <td><%= snapshot.getVersion() %></td>
+        <% if (stats.isSnapshotCorrupted()) { %>
+          <td style="font-weight: bold; color: #dd0000;">CORRUPTED</td>
+        <% } else { %>
+          <td>ok</td>
+        <% } %>
     </tr>
   </table>
+  <div class="row">
+    <div class="span12">
+    <%= stats.getStoreFilesCount() %> HFiles (<%= stats.getArchivedStoreFilesCount() %> in archive),
+    total size <%= StringUtils.humanReadableInt(stats.getStoreFilesSize()) %>
+    (<%= stats.getSharedStoreFilePercentage() %>&#37;
+    <%= StringUtils.humanReadableInt(stats.getSharedStoreFilesSize()) %> shared with the source
+    table)
+    </div>
+    <div class="span12">
+    <%= stats.getLogsCount() %> Logs, total size
+    <%= StringUtils.humanReadableInt(stats.getLogsSize()) %>
+    </div>
+  </div>
+  <% if (stats.isSnapshotCorrupted()) { %>
+    <div class="row">
+      <div class="span12">
+          <h3>CORRUPTED Snapshot</h3>
+      </div>
+      <div class="span12">
+        <%= stats.getMissingStoreFilesCount() %> hfile(s) and
+        <%= stats.getMissingLogsCount() %> log(s) missing.
+      </div>
+    </div>
+  <% } %>
 <%
   } // end else
 

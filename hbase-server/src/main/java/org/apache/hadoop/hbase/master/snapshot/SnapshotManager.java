@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
@@ -118,6 +119,7 @@ public class SnapshotManager implements Stoppable {
   private boolean stopped;
   private final long wakeFrequency;
   private final MasterServices master;  // Needed by TableEventHandlers
+  private final MetricsMaster metricsMaster;
   private final ProcedureCoordinator coordinator;
 
   // Is snapshot feature enabled?
@@ -139,9 +141,11 @@ public class SnapshotManager implements Stoppable {
    * Construct a snapshot manager.
    * @param master
    */
-  public SnapshotManager(final MasterServices master) throws KeeperException, IOException,
-    UnsupportedOperationException {
+  public SnapshotManager(final MasterServices master, final MetricsMaster metricsMaster)
+      throws KeeperException, IOException, UnsupportedOperationException {
     this.master = master;
+    this.metricsMaster = metricsMaster;
+
     checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
 
     // get the configuration for the coordinator
@@ -166,9 +170,12 @@ public class SnapshotManager implements Stoppable {
    * @param coordinator procedure coordinator instance.  exposed for testing.
    * @param pool HBase ExecutorServcie instance, exposed for testing.
    */
-  public SnapshotManager(final MasterServices master, ProcedureCoordinator coordinator, ExecutorService pool)
+  public SnapshotManager(final MasterServices master, final MetricsMaster metricsMaster,
+      ProcedureCoordinator coordinator, ExecutorService pool)
       throws IOException, UnsupportedOperationException {
     this.master = master;
+    this.metricsMaster = metricsMaster;
+
     checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
 
     this.wakeFrequency = master.getConfiguration().getInt(SNAPSHOT_WAKE_MILLIS_KEY,
@@ -428,7 +435,7 @@ public class SnapshotManager implements Stoppable {
       throws HBaseSnapshotException {
     TakeSnapshotHandler handler;
     try {
-      handler = new EnabledTableSnapshotHandler(snapshot, master, this).prepare();
+      handler = new EnabledTableSnapshotHandler(snapshot, master, this, metricsMaster).prepare();
       this.executorService.submit(handler);
       this.handler = handler;
     } catch (Exception e) {
@@ -537,7 +544,7 @@ public class SnapshotManager implements Stoppable {
 
     DisabledTableSnapshotHandler handler;
     try {
-      handler = new DisabledTableSnapshotHandler(snapshot, this.master).prepare();
+      handler = new DisabledTableSnapshotHandler(snapshot, master, metricsMaster).prepare();
       this.executorService.submit(handler);
       this.handler = handler;
     } catch (Exception e) {
@@ -620,7 +627,7 @@ public class SnapshotManager implements Stoppable {
 
     try {
       CloneSnapshotHandler handler =
-        new CloneSnapshotHandler(master, snapshot, hTableDescriptor).prepare();
+        new CloneSnapshotHandler(master, snapshot, hTableDescriptor, metricsMaster).prepare();
       this.executorService.submit(handler);
       restoreHandlers.put(tableName, handler);
     } catch (Exception e) {
@@ -711,7 +718,7 @@ public class SnapshotManager implements Stoppable {
 
     try {
       RestoreSnapshotHandler handler =
-        new RestoreSnapshotHandler(master, snapshot, hTableDescriptor);
+        new RestoreSnapshotHandler(master, snapshot, hTableDescriptor, metricsMaster);
       this.executorService.submit(handler);
       restoreHandlers.put(hTableDescriptor.getNameAsString(), handler);
     } catch (Exception e) {

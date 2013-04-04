@@ -57,6 +57,9 @@ public interface MetricsMasterSource extends BaseSource {
   static final String IS_ACTIVE_MASTER_NAME = "isActiveMaster";
   static final String SPLIT_TIME_NAME = "hlogSplitTime";
   static final String SPLIT_SIZE_NAME = "hlogSplitSize";
+  static final String SNAPSHOT_TIME_NAME = "snapshotTime";
+  static final String SNAPSHOT_RESTORE_TIME_NAME = "snapshotRestoreTime";
+  static final String SNAPSHOT_CLONE_TIME_NAME = "snapshotCloneTime";
   static final String CLUSTER_REQUESTS_NAME = "clusterRequests";
   static final String RIT_COUNT_NAME = "ritCount";
   static final String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
@@ -72,6 +75,9 @@ public interface MetricsMasterSource extends BaseSource {
   static final String IS_ACTIVE_MASTER_DESC = "Is Active Master";
   static final String SPLIT_TIME_DESC = "Time it takes to finish HLog.splitLog()";
   static final String SPLIT_SIZE_DESC = "Size of HLog files being split";
+  static final String SNAPSHOT_TIME_DESC = "Time it takes to finish snapshot()";
+  static final String SNAPSHOT_RESTORE_TIME_DESC = "Time it takes to finish restoreSnapshot()";
+  static final String SNAPSHOT_CLONE_TIME_DESC = "Time it takes to finish cloneSnapshot()";
 
 
   /**
@@ -106,4 +112,9 @@ public interface MetricsMasterSource extends BaseSource {
 
   void updateSplitSize(long size);
 
+  void updateSnapshotTime(long time);
+
+  void updateSnapshotCloneTime(long time);
+
+  void updateSnapshotRestoreTime(long time);
 }

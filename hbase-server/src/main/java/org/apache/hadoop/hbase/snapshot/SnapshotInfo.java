@@ -63,6 +63,187 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 public final class SnapshotInfo extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(SnapshotInfo.class);
 
+  /**
+   * Statistics about the snapshot
+   * <ol>
+   * <li> How many store files and logs are in the archive
+   * <li> How many store files and logs are shared with the table
+   * <li> Total store files and logs size and shared amount
+   * </ol>
+   */
+  public static class SnapshotStats {
+    /** Information about the file referenced by the snapshot */
+    static class FileInfo {
+      private final boolean inArchive;
+      private final long size;
+
+      FileInfo(final boolean inArchive, final long size) {
+        this.inArchive = inArchive;
+        this.size = size;
+      }
+
+      /** @return true if the file is in the archive */
+      public boolean inArchive() {
+        return this.inArchive;
+      }
+
+      /** @return true if the file is missing */
+      public boolean isMissing() {
+        return this.size < 0;
+      }
+
+      /** @return the file size */
+      public long getSize() {
+        return this.size;
+      }
+    }
+
+    private int hfileArchiveCount = 0;
+    private int hfilesMissing = 0;
+    private int hfilesCount = 0;
+    private int logsMissing = 0;
+    private int logsCount = 0;
+    private long hfileArchiveSize = 0;
+    private long hfileSize = 0;
+    private long logSize = 0;
+
+    private final SnapshotDescription snapshot;
+    private final Configuration conf;
+    private final FileSystem fs;
+
+    SnapshotStats(final Configuration conf, final FileSystem fs, final SnapshotDescription snapshot)
+    {
+      this.snapshot = snapshot;
+      this.conf = conf;
+      this.fs = fs;
+    }
+
+    /** @return the snapshot descriptor */
+    public SnapshotDescription getSnapshotDescription() {
+      return this.snapshot;
+    }
+
+    /** @return true if the snapshot is corrupted */
+    public boolean isSnapshotCorrupted() {
+      return hfilesMissing > 0 || logsMissing > 0;
+    }
+
+    /** @return the number of available store files */
+    public int getStoreFilesCount() {
+      return hfilesCount + hfileArchiveCount;
+    }
+
+    /** @return the number of available store files in the archive */
+    public int getArchivedStoreFilesCount() {
+      return hfileArchiveCount;
+    }
+
+    /** @return the number of available log files */
+    public int getLogsCount() {
+      return logsCount;
+    }
+
+    /** @return the number of missing store files */
+    public int getMissingStoreFilesCount() {
+      return hfilesMissing;
+    }
+
+    /** @return the number of missing log files */
+    public int getMissingLogsCount() {
+      return logsMissing;
+    }
+
+    /** @return the total size of the store files referenced by the snapshot */
+    public long getStoreFilesSize() {
+      return hfileSize + hfileArchiveSize;
+    }
+
+    /** @return the total size of the store files shared */
+    public long getSharedStoreFilesSize() {
+      return hfileSize;
+    }
+
+    /** @return the total size of the store files in the archive */
+    public long getArchivedStoreFileSize() {
+      return hfileArchiveSize;
+    }
+
+    /** @return the percentage of the shared store files */
+    public float getSharedStoreFilePercentage() {
+      return ((float)hfileSize / (hfileSize + hfileArchiveSize)) * 100;
+    }
+
+    /** @return the total log size */
+    public long getLogsSize() {
+      return logSize;
+    }
+
+    /**
+     * Add the specified store file to the stats
+     * @param region region encoded Name
+     * @param family family name
+     * @param hfile store file name
+     * @return the store file information
+     */
+    FileInfo addStoreFile(final String region, final String family, final String hfile)
+          throws IOException {
+      String table = this.snapshot.getTable();
+      Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
+      HFileLink link = new HFileLink(conf, path);
+      boolean inArchive = false;
+      long size = -1;
+      try {
+        if ((inArchive = fs.exists(link.getArchivePath()))) {
+          size = fs.getFileStatus(link.getArchivePath()).getLen();
+          hfileArchiveSize += size;
+          hfileArchiveCount++;
+        } else {
+          size = link.getFileStatus(fs).getLen();
+          hfileSize += size;
+          hfilesCount++;
+        }
+      } catch (FileNotFoundException e) {
+        hfilesMissing++;
+      }
+      return new FileInfo(inArchive, size);
+    }
+
+    /**
+     * Add the specified recovered.edits file to the stats
+     * @param region region encoded name
+     * @param logfile log file name
+     * @return the recovered.edits information
+     */
+    FileInfo addRecoveredEdits(final String region, final String logfile) throws IOException {
+      Path rootDir = FSUtils.getRootDir(conf);
+      Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
+      Path path = SnapshotReferenceUtil.getRecoveredEdits(snapshotDir, region, logfile);
+      long size = fs.getFileStatus(path).getLen();
+      logSize += size;
+      logsCount++;
+      return new FileInfo(true, size);
+    }
+
+    /**
+     * Add the specified log file to the stats
+     * @param server server name
+     * @param logfile log file name
+     * @return the log information
+     */
+    FileInfo addLogFile(final String server, final String logfile) throws IOException {
+      HLogLink logLink = new HLogLink(conf, server, logfile);
+      long size = -1;
+      try {
+        size = logLink.getFileStatus(fs).getLen();
+        logSize += size;
+        logsCount++;
+      } catch (FileNotFoundException e) {
+        logsMissing++;
+      }
+      return new FileInfo(false, size);
+    }
+  }
+
   private FileSystem fs;
   private Path rootDir;
 
@@ -170,104 +351,68 @@ public final class SnapshotInfo extends Configured implements Tool {
    * dump the file list if requested and the collected information.
    */
   private void printFiles(final boolean showFiles) throws IOException {
-    final String table = snapshotDesc.getTable();
-    final Configuration conf = getConf();
-
     if (showFiles) {
       System.out.println("Snapshot Files");
       System.out.println("----------------------------------------");
     }
 
     // Collect information about hfiles and logs in the snapshot
-    final AtomicInteger hfileArchiveCount = new AtomicInteger();
-    final AtomicInteger hfilesMissing = new AtomicInteger();
-    final AtomicInteger hfilesCount = new AtomicInteger();
-    final AtomicInteger logsMissing = new AtomicInteger();
-    final AtomicInteger logsCount = new AtomicInteger();
-    final AtomicLong hfileArchiveSize = new AtomicLong();
-    final AtomicLong hfileSize = new AtomicLong();
-    final AtomicLong logSize = new AtomicLong();
+    final String table = this.snapshotDesc.getTable();
+    final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, this.snapshotDesc);
     SnapshotReferenceUtil.visitReferencedFiles(fs, snapshotDir,
       new SnapshotReferenceUtil.FileVisitor() {
         public void storeFile (final String region, final String family, final String hfile)
             throws IOException {
-          Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
-          HFileLink link = new HFileLink(conf, path);
-          boolean inArchive = false;
-          long size = -1;
-          try {
-            if ((inArchive = fs.exists(link.getArchivePath()))) {
-              size = fs.getFileStatus(link.getArchivePath()).getLen();
-              hfileArchiveSize.addAndGet(size);
-              hfileArchiveCount.addAndGet(1);
-            } else {
-              size = link.getFileStatus(fs).getLen();
-              hfileSize.addAndGet(size);
-              hfilesCount.addAndGet(1);
-            }
-          } catch (FileNotFoundException e) {
-            hfilesMissing.addAndGet(1);
-          }
+          SnapshotStats.FileInfo info = stats.addStoreFile(region, family, hfile);
 
           if (showFiles) {
             System.out.printf("%8s %s/%s/%s/%s %s%n",
-              (size < 0 ? "-" : StringUtils.humanReadableInt(size)),
+              (info.isMissing() ? "-" : StringUtils.humanReadableInt(info.getSize())),
               table, region, family, hfile,
-              (inArchive ? "(archive)" : (size < 0) ? "(NOT FOUND)" : ""));
+              (info.inArchive() ? "(archive)" : info.isMissing() ? "(NOT FOUND)" : ""));
           }
         }
 
         public void recoveredEdits (final String region, final String logfile)
             throws IOException {
-          Path path = SnapshotReferenceUtil.getRecoveredEdits(snapshotDir, region, logfile);
-          long size = fs.getFileStatus(path).getLen();
-          logSize.addAndGet(size);
-          logsCount.addAndGet(1);
+          SnapshotStats.FileInfo info = stats.addRecoveredEdits(region, logfile);
 
           if (showFiles) {
             System.out.printf("%8s recovered.edits %s on region %s%n",
-              StringUtils.humanReadableInt(size), logfile, region);
+              StringUtils.humanReadableInt(info.getSize()), logfile, region);
           }
         }
 
         public void logFile (final String server, final String logfile)
             throws IOException {
-          HLogLink logLink = new HLogLink(conf, server, logfile);
-          long size = -1;
-          try {
-            size = logLink.getFileStatus(fs).getLen();
-            logSize.addAndGet(size);
-            logsCount.addAndGet(1);
-          } catch (FileNotFoundException e) {
-            logsMissing.addAndGet(1);
-          }
+          SnapshotStats.FileInfo info = stats.addLogFile(server, logfile);
 
           if (showFiles) {
             System.out.printf("%8s log %s on server %s %s%n",
-              (size < 0 ? "-" : StringUtils.humanReadableInt(size)),
+              (info.isMissing() ? "-" : StringUtils.humanReadableInt(info.getSize())),
               logfile, server,
-              (size < 0 ? "(NOT FOUND)" : ""));
+              (info.isMissing() ? "(NOT FOUND)" : ""));
           }
         }
     });
 
     // Dump the stats
     System.out.println();
-    if (hfilesMissing.get() > 0 || logsMissing.get() > 0) {
+    if (stats.isSnapshotCorrupted()) {
       System.out.println("**************************************************************");
       System.out.printf("BAD SNAPSHOT: %d hfile(s) and %d log(s) missing.%n",
-        hfilesMissing.get(), logsMissing.get());
+        stats.getMissingStoreFilesCount(), stats.getMissingLogsCount());
       System.out.println("**************************************************************");
     }
 
     System.out.printf("%d HFiles (%d in archive), total size %s (%.2f%% %s shared with the source table)%n",
-      hfilesCount.get() + hfileArchiveCount.get(), hfileArchiveCount.get(),
-      StringUtils.humanReadableInt(hfileSize.get() + hfileArchiveSize.get()),
-      ((float)hfileSize.get() / (hfileSize.get() + hfileArchiveSize.get())) * 100,
-      StringUtils.humanReadableInt(hfileSize.get())
+      stats.getStoreFilesCount(), stats.getArchivedStoreFilesCount(),
+      StringUtils.humanReadableInt(stats.getStoreFilesSize()),
+      stats.getSharedStoreFilePercentage(),
+      StringUtils.humanReadableInt(stats.getSharedStoreFilesSize())
     );
     System.out.printf("%d Logs, total size %s%n",
-      logsCount.get(), StringUtils.humanReadableInt(logSize.get()));
+      stats.getLogsCount(), StringUtils.humanReadableInt(stats.getLogsSize()));
     System.out.println();
   }
 
@@ -284,6 +429,36 @@ public final class SnapshotInfo extends Configured implements Tool {
     System.err.println("  hbase " + getClass() + " \\");
     System.err.println("    -snapshot MySnapshot -files");
     System.exit(1);
+  }
+
+  /**
+   * Returns the snapshot stats
+   * @param conf the {@link Configuration} to use
+   * @param snapshot {@link SnapshotDescription} to get stats from
+   * @return the snapshot stats
+   */
+  public static SnapshotStats getSnapshotStats(final Configuration conf,
+      final SnapshotDescription snapshot) throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    FileSystem fs = FileSystem.get(conf);
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
+    final SnapshotStats stats = new SnapshotStats(conf, fs, snapshot);
+    SnapshotReferenceUtil.visitReferencedFiles(fs, snapshotDir,
+      new SnapshotReferenceUtil.FileVisitor() {
+        public void storeFile (final String region, final String family, final String hfile)
+            throws IOException {
+          stats.addStoreFile(region, family, hfile);
+        }
+
+        public void recoveredEdits (final String region, final String logfile) throws IOException {
+          stats.addRecoveredEdits(region, logfile);
+        }
+
+        public void logFile (final String server, final String logfile) throws IOException {
+          stats.addLogFile(server, logfile);
+        }
+    });
+    return stats;
   }
 
   /**
