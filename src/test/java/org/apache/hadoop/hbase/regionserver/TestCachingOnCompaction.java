@@ -193,7 +193,7 @@ public class TestCachingOnCompaction {
     col.setBlockCacheEnabled(true);
     col.setDataBlockEncoding(type);
 
-    ht.getConnection().getHTableDescriptor(TABLE).addFamily(col);
+    ht.getConnectionAndResetOperationContext().getHTableDescriptor(TABLE).addFamily(col);
 
     region = TEST_UTIL.createTestRegion(tableName, col);
 
