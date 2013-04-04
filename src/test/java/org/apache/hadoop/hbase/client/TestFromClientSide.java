@@ -4010,9 +4010,9 @@ public class TestFromClientSide {
        table.getRegionsInfo();
 
      // set the deserialized regions to the global cache.
-     table.getConnection().clearRegionCache();
+     table.getConnectionAndResetOperationContext().clearRegionCache();
 
-     table.getConnection().prewarmRegionCache(table.getTableName(),
+     table.getConnectionAndResetOperationContext().prewarmRegionCache(table.getTableName(),
          deserRegions);
 
      // verify whether the 2 maps are identical or not.
@@ -4058,7 +4058,7 @@ public class TestFromClientSide {
     // This count effectively waits until the regions have been
     // fully assigned
     TEST_UTIL.countRows(table);
-    table.getConnection().clearRegionCache();
+    table.getConnectionAndResetOperationContext().clearRegionCache();
     assertEquals("Clearing cache should have 0 cached ", 0,
         HConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
@@ -4083,7 +4083,7 @@ public class TestFromClientSide {
     assertTrue("The table is enabled for region cache prefetch",
         HTable.getRegionCachePrefetch(conf, TABLENAME));
 
-    table.getConnection().clearRegionCache();
+    table.getConnectionAndResetOperationContext().clearRegionCache();
 
     assertEquals("Number of cached region is incorrect ", 0,
         HConnectionManager.getCachedRegionCount(conf, TABLENAME));
@@ -4101,7 +4101,7 @@ public class TestFromClientSide {
     LOG.info("Testing how many regions cached");
     assertTrue(prefetchRegionNumber < HConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
-    table.getConnection().clearRegionCache();
+    table.getConnectionAndResetOperationContext().clearRegionCache();
 
     Get g3 = new Get(Bytes.toBytes("abc"));
     table.get(g3);

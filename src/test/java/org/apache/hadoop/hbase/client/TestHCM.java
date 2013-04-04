@@ -54,6 +54,7 @@ public class TestHCM {
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 3);
     TEST_UTIL.getConfiguration().set("hbase.loadbalancer.impl",
         "org.apache.hadoop.hbase.master.RegionManager$AssignmentLoadBalancer");
+    TEST_UTIL.getConfiguration().setBoolean("hbase.client.record.context", true);
     TEST_UTIL.startMiniCluster(REGION_SERVERS);
   }
 
@@ -71,7 +72,7 @@ public class TestHCM {
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
     HConnectionManager.TableServers conn =
-        (HConnectionManager.TableServers) table.getConnection();
+        (HConnectionManager.TableServers) table.getConnectionAndResetOperationContext();
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     conn.deleteCachedLocation(TABLE_NAME, ROW, null);
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
@@ -91,12 +92,14 @@ public class TestHCM {
 
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
-    setupFailure(table);
+    setupFailure(table,
+        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size());
     try {
       table.put(put);
       assertNull("Put should not succeed");
     } catch (IOException e) {
-      verifyException(e);
+      verifyFailure(table, e);
+
     } finally {
       ServerManager.clearRSBlacklistInTest();
       waitForRegionsToGetReAssigned();
@@ -124,13 +127,14 @@ public class TestHCM {
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
 
-    setupFailure(table);
+    setupFailure(table,
+        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size());
     try {
       Get get = new Get(ROW);
       table.get(get);
       assertNull("Get should not succeed");
     } catch (IOException e) {
-      verifyException(e);
+      verifyFailure(table, e);
     } finally {
       ServerManager.clearRSBlacklistInTest();
       waitForRegionsToGetReAssigned();
@@ -151,13 +155,14 @@ public class TestHCM {
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
 
-    setupFailure(table);
+    setupFailure(table,
+        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size());
     try {
       Delete delete = new Delete(ROW);
       table.delete(delete);
       assertNull("Delete should not succeed");
     } catch (IOException e) {
-      verifyException(e);
+      verifyFailure(table, e);
     } finally {
       ServerManager.clearRSBlacklistInTest();
       waitForRegionsToGetReAssigned();
@@ -165,15 +170,53 @@ public class TestHCM {
 
   }
 
-  private void setupFailure(HTable table) throws IOException {
+  /**
+   * Simulates a case where the get operation succeeds after a retry
+   * @throws Exception
+   */
+  @Test
+  public void testClientGetSuccess() throws Exception {
+
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testClientSuccess"), FAM_NAM);
+    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+
+    Put put = new Put(ROW);
+    put.add(FAM_NAM, ROW, ROW);
+    table.put(put);
+
+    setupFailure(table, 0);
+    try {
+      Get g = new Get(ROW);
+      table.get(g);
+      List<OperationContext> op = table.getAndResetOperationContext();
+      assertTrue(op.size() > 0);
+      for (OperationContext p : op) {
+        assertTrue(p.getError() != null);
+        assertTrue(p.getLocation() != null);
+      }
+    } catch (IOException e) {
+
+    } finally {
+      waitForRegionsToGetReAssigned();
+    }
+  }
+
+  /**
+   * Assign noOfRS to the dead maps list, so that no regions are assigned to
+   * them and then kill the current region server.
+   * @param table
+   * @param noOfRS
+   * @throws IOException
+   */
+  private void setupFailure(HTable table, int noOfRS) throws IOException {
     HRegionLocation regLoc = table.getRegionLocation(ROW);
     List<RegionServerThread> regionServers =
         TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads();
 
     // Add all region servers to the black list to prevent fail overs.
-    for(RegionServerThread r : regionServers) {
+    for(int i = 0; i < noOfRS; i++) {
       ServerManager.blacklistRSHostPortInTest(
-          r.getRegionServer().getHServerInfo().getHostnamePort());
+          regionServers.get(i).getRegionServer().getHServerInfo().getHostnamePort());
     }
 
     // abort the region server
@@ -182,7 +225,14 @@ public class TestHCM {
     TEST_UTIL.getHBaseCluster().stopRegionServer(srcRSIdx);
   }
 
-  private void verifyException(Exception e) {
+  private void verifyFailure(HTable table, Exception e) {
+
+    List<OperationContext> context = table.getAndResetOperationContext();
+    assertTrue(context.size() != 0);
+    for (OperationContext c : context) {
+      assertTrue(c.getError() != null);
+      assertTrue(c.getLocation() != null);
+    }
     assertTrue(e instanceof RetriesExhaustedException);
     RetriesExhaustedException exp = (RetriesExhaustedException)(e);
     assertTrue(exp.getRegionNames() != null);

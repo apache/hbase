@@ -406,6 +406,42 @@ public class HConnectionManager {
     // A safety valve, in case the client does not exit the
     // fast fail mode for any reason.
     private long fastFailClearingTimeMilliSec;
+    private final boolean recordClientContext;
+
+    private ThreadLocal<List<OperationContext>> operationContextPerThread =
+        new ThreadLocal<List<OperationContext>>();
+
+    public void resetOperationContext() {
+      if (!recordClientContext || this.operationContextPerThread == null) {
+        return;
+      }
+
+      List<OperationContext> currContext = this.operationContextPerThread.get();
+
+      if (currContext != null) {
+        currContext.clear();
+      }
+    }
+
+    public List<OperationContext> getAndResetOperationContext() {
+      if (!recordClientContext || this.operationContextPerThread == null) {
+        return null;
+      }
+
+      List<OperationContext> currContext = this.operationContextPerThread.get();
+
+      if (currContext == null) {
+        return null;
+      }
+
+      ArrayList<OperationContext> context =
+          new ArrayList<OperationContext>(currContext);
+
+      // Made a copy, clear the context
+      currContext.clear();
+
+      return context;
+    }
 
     /**
      * Keeps track of repeated failures to any region server.
@@ -525,6 +561,9 @@ public class HConnectionManager {
           conf.getLong("hbase.client.batched-upload.softflush.timeout.ms", 60000L); // 1 min
       batchedUploadUpdatesMap  = new ConcurrentHashMap<String,
           ConcurrentMap<HRegionInfo, HRegionLocation>>();
+
+      this.recordClientContext = conf.getBoolean("hbase.client.record.context", false);
+
     }
 
     private long getPauseTime(int tries) {
@@ -1626,6 +1665,7 @@ public class HConnectionManager {
           handleFailureToServer(server, t2);
         }
 
+        updateClientContext(callable, t2);
         if (t2 instanceof IOException) {
           throw (IOException)t2;
         } else {
@@ -1635,6 +1675,21 @@ public class HConnectionManager {
         updateFailureInfoForServer(server, fInfo, didTry,
             couldNotCommunicateWithServer, retryDespiteFastFailMode);
       }
+    }
+
+    private <T> void updateClientContext(final ServerCallable<T> callable, final Throwable t) {
+      if (!recordClientContext) {
+        return;
+      }
+
+      List<OperationContext> currContext = this.operationContextPerThread.get();
+      if (currContext == null) {
+        currContext = new ArrayList<OperationContext>();
+        this.operationContextPerThread.set(currContext);
+      }
+
+      currContext.add(
+          new OperationContext(callable.location, t));
     }
 
     /**

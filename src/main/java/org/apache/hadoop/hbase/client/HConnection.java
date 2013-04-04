@@ -377,4 +377,18 @@ public interface HConnection extends Closeable {
    * @param options -- hbase rpc options to use when talking to regionservers
    */
   public void endBatchedLoad(byte[] tableName, HBaseRPCOptions options) throws IOException;
+
+  /**
+   * Get the context of the last operation. This call will return a copy
+   * of the context.
+   *
+   * @return List<OperationContext> operation context of the last operation
+   */
+  public List<OperationContext> getAndResetOperationContext();
+
+  /**
+   * Resets the operation context for the next operation.
+   */
+  public void resetOperationContext();
+
 }

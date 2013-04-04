@@ -394,7 +394,7 @@ public class RegionSplitter {
     HTable table = new HTable(conf, tableName);
 
     // max outstanding splits. default == 50% of servers
-    final int MAX_OUTSTANDING = Math.max(table.getConnection().getMaster()
+    final int MAX_OUTSTANDING = Math.max(table.getConnectionAndResetOperationContext().getMaster()
         .getClusterStatus().getServers() / 2, minOS);
 
     Path hbDir = new Path(conf.get(HConstants.HBASE_DIR));

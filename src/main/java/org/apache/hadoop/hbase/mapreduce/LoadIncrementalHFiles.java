@@ -157,7 +157,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public void doBulkLoad(Path hfofDir, HTable table)
     throws TableNotFoundException, IOException
   {
-    HConnection conn = table.getConnection();
+    HConnection conn = table.getConnectionAndResetOperationContext();
 
     if (!conn.isTableAvailable(table.getTableName())) {
       throw new TableNotFoundException("Table " +

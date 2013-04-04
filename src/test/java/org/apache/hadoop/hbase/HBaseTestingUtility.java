@@ -812,7 +812,7 @@ public class HBaseTestingUtility {
       meta.delete(new Delete(row));
     }
     // flush cache of regions
-    HConnection conn = table.getConnection();
+    HConnection conn = table.getConnectionAndResetOperationContext();
     conn.clearRegionCache();
     return count;
   }
