@@ -2240,6 +2240,25 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     scanner.close();
     return result;
   }
+  
+  /**
+   * Create region split keys between startkey and endKey
+   * 
+   * @param startKey
+   * @param endKey
+   * @param numRegions the number of regions to be created. it has to be greater than 3.
+   * @return
+   */
+  public byte[][] getRegionSplitStartKeys(byte[] startKey, byte[] endKey, int numRegions){
+    assertTrue(numRegions>3);
+    byte [][] tmpSplitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+    byte [][] result = new byte[tmpSplitKeys.length+1][];
+    for (int i=0;i<tmpSplitKeys.length;i++) {
+      result[i+1] = tmpSplitKeys[i];
+    }
+    result[0] = HConstants.EMPTY_BYTE_ARRAY;
+    return result;
+  }
 
   /**
    * Do a small get/scan against one store. This is required because store

@@ -25,6 +25,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -485,14 +487,10 @@ public class TestMasterFailover {
     // disable load balancing on this master
     master.balanceSwitch(false);
 
-    // create two tables in META, each with 10 regions
+    // create two tables in META, each with 30 regions
     byte [] FAMILY = Bytes.toBytes("family");
-    byte [][] SPLIT_KEYS = new byte [][] {
-        new byte[0], Bytes.toBytes("aaa"), Bytes.toBytes("bbb"),
-        Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
-        Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
-        Bytes.toBytes("iii"), Bytes.toBytes("jjj")
-    };
+    byte[][] SPLIT_KEYS =
+        TEST_UTIL.getRegionSplitStartKeys(Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 30);
 
     byte [] enabledTable = Bytes.toBytes("enabledTable");
     HTableDescriptor htdEnabled = new HTableDescriptor(enabledTable);
@@ -536,11 +534,11 @@ public class TestMasterFailover {
 
     // we'll need some regions to already be assigned out properly on live RS
     List<HRegionInfo> enabledAndAssignedRegions = new ArrayList<HRegionInfo>();
-    enabledAndAssignedRegions.add(enabledRegions.remove(0));
-    enabledAndAssignedRegions.add(enabledRegions.remove(0));
+    enabledAndAssignedRegions.addAll(enabledRegions.subList(0, 6));
+    enabledRegions.removeAll(enabledAndAssignedRegions);
     List<HRegionInfo> disabledAndAssignedRegions = new ArrayList<HRegionInfo>();
-    disabledAndAssignedRegions.add(disabledRegions.remove(0));
-    disabledAndAssignedRegions.add(disabledRegions.remove(0));
+    disabledAndAssignedRegions.addAll(disabledRegions.subList(0, 6));
+    disabledRegions.removeAll(disabledAndAssignedRegions);
 
     // now actually assign them
     for (HRegionInfo hri : enabledAndAssignedRegions) {
@@ -554,15 +552,20 @@ public class TestMasterFailover {
       master.assignRegion(hri);
     }
 
+    log("Waiting for assignment to finish");
+    ZKAssign.blockUntilNoRIT(zkw);
+    master.assignmentManager.waitUntilNoRegionsInTransition(60000);
+    log("Assignment completed");
+
     assertTrue(" Table must be enabled.", master.getAssignmentManager()
         .getZKTable().isEnabledTable("enabledTable"));
     // we also need regions assigned out on the dead server
     List<HRegionInfo> enabledAndOnDeadRegions = new ArrayList<HRegionInfo>();
-    enabledAndOnDeadRegions.add(enabledRegions.remove(0));
-    enabledAndOnDeadRegions.add(enabledRegions.remove(0));
+    enabledAndOnDeadRegions.addAll(enabledRegions.subList(0, 6));
+    enabledRegions.removeAll(enabledAndOnDeadRegions);
     List<HRegionInfo> disabledAndOnDeadRegions = new ArrayList<HRegionInfo>();
-    disabledAndOnDeadRegions.add(disabledRegions.remove(0));
-    disabledAndOnDeadRegions.add(disabledRegions.remove(0));
+    disabledAndOnDeadRegions.addAll(disabledRegions.subList(0, 6));
+    disabledRegions.removeAll(disabledAndOnDeadRegions);
 
     // set region plan to server to be killed and trigger assign
     for (HRegionInfo hri : enabledAndOnDeadRegions) {
@@ -579,7 +582,24 @@ public class TestMasterFailover {
     // wait for no more RIT
     log("Waiting for assignment to finish");
     ZKAssign.blockUntilNoRIT(zkw);
+    master.assignmentManager.waitUntilNoRegionsInTransition(60000);
     log("Assignment completed");
+
+    // Due to master.assignRegion(hri) could fail to assign a region to a specified RS
+    // therefore, we need make sure that regions are in the expected RS
+    verifyRegionLocation(hrs, enabledAndAssignedRegions);
+    verifyRegionLocation(hrs, disabledAndAssignedRegions);
+    verifyRegionLocation(hrsDead, enabledAndOnDeadRegions);
+    verifyRegionLocation(hrsDead, disabledAndOnDeadRegions);
+
+    assertTrue(" Didn't get enough regions of enabledTalbe on live rs.",
+      enabledAndAssignedRegions.size() >= 2);
+    assertTrue(" Didn't get enough regions of disalbedTable on live rs.",
+      disabledAndAssignedRegions.size() >= 2);
+    assertTrue(" Didn't get enough regions of enabledTalbe on dead rs.",
+      enabledAndOnDeadRegions.size() >= 2);
+    assertTrue(" Didn't get enough regions of disalbedTable on dead rs.",
+      disabledAndOnDeadRegions.size() >= 2);
 
     // Stop the master
     log("Aborting master");
@@ -800,6 +820,21 @@ public class TestMasterFailover {
 
     // Done, shutdown the cluster
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * Verify regions are on the expected region server
+   */
+  private void verifyRegionLocation(HRegionServer hrs, List<HRegionInfo> regions)
+      throws IOException {
+    List<HRegionInfo> tmpOnlineRegions = ProtobufUtil.getOnlineRegions(hrs);
+    Iterator<HRegionInfo> itr = regions.iterator();
+    while (itr.hasNext()) {
+      HRegionInfo tmp = itr.next();
+      if (!tmpOnlineRegions.contains(tmp)) {
+        itr.remove();
+      }
+    }
   }
 
   HRegion createRegion(final HRegionInfo  hri, final Path rootdir, final Configuration c,
