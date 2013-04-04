@@ -95,10 +95,10 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * originated and then where its destined -- e.g. RS2ZK_ prefix means the
    * event came from a regionserver destined for zookeeper -- and then what
    * the even is; e.g. REGION_OPENING.
-   * 
-   * <p>We give the enums indices so we can add types later and keep them
-   * grouped together rather than have to add them always to the end as we
-   * would have to if we used raw enum ordinals.
+   *
+   * <p>WARNING: Please do not insert, remove or swap any line in this enum
+   * Doing so would change or shift all the codes used to serialize
+   * events, which makes backwards compatibility very hard for clients.
    */
   public enum EventType {
     // Messages originating from RS (NOTE: there is NO direct communication from
@@ -128,8 +128,6 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     C_M_DELETE_FAMILY         (45),   // Client asking Master to delete family of table
     C_M_MODIFY_FAMILY         (46),   // Client asking Master to modify family of table
     C_M_CREATE_TABLE          (47),   // Client asking Master to create a table
-    C_M_SNAPSHOT_TABLE        (48),   // Client asking Master to snapshot an offline table
-    C_M_RESTORE_SNAPSHOT      (49),   // Client asking Master to snapshot an offline table
 
     // Updates from master to ZK. This is done by the master and there is
     // nothing to process by either Master or RS
@@ -138,7 +136,13 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
 
     // Master controlled events to be executed on the master
     M_SERVER_SHUTDOWN         (70),  // Master is processing shutdown of a RS
-    M_META_SERVER_SHUTDOWN    (72);  // Master is processing shutdown of RS hosting a meta region (-ROOT- or .META.).
+    M_META_SERVER_SHUTDOWN    (72),  // Master is processing shutdown of RS hosting a meta region (-ROOT- or .META.).
+
+    // WARNING: Please do not insert, remove or swap any line in this enum.
+    // RegionTransitionData.write() uses eventType.ordinal() that is the enum index
+    // and not the value specified in the enum definition. so we can't add stuff in the middle.
+    C_M_SNAPSHOT_TABLE        (48),   // Client asking Master to snapshot an offline table
+    C_M_RESTORE_SNAPSHOT      (49);   // Client asking Master to snapshot an offline table
 
     /**
      * Constructor
