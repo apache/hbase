@@ -388,7 +388,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
     byte[] row = peeked.getBuffer();
     int offset = peeked.getRowOffset();
     short length = peeked.getRowLength();
-    if ((matcher.row == null) || !Bytes.equals(row, offset, length, matcher.row,
+    if (limit < 0 || matcher.row == null || !Bytes.equals(row, offset, length, matcher.row,
         matcher.rowOffset, matcher.rowLength)) {
       this.countPerRow = 0;
       matcher.setRow(row, offset, length);
