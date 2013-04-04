@@ -262,6 +262,11 @@ public class HFile {
      * @throws IOException
      */
     void addDeleteColumnBloomFilter(BloomFilterWriter bfw) throws IOException;
+
+    /**
+     * Set whether compaction is in progress or not
+     */
+    void setCompactionWriter(boolean isCompaction);
   }
 
   /**

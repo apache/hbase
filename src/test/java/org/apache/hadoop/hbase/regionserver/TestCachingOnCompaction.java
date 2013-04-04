@@ -42,7 +42,7 @@ import org.junit.Test;
  * Test caching on Compaction
  */
 public class TestCachingOnCompaction {
-  static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
+  static final Log LOG = LogFactory.getLog(TestCachingOnCompaction.class.getName());
   private int compactionThreshold;
   byte [] TABLE = null;
   HTable ht = null;

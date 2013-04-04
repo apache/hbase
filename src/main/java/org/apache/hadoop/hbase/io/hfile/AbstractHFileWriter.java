@@ -121,6 +121,12 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
    */
   protected int numKeysInCurrentBlock;
 
+  /**
+   * is compaction writer
+   */
+
+  protected boolean isCompactionWriter = false;
+
   public AbstractHFileWriter(Configuration conf, CacheConfig cacheConf,
       FSDataOutputStream outputStream, Path path, int blockSize,
       Compression.Algorithm compressAlgo,
@@ -314,5 +320,9 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
         fs.getConf().getInt("io.file.buffer.size", 4096),
         fs.getDefaultReplication(), fs.getDefaultBlockSize(), bytesPerChecksum,
         null);
+  }
+
+  public void setCompactionWriter(boolean isCompaction) {
+    this.isCompactionWriter = isCompaction;
   }
 }

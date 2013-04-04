@@ -797,6 +797,7 @@ public class Store extends SchemaConfigured implements HeapSize {
             .withFavoredNodes(region.getFavoredNodes())
             .withCompression(compression)
             .build();
+    w.getHFileWriter().setCompactionWriter(isCompaction);
     // The store file writer's path does not include the CF name, so we need
     // to configure the HFile writer directly.
     SchemaConfigured sc = (SchemaConfigured) w.writer;

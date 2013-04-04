@@ -169,7 +169,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
   protected boolean cacheCurrentBlockForCompaction() {
 
-    if (this.numKeysInCurrentBlock == 0) {
+    if (!this.isCompactionWriter || this.numKeysInCurrentBlock == 0) {
       return false;
     }
 
