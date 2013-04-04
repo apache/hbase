@@ -153,9 +153,11 @@ pid=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
 export HBASE_ZNODE_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.znode
 export HBASE_START_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.autorestart
 
-
-if [ "$HBASE_USE_GC_LOGFILE" = "true" ]; then
-  export HBASE_GC_OPTS=" -Xloggc:${loggc}"
+if [ -n "$SERVER_GC_OPTS" ]; then
+  export SERVER_GC_OPTS=${SERVER_GC_OPTS/"-Xloggc:<FILE-PATH>"/"-Xloggc:${loggc}"}
+fi
+if [ -n "$CLIENT_GC_OPTS" ]; then
+  export CLIENT_GC_OPTS=${CLIENT_GC_OPTS/"-Xloggc:<FILE-PATH>"/"-Xloggc:${loggc}"}
 fi
 
 # Set default scheduling priority

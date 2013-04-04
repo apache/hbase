@@ -94,8 +94,10 @@ if [ -z "$HBASE_REST_OPTS" ]; then
 fi
 
 # Source the hbase-env.sh.  Will have JAVA_HOME defined.
-if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
+# HBASE-7817 - Source the hbase-env.sh only if it has not already been done. HBASE_ENV_INIT keeps track of it.
+if [ -z "$HBASE_ENV_INIT" ] && [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   . "${HBASE_CONF_DIR}/hbase-env.sh"
+  export HBASE_ENV_INIT="true"
 fi
 
 # Set default value for regionserver uid if not present
