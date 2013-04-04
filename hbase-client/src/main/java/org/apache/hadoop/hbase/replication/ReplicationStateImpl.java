@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -37,34 +38,37 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * ReplicationStateImpl is responsible for maintaining the replication state
  * znode.
  */
-public class ReplicationStateImpl implements ReplicationStateInterface {
+public class ReplicationStateImpl extends ReplicationStateZKBase implements
+    ReplicationStateInterface {
 
-  private ReplicationStateTracker stateTracker;
-  private final String stateZnode;
-  private final ZooKeeperWatcher zookeeper;
-  private final Abortable abortable;
+  private final ReplicationStateTracker stateTracker;
   private final AtomicBoolean replicating;
 
   private static final Log LOG = LogFactory.getLog(ReplicationStateImpl.class);
 
-  public ReplicationStateImpl(final ZooKeeperWatcher zk, final String stateZnode,
+  public ReplicationStateImpl(final ZooKeeperWatcher zk, final Configuration conf,
       final Abortable abortable, final AtomicBoolean replicating) {
-    this.zookeeper = zk;
-    this.stateZnode = stateZnode;
-    this.abortable = abortable;
+    super(zk, conf, abortable);
     this.replicating = replicating;
 
     // Set a tracker on replicationStateNode
-    this.stateTracker = new ReplicationStateTracker(this.zookeeper, this.stateZnode,
-        this.abortable);
+    this.stateTracker =
+        new ReplicationStateTracker(this.zookeeper, this.stateZNode, this.abortable);
     stateTracker.start();
     readReplicationStateZnode();
   }
 
+  public ReplicationStateImpl(final ZooKeeperWatcher zk, final Configuration conf,
+      final Abortable abortable) {
+    this(zk, conf, abortable, new AtomicBoolean());
+  }
+
+  @Override
   public boolean getState() throws KeeperException {
     return getReplication();
   }
 
+  @Override
   public void setState(boolean newState) throws KeeperException {
     setReplicating(newState);
   }
@@ -110,10 +114,10 @@ public class ReplicationStateImpl implements ReplicationStateInterface {
    * @param newState
    */
   private void setReplicating(boolean newState) throws KeeperException {
-    ZKUtil.createWithParents(this.zookeeper, this.stateZnode);
+    ZKUtil.createWithParents(this.zookeeper, this.stateZNode);
     byte[] stateBytes = (newState == true) ? ReplicationZookeeper.ENABLED_ZNODE_BYTES
         : ReplicationZookeeper.DISABLED_ZNODE_BYTES;
-    ZKUtil.setData(this.zookeeper, this.stateZnode, stateBytes);
+    ZKUtil.setData(this.zookeeper, this.stateZNode, stateBytes);
   }
 
   /**
@@ -143,7 +147,7 @@ public class ReplicationStateImpl implements ReplicationStateInterface {
       this.replicating.set(getReplication());
       LOG.info("Replication is now " + (this.replicating.get() ? "started" : "stopped"));
     } catch (KeeperException e) {
-      this.abortable.abort("Failed getting data on from " + this.stateZnode, e);
+      this.abortable.abort("Failed getting data on from " + this.stateZNode, e);
     }
   }
 

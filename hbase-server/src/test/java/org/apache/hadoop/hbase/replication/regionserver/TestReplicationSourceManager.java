@@ -225,7 +225,7 @@ public class TestReplicationSourceManager {
   }
   
   @Test
-  public void testNodeFailoverWorkerCopyQueuesFromRSUsingMulti() throws Exception {
+  public void testClaimQueues() throws Exception {
     LOG.debug("testNodeFailoverWorkerCopyQueuesFromRSUsingMulti");
     conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
     final Server server = new DummyServer("hostname0.example.org");
@@ -288,13 +288,13 @@ public class TestReplicationSourceManager {
     // simulate three servers fail sequentially
     ReplicationZookeeper rz1 = new ReplicationZookeeper(s1, new AtomicBoolean(true));
     SortedMap<String, SortedSet<String>> testMap =
-        rz1.copyQueuesFromRSUsingMulti(server.getServerName().getServerName());
+        rz1.claimQueues(server.getServerName().getServerName());
     rz1.close();
     ReplicationZookeeper rz2 = new ReplicationZookeeper(s2, new AtomicBoolean(true));
-    testMap = rz2.copyQueuesFromRSUsingMulti(s1.getServerName().getServerName());
+    testMap = rz2.claimQueues(s1.getServerName().getServerName());
     rz2.close();
     ReplicationZookeeper rz3 = new ReplicationZookeeper(s3, new AtomicBoolean(true));
-    testMap = rz3.copyQueuesFromRSUsingMulti(s2.getServerName().getServerName());
+    testMap = rz3.claimQueues(s2.getServerName().getServerName());
     rz3.close();
 
     ReplicationSource s = new ReplicationSource();
@@ -327,7 +327,7 @@ public class TestReplicationSourceManager {
     @Override
     public void run() {
       try {
-        logZnodesMap = rz.copyQueuesFromRSUsingMulti(deadRsZnode);
+        logZnodesMap = rz.claimQueues(deadRsZnode);
         rz.close();
         server.abort("Done with testing", null);
       } catch (Exception e) {

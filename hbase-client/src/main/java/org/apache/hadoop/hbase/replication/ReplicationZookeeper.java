@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -33,7 +32,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -51,7 +49,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -88,8 +85,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ReplicationZookeeper implements Closeable {
   private static final Log LOG =
     LogFactory.getLog(ReplicationZookeeper.class);
-  // Name of znode we use to lock when failover
-  private final static String RS_LOCK_ZNODE = "lock";
 
   // Our handle on zookeeper
   private final ZooKeeperWatcher zookeeper;
@@ -114,6 +109,7 @@ public class ReplicationZookeeper implements Closeable {
   // Abortable
   private Abortable abortable;
   private final ReplicationStateInterface replicationState;
+  private final ReplicationQueues replicationQueues;
 
   /**
    * ZNode content if enabled state.
@@ -139,8 +135,10 @@ public class ReplicationZookeeper implements Closeable {
     this.conf = conf;
     this.zookeeper = zk;
     setZNodes(abortable);
-    this.replicationState =
-        new ReplicationStateImpl(this.zookeeper, getRepStateNode(), abortable, new AtomicBoolean());
+    this.replicationState = new ReplicationStateImpl(this.zookeeper, conf, abortable);
+    // TODO This interface is no longer used by anyone using this constructor. When this class goes
+    // away, we will no longer have this null initialization business
+    this.replicationQueues = null;
   }
 
   /**
@@ -149,7 +147,7 @@ public class ReplicationZookeeper implements Closeable {
    * @param server
    * @param replicating    atomic boolean to start/stop replication
    * @throws IOException
-   * @throws KeeperException 
+   * @throws KeeperException
    */
   public ReplicationZookeeper(final Server server, final AtomicBoolean replicating)
   throws IOException, KeeperException {
@@ -158,13 +156,14 @@ public class ReplicationZookeeper implements Closeable {
     this.conf = server.getConfiguration();
     setZNodes(server);
 
-    this.replicationState =
-        new ReplicationStateImpl(this.zookeeper, getRepStateNode(), server, replicating);
+    this.replicationState = new ReplicationStateImpl(this.zookeeper, conf, server, replicating);
     this.peerClusters = new HashMap<String, ReplicationPeer>();
     ZKUtil.createWithParents(this.zookeeper,
         ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName));
     this.rsServerNameZnode = ZKUtil.joinZNode(rsZNode, server.getServerName().toString());
     ZKUtil.createWithParents(this.zookeeper, this.rsServerNameZnode);
+    this.replicationQueues = new ReplicationQueuesZKImpl(this.zookeeper, this.conf, server);
+    this.replicationQueues.init(server.getServerName().toString());
     connectExistingPeers();
   }
 
@@ -433,32 +432,6 @@ public class ReplicationZookeeper implements Closeable {
   }
 
   /**
-   * @param position
-   * @return Serialized protobuf of <code>position</code> with pb magic prefix
-   *         prepended suitable for use as content of an hlog position in a
-   *         replication queue.
-   */
-  static byte[] toByteArray(
-      final long position) {
-    byte[] bytes = ZooKeeperProtos.ReplicationHLogPosition.newBuilder().setPosition(position)
-        .build().toByteArray();
-    return ProtobufUtil.prependPBMagic(bytes);
-  }
-
-  /**
-   * @param lockOwner
-   * @return Serialized protobuf of <code>lockOwner</code> with pb magic prefix
-   *         prepended suitable for use as content of an replication lock during
-   *         region server fail over.
-   */
-  static byte[] lockToByteArray(
-      final String lockOwner) {
-    byte[] bytes = ZooKeeperProtos.ReplicationLock.newBuilder().setLockOwner(lockOwner).build()
-        .toByteArray();
-    return ProtobufUtil.prependPBMagic(bytes);
-  }
-
-  /**
    * @param bytes Content of a peer znode.
    * @return ClusterKey parsed from the passed bytes.
    * @throws DeserializationException
@@ -500,58 +473,6 @@ public class ReplicationZookeeper implements Closeable {
       return state.getState();
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
-    }
-  }
-
-  /**
-   * @param bytes - Content of a HLog position znode.
-   * @return long - The current HLog position.
-   * @throws DeserializationException
-   */
-  static long parseHLogPositionFrom(
-      final byte[] bytes) throws DeserializationException {
-    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.ReplicationHLogPosition.Builder builder = ZooKeeperProtos.ReplicationHLogPosition
-          .newBuilder();
-      ZooKeeperProtos.ReplicationHLogPosition position;
-      try {
-        position = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-      } catch (InvalidProtocolBufferException e) {
-        throw new DeserializationException(e);
-      }
-      return position.getPosition();
-    } else {
-      if (bytes.length > 0) {
-        return Bytes.toLong(bytes);
-      }
-      return 0;
-    }
-  }
-
-  /**
-   * @param bytes - Content of a lock znode.
-   * @return String - The owner of the lock.
-   * @throws DeserializationException
-   */
-  static String parseLockOwnerFrom(
-      final byte[] bytes) throws DeserializationException {
-    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.ReplicationLock.Builder builder = ZooKeeperProtos.ReplicationLock
-          .newBuilder();
-      ZooKeeperProtos.ReplicationLock lock;
-      try {
-        lock = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-      } catch (InvalidProtocolBufferException e) {
-        throw new DeserializationException(e);
-      }
-      return lock.getLockOwner();
-    } else {
-      if (bytes.length > 0) {
-        return Bytes.toString(bytes);
-      }
-      return "";
     }
   }
 
@@ -624,10 +545,6 @@ public class ReplicationZookeeper implements Closeable {
     return ZKUtil.joinZNode(this.peersZNode, ZKUtil.joinZNode(id, this.peerStateNodeName));
   }
 
-  private String getRepStateNode() {
-    return ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName);
-  }
-
   /**
    * Get the replication status of this cluster. If the state znode doesn't exist it will also
    * create it and set it true.
@@ -652,11 +569,8 @@ public class ReplicationZookeeper implements Closeable {
    * @param filename name of the hlog's znode
    * @param peerId name of the cluster's znode
    */
-  public void addLogToList(String filename, String peerId)
-    throws KeeperException {
-    String znode = ZKUtil.joinZNode(this.rsServerNameZnode, peerId);
-    znode = ZKUtil.joinZNode(znode, filename);
-    ZKUtil.createWithParents(this.zookeeper, znode);
+  public void addLogToList(String filename, String peerId) throws KeeperException {
+    this.replicationQueues.addLog(peerId, filename);
   }
 
   /**
@@ -665,13 +579,7 @@ public class ReplicationZookeeper implements Closeable {
    * @param clusterId name of the cluster's znode
    */
   public void removeLogFromList(String filename, String clusterId) {
-    try {
-      String znode = ZKUtil.joinZNode(rsServerNameZnode, clusterId);
-      znode = ZKUtil.joinZNode(znode, filename);
-      ZKUtil.deleteNode(this.zookeeper, znode);
-    } catch (KeeperException e) {
-      this.abortable.abort("Failed remove from list", e);
-    }
+    this.replicationQueues.removeLog(clusterId, filename);
   }
 
   /**
@@ -679,18 +587,9 @@ public class ReplicationZookeeper implements Closeable {
    * @param filename filename name of the hlog's znode
    * @param clusterId clusterId name of the cluster's znode
    * @param position the position in the file
-   * @throws IOException
    */
-  public void writeReplicationStatus(String filename, String clusterId,
-      long position) {
-    try {
-      String znode = ZKUtil.joinZNode(this.rsServerNameZnode, clusterId);
-      znode = ZKUtil.joinZNode(znode, filename);
-      // Why serialize String of Long and note Long as bytes?
-      ZKUtil.setData(this.zookeeper, znode, toByteArray(position));
-    } catch (KeeperException e) {
-      this.abortable.abort("Writing replication status", e);
-    }
+  public void writeReplicationStatus(String filename, String clusterId, long position) {
+    this.replicationQueues.setLogPosition(clusterId, filename, position);
   }
 
   /**
@@ -709,202 +608,15 @@ public class ReplicationZookeeper implements Closeable {
     return result;
   }
 
-  /**
-   * Get the list of the replicators that have queues, they can be alive, dead
-   * or simply from a previous run
-   * @return a list of server names
-   */
-  public List<String> getListOfReplicators() {
-    List<String> result = null;
-    try {
-      result = ZKUtil.listChildrenNoWatch(this.zookeeper, rsZNode);
-    } catch (KeeperException e) {
-      this.abortable.abort("Get list of replicators", e);
-    }
-    return result;
-  }
 
   /**
-   * Get the list of peer clusters for the specified server names
-   * @param rs server names of the rs
-   * @return a list of peer cluster
+   * Take ownership for the set of queues belonging to a dead region server.
+   * @param regionserver the id of the dead region server
+   * @return A SortedMap of the queues that have been claimed, including a SortedSet of HLogs in
+   *         each queue.
    */
-  public List<String> getListPeersForRS(String rs) {
-    String znode = ZKUtil.joinZNode(rsZNode, rs);
-    List<String> result = null;
-    try {
-      result = ZKUtil.listChildrenNoWatch(this.zookeeper, znode);
-    } catch (KeeperException e) {
-      this.abortable.abort("Get list of peers for rs", e);
-    }
-    return result;
-  }
-
-  /**
-   * Get the list of hlogs for the specified region server and peer cluster
-   * @param rs server names of the rs
-   * @param id peer cluster
-   * @return a list of hlogs
-   */
-  public List<String> getListHLogsForPeerForRS(String rs, String id) {
-    String znode = ZKUtil.joinZNode(rsZNode, rs);
-    znode = ZKUtil.joinZNode(znode, id);
-    List<String> result = null;
-    try {
-      result = ZKUtil.listChildrenNoWatch(this.zookeeper, znode);
-    } catch (KeeperException e) {
-      this.abortable.abort("Get list of hlogs for peer", e);
-    }
-    return result;
-  }
-
-  /**
-   * Try to set a lock in another server's znode.
-   * @param znode the server names of the other server
-   * @return true if the lock was acquired, false in every other cases
-   */
-  public boolean lockOtherRS(String znode) {
-    try {
-      String parent = ZKUtil.joinZNode(this.rsZNode, znode);
-      if (parent.equals(rsServerNameZnode)) {
-        LOG.warn("Won't lock because this is us, we're dead!");
-        return false;
-      }
-      String p = ZKUtil.joinZNode(parent, RS_LOCK_ZNODE);
-      ZKUtil.createAndWatch(this.zookeeper, p, lockToByteArray(rsServerNameZnode));
-    } catch (KeeperException e) {
-      // This exception will pop up if the znode under which we're trying to
-      // create the lock is already deleted by another region server, meaning
-      // that the transfer already occurred.
-      // NoNode => transfer is done and znodes are already deleted
-      // NodeExists => lock znode already created by another RS
-      if (e instanceof KeeperException.NoNodeException ||
-          e instanceof KeeperException.NodeExistsException) {
-        LOG.info("Won't transfer the queue," +
-            " another RS took care of it because of: " + e.getMessage());
-      } else {
-        LOG.info("Failed lock other rs", e);
-      }
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * It "atomically" copies all the hlogs queues from another region server and returns them all
-   * sorted per peer cluster (appended with the dead server's znode).
-   * @param znode
-   * @return HLog queues sorted per peer cluster
-   */
-  public SortedMap<String, SortedSet<String>> copyQueuesFromRSUsingMulti(String znode) {
-    SortedMap<String, SortedSet<String>> queues = new TreeMap<String, SortedSet<String>>();
-    String deadRSZnodePath = ZKUtil.joinZNode(rsZNode, znode);// hbase/replication/rs/deadrs
-    List<String> peerIdsToProcess = null;
-    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
-    try {
-      peerIdsToProcess = ZKUtil.listChildrenNoWatch(this.zookeeper, deadRSZnodePath);
-      if (peerIdsToProcess == null) return queues; // node already processed
-      for (String peerId : peerIdsToProcess) {
-        String newPeerId = peerId + "-" + znode;
-        String newPeerZnode = ZKUtil.joinZNode(this.rsServerNameZnode, newPeerId);
-        // check the logs queue for the old peer cluster
-        String oldClusterZnode = ZKUtil.joinZNode(deadRSZnodePath, peerId);
-        List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
-        if (hlogs == null || hlogs.size() == 0) {
-          listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
-          continue; // empty log queue.
-        }
-        // create the new cluster znode
-        SortedSet<String> logQueue = new TreeSet<String>();
-        queues.put(newPeerId, logQueue);
-        ZKUtilOp op = ZKUtilOp.createAndFailSilent(newPeerZnode, HConstants.EMPTY_BYTE_ARRAY);
-        listOfOps.add(op);
-        // get the offset of the logs and set it to new znodes
-        for (String hlog : hlogs) {
-          String oldHlogZnode = ZKUtil.joinZNode(oldClusterZnode, hlog);
-          byte[] logOffset = ZKUtil.getData(this.zookeeper, oldHlogZnode);
-          LOG.debug("Creating " + hlog + " with data " + Bytes.toString(logOffset));
-          String newLogZnode = ZKUtil.joinZNode(newPeerZnode, hlog);
-          listOfOps.add(ZKUtilOp.createAndFailSilent(newLogZnode, logOffset));
-          // add ops for deleting
-          listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldHlogZnode));
-          logQueue.add(hlog);
-        }
-        // add delete op for peer
-        listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
-      }
-      // add delete op for dead rs
-      listOfOps.add(ZKUtilOp.deleteNodeFailSilent(deadRSZnodePath));
-      LOG.debug(" The multi list size is: " + listOfOps.size());
-      ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
-      LOG.info("Atomically moved the dead regionserver logs. ");
-    } catch (KeeperException e) {
-      // Multi call failed; it looks like some other regionserver took away the logs.
-      LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);
-      queues.clear();
-    }
-    return queues;
-  }
-
-  /**
-   * This methods copies all the hlogs queues from another region server
-   * and returns them all sorted per peer cluster (appended with the dead
-   * server's znode)
-   * @param znode server names to copy
-   * @return all hlogs for all peers of that cluster, null if an error occurred
-   */
-  public SortedMap<String, SortedSet<String>> copyQueuesFromRS(String znode) {
-    // TODO this method isn't atomic enough, we could start copying and then
-    // TODO fail for some reason and we would end up with znodes we don't want.
-    SortedMap<String,SortedSet<String>> queues =
-        new TreeMap<String,SortedSet<String>>();
-    try {
-      String nodePath = ZKUtil.joinZNode(rsZNode, znode);
-      List<String> clusters =
-        ZKUtil.listChildrenNoWatch(this.zookeeper, nodePath);
-      // We have a lock znode in there, it will count as one.
-      if (clusters == null || clusters.size() <= 1) {
-        return queues;
-      }
-      // The lock isn't a peer cluster, remove it
-      clusters.remove(RS_LOCK_ZNODE);
-      for (String cluster : clusters) {
-        // We add the name of the recovered RS to the new znode, we can even
-        // do that for queues that were recovered 10 times giving a znode like
-        // number-startcode-number-otherstartcode-number-anotherstartcode-etc
-        String newCluster = cluster+"-"+znode;
-        String newClusterZnode = ZKUtil.joinZNode(rsServerNameZnode, newCluster);
-        String clusterPath = ZKUtil.joinZNode(nodePath, cluster);
-        List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, clusterPath);
-        // That region server didn't have anything to replicate for this cluster
-        if (hlogs == null || hlogs.size() == 0) {
-          continue;
-        }
-        ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, newClusterZnode,
-            HConstants.EMPTY_BYTE_ARRAY);
-        SortedSet<String> logQueue = new TreeSet<String>();
-        queues.put(newCluster, logQueue);
-        for (String hlog : hlogs) {
-          String z = ZKUtil.joinZNode(clusterPath, hlog);
-          byte[] positionBytes = ZKUtil.getData(this.zookeeper, z);
-          long position = 0;
-          try {
-            position = parseHLogPositionFrom(positionBytes);
-          } catch (DeserializationException e) {
-            LOG.warn("Failed parse of hlog position from the following znode: " + z);
-          }
-          LOG.debug("Creating " + hlog + " with data " + position);
-          String child = ZKUtil.joinZNode(newClusterZnode, hlog);
-          // Position doesn't actually change, we are just deserializing it for
-          // logging, so just use the already serialized version
-          ZKUtil.createAndWatch(this.zookeeper, child, positionBytes);
-          logQueue.add(hlog);
-        }
-      }
-    } catch (KeeperException e) {
-      this.abortable.abort("Copy queues from rs", e);
-    }
-    return queues;
+  public SortedMap<String, SortedSet<String>> claimQueues(String regionserver) {
+    return this.replicationQueues.claimQueues(regionserver);
   }
 
   /**
@@ -912,48 +624,10 @@ public class ReplicationZookeeper implements Closeable {
    * @param peerZnode znode of the peer cluster queue of hlogs to delete
    */
   public void deleteSource(String peerZnode, boolean closeConnection) {
-    try {
-      ZKUtil.deleteNodeRecursively(this.zookeeper,
-          ZKUtil.joinZNode(rsServerNameZnode, peerZnode));
-      if (closeConnection) {
-        this.peerClusters.get(peerZnode).getZkw().close();
-        this.peerClusters.remove(peerZnode);
-      }
-    } catch (KeeperException e) {
-      this.abortable.abort("Failed delete of " + peerZnode, e);
-    }
-  }
-
-  /**
-   * Recursive deletion of all znodes in specified rs' znode
-   * @param znode
-   */
-  public void deleteRsQueues(String znode) {
-    String fullpath = ZKUtil.joinZNode(rsZNode, znode);
-    try {
-      List<String> clusters =
-        ZKUtil.listChildrenNoWatch(this.zookeeper, fullpath);
-      for (String cluster : clusters) {
-        // We'll delete it later
-        if (cluster.equals(RS_LOCK_ZNODE)) {
-          continue;
-        }
-        String fullClusterPath = ZKUtil.joinZNode(fullpath, cluster);
-        ZKUtil.deleteNodeRecursively(this.zookeeper, fullClusterPath);
-      }
-      // Finish cleaning up
-      ZKUtil.deleteNodeRecursively(this.zookeeper, fullpath);
-    } catch (KeeperException e) {
-      if (e instanceof KeeperException.NoNodeException ||
-          e instanceof KeeperException.NotEmptyException) {
-        // Testing a special case where another region server was able to
-        // create a lock just after we deleted it, but then was also able to
-        // delete the RS znode before us or its lock znode is still there.
-        if (e.getPath().equals(fullpath)) {
-          return;
-        }
-      }
-      this.abortable.abort("Failed delete of " + znode, e);
+    this.replicationQueues.removeQueue(peerZnode);
+    if (closeConnection) {
+      this.peerClusters.get(peerZnode).getZkw().close();
+      this.peerClusters.remove(peerZnode);
     }
   }
 
@@ -961,16 +635,7 @@ public class ReplicationZookeeper implements Closeable {
    * Delete this cluster's queues
    */
   public void deleteOwnRSZNode() {
-    try {
-      ZKUtil.deleteNodeRecursively(this.zookeeper,
-          this.rsServerNameZnode);
-    } catch (KeeperException e) {
-      // if the znode is already expired, don't bother going further
-      if (e instanceof KeeperException.SessionExpiredException) {
-        return;
-      }
-      this.abortable.abort("Failed delete of " + this.rsServerNameZnode, e);
-    }
+    this.replicationQueues.removeAllQueues();
   }
 
   /**
@@ -978,22 +643,10 @@ public class ReplicationZookeeper implements Closeable {
    * @param peerId znode of the peer cluster
    * @param hlog name of the hlog
    * @return the position in that hlog
-   * @throws KeeperException 
+   * @throws KeeperException
    */
-  public long getHLogRepPosition(String peerId, String hlog)
-  throws KeeperException {
-    String clusterZnode = ZKUtil.joinZNode(rsServerNameZnode, peerId);
-    String znode = ZKUtil.joinZNode(clusterZnode, hlog);
-    byte[] bytes = ZKUtil.getData(this.zookeeper, znode);
-    try {
-      return parseHLogPositionFrom(bytes);
-    } catch (DeserializationException de) {
-      LOG.warn("Failed parse of HLogPosition for peerId=" + peerId + " and hlog=" + hlog
-          + "znode content, continuing.");
-    }
-    // if we can not parse the position, start at the beginning of the hlog file
-    // again
-    return 0;
+  public long getHLogRepPosition(String peerId, String hlog) throws KeeperException {
+    return this.replicationQueues.getLogPosition(peerId, hlog);
   }
 
   /**
@@ -1051,7 +704,7 @@ public class ReplicationZookeeper implements Closeable {
   public Map<String, ReplicationPeer> getPeerClusters() {
     return this.peerClusters;
   }
-  
+
   /**
    * Determine if a ZK path points to a peer node.
    * @param path path to be checked

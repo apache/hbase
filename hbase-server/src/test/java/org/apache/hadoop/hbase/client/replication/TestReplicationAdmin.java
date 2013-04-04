@@ -17,15 +17,10 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -49,9 +44,7 @@ public class TestReplicationAdmin {
   private final String ID_SECOND = "2";
   private final String KEY_SECOND = "127.0.0.1:2181:/hbase2";
 
-  private static ReplicationSourceManager manager;
   private static ReplicationAdmin admin;
-  private static AtomicBoolean replicating = new AtomicBoolean(true);
 
   /**
    * @throws java.lang.Exception
@@ -62,19 +55,6 @@ public class TestReplicationAdmin {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     admin = new ReplicationAdmin(conf);
-    Path oldLogDir = new Path(TEST_UTIL.getDataTestDir(),
-        HConstants.HREGION_OLDLOGDIR_NAME);
-    Path logDir = new Path(TEST_UTIL.getDataTestDir(),
-        HConstants.HREGION_LOGDIR_NAME);
-    manager = new ReplicationSourceManager(admin.getReplicationZk(), conf,
-        // The following stopper never stops so that we can respond
-        // to zk notification
-        new Stoppable() {
-          @Override
-          public void stop(String why) {}
-          @Override
-          public boolean isStopped() {return false;}
-        }, FileSystem.get(conf), replicating, logDir, oldLogDir);
   }
 
   /**
@@ -84,7 +64,6 @@ public class TestReplicationAdmin {
    */
   @Test
   public void testAddRemovePeer() throws Exception {
-    assertEquals(0, manager.getSources().size());
     // Add a valid peer
     admin.addPeer(ID_ONE, KEY_ONE);
     // try adding the same (fails)
