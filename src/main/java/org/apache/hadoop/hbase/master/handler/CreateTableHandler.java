@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
@@ -174,7 +175,7 @@ public class CreateTableHandler extends EventHandler {
     List<HRegionInfo> regionInfos = handleCreateHdfsRegions(tempdir, tableName);
 
     // 3. Move Table temp directory to the hbase root location
-    if (!fs.rename(tempTableDir, tableDir)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, tempTableDir, tableDir)) {
       throw new IOException("Unable to move table from temp=" + tempTableDir +
         " to hbase root=" + tableDir);
     }

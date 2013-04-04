@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
@@ -164,7 +165,7 @@ public class ZKSplitLog {
       FileSystem fs) {
     Path file = new Path(getSplitLogDir(rootdir, logFileName), "corrupt");
     try {
-      fs.createNewFile(file);
+      HBaseFileSystem.createNewFileOnFileSystem(fs, fs.getConf(), file);
     } catch (IOException e) {
       LOG.warn("Could not flag a log file as corrupted. Failed to create " +
           file, e);

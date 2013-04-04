@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -224,7 +225,7 @@ public class FSTableDescriptors implements TableDescriptors {
     if (!this.fsreadonly) {
       Path tabledir = FSUtils.getTablePath(this.rootdir, tablename);
       if (this.fs.exists(tabledir)) {
-        if (!this.fs.delete(tabledir, true)) {
+        if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), tabledir)) {
           throw new IOException("Failed delete of " + tabledir.toString());
         }
       }
@@ -280,7 +281,7 @@ public class FSTableDescriptors implements TableDescriptors {
       for (int i = 1; i < status.length; i++) {
         Path p = status[i].getPath();
         // Clean up old versions
-        if (!fs.delete(p, false)) {
+        if (!HBaseFileSystem.deleteFileFromFileSystem(fs, fs.getConf(), p)) {
           LOG.warn("Failed cleanup of " + status);
         } else {
           LOG.debug("Cleaned up old tableinfo file " + p);
@@ -504,7 +505,7 @@ public class FSTableDescriptors implements TableDescriptors {
       try {
         writeHTD(fs, p, hTableDescriptor);
         tableInfoPath = getTableInfoFileName(tableDir, sequenceid);
-        if (!fs.rename(p, tableInfoPath)) {
+        if (!HBaseFileSystem.renameDirForFileSystem(fs, fs.getConf(), p, tableInfoPath)) {
           throw new IOException("Failed rename of " + p + " to " + tableInfoPath);
         }
       } catch (IOException ioe) {
@@ -530,7 +531,7 @@ public class FSTableDescriptors implements TableDescriptors {
   private static void writeHTD(final FileSystem fs, final Path p,
       final HTableDescriptor htd)
   throws IOException {
-    FSDataOutputStream out = fs.create(p, false);
+    FSDataOutputStream out = HBaseFileSystem.createPathOnFileSystem(fs, fs.getConf(), p, false);
     try {
       htd.write(out);
       out.write('\n');

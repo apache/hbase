@@ -197,6 +197,11 @@ public class HBaseTestingUtility {
 
     // a hbase checksum verification failure will cause unit tests to fail
     ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
+    setHDFSClientRetryProperty();
+  }
+
+  private void setHDFSClientRetryProperty() {
+    this.conf.setInt("hdfs.client.retries.number", 1);
   }
 
   /**

@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -288,8 +289,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    */
   Path createStoreHomeDir(final FileSystem fs,
       final Path homedir) throws IOException {
-    if (!fs.exists(homedir)) {
-      if (!fs.mkdirs(homedir))
+    if (!fs.exists(homedir) && !HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), homedir)) {
         throw new IOException("Failed create of: " + homedir.toString());
     }
     return homedir;
@@ -879,7 +879,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     String msg = "Renaming flushed file at " + path + " to " + dstPath;
     LOG.debug(msg);
     status.setStatus("Flushing " + this + ": " + msg);
-    if (!fs.rename(path, dstPath)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, path, dstPath)) {
       LOG.warn("Unable to rename " + path + " to " + dstPath);
     }
 
@@ -1649,7 +1649,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       Path origPath = compactedFile.getPath();
       Path destPath = new Path(homedir, origPath.getName());
       LOG.info("Renaming compacted file at " + origPath + " to " + destPath);
-      if (!fs.rename(origPath, destPath)) {
+      if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, origPath, destPath)) {
         LOG.error("Failed move of compacted file " + origPath + " to " +
             destPath);
         throw new IOException("Failed move of compacted file " + origPath +

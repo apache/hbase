@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -125,7 +126,7 @@ public class Reference implements Writable {
 
   public Path write(final FileSystem fs, final Path p)
   throws IOException {
-    FSDataOutputStream out = fs.create(p, false);
+    FSDataOutputStream out = HBaseFileSystem.createPathOnFileSystem(fs, fs.getConf(), p, false);
     try {
       write(out);
     } finally {

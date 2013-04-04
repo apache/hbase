@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskFinisher.Status;
@@ -295,7 +296,7 @@ public class SplitLogManager extends ZooKeeperListener {
     for(Path logDir: logDirs){
       status.setStatus("Cleaning up log directory...");
       try {
-        if (fs.exists(logDir) && !fs.delete(logDir, false)) {
+        if (fs.exists(logDir) && !HBaseFileSystem.deleteFileFromFileSystem(fs, conf, logDir)) {
           LOG.warn("Unable to delete log src dir. Ignoring. " + logDir);
         }
       } catch (IOException ioe) {

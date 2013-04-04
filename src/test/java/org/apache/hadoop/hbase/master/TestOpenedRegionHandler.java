@@ -73,7 +73,6 @@ public class TestOpenedRegionHandler {
   public void tearDown() throws Exception {
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();
-    TEST_UTIL = new HBaseTestingUtility(resetConf);
   }
 
   @Test

@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -551,12 +552,13 @@ public class SplitTransaction {
     if (fs.exists(splitdir)) {
       LOG.info("The " + splitdir
           + " directory exists.  Hence deleting it to recreate it");
-      if (!fs.delete(splitdir, true)) {
+      if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), splitdir)) {
         throw new IOException("Failed deletion of " + splitdir
             + " before creating them again.");
       }
     }
-    if (!fs.mkdirs(splitdir)) throw new IOException("Failed create of " + splitdir);
+    if (!HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), splitdir))
+        throw new IOException("Failed create of " + splitdir);
   }
 
   private static void cleanupSplitDir(final FileSystem fs, final Path splitdir)
@@ -577,7 +579,7 @@ public class SplitTransaction {
   throws IOException {
     if (!fs.exists(dir)) {
       if (mustPreExist) throw new IOException(dir.toString() + " does not exist!");
-    } else if (!fs.delete(dir, true)) {
+    } else if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), dir)) {
       throw new IOException("Failed delete of " + dir);
     }
   }

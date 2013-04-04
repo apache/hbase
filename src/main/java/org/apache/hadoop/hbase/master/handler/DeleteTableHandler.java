@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseFileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
@@ -89,7 +90,7 @@ public class DeleteTableHandler extends TableEventHandler {
       }
 
       // 5. Delete table from FS (temp directory)
-      if (!fs.delete(tempTableDir, true)) {
+      if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), tempTableDir)) {
         LOG.error("Couldn't delete " + tempTableDir);
       }
     } finally {
