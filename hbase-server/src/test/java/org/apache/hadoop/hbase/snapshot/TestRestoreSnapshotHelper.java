@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -145,12 +146,13 @@ public class TestRestoreSnapshotHelper {
     CatalogTracker catalogTracker = Mockito.mock(CatalogTracker.class);
     HTableDescriptor tableDescriptor = Mockito.mock(HTableDescriptor.class);
     ForeignExceptionDispatcher monitor = Mockito.mock(ForeignExceptionDispatcher.class);
+    MonitoredTask status = Mockito.mock(MonitoredTask.class);
 
     SnapshotDescription sd = SnapshotDescription.newBuilder()
       .setName("snapshot").setTable(sourceTableName).build();
 
     return new RestoreSnapshotHelper(conf, fs, sd, snapshotDir,
-      htdClone, HTableDescriptor.getTableDir(rootDir, htdClone.getName()), monitor);
+      htdClone, HTableDescriptor.getTableDir(rootDir, htdClone.getName()), monitor, status);
   }
 
   private void createSnapshot(final Path rootDir, final Path snapshotDir, final HTableDescriptor htd)
