@@ -27,6 +27,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -34,6 +35,8 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -59,6 +62,8 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -67,8 +72,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
-import org.junit.AfterClass;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -638,6 +643,67 @@ public class TestSplitTransactionOnCluster {
     p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("4"));
     t.put(p);
     admin.flush(tableName);
+  }
+
+  /**
+   * If a table has regions that have no store files in a region, they should split successfully
+   * into two regions with no store files.
+   */
+  @Test
+  public void testSplitRegionWithNoStoreFiles()
+      throws Exception {
+    final byte[] tableName = Bytes.toBytes("testSplitRegionWithNoStoreFiles");
+    // Create table then get the single region for our new table.
+    createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
+    List<HRegion> regions = cluster.getRegions(tableName);
+    HRegionInfo hri = getAndCheckSingleTableRegion(regions);
+    ensureTableRegionNotOnSameServerAsMeta(admin, hri);
+    int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+    // Turn off balancer so it doesn't cut in and mess up our placements.
+    this.admin.setBalancerRunning(false, true);
+    // Turn off the meta scanner so it don't remove parent on us.
+    cluster.getMaster().setCatalogJanitorEnabled(false);
+    try {
+      // Precondition: we created a table with no data, no store files.
+      printOutRegions(regionServer, "Initial regions: ");
+      Configuration conf = cluster.getConfiguration();
+      HBaseFsck.debugLsr(conf, new Path("/"));
+      Path rootDir = FSUtils.getRootDir(conf);
+      FileSystem fs = TESTING_UTIL.getDFSCluster().getFileSystem();
+      Map<String, Path> storefiles =
+          FSUtils.getTableStoreFilePathMap(null, fs, rootDir, tableName);
+      assertEquals("Expected nothing but found " + storefiles.toString(), storefiles.size(), 0);
+
+      // find a splittable region.  Refresh the regions list
+      regions = cluster.getRegions(tableName);
+      final HRegion region = findSplittableRegion(regions);
+      assertTrue("not able to find a splittable region", region != null);
+
+      // Now split.
+      SplitTransaction st = new MockedSplitTransaction(region, Bytes.toBytes("row2"));
+      try {
+        st.prepare();
+        st.execute(regionServer, regionServer);
+      } catch (IOException e) {
+        fail("Split execution should have succeeded with no exceptions thrown");
+      }
+
+      // Postcondition: split the table with no store files into two regions, but still have not
+      // store files
+      List<HRegion> daughters = cluster.getRegions(tableName);
+      assertTrue(daughters.size() == 2);
+
+      // check dirs
+      HBaseFsck.debugLsr(conf, new Path("/"));
+      Map<String, Path> storefilesAfter =
+          FSUtils.getTableStoreFilePathMap(null, fs, rootDir, tableName);
+      assertEquals("Expected nothing but found " + storefilesAfter.toString(),
+          storefilesAfter.size(), 0);
+    } finally {
+      admin.setBalancerRunning(true, false);
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+    }
   }
 
   private void testSplitBeforeSettingSplittingInZKInternals() throws Exception {
