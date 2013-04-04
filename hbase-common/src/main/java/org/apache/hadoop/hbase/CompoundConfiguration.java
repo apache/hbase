@@ -25,10 +25,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections.iterators.UnmodifiableIterator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -41,6 +43,9 @@ import org.apache.hadoop.util.StringUtils;
  * scope settings. This is different from Configuration.addResource()
  * functionality, which performs a deep merge and mutates the common data
  * structure.
+ * <p>
+ * The iterator on CompoundConfiguration is unmodifiable. Obtaining iterator is an expensive
+ * operation.
  * <p>
  * For clarity: the shallow merge allows the user to mutate either of the
  * configuration objects and have changes reflected everywhere. In contrast to a
@@ -57,7 +62,7 @@ public class CompoundConfiguration extends Configuration {
 
   // Devs: these APIs are the same contract as their counterparts in
   // Configuration.java
-  private static interface ImmutableConfigMap {
+  private static interface ImmutableConfigMap extends Iterable<Map.Entry<String,String>> {
     String get(String key);
     String getRaw(String key);
     Class<?> getClassByName(String name) throws ClassNotFoundException;
@@ -82,6 +87,11 @@ public class CompoundConfiguration extends Configuration {
     this.configs.add(0, new ImmutableConfigMap() {
       Configuration c = conf;
 
+      @Override
+      public Iterator<Map.Entry<String,String>> iterator() {
+        return c.iterator();
+      }
+      
       @Override
       public String get(String key) {
         return c.get(key);
@@ -127,6 +137,17 @@ public class CompoundConfiguration extends Configuration {
     this.configs.add(0, new ImmutableConfigMap() {
       Map<ImmutableBytesWritable, ImmutableBytesWritable> m = map;
 
+      @Override
+      public Iterator<Map.Entry<String,String>> iterator() {
+        Map<String, String> ret = new HashMap<String, String>();
+        for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry : map.entrySet()) {
+          String key = Bytes.toString(entry.getKey().get());
+          String val = entry.getValue() == null ? null : Bytes.toString(entry.getValue().get());
+          ret.put(key, val);
+        }
+        return ret.entrySet().iterator();
+      }
+      
       @Override
       public String get(String key) {
         ImmutableBytesWritable ibw = new ImmutableBytesWritable(Bytes
@@ -174,6 +195,11 @@ public class CompoundConfiguration extends Configuration {
     // put new map at the front of the list (top priority)
     this.configs.add(0, new ImmutableConfigMap() {
       Map<String, String> m = map;
+
+      @Override
+      public Iterator<Map.Entry<String,String>> iterator() {
+        return map.entrySet().iterator();
+      }
 
       @Override
       public String get(String key) {
@@ -434,7 +460,18 @@ public class CompoundConfiguration extends Configuration {
 
   @Override
   public Iterator<Map.Entry<String, String>> iterator() {
-    throw new UnsupportedOperationException("Immutable Configuration");
+    Map<String, String> ret = new HashMap<String, String>();
+    if (!configs.isEmpty()) {
+      for (int i = configs.size() - 1; i >= 0; i--) {
+        ImmutableConfigMap map = configs.get(i);
+        Iterator<Map.Entry<String, String>> iter = map.iterator();
+        while (iter.hasNext()) {
+          Map.Entry<String, String> entry = iter.next();
+          ret.put(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+    return UnmodifiableIterator.decorate(ret.entrySet().iterator());
   }
 
   @Override
