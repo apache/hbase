@@ -1572,7 +1572,7 @@ public class HRegion implements HeapSize { // , Writable{
       StringUtils.humanReadableInt(flushsize) + "/" + flushsize +
       ", currentsize=" +
       StringUtils.humanReadableInt(memstoresize) + "/" + memstoresize +
-      " for region " + this + " in " + time + "ms, sequenceid=" + sequenceId +
+      " for region " + this + " in " + time + "ms, sequenceid=" + flushSeqId +
       ", compaction requested=" + compactionRequested +
       ((wal == null)? "; wal=null": "");
     LOG.info(msg);
