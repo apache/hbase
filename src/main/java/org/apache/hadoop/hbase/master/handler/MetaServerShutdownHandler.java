@@ -50,53 +50,64 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
 
   @Override
   public void process() throws IOException {
+
+    boolean gotException = true;
     try {
-      if (this.shouldSplitHlog) {
-        if (this.services.shouldSplitMetaSeparately()) {
-          LOG.info("Splitting META logs for " + serverName);
-          this.services.getMasterFileSystem().splitMetaLog(serverName);
+      try {
+        if (this.shouldSplitHlog) {
+          if (this.services.shouldSplitMetaSeparately()) {
+            LOG.info("Splitting META logs for " + serverName);
+            this.services.getMasterFileSystem().splitMetaLog(serverName);
+          } else {
+            LOG.info("Splitting all logs for " + serverName);
+            this.services.getMasterFileSystem().splitAllLogs(serverName);
+          }
+        }
+      } catch (IOException ioe) {
+        this.services.getExecutorService().submit(this);
+        this.deadServers.add(serverName);
+        throw new IOException("failed log splitting for " +
+            serverName + ", will retry", ioe);
+      }
+  
+      // Assign root and meta if we were carrying them.
+      if (isCarryingRoot()) { // -ROOT-
+        // Check again: region may be assigned to other where because of RIT
+        // timeout
+        if (this.services.getAssignmentManager().isCarryingRoot(serverName)) {
+          LOG.info("Server " + serverName
+              + " was carrying ROOT. Trying to assign.");
+          this.services.getAssignmentManager().regionOffline(
+              HRegionInfo.ROOT_REGIONINFO);
+          verifyAndAssignRootWithRetries();
         } else {
-          LOG.info("Splitting all logs for " + serverName);
-          this.services.getMasterFileSystem().splitAllLogs(serverName);
+          LOG.info("ROOT has been assigned to otherwhere, skip assigning.");
         }
       }
-    } catch (IOException ioe) {
-      this.services.getExecutorService().submit(this);
-      this.deadServers.add(serverName);
-      throw new IOException("failed log splitting for " +
-          serverName + ", will retry", ioe);
-    }
-
-    // Assign root and meta if we were carrying them.
-    if (isCarryingRoot()) { // -ROOT-
-      // Check again: region may be assigned to other where because of RIT
-      // timeout
-      if (this.services.getAssignmentManager().isCarryingRoot(serverName)) {
-        LOG.info("Server " + serverName
-            + " was carrying ROOT. Trying to assign.");
-        this.services.getAssignmentManager().regionOffline(
-            HRegionInfo.ROOT_REGIONINFO);
-        verifyAndAssignRootWithRetries();
-      } else {
-        LOG.info("ROOT has been assigned to otherwhere, skip assigning.");
+  
+      // Carrying meta?
+      if (isCarryingMeta()) {
+        // Check again: region may be assigned to other where because of RIT
+        // timeout
+        if (this.services.getAssignmentManager().isCarryingMeta(serverName)) {
+          LOG.info("Server " + serverName
+              + " was carrying META. Trying to assign.");
+          this.services.getAssignmentManager().regionOffline(
+              HRegionInfo.FIRST_META_REGIONINFO);
+          this.services.getAssignmentManager().assignMeta();
+        } else {
+          LOG.info("META has been assigned to otherwhere, skip assigning.");
+        }
+      }
+      
+      gotException = false;
+    } finally {
+      if (gotException){
+        // If we had an exception, this.deadServers.finish will be skipped in super.process()
+        this.deadServers.finish(serverName);
       }
     }
 
-    // Carrying meta?
-    if (isCarryingMeta()) {
-      // Check again: region may be assigned to other where because of RIT
-      // timeout
-      if (this.services.getAssignmentManager().isCarryingMeta(serverName)) {
-        LOG.info("Server " + serverName
-            + " was carrying META. Trying to assign.");
-        this.services.getAssignmentManager().regionOffline(
-            HRegionInfo.FIRST_META_REGIONINFO);
-        this.services.getAssignmentManager().assignMeta();
-      } else {
-        LOG.info("META has been assigned to otherwhere, skip assigning.");
-      }
-
-    }
     super.process();
   }
   /**
