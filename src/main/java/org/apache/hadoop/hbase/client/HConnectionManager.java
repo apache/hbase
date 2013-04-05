@@ -32,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -827,17 +828,27 @@ public class HConnectionManager {
     }
 
     @Override
-    public HRegionLocation locateRegion(final byte [] regionName)
-    throws IOException {
-      // TODO implement.  use old stuff or new stuff?
-      return null;
+    public HRegionLocation locateRegion(final byte[] regionName) throws IOException {
+      return locateRegion(HRegionInfo.getTableName(regionName),
+        HRegionInfo.getStartKey(regionName), false, true);
     }
 
     @Override
-    public List<HRegionLocation> locateRegions(final byte [] tableName)
+    public List<HRegionLocation> locateRegions(final byte[] tableName)
     throws IOException {
-      // TODO implement.  use old stuff or new stuff?
-      return null;
+      return locateRegions(tableName, false, true);
+    }
+
+    @Override
+    public List<HRegionLocation> locateRegions(final byte[] tableName, final boolean useCache,
+        final boolean offlined) throws IOException {
+      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, tableName,
+        offlined);
+      final List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
+      for (HRegionInfo regionInfo : regions.keySet()) {
+        locations.add(locateRegion(tableName, regionInfo.getStartKey(), useCache, true));
+      }
+      return locations;
     }
 
     public HRegionLocation locateRegion(final byte [] tableName,

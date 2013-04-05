@@ -191,8 +191,20 @@ public interface HConnection extends Abortable, Closeable {
    * @return list of region locations for all regions of table
    * @throws IOException
    */
-  public List<HRegionLocation> locateRegions(byte[] tableName)
-  throws IOException;
+  public List<HRegionLocation> locateRegions(final byte[] tableName)
+      throws IOException;
+
+  /**
+   * Gets the locations of all regions in the specified table, <i>tableName</i>.
+   * @param tableName table to get regions of
+   * @param useCache Should we use the cache to retrieve the region information.
+   * @param offlined True if we are to include offlined regions, false and we'll leave out offlined
+   *          regions from returned list.
+   * @return list of region locations for all regions of table
+   * @throws IOException
+   */
+  public List<HRegionLocation> locateRegions(final byte[] tableName, final boolean useCache,
+      final boolean offlined) throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address.
