@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
+import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -60,14 +61,16 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   private final SnapshotDescription snapshot;
 
   private final ForeignExceptionDispatcher monitor;
+  private final MasterMetrics metricsMaster;
   private final MonitoredTask status;
 
   private volatile boolean stopped = false;
 
   public RestoreSnapshotHandler(final MasterServices masterServices,
-      final SnapshotDescription snapshot, final HTableDescriptor htd)
-      throws IOException {
+      final SnapshotDescription snapshot, final HTableDescriptor htd,
+      final MasterMetrics metricsMaster) throws IOException {
     super(EventType.C_M_RESTORE_SNAPSHOT, htd.getName(), masterServices, masterServices);
+    this.metricsMaster = metricsMaster;
 
     // Snapshot information
     this.snapshot = snapshot;
@@ -146,6 +149,8 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
     } else {
       status.markComplete("Restore snapshot '"+ snapshot.getName() +"' completed!");
     }
+    metricsMaster.addSnapshotRestore(status.getCompletionTimestamp() - status.getStartTime());
+    super.completed(exception);
   }
 
   @Override
