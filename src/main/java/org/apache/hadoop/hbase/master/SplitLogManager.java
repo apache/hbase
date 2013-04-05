@@ -63,6 +63,8 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
+import com.google.common.base.Strings;
+
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.*;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.*;
 
@@ -99,6 +101,7 @@ public class SplitLogManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(SplitLogManager.class);
 
   private final Stoppable stopper;
+  private final MasterServices master;
   private final String serverName;
   private final TaskFinisher taskFinisher;
   private FileSystem fs;
@@ -111,12 +114,12 @@ public class SplitLogManager extends ZooKeeperListener {
   private long lastNodeCreateTime = Long.MAX_VALUE;
   public boolean ignoreZKDeleteForTesting = false;
 
-  private ConcurrentMap<String, Task> tasks =
+  private final ConcurrentMap<String, Task> tasks =
     new ConcurrentHashMap<String, Task>();
   private TimeoutMonitor timeoutMonitor;
 
   private Set<String> deadWorkers = null;
-  private Object deadWorkersLock = new Object();
+  private final Object deadWorkersLock = new Object();
 
   private Set<String> failedDeletions = null;
 
@@ -133,8 +136,8 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param serverName
    */
   public SplitLogManager(ZooKeeperWatcher zkw, final Configuration conf,
-      Stoppable stopper, String serverName) {
-    this(zkw, conf, stopper, serverName, new TaskFinisher() {
+      Stoppable stopper, MasterServices master, String serverName) {
+    this(zkw, conf, stopper, master, serverName, new TaskFinisher() {
       @Override
       public Status finish(String workerName, String logfile) {
         try {
@@ -160,11 +163,12 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param tf task finisher 
    */
   public SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
-      Stoppable stopper, String serverName, TaskFinisher tf) {
+      Stoppable stopper, MasterServices master, String serverName, TaskFinisher tf) {
     super(zkw);
     this.taskFinisher = tf;
     this.conf = conf;
     this.stopper = stopper;
+    this.master = master;
     this.zkretries = conf.getLong("hbase.splitlog.zk.retries",
         ZKSplitLog.DEFAULT_ZK_RETRIES);
     this.resubmit_threshold = conf.getLong("hbase.splitlog.max.resubmit",
@@ -174,8 +178,9 @@ public class SplitLogManager extends ZooKeeperListener {
     this.unassignedTimeout =
       conf.getInt("hbase.splitlog.manager.unassigned.timeout",
         ZKSplitLog.DEFAULT_UNASSIGNED_TIMEOUT);
-    LOG.debug("timeout = " + timeout);
-    LOG.debug("unassigned timeout = " + unassignedTimeout);
+    LOG.info("timeout = " + timeout);
+    LOG.info("unassigned timeout = " + unassignedTimeout);
+    LOG.info("resubmit threshold = " + this.resubmit_threshold);
 
     this.serverName = serverName;
     this.timeoutMonitor = new TimeoutMonitor(
@@ -598,8 +603,31 @@ public class SplitLogManager extends ZooKeeperListener {
     }
     int version;
     if (directive != FORCE) {
-      if ((EnvironmentEdgeManager.currentTimeMillis() - task.last_update) <
-          timeout) {
+      // We're going to resubmit:
+      // 1) immediately if the worker server is now marked as dead
+      // 2) after a configurable timeout if the server is not marked as dead but has still not
+      // finished the task. This allows to continue if the worker cannot actually handle it,
+      // for any reason.
+      final long time = EnvironmentEdgeManager.currentTimeMillis() - task.last_update;
+      ServerName curWorker = null;
+      if (!Strings.isNullOrEmpty(task.cur_worker_name)) {
+        try {
+          curWorker = ServerName.parseServerName(task.cur_worker_name);
+        } catch (IllegalArgumentException ie) {
+          LOG.error("Got invalid server name:" + task.cur_worker_name + " - task for path:" + path
+              + " won't be resubmitted before timeout");
+        }
+      } else {
+        LOG.error("Got empty/null server name:" + task.cur_worker_name + " - task for path:" + path
+            + " won't be resubmitted before timeout");
+      }
+      final boolean alive =
+          (master.getServerManager() != null && curWorker != null) ? master.getServerManager()
+              .isServerOnline(curWorker) : true;
+      if (alive && time < timeout) {
+        LOG.trace("Skipping the resubmit of " + task.toString() + "  because the server "
+            + task.cur_worker_name + " is not marked as dead, we waited for " + time
+            + " while the timeout is " + timeout);
         return false;
       }
       if (task.unforcedResubmits >= resubmit_threshold) {

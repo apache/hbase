@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class ZKSplitLog {
   private static final Log LOG = LogFactory.getLog(ZKSplitLog.class);
 
-  public static final int DEFAULT_TIMEOUT = 25000; // 25 sec
+  public static final int DEFAULT_TIMEOUT = 300000; // 5 mins
   public static final int DEFAULT_ZK_RETRIES = 3;
   public static final int DEFAULT_MAX_RESUBMIT = 3;
   public static final int DEFAULT_UNASSIGNED_TIMEOUT = (3 * 60 * 1000); //3 min
