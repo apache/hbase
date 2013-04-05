@@ -88,7 +88,7 @@ public final class Compression {
         lzoCodec = null;
       }
       @Override
-      CompressionCodec getCodec(Configuration conf) {
+      public CompressionCodec getCodec(Configuration conf) {
         if (lzoCodec == null) {
           try {
             Class<?> externalCodec = ClassLoader.getSystemClassLoader().loadClass(
@@ -106,7 +106,7 @@ public final class Compression {
       private transient Object lock = new Object();
 
       @Override
-      DefaultCodec getCodec(Configuration conf) {
+      public DefaultCodec getCodec(Configuration conf) {
         if (codec == null) {
           synchronized (lock) {
             if (codec == null) {
@@ -125,7 +125,7 @@ public final class Compression {
     },
     NONE("none") {
       @Override
-      DefaultCodec getCodec(Configuration conf) {
+      public DefaultCodec getCodec(Configuration conf) {
         return null;
       }
       @Override
@@ -169,7 +169,7 @@ public final class Compression {
       }
       @SuppressWarnings("unchecked")
       @Override
-      CompressionCodec getCodec(Configuration conf) {
+      public CompressionCodec getCodec(Configuration conf) {
         if (snappyCodec == null) {
           synchronized (lock) {
             if (snappyCodec == null) {
@@ -211,7 +211,7 @@ public final class Compression {
       this.compressName = name;
     }
 
-    abstract CompressionCodec getCodec(Configuration conf);
+    public abstract CompressionCodec getCodec(Configuration conf);
 
     public InputStream createDecompressionStream(
         InputStream downStream, Decompressor decompressor,
