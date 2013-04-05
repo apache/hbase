@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -72,6 +74,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   protected final Path workingDir;
   private final MasterSnapshotVerifier verifier;
   protected final ForeignExceptionDispatcher monitor;
+  protected final MonitoredTask status;
 
   /**
    * @param snapshot descriptor of the snapshot to take
@@ -97,6 +100,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
     // prepare the verify
     this.verifier = new MasterSnapshotVerifier(masterServices, snapshot, rootDir);
+    // update the running tasks
+    this.status = TaskMonitor.get().createStatus(
+      "Taking " + snapshot.getType() + " snapshot on table: " + snapshot.getTable());
   }
 
   private HTableDescriptor loadTableDescriptor()
@@ -116,7 +122,10 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
    */
   @Override
   public void process() {
-    LOG.info("Running table snapshot operation " + eventType + " on table " + snapshot.getTable());
+    String msg = "Running " + snapshot.getType() + " table snapshot " + snapshot.getName() + " "
+        + eventType + " on table " + snapshot.getTable();
+    LOG.info(msg);
+    status.setStatus(msg);
     try {
       // If regions move after this meta scan, the region specific snapshot should fail, triggering
       // an external exception that gets captured here.
@@ -140,11 +149,16 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       }
 
       // verify the snapshot is valid
+      status.setStatus("Verifying snapshot: " + snapshot.getName());
       verifier.verifySnapshot(this.workingDir, serverNames);
 
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
       completeSnapshot(this.snapshotDir, this.workingDir, this.fs);
+      status.markComplete("Snapshot " + snapshot.getName() + " of table " + snapshot.getTable()
+          + " completed");
     } catch (Exception e) {
+      status.abort("Failed to complete snapshot " + snapshot.getName() + " on table " +
+          snapshot.getTable() + " because " + e.getMessage());
       String reason = "Failed taking snapshot " + SnapshotDescriptionUtils.toString(snapshot)
           + " due to exception:" + e.getMessage();
       LOG.error(reason, e);

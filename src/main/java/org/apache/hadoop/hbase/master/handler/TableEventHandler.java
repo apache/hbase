@@ -106,13 +106,23 @@ public abstract class TableEventHandler extends EventHandler {
           LOG.warn("Error on reopening the regions");
         }
       }
+      completed(null);
     } catch (IOException e) {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
+      completed(e);
     } catch (KeeperException e) {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
+      completed(e);
     } finally {
       notifyEventBeingHandled();
     }
+  }
+
+  /**
+   * Called after that process() is completed.
+   * @param exception null if process() is successful or not null if something has failed.
+   */
+  protected void completed(final Throwable exception) {
   }
 
   public boolean reOpenAllRegions(List<HRegionInfo> regions) throws IOException {
