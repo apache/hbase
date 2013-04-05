@@ -24,6 +24,7 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 
@@ -42,9 +43,9 @@ public abstract class IngestIntegrationTestBase {
   protected HBaseCluster cluster;
   private LoadTestTool loadTool;
 
-  protected void setUp(int numSlavesBase) throws Exception {
+  protected void setUp(int numSlavesBase, Configuration conf) throws Exception {
     tableName = this.getClass().getSimpleName();
-    util = new IntegrationTestingUtility();
+    util = (conf == null) ? new IntegrationTestingUtility() : new IntegrationTestingUtility(conf);
     LOG.info("Initializing cluster with " + numSlavesBase + " servers");
     util.initializeCluster(numSlavesBase);
     LOG.info("Done initializing cluster");
@@ -56,6 +57,10 @@ public abstract class IngestIntegrationTestBase {
     // LoadTestTool init, even when it is a no-op, is very fragile.
     int ret = loadTool.run(new String[] { "-tn", tableName, "-init_only" });
     Assert.assertEquals("Failed to initialize LoadTestTool", 0, ret);
+  }
+
+  protected void setUp(int numSlavesBase) throws Exception {
+    setUp(numSlavesBase, null);
   }
 
   protected void tearDown() throws Exception {

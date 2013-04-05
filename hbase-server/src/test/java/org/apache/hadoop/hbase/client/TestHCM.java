@@ -18,10 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -42,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
@@ -55,6 +53,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -304,13 +304,13 @@ public class TestHCM {
 
     // Hijack the number of retry to fail immediately instead of retrying: there will be no new
     //  connection to the master
-    Field numRetries = conn.getClass().getDeclaredField("numRetries");
-    numRetries.setAccessible(true);
+    Field numTries = conn.getClass().getDeclaredField("numTries");
+    numTries.setAccessible(true);
     Field modifiersField = Field.class.getDeclaredField("modifiers");
     modifiersField.setAccessible(true);
-    modifiersField.setInt(numRetries, numRetries.getModifiers() & ~Modifier.FINAL);
-    final int prevNumRetriesVal = (Integer)numRetries.get(conn);
-    numRetries.set(conn, 1);
+    modifiersField.setInt(numTries, numTries.getModifiers() & ~Modifier.FINAL);
+    final int prevNumRetriesVal = (Integer)numTries.get(conn);
+    numTries.set(conn, 1);
 
     // We do a put and expect the cache to be updated, even if we don't retry
     LOG.info("Put starting");
@@ -379,7 +379,7 @@ public class TestHCM {
       "Previous server was "+destServer.getServerName().getHostAndPort(),
       curServer.getServerName().getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
 
-    numRetries.set(conn, prevNumRetriesVal);
+    numTries.set(conn, prevNumRetriesVal);
     table.close();
   }
 
@@ -705,13 +705,13 @@ public class TestHCM {
         conn.getCachedLocation(TABLE_NAME3, ROW_X).getPort() == destServerName.getPort());
 
     // Hijack the number of retry to fail after 2 tries
-    Field numRetries = conn.getClass().getDeclaredField("numRetries");
-    numRetries.setAccessible(true);
+    Field numTries = conn.getClass().getDeclaredField("numTries");
+    numTries.setAccessible(true);
     Field modifiersField = Field.class.getDeclaredField("modifiers");
     modifiersField.setAccessible(true);
-    modifiersField.setInt(numRetries, numRetries.getModifiers() & ~Modifier.FINAL);
-    final int prevNumRetriesVal = (Integer)numRetries.get(conn);
-    numRetries.set(conn, 2);
+    modifiersField.setInt(numTries, numTries.getModifiers() & ~Modifier.FINAL);
+    final int prevNumRetriesVal = (Integer)numTries.get(conn);
+    numTries.set(conn, 2);
 
     Put put3 = new Put(ROW_X);
     put3.add(FAM_NAM, ROW_X, ROW_X);
@@ -722,10 +722,83 @@ public class TestHCM {
     table.batch(Lists.newArrayList(put4, put3)); // first should be a valid row,
                                                  // second we get RegionMovedException.
 
-    numRetries.set(conn, prevNumRetriesVal);
+    numTries.set(conn, prevNumRetriesVal);
     table.close();
     conn.close();
   }
 
+  @Test
+  public void testErrorBackoffTimeCalculation() throws Exception {
+    final long ANY_PAUSE = 1000;
+    HRegionInfo ri = new HRegionInfo(TABLE_NAME);
+    HRegionLocation location = new HRegionLocation(ri, new ServerName("127.0.0.1", 1, 0));
+    HRegionLocation diffLocation = new HRegionLocation(ri, new ServerName("127.0.0.1", 2, 0));
+
+    ManualEnvironmentEdge timeMachine = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(timeMachine);
+    try {
+      long timeBase = timeMachine.currentTimeMillis();
+      long largeAmountOfTime = ANY_PAUSE * 1000;
+      HConnectionImplementation.ServerErrorTracker tracker =
+          new HConnectionImplementation.ServerErrorTracker(largeAmountOfTime);
+
+      // The default backoff is 0.
+      assertEquals(0, tracker.calculateBackoffTime(location, ANY_PAUSE));
+
+      // Check some backoff values from HConstants sequence.
+      tracker.reportServerError(location);
+      assertEqualsWithJitter(ANY_PAUSE, tracker.calculateBackoffTime(location, ANY_PAUSE));
+      tracker.reportServerError(location);
+      tracker.reportServerError(location);
+      tracker.reportServerError(location);
+      assertEqualsWithJitter(ANY_PAUSE * 2, tracker.calculateBackoffTime(location, ANY_PAUSE));
+
+      // All of this shouldn't affect backoff for different location.
+
+      assertEquals(0, tracker.calculateBackoffTime(diffLocation, ANY_PAUSE));
+      tracker.reportServerError(diffLocation);
+      assertEqualsWithJitter(ANY_PAUSE, tracker.calculateBackoffTime(diffLocation, ANY_PAUSE));
+
+      // But should still work for a different region in the same location.
+      HRegionInfo ri2 = new HRegionInfo(TABLE_NAME2);
+      HRegionLocation diffRegion = new HRegionLocation(ri2, location.getServerName());
+      assertEqualsWithJitter(ANY_PAUSE * 2, tracker.calculateBackoffTime(diffRegion, ANY_PAUSE));
+
+      // Check with different base.
+      assertEqualsWithJitter(ANY_PAUSE * 4,
+          tracker.calculateBackoffTime(location, ANY_PAUSE * 2));
+
+      // See that time from last error is taken into account. Time shift is applied after jitter,
+      // so pass the original expected backoff as the base for jitter.
+      long timeShift = (long)(ANY_PAUSE * 0.5);
+      timeMachine.setValue(timeBase + timeShift);
+      assertEqualsWithJitter(ANY_PAUSE * 2 - timeShift,
+        tracker.calculateBackoffTime(location, ANY_PAUSE), ANY_PAUSE * 2);
+
+      // However we should not go into negative.
+      timeMachine.setValue(timeBase + ANY_PAUSE * 100);
+      assertEquals(0, tracker.calculateBackoffTime(location, ANY_PAUSE));
+
+      // We also should not go over the boundary; last retry would be on it.
+      long timeLeft = (long)(ANY_PAUSE * 0.5);
+      timeMachine.setValue(timeBase + largeAmountOfTime - timeLeft);
+      assertTrue(tracker.canRetryMore());
+      tracker.reportServerError(location);
+      assertEquals(timeLeft, tracker.calculateBackoffTime(location, ANY_PAUSE));
+      timeMachine.setValue(timeBase + largeAmountOfTime);
+      assertFalse(tracker.canRetryMore());
+    } finally {
+      EnvironmentEdgeManager.reset();
+    }
+  }
+
+  private static void assertEqualsWithJitter(long expected, long actual) {
+    assertEqualsWithJitter(expected, actual, expected);
+  }
+
+  private static void assertEqualsWithJitter(long expected, long actual, long jitterBase) {
+    assertTrue("Value not within jitter: " + expected + " vs " + actual,
+        Math.abs(actual - expected) <= (0.01f * jitterBase));
+  }
 }
 
