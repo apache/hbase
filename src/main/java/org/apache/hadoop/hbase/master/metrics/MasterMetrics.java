@@ -50,7 +50,8 @@ public class MasterMetrics implements Updater {
   private long lastUpdate = System.currentTimeMillis();
   private long lastExtUpdate = System.currentTimeMillis();
   private long extendedPeriod = 0;
-/*
+
+  /*
    * Count of requests to the cluster since last call to metrics update
    */
   private final MetricsRate cluster_requests =
@@ -63,6 +64,18 @@ public class MasterMetrics implements Updater {
   /** Size of HLog files being split */
   final PersistentMetricsTimeVaryingRate splitSize =
     new PersistentMetricsTimeVaryingRate("splitSize", registry);
+
+  /** Time it takes to finish snapshot() */
+  final PersistentMetricsTimeVaryingRate snapshotTime =
+    new PersistentMetricsTimeVaryingRate("snapshotTime", registry);
+
+  /** Time it takes to finish restoreSnapshot() */
+  final PersistentMetricsTimeVaryingRate snapshotRestoreTime =
+    new PersistentMetricsTimeVaryingRate("snapshotRestoreTime", registry);
+
+  /** Time it takes to finish cloneSnapshotTime() */
+  final PersistentMetricsTimeVaryingRate snapshotCloneTime =
+    new PersistentMetricsTimeVaryingRate("snapshotCloneTime", registry);
 
   public MasterMetrics(final String name) {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -145,5 +158,29 @@ public class MasterMetrics implements Updater {
    */
   public void incrementRequests(final int inc) {
     this.cluster_requests.inc(inc);
+  }
+
+  /**
+   * Record a single instance of a snapshot
+   * @param time time that the snapshot took
+   */
+  public void addSnapshot(long time) {
+    snapshotTime.inc(time);
+  }
+
+  /**
+   * Record a single instance of a snapshot
+   * @param time time that the snapshot restore took
+   */
+  public void addSnapshotRestore(long time) {
+    snapshotRestoreTime.inc(time);
+  }
+
+  /**
+   * Record a single instance of a snapshot cloned table
+   * @param time time that the snapshot clone took
+   */
+  public void addSnapshotClone(long time) {
+    snapshotCloneTime.inc(time);
   }
 }

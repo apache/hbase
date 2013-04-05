@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
+import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.zookeeper.KeeperException;
@@ -49,6 +50,7 @@ public class TestSnapshotManager {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   MasterServices services = Mockito.mock(MasterServices.class);
+  MasterMetrics metrics = Mockito.mock(MasterMetrics.class);
   ProcedureCoordinator coordinator = Mockito.mock(ProcedureCoordinator.class);
   ExecutorService pool = Mockito.mock(ExecutorService.class);
   MasterFileSystem mfs = Mockito.mock(MasterFileSystem.class);
@@ -71,7 +73,7 @@ public class TestSnapshotManager {
     Mockito.when(services.getMasterFileSystem()).thenReturn(mfs);
     Mockito.when(mfs.getFileSystem()).thenReturn(fs);
     Mockito.when(mfs.getRootDir()).thenReturn(UTIL.getDataTestDir());
-    return new SnapshotManager(services, coordinator, pool);
+    return new SnapshotManager(services, metrics, coordinator, pool);
   }
 
   @Test

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
+import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -63,17 +64,20 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   private final SnapshotDescription snapshot;
 
   private final ForeignExceptionDispatcher monitor;
+  private final MasterMetrics metricsMaster;
   private final MonitoredTask status;
 
   private volatile boolean stopped = false;
 
   public CloneSnapshotHandler(final MasterServices masterServices,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor,
+      final MasterMetrics metricsMaster)
       throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
-    super(masterServices, masterServices.getMasterFileSystem(), 
+    super(masterServices, masterServices.getMasterFileSystem(),
       masterServices.getServerManager(), hTableDescriptor,
       masterServices.getConfiguration(), null, masterServices.getCatalogTracker(),
       masterServices.getAssignmentManager());
+    this.metricsMaster = metricsMaster;
 
     // Snapshot information
     this.snapshot = snapshot;
@@ -137,6 +141,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
     } else {
       status.markComplete("Snapshot '"+ snapshot.getName() +"' clone completed and table enabled!");
     }
+    metricsMaster.addSnapshotClone(status.getCompletionTimestamp() - status.getStartTime());
     super.completed(exception);
   }
 
