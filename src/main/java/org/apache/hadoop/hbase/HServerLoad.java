@@ -410,25 +410,29 @@ implements WritableComparable<HServerLoad> {
     }
 
     public void write(DataOutput out) throws IOException {
-      super.write(out);
-      WritableUtils.writeVInt(out, name.length);
+      // To be compatible with cdh 4.1 and apache 0.94 we write in v1 format.
+      // HBASE-5256, HBASE-5283, HBASE-5795, HBASE-7072
+      out.writeByte(1);
+      // in 0.92, the version was actually written twice
+      out.writeByte(1);
+      out.writeInt(name.length);
       out.write(name);
-      WritableUtils.writeVInt(out, stores);
-      WritableUtils.writeVInt(out, storefiles);
-      WritableUtils.writeVInt(out, storeUncompressedSizeMB);
-      WritableUtils.writeVInt(out, storefileSizeMB);
-      WritableUtils.writeVInt(out, memstoreSizeMB);
-      WritableUtils.writeVInt(out, storefileIndexSizeMB);
-      WritableUtils.writeVLong(out, readRequestsCount);
-      WritableUtils.writeVLong(out, writeRequestsCount);
-      WritableUtils.writeVInt(out, rootIndexSizeKB);
-      WritableUtils.writeVInt(out, totalStaticIndexSizeKB);
-      WritableUtils.writeVInt(out, totalStaticBloomSizeKB);
-      WritableUtils.writeVLong(out, totalCompactingKVs);
-      WritableUtils.writeVLong(out, currentCompactedKVs);
+      out.writeInt(stores);
+      out.writeInt(storefiles);
+      out.writeInt(storeUncompressedSizeMB);
+      out.writeInt(storefileSizeMB);
+      out.writeInt(memstoreSizeMB);
+      out.writeInt(storefileIndexSizeMB);
+      out.writeInt((int)readRequestsCount);
+      out.writeInt((int)writeRequestsCount);
+      out.writeInt(rootIndexSizeKB);
+      out.writeInt(totalStaticIndexSizeKB);
+      out.writeInt(totalStaticBloomSizeKB);
+      out.writeLong(totalCompactingKVs);
+      out.writeLong(currentCompactedKVs);
       // Backward compatibility - write out 0 as coprocessor count,
       // we don't report region-level coprocessors anymore.
-      WritableUtils.writeVInt(out, 0);
+      out.writeInt(0);
     }
 
     /**
