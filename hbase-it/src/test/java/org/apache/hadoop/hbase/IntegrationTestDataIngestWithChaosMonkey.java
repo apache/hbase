@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
-import junit.framework.Assert;
-
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChaosMonkey;
 import org.junit.After;
 import org.junit.Before;
