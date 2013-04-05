@@ -109,7 +109,7 @@ public class MasterFileSystem {
       conf.getBoolean("hbase.master.distributed.log.splitting", true);
     if (this.distributedLogSplitting) {
       this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
-          master.getConfiguration(), master, master.getServerName().toString());
+          master.getConfiguration(), master, this.services, master.getServerName().toString());
       this.splitLogManager.finishInitialization(masterRecovery);
     } else {
       this.splitLogManager = null;
