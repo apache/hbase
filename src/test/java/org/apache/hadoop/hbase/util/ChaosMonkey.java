@@ -446,16 +446,122 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
   }
 
+  /** A policy that runs multiple other policies one after the other */
+  public static class CompositeSequentialPolicy extends Policy {
+    private List<Policy> policies;
+    public CompositeSequentialPolicy(Policy... policies) {
+      this.policies = Arrays.asList(policies);
+    }
+
+    @Override
+    public void stop(String why) {
+      super.stop(why);
+      for (Policy p : policies) {
+        p.stop(why);
+      }
+    }
+
+    @Override
+    public void run() {
+      for (Policy p : policies) {
+        p.run();
+      }
+    }
+
+    @Override
+    public void init(PolicyContext context) throws Exception {
+      super.init(context);
+      for (Policy p : policies) {
+        p.init(context);
+      }
+    }
+  }
+
+  /** A policy which does stuff every time interval. */
+  public static abstract class PeriodicPolicy extends Policy {
+    private long periodMs;
+
+    public PeriodicPolicy(long periodMs) {
+      this.periodMs = periodMs;
+    }
+
+    @Override
+    public void run() {
+      // Add some jitter.
+      int jitter = new Random().nextInt((int)periodMs);
+      LOG.info("Sleeping for " + jitter + " to add jitter");
+      Threads.sleep(jitter);
+
+      while (!isStopped()) {
+        long start = System.currentTimeMillis();
+        runOneIteration();
+
+        if (isStopped()) return;
+        long sleepTime = periodMs - (System.currentTimeMillis() - start);
+        if (sleepTime > 0) {
+          LOG.info("Sleeping for: " + sleepTime);
+          Threads.sleep(sleepTime);
+        }
+      }
+    }
+
+    protected abstract void runOneIteration();
+
+    @Override
+    public void init(PolicyContext context) throws Exception {
+      super.init(context);
+      LOG.info("Using ChaosMonkey Policy: " + this.getClass() + ", period: " + periodMs);
+    }
+  }
+
+
+  /** A policy which performs a sequence of actions deterministically. */
+  public static class DoActionsOncePolicy extends PeriodicPolicy {
+    private List<Action> actions;
+
+    public DoActionsOncePolicy(long periodMs, List<Action> actions) {
+      super(periodMs);
+      this.actions = new ArrayList<ChaosMonkey.Action>(actions);
+    }
+
+    public DoActionsOncePolicy(long periodMs, Action... actions) {
+      this(periodMs, Arrays.asList(actions));
+    }
+
+    @Override
+    protected void runOneIteration() {
+      if (actions.isEmpty()) {
+        this.stop("done");
+        return;
+      }
+      Action action = actions.remove(0);
+
+      try {
+        action.perform();
+      } catch (Exception ex) {
+        LOG.warn("Exception occured during performing action: "
+            + StringUtils.stringifyException(ex));
+      }
+    }
+
+    @Override
+    public void init(PolicyContext context) throws Exception {
+      super.init(context);
+      for (Action action : actions) {
+        action.init(this.context);
+      }
+    }
+  }
+
   /**
    * A policy, which picks a random action according to the given weights,
    * and performs it every configurable period.
    */
-  public static class PeriodicRandomActionPolicy extends Policy {
-    private long periodMs;
+  public static class PeriodicRandomActionPolicy extends PeriodicPolicy {
     private List<Pair<Action, Integer>> actions;
 
     public PeriodicRandomActionPolicy(long periodMs, List<Pair<Action, Integer>> actions) {
-      this.periodMs = periodMs;
+      super(periodMs);
       this.actions = actions;
     }
 
@@ -465,7 +571,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     public PeriodicRandomActionPolicy(long periodMs, Action... actions) {
-      this.periodMs = periodMs;
+      super(periodMs);
       this.actions = new ArrayList<Pair<Action, Integer>>(actions.length);
       for (Action action : actions) {
         this.actions.add(new Pair<Action, Integer>(action, 1));
@@ -473,35 +579,19 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     @Override
-    public void run() {
-      //add some jitter
-      int jitter = new Random().nextInt((int)periodMs);
-      LOG.info("Sleeping for " + jitter + " to add jitter");
-      Threads.sleep(jitter);
-
-      while (!isStopped()) {
-        long start = System.currentTimeMillis();
-        Action action = selectWeightedRandomItem(actions);
-
-        try {
-          action.perform();
-        } catch (Exception ex) {
-          LOG.warn("Exception occured during performing action: "
-              + StringUtils.stringifyException(ex));
-        }
-
-        long sleepTime = periodMs - (System.currentTimeMillis() - start);
-        if (sleepTime > 0) {
-          LOG.info("Sleeping for:" + sleepTime);
-          Threads.sleep(sleepTime);
-        }
+    protected void runOneIteration() {
+      Action action = selectWeightedRandomItem(actions);
+      try {
+        action.perform();
+      } catch (Exception ex) {
+        LOG.warn("Exception occured during performing action: "
+            + StringUtils.stringifyException(ex));
       }
     }
 
     @Override
     public void init(PolicyContext context) throws Exception {
       super.init(context);
-      LOG.info("Using ChaosMonkey Policy: " + this.getClass() + ", period:" + periodMs);
       for (Pair<Action, Integer> action : actions) {
         action.getFirst().init(this.context);
       }
