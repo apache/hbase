@@ -27,6 +27,8 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChaosMonkey;
 import org.apache.hadoop.hbase.util.Pair;
@@ -100,7 +102,9 @@ public class IntegrationTestRebalanceAndKillServersTargeted extends IngestIntegr
   @Before
   @SuppressWarnings("unchecked")
   public void setUp() throws Exception {
-    super.setUp(NUM_SLAVES_BASE);
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(HConnectionManager.RETRIES_BY_SERVER, "true");
+    super.setUp(NUM_SLAVES_BASE, conf);
 
     ChaosMonkey.Policy chaosPolicy = new ChaosMonkey.PeriodicRandomActionPolicy(
       CHAOS_EVERY_MS, new UnbalanceKillAndRebalanceAction());
