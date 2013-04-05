@@ -454,9 +454,9 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   }
 
   /** A policy that runs multiple other policies one after the other */
-  public static class CompositeSequenialPolicy extends Policy {
+  public static class CompositeSequentialPolicy extends Policy {
     private List<Policy> policies;
-    public CompositeSequenialPolicy(Policy... policies) {
+    public CompositeSequentialPolicy(Policy... policies) {
       this.policies = Arrays.asList(policies);
     }
 
