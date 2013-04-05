@@ -21,9 +21,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
-import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Random;
 
@@ -32,11 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFileManager;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -50,10 +45,11 @@ import com.google.common.collect.Collections2;
  * it's given to produce the list of suitable candidates for compaction.
  */
 @InterfaceAudience.Private
-public class DefaultCompactionPolicy extends CompactionPolicy {
-  private static final Log LOG = LogFactory.getLog(DefaultCompactionPolicy.class);
+public class RatioBasedCompactionPolicy extends CompactionPolicy {
+  private static final Log LOG = LogFactory.getLog(RatioBasedCompactionPolicy.class);
 
-  public DefaultCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
+  public RatioBasedCompactionPolicy(Configuration conf,
+                                    StoreConfigInformation storeConfigInfo) {
     super(conf, storeConfigInfo);
   }
 

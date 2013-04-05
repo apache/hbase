@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.GregorianCalendar;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -40,7 +38,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -171,6 +169,16 @@ public class TestDefaultCompactSelection extends TestCase {
         }
       };
     }
+
+    @Override
+    public String toString() {
+      return "MockStoreFile{" +
+          "length=" + length +
+          ", isRef=" + isRef +
+          ", ageInDisk=" + ageInDisk +
+          ", sequenceid=" + sequenceid +
+          '}';
+    }
   }
 
   ArrayList<Long> toArrayList(long... numbers) {
@@ -234,7 +242,7 @@ public class TestDefaultCompactSelection extends TestCase {
   throws IOException {
     store.forceMajor = forcemajor;
     //Test Default compactions
-    CompactionRequest result = ((DefaultCompactionPolicy)store.storeEngine.getCompactionPolicy())
+    CompactionRequest result = ((RatioBasedCompactionPolicy)store.storeEngine.getCompactionPolicy())
         .selectCompaction(candidates, new ArrayList<StoreFile>(), false, isOffPeak, forcemajor);
     List<StoreFile> actual = new ArrayList<StoreFile>(result.getFiles());
     if (isOffPeak && !forcemajor) {
@@ -269,7 +277,13 @@ public class TestDefaultCompactSelection extends TestCase {
      */
     // don't exceed max file compact threshold
     // note:  file selection starts with largest to smallest.
-    compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
+    compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 5, 4, 3, 2, 1);
+
+    compactEquals(sfCreate(50, 10, 10 ,10, 10), 10, 10, 10, 10);
+
+    compactEquals(sfCreate(10, 10, 10, 10, 50), 10, 10, 10, 10);
+
+    compactEquals(sfCreate(251, 253, 251, maxSize -1), 251, 253, 251);
 
     /* MAJOR COMPACTION */
     // if a major compaction has been forced, then compact everything
@@ -280,7 +294,7 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(tooBig, 12,12), true, tooBig, 12, 12);
     // don't exceed max file compact threshold, even with major compaction
     store.forceMajor = true;
-    compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
+    compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 5, 4, 3, 2, 1);
     store.forceMajor = false;
     // if we exceed maxCompactSize, downgrade to minor
     // if not, it creates a 'snowball effect' when files >> maxCompactSize:
