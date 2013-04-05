@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -27,11 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
-import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
-import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 
 /**
  * Default StoreEngine creates the default compactor, policy, and store file manager, or
@@ -39,7 +37,7 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  */
 @InterfaceAudience.Private
 public class DefaultStoreEngine extends StoreEngine<
-  DefaultCompactionPolicy, DefaultCompactor, DefaultStoreFileManager> {
+    RatioBasedCompactionPolicy, DefaultCompactor, DefaultStoreFileManager> {
 
   public static final String DEFAULT_COMPACTOR_CLASS_KEY =
       "hbase.hstore.defaultengine.compactor.class";
@@ -48,8 +46,8 @@ public class DefaultStoreEngine extends StoreEngine<
 
   private static final Class<? extends DefaultCompactor>
     DEFAULT_COMPACTOR_CLASS = DefaultCompactor.class;
-  private static final Class<? extends DefaultCompactionPolicy>
-    DEFAULT_COMPACTION_POLICY_CLASS = DefaultCompactionPolicy.class;
+  private static final Class<? extends RatioBasedCompactionPolicy>
+    DEFAULT_COMPACTION_POLICY_CLASS = ExploringCompactionPolicy.class;
 
   @Override
   protected void createComponents(
@@ -98,4 +96,5 @@ public class DefaultStoreEngine extends StoreEngine<
           storeFileManager.getStorefiles(), filesCompacting);
     }
   }
+
 }

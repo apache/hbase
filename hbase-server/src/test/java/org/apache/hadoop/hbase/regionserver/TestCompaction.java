@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
-import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -321,7 +321,8 @@ public class TestCompaction extends HBaseTestCase {
       assertEquals(2, s.getStorefilesCount());
 
       // ensure that major compaction time is deterministic
-      DefaultCompactionPolicy c = (DefaultCompactionPolicy)s.storeEngine.getCompactionPolicy();
+      RatioBasedCompactionPolicy
+          c = (RatioBasedCompactionPolicy)s.storeEngine.getCompactionPolicy();
       Collection<StoreFile> storeFiles = s.getStorefiles();
       long mcTime = c.getNextMajorCompactTime(storeFiles);
       for (int i = 0; i < 10; ++i) {

@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,7 +38,7 @@ public class TestDefaultStoreEngine {
     }
   }
 
-  public static class DummyCompactionPolicy extends DefaultCompactionPolicy {
+  public static class DummyCompactionPolicy extends RatioBasedCompactionPolicy {
     public DummyCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
       super(conf, storeConfigInfo);
     }

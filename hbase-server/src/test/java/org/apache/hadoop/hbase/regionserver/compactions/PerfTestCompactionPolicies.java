@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -53,7 +52,7 @@ public class PerfTestCompactionPolicies {
 
   static final Log LOG = LogFactory.getLog(PerfTestCompactionPolicies.class);
 
-  private final DefaultCompactionPolicy cp;
+  private final RatioBasedCompactionPolicy cp;
   private final int max;
   private final int min;
   private final float ratio;
@@ -64,11 +63,16 @@ public class PerfTestCompactionPolicies {
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
-        {DefaultCompactionPolicy.class, 3, 2, 1.2f},
-        {DefaultCompactionPolicy.class, 4, 2, 1.2f},
-        {DefaultCompactionPolicy.class, 5, 2, 1.2f},
-        {DefaultCompactionPolicy.class, 4, 2, 1.3f},
-        {DefaultCompactionPolicy.class, 4, 2, 1.4f},
+        {RatioBasedCompactionPolicy.class, 3, 2, 1.2f},
+        {ExploringCompactionPolicy.class, 3, 2, 1.2f},
+        {RatioBasedCompactionPolicy.class, 4, 2, 1.2f},
+        {ExploringCompactionPolicy.class, 4, 2, 1.2f},
+        {RatioBasedCompactionPolicy.class, 5, 2, 1.2f},
+        {ExploringCompactionPolicy.class, 5, 2, 1.2f},
+        {RatioBasedCompactionPolicy.class, 4, 2, 1.3f},
+        {ExploringCompactionPolicy.class, 4, 2, 1.3f},
+        {RatioBasedCompactionPolicy.class, 4, 2, 1.4f},
+        {ExploringCompactionPolicy.class, 4, 2, 1.4f},
 
     });
   }
