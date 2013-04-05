@@ -54,7 +54,7 @@ public class IntegrationTestDataIngestSlowDeterministic extends IngestIntegratio
         new RestartRsHoldingMeta(35000),
         new RestartRsHoldingRoot(35000)
     };
-    monkey = new ChaosMonkey(util, new ChaosMonkey.CompositeSequenialPolicy(
+    monkey = new ChaosMonkey(util, new ChaosMonkey.CompositeSequentialPolicy(
             new ChaosMonkey.DoActionsOncePolicy(CHAOS_EVERY_MS, actions),
             new ChaosMonkey.PeriodicRandomActionPolicy(CHAOS_EVERY_MS, actions)));
     monkey.start();
