@@ -2942,7 +2942,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     // Added to in-memory RS RIT that we are trying to open this region.
     // Clear it if we fail queuing an open executor.
-    addRegionsInTransition(region, OPEN);
+    boolean isNewRit = addRegionsInTransition(region, OPEN);
+    if (!isNewRit) {
+      // An open is in progress. This is supported, but let's log this.
+      LOG.info("Receiving OPEN for the region:" +
+          region.getRegionNameAsString() + " , which we are already trying to OPEN" +
+          " - ignoring this new request for this region.");
+      return RegionOpeningState.OPENED;
+    }
     try {
       LOG.info("Received request to open region: " +
         region.getRegionNameAsString());
@@ -3026,16 +3033,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     *          Whether OPEN or CLOSE.
     * @throws RegionAlreadyInTransitionException
     */
-   protected void addRegionsInTransition(final HRegionInfo region, final String currentAction)
+   protected boolean addRegionsInTransition(final HRegionInfo region, final String currentAction)
        throws RegionAlreadyInTransitionException {
-     Boolean action = this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(),
-         currentAction.equals(OPEN));
-     if (action != null) {
-       // The below exception message will be used in master.
-       throw new RegionAlreadyInTransitionException("Received:" + currentAction + " for the region:"
-           + region.getRegionNameAsString() + " for the region:" + region.getRegionNameAsString()
-           + ", which we are already trying to " + (action ? OPEN : CLOSE) + ".");
+     boolean isOpen = currentAction.equals(OPEN);
+     Boolean action = this.regionsInTransitionInRS.putIfAbsent(
+         region.getEncodedNameAsBytes(), isOpen);
+     if (action == null) return true;
+     if (isOpen && action.booleanValue()) {
+       return false;
      }
+     // The below exception message will be used in master.
+     throw new RegionAlreadyInTransitionException("Received:" + currentAction
+         + " for the region:" + region.getRegionNameAsString()
+         + ", which we are already trying to " + (action ? OPEN : CLOSE) + ".");
    }
 
   @Override

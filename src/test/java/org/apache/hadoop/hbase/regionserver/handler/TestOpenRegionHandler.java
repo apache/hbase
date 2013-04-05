@@ -202,9 +202,9 @@ public class TestOpenRegionHandler {
       super(conf);
     }
     @Override
-    public void addRegionsInTransition(HRegionInfo region,
+    public boolean addRegionsInTransition(HRegionInfo region,
         String currentAction) throws RegionAlreadyInTransitionException {
-      super.addRegionsInTransition(region, currentAction);
+      return super.addRegionsInTransition(region, currentAction);
     }
   }
   
