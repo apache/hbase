@@ -100,14 +100,14 @@ public class JVM
     try {
       classRef = Class.forName("com.sun.management.UnixOperatingSystemMXBean");
       if (classRef.isInstance(osMbean)) {
-        mBeanMethod = classRef.getDeclaredMethod(mBeanMethodName,
-          new Class[0]);
+        mBeanMethod = classRef.getMethod(mBeanMethodName, new Class[0]);
         unixos = classRef.cast(osMbean);
         return (Long)mBeanMethod.invoke(unixos);
       }
     }
     catch(Exception e) {
-      LOG.warn("Not able to load class or method for com.sun.managment.UnixOperatingSystemMXBean.", e);
+      LOG.warn("Not able to load class or method for" +
+          " com.sun.management.UnixOperatingSystemMXBean.", e);
     }
     return null;
   }
@@ -162,6 +162,58 @@ public class JVM
        }
     }
     return -1;
+  }
+
+  /**
+   * @see java.lang.management.OperatingSystemMXBean#getSystemLoadAverage
+   */
+  public double getSystemLoadAverage() {
+    return osMbean.getSystemLoadAverage();
+  }
+
+  /**
+   * @return the physical free memory (not the JVM one, as it's not very useful as it depends on
+   *  the GC), but the one from the OS as it allows a little bit more to guess if the machine is
+   *  overloaded or not).
+   */
+  public long getFreeMemory() {
+    if (ibmvendor){
+      return 0;
+    }
+
+    Long r =  runUnixMXBeanMethod("getFreePhysicalMemorySize");
+    return (r != null ? r : -1);
+  }
+
+
+  /**
+   * Workaround to get the current number of process running. Approach is the one described here:
+   * http://stackoverflow.com/questions/54686/how-to-get-a-list-of-current-open-windows-process-with-java
+   */
+  public int getNumberOfRunningProcess(){
+    if (!isUnix()){
+      return 0;
+    }
+
+    BufferedReader input = null;
+    try {
+      int count = 0;
+      Process p = Runtime.getRuntime().exec("ps -e");
+      input = new BufferedReader(new InputStreamReader(p.getInputStream()));
+      while (input.readLine() != null) {
+        count++;
+      }
+      return count - 1; //  -1 because there is a headline
+    } catch (IOException e) {
+      return -1;
+    }  finally {
+      if (input != null){
+        try {
+          input.close();
+        } catch (IOException ignored) {
+        }
+      }
+    }
   }
 
   /**

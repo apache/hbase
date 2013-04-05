@@ -142,7 +142,7 @@ public class HBaseCommonTestingUtility {
    * @throws IOException
    */
   boolean deleteDir(final File dir) throws IOException {
-    if (dir != null && !dir.exists()) {
+    if (dir == null || !dir.exists()) {
       return true;
     }
     try {
@@ -153,4 +153,4 @@ public class HBaseCommonTestingUtility {
       return false;
     }
   }
-};
+}

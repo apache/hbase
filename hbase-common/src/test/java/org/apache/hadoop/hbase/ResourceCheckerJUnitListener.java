@@ -20,8 +20,7 @@
 package org.apache.hadoop.hbase;
 
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.OperatingSystemMXBean;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -89,7 +88,7 @@ public class ResourceCheckerJUnitListener extends RunListener {
   static class OpenFileDescriptorResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
-      if (JVM.isUnix() == false) return 0;
+      if (!JVM.isUnix()) return 0;
       JVM jvm = new JVM();
       return (int)jvm.getOpenFileDescriptorCount();
     }
@@ -103,11 +102,35 @@ public class ResourceCheckerJUnitListener extends RunListener {
   static class MaxFileDescriptorResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
-      if (JVM.isUnix() == false) return 0;
+      if (!JVM.isUnix()) return 0;
       JVM jvm = new JVM();
       return (int)jvm.getMaxFileDescriptorCount();
      } 
    }
+
+  static class SystemLoadAverageResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
+    @Override
+    public int getVal(Phase phase) {
+      if (!JVM.isUnix()) return 0;
+      return (int)(new JVM().getSystemLoadAverage()*100);
+    }
+  }
+
+  static class ProcessCountResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
+    @Override
+    public int getVal(Phase phase) {
+      if (!JVM.isUnix()) return 0;
+      return new JVM().getNumberOfRunningProcess();
+    }
+  }
+
+  static class AvailableMemoryMBResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
+    @Override
+    public int getVal(Phase phase) {
+      if (!JVM.isUnix()) return 0;
+      return (int) (new JVM().getFreeMemory() / (1024L * 1024L));
+    }
+  }
 
 
   /**
@@ -122,6 +145,9 @@ public class ResourceCheckerJUnitListener extends RunListener {
     rc.addResourceAnalyzer(new ThreadResourceAnalyzer());
     rc.addResourceAnalyzer(new OpenFileDescriptorResourceAnalyzer());
     rc.addResourceAnalyzer(new MaxFileDescriptorResourceAnalyzer());
+    rc.addResourceAnalyzer(new SystemLoadAverageResourceAnalyzer());
+    rc.addResourceAnalyzer(new ProcessCountResourceAnalyzer());
+    rc.addResourceAnalyzer(new AvailableMemoryMBResourceAnalyzer());
 
     addResourceAnalyzer(rc);
 
