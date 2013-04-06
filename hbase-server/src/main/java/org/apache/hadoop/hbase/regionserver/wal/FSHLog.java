@@ -1071,6 +1071,11 @@ class FSHLog implements HLog, Syncable {
 
   // sync all transactions upto the specified txid
   private void syncer(long txid) throws IOException {
+    // if the transaction that we are interested in is already
+    // synced, then return immediately.
+    if (txid <= this.syncedTillHere) {
+      return;
+    }
     Writer tempWriter;
     synchronized (this.updateLock) {
       if (this.closed) return;
@@ -1079,11 +1084,6 @@ class FSHLog implements HLog, Syncable {
       // The current method of dealing with this is to catch exceptions.
       // See HBASE-4387, HBASE-5623, HBASE-7329.
       tempWriter = this.writer;
-    }
-    // if the transaction that we are interested in is already 
-    // synced, then return immediately.
-    if (txid <= this.syncedTillHere) {
-      return;
     }
     try {
       long doneUpto;
