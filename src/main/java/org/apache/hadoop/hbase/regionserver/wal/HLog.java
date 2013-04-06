@@ -1321,15 +1321,15 @@ public class HLog implements Syncable {
 
   // sync all transactions upto the specified txid
   private void syncer(long txid) throws IOException {
+    // if the transaction that we are interested in is already
+    // synced, then return immediately.
+    if (txid <= this.syncedTillHere) {
+      return;
+    }
     Writer tempWriter;
     synchronized (this.updateLock) {
       if (this.closed) return;
       tempWriter = this.writer; // guaranteed non-null
-    }
-    // if the transaction that we are interested in is already 
-    // synced, then return immediately.
-    if (txid <= this.syncedTillHere) {
-      return;
     }
     try {
       long doneUpto;
