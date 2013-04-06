@@ -85,7 +85,7 @@ public class RegionGetBenchmark extends Benchmark {
     HRegionInfo hRegionInfo = 
       new HRegionInfo(htd, getRowKeyFromLong(0), null, false);
     bulkLoadDataForRegion(fs, basedir, hRegionInfo, null, cfName, kvSize, 
-        numKVs, keysWritten);
+        numKVs, Bytes.toBytes(tableName), keysWritten, conf);
 
     // setup all the regions
     int maxRegions = NUM_REGIONS[0];

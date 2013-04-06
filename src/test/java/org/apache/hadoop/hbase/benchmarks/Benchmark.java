@@ -1,6 +1,7 @@
 package org.apache.hadoop.hbase.benchmarks;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.Random;
@@ -17,24 +18,25 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.loadtest.RegionSplitter;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat;
+import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -141,7 +143,7 @@ public abstract class Benchmark {
    * @param numKVs number of kv's to write into the table and cf
    * @param numRegionsPerRS numer of regions per RS, 0 for one region
    * @param bulkLoad if true, create HFile and load. Else do puts.
-   * @param keys if not null, fills in the keys populated for bulk load case.
+   * @param keysWritten if not null, fills in the keys populated for bulk load case.
    * @return HTable instance to the table just created
    * @throws IOException
    */
@@ -149,13 +151,14 @@ public abstract class Benchmark {
       int kvSize, long numKVs, int numRegionsPerRS, boolean bulkLoad, 
       List<byte[]> keysWritten) throws IOException {
     HTable htable = null;
+
     try {
       htable = new HTable(conf, tableName);
       LOG.info("Table " + new String(tableName) + " exists, skipping create.");
     } catch (IOException e) {
       LOG.info("Table " + new String(tableName) + " does not exist.");
     }
-    
+
     int numRegions = numRegionsPerRS;
     if (htable == null) {
       // create the table - 1 version, no compression or bloomfilters
@@ -226,9 +229,11 @@ public abstract class Benchmark {
             continue;
           }
           long startKey = 0;
-          try {
-            startKey = getLongFromRowKey(hRegionInfo.getStartKey());
-          } catch (NumberFormatException e) { }
+          byte[] startKeyBytes = hRegionInfo.getStartKey();
+          if (startKeyBytes.length != 0) {
+            startKey = Bytes.toLong(startKeyBytes);
+          }
+
           long rowID = startKey;
           for (; rowID < startKey + numKVsInRegion; rowID++) {
             byte[] row = getRowKeyFromLong(rowID);
@@ -265,7 +270,7 @@ public abstract class Benchmark {
         Path hbaseRootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
         Path basedir = new Path(hbaseRootDir, new String(tableName));
         bulkLoadDataForRegion(fs, basedir, hRegionInfo, regionServer, 
-            cfNameStr, kvSize, numKVsInRegion, keysWritten);
+            cfNameStr, kvSize, numKVsInRegion, tableName, keysWritten, conf);
       }
     } 
     else {
@@ -293,54 +298,85 @@ public abstract class Benchmark {
    * Create a HFile and bulk load it for a given region
    * @throws IOException 
    */
-  public void bulkLoadDataForRegion(FileSystem fs, Path basedir, 
-      HRegionInfo hRegionInfo, HRegionInterface regionServer, String cfNameStr, 
-      int kvSize, long numKVsInRegion, List<byte[]> keysWritten) 
+  public void bulkLoadDataForRegion(FileSystem fs, Path basedir,
+                                    HRegionInfo hRegionInfo, HRegionInterface regionServer, String cfNameStr,
+                                    int kvSize, long numKVsInRegion, byte[] tableName, List<byte[]> keysWritten,
+                                    Configuration conf)
   throws IOException {
-    // create an hfile
-    Path hFile =  new Path(basedir, "hfile." + hRegionInfo.getEncodedName() + 
-        "." + System.currentTimeMillis());
-    HFile.Writer writer =
-      HFile.getWriterFactoryNoCache(conf).withPath(fs, hFile).create();
+
+    HTable hTable = new HTable(conf, tableName);
+
+    HFileOutputFormat hfof = new HFileOutputFormat();
+    RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
+
+    String outputDirStr = conf.get("mapred.output.dir");
+
+    if (outputDirStr == null || outputDirStr.equals("")) {
+      conf.setStrings("mapred.output.dir", basedir.toString() + "/mapredOutput");
+      outputDirStr = basedir.toString() + "/mapredOutput";
+    }
+
+    Path outputDir = new Path(outputDirStr);
+
+    TaskAttemptContext cntx = new TaskAttemptContext(conf, new TaskAttemptID());
+
+    try {
+      writer = hfof.getRecordWriter(cntx);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
     byte [] family = 
       hRegionInfo.getTableDesc().getFamilies().iterator().next().getName();
     byte [] value = new byte[kvSize];
     (new Random()).nextBytes(value);
 
     long startKey = 0;
-    try {
-      startKey = getLongFromRowKey(hRegionInfo.getStartKey());
-    } catch (NumberFormatException e) { }
+
+    LOG.info(Bytes.toStringBinary(hRegionInfo.getRegionName()) +
+        " Start Key: " + Bytes.toStringBinary(hRegionInfo.getStartKey()) +
+        " End Key: " + Bytes.toStringBinary(hRegionInfo.getEndKey()));
+
+    byte[] startKeyBytes = hRegionInfo.getStartKey();
+    if (startKeyBytes.length != 0) {
+      startKey = getLongFromRowKey(startKeyBytes);
+    }
+
     long rowID = startKey;
     for (; rowID < startKey + numKVsInRegion; rowID++) {
       byte[] row = getRowKeyFromLong(rowID);
-      writer.append(new KeyValue(row, family, Bytes.toBytes(rowID), 
-          System.currentTimeMillis(), value));
-      if (keysWritten != null) keysWritten.add(row);
+      KeyValue keyValue = new KeyValue(row, family, row,
+          System.currentTimeMillis(), value);
+
+      try {
+        writer.write(new ImmutableBytesWritable(), keyValue);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+
+      if (keysWritten != null) keysWritten.add(keyValue.getRow());
+
     }
-    writer.close();
-    LOG.info("Done creating data file: " + hFile.getName() + 
-        ", hfile key-range: (" + startKey + ", " + rowID + 
-        ") for region: " + hRegionInfo.getEncodedName() + 
-        ", region key-range: (" + 
-        (new String(hRegionInfo.getStartKey())).trim() + ", " + 
-        (new String(hRegionInfo.getEndKey())).trim() + ")");
+    try {
+      writer.close(cntx);
+      hfof.getOutputCommitter(cntx).commitTask(cntx);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
 
     // bulk load the file
-    if (regionServer != null) {
-      regionServer.bulkLoadHFile(hFile.toString(), hRegionInfo.getRegionName(), 
-          Bytes.toBytes(cfNameStr), true);
-      LOG.info("Done bulk-loading data file [" + hFile.getName() + 
-          "] for region [" + hRegionInfo.getEncodedName() + "]");
-    }
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+    loader.doBulkLoad(outputDir, hTable);
+
+    LOG.info("Done bulk loading file.");
+
   }
   
   public static byte[] getRowKeyFromLong(long l) {
-    return Bytes.toBytes(String.format("%20d", l));
+    return Bytes.toBytes(l);
   }
   
   public static long getLongFromRowKey(byte[] rowKey) {
-    return Long.parseLong((new String(rowKey)).trim());
+    return Bytes.toLong(rowKey);
   }
   
   /**
