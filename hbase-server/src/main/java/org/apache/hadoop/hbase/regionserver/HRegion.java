@@ -1496,6 +1496,12 @@ public class HRegion implements HeapSize { // , Writable{
     status.setStatus(s);
     LOG.debug(s);
 
+    // sync unflushed WAL changes when deferred log sync is enabled
+    // see HBASE-8208 for details
+    if (wal != null && isDeferredLogSyncEnabled()) {
+      wal.sync();
+    }
+
     // wait for all in-progress transactions to commit to HLog before
     // we can start the flush. This prevents
     // uncommitted transactions from being written into HFiles.
@@ -5382,10 +5388,16 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException If anything goes wrong with DFS
    */
   private void syncOrDefer(long txid) throws IOException {
-    if (this.getRegionInfo().isMetaRegion() ||
-      !this.htableDescriptor.isDeferredLogFlush() || this.deferredLogSyncDisabled) {
+    if (this.getRegionInfo().isMetaRegion() || !isDeferredLogSyncEnabled()) {
       this.log.sync(txid);
     }
+  }
+
+  /**
+   * check if current region is deferred sync enabled.
+   */
+  private boolean isDeferredLogSyncEnabled() {
+    return (this.htableDescriptor.isDeferredLogFlush() && !this.deferredLogSyncDisabled);
   }
 
   /**
