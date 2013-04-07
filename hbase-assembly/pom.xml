@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!--
+  <!--
     /**
      * Licensed to the Apache Software Foundation (ASF) under one
      * or more contributor license agreements.  See the NOTICE file
@@ -19,28 +19,27 @@
      * limitations under the License.
      */
     -->
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <artifactId>hbase</artifactId>
-        <groupId>org.apache.hbase</groupId>
-        <version>0.97.0-SNAPSHOT</version>
-        <relativePath>..</relativePath>
-    </parent>
-
-    <artifactId>hbase-assembly</artifactId>
-    <name>HBase - Assembly</name>
-    <description>
-        Module that does project assembly and site.
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>hbase</artifactId>
+    <groupId>org.apache.hbase</groupId>
+    <version>0.97.0-SNAPSHOT</version>
+    <relativePath>..</relativePath>
+  </parent>
+  <artifactId>hbase-assembly</artifactId>
+  <name>HBase - Assembly</name>
+  <description>
+        Module that does project assembly and that is all that it does.
     </description>
-    <packaging>pom</packaging>
-    <build>
-        <plugins>
-        <plugin>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>${maven.assembly.version}</version>
-          <configuration>
+  <packaging>pom</packaging>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>${maven.assembly.version}</version>
+        <configuration>
           <!--Else will use hbase-assembly as final name.-->
-          <finalName>hbase-${pom.version}</finalName>
+          <finalName>hbase-${project.version}</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
           <!--We do not want assembly attached; run on command-line explicitly
@@ -50,182 +49,15 @@
           <descriptors>
             <descriptor>${assembly.file}</descriptor>
           </descriptors>
+        </configuration>
+      </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-site-plugin</artifactId>
+          <configuration>
+            <skip>true</skip>
           </configuration>
         </plugin>
-       <!--The below plugins are about site generation.
-            They are all marked as not to be in herited by child
-            modules.  The plugins are meant to run here in this
-            module only
-        -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0</version>
-        <inherited>false</inherited>
-        <executions>
-          <execution>
-            <!-- Run the hbase-default.xml through a stylesheet so can show it in doc-->
-            <goals>
-              <goal>transform</goal>
-            </goals>
-            <phase>pre-site</phase>
-          </execution>
-        </executions>
-        <configuration>
-          <transformationSets>
-            <transformationSet>
-              <!--Reaching up and over into common sub-module for hbase-default.xml-->
-              <dir>${basedir}/../hbase-common/src/main/resources/</dir>
-              <includes>
-                <include>hbase-default.xml</include>
-              </includes>
-              <stylesheet>${basedir}/src/xslt/configuration_to_docbook_section.xsl</stylesheet>
-              <outputDir>${basedir}/target/docbkx</outputDir>
-            </transformationSet>
-          </transformationSets>
-        </configuration>
-      </plugin>
-      <!--Build the documentation.  We build it twice.  Once as a single page and then
-           again as multipage.-->
-      <plugin>
-        <groupId>com.agilejava.docbkx</groupId>
-        <artifactId>docbkx-maven-plugin</artifactId>
-        <version>2.0.14</version>
-        <inherited>false</inherited>
-        <dependencies>
-          <dependency>
-            <groupId>org.docbook</groupId>
-            <artifactId>docbook-xml</artifactId>
-            <version>4.4</version>
-            <scope>runtime</scope>
-          </dependency>
-        </dependencies>
-        <configuration>
-          <xincludeSupported>true</xincludeSupported>
-          <useIdAsFilename>true</useIdAsFilename>
-          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
-          <sectionAutolabel>true</sectionAutolabel>
-          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
-          <htmlCustomization>${basedir}/src/docbkx/customization.xsl</htmlCustomization>
-          <tocMaxDepth>2</tocMaxDepth>
-          <insertXrefPageNumber>yes</insertXrefPageNumber>
-          <targetDirectory>${basedir}/target/docbkx</targetDirectory>
-          <chunkerOutputEncoding>UTF-8</chunkerOutputEncoding>
-        </configuration>
-        <executions>
-          <execution>
-            <id>multipage</id>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <navigShowtitles>true</navigShowtitles>
-              <chunkedOutput>true</chunkedOutput>
-              <imgSrcPath>../images/</imgSrcPath>
-              <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
-            </configuration>
-          </execution>
-          <execution>
-            <id>onepage</id>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <imgSrcPath>images/</imgSrcPath>
-              <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>${maven.resources.plugin.version}</version>
-        <!--$NO-MVN-MAN-VER$ -->
-        <inherited>false</inherited>
-        <executions>
-          <execution>
-            <id>copy-javadocs</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <outputDirectory>target/site/apidocs</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/target/apidocs</directory>
-                  <includes>
-                    <include>**/**</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-docbkx</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <outputDirectory>target/site</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/target/docbkx</directory>
-                  <includes>
-                    <include>**/**</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-xref</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-                <outputDirectory>target/site/xref</outputDirectory>
-              <resources>
-                <resource>
-                    <directory>${basedir}/../target/site/xref</directory>
-                  <includes>
-                    <include>**/**</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-        <configuration>
-          <escapeString>\</escapeString>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>${maven.site.version}</version>
-        <inherited>false</inherited>
-        <dependencies>
-          <dependency>
-            <!-- add support for ssh/scp -->
-            <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-ssh</artifactId>
-            <version>2.2</version>
-          </dependency>
-        </dependencies>
-        <configuration>
-          <inputEncoding>UTF-8</inputEncoding>
-          <outputEncoding>UTF-8</outputEncoding>
-          <templateFile>${basedir}/src/site/site.vm</templateFile>
-        </configuration>
-      </plugin>
-        </plugins>
-    </build>
-    <dependencies>
-    </dependencies>
+    </plugins>
+  </build>
 </project>

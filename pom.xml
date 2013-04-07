@@ -566,7 +566,6 @@
             <effort>Max</effort>
           </configuration>
         </plugin>
-        <!-- Build plugins -->
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
@@ -676,36 +675,47 @@
             </excludes>
           </configuration>
         </plugin>
-        <!-- Website/Reference Guide building -->
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>xml-maven-plugin</artifactId>
-          <version>1.0-beta-3</version>
-        </plugin>
+      <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>${maven.assembly.version}</version>
+          <configuration>
+            <!--Defer to the hbase-assembly sub-module.  It
+             does all assembly-->
+            <skipAssembly>true</skipAssembly>
+            <!--Do not attach assembly to project.-->
+            <attach>false</attach>
+          </configuration>
+      </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
-      <!-- hbase parent only plugins -->
+      <!-- parent-module only plugins -->
       <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>${maven.assembly.version}</version>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>xml-maven-plugin</artifactId>
+        <version>1.0</version>
+        <inherited>false</inherited>
+        <executions>
+          <execution>
+            <!-- Run the hbase-default.xml through a stylesheet so can show it in doc-->
+            <goals>
+              <goal>transform</goal>
+            </goals>
+            <phase>pre-site</phase>
+          </execution>
+        </executions>
         <configuration>
-          <!--Defer to the hbase-assembly sub-module.  It
-             does all assembly-->
-          <skipAssembly>true</skipAssembly>
-          <!--Do not attach assembly to project.-->
-          <!--
-          <attach>false</attach>
-          <tarLongFileMode>gnu</tarLongFileMode>
-          -->
-          <!--
-          <appendAssemblyId>false</appendAssemblyId>
-          -->
-          <!--
-          <descriptors>
-            <descriptor>${assembly.file}</descriptor>
-          </descriptors>
-          -->
+          <transformationSets>
+            <transformationSet>
+              <!--Reaching up and over into common sub-module for hbase-default.xml-->
+              <dir>${basedir}/hbase-common/src/main/resources/</dir>
+              <includes>
+                <include>hbase-default.xml</include>
+              </includes>
+              <stylesheet>${basedir}/src/main/xslt/configuration_to_docbook_section.xsl</stylesheet>
+              <outputDir>${basedir}/target/docbkx</outputDir>
+            </transformationSet>
+          </transformationSets>
         </configuration>
       </plugin>
       <!-- Special configuration for findbugs just in the parent so
@@ -720,18 +730,135 @@
               <goal>findbugs</goal>
             </goals>
             <configuration>
-              <excludeFilterFile>${project.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+              <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
             </configuration>
           </execution>
         </executions>
       </plugin>
-      <!-- Plugins inherited by all modules -->
-      <!-- All submodules build their javadocs -->
+      <!--Build the documentation.  We build it twice.  Once as a single page and then
+           again as multipage.-->
+      <plugin>
+        <groupId>com.agilejava.docbkx</groupId>
+        <artifactId>docbkx-maven-plugin</artifactId>
+        <version>2.0.14</version>
+        <inherited>false</inherited>
+        <dependencies>
+          <dependency>
+            <groupId>org.docbook</groupId>
+            <artifactId>docbook-xml</artifactId>
+            <version>4.4</version>
+            <scope>runtime</scope>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <sourceDirectory>${basedir}/src/main/docbkx</sourceDirectory>
+          <xincludeSupported>true</xincludeSupported>
+          <useIdAsFilename>true</useIdAsFilename>
+          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
+          <sectionAutolabel>true</sectionAutolabel>
+          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
+          <htmlCustomization>${basedir}/src/main/docbkx/customization.xsl</htmlCustomization>
+          <tocMaxDepth>2</tocMaxDepth>
+          <insertXrefPageNumber>yes</insertXrefPageNumber>
+          <targetDirectory>${basedir}/target/docbkx</targetDirectory>
+          <chunkerOutputEncoding>UTF-8</chunkerOutputEncoding>
+        </configuration>
+        <executions>
+          <execution>
+            <id>multipage</id>
+            <goals>
+              <goal>generate-html</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <navigShowtitles>true</navigShowtitles>
+              <chunkedOutput>true</chunkedOutput>
+              <imgSrcPath>../images/</imgSrcPath>
+              <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
+            </configuration>
+          </execution>
+          <execution>
+            <id>onepage</id>
+            <goals>
+              <goal>generate-html</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <imgSrcPath>images/</imgSrcPath>
+              <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>${maven.resources.plugin.version}</version>
+        <!--$NO-MVN-MAN-VER$ -->
+        <inherited>false</inherited>
+        <executions>
+          <execution>
+            <id>copy-javadocs</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>site</phase>
+            <configuration>
+              <outputDirectory>target/site/apidocs</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/target/apidocs</directory>
+                  <includes>
+                    <include>**/**</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-docbkx</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>site</phase>
+            <configuration>
+              <outputDirectory>target/site</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/target/docbkx</directory>
+                  <includes>
+                    <include>**/**</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+        <configuration>
+          <escapeString>\</escapeString>
+        </configuration>
       </plugin>
-     </plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>${maven.site.version}</version>
+        <inherited>false</inherited>
+        <dependencies>
+          <dependency>
+            <!-- add support for ssh/scp -->
+            <groupId>org.apache.maven.wagon</groupId>
+            <artifactId>wagon-ssh</artifactId>
+            <version>2.2</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+            <siteDirectory>${basedir}/src/main/site</siteDirectory>
+          <inputEncoding>UTF-8</inputEncoding>
+          <outputEncoding>UTF-8</outputEncoding>
+          <templateFile>${basedir}/src/main/site/site.vm</templateFile>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
   <properties>
     <tar.name>${project.build.finalName}.tar.gz</tar.name>
@@ -1163,14 +1290,12 @@
   </dependencyManagement>
   <!-- Dependencies needed by subprojects -->
   <dependencies>
-
     <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
       <artifactId>findbugs-annotations</artifactId>
       <version>${findbugs-annotations}</version>
       <scope>compile</scope>
     </dependency>
-
     <!-- Test dependencies -->
     <dependency>
       <groupId>junit</groupId>
@@ -1242,25 +1367,24 @@
       </properties>
       <build>
         <pluginManagement>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
-              <systemProperties>
-                <property>
-                  <name>java.net.preferIPv4Stack</name>
-                  <value>true</value>
-		</property>
-              </systemProperties>
-            </configuration>
-          </plugin>
-        </plugins>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <configuration>
+                <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
+                <systemProperties>
+                  <property>
+                    <name>java.net.preferIPv4Stack</name>
+                    <value>true</value>
+                  </property>
+                </systemProperties>
+              </configuration>
+            </plugin>
+          </plugins>
         </pluginManagement>
       </build>
     </profile>
-
     <!-- this profile should be activated for release builds -->
     <profile>
       <id>release</id>
@@ -1301,7 +1425,7 @@
         <hadoop.version>${hadoop-one.version}</hadoop.version>
         <slf4j.version>1.4.3</slf4j.version>
         <compat.module>hbase-hadoop1-compat</compat.module>
-        <assembly.file>src/assembly/hadoop-one-compat.xml</assembly.file>
+        <assembly.file>src/main/assembly/hadoop-one-compat.xml</assembly.file>
       </properties>
       <dependencyManagement>
         <dependencies>
@@ -1360,7 +1484,7 @@
         <hadoop.version>${hadoop-two.version}</hadoop.version>
         <slf4j.version>1.6.1</slf4j.version>
         <compat.module>hbase-hadoop2-compat</compat.module>
-        <assembly.file>src/assembly/hadoop-two-compat.xml</assembly.file>
+        <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
       </properties>
       <dependencyManagement>
         <dependencies>
@@ -1559,7 +1683,7 @@
       <id>localTests</id>
       <activation>
         <property>
-            <name>test</name>
+          <name>test</name>
         </property>
       </activation>
       <properties>
@@ -1655,9 +1779,9 @@
         <configuration>
           <aggregate>true</aggregate>
           <linkJavadoc>true</linkJavadoc>
-          <javadocDir>hbase-assembly/target/site/apidocs</javadocDir>
-          <reportOutputDirectory>hbase-assembly/target/site/xref</reportOutputDirectory>
-          <destDir>hbase-assembly/target/site/xref</destDir>
+          <javadocDir>${basedir}/target/site/apidocs</javadocDir>
+          <reportOutputDirectory>${basedir}/target/site/xref</reportOutputDirectory>
+          <destDir>${basedir}/target/site/xref</destDir>
           <excludes>
             <exclude>**/generated/**</exclude>
           </excludes>
@@ -1666,13 +1790,13 @@
     </plugins>
   </reporting>
   <distributionManagement>
-      <site>
-          <id>hbase.apache.org</id>
-          <name>HBase Website at hbase.apache.org</name>
-          <!-- On why this is the tmp dir and not hbase.apache.org, see
+    <site>
+      <id>hbase.apache.org</id>
+      <name>HBase Website at hbase.apache.org</name>
+      <!-- On why this is the tmp dir and not hbase.apache.org, see
                https://issues.apache.org/jira/browse/HBASE-7593?focusedCommentId=13555866&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13555866
                -->
-          <url>file:///tmp</url>
-      </site>
+      <url>file:///tmp</url>
+    </site>
   </distributionManagement>
 </project>

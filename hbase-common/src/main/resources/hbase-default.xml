@@ -797,7 +797,7 @@
     <name>hbase.defaults.for.version</name>
     <value>@@@VERSION@@@</value>
     <description>
-    This defaults file was compiled for version ${pom.version}. This variable is used
+    This defaults file was compiled for version ${project.version}. This variable is used
     to make sure that a user doesn't have an old version of hbase-default.xml on the
     classpath.
     </description>

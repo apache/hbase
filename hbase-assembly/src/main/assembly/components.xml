@@ -25,13 +25,8 @@
   <fileSets>
     <!--Copy over the site if built as docs dir -->
     <fileSet>
-      <directory>target/site</directory>
+        <directory>${project.basedir}/../target/site</directory>
       <outputDirectory>docs</outputDirectory>
-    </fileSet>
-    <!--Copy over the javadoc if built-->
-    <fileSet>
-        <directory>${project.basedir}/../target/apidocs</directory>
-        <outputDirectory>docs/apidocs</outputDirectory>
     </fileSet>
     <!-- Include top level text files-->
     <fileSet>

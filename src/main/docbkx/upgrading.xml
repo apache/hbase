@@ -28,58 +28,11 @@
 -->
     <title>Upgrading</title>
     <para>You cannot skip major verisons upgrading.  If you are upgrading from
-    version 0.90.x to 0.94.x, you must first go from 0.90.x to 0.92.x and then go
-    from 0.92.x to 0.94.x.</para>
+    version 0.20.x to 0.92.x, you must first go from 0.20.x to 0.90.x and then go
+    from 0.90.x to 0.92.x.</para>
     <para>
         Review <xref linkend="configuration" />, in particular the section on Hadoop version.
     </para>
-    <section xml:id="hbase.versioning">
-        <title>HBase version numbers</title>
-        <para>HBase has not walked a straight line where version numbers are concerned.
-            Since we came up out of hadoop itself, we originally tracked hadoop versioning.
-            Later we left hadoop versioning behind because we were moving at a different rate
-            to that of our parent.  If you are into the arcane, checkout our old wiki page
-            on <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HBaseVersions">HBase Versioning</link>
-            which tries to connect the HBase version dots.</para>
-        <section xml:id="hbase.development.series"><title>Odd/Even Versioning or "Development"" Series Releases</title>
-            <para>Ahead of big releases, we have been putting up preview versions to start the
-                feedback cycle turning-over  earlier.  These "Development" Series releases,
-                always odd-numbered, come with no guarantees, not even regards being able
-                to upgrade between two sequential releases (we reserve the right to break compatibility across
-                "Development" Series releases).  Needless to say, these releases are not for
-                production deploys.  They are a preview of what is coming in the hope that
-                interested parties will take the release for a test drive and flag us early if we
-                there are issues we've missed ahead of our rolling a production-worthy release.
-            </para>
-            <para>Our first "Development" Series was the 0.89 set that came out ahead of
-                HBase 0.90.0.  HBase 0.95 is another "Development" Series that portends
-                HBase 0.96.0.
-            </para>
-        </section>
-        <section xml:id="hbase.binary.compatibility">
-            <title>Binary Compatibility</title>
-            <para>When we say two HBase versions are compatible, we mean that the versions
-                are wire and binary compatible.  Compatible HBase versions means that
-                clients can talk to compatible but differently versioned servers.
-                It means too that you can just swap out the jars of one version and replace
-                them with the jars of another, compatible version and all will just work.
-                Unless otherwise specified, HBase point versions are binary compatible.
-                You can safely do rolling upgrades between binary compatible versions; i.e.
-                across point versions: e.g. from 0.94.5 to 0.94.6<footnote><para>See
-                        <link xlink:href="http://search-hadoop.com/m/bOOvwHGW981/Does+compatibility+between+versions+also+mean+binary+compatibility%253F&amp;subj=Re+Does+compatibility+between+versions+also+mean+binary+compatibility+">Does compatibility between versions also mean binary compatibility?</link>
-                        discussion on the hbaes dev mailing list.
-                </para></footnote>.
-            </para>
-        </section>
-        <section xml:id="hbase.rolling.restart">
-            <title>Rolling Upgrade between versions/Binary compatibility</title>
-            <para>Unless otherwise specified, HBase point versions are binary compatible.
-                you can do a rolling upgrade between hbase point versions;
-                for example, you can go to 0.94.6 from 0.94.5 by doing a rolling upgrade across the cluster
-                replacing the 0.94.5 binary with a 0.94.6 binary.
-            </para>
-        </section>
-</section>
     <section xml:id="upgrade0.96">
       <title>Upgrading from 0.94.x to 0.96.x</title>
       <subtitle>The Singularity</subtitle>
@@ -94,12 +47,7 @@
     </section>
     <section xml:id="upgrade0.94">
       <title>Upgrading from 0.92.x to 0.94.x</title>
-      <para>We used to think that 0.92 and 0.94 were interface compatible and that you can do a
-          rolling upgrade between these versions but then we figured that
-          <link xlink:href="https://issues.apache.org/jira/browse/HBASE-5357">HBASE-5357 Use builder pattern in HColumnDescriptor</link>
-          changed method signatures so rather than return void they instead return HColumnDescriptor.  This
-          will throw <programlisting>java.lang.NoSuchMethodError: org.apache.hadoop.hbase.HColumnDescriptor.setMaxVersions(I)V</programlisting>
-          .... so 0.92 and 0.94 are NOT compatible.  You cannot do a rolling upgrade between them.
+    <para>0.92 and 0.94 are interface compatible.  You can do a rolling upgrade between these versions.
     </para>
     </section>
     <section xml:id="upgrade0.92">
