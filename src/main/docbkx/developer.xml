@@ -325,8 +325,16 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
     <title>Updating hbase.apache.org</title>
       <section xml:id="hbase.org.site.contributing">
       <title>Contributing to hbase.apache.org</title>
-      <para>The Apache HBase apache web site (including this reference guide) is maintained as part of the main Apache HBase source tree, under <filename>/src/docbkx</filename> and <filename>/src/site</filename>. The former is this reference guide; the latter, in most cases, are legacy pages that are in the process of being merged into the docbkx tree.</para>
-      <para>To contribute to the reference guide, edit these files and submit them as a patch (see <xref linkend="submitting.patches"/>). Your Jira should contain a summary of the changes in each section (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6081">HBASE-6081</link> for an example).</para>
+      <para>The Apache HBase apache web site (including this reference guide) is maintained as part of the main
+          Apache HBase source tree, under <filename>/src/main/docbkx</filename> and <filename>/src/main/site</filename>
+          <footnote><para>Before 0.95.0, site and reference guide were at src/docbkx and src/site respectively</para></footnote>.
+          The former -- docbkx -- is this reference guide as a bunch of xml marked up using <link xlink:href="http://docbook.org">docbook</link>;
+          the latter is the hbase site (the navbars, the header, the layout, etc.),
+          and some of the documentation, legacy pages mostly that are in the process of being merged into the docbkx tree that is
+      converted to html by a maven plugin by the site build.</para>
+      <para>To contribute to the reference guide, edit these files under site or docbkx and submit them as a patch
+          (see <xref linkend="submitting.patches"/>). Your Jira should contain a summary of the changes in each
+          section (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6081">HBASE-6081</link> for an example).</para>
       <para>To generate the site locally while you're working on it, run:
       <programlisting>mvn site</programlisting>
       Then you can load up the generated HTML files in your browser (file are under <filename>/target/site</filename>).</para>
@@ -334,20 +342,22 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
       <section xml:id="hbase.org.site.publishing">
       <title>Publishing hbase.apache.org</title>
       <para>As of <link xlink:href="https://issues.apache.org/jira/browse/INFRA-5680">INFRA-5680 Migrate apache hbase website</link>,
-          to publish the website, build it, and then deploy it over a checkout of <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>,
-          and then check it in.  For example, if trunk is checked out out at <filename>/Users/stack/checkouts/trunk</filename>
-          and hbase.apache.org is checked out at <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
+          to publish the website, build it, and then deploy it over a checkout of <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>.
+          Finally, check it in.  For example, if trunk is checked out out at <filename>/Users/stack/checkouts/trunk</filename>
+          and the hbase website, hbase.apache.org, is checked out at <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
           the site, do the following:
           <programlisting>
               # Build the site and deploy it to the checked out directory
-              # Getting the javadoc into site is a little tricky.  You have to build it independent, then
-              # 'aggregate' it at top-level so the pre-site site lifecycle step can find it; that is
-              # what the javadoc:javadoc and javadoc:aggregate is about.
-              $ MAVEN_OPTS=" -Xmx3g" mvn clean -DskipTests javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
-              # Check the deployed site by viewing in a brower.
-              # If all is good, commit it and it will show up at http://hbase.apache.org
-              #
+              # Getting the javadoc into site is a little tricky.  You have to build it before you invoke 'site'.
+              $ MAVEN_OPTS=" -Xmx3g" mvn clean install -DskipTests javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
+          </programlisting>
+          Now check the deployed site by viewing in a brower, browse to file:////Users/stack/checkouts/hbase.apache.org/trunk/index.html and check all is good.
+          If all checks out, commit it and your new build will show up immediately at http://hbase.apache.org
+          <programlisting>
               $ cd /Users/stack/checkouts/hbase.apache.org/trunk
+              $ svn status
+              # Do an svn add of any new content...
+              $ svn add ....
               $ svn commit -m 'Committing latest version of website...'
           </programlisting>
       </para>
