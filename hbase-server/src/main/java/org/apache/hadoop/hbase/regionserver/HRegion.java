@@ -1450,7 +1450,6 @@ public class HRegion implements HeapSize { // , Writable{
     // We also set the memstore size to zero here before we allow updates
     // again so its value will represent the size of the updates received
     // during the flush
-    long sequenceId = -1L;
     MultiVersionConsistencyControl.WriteEntry w = null;
 
     // We have to take a write lock during snapshot, or else a write could
