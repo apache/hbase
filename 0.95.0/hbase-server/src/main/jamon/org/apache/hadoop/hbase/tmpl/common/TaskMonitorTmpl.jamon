@@ -1,0 +1,101 @@
+<%doc>
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+</%doc>
+<%import>
+java.util.*;
+org.apache.hadoop.hbase.monitoring.*;
+org.apache.hadoop.util.StringUtils;
+</%import>
+<%args>
+TaskMonitor taskMonitor = TaskMonitor.get();
+String filter = "general";
+String format = "html";
+</%args>
+<%java>
+List<? extends MonitoredTask> tasks = taskMonitor.getTasks();
+Iterator<? extends MonitoredTask> iter = tasks.iterator();
+// apply requested filter
+while (iter.hasNext()) {
+  MonitoredTask t = iter.next();
+  if (filter.equals("general")) {
+    if (t instanceof MonitoredRPCHandler)
+      iter.remove();
+  } else if (filter.equals("handler")) {
+    if (!(t instanceof MonitoredRPCHandler))
+      iter.remove();
+  } else if (filter.equals("rpc")) {
+    if (!(t instanceof MonitoredRPCHandler) || 
+        !((MonitoredRPCHandler) t).isRPCRunning())
+      iter.remove();
+  } else if (filter.equals("operation")) {
+    if (!(t instanceof MonitoredRPCHandler) || 
+        !((MonitoredRPCHandler) t).isOperationRunning())
+      iter.remove();
+  }
+}
+long now = System.currentTimeMillis();
+Collections.reverse(tasks);
+boolean first = true;
+</%java>
+<%if format.equals("json")%>
+[<%for MonitoredTask task : tasks%><%if first%><%java>first = false;</%java><%else>,</%if><% task.toJSON() %></%for>]
+<%else>
+<h2>Tasks</h2>
+  <ul class="nav nav-pills">
+    <li <%if filter.equals("all")%>class="active"</%if>><a href="?filter=all">Show All Monitored Tasks</a></li>
+    <li <%if filter.equals("general")%>class="active"</%if>><a href="?filter=general">Show non-RPC Tasks</a></li>
+    <li <%if filter.equals("handler")%>class="active"</%if>><a href="?filter=handler">Show All RPC Handler Tasks</a></li>
+    <li <%if filter.equals("rpc")%>class="active"</%if>><a href="?filter=rpc">Show Active RPC Calls</a></li>
+    <li <%if filter.equals("operation")%>class="active"</%if>><a href="?filter=operation">Show Client Operations</a></li>
+    <li><a href="?format=json&filter=<% filter %>">View as JSON</a></li>
+  </ul>
+  <%if tasks.isEmpty()%>
+    <p>No tasks currently running on this node.</p>
+  <%else>
+    <table class="table">
+    <tr>
+      <th>Start Time</th>
+      <th>Description</th>
+      <th>State</th>
+      <th>Status</th>
+    </tr>
+    <%for MonitoredTask task : tasks %>
+    <tr class="<& stateCss; state = task.getState() &>">
+      <td><% new Date(task.getStartTime()) %></td>
+      <td><% task.getDescription() %></td>
+      <td><% task.getState() %>
+          (since <% StringUtils.formatTimeDiff(now, task.getStateTime()) %> ago)
+      </td>
+      <td><% task.getStatus() %>
+          (since <% StringUtils.formatTimeDiff(now, task.getStatusTime()) %> 
+          ago)</td>
+    </tr>
+    </%for>
+    </table>
+
+  </%if>
+</%if>
+
+
+<%def stateCss>
+        <%args>
+        MonitoredTask.State state;
+        </%args>
+<%java>       if (state == MonitoredTask.State.COMPLETE) { </%java>alert alert-success<%java> } </%java>
+<%java>  else if (state == MonitoredTask.State.ABORTED)  { </%java>alert alert-error<%java>   } </%java>
+</%def>

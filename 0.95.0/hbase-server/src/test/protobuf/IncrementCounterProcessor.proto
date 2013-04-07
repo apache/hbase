@@ -1,0 +1,55 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
+option java_outer_classname = "IncrementCounterProcessorTestProtos";
+option java_generate_equals_and_hash = true;
+
+message IncCounterProcessorRequest {
+  required bytes row = 1;
+  required int32 counter = 2;
+}
+
+message IncCounterProcessorResponse {
+  required int32 response = 1;
+}
+
+message FriendsOfFriendsProcessorRequest {
+  required bytes person = 1;
+  required bytes row = 2;
+  repeated string result = 3;
+}
+
+message FriendsOfFriendsProcessorResponse {
+  repeated string result = 1;
+}
+
+message RowSwapProcessorRequest {
+  required bytes row1 = 1;
+  required bytes row2 = 2;
+}
+
+message RowSwapProcessorResponse {
+}
+
+message TimeoutProcessorRequest {
+  required bytes row = 1;
+}
+
+message TimeoutProcessorResponse {
+}
