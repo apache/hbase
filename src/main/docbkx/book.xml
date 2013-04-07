@@ -581,445 +581,8 @@ htable.put(put);
     </section>
   </chapter>  <!-- data model -->
 
- <chapter xml:id="schema">
-  <title>HBase and Schema Design</title>
-      <para>A good general introduction on the strength and weaknesses modelling on
-          the various non-rdbms datastores is Ian Varley's Master thesis,
-          <link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link>.
-          Recommended.  Also, read <xref linkend="keyvalue"/> for how HBase stores data internally.
-      </para>
-  <section xml:id="schema.creation">
-  <title>
-      Schema Creation
-  </title>
-  <para>HBase schemas can be created or updated with <xref linkend="shell" />
-      or by using <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link> in the Java API.
-      </para>
-      <para>Tables must be disabled when making ColumnFamily modifications, for example..
-      <programlisting>
-Configuration config = HBaseConfiguration.create();
-HBaseAdmin admin = new HBaseAdmin(conf);
-String table = "myTable";
-
-admin.disableTable(table);
-
-HColumnDescriptor cf1 = ...;
-admin.addColumn(table, cf1);      // adding new ColumnFamily
-HColumnDescriptor cf2 = ...;
-admin.modifyColumn(table, cf2);    // modifying existing ColumnFamily
-
-admin.enableTable(table);
-      </programlisting>
-      </para>See <xref linkend="client_dependencies"/> for more information about configuring client connections.
-      <para>Note:  online schema changes are supported in the 0.92.x codebase, but the 0.90.x codebase requires the table
-      to be disabled.
-      </para>
-    <section xml:id="schema.updates"><title>Schema Updates</title>
-      <para>When changes are made to either Tables or ColumnFamilies (e.g., region size, block size), these changes
-      take effect the next time there is a major compaction and the StoreFiles get re-written.
-      </para>
-      <para>See <xref linkend="store"/> for more information on StoreFiles.
-      </para>
-    </section>
-  </section>
-  <section xml:id="number.of.cfs">
-  <title>
-      On the number of column families
-  </title>
-  <para>
-      HBase currently does not do well with anything above two or three column families so keep the number
-      of column families in your schema low.  Currently, flushing and compactions are done on a per Region basis so
-      if one column family is carrying the bulk of the data bringing on flushes, the adjacent families
-      will also be flushed though the amount of data they carry is small.  When many column families the
-      flushing and compaction interaction can make for a bunch of needless i/o loading (To be addressed by
-      changing flushing and compaction to work on a per column family basis).  For more information
-      on compactions, see <xref linkend="compaction"/>.
-    </para>
-    <para>Try to make do with one column family if you can in your schemas.  Only introduce a
-        second and third column family in the case where data access is usually column scoped;
-        i.e. you query one column family or the other but usually not both at the one time.
-    </para>
-    <section xml:id="number.of.cfs.card"><title>Cardinality of ColumnFamilies</title>
-      <para>Where multiple ColumnFamilies exist in a single table, be aware of the cardinality (i.e., number of rows).
-      If ColumnFamilyA has 1 million rows and ColumnFamilyB has 1 billion rows, ColumnFamilyA's data will likely be spread
-      across many, many regions (and RegionServers).  This makes mass scans for ColumnFamilyA less efficient.
-      </para>
-    </section>
-  </section>
-  <section xml:id="rowkey.design"><title>Rowkey Design</title>
-    <section xml:id="timeseries">
-    <title>
-    Monotonically Increasing Row Keys/Timeseries Data
-    </title>
-    <para>
-      In the HBase chapter of Tom White's book <link xlink:url="http://oreilly.com/catalog/9780596521981">Hadoop: The Definitive Guide</link> (O'Reilly) there is a an optimization note on watching out for a phenomenon where an import process walks in lock-step with all clients in concert pounding one of the table's regions (and thus, a single node), then moving onto the next region, etc.  With monotonically increasing row-keys (i.e., using a timestamp), this will happen.  See this comic by IKai Lan on why monotonically increasing row keys are problematic in BigTable-like datastores:
-      <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link>.  The pile-up on a single region brought on
-      by monotonically increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general it's best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key.
-    </para>
-
-
-    <para>If you do need to upload time series data into HBase, you should
-    study <link xlink:href="http://opentsdb.net/">OpenTSDB</link> as a
-    successful example.  It has a page describing the <link xlink:href=" http://opentsdb.net/schema.html">schema</link> it uses in
-    HBase.  The key format in OpenTSDB is effectively [metric_type][event_timestamp], which would appear at first glance to contradict the previous advice about not using a timestamp as the key.  However, the difference is that the timestamp is not in the <emphasis>lead</emphasis> position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types.  Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
-   </para>
-  </section>
-  <section xml:id="keysize">
-      <title>Try to minimize row and column sizes</title>
-      <subtitle>Or why are my StoreFile indices large?</subtitle>
-      <para>In HBase, values are always freighted with their coordinates; as a
-          cell value passes through the system, it'll be accompanied by its
-          row, column name, and timestamp - always.  If your rows and column names
-          are large, especially compared to the size of the cell value, then
-          you may run up against some interesting scenarios.  One such is
-          the case described by Marc Limotte at the tail of
-          <link xlink:url="https://issues.apache.org/jira/browse/HBASE-3551?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&amp;focusedCommentId=13005272#comment-13005272">HBASE-3551</link>
-          (recommended!).
-          Therein, the indices that are kept on HBase storefiles (<xref linkend="hfile" />)
-                  to facilitate random access may end up occupyng large chunks of the HBase
-                  allotted RAM because the cell value coordinates are large.
-                  Mark in the above cited comment suggests upping the block size so
-                  entries in the store file index happen at a larger interval or
-                  modify the table schema so it makes for smaller rows and column
-                  names.
-                  Compression will also make for larger indices.  See
-                  the thread <link xlink:href="http://search-hadoop.com/m/hemBv1LiN4Q1/a+question+storefileIndexSize&amp;subj=a+question+storefileIndexSize">a question storefileIndexSize</link>
-                  up on the user mailing list.
-       </para>
-       <para>Most of the time small inefficiencies don't matter all that much.  Unfortunately,
-         this is a case where they do.  Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated
-       several billion times in your data. </para>
-       <para>See <xref linkend="keyvalue"/> for more information on HBase stores data internally to see why this is important.</para>
-       <section xml:id="keysize.cf"><title>Column Families</title>
-         <para>Try to keep the ColumnFamily names as small as possible, preferably one character (e.g. "d" for data/default).
-         </para>
-       <para>See <xref linkend="keyvalue"/> for more information on HBase stores data internally to see why this is important.</para>
-       </section>
-       <section xml:id="keysize.atttributes"><title>Attributes</title>
-         <para>Although verbose attribute names (e.g., "myVeryImportantAttribute") are easier to read, prefer shorter attribute names (e.g., "via")
-         to store in HBase.
-         </para>
-       <para>See <xref linkend="keyvalue"/> for more information on HBase stores data internally to see why this is important.</para>
-       </section>
-       <section xml:id="keysize.row"><title>Rowkey Length</title>
-         <para>Keep them as short as is reasonable such that they can still be useful for required data access (e.g., Get vs. Scan).
-         A short key that is useless for data access is not better than a longer key with better get/scan properties.  Expect tradeoffs
-         when designing rowkeys.
-         </para>
-       </section>
-       <section xml:id="keysize.patterns"><title>Byte Patterns</title>
-         <para>A long is 8 bytes.  You can store an unsigned number up to 18,446,744,073,709,551,615 in those eight bytes.
-            If you stored this number as a String -- presuming a byte per character -- you need nearly 3x the bytes.
-         </para>
-         <para>Not convinced?  Below is some sample code that you can run on your own.
-<programlisting>
-// long
-//
-long l = 1234567890L;
-byte[] lb = Bytes.toBytes(l);
-System.out.println("long bytes length: " + lb.length);   // returns 8
-
-String s = "" + l;
-byte[] sb = Bytes.toBytes(s);
-System.out.println("long as string length: " + sb.length);    // returns 10
-
-// hash
-//
-MessageDigest md = MessageDigest.getInstance("MD5");
-byte[] digest = md.digest(Bytes.toBytes(s));
-System.out.println("md5 digest bytes length: " + digest.length);    // returns 16
-
-String sDigest = new String(digest);
-byte[] sbDigest = Bytes.toBytes(sDigest);
-System.out.println("md5 digest as string length: " + sbDigest.length);    // returns 26
-</programlisting>
-         </para>
-       </section>
-
-    </section>
-    <section xml:id="reverse.timestamp"><title>Reverse Timestamps</title>
-    <para>A common problem in database processing is quickly finding the most recent version of a value.  A technique using reverse timestamps
-    as a part of the key can help greatly with a special case of this problem.  Also found in the HBase chapter of Tom White's book Hadoop:  The Definitive Guide (O'Reilly),
-    the technique involves appending (<code>Long.MAX_VALUE - timestamp</code>) to the end of any key, e.g., [key][reverse_timestamp].
-    </para>
-    <para>The most recent value for [key] in a table can be found by performing a Scan for [key] and obtaining the first record.  Since HBase keys
-    are in sorted order, this key sorts before any older row-keys for [key] and thus is first.
-    </para>
-    <para>This technique would be used instead of using <xref linkend="schema.versions">HBase Versioning</xref> where the intent is to hold onto all versions
-    "forever" (or a very long time) and at the same time quickly obtain access to any other version by using the same Scan technique.
-    </para>
-    </section>
-    <section xml:id="rowkey.scope">
-    <title>Rowkeys and ColumnFamilies</title>
-    <para>Rowkeys are scoped to ColumnFamilies.  Thus, the same rowkey could exist in each ColumnFamily that exists in a table without collision.
-    </para>
-    </section>
-    <section xml:id="changing.rowkeys"><title>Immutability of Rowkeys</title>
-    <para>Rowkeys cannot be changed.  The only way they can be "changed" in a table is if the row is deleted and then re-inserted.
-    This is a fairly common question on the HBase dist-list so it pays to get the rowkeys right the first time (and/or before you've
-    inserted a lot of data).
-    </para>
-    </section>
-    <section xml:id="rowkey.regionsplits"><title>Relationship Between RowKeys and Region Splits</title>
-    <para>If you pre-split your table, it is <emphasis>critical</emphasis> to understand how your rowkey will be distributed across
-    the region boundaries.  As an example of why this is important, consider the example of using displayable hex characters as the
-    lead position of the key (e.g., ""0000000000000000" to "ffffffffffffffff").  Running those key ranges through <code>Bytes.split</code>
-    (which is the split strategy used when creating regions in <code>HBaseAdmin.createTable(byte[] startKey, byte[] endKey, numRegions)</code>
-    for 10 regions will generate the following splits...
-    </para>
-    <para>
-    <programlisting>
-48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48                                // 0
-54 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10                 // 6
-61 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -67 -68                 // =
-68 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -124 -126  // D
-75 75 75 75 75 75 75 75 75 75 75 75 75 75 75 72                                // K
-82 18 18 18 18 18 18 18 18 18 18 18 18 18 18 14                                // R
-88 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -40 -44                 // X
-95 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -97 -102                // _
-102 102 102 102 102 102 102 102 102 102 102 102 102 102 102 102                // f
-    </programlisting>
-    ... (note:  the lead byte is listed to the right as a comment.)  Given that the first split is a '0' and the last split is an 'f',
-    everything is great, right?  Not so fast.
-    </para>
-    <para>The problem is that all the data is going to pile up in the first 2 regions and the last region thus creating a "lumpy" (and
-    possibly "hot") region problem.  To understand why, refer to an  <link xlink:href="http://www.asciitable.com">ASCII Table</link>.
-    '0' is byte 48, and 'f' is byte 102, but there is a huge gap in byte values (bytes 58 to 96) that will <emphasis>never appear in this
-    keyspace</emphasis> because the only values are [0-9] and [a-f].  Thus, the middle regions regions will
-    never be used.  To make pre-spliting work with this example keyspace, a custom definition of splits (i.e., and not relying on the
-    built-in split method) is required.
-    </para>
-    <para>Lesson #1:  Pre-splitting tables is generally a best practice, but you need to pre-split them in such a way that all the
-    regions are accessible in the keyspace.  While this example demonstrated the problem with a hex-key keyspace, the same problem can happen
-     with <emphasis>any</emphasis> keyspace.  Know your data.
-    </para>
-    <para>Lesson #2:  While generally not advisable, using hex-keys (and more generally, displayable data) can still work with pre-split
-    tables as long as all the created regions are accessible in the keyspace.
-    </para>
-	 <para>To conclude this example, the following is an example of  how appropriate splits can be pre-created for hex-keys:.
-	    </para>
-<programlisting>public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
-throws IOException {
-  try {
-    admin.createTable( table, splits );
-    return true;
-  } catch (TableExistsException e) {
-    logger.info("table " + table.getNameAsString() + " already exists");
-    // the table already exists...
-    return false;
-  }
-}
-
-public static byte[][] getHexSplits(String startKey, String endKey, int numRegions) {
-  byte[][] splits = new byte[numRegions-1][];
-  BigInteger lowestKey = new BigInteger(startKey, 16);
-  BigInteger highestKey = new BigInteger(endKey, 16);
-  BigInteger range = highestKey.subtract(lowestKey);
-  BigInteger regionIncrement = range.divide(BigInteger.valueOf(numRegions));
-  lowestKey = lowestKey.add(regionIncrement);
-  for(int i=0; i &lt; numRegions-1;i++) {
-    BigInteger key = lowestKey.add(regionIncrement.multiply(BigInteger.valueOf(i)));
-    byte[] b = String.format("%016x", key).getBytes();
-    splits[i] = b;
-  }
-  return splits;
-}</programlisting>
-    </section>
-    </section>  <!--  rowkey design -->
-    <section xml:id="schema.versions">
-  <title>
-  Number of Versions
-  </title>
-     <section xml:id="schema.versions.max"><title>Maximum Number of Versions</title>
-      <para>The maximum number of row versions to store is configured per column
-      family via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
-      The default for max versions is 3.
-      This is an important parameter because as described in <xref linkend="datamodel" />
-      section HBase does <emphasis>not</emphasis> overwrite row values, but rather
-      stores different values per row by time (and qualifier).  Excess versions are removed during major
-      compactions.  The number of max versions may need to be increased or decreased depending on application needs.
-      </para>
-      <para>It is not recommended setting the number of max versions to an exceedingly high level (e.g., hundreds or more) unless those old values are
-      very dear to you because this will greatly increase StoreFile size.
-      </para>
-     </section>
-    <section xml:id="schema.minversions">
-    <title>
-    Minimum Number of Versions
-    </title>
-    <para>Like maximum number of row versions, the minimum number of row versions to keep is configured per column
-      family via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
-      The default for min versions is 0, which means the feature is disabled.
-      The minimum number of row versions parameter is used together with the time-to-live parameter and can be combined with the
-      number of row versions parameter to allow configurations such as
-      "keep the last T minutes worth of data, at most N versions, <emphasis>but keep at least M versions around</emphasis>"
-      (where M is the value for minimum number of row versions, M&lt;N).
-      This parameter should only be set when time-to-live is enabled for a column family and must be less than the
-      number of row versions.
-    </para>
-    </section>
-  </section>
-  <section xml:id="supported.datatypes">
-  <title>
-  Supported Datatypes
-  </title>
-  <para>HBase supports a "bytes-in/bytes-out" interface via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html">Put</link> and
-  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html">Result</link>, so anything that can be
-  converted to an array of bytes can be stored as a value.  Input could be strings, numbers, complex objects, or even images as long as they can rendered as bytes.
-  </para>
-  <para>There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase would probably be too much to ask);
-  search the mailling list for conversations on this topic. All rows in HBase conform to the <xref linkend="datamodel">datamodel</xref>, and
-  that includes versioning.  Take that into consideration when making your design, as well as block size for the ColumnFamily.
-  </para>
-    <section xml:id="counters">
-      <title>Counters</title>
-      <para>
-      One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers).  See
-      <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#increment%28org.apache.hadoop.hbase.client.Increment%29">Increment</link> in HTable.
-      </para>
-      <para>Synchronization on counters are done on the RegionServer, not in the client.
-      </para>
-    </section>
-  </section>
-  <section xml:id="schema.joins"><title>Joins</title>
-    <para>If you have multiple tables, don't forget to factor in the potential for <xref linkend="joins"/> into the schema design.
-    </para>
-  </section>
-  <section xml:id="ttl">
-  <title>Time To Live (TTL)</title>
-  <para>ColumnFamilies can set a TTL length in seconds, and HBase will automatically delete rows once the expiration time is reached.
-  This applies to <emphasis>all</emphasis> versions of a row - even the current one.  The TTL time encoded in the HBase for the row is specified in UTC.
-  </para>
-  <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
-  </para>
-  </section>
-  <section xml:id="cf.keep.deleted">
-  <title>
-  Keeping Deleted Cells
-  </title>
-  <para>ColumnFamilies can optionally keep deleted cells. That means deleted cells can still be retrieved with
-  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> or
-  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> operations,
-  as long these operations have a time range specified that ends before the timestamp of any delete that would affect the cells.
-  This allows for point in time queries even in the presence of deletes.
-  </para>
-  <para>
-  Deleted cells are still subject to TTL and there will never be more than "maximum number of versions" deleted cells.
-  A new "raw" scan options returns all deleted rows and the delete markers.
-  </para>
-  <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
-  </para>
-  </section>
-  <section xml:id="secondary.indexes">
-  <title>
-  Secondary Indexes and Alternate Query Paths
-  </title>
-  <para>This section could also be titled "what if my table rowkey looks like <emphasis>this</emphasis> but I also want to query my table like <emphasis>that</emphasis>."
-  A common example on the dist-list is where a row-key is of the format "user-timestamp" but there are reporting requirements on activity across users for certain
-  time ranges.  Thus, selecting by user is easy because it is in the lead position of the key, but time is not.
-  </para>
-  <para>There is no single answer on the best way to handle this because it depends on...
-   <itemizedlist>
-       <listitem>Number of users</listitem>
-       <listitem>Data size and data arrival rate</listitem>
-       <listitem>Flexibility of reporting requirements (e.g., completely ad-hoc date selection vs. pre-configured ranges) </listitem>
-       <listitem>Desired execution speed of query (e.g., 90 seconds may be reasonable to some for an ad-hoc report, whereas it may be too long for others) </listitem>
-   </itemizedlist>
-   ... and solutions are also influenced by the size of the cluster and how much processing power you have to throw at the solution.
-   Common techniques are in sub-sections below.  This is a comprehensive, but not exhaustive, list of approaches.
-  </para>
-  <para>It should not be a surprise that secondary indexes require additional cluster space and processing.
-  This is precisely what happens in an RDBMS because the act of creating an alternate index requires both space and processing cycles to update.  RBDMS products
-  are more advanced in this regard to handle alternative index management out of the box.  However, HBase scales better at larger data volumes, so this is a feature trade-off.
-  </para>
-  <para>Pay attention to <xref linkend="performance"/> when implementing any of these approaches.</para>
-  <para>Additionally, see the David Butler response in this dist-list thread <link xlink:href="http://search-hadoop.com/m/nvbiBp2TDP/Stargate%252Bhbase&amp;subj=Stargate+hbase">HBase, mail # user - Stargate+hbase</link>
-   </para>
-    <section xml:id="secondary.indexes.filter">
-      <title>
-       Filter Query
-      </title>
-      <para>Depending on the case, it may be appropriate to use <xref linkend="client.filter"/>.  In this case, no secondary index is created.
-      However, don't try a full-scan on a large table like this from an application (i.e., single-threaded client).
-      </para>
-    </section>
-    <section xml:id="secondary.indexes.periodic">
-      <title>
-       Periodic-Update Secondary Index
-      </title>
-      <para>A secondary index could be created in an other table which is periodically updated via a MapReduce job.  The job could be executed intra-day, but depending on
-      load-strategy it could still potentially be out of sync with the main data table.</para>
-      <para>See <xref linkend="mapreduce.example.readwrite"/> for more information.</para>
-    </section>
-    <section xml:id="secondary.indexes.dualwrite">
-      <title>
-       Dual-Write Secondary Index
-      </title>
-      <para>Another strategy is to build the secondary index while publishing data to the cluster (e.g., write to data table, write to index table).
-      If this is approach is taken after a data table already exists, then bootstrapping will be needed for the secondary index with a MapReduce job (see <xref linkend="secondary.indexes.periodic"/>).</para>
-    </section>
-    <section xml:id="secondary.indexes.summary">
-      <title>
-       Summary Tables
-      </title>
-      <para>Where time-ranges are very wide (e.g., year-long report) and where the data is voluminous, summary tables are a common approach.
-      These would be generated with MapReduce jobs into another table.</para>
-      <para>See <xref linkend="mapreduce.example.summary"/> for more information.</para>
-    </section>
-    <section xml:id="secondary.indexes.coproc">
-      <title>
-       Coprocessor Secondary Index
-      </title>
-      <para>Coprocessors act like RDBMS triggers.  These were added in 0.92.  For more information, see <xref linkend="coprocessors"/>
-      </para>
-    </section>
-  </section>
-  <section xml:id="schema.smackdown"><title>Schema Design Smackdown</title>
-    <para>This section will describe common schema design questions that appear on the dist-list.  These are
-    general guidelines and not laws - each application must consider its own needs.
-    </para>
-    <section xml:id="schema.smackdown.rowsversions"><title>Rows vs. Versions</title>
-      <para>A common question is whether one should prefer rows or HBase's built-in-versioning.  The context is typically where there are
-      "a lot" of versions of a row to be retained (e.g., where it is significantly above the HBase default of 3 max versions).  The
-      rows-approach would require storing a timstamp in some portion of the rowkey so that they would not overwite with each successive update.
-      </para>
-      <para>Preference:  Rows (generally speaking).
-      </para>
-    </section>
-    <section xml:id="schema.smackdown.rowscols"><title>Rows vs. Columns</title>
-      <para>Another common question is whether one should prefer rows or columns.  The context is typically in extreme cases of wide
-      tables, such as having 1 row with 1 million attributes, or 1 million rows with 1 columns apiece.
-      </para>
-      <para>Preference:  Rows (generally speaking).  To be clear, this guideline is in the context is in extremely wide cases, not in the
-      standard use-case where one needs to store a few dozen or hundred columns.  But there is also a middle path between these two
-      options, and that is "Rows as Columns."
-      </para>
-    </section>
-    <section xml:id="schema.smackdown.rowsascols"><title>Rows as Columns</title>
-      <para>The middle path between Rows vs. Columns is packing data that would be a separate row into columns, for certain rows.
-      OpenTSDB is the best example of this case where a single row represents a defined time-range, and then discrete events are treated as
-      columns.  This approach is often more complex, and may require the additional complexity of re-writing your data, but has the
-      advantage of being I/O efficient.  For an overview of this approach, see
-      <link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</link>
-      from HBaseCon2012.
-      </para>
-    </section>
-
-  </section>
-  <section xml:id="schema.ops"><title>Operational and Performance Configuration Options</title>
-    <para>See the Performance section <xref linkend="perf.schema"/> for more information operational and performance
-    schema design options, such as Bloom Filters, Table-configured regionsizes, compression, and blocksizes.
-    </para>
-  </section>
-
-  <section xml:id="constraints"><title>Constraints</title>
-    <para>HBase currently supports 'constraints' in traditional (SQL) database parlance. The advised usage for Constraints is in enforcing business rules for attributes in the table (eg. make sure values are in the range 1-10).
-    Constraints could also be used to enforce referential integrity, but this is strongly discouraged as it will dramatically decrease the write throughput of the tables where integrity checking is enabled.
-    Extensive documentation on using Constraints can be found at: <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/constraint">Constraint</link> since version 0.94.
-    </para>
-  </section>
-
-  </chapter>   <!--  schema design -->
+  <!--  schema design -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="schema_design.xml" />
 
   <chapter xml:id="mapreduce">
   <title>HBase and MapReduce</title>
@@ -2175,14 +1738,14 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           </para>
         </section>
       </section>
-      
+
        <section>
         <title>Online Region Merges</title>
-        
+
         <para>Both Master and Regionserver participate in the event of online region merges.
         Client sends merge RPC to master, then master moves the regions together to the
         same regionserver where the more heavily loaded region resided, finally master
-        send merge request to this regionserver and regionserver run the region merges. 
+        send merge request to this regionserver and regionserver run the region merges.
         Similar with process of region splits, region merges run as a local transaction
         on the regionserver, offlines the regions and then merges two regions on the file
         system, atomically delete merging regions from META and add merged region to the META,
@@ -2193,7 +1756,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
           </programlisting>
           It's an asynchronous operation and call returns immediately without waiting merge completed.
-          Passing 'true' as the optional third parameter will force a merge ('force' merges regardless 
+          Passing 'true' as the optional third parameter will force a merge ('force' merges regardless
           else merge will fail unless passed adjacent regions. 'force' is for expert use only)
         </para>
       </section>
@@ -3121,19 +2684,22 @@ hbase> describe 't1'</programlisting>
     <para>
         You will find the snappy library file under the .libs directory from your Snappy build (For example
         /home/hbase/snappy-1.0.5/.libs/). The file is called libsnappy.so.1.x.x where 1.x.x is the version of the snappy
-        code you are building. You can either copy this file into your hbase directory under libsnappy.so name, or simply
-        create a symbolic link to it.
+        code you are building. You can either copy this file into your hbase lib directory -- under lib/native/PLATFORM --
+        naming the file as libsnappy.so,
+        or simply create a symbolic link to it (See ./bin/hbase for how it does library path for native libs).
     </para>
 
     <para>
         The second file you need is the hadoop native library. You will find this file in your hadoop installation directory
         under lib/native/Linux-amd64-64/ or lib/native/Linux-i386-32/. The file you are looking for is libhadoop.so.1.x.x.
-        Again, you can simply copy this file or link to it, under the name libhadoop.so.
+        Again, you can simply copy this file or link to it from under hbase in lib/native/PLATFORM (e.g. Linux-amd64-64, etc.),
+        using the name libhadoop.so.
     </para>
 
     <para>
         At the end of the installation, you should have both libsnappy.so and libhadoop.so links or files present into
-        lib/native/Linux-amd64-64 or into lib/native/Linux-i386-32
+        lib/native/Linux-amd64-64 or into lib/native/Linux-i386-32 (where the last part of the directory path is the
+        PLATFORM you built and rare running the native lib on)
     </para>
     <para>To point hbase at snappy support, in hbase-env.sh set
         <programlisting>export HBASE_LIBRARY_PATH=/pathtoyourhadoop/lib/native/Linux-amd64-64</programlisting>
