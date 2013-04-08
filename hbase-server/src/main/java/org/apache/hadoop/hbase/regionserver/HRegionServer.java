@@ -3887,6 +3887,10 @@ public class HRegionServer implements ClientProtocol,
   private static final int TIMEOUT_REGION_MOVED = (2 * 60 * 1000);
 
   protected void addToMovedRegions(String encodedName, ServerName destination, long closeSeqNum) {
+    if (ServerName.isSameHostnameAndPort(destination, this.getServerName())) {
+      LOG.warn("Not adding moved region record: " + encodedName + " to self.");
+      return;
+    }
     LOG.info("Adding moved region record: " + encodedName + " to "
         + destination.getServerName() + ":" + destination.getPort()
         + " as of " + closeSeqNum);

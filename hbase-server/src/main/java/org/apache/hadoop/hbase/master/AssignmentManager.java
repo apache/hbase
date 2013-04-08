@@ -551,7 +551,7 @@ public class AssignmentManager extends ZooKeeperListener {
                 public void process() throws IOException {
                   ReentrantLock lock = locker.acquireLock(regionInfo.getEncodedName());
                   try {
-                    unassign(regionInfo, rs, expectedVersion, sn, true, null);
+                    unassign(regionInfo, rs, expectedVersion, null, true, null);
                   } finally {
                     lock.unlock();
                   }
