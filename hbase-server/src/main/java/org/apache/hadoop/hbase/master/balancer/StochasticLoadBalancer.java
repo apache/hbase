@@ -397,13 +397,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private ServerName pickOtherServer(ServerName server, List<ServerName> allServers) {
     ServerName s = null;
     int count = 0;
-    while (count < 100 && (s == null || s.equals(server))) {
+    while (count < 100 && (s == null || ServerName.isSameHostnameAndPort(s, server))) {
       count++;
       s = allServers.get(RANDOM.nextInt(allServers.size()));
     }
 
     // If nothing but the current server was found return null.
-    return (s == null || s.equals(server)) ? null : s;
+    return (s == null || ServerName.isSameHostnameAndPort(s, server)) ? null : s;
   }
 
   /**

@@ -188,8 +188,6 @@ public class TestAssignmentManager {
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithOpenedNode()
   throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
-    Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, REGIONINFO, 0, null, true)).
-        thenReturn(true);
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -238,8 +236,6 @@ public class TestAssignmentManager {
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithClosedNode()
   throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
-    Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, REGIONINFO, 0, null, true)).
-        thenReturn(true);
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -289,8 +285,6 @@ public class TestAssignmentManager {
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithOfflineNode()
   throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
-    Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, REGIONINFO, 0, null, true)).
-        thenReturn(true);
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
