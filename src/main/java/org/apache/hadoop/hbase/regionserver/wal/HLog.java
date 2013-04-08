@@ -408,11 +408,11 @@ public class HLog implements Syncable {
     if (failIfLogDirExists && fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
-    if (!HBaseFileSystem.makeDirOnFileSystem(fs, conf, dir)) {
+    if (!HBaseFileSystem.makeDirOnFileSystem(fs, dir)) {
       throw new IOException("Unable to mkdir " + dir);
     }
     this.oldLogDir = oldLogDir;
-    if (!fs.exists(oldLogDir) && !HBaseFileSystem.makeDirOnFileSystem(fs, conf, oldLogDir)) {
+    if (!fs.exists(oldLogDir) && !HBaseFileSystem.makeDirOnFileSystem(fs, oldLogDir)) {
       throw new IOException("Unable to mkdir " + this.oldLogDir);
     }
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
@@ -918,7 +918,7 @@ public class HLog implements Syncable {
         i.preLogArchive(p, newPath);
       }
     }
-    if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, p, newPath)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, p, newPath)) {
       throw new IOException("Unable to rename " + p + " to " + newPath);
     }
     // Tell our listeners that a log has been archived.
@@ -970,7 +970,7 @@ public class HLog implements Syncable {
         }
       }
 
-      if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, file.getPath(),p)) {
+      if (!HBaseFileSystem.renameDirForFileSystem(fs, file.getPath(), p)) {
         throw new IOException("Unable to rename " + file.getPath() + " to " + p);
       }
       // Tell our listeners that a log was archived.
@@ -982,7 +982,7 @@ public class HLog implements Syncable {
     }
     LOG.debug("Moved " + files.length + " log files to " +
       FSUtils.getPath(this.oldLogDir));
-    if (!HBaseFileSystem.deleteDirFromFileSystem(fs, conf, dir)) {
+    if (!HBaseFileSystem.deleteDirFromFileSystem(fs, dir)) {
       LOG.info("Unable to delete " + dir);
     }
   }
@@ -1864,7 +1864,7 @@ public class HLog implements Syncable {
   throws IOException {
     Path moveAsideName = new Path(edits.getParent(), edits.getName() + "." +
       System.currentTimeMillis());
-    if (!HBaseFileSystem.renameDirForFileSystem(fs, fs.getConf(), edits, moveAsideName)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, edits, moveAsideName)) {
       LOG.warn("Rename failed from " + edits + " to " + moveAsideName);
     }
     return moveAsideName;

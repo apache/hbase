@@ -55,6 +55,7 @@ public class TestHBaseFileSystem {
     LOG.info("hbase.rootdir=" + hbaseRootDir);
     conf.set(HConstants.HBASE_DIR, hbaseRootDir.toString());
     conf.setInt("hdfs.client.retries.number", 10);
+    HBaseFileSystem.setRetryCounts(conf);
   }
 
   
@@ -65,16 +66,24 @@ public class TestHBaseFileSystem {
     Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     // Create a Region
-    assertTrue(HBaseFileSystem.createPathOnFileSystem(fs, TestHBaseFileSystem.conf, rootDir, true) != null);
-
-    boolean result = HBaseFileSystem.makeDirOnFileSystem(new MockFileSystemForCreate(), TestHBaseFileSystem.conf, new Path("/a"));
+    assertTrue(HBaseFileSystem.createPathOnFileSystem(fs, rootDir, true) != null);
+    
+    try {
+      HBaseFileSystem.createPathOnFileSystem(new MockFileSystemForCreate(), 
+        new Path("/A"), false);
+     assertTrue(false);// control should not come here.
+    } catch (Exception e) {
+      LOG.info(e);
+    }
+    
+    boolean result = HBaseFileSystem.makeDirOnFileSystem(new MockFileSystemForCreate(), new Path("/a"));
     assertTrue("Couldn't create the directory", result);
 
 
-    result = HBaseFileSystem.renameDirForFileSystem(new MockFileSystem(), TestHBaseFileSystem.conf, new Path("/a"), new Path("/b"));
+    result = HBaseFileSystem.renameDirForFileSystem(new MockFileSystem(), new Path("/a"), new Path("/b"));
     assertTrue("Couldn't rename the directory", result);
 
-    result = HBaseFileSystem.deleteDirFromFileSystem(new MockFileSystem(), TestHBaseFileSystem.conf, new Path("/a"));
+    result = HBaseFileSystem.deleteDirFromFileSystem(new MockFileSystem(), new Path("/a"));
 
     assertTrue("Couldn't delete the directory", result);
     fs.delete(rootDir, true);
@@ -83,6 +92,7 @@ public class TestHBaseFileSystem {
   static class MockFileSystemForCreate extends MockFileSystem {
     @Override
     public boolean exists(Path path) {
+      if ("/A".equals(path.toString())) return true;
       return false;
     }
   }

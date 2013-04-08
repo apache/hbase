@@ -279,7 +279,7 @@ public class SplitLogManager extends ZooKeeperListener {
     for(Path logDir: logDirs){
       status.setStatus("Cleaning up log directory...");
       try {
-        if (fs.exists(logDir) && !HBaseFileSystem.deleteFileFromFileSystem(fs, conf, logDir)) {
+        if (fs.exists(logDir) && !HBaseFileSystem.deleteFileFromFileSystem(fs, logDir)) {
           LOG.warn("Unable to delete log src dir. Ignoring. " + logDir);
         }
       } catch (IOException ioe) {

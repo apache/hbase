@@ -479,7 +479,7 @@ public class HLogSplitter {
             LOG.warn("Found existing old edits file. It could be the "
                 + "result of a previous failed split attempt. Deleting " + dst + ", length="
                 + fs.getFileStatus(dst).getLen());
-            if (!HBaseFileSystem.deleteFileFromFileSystem(fs, conf, dst)) {
+            if (!HBaseFileSystem.deleteFileFromFileSystem(fs, dst)) {
               LOG.warn("Failed deleting of old " + dst);
               throw new IOException("Failed deleting of old " + dst);
             }
@@ -488,7 +488,7 @@ public class HLogSplitter {
           // data without touching disk. TestHLogSplit#testThreading is an
           // example.
           if (fs.exists(wap.p)) {
-            if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, wap.p, dst)) {
+            if (!HBaseFileSystem.renameDirForFileSystem(fs, wap.p, dst)) {
               throw new IOException("Failed renaming " + wap.p + " to " + dst);
             }
             LOG.debug("Rename " + wap.p + " to " + dst);
@@ -555,7 +555,7 @@ public class HLogSplitter {
     }
     archiveLogs(null, corruptedLogs, processedLogs, oldLogDir, fs, conf);
     Path stagingDir = ZKSplitLog.getSplitLogDir(rootdir, logPath.getName());
-    HBaseFileSystem.deleteDirFromFileSystem(fs, conf, stagingDir);
+    HBaseFileSystem.deleteDirFromFileSystem(fs, stagingDir);
   }
 
   /**
@@ -578,17 +578,17 @@ public class HLogSplitter {
     final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR), conf.get(
         "hbase.regionserver.hlog.splitlog.corrupt.dir",  HConstants.CORRUPT_DIR_NAME));
 
-    if (!HBaseFileSystem.makeDirOnFileSystem(fs, conf, corruptDir)) {
+    if (!HBaseFileSystem.makeDirOnFileSystem(fs, corruptDir)) {
       LOG.info("Unable to mkdir " + corruptDir);
     }
-    HBaseFileSystem.makeDirOnFileSystem(fs, conf, oldLogDir);
+    HBaseFileSystem.makeDirOnFileSystem(fs, oldLogDir);
 
     // this method can get restarted or called multiple times for archiving
     // the same log files.
     for (Path corrupted : corruptedLogs) {
       Path p = new Path(corruptDir, corrupted.getName());
       if (fs.exists(corrupted)) {
-        if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, corrupted, p)) {
+        if (!HBaseFileSystem.renameDirForFileSystem(fs, corrupted, p)) {
           LOG.warn("Unable to move corrupted log " + corrupted + " to " + p);
         } else {
           LOG.warn("Moving corrupted log " + corrupted + " to " + p);
@@ -599,7 +599,7 @@ public class HLogSplitter {
     for (Path p : processedLogs) {
       Path newPath = HLog.getHLogArchivePath(oldLogDir, p);
       if (fs.exists(p)) {
-        if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, p, newPath)) {
+        if (!HBaseFileSystem.renameDirForFileSystem(fs, p, newPath)) {
           LOG.warn("Unable to move  " + p + " to " + newPath);
         } else {
           LOG.debug("Archived processed log " + p + " to " + newPath);
@@ -609,7 +609,7 @@ public class HLogSplitter {
 
     // distributed log splitting removes the srcDir (region's log dir) later
     // when all the log files in that srcDir have been successfully processed
-    if (srcDir != null && !HBaseFileSystem.deleteDirFromFileSystem(fs, conf, srcDir)) {
+    if (srcDir != null && !HBaseFileSystem.deleteDirFromFileSystem(fs, srcDir)) {
       throw new IOException("Unable to delete src dir: " + srcDir);
     }
   }
@@ -643,20 +643,20 @@ public class HLogSplitter {
     if (fs.exists(dir) && fs.isFile(dir)) {
       Path tmp = new Path("/tmp");
       if (!fs.exists(tmp)) {
-        HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), tmp);
+        HBaseFileSystem.makeDirOnFileSystem(fs, tmp);
       }
       tmp = new Path(tmp,
         HLog.RECOVERED_EDITS_DIR + "_" + encodedRegionName);
       LOG.warn("Found existing old file: " + dir + ". It could be some "
         + "leftover of an old installation. It should be a folder instead. "
         + "So moving it to " + tmp);
-      if (!HBaseFileSystem.renameDirForFileSystem(fs, fs.getConf(), dir, tmp)) {
+      if (!HBaseFileSystem.renameDirForFileSystem(fs, dir, tmp)) {
         LOG.warn("Failed to sideline old file " + dir);
       }
     }
 
     if (isCreate && !fs.exists(dir) && 
-        !HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), dir)) {
+        !HBaseFileSystem.makeDirOnFileSystem(fs, dir)) {
       LOG.warn("mkdir failed on " + dir);
     }
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
@@ -1075,7 +1075,7 @@ public class HLogSplitter {
           + "result of a previous failed split attempt. Deleting "
           + regionedits + ", length="
           + fs.getFileStatus(regionedits).getLen());
-      if (!HBaseFileSystem.deleteFileFromFileSystem(fs, conf, regionedits)) {
+      if (!HBaseFileSystem.deleteFileFromFileSystem(fs, regionedits)) {
         LOG.warn("Failed delete of old " + regionedits);
       }
     }
@@ -1101,12 +1101,12 @@ public class HLogSplitter {
             + "result of a previous failed split attempt. Deleting "
             + ret + ", length="
             + fs.getFileStatus(ret).getLen());
-        if (!HBaseFileSystem.deleteFileFromFileSystem(fs, conf, ret)) {
+        if (!HBaseFileSystem.deleteFileFromFileSystem(fs, ret)) {
           LOG.warn("Failed delete of old " + ret);
         }
       }
       Path dir = ret.getParent();
-      if (!fs.exists(dir) && !HBaseFileSystem.makeDirOnFileSystem(fs, conf, dir)) { 
+      if (!fs.exists(dir) && !HBaseFileSystem.makeDirOnFileSystem(fs, dir)) { 
           LOG.warn("mkdir failed on " + dir);
       }
     } catch (IOException e) {
@@ -1200,7 +1200,7 @@ public class HLogSplitter {
             LOG.warn("Found existing old edits file. It could be the "
                 + "result of a previous failed split attempt. Deleting " + dst
                 + ", length=" + fs.getFileStatus(dst).getLen());
-            if (!HBaseFileSystem.deleteFileFromFileSystem(fs, conf, dst)) {
+            if (!HBaseFileSystem.deleteFileFromFileSystem(fs, dst)) {
               LOG.warn("Failed deleting of old " + dst);
               throw new IOException("Failed deleting of old " + dst);
             }
@@ -1209,7 +1209,7 @@ public class HLogSplitter {
           // the data without touching disk. TestHLogSplit#testThreading is an
           // example.
           if (fs.exists(wap.p)) {
-            if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, wap.p, dst)) {
+            if (!HBaseFileSystem.renameDirForFileSystem(fs, wap.p, dst)) {
               throw new IOException("Failed renaming " + wap.p + " to " + dst);
             }
             LOG.debug("Rename " + wap.p + " to " + dst);

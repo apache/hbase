@@ -225,7 +225,7 @@ public class FSTableDescriptors implements TableDescriptors {
     if (!this.fsreadonly) {
       Path tabledir = FSUtils.getTablePath(this.rootdir, tablename);
       if (this.fs.exists(tabledir)) {
-        if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), tabledir)) {
+        if (!HBaseFileSystem.deleteDirFromFileSystem(fs, tabledir)) {
           throw new IOException("Failed delete of " + tabledir.toString());
         }
       }
@@ -281,7 +281,7 @@ public class FSTableDescriptors implements TableDescriptors {
       for (int i = 1; i < status.length; i++) {
         Path p = status[i].getPath();
         // Clean up old versions
-        if (!HBaseFileSystem.deleteFileFromFileSystem(fs, fs.getConf(), p)) {
+        if (!HBaseFileSystem.deleteFileFromFileSystem(fs, p)) {
           LOG.warn("Failed cleanup of " + status);
         } else {
           LOG.debug("Cleaned up old tableinfo file " + p);
@@ -505,7 +505,7 @@ public class FSTableDescriptors implements TableDescriptors {
       try {
         writeHTD(fs, p, hTableDescriptor);
         tableInfoPath = getTableInfoFileName(tableDir, sequenceid);
-        if (!HBaseFileSystem.renameDirForFileSystem(fs, fs.getConf(), p, tableInfoPath)) {
+        if (!HBaseFileSystem.renameDirForFileSystem(fs, p, tableInfoPath)) {
           throw new IOException("Failed rename of " + p + " to " + tableInfoPath);
         }
       } catch (IOException ioe) {
@@ -531,7 +531,7 @@ public class FSTableDescriptors implements TableDescriptors {
   private static void writeHTD(final FileSystem fs, final Path p,
       final HTableDescriptor htd)
   throws IOException {
-    FSDataOutputStream out = HBaseFileSystem.createPathOnFileSystem(fs, fs.getConf(), p, false);
+    FSDataOutputStream out = HBaseFileSystem.createPathOnFileSystem(fs, p, false);
     try {
       htd.write(out);
       out.write('\n');

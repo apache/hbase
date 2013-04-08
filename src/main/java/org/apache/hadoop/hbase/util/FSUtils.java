@@ -107,7 +107,7 @@ public abstract class FSUtils {
    */
   public Path checkdir(final FileSystem fs, final Path dir) throws IOException {
     if (!fs.exists(dir)) {
-      HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), dir);
+      HBaseFileSystem.makeDirOnFileSystem(fs, dir);
     }
     return dir;
   }
@@ -155,7 +155,7 @@ public abstract class FSUtils {
   public static FSDataOutputStream create(FileSystem fs, Path path, FsPermission perm,
       boolean overwrite) throws IOException {
     LOG.debug("Creating file=" + path + " with permission=" + perm);
-    return HBaseFileSystem.createPathWithPermsOnFileSystem(fs, fs.getConf(), path, perm, overwrite);
+    return HBaseFileSystem.createPathWithPermsOnFileSystem(fs, path, perm, overwrite);
   }
 
   /**

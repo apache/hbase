@@ -154,7 +154,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     // if the directory doesn't exist, then we are done
     if (children == null) {
       try {
-        return HBaseFileSystem.deleteFileFromFileSystem(fs, conf, toCheck);
+        return HBaseFileSystem.deleteFileFromFileSystem(fs, toCheck);
       } catch (IOException e) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Couldn't delete directory: " + toCheck, e);
@@ -186,7 +186,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     // delete this directory. However, don't do so recursively so we don't delete files that have
     // been added since we last checked.
     try {
-      return HBaseFileSystem.deleteFileFromFileSystem(fs, conf, toCheck);
+      return HBaseFileSystem.deleteFileFromFileSystem(fs, toCheck);
     } catch (IOException e) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Couldn't delete directory: " + toCheck, e);
@@ -208,7 +208,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     // first check to see if the path is valid
     if (!validate(filePath)) {
       LOG.warn("Found a wrongly formatted file: " + filePath.getName() + " deleting it.");
-      boolean success = HBaseFileSystem.deleteDirFromFileSystem(fs, conf, filePath);
+      boolean success = HBaseFileSystem.deleteDirFromFileSystem(fs, filePath);
       if (!success) LOG.warn("Attempted to delete:" + filePath
           + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
 
@@ -234,7 +234,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     if (LOG.isTraceEnabled()) {
       LOG.trace("Removing:" + filePath + " from archive");
     }
-    boolean success = HBaseFileSystem.deleteFileFromFileSystem(fs, conf, filePath);
+    boolean success = HBaseFileSystem.deleteFileFromFileSystem(fs, filePath);
     if (!success) {
       LOG.warn("Attempted to delete:" + filePath
           + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");

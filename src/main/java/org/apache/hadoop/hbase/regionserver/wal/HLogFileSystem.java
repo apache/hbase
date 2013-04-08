@@ -41,7 +41,7 @@ public class HLogFileSystem extends HBaseFileSystem {
    */
 
   public HLogFileSystem(Configuration conf) {
-    checkAndSetRetryCounts(conf);
+    setRetryCounts(conf);
   }
 
   /**

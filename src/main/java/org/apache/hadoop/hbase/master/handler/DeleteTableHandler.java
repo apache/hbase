@@ -90,7 +90,7 @@ public class DeleteTableHandler extends TableEventHandler {
       }
 
       // 5. Delete table from FS (temp directory)
-      if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), tempTableDir)) {
+      if (!HBaseFileSystem.deleteDirFromFileSystem(fs, tempTableDir)) {
         LOG.error("Couldn't delete " + tempTableDir);
       }
       LOG.debug("Table '" + Bytes.toString(tableName) + "' archived!");

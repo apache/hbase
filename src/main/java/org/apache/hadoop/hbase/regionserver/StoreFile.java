@@ -676,7 +676,7 @@ public class StoreFile extends SchemaConfigured {
    */
   public void deleteReader() throws IOException {
     closeReader(true);
-    HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), getPath());
+    HBaseFileSystem.deleteDirFromFileSystem(fs, getPath());
   }
 
   @Override
@@ -719,7 +719,7 @@ public class StoreFile extends SchemaConfigured {
     if (!fs.exists(src)) {
       throw new FileNotFoundException(src.toString());
     }
-    if (!HBaseFileSystem.renameDirForFileSystem(fs, fs.getConf(), src, tgt)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, src, tgt)) {
       throw new IOException("Failed rename of " + src + " to " + tgt);
     }
     return tgt;
@@ -842,7 +842,7 @@ public class StoreFile extends SchemaConfigured {
       }
 
       if (!fs.exists(dir)) {
-        HBaseFileSystem.makeDirOnFileSystem(fs, conf, dir);
+        HBaseFileSystem.makeDirOnFileSystem(fs, dir);
       }
 
       if (filePath == null) {

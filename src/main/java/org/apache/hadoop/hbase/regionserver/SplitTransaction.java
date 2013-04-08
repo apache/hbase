@@ -552,12 +552,12 @@ public class SplitTransaction {
     if (fs.exists(splitdir)) {
       LOG.info("The " + splitdir
           + " directory exists.  Hence deleting it to recreate it");
-      if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), splitdir)) {
+      if (!HBaseFileSystem.deleteDirFromFileSystem(fs, splitdir)) {
         throw new IOException("Failed deletion of " + splitdir
             + " before creating them again.");
       }
     }
-    if (!HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), splitdir))
+    if (!HBaseFileSystem.makeDirOnFileSystem(fs, splitdir))
         throw new IOException("Failed create of " + splitdir);
   }
 
@@ -579,7 +579,7 @@ public class SplitTransaction {
   throws IOException {
     if (!fs.exists(dir)) {
       if (mustPreExist) throw new IOException(dir.toString() + " does not exist!");
-    } else if (!HBaseFileSystem.deleteDirFromFileSystem(fs, fs.getConf(), dir)) {
+    } else if (!HBaseFileSystem.deleteDirFromFileSystem(fs, dir)) {
       throw new IOException("Failed delete of " + dir);
     }
   }

@@ -178,7 +178,7 @@ public class CreateTableHandler extends EventHandler {
     List<HRegionInfo> regionInfos = handleCreateHdfsRegions(tempdir, tableName);
 
     // 3. Move Table temp directory to the hbase root location
-    if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, tempTableDir, tableDir)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, tempTableDir, tableDir)) {
       throw new IOException("Unable to move table from temp=" + tempTableDir +
         " to hbase root=" + tableDir);
     }

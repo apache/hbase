@@ -140,7 +140,7 @@ public class MasterFileSystem {
 
     // Make sure the region servers can archive their old logs
     if(!this.fs.exists(oldLogDir)) {
-      HBaseFileSystem.makeDirOnFileSystem(fs, conf, oldLogDir);
+      HBaseFileSystem.makeDirOnFileSystem(fs, oldLogDir);
     }
 
     return oldLogDir;
@@ -277,7 +277,7 @@ public class MasterFileSystem {
       Path splitDir = logDir.suffix(HLog.SPLITTING_EXT);
       // rename the directory so a rogue RS doesn't create more HLogs
       if (fs.exists(logDir)) {
-        if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, logDir, splitDir)) {
+        if (!HBaseFileSystem.renameDirForFileSystem(fs, logDir, splitDir)) {
           throw new IOException("Failed fs.rename for log split: " + logDir);
         }
         logDir = splitDir;
@@ -349,7 +349,7 @@ public class MasterFileSystem {
     // Filesystem is good. Go ahead and check for hbase.rootdir.
     try {
       if (!fs.exists(rd)) {
-        HBaseFileSystem.makeDirOnFileSystem(fs, c, rd);
+        HBaseFileSystem.makeDirOnFileSystem(fs, rd);
         // DFS leaves safe mode with 0 DNs when there are 0 blocks.
         // We used to handle this by checking the current DN count and waiting until
         // it is nonzero. With security, the check for datanode count doesn't work --
@@ -413,13 +413,13 @@ public class MasterFileSystem {
           HFileArchiver.archiveRegion(fs, this.rootdir, tabledir, regiondir);
         }
       }
-      if (!HBaseFileSystem.deleteDirFromFileSystem(fs, c, tmpdir)) {
+      if (!HBaseFileSystem.deleteDirFromFileSystem(fs, tmpdir)) {
         throw new IOException("Unable to clean the temp directory: " + tmpdir);
       }
     }
 
     // Create the temp directory
-    if (!HBaseFileSystem.makeDirOnFileSystem(fs, c, tmpdir)) {
+    if (!HBaseFileSystem.makeDirOnFileSystem(fs, tmpdir)) {
       throw new IOException("HBase temp directory '" + tmpdir + "' creation failure.");
     }
   }
@@ -487,7 +487,7 @@ public class MasterFileSystem {
   }
 
   public void deleteTable(byte[] tableName) throws IOException {
-    HBaseFileSystem.deleteDirFromFileSystem(fs, conf, new Path(rootdir, Bytes.toString(tableName)));
+    HBaseFileSystem.deleteDirFromFileSystem(fs, new Path(rootdir, Bytes.toString(tableName)));
   }
 
   /**
@@ -500,11 +500,11 @@ public class MasterFileSystem {
     Path tempPath = new Path(this.tempdir, path.getName());
 
     // Ensure temp exists
-    if (!fs.exists(tempdir) && !HBaseFileSystem.makeDirOnFileSystem(fs, conf, tempdir)) {
+    if (!fs.exists(tempdir) && !HBaseFileSystem.makeDirOnFileSystem(fs, tempdir)) {
       throw new IOException("HBase temp directory '" + tempdir + "' creation failure.");
     }
 
-    if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, path, tempPath)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, path, tempPath)) {
       throw new IOException("Unable to move '" + path + "' to temp '" + tempPath + "'");
     }
 
@@ -536,7 +536,7 @@ public class MasterFileSystem {
     // delete the family folder
     Path familyDir = new Path(tableDir,
       new Path(region.getEncodedName(), Bytes.toString(familyName)));
-    if (!HBaseFileSystem.deleteDirFromFileSystem(fs, conf, familyDir)) {
+    if (!HBaseFileSystem.deleteDirFromFileSystem(fs, familyDir)) {
       throw new IOException("Could not delete family "
           + Bytes.toString(familyName) + " from FileSystem for region "
           + region.getRegionNameAsString() + "(" + region.getEncodedName()

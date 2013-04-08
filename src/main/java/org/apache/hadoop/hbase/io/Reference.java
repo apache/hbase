@@ -126,7 +126,7 @@ public class Reference implements Writable {
 
   public Path write(final FileSystem fs, final Path p)
   throws IOException {
-    FSDataOutputStream out = HBaseFileSystem.createPathOnFileSystem(fs, fs.getConf(), p, false);
+    FSDataOutputStream out = HBaseFileSystem.createPathOnFileSystem(fs, p, false);
     try {
       write(out);
     } finally {
