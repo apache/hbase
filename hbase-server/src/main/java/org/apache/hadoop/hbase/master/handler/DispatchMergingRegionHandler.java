@@ -121,10 +121,14 @@ public class DispatchMergingRegionHandler extends EventHandler {
       while (!masterServices.isStopped()) {
         try {
           Thread.sleep(20);
+          // Make sure check RIT first, then get region location, otherwise
+          // we would make a wrong result if region is online between getting
+          // region location and checking RIT
+          boolean isRIT = regionStates.isRegionInTransition(region_b);
           region_b_location = masterServices.getAssignmentManager()
               .getRegionStates().getRegionServerOfRegion(region_b);
           onSameRS = region_a_location.equals(region_b_location);
-          if (onSameRS || !regionStates.isRegionInTransition(region_b)) {
+          if (onSameRS || !isRIT) {
             // Regions are on the same RS, or region_b is not in
             // RegionInTransition any more
             break;
