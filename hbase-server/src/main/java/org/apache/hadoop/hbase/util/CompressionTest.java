@@ -18,8 +18,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.awt.*;
 import java.io.IOException;
+import java.util.Arrays;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -96,8 +99,10 @@ public class CompressionTest {
   protected static Path path = new Path(".hfile-comp-test");
 
   public static void usage() {
+
     System.err.println(
-      "Usage: CompressionTest <path> none|gz|lzo|snappy\n" +
+      "Usage: CompressionTest <path> " +
+      StringUtils.join( Compression.Algorithm.values(), "|").toLowerCase() +
       "\n" +
       "For example:\n" +
       "  hbase " + CompressionTest.class + " file:///tmp/testfile gz\n");
