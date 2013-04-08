@@ -24,8 +24,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -39,11 +39,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.hadoopbackport.JarFinder;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -568,43 +569,31 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * If org.apache.hadoop.util.JarFinder is available (0.23+ hadoop),
-   * finds the Jar for a class or creates it if it doesn't exist. If
-   * the class is in a directory in the classpath, it creates a Jar
-   * on the fly with the contents of the directory and returns the path
-   * to that Jar. If a Jar is created, it is created in
-   * the system temporary directory.
-   *
-   * Otherwise, returns an existing jar that contains a class of the
-   * same name.
-   *
+   * If org.apache.hadoop.util.JarFinder is available (0.23+ hadoop), finds
+   * the Jar for a class or creates it if it doesn't exist. If the class is in
+   * a directory in the classpath, it creates a Jar on the fly with the
+   * contents of the directory and returns the path to that Jar. If a Jar is
+   * created, it is created in the system temporary directory. Otherwise,
+   * returns an existing jar that contains a class of the same name.
    * @param my_class the class to find.
-   * @return a jar file that contains the class, or null.
+   * @return a jar file that contains the class.
    * @throws IOException
    */
-  private static String findOrCreateJar(Class my_class)
+  private static String findOrCreateJar(Class<?> my_class)
   throws IOException {
-    try {
-      Class<?> jarFinder = Class.forName("org.apache.hadoop.util.JarFinder");
-      // hadoop-0.23 has a JarFinder class that will create the jar
-      // if it doesn't exist.  Note that this is needed to run the mapreduce
-      // unit tests post-0.23, because mapreduce v2 requires the relevant jars
-      // to be in the mr cluster to do output, split, etc.  At unit test time,
-      // the hbase jars do not exist, so we need to create some.  Note that we
-      // can safely fall back to findContainingJars for pre-0.23 mapreduce.
-      Method m = jarFinder.getMethod("getJar", Class.class);
-      return (String)m.invoke(null,my_class);
-    } catch (InvocationTargetException ite) {
-      // function was properly called, but threw it's own exception
-      throw new IOException(ite.getCause());
-    } catch (Exception e) {
-      // ignore all other exceptions. related to reflection failure
-  }
+    // attempt to locate an existing jar for the class.
+    String jar = findContainingJar(my_class);
+    if (null == jar || jar.isEmpty()) {
+      jar = getJar(my_class);
+    }
 
-  LOG.debug("New JarFinder: org.apache.hadoop.util.JarFinder.getJar " +
-	"not available.  Using old findContainingJar");
-  return findContainingJar(my_class);
-}
+    if (null == jar || jar.isEmpty()) {
+      throw new IOException("Cannot locate resource for class " + my_class.getName());
+    }
+
+    LOG.debug(String.format("For class %s, using jar %s", my_class.getName(), jar));
+    return jar;
+  }
 
   /**
    * Find a jar that contains a class of the same name, if any.
@@ -617,34 +606,60 @@ public class TableMapReduceUtil {
    * @return a jar file that contains the class, or null.
    * @throws IOException
    */
-  private static String findContainingJar(Class my_class) {
+  private static String findContainingJar(Class<?> my_class) throws IOException {
     ClassLoader loader = my_class.getClassLoader();
     String class_file = my_class.getName().replaceAll("\\.", "/") + ".class";
-    try {
-      for(Enumeration itr = loader.getResources(class_file);
-          itr.hasMoreElements();) {
-        URL url = (URL) itr.nextElement();
-        if ("jar".equals(url.getProtocol())) {
-          String toReturn = url.getPath();
-          if (toReturn.startsWith("file:")) {
-            toReturn = toReturn.substring("file:".length());
-          }
-          // URLDecoder is a misnamed class, since it actually decodes
-          // x-www-form-urlencoded MIME type rather than actual
-          // URL encoding (which the file path has). Therefore it would
-          // decode +s to ' 's which is incorrect (spaces are actually
-          // either unencoded or encoded as "%20"). Replace +s first, so
-          // that they are kept sacred during the decoding process.
-          toReturn = toReturn.replaceAll("\\+", "%2B");
-          toReturn = URLDecoder.decode(toReturn, "UTF-8");
-          return toReturn.replaceAll("!.*$", "");
+    for (Enumeration<URL> itr = loader.getResources(class_file); itr.hasMoreElements();) {
+      URL url = itr.nextElement();
+      if ("jar".equals(url.getProtocol())) {
+        String toReturn = url.getPath();
+        if (toReturn.startsWith("file:")) {
+          toReturn = toReturn.substring("file:".length());
         }
+        // URLDecoder is a misnamed class, since it actually decodes
+        // x-www-form-urlencoded MIME type rather than actual
+        // URL encoding (which the file path has). Therefore it would
+        // decode +s to ' 's which is incorrect (spaces are actually
+        // either unencoded or encoded as "%20"). Replace +s first, so
+        // that they are kept sacred during the decoding process.
+        toReturn = toReturn.replaceAll("\\+", "%2B");
+        toReturn = URLDecoder.decode(toReturn, "UTF-8");
+        return toReturn.replaceAll("!.*$", "");
       }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
     }
     return null;
   }
 
+  /**
+   * Invoke 'getJar' on a JarFinder implementation. Useful for some job configuration
+   * contexts (HBASE-8140) and also for testing on MRv2. First check if we have
+   * HADOOP-9426. Lacking that, fall back to the backport.
+   *
+   * @param my_class the class to find.
+   * @return a jar file that contains the class, or null.
+   */
+  private static String getJar(Class<?> my_class) {
+    String ret = null;
+    String hadoopJarFinder = "org.apache.hadoop.util.JarFinder";
+    Class<?> jarFinder = null;
+    try {
+      LOG.debug("Looking for " + hadoopJarFinder + ".");
+      jarFinder = Class.forName(hadoopJarFinder);
+      LOG.debug(hadoopJarFinder + " found.");
+      Method getJar = jarFinder.getMethod("getJar", Class.class);
+      ret = (String) getJar.invoke(null, my_class);
+    } catch (ClassNotFoundException e) {
+      LOG.debug("Using backported JarFinder.");
+      ret = JarFinder.getJar(my_class);
+    } catch (InvocationTargetException e) {
+      // function was properly called, but threw it's own exception. Unwrap it
+      // and pass it on.
+      throw new RuntimeException(e.getCause());
+    } catch (Exception e) {
+      // toss all other exceptions, related to reflection failure
+      throw new RuntimeException("getJar invocation failed.", e);
+    }
 
+    return ret;
+  }
 }
