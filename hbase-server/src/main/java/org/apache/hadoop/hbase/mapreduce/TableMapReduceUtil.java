@@ -579,49 +579,97 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * If org.apache.hadoop.util.JarFinder is available (0.23+ hadoop),
-   * finds the Jar for a class or creates it if it doesn't exist. If
-   * the class is in a directory in the classpath, it creates a Jar
-   * on the fly with the contents of the directory and returns the path
-   * to that Jar. If a Jar is created, it is created in
-   * the system temporary directory.
-   *
-   * Otherwise, returns an existing jar that contains a class of the
-   * same name.
-   *
+   * If org.apache.hadoop.util.JarFinder is available (0.23+ hadoop), finds
+   * the Jar for a class or creates it if it doesn't exist. If the class is in
+   * a directory in the classpath, it creates a Jar on the fly with the
+   * contents of the directory and returns the path to that Jar. If a Jar is
+   * created, it is created in the system temporary directory. Otherwise,
+   * returns an existing jar that contains a class of the same name.
    * @param my_class the class to find.
-   * @return a jar file that contains the class, or null.
+   * @return a jar file that contains the class.
    * @throws IOException
    */
   private static String findOrCreateJar(Class<?> my_class)
   throws IOException {
-    try {
-      Class<?> jarFinder = Class.forName("org.apache.hadoop.util.JarFinder");
-      // hadoop-0.23 has a JarFinder class that will create the jar
-      // if it doesn't exist.  Note that this is needed to run the mapreduce
-      // unit tests post-0.23, because mapreduce v2 requires the relevant jars
-      // to be in the mr cluster to do output, split, etc.  At unit test time,
-      // the hbase jars do not exist, so we need to create some.
-      Method m = jarFinder.getMethod("getJar", Class.class);
-      return (String)m.invoke(null,my_class);
-    } catch (InvocationTargetException ite) {
-      // function was properly called, but threw it's own exception
-      throw new IOException(ite.getCause());
-    } catch (Exception e) {
-      // ignore all other exceptions. related to reflection failure
+    // attempt to locate an existing jar for the class.
+    String jar = findContainingJar(my_class);
+    if (null == jar || jar.isEmpty()) {
+      jar = getJar(my_class);
     }
 
-    LOG.debug("New JarFinder: org.apache.hadoop.util.JarFinder.getJar " +
-        "not available. Falling back to backported JarFinder");
-    // Use JarFinder because it will construct a jar from class files when
-    // one does not exist. This is relevant for cases when an HBase MR job
-    // is created in the context of another MR job (particularly common for
-    // tools consuming the bulk import APIs). In that case, the dependency
-    // jars have already been shipped to and expanded in the job's working
-    // directory, so it has no jars to package. We could just construct a
-    // classpath from those class files, but we don't know the context: are
-    // they on the local filesystem, are they are ephemeral tmp files, &c.
-    // Better to package them up and ship them via the normal means.
-    return JarFinder.getJar(my_class);
+    if (null == jar || jar.isEmpty()) {
+      throw new IOException("Cannot locate resource for class " + my_class.getName());
+    }
+
+    LOG.debug(String.format("For class %s, using jar %s", my_class.getName(), jar));
+    return jar;
+  }
+
+  /**
+   * Find a jar that contains a class of the same name, if any.
+   * It will return a jar file, even if that is not the first thing
+   * on the class path that has a class with the same name.
+   * 
+   * This is shamelessly copied from JobConf
+   * 
+   * @param my_class the class to find.
+   * @return a jar file that contains the class, or null.
+   * @throws IOException
+   */
+  private static String findContainingJar(Class<?> my_class) throws IOException {
+    ClassLoader loader = my_class.getClassLoader();
+    String class_file = my_class.getName().replaceAll("\\.", "/") + ".class";
+    for (Enumeration<URL> itr = loader.getResources(class_file); itr.hasMoreElements();) {
+      URL url = itr.nextElement();
+      if ("jar".equals(url.getProtocol())) {
+        String toReturn = url.getPath();
+        if (toReturn.startsWith("file:")) {
+          toReturn = toReturn.substring("file:".length());
+        }
+        // URLDecoder is a misnamed class, since it actually decodes
+        // x-www-form-urlencoded MIME type rather than actual
+        // URL encoding (which the file path has). Therefore it would
+        // decode +s to ' 's which is incorrect (spaces are actually
+        // either unencoded or encoded as "%20"). Replace +s first, so
+        // that they are kept sacred during the decoding process.
+        toReturn = toReturn.replaceAll("\\+", "%2B");
+        toReturn = URLDecoder.decode(toReturn, "UTF-8");
+        return toReturn.replaceAll("!.*$", "");
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Invoke 'getJar' on a JarFinder implementation. Useful for some job configuration
+   * contexts (HBASE-8140) and also for testing on MRv2. First check if we have
+   * HADOOP-9426. Lacking that, fall back to the backport.
+   *
+   * @param my_class the class to find.
+   * @return a jar file that contains the class, or null.
+   */
+  private static String getJar(Class<?> my_class) {
+    String ret = null;
+    String hadoopJarFinder = "org.apache.hadoop.util.JarFinder";
+    Class<?> jarFinder = null;
+    try {
+      LOG.debug("Looking for " + hadoopJarFinder + ".");
+      jarFinder = Class.forName(hadoopJarFinder);
+      LOG.debug(hadoopJarFinder + " found.");
+      Method getJar = jarFinder.getMethod("getJar", Class.class);
+      ret = (String) getJar.invoke(null, my_class);
+    } catch (ClassNotFoundException e) {
+      LOG.debug("Using backported JarFinder.");
+      ret = JarFinder.getJar(my_class);
+    } catch (InvocationTargetException e) {
+      // function was properly called, but threw it's own exception. Unwrap it
+      // and pass it on.
+      throw new RuntimeException(e.getCause());
+    } catch (Exception e) {
+      // toss all other exceptions, related to reflection failure
+      throw new RuntimeException("getJar invocation failed.", e);
+    }
+
+    return ret;
   }
 }
