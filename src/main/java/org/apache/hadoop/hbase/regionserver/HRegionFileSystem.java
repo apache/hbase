@@ -33,6 +33,6 @@ public class HRegionFileSystem extends HBaseFileSystem {
   public static final Log LOG = LogFactory.getLog(HRegionFileSystem.class);
 
   public HRegionFileSystem(Configuration conf) {
-    checkAndSetRetryCounts(conf);
+    setRetryCounts(conf);
   }
 }

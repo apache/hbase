@@ -289,7 +289,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    */
   Path createStoreHomeDir(final FileSystem fs,
       final Path homedir) throws IOException {
-    if (!fs.exists(homedir) && !HBaseFileSystem.makeDirOnFileSystem(fs, fs.getConf(), homedir)) {
+    if (!fs.exists(homedir) && !HBaseFileSystem.makeDirOnFileSystem(fs, homedir)) {
         throw new IOException("Failed create of: " + homedir.toString());
     }
     return homedir;
@@ -879,7 +879,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     String msg = "Renaming flushed file at " + path + " to " + dstPath;
     LOG.debug(msg);
     status.setStatus("Flushing " + this + ": " + msg);
-    if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, path, dstPath)) {
+    if (!HBaseFileSystem.renameDirForFileSystem(fs, path, dstPath)) {
       LOG.warn("Unable to rename " + path + " to " + dstPath);
     }
 
@@ -1649,7 +1649,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       Path origPath = compactedFile.getPath();
       Path destPath = new Path(homedir, origPath.getName());
       LOG.info("Renaming compacted file at " + origPath + " to " + destPath);
-      if (!HBaseFileSystem.renameDirForFileSystem(fs, conf, origPath, destPath)) {
+      if (!HBaseFileSystem.renameDirForFileSystem(fs, origPath, destPath)) {
         LOG.error("Failed move of compacted file " + origPath + " to " +
             destPath);
         throw new IOException("Failed move of compacted file " + origPath +

@@ -165,7 +165,7 @@ public class ZKSplitLog {
       FileSystem fs) {
     Path file = new Path(getSplitLogDir(rootdir, logFileName), "corrupt");
     try {
-      HBaseFileSystem.createNewFileOnFileSystem(fs, fs.getConf(), file);
+      HBaseFileSystem.createNewFileOnFileSystem(fs, file);
     } catch (IOException e) {
       LOG.warn("Could not flag a log file as corrupted. Failed to create " +
           file, e);

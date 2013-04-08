@@ -42,25 +42,28 @@ public abstract class HBaseFileSystem {
    * In order to handle NN connectivity hiccups, one need to retry non-idempotent operation at the
    * client level.
    */
-  protected static  int hdfsClientRetriesNumber;
+  protected static int hdfsClientRetriesNumber;
   private static int baseSleepBeforeRetries;
   private static final int DEFAULT_HDFS_CLIENT_RETRIES_NUMBER = 10;
   private static final int DEFAULT_BASE_SLEEP_BEFORE_RETRIES = 1000;
+  // This static block is added for performance reasons. This is to ensure we are not checking
+  // in the method calls whether retry properties are set or not. Refer to HBase-8288 for more 
+  // context.
+  static {
+    setRetryCounts(HBaseConfiguration.create());
+  }
 
-  
   /**
    * Deletes a file. Assumes the user has already checked for this directory existence.
-   * @param dir
    * @param fs
-   * @param conf
+   * @param dir
    * @return true if the directory is deleted.
    * @throws IOException
    */
-  public static boolean deleteFileFromFileSystem(FileSystem fs, Configuration conf, Path dir)
+  public static boolean deleteFileFromFileSystem(FileSystem fs, Path dir)
       throws IOException {
     IOException lastIOE = null;
     int i = 0;
-    checkAndSetRetryCounts(conf);
     do {
       try {
         return fs.delete(dir, false);
@@ -77,17 +80,15 @@ public abstract class HBaseFileSystem {
   
   /**
    * Deletes a directory. Assumes the user has already checked for this directory existence.
-   * @param dir
    * @param fs
-   * @param conf
+   * @param dir
    * @return true if the directory is deleted.
    * @throws IOException
    */
-  public static boolean deleteDirFromFileSystem(FileSystem fs, Configuration conf, Path dir)
+  public static boolean deleteDirFromFileSystem(FileSystem fs, Path dir)
       throws IOException {
     IOException lastIOE = null;
     int i = 0;
-    checkAndSetRetryCounts(conf);
     do {
       try {
         return fs.delete(dir, true);
@@ -101,30 +102,26 @@ public abstract class HBaseFileSystem {
     throw new IOException("Exception in deleteDirFromFileSystem", lastIOE);
   }
 
-  protected static void checkAndSetRetryCounts(Configuration conf) {
-    if (hdfsClientRetriesNumber == 0) {
+  protected static void setRetryCounts(Configuration conf) {
       hdfsClientRetriesNumber = conf.getInt("hdfs.client.retries.number",
         DEFAULT_HDFS_CLIENT_RETRIES_NUMBER);
       baseSleepBeforeRetries = conf.getInt("hdfs.client.sleep.before.retries",
         DEFAULT_BASE_SLEEP_BEFORE_RETRIES);
-    }
   }
   
   /**
    * Creates a directory for a filesystem and configuration object. Assumes the user has already
    * checked for this directory existence.
    * @param fs
-   * @param conf
    * @param dir
    * @return the result of fs.mkdirs(). In case underlying fs throws an IOException, it checks
    *         whether the directory exists or not, and returns true if it exists.
    * @throws IOException
    */
-  public static boolean makeDirOnFileSystem(FileSystem fs, Configuration conf, Path dir)
+  public static boolean makeDirOnFileSystem(FileSystem fs, Path dir)
       throws IOException {
     int i = 0;
     IOException lastIOE = null;
-    checkAndSetRetryCounts(conf);
     do {
       try {
         return fs.mkdirs(dir);
@@ -139,18 +136,16 @@ public abstract class HBaseFileSystem {
   
   /**
    * Renames a directory. Assumes the user has already checked for this directory existence.
-   * @param src
    * @param fs
+   * @param src
    * @param dst
-   * @param conf
    * @return true if the directory is renamed.
    * @throws IOException
    */
-  public static boolean renameDirForFileSystem(FileSystem fs, Configuration conf, Path src, Path dst)
+  public static boolean renameDirForFileSystem(FileSystem fs, Path src, Path dst)
       throws IOException {
     IOException lastIOE = null;
     int i = 0;
-    checkAndSetRetryCounts(conf);
     do {
       try {
         return fs.rename(src, dst);
@@ -163,30 +158,29 @@ public abstract class HBaseFileSystem {
     } while (++i <= hdfsClientRetriesNumber);
     throw new IOException("Exception in renameDirForFileSystem", lastIOE);
   }
-  
-/**
- * Creates a path on the file system. Checks whether the path exists already or not, and use it
- * for retrying in case underlying fs throws an exception.
- * @param fs
- * @param conf
- * @param dir
- * @param overwrite
- * @return
- * @throws IOException
- */
-  public static FSDataOutputStream createPathOnFileSystem(FileSystem fs, Configuration conf, Path dir,
+
+  /**
+   * Creates a path on the file system. Checks whether the path exists already or not, and use it
+   * for retrying in case underlying fs throws an exception. 
+   * If the dir already exists and overwrite flag is false, the underlying FileSystem throws
+   *  an IOE. It is not retried and the IOE is re-thrown to the caller.
+   * @param fs
+   * @param dir
+   * @param overwrite
+   * @return
+   * @throws IOException
+   */
+  public static FSDataOutputStream createPathOnFileSystem(FileSystem fs, Path dir,
       boolean overwrite) throws IOException {
     int i = 0;
     boolean existsBefore = fs.exists(dir);
     IOException lastIOE = null;
-    checkAndSetRetryCounts(conf);
     do {
       try {
         return fs.create(dir, overwrite);
       } catch (IOException ioe) {
         lastIOE = ioe;
-        // directory is present, don't overwrite
-        if (!existsBefore && fs.exists(dir)) return fs.create(dir, false);
+        if (existsBefore && !overwrite) throw ioe;// a legitimate exception
         sleepBeforeRetry("Create Path", i + 1);
       }
     } while (++i <= hdfsClientRetriesNumber);
@@ -194,29 +188,28 @@ public abstract class HBaseFileSystem {
   }
 
   /**
-   * Creates the specified file with the given permission.
+   * Creates the specified file with the given permission. 
+   * If the dir already exists and the overwrite flag is false, underlying FileSystem throws
+   * an IOE. It is not retried and the IOE is re-thrown to the caller.
    * @param fs
    * @param path
    * @param perm
    * @param overwrite
    * @return
-   * @throws IOException 
+   * @throws IOException
    */
   public static FSDataOutputStream createPathWithPermsOnFileSystem(FileSystem fs,
-      Configuration conf, Path path, FsPermission perm, boolean overwrite) throws IOException {
+      Path path, FsPermission perm, boolean overwrite) throws IOException {
     int i = 0;
     IOException lastIOE = null;
     boolean existsBefore = fs.exists(path);
-    checkAndSetRetryCounts(conf);
     do {
       try {
         return fs.create(path, perm, overwrite, fs.getConf().getInt("io.file.buffer.size", 4096),
           fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
       } catch (IOException ioe) {
         lastIOE = ioe;
-        // path is present now, don't overwrite
-        if (!existsBefore && fs.exists(path)) return fs.create(path, false);
-        // if it existed before let's retry in case we get IOE, as we can't rely on fs.exists()
+        if (existsBefore && !overwrite) throw ioe;// a legitimate exception
         sleepBeforeRetry("Create Path with Perms", i + 1);
       }
     } while (++i <= hdfsClientRetriesNumber);
@@ -226,16 +219,14 @@ public abstract class HBaseFileSystem {
 /**
  * Creates the file. Assumes the user has already checked for this file existence.
  * @param fs
- * @param conf
  * @param dir
  * @return result true if the file is created with this call, false otherwise.
  * @throws IOException
  */
-  public static boolean createNewFileOnFileSystem(FileSystem fs, Configuration conf, Path file)
+  public static boolean createNewFileOnFileSystem(FileSystem fs, Path file)
       throws IOException {
     int i = 0;
     IOException lastIOE = null;
-    checkAndSetRetryCounts(conf);
     do {
       try {
         return fs.createNewFile(file);
