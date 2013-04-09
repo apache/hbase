@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
@@ -78,7 +79,7 @@ public class Export {
     job.setOutputFormatClass(SequenceFileOutputFormat.class);
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(Result.class);
-    FileOutputFormat.setOutputPath(job, outputDir);
+    FileOutputFormat.setOutputPath(job, outputDir); // job conf doesn't contain the conf so doesn't have a default fs.
     return job;
   }
 
