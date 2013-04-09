@@ -1658,7 +1658,11 @@ public class HStore implements Store {
 
   @Override
   public int getCompactPriority() {
-    return this.storeEngine.getStoreFileManager().getStoreCompactionPriority();
+    int priority = this.storeEngine.getStoreFileManager().getStoreCompactionPriority();
+    if (priority == PRIORITY_USER) {
+      LOG.warn("Compaction priority is USER despite there being no user compaction");
+    }
+    return priority;
   }
 
   @Override

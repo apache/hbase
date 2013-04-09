@@ -131,7 +131,8 @@ class DefaultStoreFileManager implements StoreFileManager {
   public int getStoreCompactionPriority() {
     int blockingFileCount = conf.getInt(
         HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
-    return blockingFileCount - storefiles.size();
+    int priority = blockingFileCount - storefiles.size();
+    return (priority == HStore.PRIORITY_USER) ? priority + 1 : priority;
   }
 
   private void sortAndSetStoreFiles(List<StoreFile> storeFiles) {
