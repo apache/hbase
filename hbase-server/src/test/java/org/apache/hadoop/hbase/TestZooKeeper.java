@@ -217,7 +217,7 @@ public class TestZooKeeper {
    *  test differs from {@link #testMasterSessionExpired} because here
    *  the master znode will exist in ZK.
    */
-  @Test(timeout=20000)
+  @Test(timeout = 60000)
   public void testMasterZKSessionRecoveryFailure() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();

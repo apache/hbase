@@ -125,7 +125,7 @@ public class TestSplitTransactionOnCluster {
     return regions.get(0).getRegionInfo();
   }
 
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack() throws Exception {
     final byte[] tableName = Bytes
         .toBytes("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack");
@@ -586,7 +586,7 @@ public class TestSplitTransactionOnCluster {
     testSplitBeforeSettingSplittingInZKInternals();
   }
 
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testTableExistsIfTheSpecifiedTableRegionIsSplitParent() throws Exception {
     final byte[] tableName =
         Bytes.toBytes("testTableExistsIfTheSpecifiedTableRegionIsSplitParent");
