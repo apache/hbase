@@ -115,7 +115,6 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.LegacyRootZNodeUpdater;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -1544,9 +1543,9 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   @Override
   public void alterTable(final byte [] tableName,
-      List<HColumnDescriptor> columnAdditions,
-      List<Pair<byte[], HColumnDescriptor>> columnModifications,
-      List<byte[]> columnDeletions) throws IOException {
+                         List<HColumnDescriptor> columnAdditions,
+                         List<Pair<byte [], HColumnDescriptor>> columnModifications,
+                         List<byte []> columnDeletions) throws IOException {
     lockTable(tableName, "alter");
     try {
       InjectionHandler.processEvent(InjectionEvent.HMASTER_ALTER_TABLE);
@@ -1561,7 +1560,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     }
   }
 
-  public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
+  public Pair<Integer, Integer> getAlterStatus(byte [] tableName)
       throws IOException {
     Pair <Integer, Integer> p = new Pair<Integer, Integer>(0,0);
     if (regionManager.getThrottledReopener(Bytes.toString(tableName)) != null) {
@@ -1958,7 +1957,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    * Returns null if none found (and logs fact that expected COL_REGIONINFO
    * was missing).  Utility method used by scanners of META tables.
    * @param row name of the row
-   * @param map Map to do lookup in.
+   * @param res Result to use to do lookup.
    * @return Null or found HRegionInfo.
    * @throws IOException
    */
@@ -2271,6 +2270,18 @@ public class HMaster extends HasThread implements HMasterInterface,
       return flushedSequenceIdByRegion.get(regionName);
     }
     return -1;
+  }
+
+  @Override
+  public void setCloseRegionWaitInterval(String tableName, int waitInterval) {
+    ThrottledRegionReopener reopener = this.regionManager.createThrottledReopener(tableName);
+    reopener.setRegionCloseWaitInterval(waitInterval);
+  }
+
+  @Override
+  public void setNumConcurrentCloseRegions(String tableName, int numConcurrentClose) {
+    ThrottledRegionReopener reopener = this.regionManager.createThrottledReopener(tableName);
+    reopener.setNumConcurrentCloseRegions(numConcurrentClose);
   }
 
   String getZKWrapperName() {

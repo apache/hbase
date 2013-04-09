@@ -58,6 +58,8 @@ module HBaseConstants
   FILTER = 'FILTER'
   SPLITALGO = 'SPLITALGO'
   NUMREGIONS = 'NUMREGIONS'
+  WAIT_INTERVAL = 'WAIT_INTERVAL'
+  NUM_CONCURRENT_CLOSE = 'NUM_CONCURRENT_CLOSE'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)

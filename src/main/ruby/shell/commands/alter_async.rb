@@ -46,11 +46,16 @@ module Shell
 
           For example, to change the max size of a family to 128MB, do:
 
-            hbase> alter 't1', METHOD => 'table_att', MAX_FILESIZE => '134217728'
+            hbase> alter_async 't1', METHOD => 'table_att', MAX_FILESIZE => '134217728'
 
           There could be more than one alteration in one command:
 
-            hbase> alter 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
+            hbase> alter_async 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
+
+          You can also specify the wait interval, in milliseconds, to pause for in between region restarts
+          and the simultaneous number of regions to close at a time:
+
+            hbase> alter_async 't1', NAME => 'f1', METHOD => 'delete', WAIT_INTERVAL => 1000, NUM_CONCURRENT_CLOSE => 1
 
           To check if all the regions have been updated, use alter_status <table_name>
         EOF

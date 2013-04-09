@@ -21,6 +21,9 @@ public class ThrottledRegionReopener {
   private RegionManager regionManager;
   private String tableName;
   private int totalNoOfRegionsToReopen = 0;
+  private int regionCloseWaitInterval = 1000;
+  private long timeAllowedToProceed = 0;
+  private int numOfConcurrentClose = 0;
 
   ThrottledRegionReopener(String tn, HMaster m, RegionManager regMgr) {
     this.tableName = tn;
@@ -35,7 +38,7 @@ public class ThrottledRegionReopener {
    * region is closed it is removed from this set and added to the
    * alterTableReopeningRegions set.
    */
-  private final Set<HRegionInfo> regionsToBeReopend = new HashSet<HRegionInfo>();
+  private final Set<HRegionInfo> regionsToBeReopened = new HashSet<HRegionInfo>();
 
   /**
    * Set of regions that are currently being reopened by the master. Regions are
@@ -45,8 +48,8 @@ public class ThrottledRegionReopener {
   private final Set<HRegionInfo> regionsBeingReopened = new HashSet<HRegionInfo>();
 
   public synchronized void addRegionsToReopen(Set<HRegionInfo> regions) {
-    regionsToBeReopend.addAll(regions);
-    if (regionsToBeReopend.size() + regionsBeingReopened.size() == 0) {
+    regionsToBeReopened.addAll(regions);
+    if (regionsToBeReopened.size() + regionsBeingReopened.size() == 0) {
       totalNoOfRegionsToReopen = regions.size();
     } else {
       totalNoOfRegionsToReopen += regions.size();
@@ -54,8 +57,8 @@ public class ThrottledRegionReopener {
   }
 
   public synchronized void addRegionToReopen(HRegionInfo region) {
-    regionsToBeReopend.add(region);
-    if (regionsToBeReopend.size() + regionsBeingReopened.size() == 0) {
+    regionsToBeReopened.add(region);
+    if (regionsToBeReopened.size() + regionsBeingReopened.size() == 0) {
       totalNoOfRegionsToReopen = 1;
     } else {
       totalNoOfRegionsToReopen += 1;
@@ -69,7 +72,7 @@ public class ThrottledRegionReopener {
    */
   public synchronized Pair<Integer, Integer> getReopenStatus()
       throws IOException {
-    int pending = regionsToBeReopend.size() + regionsBeingReopened.size();
+    int pending = regionsToBeReopened.size() + regionsBeingReopened.size();
     return new Pair<Integer, Integer>(pending, totalNoOfRegionsToReopen);
   }
 
@@ -78,8 +81,7 @@ public class ThrottledRegionReopener {
    * regions.
    *
    * @param region
-   * @param serverName
-   *          on which the region reopened.
+   *
    */
   public synchronized void notifyRegionOpened(HRegionInfo region) {
     if (regionsBeingReopened.contains(region)) {
@@ -88,7 +90,8 @@ public class ThrottledRegionReopener {
 
       // Check if all the regions have reopened and log.
       if (closeSomeRegions() == 0) {
-        if (regionsToBeReopend.size() == 0 && regionsBeingReopened.size() == 0) {
+        if (regionsToBeReopened.size() == 0 && regionsBeingReopened.size() == 0) {
+          this.numOfConcurrentClose = 0;
           LOG.info("All regions of " + tableName + " reopened successfully.");
         } else {
           LOG.error("All regions of " + tableName
@@ -106,27 +109,44 @@ public class ThrottledRegionReopener {
    * which defines the percentage of regions of a table that the master may
    * reopen concurrently (defaults to 1).
    *
-   * @param serverName
-   *          Region server on which to close regions
    */
   public synchronized int closeSomeRegions() {
 
-    float percentConcurrentClose = this.master.getConfiguration().getFloat(
-        "hbase.regionserver.alterTable.concurrentReopen", 5);
-    // Find the number of regions you are allowed to close concurrently
-    float numOfConcurrentClose = (percentConcurrentClose / 100)
-        * totalNoOfRegionsToReopen;
-    // Close at least one region at a time
-    if (numOfConcurrentClose < 1 && numOfConcurrentClose > 0) {
-      numOfConcurrentClose = 1;
+    float localNumOfConcurrentClose = this.numOfConcurrentClose;
+
+    //Try to get the number from the config if class value is set to 0
+    if (this.numOfConcurrentClose == 0) {
+      float percentConcurrentClose = this.master.getConfiguration().getFloat(
+          "hbase.regionserver.alterTable.concurrentReopen", 5);
+      // Find the number of regions you are allowed to close concurrently
+      float configNumOfConcurrentClose = (percentConcurrentClose / 100)
+          * totalNoOfRegionsToReopen;
+      // Close at least one region at a time
+      if (configNumOfConcurrentClose < 1 && configNumOfConcurrentClose > 0) {
+        configNumOfConcurrentClose = 1;
+      }
+
+      localNumOfConcurrentClose = configNumOfConcurrentClose;
     }
 
-    numOfConcurrentClose -= regionsBeingReopened.size();
-    if (numOfConcurrentClose <= 0) {
+    localNumOfConcurrentClose -= regionsBeingReopened.size();
+    if (localNumOfConcurrentClose <= 0) {
       return 0;
     }
+
+    //If true we are not yet at the time when we can proceed
+    if ( this.timeAllowedToProceed > System.currentTimeMillis()) {
+      //Wait until we are allowed to try and close more regions
+      try {
+        long sleepLength = this.timeAllowedToProceed - System.currentTimeMillis();
+        Thread.sleep(sleepLength);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+
     int cnt = 0;
-    for (Iterator<HRegionInfo> iter = regionsToBeReopend.iterator(); iter
+    for (Iterator<HRegionInfo> iter = regionsToBeReopened.iterator(); iter
         .hasNext();) {
       HRegionInfo region = iter.next();
       // Get the server name on which this is currently deployed
@@ -144,11 +164,18 @@ public class ThrottledRegionReopener {
       iter.remove(); // Remove from regionsToBeReopened
       regionsBeingReopened.add(region);
       cnt++;
+
       // Close allowed number of regions, exit
-      if (cnt == (int) numOfConcurrentClose) {
+      if (cnt == localNumOfConcurrentClose) {
         break;
       }
     }
+
+    //If we closed some regions set the time we are allowed to close more regions
+    if (cnt > 0) {
+      this.timeAllowedToProceed = System.currentTimeMillis() + regionCloseWaitInterval;
+    }
+
     return cnt;
   }
 
@@ -211,5 +238,23 @@ public class ThrottledRegionReopener {
             + "retry the alter operation");
       }
     }
+  }
+
+  public int getRegionCloseWaitInterval() {
+    return regionCloseWaitInterval;
+  }
+
+  public int getNumConcurrentCloseRegions() {
+    return numOfConcurrentClose;
+  }
+
+  public synchronized void setRegionCloseWaitInterval(int regionCloseWaitInterval) {
+    LOG.info("ThrottledRegionReopener: Setting wait interval " + regionCloseWaitInterval + " !!!");
+    //Wait interval is in milliseconds
+    this.regionCloseWaitInterval = regionCloseWaitInterval;
+  }
+
+  public synchronized void setNumConcurrentCloseRegions(int numConcurrentClose) {
+    this.numOfConcurrentClose = numConcurrentClose;
   }
 }

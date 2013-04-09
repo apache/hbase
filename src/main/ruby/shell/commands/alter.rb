@@ -30,21 +30,29 @@ module Shell
 
           To change or add the 'f1' column family in table 't1' from defaults
           to instead keep a maximum of 5 cell VERSIONS, do:
-          hbase> alter 't1', NAME => 'f1', VERSIONS => 5
+
+            hbase> alter 't1', NAME => 'f1', VERSIONS => 5
 
           To delete the 'f1' column family in table 't1', do:
           hbase> alter 't1', NAME => 'f1', METHOD => 'delete'
           or a shorter version:
-          hbase> alter 't1', 'delete' => 'f1'
+
+            hbase> alter 't1', 'delete' => 'f1'
 
           You can also change table-scope attributes like MAX_FILESIZE
           MEMSTORE_FLUSHSIZE, READONLY, and DEFERRED_LOG_FLUSH.
 
           For example, to change the max size of a family to 128MB, do:
-          hbase> alter 't1', METHOD => 'table_att', MAX_FILESIZE => '134217728'
+
+            hbase> alter 't1', METHOD => 'table_att', MAX_FILESIZE => '134217728'
 
           There could be more than one alteration in one command:
-          hbase> alter 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
+
+            hbase> alter 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
+
+          You can also specify the wait interval, in milliseconds, to pause for in between region restarts:
+
+            hbase> alter 't1', NAME => 'f1', METHOD => 'delete', WAIT_INTERVAL => 1000, NUM_CONCURRENT_CLOSE => 1
         EOF
       end
 

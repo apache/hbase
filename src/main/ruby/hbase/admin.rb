@@ -21,6 +21,7 @@
 include Java
 
 java_import java.util.ArrayList
+java_import java.util.concurrent.TimeUnit
 
 java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.zookeeper.ZooKeeperMain
@@ -127,21 +128,21 @@ module Hbase
       @admin.enableLoadBalancer
       get_loadbalancer
     end
-	
-	#----------------------------------------------------------------------------------------------
+
+  #----------------------------------------------------------------------------------------------
     # disable_loadbalancer
     def disable_loadbalancer
       @admin.disableLoadBalancer
       get_loadbalancer
     end
-	
-	#----------------------------------------------------------------------------------------------
+
+  #----------------------------------------------------------------------------------------------
     # Shuts hbase down
     def get_loadbalancer
       print "LoadBalacner disabled: %s \n " % @admin.isLoadBalancerDisabled
     end
-	
-	#----------------------------------------------------------------------------------------------
+
+  #----------------------------------------------------------------------------------------------
     # Shuts hbase down
     def shutdown
       @admin.shutdown
@@ -178,7 +179,6 @@ module Hbase
         unless arg.kind_of?(String) || arg.kind_of?(Hash)
           raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash or String type")
         end
-
         if arg.kind_of?(String)
           # the arg is a string, default action is to add a column to the table
           htd.addFamily(hcd(arg, htd))
@@ -219,7 +219,6 @@ module Hbase
           end
         end
       end
-
       if num_regions.nil?
         # Perform the create table call
         @admin.createTable(htd)
@@ -337,6 +336,16 @@ module Hbase
         # Normalize args to support shortcut delete syntax
         arg = { METHOD => 'delete', NAME => arg['delete'] } if arg['delete']
 
+        # Now set regionCloseWaitInterval if specified
+        if arg[WAIT_INTERVAL]
+          @admin.setCloseRegionWaitInterval(table_name, arg[WAIT_INTERVAL])
+        end
+
+        # Now set the NumConcurrentCloseRegions if specified
+        if arg[NUM_CONCURRENT_CLOSE]
+          @admin.setNumConcurrentCloseRegions(table_name, arg[NUM_CONCURRENT_CLOSE])
+        end
+
         # No method parameter, try to use the args as a column definition
         unless method = arg.delete(METHOD)
           descriptor = hcd(arg, htd)
@@ -350,6 +359,7 @@ module Hbase
           end
           next
         end
+
         # Delete column family
         if method == "delete"
           raise(ArgumentError, "NAME parameter missing for delete method") unless arg[NAME]
@@ -379,6 +389,7 @@ module Hbase
         # Unknown method
         raise ArgumentError, "Unknown method: #{method}"
       end
+
       # now batch process alter requests
       @admin.alterTable(table_name, columnsToAdd, columnsToMod, columnsToDel)
       if wait == true

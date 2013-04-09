@@ -605,6 +605,28 @@ public class HBaseAdmin {
   }
 
   /**
+   * Sets the wait interval to wait between closing and reopening of Regions.
+   * Asynchronous operation.
+   *
+   * @param waitInterval The interval in milliseconds to wait
+   *                     in between closing and reopening regions
+   */
+  public void setCloseRegionWaitInterval(final String tableName, int waitInterval) {
+    this.master.setCloseRegionWaitInterval(tableName, waitInterval);
+  }
+
+  /**
+   * Sets the number of Regions to close concurrently.
+   * Asynchronous operation.
+   *
+   * @param numConcurrentClose The number of Regions to close at the same time
+   *
+   */
+  public void setNumConcurrentCloseRegions(final String tableName, int numConcurrentClose) {
+    this.master.setNumConcurrentCloseRegions(tableName, numConcurrentClose);
+  }
+
+  /**
    * Batch alter a table. Only takes regions offline once and performs a single
    * update to .META.
    * Asynchronous operation.
@@ -942,7 +964,7 @@ public class HBaseAdmin {
    * Compact a column family within a region.
    * Asynchronous operation.
    *
-   * @param regionName region to compact
+   * @param tableOrRegionName region to compact
    * @param columnFamily column family within the region to compact
    * @throws IOException if a remote or network exception occurs
    */
@@ -965,7 +987,7 @@ public class HBaseAdmin {
    * Compact a column family within a region.
    * Asynchronous operation.
    *
-   * @param regionName region to compact
+   * @param tableOrRegionName region to compact
    * @param columnFamily column family within the region to compact
    * @throws IOException if a remote or network exception occurs
    */
@@ -1009,7 +1031,7 @@ public class HBaseAdmin {
    * Major compacts a column family within a region or table.
    * Asynchronous operation.
    *
-   * @param regionName region to compact
+   * @param tableOrRegionName region to compact
    * @param columnFamily column family within the region to compact
    * @throws IOException if a remote or network exception occurs
    */
@@ -1032,7 +1054,7 @@ public class HBaseAdmin {
    * Major compacts a column family within a region or table.
    * Asynchronous operation.
    *
-   * @param regionName region to compact
+   * @param tableOrRegionName region to compact
    * @param columnFamily column family within the region to compact
    * @throws IOException if a remote or network exception occurs
    */
@@ -1292,9 +1314,6 @@ public class HBaseAdmin {
    *
    * @param hsa
    *          the address of the RegionServer to stop
-   * @param numThreads
-   *          the number of threads to be used for HDFS quorum reads
-   *          <= 0 will disable quorum Reads.
    * @throws IOException
    *           if a remote or network exception occurs
    */
