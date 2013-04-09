@@ -294,22 +294,6 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
   }
 
-  public static class RestartRsHoldingRoot extends RestartRandomRs {
-    public RestartRsHoldingRoot(long sleepTime) {
-      super(sleepTime);
-    }
-    @Override
-    protected void perform() throws Exception {
-      LOG.info("Performing action: Restart region server holding ROOT");
-      ServerName server = cluster.getServerHoldingRoot();
-      if (server == null) {
-        LOG.warn("No server is holding -ROOT- right now.");
-        return;
-      }
-      restartRs(server, sleepTime);
-    }
-  }
-
   /**
    * Restarts a ratio of the running regionservers at the same time
    */
@@ -659,7 +643,6 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
    *  - Restart random regionserver (sleep 5 sec)              : 2
    *  - Restart random regionserver (sleep 60 sec)             : 2
    *  - Restart META regionserver (sleep 5 sec)                : 1
-   *  - Restart ROOT regionserver (sleep 5 sec)                : 1
    *  - Batch restart of 50% of regionservers (sleep 5 sec)    : 2
    *  - Rolling restart of 100% of regionservers (sleep 5 sec) : 2
    */
@@ -669,7 +652,6 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       new Pair<Action,Integer>(new RestartRandomRs(FIVE_SEC), 2),
       new Pair<Action,Integer>(new RestartRandomRs(ONE_MIN), 2),
       new Pair<Action,Integer>(new RestartRsHoldingMeta(FIVE_SEC), 1),
-      new Pair<Action,Integer>(new RestartRsHoldingRoot(FIVE_SEC), 1),
       new Pair<Action,Integer>(new BatchRestartRs(FIVE_SEC, 0.5f), 2),
       new Pair<Action,Integer>(new RollingBatchRestartRs(FIVE_SEC, 1.0f), 2)
   );

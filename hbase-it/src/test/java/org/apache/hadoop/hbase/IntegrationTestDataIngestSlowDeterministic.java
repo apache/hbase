@@ -22,7 +22,6 @@ import org.apache.hadoop.hbase.util.ChaosMonkey.BatchRestartRs;
 import org.apache.hadoop.hbase.util.ChaosMonkey.RestartActiveMaster;
 import org.apache.hadoop.hbase.util.ChaosMonkey.RestartRandomRs;
 import org.apache.hadoop.hbase.util.ChaosMonkey.RestartRsHoldingMeta;
-import org.apache.hadoop.hbase.util.ChaosMonkey.RestartRsHoldingRoot;
 import org.apache.hadoop.hbase.util.ChaosMonkey.RollingBatchRestartRs;
 import org.junit.After;
 import org.junit.Before;
@@ -51,8 +50,7 @@ public class IntegrationTestDataIngestSlowDeterministic extends IngestIntegratio
         new BatchRestartRs(5000, 0.5f),
         new RestartActiveMaster(5000),
         new RollingBatchRestartRs(5000, 1.0f),
-        new RestartRsHoldingMeta(35000),
-        new RestartRsHoldingRoot(35000)
+        new RestartRsHoldingMeta(35000)
     };
     monkey = new ChaosMonkey(util, new ChaosMonkey.CompositeSequentialPolicy(
             new ChaosMonkey.DoActionsOncePolicy(CHAOS_EVERY_MS, actions),
