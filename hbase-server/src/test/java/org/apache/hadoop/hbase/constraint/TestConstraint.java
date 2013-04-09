@@ -95,7 +95,7 @@ public class TestConstraint {
    * @throws Exception
    */
   @SuppressWarnings("unchecked")
-  @Test(timeout = 10000)
+  @Test(timeout = 60000)
   public void testConstraintFails() throws Exception {
 
     // create the table

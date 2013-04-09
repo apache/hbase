@@ -157,13 +157,13 @@ public class TestRegionServerNoMaster {
   }
 
 
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testCloseByRegionServer() throws Exception {
     closeNoZK();
     reopenRegion();
   }
 
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testCloseByMasterWithoutZNode() throws Exception {
 
     // Transition in ZK on. This should fail, as there is no znode
@@ -181,7 +181,7 @@ public class TestRegionServerNoMaster {
     Assert.assertTrue("The close should have failed", getRS().getRegion(regionName).isAvailable());
   }
 
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testOpenCloseByMasterWithZNode() throws Exception {
 
     ZKAssign.createNodeClosing(HTU.getZooKeeperWatcher(), hri, getRS().getServerName());
@@ -208,7 +208,7 @@ public class TestRegionServerNoMaster {
    * the region server has received the query or not. Only solution to be efficient: re-ask
    * immediately.
    */
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testMultipleOpen() throws Exception {
 
     // We close
@@ -234,7 +234,7 @@ public class TestRegionServerNoMaster {
     checkRegionIsOpened();
   }
 
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testMultipleCloseFromMaster() throws Exception {
 
     // As opening, we must support multiple requests on the same region
@@ -264,7 +264,7 @@ public class TestRegionServerNoMaster {
   /**
    * Test that if we do a close while opening it stops the opening.
    */
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testCancelOpeningWithoutZK() throws Exception {
     // We close
     closeNoZK();
@@ -307,7 +307,7 @@ public class TestRegionServerNoMaster {
    * Test an open then a close with ZK. This is going to mess-up the ZK states, so
    * the opening will fail as well because it doesn't find what it expects in ZK.
    */
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testCancelOpeningWithZK() throws Exception {
     // We close
     closeNoZK();

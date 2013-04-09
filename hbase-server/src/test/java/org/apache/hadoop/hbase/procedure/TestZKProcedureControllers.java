@@ -74,7 +74,7 @@ public class TestZKProcedureControllers {
    * Smaller test to just test the actuation on the cohort member
    * @throws Exception on failure
    */
-  @Test(timeout = 15000)
+  @Test(timeout = 60000)
   public void testSimpleZKCohortMemberController() throws Exception {
     ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
     final String operationName = "instanceTest";
@@ -137,7 +137,7 @@ public class TestZKProcedureControllers {
     assertEquals("Didn't delete commit node", -1, ZKUtil.checkExists(watcher, commit));
   }
 
-  @Test(timeout = 15000)
+  @Test(timeout = 60000)
   public void testZKCoordinatorControllerWithNoCohort() throws Exception {
     final String operationName = "no cohort controller test";
     final byte[] data = new byte[] { 1, 2, 3 };
@@ -146,7 +146,7 @@ public class TestZKProcedureControllers {
     runMockCommitWithOrchestratedControllers(startCohortFirst, operationName, data);
   }
 
-  @Test(timeout = 15000)
+  @Test(timeout = 60000)
   public void testZKCoordinatorControllerWithSingleMemberCohort() throws Exception {
     final String operationName = "single member controller test";
     final byte[] data = new byte[] { 1, 2, 3 };
@@ -155,7 +155,7 @@ public class TestZKProcedureControllers {
     runMockCommitWithOrchestratedControllers(startCohortFirst, operationName, data, "cohort");
   }
 
-  @Test(timeout = 15000)
+  @Test(timeout = 60000)
   public void testZKCoordinatorControllerMultipleCohort() throws Exception {
     final String operationName = "multi member controller test";
     final byte[] data = new byte[] { 1, 2, 3 };

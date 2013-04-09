@@ -185,7 +185,7 @@ public class TestAssignmentManager {
    * @throws InterruptedException
    * @throws DeserializationException
    */
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testBalanceOnMasterFailoverScenarioWithOpenedNode()
   throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
     AssignmentManagerWithExtrasForTesting am =
@@ -233,7 +233,7 @@ public class TestAssignmentManager {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testBalanceOnMasterFailoverScenarioWithClosedNode()
   throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
     AssignmentManagerWithExtrasForTesting am =
@@ -282,7 +282,7 @@ public class TestAssignmentManager {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testBalanceOnMasterFailoverScenarioWithOfflineNode()
   throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
     AssignmentManagerWithExtrasForTesting am =
@@ -686,7 +686,7 @@ public class TestAssignmentManager {
    * situation
    * @throws ServiceException
    */
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testProcessDeadServersAndRegionsInTransitionShouldNotFailWithNPE()
       throws IOException, KeeperException, InterruptedException, ServiceException {
     final RecoverableZooKeeper recoverableZk = Mockito
@@ -716,7 +716,7 @@ public class TestAssignmentManager {
    * TestCase verifies that the regionPlan is updated whenever a region fails to open
    * and the master tries to process RS_ZK_FAILED_OPEN state.(HBASE-5546).
    */
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testRegionPlanIsUpdatedWhenRegionFailsToOpen() throws IOException, KeeperException,
       ServiceException, InterruptedException {
     this.server.getConfiguration().setClass(
@@ -814,7 +814,7 @@ public class TestAssignmentManager {
    * region which is in Opening state on a dead RS. Master should immediately
    * assign the region and not wait for Timeout Monitor.(Hbase-5882).
    */
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testRegionInOpeningStateOnDeadRSWhileMasterFailover() throws IOException,
       KeeperException, ServiceException, InterruptedException {
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
@@ -846,7 +846,7 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws Exception
    */
-  @Test(timeout = 10000)
+  @Test(timeout = 60000)
   public void testDisablingTableRegionsAssignmentDuringCleanClusterStartup()
       throws KeeperException, IOException, Exception {
     this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,

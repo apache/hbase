@@ -595,7 +595,7 @@ public class TestHCM {
    *  ZooKeeper quorum set. Other stuff like master address will be read
    *  from ZK by the client.
    */
-  @Test(timeout = 10000)
+  @Test(timeout = 60000)
   public void testConnection() throws Exception{
     // We create an empty config and add the ZK address.
     Configuration c = new Configuration();
