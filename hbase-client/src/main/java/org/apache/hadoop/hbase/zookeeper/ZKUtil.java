@@ -1676,8 +1676,8 @@ public class ZKUtil {
 
   private static void logRetrievedMsg(final ZooKeeperWatcher zkw,
       final String znode, final byte [] data, final boolean watcherSet) {
-    if (!LOG.isDebugEnabled()) return;
-    LOG.debug(zkw.prefix("Retrieved " + ((data == null)? 0: data.length) +
+    if (!LOG.isTraceEnabled()) return;
+    LOG.trace(zkw.prefix("Retrieved " + ((data == null)? 0: data.length) +
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
       (data == null? "null": data.length == 0? "empty": (

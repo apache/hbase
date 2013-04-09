@@ -970,8 +970,8 @@ public class HBaseClient {
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
           IPCUtil.write(this.out, header, call.param, cellBlock);
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(getName() + ": wrote request header " + TextFormat.shortDebugString(header));
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(getName() + ": wrote request header " + TextFormat.shortDebugString(header));
         }
       } catch(IOException e) {
         markClosed(e);
