@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -402,12 +403,20 @@ public class RegionMergeTransaction {
 
     byte[] startKey = null;
     byte[] endKey = null;
+    // Choose the smaller as start key
     if (a.compareTo(b) <= 0) {
       startKey = a.getStartKey();
-      endKey = b.getEndKey();
     } else {
       startKey = b.getStartKey();
+    }
+    // Choose the bigger as end key
+    if (a.getComparator().matchingRows(a.getEndKey(), 0, a.getEndKey().length,
+        HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
+        || a.getComparator().compareRows(a.getEndKey(), 0,
+            a.getEndKey().length, b.getEndKey(), 0, b.getEndKey().length) > 0) {
       endKey = a.getEndKey();
+    } else {
+      endKey = b.getEndKey();
     }
 
     // Merged region is sorted between two merging regions in META
@@ -756,6 +765,7 @@ public class RegionMergeTransaction {
    */
   boolean hasMergeQualifierInMeta(final RegionServerServices services,
       final byte[] regionName) throws IOException {
+    if (services == null) return false;
     // Get merge regions if it is a merged region and already has merge
     // qualifier
     Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaReader
