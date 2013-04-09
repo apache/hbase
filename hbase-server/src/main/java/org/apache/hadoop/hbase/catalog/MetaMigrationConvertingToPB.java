@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * A tool to migrate the data stored in ROOT and META tables to pbuf serialization.
- * Supports migrating from 0.92.x and 0.94.x to 0.96.x for the catalog tables.
+ * A tool to migrate the data stored in META table to pbuf serialization.
+ * Supports migrating from 0.92.x and 0.94.x to 0.96.x for the catalog table.
  * @deprecated will be removed for the major release after 0.96.
  */
 @Deprecated
@@ -121,52 +121,26 @@ public class MetaMigrationConvertingToPB {
   }
 
   /**
-   * Update ROOT and META to newer version, converting writable serialization to PB, if
-   * it is needed.
+   * Converting writable serialization to PB, if it is needed.
    * @param services MasterServices to get a handle on master
    * @return num migrated rows
    * @throws IOException or RuntimeException if something goes wrong
    */
-  public static long updateRootAndMetaIfNecessary(final MasterServices services)
+  public static long updateMetaIfNecessary(final MasterServices services)
   throws IOException {
-    if (isMetaHRIUpdated(services.getCatalogTracker())) {
-      LOG.info("ROOT/META already up-to date with PB serialization");
+    if (isMetaTableUpdated(services.getCatalogTracker())) {
+      LOG.info("META already up-to date with PB serialization");
       return 0;
     }
-    LOG.info("ROOT/META has Writable serializations, migrating ROOT and META to PB serialization");
+    LOG.info("META has Writable serializations, migrating META to PB serialization");
     try {
-      long rows = updateRootAndMeta(services);
-      LOG.info("ROOT and META updated with PB serialization. Total rows updated: " + rows);
+      long rows = updateMeta(services);
+      LOG.info("META updated with PB serialization. Total rows updated: " + rows);
       return rows;
     } catch (IOException e) {
-      LOG.warn("Update ROOT/META with PB serialization failed." +
-        "Master startup aborted.");
+      LOG.warn("Update META with PB serialization failed." + "Master startup aborted.");
       throw e;
     }
-  }
-
-  /**
-   * Update ROOT and META to newer version, converting writable serialization to PB
-   * @return  num migrated rows
-   */
-  static long updateRootAndMeta(final MasterServices masterServices)
-      throws IOException {
-    long rows = updateRoot(masterServices);
-    rows += updateMeta(masterServices);
-    return rows;
-  }
-
-  /**
-   * Update ROOT rows, converting writable serialization to PB
-   * @return num migrated rows
-   */
-  static long updateRoot(final MasterServices masterServices)
-  throws IOException {
-    LOG.info("Starting update of ROOT");
-    ConvertToPBMetaVisitor v = new ConvertToPBMetaVisitor(masterServices);
-    MetaReader.fullScan(masterServices.getCatalogTracker(), v, null);
-    LOG.info("Finished update of ROOT. Total rows updated:" + v.numMigratedRows);
-    return v.numMigratedRows;
   }
 
   /**
@@ -177,24 +151,8 @@ public class MetaMigrationConvertingToPB {
     LOG.info("Starting update of META");
     ConvertToPBMetaVisitor v = new ConvertToPBMetaVisitor(masterServices);
     MetaReader.fullScan(masterServices.getCatalogTracker(), v);
-    //updateRootWithMetaMigrationStatus(masterServices.getCatalogTracker());
     LOG.info("Finished update of META. Total rows updated:" + v.numMigratedRows);
     return v.numMigratedRows;
-  }
-
-  /**
-   * Update the version flag in -ROOT-.
-   * @param catalogTracker the catalog tracker
-   * @throws IOException
-   */
-  static void updateRootWithMetaMigrationStatus(final CatalogTracker catalogTracker)
-      throws IOException {
-    Put p = new Put(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
-    p.add(HConstants.CATALOG_FAMILY, HConstants.META_VERSION_QUALIFIER,
-        Bytes.toBytes(HConstants.META_VERSION));
-    // TODO so wrong
-    //MetaEditor.putToRootTable(catalogTracker, p);
-    LOG.info("Updated -ROOT- meta version=" + HConstants.META_VERSION);
   }
 
   /**
@@ -202,20 +160,18 @@ public class MetaMigrationConvertingToPB {
    * @return True if the meta table has been migrated.
    * @throws IOException
    */
-  static boolean isMetaHRIUpdated(final CatalogTracker catalogTracker) throws IOException {
+  static boolean isMetaTableUpdated(final CatalogTracker catalogTracker) throws IOException {
     List<Result> results = MetaReader.fullScanOfMeta(catalogTracker);
     if (results == null || results.isEmpty()) {
-      LOG.info(".META. is not migrated");
-      return false;
+      LOG.info(".META. doesn't have any entries to update.");
+      return true;
     }
-    // Presume only the one result because we only support one meta region.
-    Result r = results.get(0);
-    byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
-        HConstants.META_VERSION_QUALIFIER);
-    short version = value == null || value.length <= 0? -1: Bytes.toShort(value);
-
-    boolean migrated = version >= HConstants.META_VERSION;
-    LOG.info("Meta version=" + version + "; migrated=" + migrated);
-    return migrated;
+    for (Result r : results) {
+      byte[] value = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      if (!isMigrated(value)) {
+        return false;
+      }
+    }
+    return true;
   }
 }
