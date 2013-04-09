@@ -982,4 +982,14 @@
         is 2.
     </description>
   </property>
+  <property>
+    <name>hbase.rpc.timeout</name>
+    <value>60000</value>
+    <description>
+        This is for the RPC layer to define how long HBase client applications
+        take for a remote call to time out. It uses pings to check connections
+        but will eventually throw a TimeoutException. 
+        The default value is 60000ms(60s).
+    </description>
+  </property>
 </configuration>
