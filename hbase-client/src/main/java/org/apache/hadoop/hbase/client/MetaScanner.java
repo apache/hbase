@@ -247,8 +247,8 @@ public class MetaScanner {
       data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     if (bytes == null) return null;
     HRegionInfo info = HRegionInfo.parseFromOrNull(bytes);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Current INFO from scan results = " + info);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Current INFO from scan results = " + info);
     }
     return info;
   }

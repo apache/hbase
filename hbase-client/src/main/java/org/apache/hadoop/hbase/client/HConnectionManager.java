@@ -1873,7 +1873,7 @@ public class HConnectionManager {
     */
     void deleteCachedLocation(HRegionInfo hri, HRegionLocation source) {
       boolean isStaleDelete = false;
-      HRegionLocation oldLocation = null;
+      HRegionLocation oldLocation;
       synchronized (this.cachedRegionLocations) {
         Map<byte[], HRegionLocation> tableLocations =
           getTableLocations(hri.getTableName());
@@ -1885,11 +1885,6 @@ public class HConnectionManager {
             tableLocations.remove(hri.getStartKey());
           }
         }
-      }
-      if (isStaleDelete) {
-        LOG.debug("Received an error from " + source.getHostnamePort() + " for region "
-          + hri.getRegionNameAsString() + "; not removing "
-          + oldLocation.getHostnamePort() + " from cache.");
       }
     }
 

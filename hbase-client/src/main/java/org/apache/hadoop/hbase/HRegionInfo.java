@@ -950,9 +950,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     if (bytes == null) return null;
     HRegionInfo info = parseFromOrNull(bytes);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Current INFO from scan results = " + info);
-    }
     return info;
   }
 
