@@ -304,7 +304,7 @@ public class TestTableLockManager {
   public void testTableReadLock() throws Exception {
     // test plan: write some data to the table. Continuously alter the table and
     // force splits
-    // concurrently until we have 10 regions. verify the data just in case.
+    // concurrently until we have 6 regions. verify the data just in case.
     // Every region should contain the same table descriptor
     // This is not an exact test
     prepareMiniCluster();
@@ -384,7 +384,7 @@ public class TestTableLockManager {
       for (HRegion region : TEST_UTIL.getMiniHBaseCluster().getRegions(tableName)) {
         assertEquals(desc, region.getTableDesc());
       }
-      if (regions.size() >= 10) {
+      if (regions.size() >= 6) {
         break;
       }
       Threads.sleep(1000);
