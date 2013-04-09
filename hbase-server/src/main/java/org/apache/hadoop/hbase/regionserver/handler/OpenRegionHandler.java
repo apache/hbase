@@ -50,6 +50,9 @@ public class OpenRegionHandler extends EventHandler {
   private final HRegionInfo regionInfo;
   private final HTableDescriptor htd;
 
+  private boolean tomActivated;
+  private int assignmentTimeout;
+
   // We get version of our znode at start of open process and monitor it across
   // the total open. We'll fail the open if someone hijacks our znode; we can
   // tell this has happened if version is not as expected.
@@ -78,6 +81,10 @@ public class OpenRegionHandler extends EventHandler {
     this.regionInfo = regionInfo;
     this.htd = htd;
     this.versionOfOfflineNode = versionOfOfflineNode;
+    tomActivated = this.server.getConfiguration().
+        getBoolean("hbase.assignment.timeout.management", false);
+    assignmentTimeout = this.server.getConfiguration().
+        getInt("hbase.master.assignment.timeoutmonitor.period", 10000);
   }
 
   public HRegionInfo getRegionInfo() {
@@ -234,10 +241,6 @@ public class OpenRegionHandler extends EventHandler {
     PostOpenDeployTasksThread t = new PostOpenDeployTasksThread(r,
       this.server, this.rsServices, signaller);
     t.start();
-    boolean tomActivated = this.server.getConfiguration().
-        getBoolean("hbase.assignment.timeout.management", false);
-    int assignmentTimeout = this.server.getConfiguration().
-      getInt("hbase.master.assignment.timeoutmonitor.period", 10000);
     // Total timeout for meta edit.  If we fail adding the edit then close out
     // the region and let it be assigned elsewhere.
     long timeout = assignmentTimeout * 10;
@@ -250,13 +253,11 @@ public class OpenRegionHandler extends EventHandler {
     boolean tickleOpening = true;
     while (!signaller.get() && t.isAlive() && !this.server.isStopped() &&
         !this.rsServices.isStopping() && (endTime > now)) {
-      if (tomActivated) {
-        long elapsed = now - lastUpdate;
-        if (elapsed > period) {
-          // Only tickle OPENING if postOpenDeployTasks is taking some time.
-          lastUpdate = now;
-          tickleOpening = tickleOpening("post_open_deploy");
-        }
+      long elapsed = now - lastUpdate;
+      if (elapsed > period) {
+        // Only tickle OPENING if postOpenDeployTasks is taking some time.
+        lastUpdate = now;
+        tickleOpening = tickleOpening("post_open_deploy");
       }
       synchronized (signaller) {
         try {
@@ -294,7 +295,7 @@ public class OpenRegionHandler extends EventHandler {
    * Thread to run region post open tasks. Call {@link #getException()} after
    * the thread finishes to check for exceptions running
    * {@link RegionServerServices#postOpenDeployTasks(
-   * HRegion, org.apache.hadoop.hbase.catalog.CatalogTracker, boolean)}
+   * HRegion, org.apache.hadoop.hbase.catalog.CatalogTracker)}
    * .
    */
   static class PostOpenDeployTasksThread extends Thread {
@@ -532,7 +533,7 @@ public class OpenRegionHandler extends EventHandler {
     try {
       this.version =
         ZKAssign.retransitionNodeOpening(server.getZooKeeper(),
-          this.regionInfo, this.server.getServerName(), this.version);
+          this.regionInfo, this.server.getServerName(), this.version, tomActivated);
     } catch (KeeperException e) {
       server.abort("Exception refreshing OPENING; region=" + encodedName +
         ", context=" + context, e);
