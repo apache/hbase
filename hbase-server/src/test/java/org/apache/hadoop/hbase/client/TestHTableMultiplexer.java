@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.client.HTableMultiplexer.HTableMultiplexerStatus;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -68,12 +67,11 @@ public class TestHTableMultiplexer {
     byte[] TABLE = Bytes.toBytes("testHTableMultiplexer");
     final int NUM_REGIONS = 10;
     final int VERSION = 3;
-    List<Put> failedPuts = null;
-    boolean success = false;
+    List<Put> failedPuts;
+    boolean success;
     
     HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(), 
         PER_REGIONSERVER_QUEUE_SIZE);
-    HTableMultiplexerStatus status = multiplexer.getHTableMultiplexerStatus();
 
     HTable ht = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, VERSION,
         Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
@@ -91,15 +89,16 @@ public class TestHTableMultiplexer {
       success = multiplexer.put(TABLE, put);
       assertTrue(success);
 
-      // ensure the buffer has been flushed
-      verifyAllBufferedPutsHaveFlushed(status);
       LOG.info("Put for " + Bytes.toString(startRows[i]) + " @ iteration " + (i+1));
 
       // verify that the Get returns the correct result
       Get get = new Get(startRows[i]);
       get.addColumn(FAMILY, QUALIFIER);
       Result r;
+      int nbTry = 0;
       do {
+        assertTrue(nbTry++ < 50);
+        Thread.sleep(100);
         r = ht.get(get);
       } while (r == null || r.getValue(FAMILY, QUALIFIER) == null);
       assertEquals(0, Bytes.compareTo(VALUE1, r.getValue(FAMILY, QUALIFIER)));
@@ -117,9 +116,6 @@ public class TestHTableMultiplexer {
     failedPuts = multiplexer.put(TABLE, multiput);
     assertTrue(failedPuts == null);
 
-    // ensure the buffer has been flushed
-    verifyAllBufferedPutsHaveFlushed(status);
-
     // verify that the Get returns the correct result
     for (int i = 0; i < NUM_REGIONS; i++) {
       byte [] row = endRows[i];
@@ -127,27 +123,13 @@ public class TestHTableMultiplexer {
       Get get = new Get(row);
       get.addColumn(FAMILY, QUALIFIER);
       Result r;
+      int nbTry = 0;
       do {
+        assertTrue(nbTry++ < 50);
+        Thread.sleep(100);
         r = ht.get(get);
-      } while (r == null || r.getValue(FAMILY, QUALIFIER) == null);
-      assertEquals(0, Bytes.compareTo(VALUE2, r.getValue(FAMILY, QUALIFIER)));
+      } while (r == null || r.getValue(FAMILY, QUALIFIER) == null ||
+          Bytes.compareTo(VALUE2, r.getValue(FAMILY, QUALIFIER)) != 0);
     }
-  }
-
-  private void verifyAllBufferedPutsHaveFlushed(HTableMultiplexerStatus status) {
-    int retries = 8;
-    int tries = 0;
-    do {
-      try {
-        Thread.sleep(2 * TEST_UTIL.getConfiguration().getLong(
-          HTableMultiplexer.TABLE_MULTIPLEXER_FLUSH_FREQ_MS, 100));
-        tries++;
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    } while (status.getTotalBufferedCounter() != 0 && tries != retries);
-
-    assertEquals("There are still some buffered puts left in the queue",
-        0, status.getTotalBufferedCounter());
   }
 }
