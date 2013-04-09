@@ -287,12 +287,12 @@
 <% } %>
 </table>
 <h2>Regions by Region Server</h2>
-<table><tr><th>Region Server</th><th>Region Count</th></tr>
+<table class="table"><tr><th>Region Server</th><th>Region Count</th></tr>
 <%
   for (Map.Entry<String, Integer> rdEntry : regDistribution.entrySet()) {
 %>
 <tr>
-  <td><%= rdEntry.getKey()%></td>
+  <td><a href="<%= rdEntry.getKey()%>"><%= rdEntry.getKey()%></a></td>
   <td><%= rdEntry.getValue()%></td>
 </tr>
 <% } %>
