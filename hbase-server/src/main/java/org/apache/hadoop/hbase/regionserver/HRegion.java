@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.EOFException;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -67,8 +66,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -80,6 +77,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -124,7 +122,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -4268,7 +4265,6 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     FileSystem fs = a.getRegionFileSystem().getFileSystem();
-
     // Make sure each region's cache is empty
     a.flushcache();
     b.flushcache();
@@ -4284,85 +4280,42 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.debug("Files for region: " + b);
       b.getRegionFileSystem().logFileSystemState(LOG);
     }
-
-    Configuration conf = a.baseConf;
-    HTableDescriptor tabledesc = a.getTableDesc();
-    HLog log = a.getLog();
-    Path tableDir = a.getRegionFileSystem().getTableDir();
-
-    // Presume both are of same region type -- i.e. both user or catalog
-    // table regions.  This way can use comparator.
-    final byte[] startKey =
-      (a.comparator.matchingRows(a.getStartKey(), 0, a.getStartKey().length,
-           HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
-       || b.comparator.matchingRows(b.getStartKey(), 0,
-              b.getStartKey().length, HConstants.EMPTY_BYTE_ARRAY, 0,
-              HConstants.EMPTY_BYTE_ARRAY.length))
-      ? HConstants.EMPTY_BYTE_ARRAY
-      : (a.comparator.compareRows(a.getStartKey(), 0, a.getStartKey().length,
-             b.getStartKey(), 0, b.getStartKey().length) <= 0
-         ? a.getStartKey()
-         : b.getStartKey());
-    final byte[] endKey =
-      (a.comparator.matchingRows(a.getEndKey(), 0, a.getEndKey().length,
-           HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
-       || a.comparator.matchingRows(b.getEndKey(), 0, b.getEndKey().length,
-              HConstants.EMPTY_BYTE_ARRAY, 0,
-              HConstants.EMPTY_BYTE_ARRAY.length))
-      ? HConstants.EMPTY_BYTE_ARRAY
-      : (a.comparator.compareRows(a.getEndKey(), 0, a.getEndKey().length,
-             b.getEndKey(), 0, b.getEndKey().length) <= 0
-         ? b.getEndKey()
-         : a.getEndKey());
-
-    HRegionInfo newRegionInfo = new HRegionInfo(tabledesc.getName(), startKey, endKey);
-
-    LOG.info("Creating new region " + newRegionInfo);
-    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
-        conf, fs, tableDir, newRegionInfo);
-
-    LOG.info("starting merge of regions: " + a + " and " + b +
-      " into new region " + newRegionInfo.toString() +
-        " with start key <" + Bytes.toStringBinary(startKey) + "> and end key <" +
-        Bytes.toStringBinary(endKey) + ">");
-
-    // Because we compacted the source regions we should have no more than two
-    // StoreFiles per family and there will be no reference store
-    Map<byte[], List<StoreFile>> aStoreFiles = a.close();
-    Map<byte[], List<StoreFile>> bStoreFiles = b.close();
-
-    // Move StoreFiles under new region directory
-    regionFs.commitStoreFiles(aStoreFiles);
-    regionFs.commitStoreFiles(bStoreFiles);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Files for new region");
-      regionFs.logFileSystemState(LOG);
+    
+    RegionMergeTransaction rmt = new RegionMergeTransaction(a, b, true);
+    if (!rmt.prepare(null)) {
+      throw new IOException("Unable to merge regions " + a + " and " + b);
     }
-
-    // Create HRegion and update the metrics
-    HRegion dstRegion = HRegion.newHRegion(tableDir, log, fs, conf,
-        newRegionInfo, tabledesc, null);
-    dstRegion.readRequestsCount.set(a.readRequestsCount.get() + b.readRequestsCount.get());
-    dstRegion.writeRequestsCount.set(a.writeRequestsCount.get() + b.writeRequestsCount.get());
-    dstRegion.checkAndMutateChecksFailed.set(
-      a.checkAndMutateChecksFailed.get() + b.checkAndMutateChecksFailed.get());
-    dstRegion.checkAndMutateChecksPassed.set(
-      a.checkAndMutateChecksPassed.get() + b.checkAndMutateChecksPassed.get());
-    dstRegion.initialize();
-    dstRegion.compactStores();
+    HRegionInfo mergedRegionInfo = rmt.getMergedRegionInfo();
+    LOG.info("starting merge of regions: " + a + " and " + b
+        + " into new region " + mergedRegionInfo.getRegionNameAsString()
+        + " with start key <"
+        + Bytes.toStringBinary(mergedRegionInfo.getStartKey())
+        + "> and end key <"
+        + Bytes.toStringBinary(mergedRegionInfo.getEndKey()) + ">");
+    HRegion dstRegion = null;
+    try {
+      dstRegion = rmt.execute(null, null);
+    } catch (IOException ioe) {
+      rmt.rollback(null, null);
+      throw new IOException("Failed merging region " + a + " and " + b
+          + ", and succssfully rolled back");
+    }
+    dstRegion.compactStores(true);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for new region");
       dstRegion.getRegionFileSystem().logFileSystemState(LOG);
     }
+    
+    if (dstRegion.getRegionFileSystem().hasReferences(dstRegion.getTableDesc())) {
+      throw new IOException("Merged region " + dstRegion
+          + " still has references after the compaction, is compaction canceled?");
+    }
 
-    // delete out the 'A' region
-    HRegionFileSystem.deleteRegionFromFileSystem(
-      a.getBaseConf(), fs, tableDir, a.getRegionInfo());
-    // delete out the 'B' region
-    HRegionFileSystem.deleteRegionFromFileSystem(
-      b.getBaseConf(), fs, tableDir, b.getRegionInfo());
+    // Archiving the 'A' region
+    HFileArchiver.archiveRegion(a.getBaseConf(), fs, a.getRegionInfo());
+    // Archiving the 'B' region
+    HFileArchiver.archiveRegion(b.getBaseConf(), fs, b.getRegionInfo());
 
     LOG.info("merge completed. New region is " + dstRegion);
     return dstRegion;
