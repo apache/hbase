@@ -778,7 +778,11 @@ public class TestMasterFailover {
     log("Waiting for master to be ready");
     assertTrue(cluster.waitForActiveAndReadyMaster());
     log("Master is ready");
-
+    
+    // Wait until SSH processing completed for dead server.
+    while (master.getServerManager().areDeadServersInProgress()) {
+      Thread.sleep(10);
+    }
     // Failover should be completed, now wait for no RIT
     log("Waiting for no more RIT");
     ZKAssign.blockUntilNoRIT(zkw);
