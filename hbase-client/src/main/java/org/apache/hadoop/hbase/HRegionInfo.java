@@ -154,7 +154,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   /**
    * Use logging.
    * @param encodedRegionName The encoded regionname.
-   * @return <code>.META.</code> if passed </code>1028785192</code> else returns
+   * @return <code>.META.</code> if passed <code>1028785192</code> else returns
    * <code>encodedRegionName</code>
    */
   public static String prettyPrint(final String encodedRegionName) {
