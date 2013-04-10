@@ -172,8 +172,14 @@ public class CreateTableHandler extends EventHandler {
       // If this does not happen then if the client tries to create the table
       // again with the same Active master
       // It will block the creation saying TableAlreadyExists.
-      this.assignmentManager.getZKTable().removeEnablingTable(
-          this.hTableDescriptor.getNameAsString());
+      try {
+        this.assignmentManager.getZKTable().removeEnablingTable(
+            this.hTableDescriptor.getNameAsString(), false);
+      } catch (KeeperException e) {
+        // Keeper exception should not happen here
+        LOG.error("Got a keeper exception while removing the ENABLING table znode "
+            + this.hTableDescriptor.getNameAsString(), e);
+      }
     }
   }
 
