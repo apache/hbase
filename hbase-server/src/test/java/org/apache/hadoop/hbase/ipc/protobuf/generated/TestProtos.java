@@ -11,69 +11,130 @@ public final class TestProtos {
   public interface EmptyRequestProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
+  /**
+   * Protobuf type {@code EmptyRequestProto}
+   */
   public static final class EmptyRequestProto extends
       com.google.protobuf.GeneratedMessage
       implements EmptyRequestProtoOrBuilder {
     // Use EmptyRequestProto.newBuilder() to construct.
-    private EmptyRequestProto(Builder builder) {
+    private EmptyRequestProto(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private EmptyRequestProto(boolean noInit) {}
-    
+    private EmptyRequestProto(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final EmptyRequestProto defaultInstance;
     public static EmptyRequestProto getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public EmptyRequestProto getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private EmptyRequestProto(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyRequestProto_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyRequestProto_fieldAccessorTable;
+      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyRequestProto_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<EmptyRequestProto> PARSER =
+        new com.google.protobuf.AbstractParser<EmptyRequestProto>() {
+      public EmptyRequestProto parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new EmptyRequestProto(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<EmptyRequestProto> getParserForType() {
+      return PARSER;
+    }
+
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -83,101 +144,95 @@ public final class TestProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto other = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto) obj;
-      
+
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code EmptyRequestProto}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProtoOrBuilder {
@@ -185,18 +240,21 @@ public final class TestProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyRequestProto_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyRequestProto_fieldAccessorTable;
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyRequestProto_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -207,25 +265,25 @@ public final class TestProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.getDescriptor();
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyRequestProto_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto build() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto result = buildPartial();
         if (!result.isInitialized()) {
@@ -233,23 +291,13 @@ public final class TestProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto buildPartial() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto result = new org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto(this);
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto) {
           return mergeFrom((org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto)other);
@@ -258,122 +306,173 @@ public final class TestProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto other) {
         if (other == org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
+        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:EmptyRequestProto)
+    }
+
+    static {
+      defaultInstance = new EmptyRequestProto(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:EmptyRequestProto)
+  }
+
+  public interface EmptyResponseProtoOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code EmptyResponseProto}
+   */
+  public static final class EmptyResponseProto extends
+      com.google.protobuf.GeneratedMessage
+      implements EmptyResponseProtoOrBuilder {
+    // Use EmptyResponseProto.newBuilder() to construct.
+    private EmptyResponseProto(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private EmptyResponseProto(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final EmptyResponseProto defaultInstance;
+    public static EmptyResponseProto getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public EmptyResponseProto getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private EmptyResponseProto(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
+              done = true;
+              break;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
+                done = true;
               }
               break;
             }
           }
         }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
       }
-      
-      
-      // @@protoc_insertion_point(builder_scope:EmptyRequestProto)
     }
-    
-    static {
-      defaultInstance = new EmptyRequestProto(true);
-      defaultInstance.initFields();
-    }
-    
-    // @@protoc_insertion_point(class_scope:EmptyRequestProto)
-  }
-  
-  public interface EmptyResponseProtoOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-  }
-  public static final class EmptyResponseProto extends
-      com.google.protobuf.GeneratedMessage
-      implements EmptyResponseProtoOrBuilder {
-    // Use EmptyResponseProto.newBuilder() to construct.
-    private EmptyResponseProto(Builder builder) {
-      super(builder);
-    }
-    private EmptyResponseProto(boolean noInit) {}
-    
-    private static final EmptyResponseProto defaultInstance;
-    public static EmptyResponseProto getDefaultInstance() {
-      return defaultInstance;
-    }
-    
-    public EmptyResponseProto getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyResponseProto_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyResponseProto_fieldAccessorTable;
+      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyResponseProto_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<EmptyResponseProto> PARSER =
+        new com.google.protobuf.AbstractParser<EmptyResponseProto>() {
+      public EmptyResponseProto parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new EmptyResponseProto(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<EmptyResponseProto> getParserForType() {
+      return PARSER;
+    }
+
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -383,101 +482,95 @@ public final class TestProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto other = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto) obj;
-      
+
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code EmptyResponseProto}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProtoOrBuilder {
@@ -485,18 +578,21 @@ public final class TestProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyResponseProto_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyResponseProto_fieldAccessorTable;
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyResponseProto_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -507,25 +603,25 @@ public final class TestProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDescriptor();
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EmptyResponseProto_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto build() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto result = buildPartial();
         if (!result.isInitialized()) {
@@ -533,23 +629,13 @@ public final class TestProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto buildPartial() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto result = new org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto(this);
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto) {
           return mergeFrom((org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto)other);
@@ -558,124 +644,203 @@ public final class TestProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto other) {
         if (other == org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
+        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
-      
+
       // @@protoc_insertion_point(builder_scope:EmptyResponseProto)
     }
-    
+
     static {
       defaultInstance = new EmptyResponseProto(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:EmptyResponseProto)
   }
-  
+
   public interface EchoRequestProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required string message = 1;
+    /**
+     * <code>required string message = 1;</code>
+     */
     boolean hasMessage();
-    String getMessage();
+    /**
+     * <code>required string message = 1;</code>
+     */
+    java.lang.String getMessage();
+    /**
+     * <code>required string message = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getMessageBytes();
   }
+  /**
+   * Protobuf type {@code EchoRequestProto}
+   */
   public static final class EchoRequestProto extends
       com.google.protobuf.GeneratedMessage
       implements EchoRequestProtoOrBuilder {
     // Use EchoRequestProto.newBuilder() to construct.
-    private EchoRequestProto(Builder builder) {
+    private EchoRequestProto(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private EchoRequestProto(boolean noInit) {}
-    
+    private EchoRequestProto(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final EchoRequestProto defaultInstance;
     public static EchoRequestProto getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public EchoRequestProto getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private EchoRequestProto(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              message_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoRequestProto_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoRequestProto_fieldAccessorTable;
+      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoRequestProto_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<EchoRequestProto> PARSER =
+        new com.google.protobuf.AbstractParser<EchoRequestProto>() {
+      public EchoRequestProto parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new EchoRequestProto(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<EchoRequestProto> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required string message = 1;
     public static final int MESSAGE_FIELD_NUMBER = 1;
     private java.lang.Object message_;
+    /**
+     * <code>required string message = 1;</code>
+     */
     public boolean hasMessage() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public String getMessage() {
+    /**
+     * <code>required string message = 1;</code>
+     */
+    public java.lang.String getMessage() {
       java.lang.Object ref = message_;
-      if (ref instanceof String) {
-        return (String) ref;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
           message_ = s;
         }
         return s;
       }
     }
-    private com.google.protobuf.ByteString getMessageBytes() {
+    /**
+     * <code>required string message = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getMessageBytes() {
       java.lang.Object ref = message_;
-      if (ref instanceof String) {
+      if (ref instanceof java.lang.String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         message_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-    
+
     private void initFields() {
       message_ = "";
     }
@@ -683,7 +848,7 @@ public final class TestProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasMessage()) {
         memoizedIsInitialized = 0;
         return false;
@@ -691,7 +856,7 @@ public final class TestProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -700,12 +865,12 @@ public final class TestProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -715,14 +880,14 @@ public final class TestProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -732,7 +897,7 @@ public final class TestProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto other = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto) obj;
-      
+
       boolean result = true;
       result = result && (hasMessage() == other.hasMessage());
       if (hasMessage()) {
@@ -743,9 +908,13 @@ public final class TestProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasMessage()) {
@@ -753,89 +922,79 @@ public final class TestProtos {
         hash = (53 * hash) + getMessage().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code EchoRequestProto}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProtoOrBuilder {
@@ -843,18 +1002,21 @@ public final class TestProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoRequestProto_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoRequestProto_fieldAccessorTable;
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoRequestProto_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -865,27 +1027,27 @@ public final class TestProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         message_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.getDescriptor();
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoRequestProto_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto build() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto result = buildPartial();
         if (!result.isInitialized()) {
@@ -893,17 +1055,7 @@ public final class TestProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto buildPartial() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto result = new org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto(this);
         int from_bitField0_ = bitField0_;
@@ -916,7 +1068,7 @@ public final class TestProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto) {
           return mergeFrom((org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto)other);
@@ -925,16 +1077,18 @@ public final class TestProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto other) {
         if (other == org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.getDefaultInstance()) return this;
         if (other.hasMessage()) {
-          setMessage(other.getMessage());
+          bitField0_ |= 0x00000001;
+          message_ = other.message_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasMessage()) {
           
@@ -942,27 +1096,177 @@ public final class TestProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
+        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string message = 1;
+      private java.lang.Object message_ = "";
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public boolean hasMessage() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public java.lang.String getMessage() {
+        java.lang.Object ref = message_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          message_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getMessageBytes() {
+        java.lang.Object ref = message_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          message_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public Builder setMessage(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        message_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public Builder clearMessage() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        message_ = getDefaultInstance().getMessage();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public Builder setMessageBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        message_ = value;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:EchoRequestProto)
+    }
+
+    static {
+      defaultInstance = new EchoRequestProto(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:EchoRequestProto)
+  }
+
+  public interface EchoResponseProtoOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string message = 1;
+    /**
+     * <code>required string message = 1;</code>
+     */
+    boolean hasMessage();
+    /**
+     * <code>required string message = 1;</code>
+     */
+    java.lang.String getMessage();
+    /**
+     * <code>required string message = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getMessageBytes();
+  }
+  /**
+   * Protobuf type {@code EchoResponseProto}
+   */
+  public static final class EchoResponseProto extends
+      com.google.protobuf.GeneratedMessage
+      implements EchoResponseProtoOrBuilder {
+    // Use EchoResponseProto.newBuilder() to construct.
+    private EchoResponseProto(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private EchoResponseProto(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final EchoResponseProto defaultInstance;
+    public static EchoResponseProto getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public EchoResponseProto getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private EchoResponseProto(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
+              done = true;
+              break;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
+                done = true;
               }
               break;
             }
@@ -973,125 +1277,87 @@ public final class TestProtos {
             }
           }
         }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
       }
-      
-      private int bitField0_;
-      
-      // required string message = 1;
-      private java.lang.Object message_ = "";
-      public boolean hasMessage() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      public String getMessage() {
-        java.lang.Object ref = message_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
-          message_ = s;
-          return s;
-        } else {
-          return (String) ref;
-        }
-      }
-      public Builder setMessage(String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-        message_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearMessage() {
-        bitField0_ = (bitField0_ & ~0x00000001);
-        message_ = getDefaultInstance().getMessage();
-        onChanged();
-        return this;
-      }
-      void setMessage(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000001;
-        message_ = value;
-        onChanged();
-      }
-      
-      // @@protoc_insertion_point(builder_scope:EchoRequestProto)
     }
-    
-    static {
-      defaultInstance = new EchoRequestProto(true);
-      defaultInstance.initFields();
-    }
-    
-    // @@protoc_insertion_point(class_scope:EchoRequestProto)
-  }
-  
-  public interface EchoResponseProtoOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-    
-    // required string message = 1;
-    boolean hasMessage();
-    String getMessage();
-  }
-  public static final class EchoResponseProto extends
-      com.google.protobuf.GeneratedMessage
-      implements EchoResponseProtoOrBuilder {
-    // Use EchoResponseProto.newBuilder() to construct.
-    private EchoResponseProto(Builder builder) {
-      super(builder);
-    }
-    private EchoResponseProto(boolean noInit) {}
-    
-    private static final EchoResponseProto defaultInstance;
-    public static EchoResponseProto getDefaultInstance() {
-      return defaultInstance;
-    }
-    
-    public EchoResponseProto getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoResponseProto_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoResponseProto_fieldAccessorTable;
+      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoResponseProto_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<EchoResponseProto> PARSER =
+        new com.google.protobuf.AbstractParser<EchoResponseProto>() {
+      public EchoResponseProto parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new EchoResponseProto(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<EchoResponseProto> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required string message = 1;
     public static final int MESSAGE_FIELD_NUMBER = 1;
     private java.lang.Object message_;
+    /**
+     * <code>required string message = 1;</code>
+     */
     public boolean hasMessage() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public String getMessage() {
+    /**
+     * <code>required string message = 1;</code>
+     */
+    public java.lang.String getMessage() {
       java.lang.Object ref = message_;
-      if (ref instanceof String) {
-        return (String) ref;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
           message_ = s;
         }
         return s;
       }
     }
-    private com.google.protobuf.ByteString getMessageBytes() {
+    /**
+     * <code>required string message = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getMessageBytes() {
       java.lang.Object ref = message_;
-      if (ref instanceof String) {
+      if (ref instanceof java.lang.String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         message_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-    
+
     private void initFields() {
       message_ = "";
     }
@@ -1099,7 +1365,7 @@ public final class TestProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasMessage()) {
         memoizedIsInitialized = 0;
         return false;
@@ -1107,7 +1373,7 @@ public final class TestProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -1116,12 +1382,12 @@ public final class TestProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1131,14 +1397,14 @@ public final class TestProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -1148,7 +1414,7 @@ public final class TestProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto other = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto) obj;
-      
+
       boolean result = true;
       result = result && (hasMessage() == other.hasMessage());
       if (hasMessage()) {
@@ -1159,9 +1425,13 @@ public final class TestProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasMessage()) {
@@ -1169,89 +1439,79 @@ public final class TestProtos {
         hash = (53 * hash) + getMessage().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code EchoResponseProto}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProtoOrBuilder {
@@ -1259,18 +1519,21 @@ public final class TestProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoResponseProto_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoResponseProto_fieldAccessorTable;
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoResponseProto_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1281,27 +1544,27 @@ public final class TestProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         message_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.getDescriptor();
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.internal_static_EchoResponseProto_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto build() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto result = buildPartial();
         if (!result.isInitialized()) {
@@ -1309,17 +1572,7 @@ public final class TestProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto buildPartial() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto result = new org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto(this);
         int from_bitField0_ = bitField0_;
@@ -1332,7 +1585,7 @@ public final class TestProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto) {
           return mergeFrom((org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto)other);
@@ -1341,16 +1594,18 @@ public final class TestProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto other) {
         if (other == org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.getDefaultInstance()) return this;
         if (other.hasMessage()) {
-          setMessage(other.getMessage());
+          bitField0_ |= 0x00000001;
+          message_ = other.message_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasMessage()) {
           
@@ -1358,57 +1613,69 @@ public final class TestProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              message_ = input.readBytes();
-              break;
-            }
+        org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required string message = 1;
       private java.lang.Object message_ = "";
+      /**
+       * <code>required string message = 1;</code>
+       */
       public boolean hasMessage() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public String getMessage() {
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public java.lang.String getMessage() {
         java.lang.Object ref = message_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
           message_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
-      public Builder setMessage(String value) {
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getMessageBytes() {
+        java.lang.Object ref = message_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          message_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public Builder setMessage(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -1417,29 +1684,40 @@ public final class TestProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required string message = 1;</code>
+       */
       public Builder clearMessage() {
         bitField0_ = (bitField0_ & ~0x00000001);
         message_ = getDefaultInstance().getMessage();
         onChanged();
         return this;
       }
-      void setMessage(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000001;
+      /**
+       * <code>required string message = 1;</code>
+       */
+      public Builder setMessageBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
         message_ = value;
         onChanged();
+        return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:EchoResponseProto)
     }
-    
+
     static {
       defaultInstance = new EchoResponseProto(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:EchoResponseProto)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_EmptyRequestProto_descriptor;
   private static
@@ -1460,7 +1738,7 @@ public final class TestProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_EchoResponseProto_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -1485,33 +1763,25 @@ public final class TestProtos {
           internal_static_EmptyRequestProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EmptyRequestProto_descriptor,
-              new java.lang.String[] { },
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.class,
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto.Builder.class);
+              new java.lang.String[] { });
           internal_static_EmptyResponseProto_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_EmptyResponseProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EmptyResponseProto_descriptor,
-              new java.lang.String[] { },
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.class,
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.Builder.class);
+              new java.lang.String[] { });
           internal_static_EchoRequestProto_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_EchoRequestProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EchoRequestProto_descriptor,
-              new java.lang.String[] { "Message", },
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.class,
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto.Builder.class);
+              new java.lang.String[] { "Message", });
           internal_static_EchoResponseProto_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_EchoResponseProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EchoResponseProto_descriptor,
-              new java.lang.String[] { "Message", },
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.class,
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.Builder.class);
+              new java.lang.String[] { "Message", });
           return null;
         }
       };
@@ -1520,6 +1790,6 @@ public final class TestProtos {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

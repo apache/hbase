@@ -348,19 +348,17 @@ service MasterAdminService {
 
   /** 
    * Create a snapshot for the given table.
-   * @param snapshot description of the snapshot to take
    */
   rpc snapshot(TakeSnapshotRequest) returns(TakeSnapshotResponse);
 
   /**
    * List completed snapshots.
-   * @return a list of snapshot descriptors for completed snapshots
+   * Return a list of snapshot descriptors for completed snapshots
    */
   rpc getCompletedSnapshots(ListSnapshotRequest) returns(ListSnapshotResponse);
 
   /**
    * Delete an existing snapshot. This method can also be used to clean up an aborted snapshot.
-   * @param snapshotName snapshot to delete
    */
   rpc deleteSnapshot(DeleteSnapshotRequest) returns(DeleteSnapshotResponse);
 
@@ -371,7 +369,6 @@ service MasterAdminService {
 
   /**
    * Restore a snapshot
-   * @param snapshot description of the snapshot to restore
    */
   rpc restoreSnapshot(RestoreSnapshotRequest) returns(RestoreSnapshotResponse);
 

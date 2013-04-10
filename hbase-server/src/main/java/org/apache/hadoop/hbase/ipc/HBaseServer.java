@@ -119,7 +119,7 @@ import com.google.common.base.Function;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Message;
-import com.google.protobuf.Message.Builder;
+import com.google.protobuf.Parser;
 import com.google.protobuf.TextFormat;
 // Uses Writables doing sasl
 
@@ -1673,8 +1673,7 @@ public abstract class HBaseServer implements RpcServer {
       CodedInputStream cis = CodedInputStream.newInstance(buf, offset, buf.length);
       int headerSize = cis.readRawVarint32();
       offset = cis.getTotalBytesRead();
-      RequestHeader header =
-        RequestHeader.newBuilder().mergeFrom(buf, offset, headerSize).build();
+      RequestHeader header = RequestHeader.PARSER.parseFrom(buf, offset, headerSize);
       offset += headerSize;
       int id = header.getCallId();
       if (LOG.isDebugEnabled()) {
@@ -1701,15 +1700,13 @@ public abstract class HBaseServer implements RpcServer {
           Message m = methodCache.getMethodArgType(method);
           // Check that there is a param to deserialize.
           if (m != null) {
-            Builder builder = null;
-            builder = m.newBuilderForType();
+            Parser<? extends Message> parser = m.getParserForType();
             // To read the varint, I need an inputstream; might as well be a CIS.
             cis = CodedInputStream.newInstance(buf, offset, buf.length);
             int paramSize = cis.readRawVarint32();
             offset += cis.getTotalBytesRead();
-            if (builder != null) {
-              builder.mergeFrom(buf, offset, paramSize);
-              param = builder.build();
+            if (parser != null) {
+              param = parser.parseFrom(buf, offset, paramSize);
             }
             offset += paramSize;
           }
