@@ -22,9 +22,10 @@ module Shell
       def help
         return <<-EOF
 Revoke a user's access rights.
-Syntax : revoke <user> <table> <column family> <column qualifier>
+Syntax : revoke <user> [<table> [<column family> [<column qualifier>]]
 For example:
 
+    hbase> revoke 'bobsmith'
     hbase> revoke 'bobsmith', 't1', 'f1', 'col1'
 EOF
       end

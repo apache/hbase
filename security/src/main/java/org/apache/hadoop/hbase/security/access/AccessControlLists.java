@@ -134,8 +134,9 @@ public class AccessControlLists {
     byte[] key = userPermissionKey(userPerm);
 
     if ((actions == null) || (actions.length == 0)) {
-      LOG.warn("No actions associated with user '"+Bytes.toString(userPerm.getUser())+"'");
-      return;
+      String msg = "No actions associated with user '" + Bytes.toString(userPerm.getUser()) + "'";
+      LOG.warn(msg);
+      throw new IOException(msg);
     }
 
     byte[] value = new byte[actions.length];
