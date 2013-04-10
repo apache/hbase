@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionStates;
@@ -84,6 +85,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -2661,4 +2663,56 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     };
   }
 
+  /**
+   * Create a set of column descriptors with the combination of compression,
+   * encoding, bloom codecs available.
+   * @return the list of column descriptors
+   */
+  public static List<HColumnDescriptor> generateColumnDescriptors() {
+    return generateColumnDescriptors("");
+  }
+
+  /**
+   * Create a set of column descriptors with the combination of compression,
+   * encoding, bloom codecs available.
+   * @param prefix family names prefix
+   * @return the list of column descriptors
+   */
+  public static List<HColumnDescriptor> generateColumnDescriptors(final String prefix) {
+    List<HColumnDescriptor> htds = new ArrayList<HColumnDescriptor>();
+    long familyId = 0;
+    for (Compression.Algorithm compressionType: getSupportedCompressionAlgorithms()) {
+      for (DataBlockEncoding encodingType: DataBlockEncoding.values()) {
+        for (BloomType bloomType: BloomType.values()) {
+          String name = String.format("%s-cf-!@#&-%d!@#", prefix, familyId);
+          HColumnDescriptor htd = new HColumnDescriptor(name);
+          htd.setCompressionType(compressionType);
+          htd.setDataBlockEncoding(encodingType);
+          htd.setBloomFilterType(bloomType);
+          htds.add(htd);
+          familyId++;
+        }
+      }
+    }
+    return htds;
+  }
+
+  /**
+   * Get supported compression algorithms.
+   * @return supported compression algorithms.
+   */
+  public static Compression.Algorithm[] getSupportedCompressionAlgorithms() {
+    String[] allAlgos = HFile.getSupportedCompressionAlgorithms();
+    List<Compression.Algorithm> supportedAlgos = new ArrayList<Compression.Algorithm>();
+    for (String algoName : allAlgos) {
+      try {
+        Compression.Algorithm algo = Compression.getCompressionAlgorithmByName(algoName);
+        algo.getCompressor();
+        supportedAlgos.add(algo);
+      } catch (Throwable t) {
+        // this algo is not available
+      }
+    }
+    return supportedAlgos.toArray(new Compression.Algorithm[0]);
+  }
 }
