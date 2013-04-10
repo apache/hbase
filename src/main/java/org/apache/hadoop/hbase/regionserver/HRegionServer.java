@@ -1050,7 +1050,7 @@ public class HRegionServer implements HRegionInterface,
       this.setNumHDFSQuorumReadThreads(parallelHDFSReadPoolSize);
       
       // Init in here rather than in constructor after thread name has been set
-      this.metrics = new RegionServerMetrics();
+      this.metrics = new RegionServerMetrics(this.conf);
       this.dynamicMetrics = RegionServerDynamicMetrics.newInstance(this);
       startServiceThreads();
       isOnline = true;

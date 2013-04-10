@@ -46,10 +46,12 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.metrics.PercentileMetric;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Histogram;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
@@ -170,7 +172,15 @@ public class HFile {
   //For measuring latency of pread during compactions
   static final AtomicInteger preadCompactionOps = new AtomicInteger();
   static final AtomicLong preadCompactionTimeNano = new AtomicLong();
-
+  // These outliers measure in nano seconds.
+  public static final Histogram preadHistogram = new Histogram(
+    PercentileMetric.HISTOGRAM_NUM_BUCKETS_DEFAULT,
+    PercentileMetric.HISTOGRAM_MINVALUE_DEFAULT,
+    PercentileMetric.HISTOGRAM_MAXVALUE_DEFAULT);
+  public static final Histogram preadCompactionHistogram = new Histogram(
+    PercentileMetric.HISTOGRAM_NUM_BUCKETS_DEFAULT,
+    PercentileMetric.HISTOGRAM_MINVALUE_DEFAULT,
+    PercentileMetric.HISTOGRAM_MAXVALUE_DEFAULT);
   /**
    * Get the number of positional read operations during compaction
    * and reset it to zero.

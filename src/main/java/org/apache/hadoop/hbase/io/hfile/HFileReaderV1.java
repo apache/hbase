@@ -247,6 +247,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
       long delta = System.nanoTime() - startTimeNs;
       HFile.preadTimeNano.addAndGet(delta);
       HFile.preadOps.incrementAndGet();
+      HFile.preadHistogram.addValue(delta);
       getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false, delta);
 
       // Cache the block
@@ -327,9 +328,11 @@ public class HFileReaderV1 extends AbstractHFileReader {
       long delta = System.nanoTime() - startTimeNs;
       if (isCompaction) {
         HFile.preadCompactionTimeNano.addAndGet(delta);
+        HFile.preadCompactionHistogram.addValue(delta);
         HFile.preadCompactionOps.incrementAndGet();
       } else {
         HFile.preadTimeNano.addAndGet(delta);
+        HFile.preadHistogram.addValue(delta);
         HFile.preadOps.incrementAndGet();
       }
       getSchemaMetrics().updateOnCacheMiss(BlockCategory.DATA, isCompaction,

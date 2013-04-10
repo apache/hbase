@@ -661,6 +661,22 @@ public final class HConstants {
   public static final String HBASE_REGION_ASSIGNMENT_LOADBALANCER_WAITTIME_MS
                                 = "hbase.master.assignment.load.balancer.waittime.ms";
   public static final int DEFAULT_HBASE_REGION_ASSIGNMENT_LOADBALANCER_WAITTIME_MS = 60000;
+  
+  /*
+   * This defines the number of buckets used for computing the histogram of
+   * pread latency.
+   */
+  public static final String PREAD_LATENCY_HISTOGRAM_NUM_BUCKETS =
+      "hbase.histogrambasedmetric.numbuckets.preadlatency";
+
+  /*
+   * This defines the number of buckets used for computing the histogram of
+   * pread latency during compaction.
+   */
+  public static final String PREAD_COMPACTION_LATENCY_HISTOGRAM_NUM_BUCKETS =
+      "hbase.histogrambasedmetric.numbuckets.preadcompactionlatency";
+  public static final String HISTOGRAM_BASED_METRICS_WINDOW =
+      "hbase.histogrambasedmetric.window";
 
   private HConstants() {
     // Can't be instantiated with this constructor.

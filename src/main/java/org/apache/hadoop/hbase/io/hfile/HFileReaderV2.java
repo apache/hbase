@@ -224,6 +224,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       long deltaNs = System.nanoTime() - startTimeNs;
       HFile.preadTimeNano.addAndGet(deltaNs);
+      HFile.preadHistogram.addValue(deltaNs);
       HFile.preadOps.incrementAndGet();
       getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false,
           TimeUnit.NANOSECONDS.toMillis(deltaNs));
@@ -316,9 +317,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       if (isCompaction) {
         HFile.preadCompactionTimeNano.addAndGet(deltaNs);
+        HFile.preadCompactionHistogram.addValue(deltaNs);
         HFile.preadCompactionOps.incrementAndGet();
       } else {
         HFile.preadTimeNano.addAndGet(deltaNs);
+        HFile.preadHistogram.addValue(deltaNs);
         HFile.preadOps.incrementAndGet();
       }
       if (kvContext != null) {

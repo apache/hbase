@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
@@ -57,6 +59,7 @@ public class RegionServerMetrics implements Updater {
   private final MetricsRecord metricsRecord;
   private long lastUpdate = System.currentTimeMillis();
   private long lastExtUpdate = System.currentTimeMillis();
+  private long lastHistUpdate = System.currentTimeMillis();
   private long extendedPeriod = 0;
   private static final int MB = 1024*1024;
   private MetricsRegistry registry = new MetricsRegistry();
@@ -173,11 +176,26 @@ public class RegionServerMetrics implements Updater {
       new MetricsTimeVaryingRate("fsReadLatency", registry);
 
   /**
+   * filesystem p99 read latency outlier for positional read operations
+   */
+  public final PercentileMetric fsReadLatencyP99 =
+      new PercentileMetric("fsReadLatencyP99", registry,
+          HFile.preadHistogram);
+
+  /**
    * filesystem read latency for positional read operations during
    * compactions
    */
   public final MetricsTimeVaryingRate fsCompactionReadLatency =
       new MetricsTimeVaryingRate("fsCompactionReadLatency", registry);
+
+  /**
+   * filesystem p99 read latency outlier for positional read operations during
+   * compactions
+   */
+  public final PercentileMetric fsCompactionReadLatencyP99 =
+      new PercentileMetric("fsReadCompactionLatencyP99", registry,
+          HFile.preadCompactionHistogram);
 
   /**
    * filesystem write latency
@@ -264,7 +282,12 @@ public class RegionServerMetrics implements Updater {
   public final MetricsLongValue quorumReadsExecutedInCurThread =
       new MetricsLongValue("quorumReadsExecutedInCurThread", registry);
 
-  public RegionServerMetrics() {
+  // The histogram metrics are updated every histogramMetricWindow seconds
+  private long histogramMetricWindow = 240;
+
+  public final Configuration conf;
+
+  public RegionServerMetrics(Configuration conf) {
     MetricsContext context = MetricsUtil.getContext("hbase");
     metricsRecord = MetricsUtil.createRecord(context, "regionserver");
     String name = Thread.currentThread().getName();
@@ -288,7 +311,25 @@ public class RegionServerMetrics implements Updater {
       LOG.info("Couldn't load ContextFactory for Metrics config info");
     }
 
+    this.conf = conf;
+    // Initializing the HistogramBasedMetrics here since
+    // they will be needing conf
+    initializeHistogramBasedMetrics();
     LOG.info("Initialized");
+  }
+
+  private void initializeHistogramBasedMetrics() {
+    histogramMetricWindow = 1000 *
+        conf.getLong(HConstants.HISTOGRAM_BASED_METRICS_WINDOW,
+        PercentileMetric.DEFAULT_SAMPLE_WINDOW);
+    fsReadLatencyP99.setNumBuckets(
+        conf.getInt(HConstants.PREAD_LATENCY_HISTOGRAM_NUM_BUCKETS,
+        PercentileMetric.HISTOGRAM_NUM_BUCKETS_DEFAULT));
+    fsReadLatencyP99.setPercentile(PercentileMetric.P99);
+    fsCompactionReadLatencyP99.setNumBuckets(conf.getInt(
+        HConstants.PREAD_COMPACTION_LATENCY_HISTOGRAM_NUM_BUCKETS,
+        PercentileMetric.HISTOGRAM_NUM_BUCKETS_DEFAULT));
+    fsCompactionReadLatencyP99.setPercentile(99.0);
   }
 
   public void shutdown() {
@@ -310,6 +351,11 @@ public class RegionServerMetrics implements Updater {
           this.lastUpdate - this.lastExtUpdate >= this.extendedPeriod) {
         this.lastExtUpdate = this.lastUpdate;
         this.resetAllMinMax();
+      }
+      if (this.histogramMetricWindow > 0 &&
+        ((this.lastUpdate - this.lastHistUpdate) >= this.histogramMetricWindow)) {
+        this.lastHistUpdate = this.lastUpdate;
+        this.resetAllHistogramBasedMetrics();
       }
 
       this.stores.pushMetric(this.metricsRecord);
@@ -357,6 +403,13 @@ public class RegionServerMetrics implements Updater {
           HFile.getPreadCompactionOpsAndReset(),
           HFile.getPreadCompactionTimeMsAndReset());
 
+      try {
+        fsReadLatencyP99.updateMetric();
+        fsCompactionReadLatencyP99.updateMetric();
+      } catch (UnsupportedOperationException e) {
+        LOG.error("Exception in Histogram based metric : " + e.getMessage());
+      }
+
       /* NOTE: removed HFile write latency.  2 reasons:
        * 1) Mixing HLog latencies are far higher priority since they're
        *      on-demand and HFile is used in background (compact/flush)
@@ -372,6 +425,8 @@ public class RegionServerMetrics implements Updater {
       }
 
       // push the result
+      this.fsReadLatencyP99.pushMetric(this.metricsRecord);
+      this.fsCompactionReadLatencyP99.pushMetric(this.metricsRecord);
       this.fsReadLatency.pushMetric(this.metricsRecord);
       this.fsCompactionReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
@@ -401,6 +456,11 @@ public class RegionServerMetrics implements Updater {
 
     }
     this.metricsRecord.update();
+  }
+
+  private void resetAllHistogramBasedMetrics() {
+    this.fsReadLatencyP99.refresh();
+    this.fsCompactionReadLatencyP99.refresh();
   }
 
   /**
