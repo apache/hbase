@@ -366,6 +366,7 @@ checkHadoop20Compile () {
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 hadoop2.0{color}.  The patch failed to compile against the hadoop 2.0 profile."
+    submitJiraComment 1
     cleanupAndExit 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
