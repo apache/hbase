@@ -10,66 +10,169 @@ public final class MapReduceProtos {
   }
   public interface ScanMetricsOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // repeated .NameInt64Pair metrics = 1;
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair> 
         getMetricsList();
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair getMetrics(int index);
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     int getMetricsCount();
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64PairOrBuilder> 
         getMetricsOrBuilderList();
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64PairOrBuilder getMetricsOrBuilder(
         int index);
   }
+  /**
+   * Protobuf type {@code ScanMetrics}
+   */
   public static final class ScanMetrics extends
       com.google.protobuf.GeneratedMessage
       implements ScanMetricsOrBuilder {
     // Use ScanMetrics.newBuilder() to construct.
-    private ScanMetrics(Builder builder) {
+    private ScanMetrics(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private ScanMetrics(boolean noInit) {}
-    
+    private ScanMetrics(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final ScanMetrics defaultInstance;
     public static ScanMetrics getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public ScanMetrics getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ScanMetrics(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                metrics_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              metrics_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          metrics_ = java.util.Collections.unmodifiableList(metrics_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.internal_static_ScanMetrics_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.internal_static_ScanMetrics_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.internal_static_ScanMetrics_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.class, org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<ScanMetrics> PARSER =
+        new com.google.protobuf.AbstractParser<ScanMetrics>() {
+      public ScanMetrics parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ScanMetrics(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ScanMetrics> getParserForType() {
+      return PARSER;
+    }
+
     // repeated .NameInt64Pair metrics = 1;
     public static final int METRICS_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair> metrics_;
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair> getMetricsList() {
       return metrics_;
     }
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64PairOrBuilder> 
         getMetricsOrBuilderList() {
       return metrics_;
     }
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     public int getMetricsCount() {
       return metrics_.size();
     }
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair getMetrics(int index) {
       return metrics_.get(index);
     }
+    /**
+     * <code>repeated .NameInt64Pair metrics = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64PairOrBuilder getMetricsOrBuilder(
         int index) {
       return metrics_.get(index);
     }
-    
+
     private void initFields() {
       metrics_ = java.util.Collections.emptyList();
     }
@@ -77,11 +180,11 @@ public final class MapReduceProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -90,12 +193,12 @@ public final class MapReduceProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       for (int i = 0; i < metrics_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -105,14 +208,14 @@ public final class MapReduceProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -122,7 +225,7 @@ public final class MapReduceProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics other = (org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics) obj;
-      
+
       boolean result = true;
       result = result && getMetricsList()
           .equals(other.getMetricsList());
@@ -130,9 +233,13 @@ public final class MapReduceProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getMetricsCount() > 0) {
@@ -140,89 +247,79 @@ public final class MapReduceProtos {
         hash = (53 * hash) + getMetricsList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code ScanMetrics}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetricsOrBuilder {
@@ -230,18 +327,21 @@ public final class MapReduceProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.internal_static_ScanMetrics_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.internal_static_ScanMetrics_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.internal_static_ScanMetrics_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.class, org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -253,7 +353,7 @@ public final class MapReduceProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (metricsBuilder_ == null) {
@@ -264,20 +364,20 @@ public final class MapReduceProtos {
         }
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.internal_static_ScanMetrics_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics build() {
         org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics result = buildPartial();
         if (!result.isInitialized()) {
@@ -285,17 +385,7 @@ public final class MapReduceProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics result = new org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics(this);
         int from_bitField0_ = bitField0_;
@@ -311,7 +401,7 @@ public final class MapReduceProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics)other);
@@ -320,7 +410,7 @@ public final class MapReduceProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.getDefaultInstance()) return this;
         if (metricsBuilder_ == null) {
@@ -352,46 +442,30 @@ public final class MapReduceProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addMetrics(subBuilder.buildPartial());
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // repeated .NameInt64Pair metrics = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair> metrics_ =
         java.util.Collections.emptyList();
@@ -401,10 +475,13 @@ public final class MapReduceProtos {
           bitField0_ |= 0x00000001;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64PairOrBuilder> metricsBuilder_;
-      
+
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair> getMetricsList() {
         if (metricsBuilder_ == null) {
           return java.util.Collections.unmodifiableList(metrics_);
@@ -412,6 +489,9 @@ public final class MapReduceProtos {
           return metricsBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public int getMetricsCount() {
         if (metricsBuilder_ == null) {
           return metrics_.size();
@@ -419,6 +499,9 @@ public final class MapReduceProtos {
           return metricsBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair getMetrics(int index) {
         if (metricsBuilder_ == null) {
           return metrics_.get(index);
@@ -426,6 +509,9 @@ public final class MapReduceProtos {
           return metricsBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public Builder setMetrics(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair value) {
         if (metricsBuilder_ == null) {
@@ -440,6 +526,9 @@ public final class MapReduceProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public Builder setMetrics(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder builderForValue) {
         if (metricsBuilder_ == null) {
@@ -451,6 +540,9 @@ public final class MapReduceProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public Builder addMetrics(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair value) {
         if (metricsBuilder_ == null) {
           if (value == null) {
@@ -464,6 +556,9 @@ public final class MapReduceProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public Builder addMetrics(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair value) {
         if (metricsBuilder_ == null) {
@@ -478,6 +573,9 @@ public final class MapReduceProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public Builder addMetrics(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder builderForValue) {
         if (metricsBuilder_ == null) {
@@ -489,6 +587,9 @@ public final class MapReduceProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public Builder addMetrics(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder builderForValue) {
         if (metricsBuilder_ == null) {
@@ -500,6 +601,9 @@ public final class MapReduceProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public Builder addAllMetrics(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair> values) {
         if (metricsBuilder_ == null) {
@@ -511,6 +615,9 @@ public final class MapReduceProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public Builder clearMetrics() {
         if (metricsBuilder_ == null) {
           metrics_ = java.util.Collections.emptyList();
@@ -521,6 +628,9 @@ public final class MapReduceProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public Builder removeMetrics(int index) {
         if (metricsBuilder_ == null) {
           ensureMetricsIsMutable();
@@ -531,10 +641,16 @@ public final class MapReduceProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder getMetricsBuilder(
           int index) {
         return getMetricsFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64PairOrBuilder getMetricsOrBuilder(
           int index) {
         if (metricsBuilder_ == null) {
@@ -542,6 +658,9 @@ public final class MapReduceProtos {
           return metricsBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64PairOrBuilder> 
            getMetricsOrBuilderList() {
         if (metricsBuilder_ != null) {
@@ -550,15 +669,24 @@ public final class MapReduceProtos {
           return java.util.Collections.unmodifiableList(metrics_);
         }
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder addMetricsBuilder() {
         return getMetricsFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.getDefaultInstance());
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder addMetricsBuilder(
           int index) {
         return getMetricsFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.getDefaultInstance());
       }
+      /**
+       * <code>repeated .NameInt64Pair metrics = 1;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder> 
            getMetricsBuilderList() {
         return getMetricsFieldBuilder().getBuilderList();
@@ -577,24 +705,24 @@ public final class MapReduceProtos {
         }
         return metricsBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:ScanMetrics)
     }
-    
+
     static {
       defaultInstance = new ScanMetrics(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:ScanMetrics)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_ScanMetrics_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_ScanMetrics_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -618,9 +746,7 @@ public final class MapReduceProtos {
           internal_static_ScanMetrics_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ScanMetrics_descriptor,
-              new java.lang.String[] { "Metrics", },
-              org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.class,
-              org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics.Builder.class);
+              new java.lang.String[] { "Metrics", });
           return null;
         }
       };
@@ -630,6 +756,6 @@ public final class MapReduceProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

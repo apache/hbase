@@ -184,7 +184,6 @@ import com.google.protobuf.Service;
 @InterfaceAudience.Private
 public class HRegion implements HeapSize { // , Writable{
   public static final Log LOG = LogFactory.getLog(HRegion.class);
-  private static final String MERGEDIR = ".merges";
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";

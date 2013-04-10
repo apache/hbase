@@ -10,66 +10,169 @@ public final class MultiRowMutation {
   }
   public interface MultiMutateRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // repeated .MutationProto mutationRequest = 1;
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> 
         getMutationRequestList();
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutationRequest(int index);
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     int getMutationRequestCount();
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder> 
         getMutationRequestOrBuilderList();
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationRequestOrBuilder(
         int index);
   }
+  /**
+   * Protobuf type {@code MultiMutateRequest}
+   */
   public static final class MultiMutateRequest extends
       com.google.protobuf.GeneratedMessage
       implements MultiMutateRequestOrBuilder {
     // Use MultiMutateRequest.newBuilder() to construct.
-    private MultiMutateRequest(Builder builder) {
+    private MultiMutateRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private MultiMutateRequest(boolean noInit) {}
-    
+    private MultiMutateRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final MultiMutateRequest defaultInstance;
     public static MultiMutateRequest getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public MultiMutateRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private MultiMutateRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                mutationRequest_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              mutationRequest_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          mutationRequest_ = java.util.Collections.unmodifiableList(mutationRequest_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateRequest_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateRequest_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.class, org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<MultiMutateRequest> PARSER =
+        new com.google.protobuf.AbstractParser<MultiMutateRequest>() {
+      public MultiMutateRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new MultiMutateRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<MultiMutateRequest> getParserForType() {
+      return PARSER;
+    }
+
     // repeated .MutationProto mutationRequest = 1;
     public static final int MUTATIONREQUEST_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> mutationRequest_;
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> getMutationRequestList() {
       return mutationRequest_;
     }
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder> 
         getMutationRequestOrBuilderList() {
       return mutationRequest_;
     }
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     public int getMutationRequestCount() {
       return mutationRequest_.size();
     }
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutationRequest(int index) {
       return mutationRequest_.get(index);
     }
+    /**
+     * <code>repeated .MutationProto mutationRequest = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationRequestOrBuilder(
         int index) {
       return mutationRequest_.get(index);
     }
-    
+
     private void initFields() {
       mutationRequest_ = java.util.Collections.emptyList();
     }
@@ -77,7 +180,7 @@ public final class MultiRowMutation {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       for (int i = 0; i < getMutationRequestCount(); i++) {
         if (!getMutationRequest(i).isInitialized()) {
           memoizedIsInitialized = 0;
@@ -87,7 +190,7 @@ public final class MultiRowMutation {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -96,12 +199,12 @@ public final class MultiRowMutation {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       for (int i = 0; i < mutationRequest_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -111,14 +214,14 @@ public final class MultiRowMutation {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -128,7 +231,7 @@ public final class MultiRowMutation {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest other = (org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest) obj;
-      
+
       boolean result = true;
       result = result && getMutationRequestList()
           .equals(other.getMutationRequestList());
@@ -136,9 +239,13 @@ public final class MultiRowMutation {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getMutationRequestCount() > 0) {
@@ -146,89 +253,79 @@ public final class MultiRowMutation {
         hash = (53 * hash) + getMutationRequestList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code MultiMutateRequest}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequestOrBuilder {
@@ -236,18 +333,21 @@ public final class MultiRowMutation {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateRequest_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateRequest_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.class, org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -259,7 +359,7 @@ public final class MultiRowMutation {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (mutationRequestBuilder_ == null) {
@@ -270,20 +370,20 @@ public final class MultiRowMutation {
         }
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateRequest_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest build() {
         org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -291,17 +391,7 @@ public final class MultiRowMutation {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest result = new org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest(this);
         int from_bitField0_ = bitField0_;
@@ -317,7 +407,7 @@ public final class MultiRowMutation {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest)other);
@@ -326,7 +416,7 @@ public final class MultiRowMutation {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.getDefaultInstance()) return this;
         if (mutationRequestBuilder_ == null) {
@@ -358,7 +448,7 @@ public final class MultiRowMutation {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         for (int i = 0; i < getMutationRequestCount(); i++) {
           if (!getMutationRequest(i).isInitialized()) {
@@ -368,42 +458,26 @@ public final class MultiRowMutation {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addMutationRequest(subBuilder.buildPartial());
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // repeated .MutationProto mutationRequest = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> mutationRequest_ =
         java.util.Collections.emptyList();
@@ -413,10 +487,13 @@ public final class MultiRowMutation {
           bitField0_ |= 0x00000001;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder> mutationRequestBuilder_;
-      
+
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> getMutationRequestList() {
         if (mutationRequestBuilder_ == null) {
           return java.util.Collections.unmodifiableList(mutationRequest_);
@@ -424,6 +501,9 @@ public final class MultiRowMutation {
           return mutationRequestBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public int getMutationRequestCount() {
         if (mutationRequestBuilder_ == null) {
           return mutationRequest_.size();
@@ -431,6 +511,9 @@ public final class MultiRowMutation {
           return mutationRequestBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutationRequest(int index) {
         if (mutationRequestBuilder_ == null) {
           return mutationRequest_.get(index);
@@ -438,6 +521,9 @@ public final class MultiRowMutation {
           return mutationRequestBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public Builder setMutationRequest(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto value) {
         if (mutationRequestBuilder_ == null) {
@@ -452,6 +538,9 @@ public final class MultiRowMutation {
         }
         return this;
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public Builder setMutationRequest(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder builderForValue) {
         if (mutationRequestBuilder_ == null) {
@@ -463,6 +552,9 @@ public final class MultiRowMutation {
         }
         return this;
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public Builder addMutationRequest(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto value) {
         if (mutationRequestBuilder_ == null) {
           if (value == null) {
@@ -476,6 +568,9 @@ public final class MultiRowMutation {
         }
         return this;
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public Builder addMutationRequest(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto value) {
         if (mutationRequestBuilder_ == null) {
@@ -490,6 +585,9 @@ public final class MultiRowMutation {
         }
         return this;
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public Builder addMutationRequest(
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder builderForValue) {
         if (mutationRequestBuilder_ == null) {
@@ -501,6 +599,9 @@ public final class MultiRowMutation {
         }
         return this;
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public Builder addMutationRequest(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder builderForValue) {
         if (mutationRequestBuilder_ == null) {
@@ -512,6 +613,9 @@ public final class MultiRowMutation {
         }
         return this;
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public Builder addAllMutationRequest(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> values) {
         if (mutationRequestBuilder_ == null) {
@@ -523,6 +627,9 @@ public final class MultiRowMutation {
         }
         return this;
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public Builder clearMutationRequest() {
         if (mutationRequestBuilder_ == null) {
           mutationRequest_ = java.util.Collections.emptyList();
@@ -533,6 +640,9 @@ public final class MultiRowMutation {
         }
         return this;
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public Builder removeMutationRequest(int index) {
         if (mutationRequestBuilder_ == null) {
           ensureMutationRequestIsMutable();
@@ -543,10 +653,16 @@ public final class MultiRowMutation {
         }
         return this;
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder getMutationRequestBuilder(
           int index) {
         return getMutationRequestFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder getMutationRequestOrBuilder(
           int index) {
         if (mutationRequestBuilder_ == null) {
@@ -554,6 +670,9 @@ public final class MultiRowMutation {
           return mutationRequestBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProtoOrBuilder> 
            getMutationRequestOrBuilderList() {
         if (mutationRequestBuilder_ != null) {
@@ -562,15 +681,24 @@ public final class MultiRowMutation {
           return java.util.Collections.unmodifiableList(mutationRequest_);
         }
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder addMutationRequestBuilder() {
         return getMutationRequestFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance());
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder addMutationRequestBuilder(
           int index) {
         return getMutationRequestFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDefaultInstance());
       }
+      /**
+       * <code>repeated .MutationProto mutationRequest = 1;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder> 
            getMutationRequestBuilderList() {
         return getMutationRequestFieldBuilder().getBuilderList();
@@ -589,84 +717,145 @@ public final class MultiRowMutation {
         }
         return mutationRequestBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:MultiMutateRequest)
     }
-    
+
     static {
       defaultInstance = new MultiMutateRequest(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:MultiMutateRequest)
   }
-  
+
   public interface MultiMutateResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
+  /**
+   * Protobuf type {@code MultiMutateResponse}
+   */
   public static final class MultiMutateResponse extends
       com.google.protobuf.GeneratedMessage
       implements MultiMutateResponseOrBuilder {
     // Use MultiMutateResponse.newBuilder() to construct.
-    private MultiMutateResponse(Builder builder) {
+    private MultiMutateResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private MultiMutateResponse(boolean noInit) {}
-    
+    private MultiMutateResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final MultiMutateResponse defaultInstance;
     public static MultiMutateResponse getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public MultiMutateResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private MultiMutateResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateResponse_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateResponse_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.class, org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<MultiMutateResponse> PARSER =
+        new com.google.protobuf.AbstractParser<MultiMutateResponse>() {
+      public MultiMutateResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new MultiMutateResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<MultiMutateResponse> getParserForType() {
+      return PARSER;
+    }
+
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -676,101 +865,95 @@ public final class MultiRowMutation {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse other = (org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse) obj;
-      
+
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code MultiMutateResponse}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponseOrBuilder {
@@ -778,18 +961,21 @@ public final class MultiRowMutation {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateResponse_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateResponse_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.class, org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -800,25 +986,25 @@ public final class MultiRowMutation {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateResponse_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse build() {
         org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -826,23 +1012,13 @@ public final class MultiRowMutation {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse result = new org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse(this);
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse)other);
@@ -851,68 +1027,64 @@ public final class MultiRowMutation {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
-      
+
       // @@protoc_insertion_point(builder_scope:MultiMutateResponse)
     }
-    
+
     static {
       defaultInstance = new MultiMutateResponse(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:MultiMutateResponse)
   }
-  
+
+  /**
+   * Protobuf service {@code MultiRowMutationService}
+   */
   public static abstract class MultiRowMutationService
       implements com.google.protobuf.Service {
     protected MultiRowMutationService() {}
-    
+
     public interface Interface {
+      /**
+       * <code>rpc mutateRows(.MultiMutateRequest) returns (.MultiMutateResponse);</code>
+       */
       public abstract void mutateRows(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse> done);
-      
+
     }
-    
+
     public static com.google.protobuf.Service newReflectiveService(
         final Interface impl) {
       return new MultiRowMutationService() {
@@ -923,10 +1095,10 @@ public final class MultiRowMutation {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse> done) {
           impl.mutateRows(controller, request, done);
         }
-        
+
       };
     }
-    
+
     public static com.google.protobuf.BlockingService
         newReflectiveBlockingService(final BlockingInterface impl) {
       return new com.google.protobuf.BlockingService() {
@@ -934,7 +1106,7 @@ public final class MultiRowMutation {
             getDescriptorForType() {
           return getDescriptor();
         }
-        
+
         public final com.google.protobuf.Message callBlockingMethod(
             com.google.protobuf.Descriptors.MethodDescriptor method,
             com.google.protobuf.RpcController controller,
@@ -952,7 +1124,7 @@ public final class MultiRowMutation {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
         public final com.google.protobuf.Message
             getRequestPrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -968,7 +1140,7 @@ public final class MultiRowMutation {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
         public final com.google.protobuf.Message
             getResponsePrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -984,15 +1156,18 @@ public final class MultiRowMutation {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
       };
     }
-    
+
+    /**
+     * <code>rpc mutateRows(.MultiMutateRequest) returns (.MultiMutateResponse);</code>
+     */
     public abstract void mutateRows(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse> done);
-    
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -1002,7 +1177,7 @@ public final class MultiRowMutation {
         getDescriptorForType() {
       return getDescriptor();
     }
-    
+
     public final void callMethod(
         com.google.protobuf.Descriptors.MethodDescriptor method,
         com.google.protobuf.RpcController controller,
@@ -1024,7 +1199,7 @@ public final class MultiRowMutation {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public final com.google.protobuf.Message
         getRequestPrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -1040,7 +1215,7 @@ public final class MultiRowMutation {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public final com.google.protobuf.Message
         getResponsePrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -1056,23 +1231,23 @@ public final class MultiRowMutation {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public static Stub newStub(
         com.google.protobuf.RpcChannel channel) {
       return new Stub(channel);
     }
-    
+
     public static final class Stub extends org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiRowMutationService implements Interface {
       private Stub(com.google.protobuf.RpcChannel channel) {
         this.channel = channel;
       }
-      
+
       private final com.google.protobuf.RpcChannel channel;
-      
+
       public com.google.protobuf.RpcChannel getChannel() {
         return channel;
       }
-      
+
       public  void mutateRows(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest request,
@@ -1088,26 +1263,26 @@ public final class MultiRowMutation {
             org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.getDefaultInstance()));
       }
     }
-    
+
     public static BlockingInterface newBlockingStub(
         com.google.protobuf.BlockingRpcChannel channel) {
       return new BlockingStub(channel);
     }
-    
+
     public interface BlockingInterface {
       public org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse mutateRows(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest request)
           throws com.google.protobuf.ServiceException;
     }
-    
+
     private static final class BlockingStub implements BlockingInterface {
       private BlockingStub(com.google.protobuf.BlockingRpcChannel channel) {
         this.channel = channel;
       }
-      
+
       private final com.google.protobuf.BlockingRpcChannel channel;
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse mutateRows(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest request)
@@ -1118,10 +1293,12 @@ public final class MultiRowMutation {
           request,
           org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.getDefaultInstance());
       }
-      
+
     }
+
+    // @@protoc_insertion_point(class_scope:MultiRowMutationService)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_MultiMutateRequest_descriptor;
   private static
@@ -1132,7 +1309,7 @@ public final class MultiRowMutation {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_MultiMutateResponse_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -1159,17 +1336,13 @@ public final class MultiRowMutation {
           internal_static_MultiMutateRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiMutateRequest_descriptor,
-              new java.lang.String[] { "MutationRequest", },
-              org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.class,
-              org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest.Builder.class);
+              new java.lang.String[] { "MutationRequest", });
           internal_static_MultiMutateResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_MultiMutateResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiMutateResponse_descriptor,
-              new java.lang.String[] { },
-              org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.class,
-              org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse.Builder.class);
+              new java.lang.String[] { });
           return null;
         }
       };
@@ -1179,6 +1352,6 @@ public final class MultiRowMutation {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }
