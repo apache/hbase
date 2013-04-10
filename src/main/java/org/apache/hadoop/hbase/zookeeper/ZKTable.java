@@ -180,13 +180,21 @@ public class ZKTable {
   
   /**
    * If the table is found in ENABLING state the inmemory state is removed.
-   * This helps in cases where CreateTable is to be retried by the client incase of failures
+   * This helps in cases where CreateTable is to be retried by the client incase of failures.
+   * If deleteZNode is true - the znode is also deleted
    * @param tableName
+   * @param deleteZNode
+   * @throws KeeperException
    */
-  public void removeEnablingTable(final String tableName) {
+  public void removeEnablingTable(final String tableName, boolean deleteZNode)
+      throws KeeperException {
     synchronized (this.cache) {
       if (isEnablingTable(tableName)) {
         this.cache.remove(tableName);
+        if (deleteZNode) {
+          ZKUtil.deleteNodeFailSilent(this.watcher,
+              ZKUtil.joinZNode(this.watcher.masterTableZNode, tableName));
+        }
       }
 
     }

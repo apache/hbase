@@ -46,7 +46,9 @@ import org.apache.hadoop.hbase.master.TestMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -57,16 +59,17 @@ public class TestCreateTableHandler {
   private static final Log LOG = LogFactory.getLog(TestCreateTableHandler.class);
   private static final byte[] TABLENAME = Bytes.toBytes("TestCreateTableHandler");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
-  public static boolean throwException = false;
+  private static boolean throwException = false;
 
-  @BeforeClass
-  public static void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
-  public static void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+    throwException = true;
   }
 
   @Test
@@ -94,6 +97,34 @@ public class TestCreateTableHandler {
     }
     assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(TABLENAME));
 
+  }
+  
+  @Test (timeout=10000)
+  public void testMasterRestartAfterEnablingNodeIsCreated() throws Exception {
+    byte[] tableName = Bytes.toBytes("testMasterRestartAfterEnablingNodeIsCreated");
+    final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    final HMaster m = cluster.getMaster();
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(FAMILYNAME));
+    final HRegionInfo[] hRegionInfos = new HRegionInfo[] { new HRegionInfo(desc.getName(), null,
+        null) };
+    CustomCreateTableHandler handler = new CustomCreateTableHandler(m, m.getMasterFileSystem(),
+        m.getServerManager(), desc, cluster.getConfiguration(), hRegionInfos,
+        m.getCatalogTracker(), m.getAssignmentManager());
+    throwException = true;
+    handler.process();
+    abortAndStartNewMaster(cluster);
+    assertTrue(cluster.getLiveMasterThreads().size() == 1);
+    
+  }
+  
+  private void abortAndStartNewMaster(final MiniHBaseCluster cluster) throws IOException {
+    cluster.abortMaster(0);
+    cluster.waitOnMaster(0);
+    LOG.info("Starting new master");
+    cluster.startMaster();
+    LOG.info("Waiting for master to become active.");
+    cluster.waitForActiveAndReadyMaster();
   }
 
   private static class CustomCreateTableHandler extends CreateTableHandler {

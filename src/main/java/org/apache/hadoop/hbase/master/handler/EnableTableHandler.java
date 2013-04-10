@@ -66,7 +66,18 @@ public class EnableTableHandler extends EventHandler {
     this.retainAssignment = skipTableStateCheck;
     // Check if table exists
     if (!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
-      throw new TableNotFoundException(Bytes.toString(tableName));
+      // retainAssignment is true only during recovery. In normal case it is
+      // false
+      if (!this.retainAssignment) {
+        throw new TableNotFoundException(tableNameStr);
+      }
+      try {
+        this.assignmentManager.getZKTable().removeEnablingTable(tableNameStr, true);
+      } catch (KeeperException e) {
+        // TODO : Use HBCK to clear such nodes
+        LOG.warn("Failed to delete the ENABLING node for the table " + tableNameStr
+            + ".  The table will remain unusable. Run HBCK to manually fix the problem.");
+      }
     }
 
     // There could be multiple client requests trying to disable or enable
