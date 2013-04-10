@@ -36,6 +36,11 @@ module Hbase
 
       # TODO: need to validate user name
 
+      # Verify that the specified permission is valid
+      if (permissions == nil || permissions.length == 0)
+        raise(ArgumentError, "Ivalid permission: no actions associated with user")
+      end
+
       if (table_name != nil)
         # Table should exist
         raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
