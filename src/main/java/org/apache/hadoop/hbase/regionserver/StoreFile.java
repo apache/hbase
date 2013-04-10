@@ -123,7 +123,7 @@ public class StoreFile extends SchemaConfigured {
       Bytes.toBytes("EXCLUDE_FROM_MINOR_COMPACTION");
 
   /** Bloom filter Type in FileInfo */
-  static final byte[] BLOOM_FILTER_TYPE_KEY =
+  public static final byte[] BLOOM_FILTER_TYPE_KEY =
       Bytes.toBytes("BLOOM_FILTER_TYPE");
 
   /** Delete Family Count in FileInfo */

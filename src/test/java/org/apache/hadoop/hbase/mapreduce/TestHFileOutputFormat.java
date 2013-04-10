@@ -33,6 +33,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.Random;
 
@@ -57,6 +59,7 @@ import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -553,29 +556,23 @@ public class TestHFileOutputFormat  {
   }
 
   /**
-   * Test that {@link HFileOutputFormat} RecordWriter uses compression settings
-   * from the column family descriptor
+   * Test that {@link HFileOutputFormat} RecordWriter uses compression and
+   * bloom filter settings from the column family descriptor
    */
   @Test
-  public void testColumnFamilyCompression() throws Exception {
+  public void testColumnFamilySettings() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
-    Path dir =
-        util.getDataTestDir("testColumnFamilyCompression");
+    Path dir = util.getDataTestDir("testColumnFamilySettings");
 
+    // Setup table descriptor
     HTable table = Mockito.mock(HTable.class);
-
-    Map<String, Compression.Algorithm> configuredCompression =
-      new HashMap<String, Compression.Algorithm>();
-    Compression.Algorithm[] supportedAlgos = getSupportedCompressionAlgorithms();
-
-    int familyIndex = 0;
-    for (byte[] family : FAMILIES) {
-      configuredCompression.put(Bytes.toString(family),
-                                supportedAlgos[familyIndex++ % supportedAlgos.length]);
+    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
+    Mockito.doReturn(htd).when(table).getTableDescriptor();
+    for (HColumnDescriptor hcd: this.util.generateColumnDescriptors()) {
+      htd.addFamily(hcd);
     }
-    setupMockColumnFamilies(table, configuredCompression);
 
     // set up the table to return some mock keys
     setupMockStartKeys(table);
@@ -594,75 +591,45 @@ public class TestHFileOutputFormat  {
       writer = hof.getRecordWriter(context);
 
       // write out random rows
-      writeRandomKeyValues(writer, context, ROWSPERSPLIT);
+      writeRandomKeyValues(writer, context, htd.getFamiliesKeys(), ROWSPERSPLIT);
       writer.close(context);
 
       // Make sure that a directory was created for every CF
-      FileSystem fileSystem = dir.getFileSystem(conf);
+      FileSystem fs = dir.getFileSystem(conf);
 
       // commit so that the filesystem has one directory per column family
       hof.getOutputCommitter(context).commitTask(context);
       hof.getOutputCommitter(context).commitJob(context);
-      for (byte[] family : FAMILIES) {
-        String familyStr = new String(family);
-        boolean found = false;
-        for (FileStatus f : fileSystem.listStatus(dir)) {
+      FileStatus[] families = FSUtils.listStatus(fs, dir, new FSUtils.FamilyDirFilter(fs));
+      assertEquals(htd.getFamilies().size(), families.length);
+      for (FileStatus f : families) {
+        String familyStr = f.getPath().getName();
+        HColumnDescriptor hcd = htd.getFamily(Bytes.toBytes(familyStr));
+        // verify that the compression on this file matches the configured
+        // compression
+        Path dataFilePath = fs.listStatus(f.getPath())[0].getPath();
+        Reader reader = HFile.createReader(fs, dataFilePath, new CacheConfig(conf));
+        Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 
-          if (Bytes.toString(family).equals(f.getPath().getName())) {
-            // we found a matching directory
-            found = true;
-
-            // verify that the compression on this file matches the configured
-            // compression
-            Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
-            Reader reader = HFile.createReader(fileSystem, dataFilePath,
-                new CacheConfig(conf));
-            reader.loadFileInfo();
-            assertEquals("Incorrect compression used for column family " + familyStr
-                         + "(reader: " + reader + ")",
-                         configuredCompression.get(familyStr), reader.getCompressionAlgorithm());
-            break;
-          }
-        }
-
-        if (!found) {
-          fail("HFile for column family " + familyStr + " not found");
-        }
+        byte[] bloomFilter = fileInfo.get(StoreFile.BLOOM_FILTER_TYPE_KEY);
+        if (bloomFilter == null) bloomFilter = Bytes.toBytes("NONE");
+        assertEquals("Incorrect bloom filter used for column family " + familyStr +
+          "(reader: " + reader + ")",
+          hcd.getBloomFilterType(), StoreFile.BloomType.valueOf(Bytes.toString(bloomFilter)));
+        assertEquals("Incorrect compression used for column family " + familyStr +
+          "(reader: " + reader + ")", hcd.getCompression(), reader.getCompressionAlgorithm());
       }
-
     } finally {
       dir.getFileSystem(conf).delete(dir, true);
     }
   }
 
-
-  /**
-   * @return
-   */
-  private Compression.Algorithm[] getSupportedCompressionAlgorithms() {
-    String[] allAlgos = HFile.getSupportedCompressionAlgorithms();
-    List<Compression.Algorithm> supportedAlgos = Lists.newArrayList();
-
-    for (String algoName : allAlgos) {
-      try {
-        Compression.Algorithm algo = Compression.getCompressionAlgorithmByName(algoName);
-        algo.getCompressor();
-        supportedAlgos.add(algo);
-      }catch (Exception e) {
-        // this algo is not available
-      }
-    }
-
-    return supportedAlgos.toArray(new Compression.Algorithm[0]);
-  }
-
-
   /**
    * Write random values to the writer assuming a table created using
    * {@link #FAMILIES} as column family descriptors
    */
-  private void writeRandomKeyValues(RecordWriter<ImmutableBytesWritable, KeyValue> writer, TaskAttemptContext context,
-      int numRows)
+  private void writeRandomKeyValues(RecordWriter<ImmutableBytesWritable, KeyValue> writer,
+      TaskAttemptContext context, Set<byte[]> families, int numRows)
       throws IOException, InterruptedException {
     byte keyBytes[] = new byte[Bytes.SIZEOF_INT];
     int valLength = 10;
@@ -678,7 +645,7 @@ public class TestHFileOutputFormat  {
       random.nextBytes(valBytes);
       ImmutableBytesWritable key = new ImmutableBytesWritable(keyBytes);
 
-      for (byte[] family : TestHFileOutputFormat.FAMILIES) {
+      for (byte[] family : families) {
         KeyValue kv = new KeyValue(keyBytes, family,
             PerformanceEvaluation.QUALIFIER_NAME, valBytes);
         writer.write(key, kv);
