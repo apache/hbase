@@ -44,12 +44,10 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TestMasterFailover;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -103,25 +101,12 @@ public class TestRSKilledWhenMasterInitializing {
       super(conf);
     }
 
-    @Override
-    protected void splitLogAfterStartup(MasterFileSystem mfs) {
-      super.splitLogAfterStartup(mfs);
-      logSplit = true;
-      // If "TestingMaster.sleep" is set, sleep after log split.
-      if (getConfiguration().getBoolean("TestingMaster.sleep", false)) {
-        int duration = getConfiguration().getInt(
-            "TestingMaster.sleep.duration", 0);
-        Threads.sleep(duration);
-      }
-    }
-
-
     public boolean isLogSplitAfterStartup() {
       return logSplit;
     }
   }
 
-  @Test(timeout = 120000)
+  @Test(timeout = 180000)
   public void testCorrectnessWhenMasterFailOver() throws Exception {
     final byte[] TABLENAME = Bytes.toBytes("testCorrectnessWhenMasterFailOver");
     final byte[] FAMILY = Bytes.toBytes("family");
@@ -164,7 +149,7 @@ public class TestRSKilledWhenMasterInitializing {
     /* NO.1 .META. region correctness */
     // First abort master
     abortMaster(cluster);
-    TestingMaster master = startMasterAndWaitUntilLogSplit(cluster);
+    TestingMaster master = startMasterAndWaitTillMetaRegionAssignment(cluster);
 
     // Second kill meta server
     int metaServerNum = cluster.getServerWithMeta();
@@ -195,7 +180,7 @@ public class TestRSKilledWhenMasterInitializing {
     if (rootServerNum != metaServerNum) {
       // First abort master
       abortMaster(cluster);
-      master = startMasterAndWaitUntilLogSplit(cluster);
+      master = startMasterAndWaitTillMetaRegionAssignment(cluster);
 
       // Second kill meta server
       HRegionServer rootRS = cluster.getRegionServer(rootServerNum);
@@ -214,6 +199,7 @@ public class TestRSKilledWhenMasterInitializing {
       // Third check whether data is correct in meta region
       assertTrue(hbaseAdmin.isTableAvailable(TABLENAME));
     }
+
 
     /* NO.3 data region correctness */
     ServerManager serverManager = cluster.getMaster().getServerManager();
@@ -274,7 +260,7 @@ public class TestRSKilledWhenMasterInitializing {
 
     // Stop the master
     abortMaster(cluster);
-    master = startMasterAndWaitUntilLogSplit(cluster);
+    master = startMasterAndWaitTillMetaRegionAssignment(cluster);
     deadRS.kill();
     deadRS.join();
     waitUntilMasterIsInitialized(master);
@@ -302,20 +288,21 @@ public class TestRSKilledWhenMasterInitializing {
     LOG.debug("Master is aborted");
   }
 
-  private TestingMaster startMasterAndWaitUntilLogSplit(MiniHBaseCluster cluster)
+  private TestingMaster startMasterAndWaitTillMetaRegionAssignment(MiniHBaseCluster cluster)
       throws IOException, InterruptedException {
     TestingMaster master = (TestingMaster) cluster.startMaster().getMaster();
-    while (!master.isLogSplitAfterStartup()) {
+    while (!master.isInitializationStartsMetaRegoinAssignment()) {
       Thread.sleep(100);
     }
-    LOG.debug("splitted:" + master.isLogSplitAfterStartup() + ",initialized:"
-        + master.isInitialized());
     return master;
   }
 
   private void waitUntilMasterIsInitialized(HMaster master)
       throws InterruptedException {
     while (!master.isInitialized()) {
+      Thread.sleep(100);
+    }
+    while (master.getServerManager().areDeadServersInProgress()) {
       Thread.sleep(100);
     }
     LOG.debug("master isInitialized");

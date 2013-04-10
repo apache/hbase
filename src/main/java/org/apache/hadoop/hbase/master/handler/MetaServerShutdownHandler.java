@@ -84,6 +84,13 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
           LOG.info("ROOT has been assigned to otherwhere, skip assigning.");
         }
       }
+      
+      if(!this.services.isServerShutdownHandlerEnabled()) {
+        // resubmit in case we're in master initialization and SSH hasn't been enabled yet.
+        this.services.getExecutorService().submit(this);
+        this.deadServers.add(serverName);
+        return;
+      }
   
       // Carrying meta?
       if (isCarryingMeta()) {

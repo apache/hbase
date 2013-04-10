@@ -119,6 +119,12 @@ public class ServerManager {
   private Set<ServerName> deadNotExpiredServers = new HashSet<ServerName>();
 
   /**
+   * Flag to enable SSH for ROOT region server. It's used in master initialization to enable SSH for
+   * ROOT before META assignment.
+   */
+  private boolean isSSHForRootEnabled = false;
+
+  /**
    * Constructor.
    * @param master
    * @param services
@@ -373,7 +379,8 @@ public class ServerManager {
    * shutdown processing.
    */
   public synchronized void expireServer(final ServerName serverName) {
-    if (!services.isServerShutdownHandlerEnabled()) {
+    boolean carryingRoot = services.getAssignmentManager().isCarryingRoot(serverName);
+    if (!services.isServerShutdownHandlerEnabled() && (!carryingRoot || !this.isSSHForRootEnabled)) {
       LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
           + "delay expiring server " + serverName);
       this.deadNotExpiredServers.add(serverName);
@@ -382,7 +389,6 @@ public class ServerManager {
     if (!this.onlineServers.containsKey(serverName)) {
       LOG.warn("Received expiration of " + serverName +
         " but server is not currently online");
-      return;
     }
     if (this.deadservers.contains(serverName)) {
       // TODO: Can this happen?  It shouldn't be online in this case?
@@ -410,7 +416,6 @@ public class ServerManager {
       return;
     }
 
-    boolean carryingRoot = services.getAssignmentManager().isCarryingRoot(serverName);
     boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName);
     if (carryingRoot || carryingMeta) {
       this.services.getExecutorService().submit(new MetaServerShutdownHandler(this.master,
@@ -438,6 +443,33 @@ public class ServerManager {
       expireServer(serverIterator.next());
       serverIterator.remove();
     }
+  }
+
+  /**
+   * Enable SSH for ROOT region server and expire ROOT which died during master's initialization. It
+   * will be called before Meta assignment.
+   * @throws IOException
+   */
+  void enableSSHForRoot() throws IOException {
+    if (this.isSSHForRootEnabled) {
+      return;
+    }
+    this.isSSHForRootEnabled = true;
+    Iterator<ServerName> serverIterator = deadNotExpiredServers.iterator();
+    while (serverIterator.hasNext()) {
+      ServerName curServerName = serverIterator.next();
+      if (services.getAssignmentManager().isCarryingRoot(curServerName)) {
+        expireServer(curServerName);
+        serverIterator.remove();
+      }
+    }
+  }
+
+  /**
+   * Reset flag isSSHForRootEnabled to false
+   */
+  void disableSSHForRoot() {
+    this.isSSHForRootEnabled = false;
   }
 
   /*

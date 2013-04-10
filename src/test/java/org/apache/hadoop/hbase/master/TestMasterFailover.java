@@ -611,7 +611,7 @@ public class TestMasterFailover {
    * </ul>
    * @throws Exception
    */
-  @Test (timeout=180000)
+  @Test(timeout = 180000)
   public void testMasterFailoverWithMockedRITOnDeadRS() throws Exception {
 
     final int NUM_MASTERS = 1;
@@ -1028,6 +1028,141 @@ public class TestMasterFailover {
 
     // Done, shutdown the cluster
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test(timeout = 180000)
+  public void testRSKilledWithMockedOpeningRITGoingToDeadRS() throws Exception {
+    final int NUM_MASTERS = 1;
+    final int NUM_RS = 2;
+
+    // Create config to use for this cluster
+    Configuration conf = HBaseConfiguration.create();
+    // Need to drop the timeout much lower
+    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 10000);
+    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 30000);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
+
+    // Create and start the cluster
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    log("Cluster started");
+
+    // Create a ZKW to use in the test
+    ZooKeeperWatcher zkw =
+        new ZooKeeperWatcher(TEST_UTIL.getConfiguration(), "unittest", new Abortable() {
+
+          @Override
+          public void abort(String why, Throwable e) {
+            LOG.error("Fatal ZK Error: " + why, e);
+            org.junit.Assert.assertFalse("Fatal ZK error", true);
+          }
+
+          @Override
+          public boolean isAborted() {
+            return false;
+          }
+
+        });
+
+    // get all the master threads
+    List<MasterThread> masterThreads = cluster.getMasterThreads();
+    assertEquals(1, masterThreads.size());
+
+    // only one master thread, let's wait for it to be initialized
+    assertTrue(cluster.waitForActiveAndReadyMaster());
+    HMaster master = masterThreads.get(0).getMaster();
+    assertTrue(master.isActiveMaster());
+    assertTrue(master.isInitialized());
+
+    // disable load balancing on this master
+    master.balanceSwitch(false);
+
+    // create two tables in META, each with 30 regions
+    byte[] FAMILY = Bytes.toBytes("family");
+    byte[][] SPLIT_KEYS =
+        TEST_UTIL.getRegionSplitStartKeys(Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 15);
+
+    FileSystem filesystem = FileSystem.get(conf);
+    Path rootdir = filesystem.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
+
+    byte[] disabledTable = Bytes.toBytes("disabledTable");
+    HTableDescriptor htdDisabled = new HTableDescriptor(disabledTable);
+    htdDisabled.addFamily(new HColumnDescriptor(FAMILY));
+    // Write the .tableinfo
+    FSTableDescriptors.createTableDescriptor(filesystem, rootdir, htdDisabled);
+    HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getName(), null, null);
+    createRegion(hriDisabled, rootdir, conf, htdDisabled);
+
+    List<HRegionInfo> tableRegions =
+        TEST_UTIL.createMultiRegionsInMeta(TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
+
+    log("Regions in META have been created");
+
+    // at this point we only expect 2 regions to be assigned out (catalogs)
+    assertEquals(2, cluster.countServedRegions());
+
+    // The first RS will stay online
+    List<RegionServerThread> regionservers = cluster.getRegionServerThreads();
+    HRegionServer hrs = regionservers.get(0).getRegionServer();
+
+    // The second RS is going to be hard-killed
+    RegionServerThread hrsDeadThread = regionservers.get(1);
+    HRegionServer hrsDead = hrsDeadThread.getRegionServer();
+    ServerName deadServerName = hrsDead.getServerName();
+
+    // we'll need some regions to already be assigned out properly on live RS
+    List<HRegionInfo> assignedRegionsOnLiveRS = new ArrayList<HRegionInfo>();
+    assignedRegionsOnLiveRS.addAll(tableRegions.subList(0, 3));
+    tableRegions.removeAll(assignedRegionsOnLiveRS);
+
+    // now actually assign them
+    for (HRegionInfo hri : assignedRegionsOnLiveRS) {
+      master.assignmentManager.regionPlans.put(hri.getEncodedName(),
+        new RegionPlan(hri, null, hrs.getServerName()));
+      master.assignRegion(hri);
+    }
+
+    log("Waiting for assignment to finish");
+    ZKAssign.blockUntilNoRIT(zkw);
+    master.assignmentManager.waitUntilNoRegionsInTransition(60000);
+    log("Assignment completed");
+
+    // Due to master.assignRegion(hri) could fail to assign a region to a specified RS
+    // therefore, we need make sure that regions are in the expected RS
+    verifyRegionLocation(hrs, assignedRegionsOnLiveRS);
+
+    assertTrue(" Table must be enabled.", master.getAssignmentManager().getZKTable()
+        .isEnabledTable("disabledTable"));
+
+    assertTrue(" Didn't get enough regions of enabledTalbe on live rs.",
+      assignedRegionsOnLiveRS.size() >= 1);
+
+    // Disable the disabledTable in ZK
+    ZKTable zktable = master.assignmentManager.getZKTable();
+    zktable.setDisablingTable("disabledTable");
+
+    // RS was opening a region of disabled table then died
+    HRegionInfo region = assignedRegionsOnLiveRS.remove(0);
+    master.assignmentManager.regionOffline(region);
+    master.assignmentManager.regionsInTransition.put(region.getEncodedName(), new RegionState(
+        region, RegionState.State.OPENING, System.currentTimeMillis(), deadServerName));
+    ZKAssign.createNodeOffline(zkw, region, deadServerName);
+    ZKAssign.transitionNodeOpening(zkw, region, deadServerName);
+
+    // Kill the RS that had a hard death
+    log("Killing RS " + deadServerName);
+    hrsDead.abort("Killing for unit test");
+    while (hrsDeadThread.isAlive()) {
+      Threads.sleep(10);
+    }
+    log("RS " + deadServerName + " killed");
+
+    log("Waiting for no more RIT");
+    ZKAssign.blockUntilNoRIT(zkw);
+    log("No more RIT in ZK");
+    assertTrue(master.assignmentManager.waitUntilNoRegionsInTransition(120000));
   }
 
   /**

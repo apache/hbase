@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -116,6 +117,10 @@ public class ServerShutdownHandler extends EventHandler {
   public void process() throws IOException {
     final ServerName serverName = this.serverName;
     try {
+      if (this.server.isStopped()) {
+        throw new IOException("Server is stopped");
+      }
+
       try {
         if (this.shouldSplitHlog) {
           LOG.info("Splitting logs for " + serverName);
@@ -200,9 +205,15 @@ public class ServerShutdownHandler extends EventHandler {
         if (!this.services.getAssignmentManager().isRegionAssigned(hri)) {
           if (!regionsToAssign.contains(hri)) {
             regionsToAssign.add(hri);
+            RegionState rit =
+                services.getAssignmentManager().getRegionsInTransition().get(hri.getEncodedName());
+            removeRITsOfRregionInDisablingOrDisabledTables(regionsToAssign, rit,
+              services.getAssignmentManager(), hri);
           }
         }
       }
+
+      // re-assign regions
       for (HRegionInfo hri : regionsToAssign) {
         this.services.getAssignmentManager().assign(hri, true);
       }
@@ -244,12 +255,13 @@ public class ServerShutdownHandler extends EventHandler {
       }
     }
 
+    AssignmentManager assignmentManager = this.services.getAssignmentManager();
     for (Map.Entry<HRegionInfo, Result> e : metaHRIs.entrySet()) {
-      RegionState rit = services.getAssignmentManager().getRegionsInTransition().get(
-          e.getKey().getEncodedName());
-      AssignmentManager assignmentManager = this.services.getAssignmentManager();
+      RegionState rit =
+          assignmentManager.getRegionsInTransition().get(e.getKey().getEncodedName());
+
       if (processDeadRegion(e.getKey(), e.getValue(), assignmentManager,
-          this.server.getCatalogTracker())) {
+        this.server.getCatalogTracker())) {
         ServerName addressFromAM = assignmentManager.getRegionServerOfRegion(e.getKey());
         if (rit != null && !rit.isClosing() && !rit.isPendingClose() && !rit.isSplitting()
             && !ritsGoingToServer.contains(e.getKey())) {
@@ -268,7 +280,7 @@ public class ServerShutdownHandler extends EventHandler {
               ZKAssign.deleteNodeFailSilent(services.getZooKeeper(), e.getKey());
             } catch (KeeperException ke) {
               this.server.abort("Unexpected ZK exception deleting unassigned node " + e.getKey(),
-                  ke);
+                ke);
               return null;
             }
           }
@@ -291,27 +303,25 @@ public class ServerShutdownHandler extends EventHandler {
       // CLOSING state. Doing this will have no harm. The rit can be null if region server went
       // down during master startup. In that case If any znodes' exists for partially disabled 
       // table regions deleting them during startup only. See HBASE-8127. 
-      toAssign =
-          checkForDisablingOrDisabledTables(ritsGoingToServer, toAssign, rit, e.getKey(),
-            assignmentManager);
+      removeRITsOfRregionInDisablingOrDisabledTables(toAssign, rit, assignmentManager, e.getKey());
     }
+
     return toAssign;
   }
 
-  private List<HRegionInfo> checkForDisablingOrDisabledTables(Set<HRegionInfo> regionsFromRIT,
-      List<HRegionInfo> toAssign, RegionState rit, HRegionInfo hri,
-      AssignmentManager assignmentManager) {
-    boolean disabled =
-        assignmentManager.getZKTable().isDisablingOrDisabledTable(hri.getTableNameAsString());
-    if (disabled) {
-      // To avoid region assignment if table is in disabling or disabled state.
-      toAssign.remove(hri);
-      regionsFromRIT.remove(hri);
+  private void removeRITsOfRregionInDisablingOrDisabledTables(List<HRegionInfo> toAssign,
+      RegionState rit, AssignmentManager assignmentManager, HRegionInfo hri) {
+
+    if (!assignmentManager.getZKTable().isDisablingOrDisabledTable(hri.getTableNameAsString())) {
+      return;
     }
-    if (rit != null && disabled) {
+
+    // To avoid region assignment if table is in disabling or disabled state.
+    toAssign.remove(hri);
+
+    if (rit != null) {
       assignmentManager.deleteNodeAndOfflineRegion(hri);
     }
-    return toAssign;
   }
 
   /**
