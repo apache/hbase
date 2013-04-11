@@ -17,21 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.commons.lang.mutable.MutableInt;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerLoad;
-import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -39,6 +24,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * <p>This is a best effort load balancer. Given a Cost function F(C) => x It will
@@ -104,6 +104,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       "hbase.master.balancer.stochastic.stepsPerRegion";
   private static final String MAX_STEPS_KEY = "hbase.master.balancer.stochastic.maxSteps";
   private static final String MAX_MOVES_KEY = "hbase.master.balancer.stochastic.maxMoveRegions";
+  private static final String MAX_RUNNING_TIME_KEY = "hbase.master.balancer.stochastic.maxRunningTime";
   private static final String KEEP_REGION_LOADS = "hbase.master.balancer.stochastic.numRegionLoadsToRemember";
 
   private static final Random RANDOM = new Random(System.currentTimeMillis());
@@ -115,10 +116,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   // values are defaults
   private int maxSteps = 15000;
   private int stepsPerRegion = 110;
+  private long maxRunningTime = 1 * 60 * 1000; //5 min
   private int maxMoves = 600;
   private int numRegionLoadsToRemember = 15;
-  private float loadMultiplier = 55;
-  private float moveCostMultiplier = 5;
+  private float loadMultiplier = 100;
+  private float moveCostMultiplier = 1;
   private float tableMultiplier = 5;
   private float localityMultiplier = 5;
   private float readRequestMultiplier = 0;
@@ -135,6 +137,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     maxSteps = conf.getInt(MAX_STEPS_KEY, maxSteps);
     maxMoves = conf.getInt(MAX_MOVES_KEY, maxMoves);
     stepsPerRegion = conf.getInt(STEPS_PER_REGION_KEY, stepsPerRegion);
+    maxRunningTime = conf.getLong(MAX_RUNNING_TIME_KEY, maxRunningTime);
 
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
 
@@ -183,86 +186,75 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return null;
     }
 
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // Keep track of servers to iterate through them.
-    List<ServerName> servers = new ArrayList<ServerName>(clusterState.keySet());
-    Map<HRegionInfo, ServerName> initialRegionMapping = createRegionMapping(clusterState);
     double currentCost, newCost, initCost;
-    currentCost = newCost = initCost = computeCost(initialRegionMapping, clusterState);
+
+    Cluster cluster = new Cluster(clusterState, loads, regionFinder);
+    currentCost = newCost = initCost = computeCost(cluster);
 
     int computedMaxSteps =
-        Math.min(this.maxSteps, (initialRegionMapping.size() * this.stepsPerRegion));
+        Math.min(this.maxSteps, (cluster.numRegions * this.stepsPerRegion));
     // Perform a stochastic walk to see if we can get a good fit.
-    for (int step = 0; step < computedMaxSteps; step++) {
+    int step;
+    for (step = 0; step < computedMaxSteps; step++) {
 
       // try and perform a mutation
-      for (ServerName leftServer : servers) {
+      for (int leftServer = 0; leftServer < cluster.numServers; leftServer++) {
 
         // What server are we going to be swapping regions with ?
-        ServerName rightServer = pickOtherServer(leftServer, servers);
-        if (rightServer == null) {
+        int rightServer = pickOtherServer(leftServer, cluster);
+        if (rightServer < 0) {
           continue;
         }
-
-        // Get the regions.
-        List<HRegionInfo> leftRegionList = clusterState.get(leftServer);
-        List<HRegionInfo> rightRegionList = clusterState.get(rightServer);
 
         // Pick what regions to swap around.
         // If we get a null for one then this isn't a swap just a move
-        HRegionInfo lRegion = pickRandomRegion(leftRegionList, 0);
-        HRegionInfo rRegion = pickRandomRegion(rightRegionList, 0.5);
+        int lRegion = pickRandomRegion(cluster, leftServer, 0);
+        int rRegion = pickRandomRegion(cluster, rightServer, 0.5);
 
         // We randomly picked to do nothing.
-        if (lRegion == null && rRegion == null) {
+        if (lRegion < 0 && rRegion < 0) {
           continue;
         }
 
-        if (rRegion != null) {
-          leftRegionList.add(rRegion);
-        }
+        cluster.moveOrSwapRegion(leftServer, rightServer, lRegion, rRegion);
 
-        if (lRegion != null) {
-          rightRegionList.add(lRegion);
-        }
-
-        newCost = computeCost(initialRegionMapping, clusterState);
-
+        newCost = computeCost(cluster);
         // Should this be kept?
         if (newCost < currentCost) {
           currentCost = newCost;
         } else {
           // Put things back the way they were before.
-          if (rRegion != null) {
-            leftRegionList.remove(rRegion);
-            rightRegionList.add(rRegion);
-          }
-
-          if (lRegion != null) {
-            rightRegionList.remove(lRegion);
-            leftRegionList.add(lRegion);
-          }
+          //TODO: undo by remembering old values, using an UndoAction class
+          cluster.moveOrSwapRegion(leftServer, rightServer, rRegion, lRegion);
         }
       }
-
+      if (EnvironmentEdgeManager.currentTimeMillis() - startTime > maxRunningTime) {
+        break;
+      }
     }
 
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTimeMillis();
 
     if (initCost > currentCost) {
-      List<RegionPlan> plans = createRegionPlans(initialRegionMapping, clusterState);
+      List<RegionPlan> plans = createRegionPlans(cluster);
 
-      LOG.debug("Finished computing new laod balance plan.  Computation took "
-          + (endTime - startTime) + "ms to try " + computedMaxSteps
-          + " different iterations.  Found a solution that moves " + plans.size()
-          + " regions; Going from a computed cost of " + initCost + " to a new cost of "
-          + currentCost);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Finished computing new laod balance plan.  Computation took "
+            + (endTime - startTime) + "ms to try " + step
+            + " different iterations.  Found a solution that moves " + plans.size()
+            + " regions; Going from a computed cost of " + initCost + " to a new cost of "
+            + currentCost);
+      }
       return plans;
     }
-    LOG.debug("Could not find a better load balance plan.  Tried " + computedMaxSteps
-        + " different configurations in " + (endTime - startTime)
-        + "ms, and did not find anything with a computed cost less than " + initCost);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Could not find a better load balance plan.  Tried " + step
+          + " different configurations in " + (endTime - startTime)
+          + "ms, and did not find anything with a computed cost less than " + initCost);
+    }
     return null;
   }
 
@@ -274,44 +266,25 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @param clusterState The desired mapping of ServerName to Regions
    * @return List of RegionPlan's that represent the moves needed to get to desired final state.
    */
-  private List<RegionPlan> createRegionPlans(Map<HRegionInfo, ServerName> initialRegionMapping,
-                                             Map<ServerName, List<HRegionInfo>> clusterState) {
+  private List<RegionPlan> createRegionPlans(Cluster cluster) {
     List<RegionPlan> plans = new LinkedList<RegionPlan>();
 
-    for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
-      ServerName newServer = entry.getKey();
-
-      for (HRegionInfo region : entry.getValue()) {
-        ServerName initialServer = initialRegionMapping.get(region);
-        if (!newServer.equals(initialServer)) {
+    for (int regionIndex = 0; regionIndex < cluster.regionIndexToServerIndex.length; regionIndex++) {
+      int initialServerIndex = cluster.initialRegionIndexToServerIndex[regionIndex];
+      int newServerIndex = cluster.regionIndexToServerIndex[regionIndex];
+      if (initialServerIndex != newServerIndex) {
+        HRegionInfo region = cluster.regions[regionIndex];
+        ServerName initialServer = cluster.servers[initialServerIndex];
+        ServerName newServer = cluster.servers[newServerIndex];
+        if (LOG.isTraceEnabled()) {
           LOG.trace("Moving Region " + region.getEncodedName() + " from server "
               + initialServer.getHostname() + " to " + newServer.getHostname());
-          RegionPlan rp = new RegionPlan(region, initialServer, newServer);
-          plans.add(rp);
         }
+        RegionPlan rp = new RegionPlan(region, initialServer, newServer);
+        plans.add(rp);
       }
     }
     return plans;
-  }
-
-  /**
-   * Create a map that will represent the initial location of regions on a
-   * {@link ServerName}
-   *
-   * @param clusterState starting state of the cluster and regions.
-   * @return A map of {@link HRegionInfo} to the {@link ServerName} that is
-   *         currently hosting that region
-   */
-  private Map<HRegionInfo, ServerName> createRegionMapping(
-      Map<ServerName, List<HRegionInfo>> clusterState) {
-    Map<HRegionInfo, ServerName> mapping = new HashMap<HRegionInfo, ServerName>();
-
-    for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
-      for (HRegionInfo region : entry.getValue()) {
-        mapping.put(region, entry.getKey());
-      }
-    }
-    return mapping;
   }
 
   /** Store the current region loads. */
@@ -358,32 +331,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @return a random {@link HRegionInfo} or null if an asymmetrical move is
    *         suggested.
    */
-  private HRegionInfo pickRandomRegion(List<HRegionInfo> regions, double chanceOfNoSwap) {
-
+  private int pickRandomRegion(Cluster cluster, int server, double chanceOfNoSwap) {
     //Check to see if this is just a move.
-    if (regions.isEmpty() || RANDOM.nextFloat() < chanceOfNoSwap) {
+    if (cluster.regionsPerServer[server].length == 0 || RANDOM.nextFloat() < chanceOfNoSwap) {
       //signal a move only.
-      return null;
+      return -1;
     }
+    int rand = RANDOM.nextInt(cluster.regionsPerServer[server].length);
+    return cluster.regionsPerServer[server][rand];
 
-    int count = 0;
-    HRegionInfo r = null;
-
-    //We will try and find a region up to 10 times.  If we always
-    while (count < 10 && r == null ) {
-      count++;
-      r = regions.get(RANDOM.nextInt(regions.size()));
-
-      // If this is a special region we always try not to move it.
-      // so clear out r.  try again
-      if (r.isMetaRegion()) {
-        r = null;
-      }
-    }
-    if (r != null) {
-      regions.remove(r);
-    }
-    return r;
   }
 
   /**
@@ -394,16 +350,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @param allServers list of all server from which to pick
    * @return random server. Null if no other servers were found.
    */
-  private ServerName pickOtherServer(ServerName server, List<ServerName> allServers) {
-    ServerName s = null;
-    int count = 0;
-    while (count < 100 && (s == null || ServerName.isSameHostnameAndPort(s, server))) {
-      count++;
-      s = allServers.get(RANDOM.nextInt(allServers.size()));
+  private int pickOtherServer(int serverIndex, Cluster cluster) {
+    if (cluster.numServers < 2) {
+      return -1;
     }
-
-    // If nothing but the current server was found return null.
-    return (s == null || ServerName.isSameHostnameAndPort(s, server)) ? null : s;
+    while (true) {
+      int otherServerIndex = RANDOM.nextInt(cluster.numServers);
+      if (otherServerIndex != serverIndex) {
+        return otherServerIndex;
+      }
+    }
   }
 
   /**
@@ -414,38 +370,39 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @param clusterState Map of ServerName to list of regions.
    * @return a double of a cost associated with the proposed
    */
-  protected double computeCost(Map<HRegionInfo, ServerName> initialRegionMapping,
-                               Map<ServerName, List<HRegionInfo>> clusterState) {
+  protected double computeCost(Cluster cluster) {
 
-    double moveCost = moveCostMultiplier * computeMoveCost(initialRegionMapping, clusterState);
+    double moveCost = moveCostMultiplier * computeMoveCost(cluster);
 
-    double regionCountSkewCost = loadMultiplier * computeSkewLoadCost(clusterState);
-    double tableSkewCost = tableMultiplier * computeTableSkewLoadCost(clusterState);
+    double regionCountSkewCost = loadMultiplier * computeSkewLoadCost(cluster);
+    double tableSkewCost = tableMultiplier * computeTableSkewLoadCost(cluster);
     double localityCost =
-        localityMultiplier * computeDataLocalityCost(initialRegionMapping, clusterState);
+        localityMultiplier * computeDataLocalityCost(cluster);
 
     double memstoreSizeCost =
         memStoreSizeMultiplier
-            * computeRegionLoadCost(clusterState, RegionLoadCostType.MEMSTORE_SIZE);
+            * computeRegionLoadCost(cluster, RegionLoadCostType.MEMSTORE_SIZE);
     double storefileSizeCost =
         storeFileSizeMultiplier
-            * computeRegionLoadCost(clusterState, RegionLoadCostType.STOREFILE_SIZE);
+            * computeRegionLoadCost(cluster, RegionLoadCostType.STOREFILE_SIZE);
 
 
     double readRequestCost =
         readRequestMultiplier
-            * computeRegionLoadCost(clusterState, RegionLoadCostType.READ_REQUEST);
+            * computeRegionLoadCost(cluster, RegionLoadCostType.READ_REQUEST);
     double writeRequestCost =
         writeRequestMultiplier
-            * computeRegionLoadCost(clusterState, RegionLoadCostType.WRITE_REQUEST);
+            * computeRegionLoadCost(cluster, RegionLoadCostType.WRITE_REQUEST);
 
-     double total =
+    double total =
         moveCost + regionCountSkewCost + tableSkewCost + localityCost + memstoreSizeCost
             + storefileSizeCost + readRequestCost + writeRequestCost;
-    LOG.trace("Computed weights for a potential balancing total = " + total + " moveCost = "
-        + moveCost + " regionCountSkewCost = " + regionCountSkewCost + " tableSkewCost = "
-        + tableSkewCost + " localityCost = " + localityCost + " memstoreSizeCost = "
-        + memstoreSizeCost + " storefileSizeCost = " + storefileSizeCost);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Computed weights for a potential balancing total = " + total + " moveCost = "
+          + moveCost + " regionCountSkewCost = " + regionCountSkewCost + " tableSkewCost = "
+          + tableSkewCost + " localityCost = " + localityCost + " memstoreSizeCost = "
+          + memstoreSizeCost + " storefileSizeCost = " + storefileSizeCost);
+    }
     return total;
   }
 
@@ -457,24 +414,21 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @param clusterState         The potential new cluster state.
    * @return The cost. Between 0 and 1.
    */
-  double computeMoveCost(Map<HRegionInfo, ServerName> initialRegionMapping,
-                         Map<ServerName, List<HRegionInfo>> clusterState) {
-    float moveCost = 0;
-    for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
-      for (HRegionInfo region : entry.getValue()) {
-        if (initialRegionMapping.get(region) != entry.getKey()) {
-          moveCost += 1;
-        }
-      }
-    }
+  double computeMoveCost(Cluster cluster) {
+    double moveCost = cluster.numMovedRegions;
 
     //Don't let this single balance move more than the max moves.
     //This allows better scaling to accurately represent the actual cost of a move.
     if (moveCost > maxMoves) {
-      return 10000;   //return a number much greater than any of the other cost functions
+      return Double.MAX_VALUE;   //return a number much greater than any of the other cost functions
     }
 
-    return scale(0, Math.min(maxMoves, initialRegionMapping.size()), moveCost);
+    //META region is special
+    if (cluster.numMovedMetaRegions > 0) {
+      maxMoves += 9 * cluster.numMovedMetaRegions; //assume each META region move costs 10 times
+    }
+
+    return scale(0, cluster.numRegions, moveCost);
   }
 
   /**
@@ -484,11 +438,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @param clusterState The proposed cluster state
    * @return The cost of region load imbalance.
    */
-  double computeSkewLoadCost(Map<ServerName, List<HRegionInfo>> clusterState) {
+  double computeSkewLoadCost(Cluster cluster) {
     DescriptiveStatistics stats = new DescriptiveStatistics();
-    for (List<HRegionInfo> regions : clusterState.values()) {
-      int size = regions.size();
-      stats.addValue(size);
+    for (int[] regions : cluster.regionsPerServer) {
+      stats.addValue(regions.length);
     }
     return costFromStats(stats);
   }
@@ -500,68 +453,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @param clusterState Proposed cluster state.
    * @return Cost of imbalance in table.
    */
-  double computeTableSkewLoadCost(Map<ServerName, List<HRegionInfo>> clusterState) {
-
-    Map<String, MutableInt> tableRegionsTotal = new HashMap<String, MutableInt>();
-    Map<String, MutableInt> tableRegionsOnCurrentServer = new HashMap<String, MutableInt>();
-    Map<String, Integer> tableCostSeenSoFar = new HashMap<String, Integer>();
-    // Go through everything per server
-    for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
-      tableRegionsOnCurrentServer.clear();
-
-      // For all of the regions count how many are from each table
-      for (HRegionInfo region : entry.getValue()) {
-        String tableName = region.getTableNameAsString();
-
-        // See if this table already has a count on this server
-        MutableInt regionsOnServerCount = tableRegionsOnCurrentServer.get(tableName);
-
-        // If this is the first time we've seen this table on this server
-        // create a new mutable int.
-        if (regionsOnServerCount == null) {
-          regionsOnServerCount = new MutableInt(0);
-          tableRegionsOnCurrentServer.put(tableName, regionsOnServerCount);
-        }
-
-        // Increment the count of how many regions from this table are host on
-        // this server
-        regionsOnServerCount.increment();
-
-        // Now count the number of regions in this table.
-        MutableInt totalCount = tableRegionsTotal.get(tableName);
-
-        // If this is the first region from this table create a new counter for
-        // this table.
-        if (totalCount == null) {
-          totalCount = new MutableInt(0);
-          tableRegionsTotal.put(tableName, totalCount);
-        }
-        totalCount.increment();
-      }
-
-      // Now go through all of the tables we have seen and keep the max number
-      // of regions of this table a single region server is hosting.
-      for (Entry<String, MutableInt> currentServerEntry: tableRegionsOnCurrentServer.entrySet()) {
-        String tableName = currentServerEntry.getKey();
-        Integer thisCount = currentServerEntry.getValue().toInteger();
-        Integer maxCountSoFar = tableCostSeenSoFar.get(tableName);
-
-        if (maxCountSoFar == null || thisCount.compareTo(maxCountSoFar) > 0) {
-          tableCostSeenSoFar.put(tableName, thisCount);
-        }
-      }
-    }
-
-    double max = 0;
-    double min = 0;
+  double computeTableSkewLoadCost(Cluster cluster) {
+    double max = cluster.numRegions;
+    double min = cluster.numRegions / cluster.numServers;
     double value = 0;
 
-    // Compute the min, value, and max.
-    for (Entry<String, MutableInt> currentEntry : tableRegionsTotal.entrySet()) {
-      max += tableRegionsTotal.get(currentEntry.getKey()).doubleValue();
-      min += tableRegionsTotal.get(currentEntry.getKey()).doubleValue() / clusterState.size();
-      value += tableCostSeenSoFar.get(currentEntry.getKey()).doubleValue();
+    for (int i = 0 ; i < cluster.numMaxRegionsPerTable.length; i++) {
+      value += cluster.numMaxRegionsPerTable[i];
     }
+
     return scale(min, max, value);
   }
 
@@ -574,8 +474,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @return A cost between 0 and 1. 0 Means all regions are on the sever with
    *         the most local store files.
    */
-  double computeDataLocalityCost(Map<HRegionInfo, ServerName> initialRegionMapping,
-                                 Map<ServerName, List<HRegionInfo>> clusterState) {
+  double computeDataLocalityCost(Cluster cluster) {
 
     double max = 0;
     double cost = 0;
@@ -583,27 +482,29 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // If there's no master so there's no way anything else works.
     if (this.services == null) return cost;
 
-    for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
-      ServerName sn = entry.getKey();
-      for (HRegionInfo region : entry.getValue()) {
+    for (int i = 0; i < cluster.regionLocations.length; i++) {
+      max += 1;
+      int serverIndex = cluster.regionIndexToServerIndex[i];
+      int[] regionLocations = cluster.regionLocations[i];
 
-        max += 1;
+      // If we can't find where the data is getTopBlock returns null.
+      // so count that as being the best possible.
+      if (regionLocations == null) {
+        continue;
+      }
 
-        List<ServerName> dataOnServers = regionFinder.getTopBlockLocations(region);
-
-        // If we can't find where the data is getTopBlock returns null.
-        // so count that as being the best possible.
-        if (dataOnServers == null) {
-          continue;
+      int index = -1;
+      for (int j = 0; j < regionLocations.length; j++) {
+        if (regionLocations[j] == serverIndex) {
+          index = j;
+          break;
         }
+      }
 
-        int index = dataOnServers.indexOf(sn);
-        if (index < 0) {
-          cost += 1;
-        } else {
-          cost += (double) index / (double) dataOnServers.size();
-        }
-
+      if (index < 0) {
+        cost += 1;
+      } else {
+        cost += (double) index / (double) regionLocations.length;
       }
     }
     return scale(0, max, cost);
@@ -621,31 +522,17 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @param costType     what type of cost to consider
    * @return the scaled cost.
    */
-  private double computeRegionLoadCost(Map<ServerName, List<HRegionInfo>> clusterState,
-                                       RegionLoadCostType costType) {
+  private double computeRegionLoadCost(Cluster cluster, RegionLoadCostType costType) {
 
     if (this.clusterStatus == null || this.loads == null || this.loads.size() == 0) return 0;
 
     DescriptiveStatistics stats = new DescriptiveStatistics();
 
-    // For every server look at the cost of each region
-    for (List<HRegionInfo> regions : clusterState.values()) {
+    for (List<RegionLoad> rl : cluster.regionLoads) {
       long cost = 0; //Cost this server has from RegionLoad
-
-      // For each region
-      for (HRegionInfo region : regions) {
-        // Try and get the region using the regionNameAsString
-        List<RegionLoad> rl = loads.get(region.getRegionNameAsString());
-
-        // That could have failed if the RegionLoad is using the other regionName
-        if (rl == null) {
-          // Try getting the region load using encoded name.
-          rl = loads.get(region.getEncodedName());
-        }
         // Now if we found a region load get the type of cost that was requested.
-        if (rl != null) {
-          cost += getRegionLoadCost(rl, costType);
-        }
+      if (rl != null) {
+        cost += getRegionLoadCost(rl, costType);
       }
 
       // Add the total cost to the stats.
@@ -713,10 +600,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     //Compute max as if all region servers had 0 and one had the sum of all costs.  This must be
     // a zero sum cost for this to make sense.
-    double max = ((stats.getN() - 1) * stats.getMean()) + (stats.getSum() - stats.getMean());
+    //TODO: Should we make this sum of square errors?
+    double max = ((stats.getN() - 1) * mean) + (stats.getSum() - mean);
     for (double n : stats.getValues()) {
-      totalCost += Math.abs(mean - n);
-
+      double diff = Math.abs(mean - n);
+      totalCost += diff;
     }
 
     return scale(0, max, totalCost);

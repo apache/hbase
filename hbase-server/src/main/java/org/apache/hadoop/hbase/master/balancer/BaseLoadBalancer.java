@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -29,10 +31,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
@@ -45,6 +49,213 @@ import com.google.common.collect.Sets;
  *
  */
 public abstract class BaseLoadBalancer implements LoadBalancer {
+
+  /**
+   * An efficient array based implementation similar to ClusterState for keeping
+   * the status of the cluster in terms of region assignment and distribution.
+   * To be used by LoadBalancers.
+   */
+  protected static class Cluster {
+    ServerName[] servers;
+    ArrayList<byte[]> tables;
+    HRegionInfo[] regions;
+    List<RegionLoad>[] regionLoads;
+    int[][] regionLocations; //regionIndex -> list of serverIndex sorted by locality
+
+    int[][] regionsPerServer;            //serverIndex -> region list
+    int[]   regionIndexToServerIndex;    //regionIndex -> serverIndex
+    int[]   initialRegionIndexToServerIndex;    //regionIndex -> serverIndex (initial cluster state)
+    int[]   regionIndexToTableIndex;     //regionIndex -> tableIndex
+    int[][] numRegionsPerServerPerTable; //serverIndex -> tableIndex -> # regions
+    int[]   numMaxRegionsPerTable;       //tableIndex -> max number of regions in a single RS
+
+    Map<ServerName, Integer> serversToIndex;
+    Map<Integer, Integer> tablesToIndex;
+
+    int numRegions;
+    int numServers;
+    int numTables;
+
+    int numMovedRegions = 0; //num moved regions from the initial configuration
+    int numMovedMetaRegions = 0;       //num of moved regions that are META
+
+    protected Cluster(Map<ServerName, List<HRegionInfo>> clusterState,  Map<String, List<RegionLoad>> loads,
+        RegionLocationFinder regionFinder) {
+      serversToIndex = new HashMap<ServerName, Integer>(clusterState.size());
+      tablesToIndex = new HashMap<Integer, Integer>();
+      //regionsToIndex = new HashMap<HRegionInfo, Integer>();
+
+      //TODO: We should get the list of tables from master
+      tables = new ArrayList<byte[]>();
+
+      numServers = clusterState.size();
+      numRegions = 0;
+
+      for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
+        numRegions += entry.getValue().size();
+      }
+
+      regionsPerServer = new int[clusterState.size()][];
+      servers = new ServerName[numServers];
+      regions = new HRegionInfo[numRegions];
+      regionIndexToServerIndex = new int[numRegions];
+      initialRegionIndexToServerIndex = new int[numRegions];
+      regionIndexToTableIndex = new int[numRegions];
+      regionLoads = new List[numRegions];
+      regionLocations = new int[numRegions][];
+
+      int tableIndex = 0, serverIndex = 0, regionIndex = 0, regionPerServerIndex = 0;
+      for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
+        servers[serverIndex] = entry.getKey();
+        regionsPerServer[serverIndex] = new int[entry.getValue().size()];
+        serversToIndex.put(servers[serverIndex], Integer.valueOf(serverIndex));
+        regionPerServerIndex = 0;
+        for (HRegionInfo region : entry.getValue()) {
+          byte[] tableName = region.getTableName();
+          int tableHash = Bytes.mapKey(tableName);
+          Integer idx = tablesToIndex.get(tableHash);
+          if (idx == null) {
+            tables.add(tableName);
+            idx = tableIndex;
+            tablesToIndex.put(tableHash, tableIndex++);
+          }
+
+          regions[regionIndex] = region;
+          regionIndexToServerIndex[regionIndex] = serverIndex;
+          initialRegionIndexToServerIndex[regionIndex] = serverIndex;
+          regionIndexToTableIndex[regionIndex] = idx;
+          regionsPerServer[serverIndex][regionPerServerIndex++] = regionIndex;
+
+          //region load
+          if (loads != null) {
+            List<RegionLoad> rl = loads.get(region.getRegionNameAsString());
+            // That could have failed if the RegionLoad is using the other regionName
+            if (rl == null) {
+              // Try getting the region load using encoded name.
+              rl = loads.get(region.getEncodedName());
+            }
+            regionLoads[regionIndex] = rl;
+          }
+
+          if (regionFinder != null) {
+            //region location
+            List<ServerName> loc = regionFinder.getTopBlockLocations(region);
+            regionLocations[regionIndex] = new int[loc.size()];
+            for (int i=0; i < loc.size(); i++) {
+              regionLocations[regionIndex][i] = serversToIndex.get(loc.get(i));
+            }
+          }
+
+          regionIndex++;
+        }
+        serverIndex++;
+      }
+
+      numTables = tables.size();
+      numRegionsPerServerPerTable = new int[numServers][numTables];
+
+      for (int i = 0; i < numServers; i++) {
+        for (int j = 0; j < numTables; j++) {
+          numRegionsPerServerPerTable[i][j] = 0;
+        }
+      }
+
+      for (int i=0; i < regionIndexToServerIndex.length; i++) {
+        numRegionsPerServerPerTable[regionIndexToServerIndex[i]][regionIndexToTableIndex[i]]++;
+      }
+
+      numMaxRegionsPerTable = new int[numTables];
+      for (serverIndex = 0 ; serverIndex < numRegionsPerServerPerTable.length; serverIndex++) {
+        for (tableIndex = 0 ; tableIndex < numRegionsPerServerPerTable[serverIndex].length; tableIndex++) {
+          if (numRegionsPerServerPerTable[serverIndex][tableIndex] > numMaxRegionsPerTable[tableIndex]) {
+            numMaxRegionsPerTable[tableIndex] = numRegionsPerServerPerTable[serverIndex][tableIndex];
+          }
+        }
+      }
+    }
+
+    public void moveOrSwapRegion(int lServer, int rServer, int lRegion, int rRegion) {
+      //swap
+      if (rRegion >= 0 && lRegion >= 0) {
+        regionMoved(rRegion, rServer, lServer);
+        regionsPerServer[rServer] = replaceRegion(regionsPerServer[rServer], rRegion, lRegion);
+        regionMoved(lRegion, lServer, rServer);
+        regionsPerServer[lServer] = replaceRegion(regionsPerServer[lServer], lRegion, rRegion);
+      } else if (rRegion >= 0) { //move rRegion
+        regionMoved(rRegion, rServer, lServer);
+        regionsPerServer[rServer] = removeRegion(regionsPerServer[rServer], rRegion);
+        regionsPerServer[lServer] = addRegion(regionsPerServer[lServer], rRegion);
+      } else if (lRegion >= 0) { //move lRegion
+        regionMoved(lRegion, lServer, rServer);
+        regionsPerServer[lServer] = removeRegion(regionsPerServer[lServer], lRegion);
+        regionsPerServer[rServer] = addRegion(regionsPerServer[rServer], lRegion);
+      }
+    }
+
+    /** Region moved out of the server */
+    void regionMoved(int regionIndex, int oldServerIndex, int newServerIndex) {
+      regionIndexToServerIndex[regionIndex] = newServerIndex;
+      if (initialRegionIndexToServerIndex[regionIndex] == newServerIndex) {
+        numMovedRegions--; //region moved back to original location
+        if (regions[regionIndex].isMetaRegion()) {
+          numMovedMetaRegions--;
+        }
+      } else if (initialRegionIndexToServerIndex[regionIndex] == oldServerIndex) {
+        numMovedRegions++; //region moved from original location
+        if (regions[regionIndex].isMetaRegion()) {
+          numMovedMetaRegions++;
+        }
+      }
+      int tableIndex = regionIndexToTableIndex[regionIndex];
+      numRegionsPerServerPerTable[oldServerIndex][tableIndex]--;
+      numRegionsPerServerPerTable[newServerIndex][tableIndex]++;
+
+      //check whether this caused maxRegionsPerTable in the new Server to be updated
+      if (numRegionsPerServerPerTable[newServerIndex][tableIndex] > numMaxRegionsPerTable[tableIndex]) {
+        numRegionsPerServerPerTable[newServerIndex][tableIndex] = numMaxRegionsPerTable[tableIndex];
+      } else if ((numRegionsPerServerPerTable[oldServerIndex][tableIndex] + 1)
+          == numMaxRegionsPerTable[tableIndex]) {
+        //recompute maxRegionsPerTable since the previous value was coming from the old server
+        for (int serverIndex = 0 ; serverIndex < numRegionsPerServerPerTable.length; serverIndex++) {
+          if (numRegionsPerServerPerTable[serverIndex][tableIndex] > numMaxRegionsPerTable[tableIndex]) {
+            numMaxRegionsPerTable[tableIndex] = numRegionsPerServerPerTable[serverIndex][tableIndex];
+          }
+        }
+      }
+    }
+
+    int[] removeRegion(int[] regions, int regionIndex) {
+      //TODO: this maybe costly. Consider using linked lists
+      int[] newRegions = new int[regions.length - 1];
+      int i = 0;
+      for (i = 0; i < regions.length; i++) {
+        if (regions[i] == regionIndex) {
+          break;
+        }
+        newRegions[i] = regions[i];
+      }
+      System.arraycopy(regions, i+1, newRegions, i, newRegions.length - i);
+      return newRegions;
+    }
+
+    int[] addRegion(int[] regions, int regionIndex) {
+      int[] newRegions = new int[regions.length + 1];
+      System.arraycopy(regions, 0, newRegions, 0, regions.length);
+      newRegions[newRegions.length - 1] = regionIndex;
+      return newRegions;
+    }
+
+    int[] replaceRegion(int[] regions, int regionIndex, int newRegionIndex) {
+      int i = 0;
+      for (i = 0; i < regions.length; i++) {
+        if (regions[i] == regionIndex) {
+          regions[i] = newRegionIndex;
+          break;
+        }
+      }
+      return regions;
+    }
+  }
 
   // slop for regions
   private float slop;
