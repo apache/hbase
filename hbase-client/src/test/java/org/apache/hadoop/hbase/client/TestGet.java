@@ -19,13 +19,20 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.fail;
+
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,6 +42,27 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestGet {
   private static final byte [] ROW = new byte [] {'r'};
+
+  private static final String PB_GET = "CgNyb3ciEwoPdGVzdC5Nb2NrRmlsdGVyEgAwATgB";
+
+  private static final String MOCK_FILTER_JAR =
+    "UEsDBBQACAgIACqBiEIAAAAAAAAAAAAAAAAJAAQATUVUQS1JTkYv/soAAAMAUEsHCAAAAAACAAAA" +
+    "AAAAAFBLAwQUAAgICAAqgYhCAAAAAAAAAAAAAAAAFAAAAE1FVEEtSU5GL01BTklGRVNULk1G803M" +
+    "y0xLLS7RDUstKs7Mz7NSMNQz4OVyLkpNLElN0XWqBAmY6xnEG1gqaPgXJSbnpCo45xcV5BcllgCV" +
+    "a/Jy8XIBAFBLBwgxyqRbQwAAAEQAAABQSwMECgAACAAAz4CIQgAAAAAAAAAAAAAAAAUAAAB0ZXN0" +
+    "L1BLAwQUAAgICACPgIhCAAAAAAAAAAAAAAAAFQAAAHRlc3QvTW9ja0ZpbHRlci5jbGFzc41Qy0rD" +
+    "QBQ9k6RNG6N9aH2uXAhWwUC3FRdRC0J1oxSkq0k6mmjaCUkq6lfpqqLgB/hR4k1aqlQEs7j3zLnn" +
+    "3Ec+Pl/fATSwoUNhKCUiTqxT6d62/CARkQ6NoS6ja4uH3PWE5fGelKHlOTwW1lWmscZSmxiG/L4/" +
+    "8JMDBnW73mHQDmVPGFBRNJFDnga0/YE4G/YdEV1wJyBHtS1dHnR45KfvCaklnh8zVNoz+zQZiiGP" +
+    "YtGKZJ+htt216780BkjFoIeO/UA1BqVrM+xm2n+dQlOM43tXhIkvB7GOZYbmX0Yx1VlHIhZ0ReA/" +
+    "8pSYdkj3WTWxgBL1PZfDyBU0h64sfS+9d8PvODZJqSL9VEL0wyjq9LIoM8q5nREKzwQUGBTzYxJz" +
+    "FM0JNjFPuZhOm5gbpE5rhTewyxHKTzN+/Ye/gAqqQPmE/IukWiJOo0ot67Q1XeMFK7NtWNZGydBa" +
+    "hta/AFBLBwjdsJqTXwEAAF0CAABQSwECFAAUAAgICAAqgYhCAAAAAAIAAAAAAAAACQAEAAAAAAAA" +
+    "AAAAAAAAAAAATUVUQS1JTkYv/soAAFBLAQIUABQACAgIACqBiEIxyqRbQwAAAEQAAAAUAAAAAAAA" +
+    "AAAAAAAAAD0AAABNRVRBLUlORi9NQU5JRkVTVC5NRlBLAQIKAAoAAAgAAM+AiEIAAAAAAAAAAAAA" +
+    "AAAFAAAAAAAAAAAAAAAAAMIAAAB0ZXN0L1BLAQIUABQACAgIAI+AiELdsJqTXwEAAF0CAAAVAAAA" +
+    "AAAAAAAAAAAAAOUAAAB0ZXN0L01vY2tGaWx0ZXIuY2xhc3NQSwUGAAAAAAQABADzAAAAhwIAAAAA";
+
   @Test
   public void testAttributesSerialization() throws IOException {
     Get get = new Get(Bytes.toBytes("row"));
@@ -106,5 +134,30 @@ public class TestGet {
     get.addColumn(family, null);
     Set<byte[]> qualifiers = get.getFamilyMap().get(family);
     Assert.assertEquals(1, qualifiers.size());
+  }
+
+  @Test
+  public void testDynamicFilter() throws Exception {
+    ClientProtos.Get getProto = ClientProtos.Get.parseFrom(Base64.decode(PB_GET));
+    try {
+      ProtobufUtil.toGet(getProto);
+      fail("Should not be able to load the filter class");
+    } catch (IOException ioe) {
+      Assert.assertTrue(ioe.getCause() instanceof ClassNotFoundException);
+    }
+
+    Configuration conf = HBaseConfiguration.create();
+    String localPath = conf.get("hbase.local.dir") + File.separator
+      + "dynamic" + File.separator + "jars" + File.separator;
+    File jarFile = new File(localPath, "MockFilter.jar");
+    jarFile.deleteOnExit();
+
+    FileOutputStream fos = new FileOutputStream(jarFile);
+    fos.write(Base64.decode(MOCK_FILTER_JAR));
+    fos.close();
+
+    Get get = ProtobufUtil.toGet(getProto);
+    Assert.assertEquals("test.MockFilter",
+      get.getFilter().getClass().getName());
   }
 }
