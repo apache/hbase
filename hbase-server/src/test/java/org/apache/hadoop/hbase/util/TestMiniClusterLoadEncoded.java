@@ -49,13 +49,4 @@ public class TestMiniClusterLoadEncoded extends TestMiniClusterLoadParallel {
   public TestMiniClusterLoadEncoded(DataBlockEncoding encoding) {
     super(USE_MULTI_PUT, encoding);
   }
-
-  /**
-   * Use a smaller number of keys in in this test.
-   */
-  @Override
-  protected int numKeys() {
-    return 3000;
-  }
-
 }
