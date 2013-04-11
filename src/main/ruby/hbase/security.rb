@@ -38,7 +38,7 @@ module Hbase
 
       # Verify that the specified permission is valid
       if (permissions == nil || permissions.length == 0)
-        raise(ArgumentError, "Ivalid permission: no actions associated with user")
+        raise(ArgumentError, "Invalid permission: no actions associated with user")
       end
 
       if (table_name != nil)
