@@ -1241,10 +1241,10 @@ Server {
     int balancerCutoffTime =
       getConfiguration().getInt("hbase.balancer.max.balancing", -1);
     if (balancerCutoffTime == -1) {
-      // No time period set so create one -- do half of balancer period.
+      // No time period set so create one
       int balancerPeriod =
         getConfiguration().getInt("hbase.balancer.period", 300000);
-      balancerCutoffTime = balancerPeriod / 2;
+      balancerCutoffTime = balancerPeriod;
       // If nonsense period, set it to balancerPeriod
       if (balancerCutoffTime <= 0) balancerCutoffTime = balancerPeriod;
     }
@@ -1261,7 +1261,6 @@ Server {
     if (!this.loadBalancerTracker.isBalancerOn()) return false;
     // Do this call outside of synchronized block.
     int maximumBalanceTime = getBalancerCutoffTime();
-    long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
     boolean balancerRan;
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
@@ -1296,6 +1295,7 @@ Server {
         List<RegionPlan> partialPlans = this.balancer.balanceCluster(assignments);
         if (partialPlans != null) plans.addAll(partialPlans);
       }
+      long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
       int rpCount = 0;  // number of RegionPlans balanced so far
       long totalRegPlanExecTime = 0;
       balancerRan = plans != null;
@@ -1303,12 +1303,14 @@ Server {
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
           long balStartTime = System.currentTimeMillis();
+          //TODO: bulk assign
           this.assignmentManager.balance(plan);
           totalRegPlanExecTime += System.currentTimeMillis()-balStartTime;
           rpCount++;
           if (rpCount < plans.size() &&
               // if performing next balance exceeds cutoff time, exit the loop
               (System.currentTimeMillis() + (totalRegPlanExecTime / rpCount)) > cutoffTime) {
+            //TODO: After balance, there should not be a cutoff time (keeping it as a security net for now)
             LOG.debug("No more balancing till next balance run; maximumBalanceTime=" +
               maximumBalanceTime);
             break;

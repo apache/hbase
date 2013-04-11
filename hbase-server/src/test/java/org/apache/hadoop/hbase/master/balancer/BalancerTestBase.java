@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -154,12 +153,20 @@ public class BalancerTestBase {
   }
 
   protected Map<ServerName, List<HRegionInfo>> mockClusterServers(int[] mockCluster) {
+    return mockClusterServers(mockCluster, -1);
+  }
+
+  protected BaseLoadBalancer.Cluster mockCluster(int[] mockCluster) {
+    return new BaseLoadBalancer.Cluster(mockClusterServers(mockCluster, -1), null, null);
+  }
+
+  protected Map<ServerName, List<HRegionInfo>> mockClusterServers(int[] mockCluster, int numTables) {
     int numServers = mockCluster.length;
     Map<ServerName, List<HRegionInfo>> servers = new TreeMap<ServerName, List<HRegionInfo>>();
     for (int i = 0; i < numServers; i++) {
       int numRegions = mockCluster[i];
       ServerAndLoad sal = randomServer(0);
-      List<HRegionInfo> regions = randomRegions(numRegions);
+      List<HRegionInfo> regions = randomRegions(numRegions, numTables);
       servers.put(sal.getServerName(), regions);
     }
     return servers;
@@ -168,6 +175,10 @@ public class BalancerTestBase {
   private Queue<HRegionInfo> regionQueue = new LinkedList<HRegionInfo>();
 
   protected List<HRegionInfo> randomRegions(int numRegions) {
+    return randomRegions(numRegions, -1);
+  }
+
+  protected List<HRegionInfo> randomRegions(int numRegions, int numTables) {
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(numRegions);
     byte[] start = new byte[16];
     byte[] end = new byte[16];
@@ -180,7 +191,8 @@ public class BalancerTestBase {
       }
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);
-      HRegionInfo hri = new HRegionInfo(Bytes.toBytes("table" + i), start, end, false, regionId++);
+      byte[] tableName = Bytes.toBytes("table" +  (numTables > 0 ? rand.nextInt(numTables) : i));
+      HRegionInfo hri = new HRegionInfo(tableName, start, end, false, regionId++);
       regions.add(hri);
     }
     return regions;

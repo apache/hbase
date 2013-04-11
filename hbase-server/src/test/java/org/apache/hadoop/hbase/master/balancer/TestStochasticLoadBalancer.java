@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -131,28 +133,29 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   @Test
   public void testSkewCost() {
     for (int[] mockCluster : clusterStateMocks) {
-      double cost = loadBalancer.computeSkewLoadCost(mockClusterServers(mockCluster));
+      double cost = loadBalancer.computeSkewLoadCost(mockCluster(mockCluster));
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
     }
     assertEquals(1,
-      loadBalancer.computeSkewLoadCost(mockClusterServers(new int[] { 0, 0, 0, 0, 1 })), 0.01);
+      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 0, 0, 0, 0, 1 })), 0.01);
     assertEquals(.75,
-      loadBalancer.computeSkewLoadCost(mockClusterServers(new int[] { 0, 0, 0, 1, 1 })), 0.01);
+      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 0, 0, 0, 1, 1 })), 0.01);
     assertEquals(.5,
-      loadBalancer.computeSkewLoadCost(mockClusterServers(new int[] { 0, 0, 1, 1, 1 })), 0.01);
+      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 0, 0, 1, 1, 1 })), 0.01);
     assertEquals(.25,
-      loadBalancer.computeSkewLoadCost(mockClusterServers(new int[] { 0, 1, 1, 1, 1 })), 0.01);
+      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 0, 1, 1, 1, 1 })), 0.01);
     assertEquals(0,
-      loadBalancer.computeSkewLoadCost(mockClusterServers(new int[] { 1, 1, 1, 1, 1 })), 0.01);
+      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 1, 1, 1, 1, 1 })), 0.01);
     assertEquals(0,
-        loadBalancer.computeSkewLoadCost(mockClusterServers(new int[] { 10, 10, 10, 10, 10 })), 0.01);
+        loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 10, 10, 10, 10, 10 })), 0.01);
   }
 
   @Test
   public void testTableSkewCost() {
     for (int[] mockCluster : clusterStateMocks) {
-      double cost = loadBalancer.computeTableSkewLoadCost(mockClusterServers(mockCluster));
+      BaseLoadBalancer.Cluster cluster = mockCluster(mockCluster);
+      double cost = loadBalancer.computeTableSkewLoadCost(cluster);
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
     }
@@ -180,4 +183,71 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     }
     assertEquals(0.5, loadBalancer.costFromStats(statThree), 0.01);
   }
+
+  @Test (timeout = 20000)
+  public void testSmallCluster() {
+    int numNodes = 10;
+    int numRegions = 1000;
+    int numRegionsPerServer = 40; //all servers except one
+    int numTables = 10;
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+  }
+
+  @Test (timeout = 20000)
+  public void testSmallCluster2() {
+    int numNodes = 20;
+    int numRegions = 2000;
+    int numRegionsPerServer = 40; //all servers except one
+    int numTables = 10;
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+  }
+
+  @Test (timeout = 40000)
+  public void testMidCluster() {
+    int numNodes = 100;
+    int numRegions = 10000;
+    int numRegionsPerServer = 60; //all servers except one
+    int numTables = 40;
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+  }
+
+  @Test (timeout = 1200000)
+  public void testMidCluster2() {
+    int numNodes = 200;
+    int numRegions = 100000;
+    int numRegionsPerServer = 40; //all servers except one
+    int numTables = 400;
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+  }
+
+  @Test
+  @Ignore
+  //TODO: This still does not finish, making the LoadBalancer unusable at this scale. We should solve this.
+  //There are two reasons so far;
+  // - It takes too long for iterating for all servers
+  // - Moving one region out of the loaded server only costs a slight decrease in the cost of regionCountSkewCost
+  // but also a slight increase on the moveCost. loadMultiplier / moveCostMultiplier is not high enough to bring down
+  // the total cost, so that the eager selection cannot continue. This can be solved by smt like
+  // http://en.wikipedia.org/wiki/Simulated_annealing instead of random walk with eager selection
+  public void testLargeCluster() {
+    int numNodes = 1000;
+    int numRegions = 100000; //100 regions per RS
+    int numRegionsPerServer = 80; //all servers except one
+    int numTables = 100;
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+  }
+
+  protected void testWithCluster(int numNodes, int numRegions, int numRegionsPerServer, int numTables) {
+    //construct a cluster of numNodes, having  a total of numRegions. Each RS will hold
+    //numRegionsPerServer many regions except for the last one, which will host all the
+    //remaining regions
+    int[] cluster = new int[numNodes];
+    for (int i =0; i < numNodes; i++) {
+      cluster[i] = numRegionsPerServer;
+    }
+    cluster[cluster.length - 1] = numRegions - ((cluster.length - 1) * numRegionsPerServer);
+
+    assertNotNull(loadBalancer.balanceCluster(mockClusterServers(cluster, numTables)));
+  }
+
 }

@@ -18,8 +18,17 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.ByteArrayInputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.SequenceInputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -37,16 +46,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.io.DataInputBuffer;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.SequenceInputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * HRegion information.
@@ -182,6 +183,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   // Current TableName
   private byte[] tableName = null;
+  private String tableNameAsString = null;
 
   /** HRegionInfo for root region */
   public static final HRegionInfo ROOT_REGIONINFO =
@@ -532,7 +534,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return string representation of current table
    */
   public String getTableNameAsString() {
-    return Bytes.toString(tableName);
+    if (tableNameAsString == null) {
+      tableNameAsString = Bytes.toString(tableName);
+    }
+    return tableNameAsString;
   }
 
   /**
@@ -684,7 +689,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * @deprecated Use protobuf deserialization instead. 
+   * @deprecated Use protobuf deserialization instead.
    * @see #parseFrom(byte[])
    */
   @Deprecated
