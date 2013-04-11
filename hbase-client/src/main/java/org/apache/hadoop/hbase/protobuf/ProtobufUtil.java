@@ -47,9 +47,11 @@ import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
 
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -119,6 +121,7 @@ import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -138,7 +141,16 @@ public final class ProtobufUtil {
   private final static Map<String, Class<?>>
     PRIMITIVES = new HashMap<String, Class<?>>();
 
+  /**
+   * Dynamic class loader to load filter/comparators
+   */
+  private final static ClassLoader CLASS_LOADER;
+
   static {
+    ClassLoader parent = ProtobufUtil.class.getClassLoader();
+    Configuration conf = HBaseConfiguration.create();
+    CLASS_LOADER = new DynamicClassLoader(conf, parent);
+
     PRIMITIVES.put(Boolean.TYPE.getName(), Boolean.TYPE);
     PRIMITIVES.put(Byte.TYPE.getName(), Byte.TYPE);
     PRIMITIVES.put(Character.TYPE.getName(), Character.TYPE);
@@ -1046,7 +1058,7 @@ public final class ProtobufUtil {
     byte [] value = proto.getSerializedComparator().toByteArray();
     try {
       Class<? extends ByteArrayComparable> c =
-        (Class<? extends ByteArrayComparable>)(Class.forName(type));
+        (Class<? extends ByteArrayComparable>)Class.forName(type, true, CLASS_LOADER);
       Method parseFrom = c.getMethod(funcName, byte[].class);
       if (parseFrom == null) {
         throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
@@ -1070,7 +1082,7 @@ public final class ProtobufUtil {
     String funcName = "parseFrom";
     try {
       Class<? extends Filter> c =
-        (Class<? extends Filter>)Class.forName(type);
+        (Class<? extends Filter>)Class.forName(type, true, CLASS_LOADER);
       Method parseFrom = c.getMethod(funcName, byte[].class);
       if (parseFrom == null) {
         throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
@@ -1130,7 +1142,7 @@ public final class ProtobufUtil {
     String type = parameter.getName();
     try {
       Class<? extends Throwable> c =
-        (Class<? extends Throwable>)Class.forName(type);
+        (Class<? extends Throwable>)Class.forName(type, true, CLASS_LOADER);
       Constructor<? extends Throwable> cn =
         c.getDeclaredConstructor(String.class);
       return cn.newInstance(desc);
