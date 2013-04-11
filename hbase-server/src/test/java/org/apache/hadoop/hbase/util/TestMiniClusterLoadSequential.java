@@ -167,7 +167,7 @@ public class TestMiniClusterLoadSequential {
   }
 
   protected int numKeys() {
-    return 10000;
+    return 1000;
   }
 
   protected HColumnDescriptor getColumnDesc(HBaseAdmin admin)
