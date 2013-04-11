@@ -11,130 +11,69 @@ public final class PingProtos {
   public interface PingRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
-  /**
-   * Protobuf type {@code PingRequest}
-   */
   public static final class PingRequest extends
       com.google.protobuf.GeneratedMessage
       implements PingRequestOrBuilder {
     // Use PingRequest.newBuilder() to construct.
-    private PingRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private PingRequest(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private PingRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private PingRequest(boolean noInit) {}
+    
     private static final PingRequest defaultInstance;
     public static PingRequest getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public PingRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private PingRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingRequest_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingRequest_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<PingRequest> PARSER =
-        new com.google.protobuf.AbstractParser<PingRequest>() {
-      public PingRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new PingRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<PingRequest> getParserForType() {
-      return PARSER;
-    }
-
+    
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -144,95 +83,101 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest) obj;
-
+      
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code PingRequest}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequestOrBuilder {
@@ -240,21 +185,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingRequest_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingRequest_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -265,25 +207,25 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingRequest_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -291,13 +233,23 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest(this);
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest)other);
@@ -306,203 +258,124 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
           }
         }
-        return this;
       }
-
+      
+      
       // @@protoc_insertion_point(builder_scope:PingRequest)
     }
-
+    
     static {
       defaultInstance = new PingRequest(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:PingRequest)
   }
-
+  
   public interface PingResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required string pong = 1;
-    /**
-     * <code>required string pong = 1;</code>
-     */
     boolean hasPong();
-    /**
-     * <code>required string pong = 1;</code>
-     */
-    java.lang.String getPong();
-    /**
-     * <code>required string pong = 1;</code>
-     */
-    com.google.protobuf.ByteString
-        getPongBytes();
+    String getPong();
   }
-  /**
-   * Protobuf type {@code PingResponse}
-   */
   public static final class PingResponse extends
       com.google.protobuf.GeneratedMessage
       implements PingResponseOrBuilder {
     // Use PingResponse.newBuilder() to construct.
-    private PingResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private PingResponse(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private PingResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private PingResponse(boolean noInit) {}
+    
     private static final PingResponse defaultInstance;
     public static PingResponse getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public PingResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private PingResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              pong_ = input.readBytes();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<PingResponse> PARSER =
-        new com.google.protobuf.AbstractParser<PingResponse>() {
-      public PingResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new PingResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<PingResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required string pong = 1;
     public static final int PONG_FIELD_NUMBER = 1;
     private java.lang.Object pong_;
-    /**
-     * <code>required string pong = 1;</code>
-     */
     public boolean hasPong() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required string pong = 1;</code>
-     */
-    public java.lang.String getPong() {
+    public String getPong() {
       java.lang.Object ref = pong_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
+      if (ref instanceof String) {
+        return (String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
           pong_ = s;
         }
         return s;
       }
     }
-    /**
-     * <code>required string pong = 1;</code>
-     */
-    public com.google.protobuf.ByteString
-        getPongBytes() {
+    private com.google.protobuf.ByteString getPongBytes() {
       java.lang.Object ref = pong_;
-      if (ref instanceof java.lang.String) {
+      if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
         pong_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-
+    
     private void initFields() {
       pong_ = "";
     }
@@ -510,7 +383,7 @@ public final class PingProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasPong()) {
         memoizedIsInitialized = 0;
         return false;
@@ -518,7 +391,7 @@ public final class PingProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -527,12 +400,12 @@ public final class PingProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -542,14 +415,14 @@ public final class PingProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -559,7 +432,7 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse) obj;
-
+      
       boolean result = true;
       result = result && (hasPong() == other.hasPong());
       if (hasPong()) {
@@ -570,13 +443,9 @@ public final class PingProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasPong()) {
@@ -584,79 +453,89 @@ public final class PingProtos {
         hash = (53 * hash) + getPong().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code PingResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponseOrBuilder {
@@ -664,21 +543,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -689,27 +565,27 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         pong_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_PingResponse_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -717,7 +593,17 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse(this);
         int from_bitField0_ = bitField0_;
@@ -730,7 +616,7 @@ public final class PingProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse)other);
@@ -739,18 +625,16 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.getDefaultInstance()) return this;
         if (other.hasPong()) {
-          bitField0_ |= 0x00000001;
-          pong_ = other.pong_;
-          onChanged();
+          setPong(other.getPong());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasPong()) {
           
@@ -758,69 +642,57 @@ public final class PingProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              pong_ = input.readBytes();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required string pong = 1;
       private java.lang.Object pong_ = "";
-      /**
-       * <code>required string pong = 1;</code>
-       */
       public boolean hasPong() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required string pong = 1;</code>
-       */
-      public java.lang.String getPong() {
+      public String getPong() {
         java.lang.Object ref = pong_;
-        if (!(ref instanceof java.lang.String)) {
-          java.lang.String s = ((com.google.protobuf.ByteString) ref)
-              .toStringUtf8();
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           pong_ = s;
           return s;
         } else {
-          return (java.lang.String) ref;
+          return (String) ref;
         }
       }
-      /**
-       * <code>required string pong = 1;</code>
-       */
-      public com.google.protobuf.ByteString
-          getPongBytes() {
-        java.lang.Object ref = pong_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          pong_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>required string pong = 1;</code>
-       */
-      public Builder setPong(
-          java.lang.String value) {
+      public Builder setPong(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -829,167 +701,95 @@ public final class PingProtos {
         onChanged();
         return this;
       }
-      /**
-       * <code>required string pong = 1;</code>
-       */
       public Builder clearPong() {
         bitField0_ = (bitField0_ & ~0x00000001);
         pong_ = getDefaultInstance().getPong();
         onChanged();
         return this;
       }
-      /**
-       * <code>required string pong = 1;</code>
-       */
-      public Builder setPongBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+      void setPong(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000001;
         pong_ = value;
         onChanged();
-        return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:PingResponse)
     }
-
+    
     static {
       defaultInstance = new PingResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:PingResponse)
   }
-
+  
   public interface CountRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
-  /**
-   * Protobuf type {@code CountRequest}
-   */
   public static final class CountRequest extends
       com.google.protobuf.GeneratedMessage
       implements CountRequestOrBuilder {
     // Use CountRequest.newBuilder() to construct.
-    private CountRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private CountRequest(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private CountRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private CountRequest(boolean noInit) {}
+    
     private static final CountRequest defaultInstance;
     public static CountRequest getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public CountRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private CountRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountRequest_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountRequest_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<CountRequest> PARSER =
-        new com.google.protobuf.AbstractParser<CountRequest>() {
-      public CountRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new CountRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<CountRequest> getParserForType() {
-      return PARSER;
-    }
-
+    
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -999,95 +799,101 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest) obj;
-
+      
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code CountRequest}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequestOrBuilder {
@@ -1095,21 +901,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountRequest_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountRequest_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1120,25 +923,25 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountRequest_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -1146,13 +949,23 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest(this);
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest)other);
@@ -1161,171 +974,102 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
           }
         }
-        return this;
       }
-
+      
+      
       // @@protoc_insertion_point(builder_scope:CountRequest)
     }
-
+    
     static {
       defaultInstance = new CountRequest(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:CountRequest)
   }
-
+  
   public interface CountResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required int32 count = 1;
-    /**
-     * <code>required int32 count = 1;</code>
-     */
     boolean hasCount();
-    /**
-     * <code>required int32 count = 1;</code>
-     */
     int getCount();
   }
-  /**
-   * Protobuf type {@code CountResponse}
-   */
   public static final class CountResponse extends
       com.google.protobuf.GeneratedMessage
       implements CountResponseOrBuilder {
     // Use CountResponse.newBuilder() to construct.
-    private CountResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private CountResponse(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private CountResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private CountResponse(boolean noInit) {}
+    
     private static final CountResponse defaultInstance;
     public static CountResponse getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public CountResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private CountResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              count_ = input.readInt32();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<CountResponse> PARSER =
-        new com.google.protobuf.AbstractParser<CountResponse>() {
-      public CountResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new CountResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<CountResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required int32 count = 1;
     public static final int COUNT_FIELD_NUMBER = 1;
     private int count_;
-    /**
-     * <code>required int32 count = 1;</code>
-     */
     public boolean hasCount() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required int32 count = 1;</code>
-     */
     public int getCount() {
       return count_;
     }
-
+    
     private void initFields() {
       count_ = 0;
     }
@@ -1333,7 +1077,7 @@ public final class PingProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasCount()) {
         memoizedIsInitialized = 0;
         return false;
@@ -1341,7 +1085,7 @@ public final class PingProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -1350,12 +1094,12 @@ public final class PingProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1365,14 +1109,14 @@ public final class PingProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -1382,7 +1126,7 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse) obj;
-
+      
       boolean result = true;
       result = result && (hasCount() == other.hasCount());
       if (hasCount()) {
@@ -1393,13 +1137,9 @@ public final class PingProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCount()) {
@@ -1407,79 +1147,89 @@ public final class PingProtos {
         hash = (53 * hash) + getCount();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code CountResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponseOrBuilder {
@@ -1487,21 +1237,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1512,27 +1259,27 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         count_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_CountResponse_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -1540,7 +1287,17 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse(this);
         int from_bitField0_ = bitField0_;
@@ -1553,7 +1310,7 @@ public final class PingProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse)other);
@@ -1562,7 +1319,7 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.getDefaultInstance()) return this;
         if (other.hasCount()) {
@@ -1571,7 +1328,7 @@ public final class PingProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasCount()) {
           
@@ -1579,195 +1336,119 @@ public final class PingProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              count_ = input.readInt32();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required int32 count = 1;
       private int count_ ;
-      /**
-       * <code>required int32 count = 1;</code>
-       */
       public boolean hasCount() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required int32 count = 1;</code>
-       */
       public int getCount() {
         return count_;
       }
-      /**
-       * <code>required int32 count = 1;</code>
-       */
       public Builder setCount(int value) {
         bitField0_ |= 0x00000001;
         count_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required int32 count = 1;</code>
-       */
       public Builder clearCount() {
         bitField0_ = (bitField0_ & ~0x00000001);
         count_ = 0;
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:CountResponse)
     }
-
+    
     static {
       defaultInstance = new CountResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:CountResponse)
   }
-
+  
   public interface IncrementCountRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required int32 diff = 1;
-    /**
-     * <code>required int32 diff = 1;</code>
-     */
     boolean hasDiff();
-    /**
-     * <code>required int32 diff = 1;</code>
-     */
     int getDiff();
   }
-  /**
-   * Protobuf type {@code IncrementCountRequest}
-   */
   public static final class IncrementCountRequest extends
       com.google.protobuf.GeneratedMessage
       implements IncrementCountRequestOrBuilder {
     // Use IncrementCountRequest.newBuilder() to construct.
-    private IncrementCountRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private IncrementCountRequest(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private IncrementCountRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private IncrementCountRequest(boolean noInit) {}
+    
     private static final IncrementCountRequest defaultInstance;
     public static IncrementCountRequest getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public IncrementCountRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private IncrementCountRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              diff_ = input.readInt32();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountRequest_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountRequest_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<IncrementCountRequest> PARSER =
-        new com.google.protobuf.AbstractParser<IncrementCountRequest>() {
-      public IncrementCountRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new IncrementCountRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<IncrementCountRequest> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required int32 diff = 1;
     public static final int DIFF_FIELD_NUMBER = 1;
     private int diff_;
-    /**
-     * <code>required int32 diff = 1;</code>
-     */
     public boolean hasDiff() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required int32 diff = 1;</code>
-     */
     public int getDiff() {
       return diff_;
     }
-
+    
     private void initFields() {
       diff_ = 0;
     }
@@ -1775,7 +1456,7 @@ public final class PingProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasDiff()) {
         memoizedIsInitialized = 0;
         return false;
@@ -1783,7 +1464,7 @@ public final class PingProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -1792,12 +1473,12 @@ public final class PingProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1807,14 +1488,14 @@ public final class PingProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -1824,7 +1505,7 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest) obj;
-
+      
       boolean result = true;
       result = result && (hasDiff() == other.hasDiff());
       if (hasDiff()) {
@@ -1835,13 +1516,9 @@ public final class PingProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasDiff()) {
@@ -1849,79 +1526,89 @@ public final class PingProtos {
         hash = (53 * hash) + getDiff();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code IncrementCountRequest}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequestOrBuilder {
@@ -1929,21 +1616,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountRequest_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountRequest_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1954,27 +1638,27 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         diff_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountRequest_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -1982,7 +1666,17 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest(this);
         int from_bitField0_ = bitField0_;
@@ -1995,7 +1689,7 @@ public final class PingProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest)other);
@@ -2004,7 +1698,7 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.getDefaultInstance()) return this;
         if (other.hasDiff()) {
@@ -2013,7 +1707,7 @@ public final class PingProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasDiff()) {
           
@@ -2021,195 +1715,119 @@ public final class PingProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              diff_ = input.readInt32();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required int32 diff = 1;
       private int diff_ ;
-      /**
-       * <code>required int32 diff = 1;</code>
-       */
       public boolean hasDiff() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required int32 diff = 1;</code>
-       */
       public int getDiff() {
         return diff_;
       }
-      /**
-       * <code>required int32 diff = 1;</code>
-       */
       public Builder setDiff(int value) {
         bitField0_ |= 0x00000001;
         diff_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required int32 diff = 1;</code>
-       */
       public Builder clearDiff() {
         bitField0_ = (bitField0_ & ~0x00000001);
         diff_ = 0;
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:IncrementCountRequest)
     }
-
+    
     static {
       defaultInstance = new IncrementCountRequest(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:IncrementCountRequest)
   }
-
+  
   public interface IncrementCountResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required int32 count = 1;
-    /**
-     * <code>required int32 count = 1;</code>
-     */
     boolean hasCount();
-    /**
-     * <code>required int32 count = 1;</code>
-     */
     int getCount();
   }
-  /**
-   * Protobuf type {@code IncrementCountResponse}
-   */
   public static final class IncrementCountResponse extends
       com.google.protobuf.GeneratedMessage
       implements IncrementCountResponseOrBuilder {
     // Use IncrementCountResponse.newBuilder() to construct.
-    private IncrementCountResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private IncrementCountResponse(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private IncrementCountResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private IncrementCountResponse(boolean noInit) {}
+    
     private static final IncrementCountResponse defaultInstance;
     public static IncrementCountResponse getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public IncrementCountResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private IncrementCountResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              count_ = input.readInt32();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<IncrementCountResponse> PARSER =
-        new com.google.protobuf.AbstractParser<IncrementCountResponse>() {
-      public IncrementCountResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new IncrementCountResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<IncrementCountResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required int32 count = 1;
     public static final int COUNT_FIELD_NUMBER = 1;
     private int count_;
-    /**
-     * <code>required int32 count = 1;</code>
-     */
     public boolean hasCount() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required int32 count = 1;</code>
-     */
     public int getCount() {
       return count_;
     }
-
+    
     private void initFields() {
       count_ = 0;
     }
@@ -2217,7 +1835,7 @@ public final class PingProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasCount()) {
         memoizedIsInitialized = 0;
         return false;
@@ -2225,7 +1843,7 @@ public final class PingProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -2234,12 +1852,12 @@ public final class PingProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2249,14 +1867,14 @@ public final class PingProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -2266,7 +1884,7 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse) obj;
-
+      
       boolean result = true;
       result = result && (hasCount() == other.hasCount());
       if (hasCount()) {
@@ -2277,13 +1895,9 @@ public final class PingProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCount()) {
@@ -2291,79 +1905,89 @@ public final class PingProtos {
         hash = (53 * hash) + getCount();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code IncrementCountResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponseOrBuilder {
@@ -2371,21 +1995,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -2396,27 +2017,27 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         count_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_IncrementCountResponse_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -2424,7 +2045,17 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse(this);
         int from_bitField0_ = bitField0_;
@@ -2437,7 +2068,7 @@ public final class PingProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse)other);
@@ -2446,7 +2077,7 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.getDefaultInstance()) return this;
         if (other.hasCount()) {
@@ -2455,7 +2086,7 @@ public final class PingProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasCount()) {
           
@@ -2463,227 +2094,141 @@ public final class PingProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              count_ = input.readInt32();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required int32 count = 1;
       private int count_ ;
-      /**
-       * <code>required int32 count = 1;</code>
-       */
       public boolean hasCount() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required int32 count = 1;</code>
-       */
       public int getCount() {
         return count_;
       }
-      /**
-       * <code>required int32 count = 1;</code>
-       */
       public Builder setCount(int value) {
         bitField0_ |= 0x00000001;
         count_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required int32 count = 1;</code>
-       */
       public Builder clearCount() {
         bitField0_ = (bitField0_ & ~0x00000001);
         count_ = 0;
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:IncrementCountResponse)
     }
-
+    
     static {
       defaultInstance = new IncrementCountResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:IncrementCountResponse)
   }
-
+  
   public interface HelloRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // optional string name = 1;
-    /**
-     * <code>optional string name = 1;</code>
-     */
     boolean hasName();
-    /**
-     * <code>optional string name = 1;</code>
-     */
-    java.lang.String getName();
-    /**
-     * <code>optional string name = 1;</code>
-     */
-    com.google.protobuf.ByteString
-        getNameBytes();
+    String getName();
   }
-  /**
-   * Protobuf type {@code HelloRequest}
-   */
   public static final class HelloRequest extends
       com.google.protobuf.GeneratedMessage
       implements HelloRequestOrBuilder {
     // Use HelloRequest.newBuilder() to construct.
-    private HelloRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private HelloRequest(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private HelloRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private HelloRequest(boolean noInit) {}
+    
     private static final HelloRequest defaultInstance;
     public static HelloRequest getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public HelloRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private HelloRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              name_ = input.readBytes();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloRequest_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloRequest_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<HelloRequest> PARSER =
-        new com.google.protobuf.AbstractParser<HelloRequest>() {
-      public HelloRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new HelloRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<HelloRequest> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // optional string name = 1;
     public static final int NAME_FIELD_NUMBER = 1;
     private java.lang.Object name_;
-    /**
-     * <code>optional string name = 1;</code>
-     */
     public boolean hasName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>optional string name = 1;</code>
-     */
-    public java.lang.String getName() {
+    public String getName() {
       java.lang.Object ref = name_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
+      if (ref instanceof String) {
+        return (String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
           name_ = s;
         }
         return s;
       }
     }
-    /**
-     * <code>optional string name = 1;</code>
-     */
-    public com.google.protobuf.ByteString
-        getNameBytes() {
+    private com.google.protobuf.ByteString getNameBytes() {
       java.lang.Object ref = name_;
-      if (ref instanceof java.lang.String) {
+      if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
         name_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-
+    
     private void initFields() {
       name_ = "";
     }
@@ -2691,11 +2236,11 @@ public final class PingProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -2704,12 +2249,12 @@ public final class PingProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2719,14 +2264,14 @@ public final class PingProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -2736,7 +2281,7 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest) obj;
-
+      
       boolean result = true;
       result = result && (hasName() == other.hasName());
       if (hasName()) {
@@ -2747,13 +2292,9 @@ public final class PingProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasName()) {
@@ -2761,79 +2302,89 @@ public final class PingProtos {
         hash = (53 * hash) + getName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code HelloRequest}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequestOrBuilder {
@@ -2841,21 +2392,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloRequest_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloRequest_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -2866,27 +2414,27 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         name_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloRequest_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -2894,7 +2442,17 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest(this);
         int from_bitField0_ = bitField0_;
@@ -2907,7 +2465,7 @@ public final class PingProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest)other);
@@ -2916,84 +2474,70 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.getDefaultInstance()) return this;
         if (other.hasName()) {
-          bitField0_ |= 0x00000001;
-          name_ = other.name_;
-          onChanged();
+          setName(other.getName());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              name_ = input.readBytes();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // optional string name = 1;
       private java.lang.Object name_ = "";
-      /**
-       * <code>optional string name = 1;</code>
-       */
       public boolean hasName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>optional string name = 1;</code>
-       */
-      public java.lang.String getName() {
+      public String getName() {
         java.lang.Object ref = name_;
-        if (!(ref instanceof java.lang.String)) {
-          java.lang.String s = ((com.google.protobuf.ByteString) ref)
-              .toStringUtf8();
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           name_ = s;
           return s;
         } else {
-          return (java.lang.String) ref;
+          return (String) ref;
         }
       }
-      /**
-       * <code>optional string name = 1;</code>
-       */
-      public com.google.protobuf.ByteString
-          getNameBytes() {
-        java.lang.Object ref = name_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          name_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string name = 1;</code>
-       */
-      public Builder setName(
-          java.lang.String value) {
+      public Builder setName(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -3002,197 +2546,97 @@ public final class PingProtos {
         onChanged();
         return this;
       }
-      /**
-       * <code>optional string name = 1;</code>
-       */
       public Builder clearName() {
         bitField0_ = (bitField0_ & ~0x00000001);
         name_ = getDefaultInstance().getName();
         onChanged();
         return this;
       }
-      /**
-       * <code>optional string name = 1;</code>
-       */
-      public Builder setNameBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+      void setName(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
-        return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:HelloRequest)
     }
-
+    
     static {
       defaultInstance = new HelloRequest(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:HelloRequest)
   }
-
+  
   public interface HelloResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // optional string response = 1;
-    /**
-     * <code>optional string response = 1;</code>
-     */
     boolean hasResponse();
-    /**
-     * <code>optional string response = 1;</code>
-     */
-    java.lang.String getResponse();
-    /**
-     * <code>optional string response = 1;</code>
-     */
-    com.google.protobuf.ByteString
-        getResponseBytes();
+    String getResponse();
   }
-  /**
-   * Protobuf type {@code HelloResponse}
-   */
   public static final class HelloResponse extends
       com.google.protobuf.GeneratedMessage
       implements HelloResponseOrBuilder {
     // Use HelloResponse.newBuilder() to construct.
-    private HelloResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private HelloResponse(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private HelloResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private HelloResponse(boolean noInit) {}
+    
     private static final HelloResponse defaultInstance;
     public static HelloResponse getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public HelloResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private HelloResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              response_ = input.readBytes();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<HelloResponse> PARSER =
-        new com.google.protobuf.AbstractParser<HelloResponse>() {
-      public HelloResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new HelloResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<HelloResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // optional string response = 1;
     public static final int RESPONSE_FIELD_NUMBER = 1;
     private java.lang.Object response_;
-    /**
-     * <code>optional string response = 1;</code>
-     */
     public boolean hasResponse() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>optional string response = 1;</code>
-     */
-    public java.lang.String getResponse() {
+    public String getResponse() {
       java.lang.Object ref = response_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
+      if (ref instanceof String) {
+        return (String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
           response_ = s;
         }
         return s;
       }
     }
-    /**
-     * <code>optional string response = 1;</code>
-     */
-    public com.google.protobuf.ByteString
-        getResponseBytes() {
+    private com.google.protobuf.ByteString getResponseBytes() {
       java.lang.Object ref = response_;
-      if (ref instanceof java.lang.String) {
+      if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
         response_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-
+    
     private void initFields() {
       response_ = "";
     }
@@ -3200,11 +2644,11 @@ public final class PingProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -3213,12 +2657,12 @@ public final class PingProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -3228,14 +2672,14 @@ public final class PingProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -3245,7 +2689,7 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse) obj;
-
+      
       boolean result = true;
       result = result && (hasResponse() == other.hasResponse());
       if (hasResponse()) {
@@ -3256,13 +2700,9 @@ public final class PingProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasResponse()) {
@@ -3270,79 +2710,89 @@ public final class PingProtos {
         hash = (53 * hash) + getResponse().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code HelloResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponseOrBuilder {
@@ -3350,21 +2800,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -3375,27 +2822,27 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         response_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_HelloResponse_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -3403,7 +2850,17 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse(this);
         int from_bitField0_ = bitField0_;
@@ -3416,7 +2873,7 @@ public final class PingProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse)other);
@@ -3425,84 +2882,70 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.getDefaultInstance()) return this;
         if (other.hasResponse()) {
-          bitField0_ |= 0x00000001;
-          response_ = other.response_;
-          onChanged();
+          setResponse(other.getResponse());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              response_ = input.readBytes();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // optional string response = 1;
       private java.lang.Object response_ = "";
-      /**
-       * <code>optional string response = 1;</code>
-       */
       public boolean hasResponse() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>optional string response = 1;</code>
-       */
-      public java.lang.String getResponse() {
+      public String getResponse() {
         java.lang.Object ref = response_;
-        if (!(ref instanceof java.lang.String)) {
-          java.lang.String s = ((com.google.protobuf.ByteString) ref)
-              .toStringUtf8();
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           response_ = s;
           return s;
         } else {
-          return (java.lang.String) ref;
+          return (String) ref;
         }
       }
-      /**
-       * <code>optional string response = 1;</code>
-       */
-      public com.google.protobuf.ByteString
-          getResponseBytes() {
-        java.lang.Object ref = response_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          response_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string response = 1;</code>
-       */
-      public Builder setResponse(
-          java.lang.String value) {
+      public Builder setResponse(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -3511,167 +2954,95 @@ public final class PingProtos {
         onChanged();
         return this;
       }
-      /**
-       * <code>optional string response = 1;</code>
-       */
       public Builder clearResponse() {
         bitField0_ = (bitField0_ & ~0x00000001);
         response_ = getDefaultInstance().getResponse();
         onChanged();
         return this;
       }
-      /**
-       * <code>optional string response = 1;</code>
-       */
-      public Builder setResponseBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+      void setResponse(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000001;
         response_ = value;
         onChanged();
-        return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:HelloResponse)
     }
-
+    
     static {
       defaultInstance = new HelloResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:HelloResponse)
   }
-
+  
   public interface NoopRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
-  /**
-   * Protobuf type {@code NoopRequest}
-   */
   public static final class NoopRequest extends
       com.google.protobuf.GeneratedMessage
       implements NoopRequestOrBuilder {
     // Use NoopRequest.newBuilder() to construct.
-    private NoopRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private NoopRequest(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private NoopRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private NoopRequest(boolean noInit) {}
+    
     private static final NoopRequest defaultInstance;
     public static NoopRequest getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public NoopRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private NoopRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopRequest_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopRequest_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<NoopRequest> PARSER =
-        new com.google.protobuf.AbstractParser<NoopRequest>() {
-      public NoopRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new NoopRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<NoopRequest> getParserForType() {
-      return PARSER;
-    }
-
+    
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -3681,95 +3052,101 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest) obj;
-
+      
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code NoopRequest}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequestOrBuilder {
@@ -3777,21 +3154,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopRequest_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopRequest_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -3802,25 +3176,25 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopRequest_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -3828,13 +3202,23 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest(this);
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest)other);
@@ -3843,173 +3227,122 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-
-      // @@protoc_insertion_point(builder_scope:NoopRequest)
-    }
-
-    static {
-      defaultInstance = new NoopRequest(true);
-      defaultInstance.initFields();
-    }
-
-    // @@protoc_insertion_point(class_scope:NoopRequest)
-  }
-
-  public interface NoopResponseOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-  }
-  /**
-   * Protobuf type {@code NoopResponse}
-   */
-  public static final class NoopResponse extends
-      com.google.protobuf.GeneratedMessage
-      implements NoopResponseOrBuilder {
-    // Use NoopResponse.newBuilder() to construct.
-    private NoopResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
-    }
-    private NoopResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final NoopResponse defaultInstance;
-    public static NoopResponse getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public NoopResponse getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private NoopResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              done = true;
-              break;
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                done = true;
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
               }
               break;
             }
           }
         }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
       }
+      
+      
+      // @@protoc_insertion_point(builder_scope:NoopRequest)
     }
+    
+    static {
+      defaultInstance = new NoopRequest(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:NoopRequest)
+  }
+  
+  public interface NoopResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  public static final class NoopResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements NoopResponseOrBuilder {
+    // Use NoopResponse.newBuilder() to construct.
+    private NoopResponse(Builder builder) {
+      super(builder);
+    }
+    private NoopResponse(boolean noInit) {}
+    
+    private static final NoopResponse defaultInstance;
+    public static NoopResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public NoopResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.Builder.class);
+      return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<NoopResponse> PARSER =
-        new com.google.protobuf.AbstractParser<NoopResponse>() {
-      public NoopResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new NoopResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<NoopResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -4019,95 +3352,101 @@ public final class PingProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse other = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse) obj;
-
+      
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code NoopResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponseOrBuilder {
@@ -4115,21 +3454,18 @@ public final class PingProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.class, org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.Builder.class);
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -4140,25 +3476,25 @@ public final class PingProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.internal_static_NoopResponse_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse build() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -4166,13 +3502,23 @@ public final class PingProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse buildPartial() {
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse result = new org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse(this);
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse) {
           return mergeFrom((org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse)other);
@@ -4181,96 +3527,88 @@ public final class PingProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse other) {
         if (other == org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
           }
         }
-        return this;
       }
-
+      
+      
       // @@protoc_insertion_point(builder_scope:NoopResponse)
     }
-
+    
     static {
       defaultInstance = new NoopResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:NoopResponse)
   }
-
-  /**
-   * Protobuf service {@code PingService}
-   */
+  
   public static abstract class PingService
       implements com.google.protobuf.Service {
     protected PingService() {}
-
+    
     public interface Interface {
-      /**
-       * <code>rpc ping(.PingRequest) returns (.PingResponse);</code>
-       */
       public abstract void ping(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse> done);
-
-      /**
-       * <code>rpc count(.CountRequest) returns (.CountResponse);</code>
-       */
+      
       public abstract void count(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse> done);
-
-      /**
-       * <code>rpc increment(.IncrementCountRequest) returns (.IncrementCountResponse);</code>
-       */
+      
       public abstract void increment(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse> done);
-
-      /**
-       * <code>rpc hello(.HelloRequest) returns (.HelloResponse);</code>
-       */
+      
       public abstract void hello(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse> done);
-
-      /**
-       * <code>rpc noop(.NoopRequest) returns (.NoopResponse);</code>
-       */
+      
       public abstract void noop(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse> done);
-
+      
     }
-
+    
     public static com.google.protobuf.Service newReflectiveService(
         final Interface impl) {
       return new PingService() {
@@ -4281,7 +3619,7 @@ public final class PingProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse> done) {
           impl.ping(controller, request, done);
         }
-
+        
         @java.lang.Override
         public  void count(
             com.google.protobuf.RpcController controller,
@@ -4289,7 +3627,7 @@ public final class PingProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse> done) {
           impl.count(controller, request, done);
         }
-
+        
         @java.lang.Override
         public  void increment(
             com.google.protobuf.RpcController controller,
@@ -4297,7 +3635,7 @@ public final class PingProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse> done) {
           impl.increment(controller, request, done);
         }
-
+        
         @java.lang.Override
         public  void hello(
             com.google.protobuf.RpcController controller,
@@ -4305,7 +3643,7 @@ public final class PingProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse> done) {
           impl.hello(controller, request, done);
         }
-
+        
         @java.lang.Override
         public  void noop(
             com.google.protobuf.RpcController controller,
@@ -4313,10 +3651,10 @@ public final class PingProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse> done) {
           impl.noop(controller, request, done);
         }
-
+        
       };
     }
-
+    
     public static com.google.protobuf.BlockingService
         newReflectiveBlockingService(final BlockingInterface impl) {
       return new com.google.protobuf.BlockingService() {
@@ -4324,7 +3662,7 @@ public final class PingProtos {
             getDescriptorForType() {
           return getDescriptor();
         }
-
+        
         public final com.google.protobuf.Message callBlockingMethod(
             com.google.protobuf.Descriptors.MethodDescriptor method,
             com.google.protobuf.RpcController controller,
@@ -4350,7 +3688,7 @@ public final class PingProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-
+        
         public final com.google.protobuf.Message
             getRequestPrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -4374,7 +3712,7 @@ public final class PingProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-
+        
         public final com.google.protobuf.Message
             getResponsePrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -4398,50 +3736,35 @@ public final class PingProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-
+        
       };
     }
-
-    /**
-     * <code>rpc ping(.PingRequest) returns (.PingResponse);</code>
-     */
+    
     public abstract void ping(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse> done);
-
-    /**
-     * <code>rpc count(.CountRequest) returns (.CountResponse);</code>
-     */
+    
     public abstract void count(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse> done);
-
-    /**
-     * <code>rpc increment(.IncrementCountRequest) returns (.IncrementCountResponse);</code>
-     */
+    
     public abstract void increment(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse> done);
-
-    /**
-     * <code>rpc hello(.HelloRequest) returns (.HelloResponse);</code>
-     */
+    
     public abstract void hello(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse> done);
-
-    /**
-     * <code>rpc noop(.NoopRequest) returns (.NoopResponse);</code>
-     */
+    
     public abstract void noop(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse> done);
-
+    
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -4451,7 +3774,7 @@ public final class PingProtos {
         getDescriptorForType() {
       return getDescriptor();
     }
-
+    
     public final void callMethod(
         com.google.protobuf.Descriptors.MethodDescriptor method,
         com.google.protobuf.RpcController controller,
@@ -4493,7 +3816,7 @@ public final class PingProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-
+    
     public final com.google.protobuf.Message
         getRequestPrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -4517,7 +3840,7 @@ public final class PingProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-
+    
     public final com.google.protobuf.Message
         getResponsePrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -4541,23 +3864,23 @@ public final class PingProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-
+    
     public static Stub newStub(
         com.google.protobuf.RpcChannel channel) {
       return new Stub(channel);
     }
-
+    
     public static final class Stub extends org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingService implements Interface {
       private Stub(com.google.protobuf.RpcChannel channel) {
         this.channel = channel;
       }
-
+      
       private final com.google.protobuf.RpcChannel channel;
-
+      
       public com.google.protobuf.RpcChannel getChannel() {
         return channel;
       }
-
+      
       public  void ping(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest request,
@@ -4572,7 +3895,7 @@ public final class PingProtos {
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.class,
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.getDefaultInstance()));
       }
-
+      
       public  void count(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest request,
@@ -4587,7 +3910,7 @@ public final class PingProtos {
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.class,
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.getDefaultInstance()));
       }
-
+      
       public  void increment(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest request,
@@ -4602,7 +3925,7 @@ public final class PingProtos {
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.class,
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.getDefaultInstance()));
       }
-
+      
       public  void hello(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest request,
@@ -4617,7 +3940,7 @@ public final class PingProtos {
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.class,
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.getDefaultInstance()));
       }
-
+      
       public  void noop(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest request,
@@ -4633,46 +3956,46 @@ public final class PingProtos {
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.getDefaultInstance()));
       }
     }
-
+    
     public static BlockingInterface newBlockingStub(
         com.google.protobuf.BlockingRpcChannel channel) {
       return new BlockingStub(channel);
     }
-
+    
     public interface BlockingInterface {
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse ping(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest request)
           throws com.google.protobuf.ServiceException;
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse count(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest request)
           throws com.google.protobuf.ServiceException;
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse increment(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest request)
           throws com.google.protobuf.ServiceException;
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse hello(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest request)
           throws com.google.protobuf.ServiceException;
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse noop(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest request)
           throws com.google.protobuf.ServiceException;
     }
-
+    
     private static final class BlockingStub implements BlockingInterface {
       private BlockingStub(com.google.protobuf.BlockingRpcChannel channel) {
         this.channel = channel;
       }
-
+      
       private final com.google.protobuf.BlockingRpcChannel channel;
-
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse ping(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest request)
@@ -4683,8 +4006,8 @@ public final class PingProtos {
           request,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.getDefaultInstance());
       }
-
-
+      
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse count(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest request)
@@ -4695,8 +4018,8 @@ public final class PingProtos {
           request,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.getDefaultInstance());
       }
-
-
+      
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse increment(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest request)
@@ -4707,8 +4030,8 @@ public final class PingProtos {
           request,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.getDefaultInstance());
       }
-
-
+      
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse hello(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest request)
@@ -4719,8 +4042,8 @@ public final class PingProtos {
           request,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.getDefaultInstance());
       }
-
-
+      
+      
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse noop(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest request)
@@ -4731,12 +4054,10 @@ public final class PingProtos {
           request,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.getDefaultInstance());
       }
-
+      
     }
-
-    // @@protoc_insertion_point(class_scope:PingService)
   }
-
+  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_PingRequest_descriptor;
   private static
@@ -4787,7 +4108,7 @@ public final class PingProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_NoopResponse_fieldAccessorTable;
-
+  
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -4822,61 +4143,81 @@ public final class PingProtos {
           internal_static_PingRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_PingRequest_descriptor,
-              new java.lang.String[] { });
+              new java.lang.String[] { },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest.Builder.class);
           internal_static_PingResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_PingResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_PingResponse_descriptor,
-              new java.lang.String[] { "Pong", });
+              new java.lang.String[] { "Pong", },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse.Builder.class);
           internal_static_CountRequest_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_CountRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CountRequest_descriptor,
-              new java.lang.String[] { });
+              new java.lang.String[] { },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest.Builder.class);
           internal_static_CountResponse_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_CountResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CountResponse_descriptor,
-              new java.lang.String[] { "Count", });
+              new java.lang.String[] { "Count", },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse.Builder.class);
           internal_static_IncrementCountRequest_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_IncrementCountRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IncrementCountRequest_descriptor,
-              new java.lang.String[] { "Diff", });
+              new java.lang.String[] { "Diff", },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest.Builder.class);
           internal_static_IncrementCountResponse_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_IncrementCountResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IncrementCountResponse_descriptor,
-              new java.lang.String[] { "Count", });
+              new java.lang.String[] { "Count", },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse.Builder.class);
           internal_static_HelloRequest_descriptor =
             getDescriptor().getMessageTypes().get(6);
           internal_static_HelloRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_HelloRequest_descriptor,
-              new java.lang.String[] { "Name", });
+              new java.lang.String[] { "Name", },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest.Builder.class);
           internal_static_HelloResponse_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_HelloResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_HelloResponse_descriptor,
-              new java.lang.String[] { "Response", });
+              new java.lang.String[] { "Response", },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse.Builder.class);
           internal_static_NoopRequest_descriptor =
             getDescriptor().getMessageTypes().get(8);
           internal_static_NoopRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_NoopRequest_descriptor,
-              new java.lang.String[] { });
+              new java.lang.String[] { },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest.Builder.class);
           internal_static_NoopResponse_descriptor =
             getDescriptor().getMessageTypes().get(9);
           internal_static_NoopResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_NoopResponse_descriptor,
-              new java.lang.String[] { });
+              new java.lang.String[] { },
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.class,
+              org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse.Builder.class);
           return null;
         }
       };
@@ -4885,6 +4226,6 @@ public final class PingProtos {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-
+  
   // @@protoc_insertion_point(outer_class_scope)
 }

@@ -10,129 +10,50 @@ public final class TestDelayedRpcProtos {
   }
   public interface TestArgOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required bool delay = 1;
-    /**
-     * <code>required bool delay = 1;</code>
-     */
     boolean hasDelay();
-    /**
-     * <code>required bool delay = 1;</code>
-     */
     boolean getDelay();
   }
-  /**
-   * Protobuf type {@code TestArg}
-   */
   public static final class TestArg extends
       com.google.protobuf.GeneratedMessage
       implements TestArgOrBuilder {
     // Use TestArg.newBuilder() to construct.
-    private TestArg(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private TestArg(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private TestArg(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private TestArg(boolean noInit) {}
+    
     private static final TestArg defaultInstance;
     public static TestArg getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public TestArg getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private TestArg(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              delay_ = input.readBool();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestArg_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestArg_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.Builder.class);
+      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestArg_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<TestArg> PARSER =
-        new com.google.protobuf.AbstractParser<TestArg>() {
-      public TestArg parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new TestArg(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<TestArg> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required bool delay = 1;
     public static final int DELAY_FIELD_NUMBER = 1;
     private boolean delay_;
-    /**
-     * <code>required bool delay = 1;</code>
-     */
     public boolean hasDelay() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required bool delay = 1;</code>
-     */
     public boolean getDelay() {
       return delay_;
     }
-
+    
     private void initFields() {
       delay_ = false;
     }
@@ -140,7 +61,7 @@ public final class TestDelayedRpcProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasDelay()) {
         memoizedIsInitialized = 0;
         return false;
@@ -148,7 +69,7 @@ public final class TestDelayedRpcProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -157,12 +78,12 @@ public final class TestDelayedRpcProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -172,14 +93,14 @@ public final class TestDelayedRpcProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -189,7 +110,7 @@ public final class TestDelayedRpcProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg other = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg) obj;
-
+      
       boolean result = true;
       result = result && (hasDelay() == other.hasDelay());
       if (hasDelay()) {
@@ -200,13 +121,9 @@ public final class TestDelayedRpcProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasDelay()) {
@@ -214,79 +131,89 @@ public final class TestDelayedRpcProtos {
         hash = (53 * hash) + hashBoolean(getDelay());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code TestArg}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArgOrBuilder {
@@ -294,21 +221,18 @@ public final class TestDelayedRpcProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestArg_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestArg_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.Builder.class);
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestArg_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -319,27 +243,27 @@ public final class TestDelayedRpcProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         delay_ = false;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestArg_descriptor;
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg build() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg result = buildPartial();
         if (!result.isInitialized()) {
@@ -347,7 +271,17 @@ public final class TestDelayedRpcProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg buildPartial() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg result = new org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg(this);
         int from_bitField0_ = bitField0_;
@@ -360,7 +294,7 @@ public final class TestDelayedRpcProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg) {
           return mergeFrom((org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg)other);
@@ -369,7 +303,7 @@ public final class TestDelayedRpcProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg other) {
         if (other == org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.getDefaultInstance()) return this;
         if (other.hasDelay()) {
@@ -378,7 +312,7 @@ public final class TestDelayedRpcProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasDelay()) {
           
@@ -386,195 +320,119 @@ public final class TestDelayedRpcProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              delay_ = input.readBool();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required bool delay = 1;
       private boolean delay_ ;
-      /**
-       * <code>required bool delay = 1;</code>
-       */
       public boolean hasDelay() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required bool delay = 1;</code>
-       */
       public boolean getDelay() {
         return delay_;
       }
-      /**
-       * <code>required bool delay = 1;</code>
-       */
       public Builder setDelay(boolean value) {
         bitField0_ |= 0x00000001;
         delay_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required bool delay = 1;</code>
-       */
       public Builder clearDelay() {
         bitField0_ = (bitField0_ & ~0x00000001);
         delay_ = false;
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:TestArg)
     }
-
+    
     static {
       defaultInstance = new TestArg(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:TestArg)
   }
-
+  
   public interface TestResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required int32 response = 1;
-    /**
-     * <code>required int32 response = 1;</code>
-     */
     boolean hasResponse();
-    /**
-     * <code>required int32 response = 1;</code>
-     */
     int getResponse();
   }
-  /**
-   * Protobuf type {@code TestResponse}
-   */
   public static final class TestResponse extends
       com.google.protobuf.GeneratedMessage
       implements TestResponseOrBuilder {
     // Use TestResponse.newBuilder() to construct.
-    private TestResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private TestResponse(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private TestResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private TestResponse(boolean noInit) {}
+    
     private static final TestResponse defaultInstance;
     public static TestResponse getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public TestResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private TestResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              response_ = input.readInt32();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.Builder.class);
+      return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<TestResponse> PARSER =
-        new com.google.protobuf.AbstractParser<TestResponse>() {
-      public TestResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new TestResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<TestResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required int32 response = 1;
     public static final int RESPONSE_FIELD_NUMBER = 1;
     private int response_;
-    /**
-     * <code>required int32 response = 1;</code>
-     */
     public boolean hasResponse() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required int32 response = 1;</code>
-     */
     public int getResponse() {
       return response_;
     }
-
+    
     private void initFields() {
       response_ = 0;
     }
@@ -582,7 +440,7 @@ public final class TestDelayedRpcProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasResponse()) {
         memoizedIsInitialized = 0;
         return false;
@@ -590,7 +448,7 @@ public final class TestDelayedRpcProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -599,12 +457,12 @@ public final class TestDelayedRpcProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -614,14 +472,14 @@ public final class TestDelayedRpcProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -631,7 +489,7 @@ public final class TestDelayedRpcProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse other = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse) obj;
-
+      
       boolean result = true;
       result = result && (hasResponse() == other.hasResponse());
       if (hasResponse()) {
@@ -642,13 +500,9 @@ public final class TestDelayedRpcProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasResponse()) {
@@ -656,79 +510,89 @@ public final class TestDelayedRpcProtos {
         hash = (53 * hash) + getResponse();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code TestResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponseOrBuilder {
@@ -736,21 +600,18 @@ public final class TestDelayedRpcProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.class, org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.Builder.class);
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -761,27 +622,27 @@ public final class TestDelayedRpcProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         response_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.internal_static_TestResponse_descriptor;
+        return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse build() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -789,7 +650,17 @@ public final class TestDelayedRpcProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse buildPartial() {
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse result = new org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse(this);
         int from_bitField0_ = bitField0_;
@@ -802,7 +673,7 @@ public final class TestDelayedRpcProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse) {
           return mergeFrom((org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse)other);
@@ -811,7 +682,7 @@ public final class TestDelayedRpcProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse other) {
         if (other == org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.getDefaultInstance()) return this;
         if (other.hasResponse()) {
@@ -820,7 +691,7 @@ public final class TestDelayedRpcProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasResponse()) {
           
@@ -828,70 +699,73 @@ public final class TestDelayedRpcProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              response_ = input.readInt32();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required int32 response = 1;
       private int response_ ;
-      /**
-       * <code>required int32 response = 1;</code>
-       */
       public boolean hasResponse() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required int32 response = 1;</code>
-       */
       public int getResponse() {
         return response_;
       }
-      /**
-       * <code>required int32 response = 1;</code>
-       */
       public Builder setResponse(int value) {
         bitField0_ |= 0x00000001;
         response_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required int32 response = 1;</code>
-       */
       public Builder clearResponse() {
         bitField0_ = (bitField0_ & ~0x00000001);
         response_ = 0;
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:TestResponse)
     }
-
+    
     static {
       defaultInstance = new TestResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:TestResponse)
   }
-
+  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_TestArg_descriptor;
   private static
@@ -902,7 +776,7 @@ public final class TestDelayedRpcProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_TestResponse_fieldAccessorTable;
-
+  
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -927,13 +801,17 @@ public final class TestDelayedRpcProtos {
           internal_static_TestArg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_TestArg_descriptor,
-              new java.lang.String[] { "Delay", });
+              new java.lang.String[] { "Delay", },
+              org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.class,
+              org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg.Builder.class);
           internal_static_TestResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_TestResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_TestResponse_descriptor,
-              new java.lang.String[] { "Response", });
+              new java.lang.String[] { "Response", },
+              org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.class,
+              org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse.Builder.class);
           return null;
         }
       };
@@ -942,6 +820,6 @@ public final class TestDelayedRpcProtos {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-
+  
   // @@protoc_insertion_point(outer_class_scope)
 }
