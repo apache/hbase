@@ -8,45 +8,28 @@ public final class TestRpcServiceProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
-  /**
-   * Protobuf service {@code TestProtobufRpcProto}
-   *
-   * <pre>
-   **
-   * A protobuf service for use in tests
-   * </pre>
-   */
   public static abstract class TestProtobufRpcProto
       implements com.google.protobuf.Service {
     protected TestProtobufRpcProto() {}
-
+    
     public interface Interface {
-      /**
-       * <code>rpc ping(.EmptyRequestProto) returns (.EmptyResponseProto);</code>
-       */
       public abstract void ping(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done);
-
-      /**
-       * <code>rpc echo(.EchoRequestProto) returns (.EchoResponseProto);</code>
-       */
+      
       public abstract void echo(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto> done);
-
-      /**
-       * <code>rpc error(.EmptyRequestProto) returns (.EmptyResponseProto);</code>
-       */
+      
       public abstract void error(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done);
-
+      
     }
-
+    
     public static com.google.protobuf.Service newReflectiveService(
         final Interface impl) {
       return new TestProtobufRpcProto() {
@@ -57,7 +40,7 @@ public final class TestRpcServiceProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done) {
           impl.ping(controller, request, done);
         }
-
+        
         @java.lang.Override
         public  void echo(
             com.google.protobuf.RpcController controller,
@@ -65,7 +48,7 @@ public final class TestRpcServiceProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto> done) {
           impl.echo(controller, request, done);
         }
-
+        
         @java.lang.Override
         public  void error(
             com.google.protobuf.RpcController controller,
@@ -73,10 +56,10 @@ public final class TestRpcServiceProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done) {
           impl.error(controller, request, done);
         }
-
+        
       };
     }
-
+    
     public static com.google.protobuf.BlockingService
         newReflectiveBlockingService(final BlockingInterface impl) {
       return new com.google.protobuf.BlockingService() {
@@ -84,7 +67,7 @@ public final class TestRpcServiceProtos {
             getDescriptorForType() {
           return getDescriptor();
         }
-
+        
         public final com.google.protobuf.Message callBlockingMethod(
             com.google.protobuf.Descriptors.MethodDescriptor method,
             com.google.protobuf.RpcController controller,
@@ -106,7 +89,7 @@ public final class TestRpcServiceProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-
+        
         public final com.google.protobuf.Message
             getRequestPrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -126,7 +109,7 @@ public final class TestRpcServiceProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-
+        
         public final com.google.protobuf.Message
             getResponsePrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -146,34 +129,25 @@ public final class TestRpcServiceProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-
+        
       };
     }
-
-    /**
-     * <code>rpc ping(.EmptyRequestProto) returns (.EmptyResponseProto);</code>
-     */
+    
     public abstract void ping(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done);
-
-    /**
-     * <code>rpc echo(.EchoRequestProto) returns (.EchoResponseProto);</code>
-     */
+    
     public abstract void echo(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto> done);
-
-    /**
-     * <code>rpc error(.EmptyRequestProto) returns (.EmptyResponseProto);</code>
-     */
+    
     public abstract void error(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto> done);
-
+    
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -183,7 +157,7 @@ public final class TestRpcServiceProtos {
         getDescriptorForType() {
       return getDescriptor();
     }
-
+    
     public final void callMethod(
         com.google.protobuf.Descriptors.MethodDescriptor method,
         com.google.protobuf.RpcController controller,
@@ -215,7 +189,7 @@ public final class TestRpcServiceProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-
+    
     public final com.google.protobuf.Message
         getRequestPrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -235,7 +209,7 @@ public final class TestRpcServiceProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-
+    
     public final com.google.protobuf.Message
         getResponsePrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -255,23 +229,23 @@ public final class TestRpcServiceProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-
+    
     public static Stub newStub(
         com.google.protobuf.RpcChannel channel) {
       return new Stub(channel);
     }
-
+    
     public static final class Stub extends org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto implements Interface {
       private Stub(com.google.protobuf.RpcChannel channel) {
         this.channel = channel;
       }
-
+      
       private final com.google.protobuf.RpcChannel channel;
-
+      
       public com.google.protobuf.RpcChannel getChannel() {
         return channel;
       }
-
+      
       public  void ping(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
@@ -286,7 +260,7 @@ public final class TestRpcServiceProtos {
             org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.class,
             org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance()));
       }
-
+      
       public  void echo(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto request,
@@ -301,7 +275,7 @@ public final class TestRpcServiceProtos {
             org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.class,
             org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.getDefaultInstance()));
       }
-
+      
       public  void error(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request,
@@ -317,36 +291,36 @@ public final class TestRpcServiceProtos {
             org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance()));
       }
     }
-
+    
     public static BlockingInterface newBlockingStub(
         com.google.protobuf.BlockingRpcChannel channel) {
       return new BlockingStub(channel);
     }
-
+    
     public interface BlockingInterface {
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto ping(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request)
           throws com.google.protobuf.ServiceException;
-
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto echo(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto request)
           throws com.google.protobuf.ServiceException;
-
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto error(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request)
           throws com.google.protobuf.ServiceException;
     }
-
+    
     private static final class BlockingStub implements BlockingInterface {
       private BlockingStub(com.google.protobuf.BlockingRpcChannel channel) {
         this.channel = channel;
       }
-
+      
       private final com.google.protobuf.BlockingRpcChannel channel;
-
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto ping(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request)
@@ -357,8 +331,8 @@ public final class TestRpcServiceProtos {
           request,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance());
       }
-
-
+      
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto echo(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto request)
@@ -369,8 +343,8 @@ public final class TestRpcServiceProtos {
           request,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto.getDefaultInstance());
       }
-
-
+      
+      
       public org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto error(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto request)
@@ -381,13 +355,11 @@ public final class TestRpcServiceProtos {
           request,
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto.getDefaultInstance());
       }
-
+      
     }
-
-    // @@protoc_insertion_point(class_scope:TestProtobufRpcProto)
   }
-
-
+  
+  
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -419,6 +391,6 @@ public final class TestRpcServiceProtos {
           org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.getDescriptor(),
         }, assigner);
   }
-
+  
   // @@protoc_insertion_point(outer_class_scope)
 }

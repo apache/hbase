@@ -10,173 +10,66 @@ public final class HFileProtos {
   }
   public interface FileInfoProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // repeated .BytesBytesPair mapEntry = 1;
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> 
         getMapEntryList();
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getMapEntry(int index);
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     int getMapEntryCount();
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getMapEntryOrBuilderList();
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getMapEntryOrBuilder(
         int index);
   }
-  /**
-   * Protobuf type {@code FileInfoProto}
-   *
-   * <pre>
-   * Map of name/values
-   * </pre>
-   */
   public static final class FileInfoProto extends
       com.google.protobuf.GeneratedMessage
       implements FileInfoProtoOrBuilder {
     // Use FileInfoProto.newBuilder() to construct.
-    private FileInfoProto(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private FileInfoProto(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private FileInfoProto(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private FileInfoProto(boolean noInit) {}
+    
     private static final FileInfoProto defaultInstance;
     public static FileInfoProto getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public FileInfoProto getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private FileInfoProto(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-                mapEntry_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair>();
-                mutable_bitField0_ |= 0x00000001;
-              }
-              mapEntry_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.PARSER, extensionRegistry));
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-          mapEntry_ = java.util.Collections.unmodifiableList(mapEntry_);
-        }
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<FileInfoProto> PARSER =
-        new com.google.protobuf.AbstractParser<FileInfoProto>() {
-      public FileInfoProto parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new FileInfoProto(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<FileInfoProto> getParserForType() {
-      return PARSER;
-    }
-
+    
     // repeated .BytesBytesPair mapEntry = 1;
     public static final int MAPENTRY_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> mapEntry_;
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getMapEntryList() {
       return mapEntry_;
     }
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getMapEntryOrBuilderList() {
       return mapEntry_;
     }
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     public int getMapEntryCount() {
       return mapEntry_.size();
     }
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getMapEntry(int index) {
       return mapEntry_.get(index);
     }
-    /**
-     * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getMapEntryOrBuilder(
         int index) {
       return mapEntry_.get(index);
     }
-
+    
     private void initFields() {
       mapEntry_ = java.util.Collections.emptyList();
     }
@@ -184,7 +77,7 @@ public final class HFileProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       for (int i = 0; i < getMapEntryCount(); i++) {
         if (!getMapEntry(i).isInitialized()) {
           memoizedIsInitialized = 0;
@@ -194,7 +87,7 @@ public final class HFileProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -203,12 +96,12 @@ public final class HFileProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       for (int i = 0; i < mapEntry_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -218,14 +111,14 @@ public final class HFileProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -235,7 +128,7 @@ public final class HFileProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto other = (org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto) obj;
-
+      
       boolean result = true;
       result = result && getMapEntryList()
           .equals(other.getMapEntryList());
@@ -243,13 +136,9 @@ public final class HFileProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getMapEntryCount() > 0) {
@@ -257,83 +146,89 @@ public final class HFileProtos {
         hash = (53 * hash) + getMapEntryList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code FileInfoProto}
-     *
-     * <pre>
-     * Map of name/values
-     * </pre>
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProtoOrBuilder {
@@ -341,21 +236,18 @@ public final class HFileProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -367,7 +259,7 @@ public final class HFileProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         if (mapEntryBuilder_ == null) {
@@ -378,20 +270,20 @@ public final class HFileProtos {
         }
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto build() {
         org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto result = buildPartial();
         if (!result.isInitialized()) {
@@ -399,7 +291,17 @@ public final class HFileProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto result = new org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto(this);
         int from_bitField0_ = bitField0_;
@@ -415,7 +317,7 @@ public final class HFileProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto)other);
@@ -424,7 +326,7 @@ public final class HFileProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.getDefaultInstance()) return this;
         if (mapEntryBuilder_ == null) {
@@ -456,7 +358,7 @@ public final class HFileProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         for (int i = 0; i < getMapEntryCount(); i++) {
           if (!getMapEntry(i).isInitialized()) {
@@ -466,26 +368,42 @@ public final class HFileProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.newBuilder();
+              input.readMessage(subBuilder, extensionRegistry);
+              addMapEntry(subBuilder.buildPartial());
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // repeated .BytesBytesPair mapEntry = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> mapEntry_ =
         java.util.Collections.emptyList();
@@ -495,13 +413,10 @@ public final class HFileProtos {
           bitField0_ |= 0x00000001;
          }
       }
-
+      
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> mapEntryBuilder_;
-
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
+      
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getMapEntryList() {
         if (mapEntryBuilder_ == null) {
           return java.util.Collections.unmodifiableList(mapEntry_);
@@ -509,9 +424,6 @@ public final class HFileProtos {
           return mapEntryBuilder_.getMessageList();
         }
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public int getMapEntryCount() {
         if (mapEntryBuilder_ == null) {
           return mapEntry_.size();
@@ -519,9 +431,6 @@ public final class HFileProtos {
           return mapEntryBuilder_.getCount();
         }
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getMapEntry(int index) {
         if (mapEntryBuilder_ == null) {
           return mapEntry_.get(index);
@@ -529,9 +438,6 @@ public final class HFileProtos {
           return mapEntryBuilder_.getMessage(index);
         }
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public Builder setMapEntry(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
         if (mapEntryBuilder_ == null) {
@@ -546,9 +452,6 @@ public final class HFileProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public Builder setMapEntry(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
         if (mapEntryBuilder_ == null) {
@@ -560,9 +463,6 @@ public final class HFileProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public Builder addMapEntry(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
         if (mapEntryBuilder_ == null) {
           if (value == null) {
@@ -576,9 +476,6 @@ public final class HFileProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public Builder addMapEntry(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
         if (mapEntryBuilder_ == null) {
@@ -593,9 +490,6 @@ public final class HFileProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public Builder addMapEntry(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
         if (mapEntryBuilder_ == null) {
@@ -607,9 +501,6 @@ public final class HFileProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public Builder addMapEntry(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
         if (mapEntryBuilder_ == null) {
@@ -621,9 +512,6 @@ public final class HFileProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public Builder addAllMapEntry(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> values) {
         if (mapEntryBuilder_ == null) {
@@ -635,9 +523,6 @@ public final class HFileProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public Builder clearMapEntry() {
         if (mapEntryBuilder_ == null) {
           mapEntry_ = java.util.Collections.emptyList();
@@ -648,9 +533,6 @@ public final class HFileProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public Builder removeMapEntry(int index) {
         if (mapEntryBuilder_ == null) {
           ensureMapEntryIsMutable();
@@ -661,16 +543,10 @@ public final class HFileProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder getMapEntryBuilder(
           int index) {
         return getMapEntryFieldBuilder().getBuilder(index);
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getMapEntryOrBuilder(
           int index) {
         if (mapEntryBuilder_ == null) {
@@ -678,9 +554,6 @@ public final class HFileProtos {
           return mapEntryBuilder_.getMessageOrBuilder(index);
         }
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
            getMapEntryOrBuilderList() {
         if (mapEntryBuilder_ != null) {
@@ -689,24 +562,15 @@ public final class HFileProtos {
           return java.util.Collections.unmodifiableList(mapEntry_);
         }
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addMapEntryBuilder() {
         return getMapEntryFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addMapEntryBuilder(
           int index) {
         return getMapEntryFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
-      /**
-       * <code>repeated .BytesBytesPair mapEntry = 1;</code>
-       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder> 
            getMapEntryBuilderList() {
         return getMapEntryFieldBuilder().getBuilderList();
@@ -725,520 +589,240 @@ public final class HFileProtos {
         }
         return mapEntryBuilder_;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:FileInfoProto)
     }
-
+    
     static {
       defaultInstance = new FileInfoProto(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:FileInfoProto)
   }
-
+  
   public interface FileTrailerProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // optional uint64 fileInfoOffset = 1;
-    /**
-     * <code>optional uint64 fileInfoOffset = 1;</code>
-     */
     boolean hasFileInfoOffset();
-    /**
-     * <code>optional uint64 fileInfoOffset = 1;</code>
-     */
     long getFileInfoOffset();
-
+    
     // optional uint64 loadOnOpenDataOffset = 2;
-    /**
-     * <code>optional uint64 loadOnOpenDataOffset = 2;</code>
-     */
     boolean hasLoadOnOpenDataOffset();
-    /**
-     * <code>optional uint64 loadOnOpenDataOffset = 2;</code>
-     */
     long getLoadOnOpenDataOffset();
-
+    
     // optional uint64 uncompressedDataIndexSize = 3;
-    /**
-     * <code>optional uint64 uncompressedDataIndexSize = 3;</code>
-     */
     boolean hasUncompressedDataIndexSize();
-    /**
-     * <code>optional uint64 uncompressedDataIndexSize = 3;</code>
-     */
     long getUncompressedDataIndexSize();
-
+    
     // optional uint64 totalUncompressedBytes = 4;
-    /**
-     * <code>optional uint64 totalUncompressedBytes = 4;</code>
-     */
     boolean hasTotalUncompressedBytes();
-    /**
-     * <code>optional uint64 totalUncompressedBytes = 4;</code>
-     */
     long getTotalUncompressedBytes();
-
+    
     // optional uint32 dataIndexCount = 5;
-    /**
-     * <code>optional uint32 dataIndexCount = 5;</code>
-     */
     boolean hasDataIndexCount();
-    /**
-     * <code>optional uint32 dataIndexCount = 5;</code>
-     */
     int getDataIndexCount();
-
+    
     // optional uint32 metaIndexCount = 6;
-    /**
-     * <code>optional uint32 metaIndexCount = 6;</code>
-     */
     boolean hasMetaIndexCount();
-    /**
-     * <code>optional uint32 metaIndexCount = 6;</code>
-     */
     int getMetaIndexCount();
-
+    
     // optional uint64 entryCount = 7;
-    /**
-     * <code>optional uint64 entryCount = 7;</code>
-     */
     boolean hasEntryCount();
-    /**
-     * <code>optional uint64 entryCount = 7;</code>
-     */
     long getEntryCount();
-
+    
     // optional uint32 numDataIndexLevels = 8;
-    /**
-     * <code>optional uint32 numDataIndexLevels = 8;</code>
-     */
     boolean hasNumDataIndexLevels();
-    /**
-     * <code>optional uint32 numDataIndexLevels = 8;</code>
-     */
     int getNumDataIndexLevels();
-
+    
     // optional uint64 firstDataBlockOffset = 9;
-    /**
-     * <code>optional uint64 firstDataBlockOffset = 9;</code>
-     */
     boolean hasFirstDataBlockOffset();
-    /**
-     * <code>optional uint64 firstDataBlockOffset = 9;</code>
-     */
     long getFirstDataBlockOffset();
-
+    
     // optional uint64 lastDataBlockOffset = 10;
-    /**
-     * <code>optional uint64 lastDataBlockOffset = 10;</code>
-     */
     boolean hasLastDataBlockOffset();
-    /**
-     * <code>optional uint64 lastDataBlockOffset = 10;</code>
-     */
     long getLastDataBlockOffset();
-
+    
     // optional string comparatorClassName = 11;
-    /**
-     * <code>optional string comparatorClassName = 11;</code>
-     */
     boolean hasComparatorClassName();
-    /**
-     * <code>optional string comparatorClassName = 11;</code>
-     */
-    java.lang.String getComparatorClassName();
-    /**
-     * <code>optional string comparatorClassName = 11;</code>
-     */
-    com.google.protobuf.ByteString
-        getComparatorClassNameBytes();
-
+    String getComparatorClassName();
+    
     // optional uint32 compressionCodec = 12;
-    /**
-     * <code>optional uint32 compressionCodec = 12;</code>
-     */
     boolean hasCompressionCodec();
-    /**
-     * <code>optional uint32 compressionCodec = 12;</code>
-     */
     int getCompressionCodec();
   }
-  /**
-   * Protobuf type {@code FileTrailerProto}
-   *
-   * <pre>
-   * HFile file trailer
-   * </pre>
-   */
   public static final class FileTrailerProto extends
       com.google.protobuf.GeneratedMessage
       implements FileTrailerProtoOrBuilder {
     // Use FileTrailerProto.newBuilder() to construct.
-    private FileTrailerProto(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private FileTrailerProto(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private FileTrailerProto(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private FileTrailerProto(boolean noInit) {}
+    
     private static final FileTrailerProto defaultInstance;
     public static FileTrailerProto getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public FileTrailerProto getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private FileTrailerProto(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              fileInfoOffset_ = input.readUInt64();
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              loadOnOpenDataOffset_ = input.readUInt64();
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              uncompressedDataIndexSize_ = input.readUInt64();
-              break;
-            }
-            case 32: {
-              bitField0_ |= 0x00000008;
-              totalUncompressedBytes_ = input.readUInt64();
-              break;
-            }
-            case 40: {
-              bitField0_ |= 0x00000010;
-              dataIndexCount_ = input.readUInt32();
-              break;
-            }
-            case 48: {
-              bitField0_ |= 0x00000020;
-              metaIndexCount_ = input.readUInt32();
-              break;
-            }
-            case 56: {
-              bitField0_ |= 0x00000040;
-              entryCount_ = input.readUInt64();
-              break;
-            }
-            case 64: {
-              bitField0_ |= 0x00000080;
-              numDataIndexLevels_ = input.readUInt32();
-              break;
-            }
-            case 72: {
-              bitField0_ |= 0x00000100;
-              firstDataBlockOffset_ = input.readUInt64();
-              break;
-            }
-            case 80: {
-              bitField0_ |= 0x00000200;
-              lastDataBlockOffset_ = input.readUInt64();
-              break;
-            }
-            case 90: {
-              bitField0_ |= 0x00000400;
-              comparatorClassName_ = input.readBytes();
-              break;
-            }
-            case 96: {
-              bitField0_ |= 0x00000800;
-              compressionCodec_ = input.readUInt32();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<FileTrailerProto> PARSER =
-        new com.google.protobuf.AbstractParser<FileTrailerProto>() {
-      public FileTrailerProto parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new FileTrailerProto(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<FileTrailerProto> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // optional uint64 fileInfoOffset = 1;
     public static final int FILEINFOOFFSET_FIELD_NUMBER = 1;
     private long fileInfoOffset_;
-    /**
-     * <code>optional uint64 fileInfoOffset = 1;</code>
-     */
     public boolean hasFileInfoOffset() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>optional uint64 fileInfoOffset = 1;</code>
-     */
     public long getFileInfoOffset() {
       return fileInfoOffset_;
     }
-
+    
     // optional uint64 loadOnOpenDataOffset = 2;
     public static final int LOADONOPENDATAOFFSET_FIELD_NUMBER = 2;
     private long loadOnOpenDataOffset_;
-    /**
-     * <code>optional uint64 loadOnOpenDataOffset = 2;</code>
-     */
     public boolean hasLoadOnOpenDataOffset() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    /**
-     * <code>optional uint64 loadOnOpenDataOffset = 2;</code>
-     */
     public long getLoadOnOpenDataOffset() {
       return loadOnOpenDataOffset_;
     }
-
+    
     // optional uint64 uncompressedDataIndexSize = 3;
     public static final int UNCOMPRESSEDDATAINDEXSIZE_FIELD_NUMBER = 3;
     private long uncompressedDataIndexSize_;
-    /**
-     * <code>optional uint64 uncompressedDataIndexSize = 3;</code>
-     */
     public boolean hasUncompressedDataIndexSize() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-    /**
-     * <code>optional uint64 uncompressedDataIndexSize = 3;</code>
-     */
     public long getUncompressedDataIndexSize() {
       return uncompressedDataIndexSize_;
     }
-
+    
     // optional uint64 totalUncompressedBytes = 4;
     public static final int TOTALUNCOMPRESSEDBYTES_FIELD_NUMBER = 4;
     private long totalUncompressedBytes_;
-    /**
-     * <code>optional uint64 totalUncompressedBytes = 4;</code>
-     */
     public boolean hasTotalUncompressedBytes() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-    /**
-     * <code>optional uint64 totalUncompressedBytes = 4;</code>
-     */
     public long getTotalUncompressedBytes() {
       return totalUncompressedBytes_;
     }
-
+    
     // optional uint32 dataIndexCount = 5;
     public static final int DATAINDEXCOUNT_FIELD_NUMBER = 5;
     private int dataIndexCount_;
-    /**
-     * <code>optional uint32 dataIndexCount = 5;</code>
-     */
     public boolean hasDataIndexCount() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-    /**
-     * <code>optional uint32 dataIndexCount = 5;</code>
-     */
     public int getDataIndexCount() {
       return dataIndexCount_;
     }
-
+    
     // optional uint32 metaIndexCount = 6;
     public static final int METAINDEXCOUNT_FIELD_NUMBER = 6;
     private int metaIndexCount_;
-    /**
-     * <code>optional uint32 metaIndexCount = 6;</code>
-     */
     public boolean hasMetaIndexCount() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
-    /**
-     * <code>optional uint32 metaIndexCount = 6;</code>
-     */
     public int getMetaIndexCount() {
       return metaIndexCount_;
     }
-
+    
     // optional uint64 entryCount = 7;
     public static final int ENTRYCOUNT_FIELD_NUMBER = 7;
     private long entryCount_;
-    /**
-     * <code>optional uint64 entryCount = 7;</code>
-     */
     public boolean hasEntryCount() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
-    /**
-     * <code>optional uint64 entryCount = 7;</code>
-     */
     public long getEntryCount() {
       return entryCount_;
     }
-
+    
     // optional uint32 numDataIndexLevels = 8;
     public static final int NUMDATAINDEXLEVELS_FIELD_NUMBER = 8;
     private int numDataIndexLevels_;
-    /**
-     * <code>optional uint32 numDataIndexLevels = 8;</code>
-     */
     public boolean hasNumDataIndexLevels() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
-    /**
-     * <code>optional uint32 numDataIndexLevels = 8;</code>
-     */
     public int getNumDataIndexLevels() {
       return numDataIndexLevels_;
     }
-
+    
     // optional uint64 firstDataBlockOffset = 9;
     public static final int FIRSTDATABLOCKOFFSET_FIELD_NUMBER = 9;
     private long firstDataBlockOffset_;
-    /**
-     * <code>optional uint64 firstDataBlockOffset = 9;</code>
-     */
     public boolean hasFirstDataBlockOffset() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
-    /**
-     * <code>optional uint64 firstDataBlockOffset = 9;</code>
-     */
     public long getFirstDataBlockOffset() {
       return firstDataBlockOffset_;
     }
-
+    
     // optional uint64 lastDataBlockOffset = 10;
     public static final int LASTDATABLOCKOFFSET_FIELD_NUMBER = 10;
     private long lastDataBlockOffset_;
-    /**
-     * <code>optional uint64 lastDataBlockOffset = 10;</code>
-     */
     public boolean hasLastDataBlockOffset() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
-    /**
-     * <code>optional uint64 lastDataBlockOffset = 10;</code>
-     */
     public long getLastDataBlockOffset() {
       return lastDataBlockOffset_;
     }
-
+    
     // optional string comparatorClassName = 11;
     public static final int COMPARATORCLASSNAME_FIELD_NUMBER = 11;
     private java.lang.Object comparatorClassName_;
-    /**
-     * <code>optional string comparatorClassName = 11;</code>
-     */
     public boolean hasComparatorClassName() {
       return ((bitField0_ & 0x00000400) == 0x00000400);
     }
-    /**
-     * <code>optional string comparatorClassName = 11;</code>
-     */
-    public java.lang.String getComparatorClassName() {
+    public String getComparatorClassName() {
       java.lang.Object ref = comparatorClassName_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
+      if (ref instanceof String) {
+        return (String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
           comparatorClassName_ = s;
         }
         return s;
       }
     }
-    /**
-     * <code>optional string comparatorClassName = 11;</code>
-     */
-    public com.google.protobuf.ByteString
-        getComparatorClassNameBytes() {
+    private com.google.protobuf.ByteString getComparatorClassNameBytes() {
       java.lang.Object ref = comparatorClassName_;
-      if (ref instanceof java.lang.String) {
+      if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
         comparatorClassName_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-
+    
     // optional uint32 compressionCodec = 12;
     public static final int COMPRESSIONCODEC_FIELD_NUMBER = 12;
     private int compressionCodec_;
-    /**
-     * <code>optional uint32 compressionCodec = 12;</code>
-     */
     public boolean hasCompressionCodec() {
       return ((bitField0_ & 0x00000800) == 0x00000800);
     }
-    /**
-     * <code>optional uint32 compressionCodec = 12;</code>
-     */
     public int getCompressionCodec() {
       return compressionCodec_;
     }
-
+    
     private void initFields() {
       fileInfoOffset_ = 0L;
       loadOnOpenDataOffset_ = 0L;
@@ -1257,11 +841,11 @@ public final class HFileProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -1303,12 +887,12 @@ public final class HFileProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1362,14 +946,14 @@ public final class HFileProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -1379,7 +963,7 @@ public final class HFileProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto other = (org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto) obj;
-
+      
       boolean result = true;
       result = result && (hasFileInfoOffset() == other.hasFileInfoOffset());
       if (hasFileInfoOffset()) {
@@ -1445,13 +1029,9 @@ public final class HFileProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasFileInfoOffset()) {
@@ -1503,83 +1083,89 @@ public final class HFileProtos {
         hash = (53 * hash) + getCompressionCodec();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code FileTrailerProto}
-     *
-     * <pre>
-     * HFile file trailer
-     * </pre>
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProtoOrBuilder {
@@ -1587,21 +1173,18 @@ public final class HFileProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1612,7 +1195,7 @@ public final class HFileProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         fileInfoOffset_ = 0L;
@@ -1641,20 +1224,20 @@ public final class HFileProtos {
         bitField0_ = (bitField0_ & ~0x00000800);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto build() {
         org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto result = buildPartial();
         if (!result.isInitialized()) {
@@ -1662,7 +1245,17 @@ public final class HFileProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto result = new org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto(this);
         int from_bitField0_ = bitField0_;
@@ -1719,7 +1312,7 @@ public final class HFileProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto)other);
@@ -1728,7 +1321,7 @@ public final class HFileProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.getDefaultInstance()) return this;
         if (other.hasFileInfoOffset()) {
@@ -1762,9 +1355,7 @@ public final class HFileProtos {
           setLastDataBlockOffset(other.getLastDataBlockOffset());
         }
         if (other.hasComparatorClassName()) {
-          bitField0_ |= 0x00000400;
-          comparatorClassName_ = other.comparatorClassName_;
-          onChanged();
+          setComparatorClassName(other.getComparatorClassName());
         }
         if (other.hasCompressionCodec()) {
           setCompressionCodec(other.getCompressionCodec());
@@ -1772,403 +1363,326 @@ public final class HFileProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              fileInfoOffset_ = input.readUInt64();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              loadOnOpenDataOffset_ = input.readUInt64();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              uncompressedDataIndexSize_ = input.readUInt64();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              totalUncompressedBytes_ = input.readUInt64();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              dataIndexCount_ = input.readUInt32();
+              break;
+            }
+            case 48: {
+              bitField0_ |= 0x00000020;
+              metaIndexCount_ = input.readUInt32();
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000040;
+              entryCount_ = input.readUInt64();
+              break;
+            }
+            case 64: {
+              bitField0_ |= 0x00000080;
+              numDataIndexLevels_ = input.readUInt32();
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000100;
+              firstDataBlockOffset_ = input.readUInt64();
+              break;
+            }
+            case 80: {
+              bitField0_ |= 0x00000200;
+              lastDataBlockOffset_ = input.readUInt64();
+              break;
+            }
+            case 90: {
+              bitField0_ |= 0x00000400;
+              comparatorClassName_ = input.readBytes();
+              break;
+            }
+            case 96: {
+              bitField0_ |= 0x00000800;
+              compressionCodec_ = input.readUInt32();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // optional uint64 fileInfoOffset = 1;
       private long fileInfoOffset_ ;
-      /**
-       * <code>optional uint64 fileInfoOffset = 1;</code>
-       */
       public boolean hasFileInfoOffset() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>optional uint64 fileInfoOffset = 1;</code>
-       */
       public long getFileInfoOffset() {
         return fileInfoOffset_;
       }
-      /**
-       * <code>optional uint64 fileInfoOffset = 1;</code>
-       */
       public Builder setFileInfoOffset(long value) {
         bitField0_ |= 0x00000001;
         fileInfoOffset_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint64 fileInfoOffset = 1;</code>
-       */
       public Builder clearFileInfoOffset() {
         bitField0_ = (bitField0_ & ~0x00000001);
         fileInfoOffset_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // optional uint64 loadOnOpenDataOffset = 2;
       private long loadOnOpenDataOffset_ ;
-      /**
-       * <code>optional uint64 loadOnOpenDataOffset = 2;</code>
-       */
       public boolean hasLoadOnOpenDataOffset() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      /**
-       * <code>optional uint64 loadOnOpenDataOffset = 2;</code>
-       */
       public long getLoadOnOpenDataOffset() {
         return loadOnOpenDataOffset_;
       }
-      /**
-       * <code>optional uint64 loadOnOpenDataOffset = 2;</code>
-       */
       public Builder setLoadOnOpenDataOffset(long value) {
         bitField0_ |= 0x00000002;
         loadOnOpenDataOffset_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint64 loadOnOpenDataOffset = 2;</code>
-       */
       public Builder clearLoadOnOpenDataOffset() {
         bitField0_ = (bitField0_ & ~0x00000002);
         loadOnOpenDataOffset_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // optional uint64 uncompressedDataIndexSize = 3;
       private long uncompressedDataIndexSize_ ;
-      /**
-       * <code>optional uint64 uncompressedDataIndexSize = 3;</code>
-       */
       public boolean hasUncompressedDataIndexSize() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-      /**
-       * <code>optional uint64 uncompressedDataIndexSize = 3;</code>
-       */
       public long getUncompressedDataIndexSize() {
         return uncompressedDataIndexSize_;
       }
-      /**
-       * <code>optional uint64 uncompressedDataIndexSize = 3;</code>
-       */
       public Builder setUncompressedDataIndexSize(long value) {
         bitField0_ |= 0x00000004;
         uncompressedDataIndexSize_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint64 uncompressedDataIndexSize = 3;</code>
-       */
       public Builder clearUncompressedDataIndexSize() {
         bitField0_ = (bitField0_ & ~0x00000004);
         uncompressedDataIndexSize_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // optional uint64 totalUncompressedBytes = 4;
       private long totalUncompressedBytes_ ;
-      /**
-       * <code>optional uint64 totalUncompressedBytes = 4;</code>
-       */
       public boolean hasTotalUncompressedBytes() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      /**
-       * <code>optional uint64 totalUncompressedBytes = 4;</code>
-       */
       public long getTotalUncompressedBytes() {
         return totalUncompressedBytes_;
       }
-      /**
-       * <code>optional uint64 totalUncompressedBytes = 4;</code>
-       */
       public Builder setTotalUncompressedBytes(long value) {
         bitField0_ |= 0x00000008;
         totalUncompressedBytes_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint64 totalUncompressedBytes = 4;</code>
-       */
       public Builder clearTotalUncompressedBytes() {
         bitField0_ = (bitField0_ & ~0x00000008);
         totalUncompressedBytes_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // optional uint32 dataIndexCount = 5;
       private int dataIndexCount_ ;
-      /**
-       * <code>optional uint32 dataIndexCount = 5;</code>
-       */
       public boolean hasDataIndexCount() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-      /**
-       * <code>optional uint32 dataIndexCount = 5;</code>
-       */
       public int getDataIndexCount() {
         return dataIndexCount_;
       }
-      /**
-       * <code>optional uint32 dataIndexCount = 5;</code>
-       */
       public Builder setDataIndexCount(int value) {
         bitField0_ |= 0x00000010;
         dataIndexCount_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint32 dataIndexCount = 5;</code>
-       */
       public Builder clearDataIndexCount() {
         bitField0_ = (bitField0_ & ~0x00000010);
         dataIndexCount_ = 0;
         onChanged();
         return this;
       }
-
+      
       // optional uint32 metaIndexCount = 6;
       private int metaIndexCount_ ;
-      /**
-       * <code>optional uint32 metaIndexCount = 6;</code>
-       */
       public boolean hasMetaIndexCount() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-      /**
-       * <code>optional uint32 metaIndexCount = 6;</code>
-       */
       public int getMetaIndexCount() {
         return metaIndexCount_;
       }
-      /**
-       * <code>optional uint32 metaIndexCount = 6;</code>
-       */
       public Builder setMetaIndexCount(int value) {
         bitField0_ |= 0x00000020;
         metaIndexCount_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint32 metaIndexCount = 6;</code>
-       */
       public Builder clearMetaIndexCount() {
         bitField0_ = (bitField0_ & ~0x00000020);
         metaIndexCount_ = 0;
         onChanged();
         return this;
       }
-
+      
       // optional uint64 entryCount = 7;
       private long entryCount_ ;
-      /**
-       * <code>optional uint64 entryCount = 7;</code>
-       */
       public boolean hasEntryCount() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-      /**
-       * <code>optional uint64 entryCount = 7;</code>
-       */
       public long getEntryCount() {
         return entryCount_;
       }
-      /**
-       * <code>optional uint64 entryCount = 7;</code>
-       */
       public Builder setEntryCount(long value) {
         bitField0_ |= 0x00000040;
         entryCount_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint64 entryCount = 7;</code>
-       */
       public Builder clearEntryCount() {
         bitField0_ = (bitField0_ & ~0x00000040);
         entryCount_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // optional uint32 numDataIndexLevels = 8;
       private int numDataIndexLevels_ ;
-      /**
-       * <code>optional uint32 numDataIndexLevels = 8;</code>
-       */
       public boolean hasNumDataIndexLevels() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-      /**
-       * <code>optional uint32 numDataIndexLevels = 8;</code>
-       */
       public int getNumDataIndexLevels() {
         return numDataIndexLevels_;
       }
-      /**
-       * <code>optional uint32 numDataIndexLevels = 8;</code>
-       */
       public Builder setNumDataIndexLevels(int value) {
         bitField0_ |= 0x00000080;
         numDataIndexLevels_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint32 numDataIndexLevels = 8;</code>
-       */
       public Builder clearNumDataIndexLevels() {
         bitField0_ = (bitField0_ & ~0x00000080);
         numDataIndexLevels_ = 0;
         onChanged();
         return this;
       }
-
+      
       // optional uint64 firstDataBlockOffset = 9;
       private long firstDataBlockOffset_ ;
-      /**
-       * <code>optional uint64 firstDataBlockOffset = 9;</code>
-       */
       public boolean hasFirstDataBlockOffset() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-      /**
-       * <code>optional uint64 firstDataBlockOffset = 9;</code>
-       */
       public long getFirstDataBlockOffset() {
         return firstDataBlockOffset_;
       }
-      /**
-       * <code>optional uint64 firstDataBlockOffset = 9;</code>
-       */
       public Builder setFirstDataBlockOffset(long value) {
         bitField0_ |= 0x00000100;
         firstDataBlockOffset_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint64 firstDataBlockOffset = 9;</code>
-       */
       public Builder clearFirstDataBlockOffset() {
         bitField0_ = (bitField0_ & ~0x00000100);
         firstDataBlockOffset_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // optional uint64 lastDataBlockOffset = 10;
       private long lastDataBlockOffset_ ;
-      /**
-       * <code>optional uint64 lastDataBlockOffset = 10;</code>
-       */
       public boolean hasLastDataBlockOffset() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
-      /**
-       * <code>optional uint64 lastDataBlockOffset = 10;</code>
-       */
       public long getLastDataBlockOffset() {
         return lastDataBlockOffset_;
       }
-      /**
-       * <code>optional uint64 lastDataBlockOffset = 10;</code>
-       */
       public Builder setLastDataBlockOffset(long value) {
         bitField0_ |= 0x00000200;
         lastDataBlockOffset_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint64 lastDataBlockOffset = 10;</code>
-       */
       public Builder clearLastDataBlockOffset() {
         bitField0_ = (bitField0_ & ~0x00000200);
         lastDataBlockOffset_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // optional string comparatorClassName = 11;
       private java.lang.Object comparatorClassName_ = "";
-      /**
-       * <code>optional string comparatorClassName = 11;</code>
-       */
       public boolean hasComparatorClassName() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
       }
-      /**
-       * <code>optional string comparatorClassName = 11;</code>
-       */
-      public java.lang.String getComparatorClassName() {
+      public String getComparatorClassName() {
         java.lang.Object ref = comparatorClassName_;
-        if (!(ref instanceof java.lang.String)) {
-          java.lang.String s = ((com.google.protobuf.ByteString) ref)
-              .toStringUtf8();
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           comparatorClassName_ = s;
           return s;
         } else {
-          return (java.lang.String) ref;
+          return (String) ref;
         }
       }
-      /**
-       * <code>optional string comparatorClassName = 11;</code>
-       */
-      public com.google.protobuf.ByteString
-          getComparatorClassNameBytes() {
-        java.lang.Object ref = comparatorClassName_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          comparatorClassName_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string comparatorClassName = 11;</code>
-       */
-      public Builder setComparatorClassName(
-          java.lang.String value) {
+      public Builder setComparatorClassName(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -2177,73 +1691,50 @@ public final class HFileProtos {
         onChanged();
         return this;
       }
-      /**
-       * <code>optional string comparatorClassName = 11;</code>
-       */
       public Builder clearComparatorClassName() {
         bitField0_ = (bitField0_ & ~0x00000400);
         comparatorClassName_ = getDefaultInstance().getComparatorClassName();
         onChanged();
         return this;
       }
-      /**
-       * <code>optional string comparatorClassName = 11;</code>
-       */
-      public Builder setComparatorClassNameBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000400;
+      void setComparatorClassName(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000400;
         comparatorClassName_ = value;
         onChanged();
-        return this;
       }
-
+      
       // optional uint32 compressionCodec = 12;
       private int compressionCodec_ ;
-      /**
-       * <code>optional uint32 compressionCodec = 12;</code>
-       */
       public boolean hasCompressionCodec() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
       }
-      /**
-       * <code>optional uint32 compressionCodec = 12;</code>
-       */
       public int getCompressionCodec() {
         return compressionCodec_;
       }
-      /**
-       * <code>optional uint32 compressionCodec = 12;</code>
-       */
       public Builder setCompressionCodec(int value) {
         bitField0_ |= 0x00000800;
         compressionCodec_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>optional uint32 compressionCodec = 12;</code>
-       */
       public Builder clearCompressionCodec() {
         bitField0_ = (bitField0_ & ~0x00000800);
         compressionCodec_ = 0;
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:FileTrailerProto)
     }
-
+    
     static {
       defaultInstance = new FileTrailerProto(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:FileTrailerProto)
   }
-
+  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_FileInfoProto_descriptor;
   private static
@@ -2254,7 +1745,7 @@ public final class HFileProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_FileTrailerProto_fieldAccessorTable;
-
+  
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -2287,13 +1778,17 @@ public final class HFileProtos {
           internal_static_FileInfoProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_FileInfoProto_descriptor,
-              new java.lang.String[] { "MapEntry", });
+              new java.lang.String[] { "MapEntry", },
+              org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.class,
+              org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.Builder.class);
           internal_static_FileTrailerProto_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_FileTrailerProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_FileTrailerProto_descriptor,
-              new java.lang.String[] { "FileInfoOffset", "LoadOnOpenDataOffset", "UncompressedDataIndexSize", "TotalUncompressedBytes", "DataIndexCount", "MetaIndexCount", "EntryCount", "NumDataIndexLevels", "FirstDataBlockOffset", "LastDataBlockOffset", "ComparatorClassName", "CompressionCodec", });
+              new java.lang.String[] { "FileInfoOffset", "LoadOnOpenDataOffset", "UncompressedDataIndexSize", "TotalUncompressedBytes", "DataIndexCount", "MetaIndexCount", "EntryCount", "NumDataIndexLevels", "FirstDataBlockOffset", "LastDataBlockOffset", "ComparatorClassName", "CompressionCodec", },
+              org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.class,
+              org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.Builder.class);
           return null;
         }
       };
@@ -2303,6 +1798,6 @@ public final class HFileProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
         }, assigner);
   }
-
+  
   // @@protoc_insertion_point(outer_class_scope)
 }

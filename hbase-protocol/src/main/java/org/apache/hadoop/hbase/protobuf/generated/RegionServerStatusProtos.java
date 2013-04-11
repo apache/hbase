@@ -10,239 +10,78 @@ public final class RegionServerStatusProtos {
   }
   public interface RegionServerStartupRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required uint32 port = 1;
-    /**
-     * <code>required uint32 port = 1;</code>
-     *
-     * <pre>
-     ** Port number this regionserver is up on 
-     * </pre>
-     */
     boolean hasPort();
-    /**
-     * <code>required uint32 port = 1;</code>
-     *
-     * <pre>
-     ** Port number this regionserver is up on 
-     * </pre>
-     */
     int getPort();
-
+    
     // required uint64 serverStartCode = 2;
-    /**
-     * <code>required uint64 serverStartCode = 2;</code>
-     *
-     * <pre>
-     ** This servers' startcode 
-     * </pre>
-     */
     boolean hasServerStartCode();
-    /**
-     * <code>required uint64 serverStartCode = 2;</code>
-     *
-     * <pre>
-     ** This servers' startcode 
-     * </pre>
-     */
     long getServerStartCode();
-
+    
     // required uint64 serverCurrentTime = 3;
-    /**
-     * <code>required uint64 serverCurrentTime = 3;</code>
-     *
-     * <pre>
-     ** Current time of the region server in ms 
-     * </pre>
-     */
     boolean hasServerCurrentTime();
-    /**
-     * <code>required uint64 serverCurrentTime = 3;</code>
-     *
-     * <pre>
-     ** Current time of the region server in ms 
-     * </pre>
-     */
     long getServerCurrentTime();
   }
-  /**
-   * Protobuf type {@code RegionServerStartupRequest}
-   */
   public static final class RegionServerStartupRequest extends
       com.google.protobuf.GeneratedMessage
       implements RegionServerStartupRequestOrBuilder {
     // Use RegionServerStartupRequest.newBuilder() to construct.
-    private RegionServerStartupRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private RegionServerStartupRequest(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private RegionServerStartupRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private RegionServerStartupRequest(boolean noInit) {}
+    
     private static final RegionServerStartupRequest defaultInstance;
     public static RegionServerStartupRequest getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public RegionServerStartupRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private RegionServerStartupRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              port_ = input.readUInt32();
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              serverStartCode_ = input.readUInt64();
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              serverCurrentTime_ = input.readUInt64();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<RegionServerStartupRequest> PARSER =
-        new com.google.protobuf.AbstractParser<RegionServerStartupRequest>() {
-      public RegionServerStartupRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new RegionServerStartupRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<RegionServerStartupRequest> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required uint32 port = 1;
     public static final int PORT_FIELD_NUMBER = 1;
     private int port_;
-    /**
-     * <code>required uint32 port = 1;</code>
-     *
-     * <pre>
-     ** Port number this regionserver is up on 
-     * </pre>
-     */
     public boolean hasPort() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required uint32 port = 1;</code>
-     *
-     * <pre>
-     ** Port number this regionserver is up on 
-     * </pre>
-     */
     public int getPort() {
       return port_;
     }
-
+    
     // required uint64 serverStartCode = 2;
     public static final int SERVERSTARTCODE_FIELD_NUMBER = 2;
     private long serverStartCode_;
-    /**
-     * <code>required uint64 serverStartCode = 2;</code>
-     *
-     * <pre>
-     ** This servers' startcode 
-     * </pre>
-     */
     public boolean hasServerStartCode() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    /**
-     * <code>required uint64 serverStartCode = 2;</code>
-     *
-     * <pre>
-     ** This servers' startcode 
-     * </pre>
-     */
     public long getServerStartCode() {
       return serverStartCode_;
     }
-
+    
     // required uint64 serverCurrentTime = 3;
     public static final int SERVERCURRENTTIME_FIELD_NUMBER = 3;
     private long serverCurrentTime_;
-    /**
-     * <code>required uint64 serverCurrentTime = 3;</code>
-     *
-     * <pre>
-     ** Current time of the region server in ms 
-     * </pre>
-     */
     public boolean hasServerCurrentTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-    /**
-     * <code>required uint64 serverCurrentTime = 3;</code>
-     *
-     * <pre>
-     ** Current time of the region server in ms 
-     * </pre>
-     */
     public long getServerCurrentTime() {
       return serverCurrentTime_;
     }
-
+    
     private void initFields() {
       port_ = 0;
       serverStartCode_ = 0L;
@@ -252,7 +91,7 @@ public final class RegionServerStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasPort()) {
         memoizedIsInitialized = 0;
         return false;
@@ -268,7 +107,7 @@ public final class RegionServerStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -283,12 +122,12 @@ public final class RegionServerStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -306,14 +145,14 @@ public final class RegionServerStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -323,7 +162,7 @@ public final class RegionServerStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest other = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest) obj;
-
+      
       boolean result = true;
       result = result && (hasPort() == other.hasPort());
       if (hasPort()) {
@@ -344,13 +183,9 @@ public final class RegionServerStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasPort()) {
@@ -366,79 +201,89 @@ public final class RegionServerStatusProtos {
         hash = (53 * hash) + hashLong(getServerCurrentTime());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code RegionServerStartupRequest}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequestOrBuilder {
@@ -446,21 +291,18 @@ public final class RegionServerStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -471,7 +313,7 @@ public final class RegionServerStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         port_ = 0;
@@ -482,20 +324,20 @@ public final class RegionServerStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest build() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -503,7 +345,17 @@ public final class RegionServerStatusProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest result = new org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest(this);
         int from_bitField0_ = bitField0_;
@@ -524,7 +376,7 @@ public final class RegionServerStatusProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest)other);
@@ -533,7 +385,7 @@ public final class RegionServerStatusProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.getDefaultInstance()) return this;
         if (other.hasPort()) {
@@ -548,7 +400,7 @@ public final class RegionServerStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasPort()) {
           
@@ -564,419 +416,187 @@ public final class RegionServerStatusProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              port_ = input.readUInt32();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              serverStartCode_ = input.readUInt64();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              serverCurrentTime_ = input.readUInt64();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required uint32 port = 1;
       private int port_ ;
-      /**
-       * <code>required uint32 port = 1;</code>
-       *
-       * <pre>
-       ** Port number this regionserver is up on 
-       * </pre>
-       */
       public boolean hasPort() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required uint32 port = 1;</code>
-       *
-       * <pre>
-       ** Port number this regionserver is up on 
-       * </pre>
-       */
       public int getPort() {
         return port_;
       }
-      /**
-       * <code>required uint32 port = 1;</code>
-       *
-       * <pre>
-       ** Port number this regionserver is up on 
-       * </pre>
-       */
       public Builder setPort(int value) {
         bitField0_ |= 0x00000001;
         port_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required uint32 port = 1;</code>
-       *
-       * <pre>
-       ** Port number this regionserver is up on 
-       * </pre>
-       */
       public Builder clearPort() {
         bitField0_ = (bitField0_ & ~0x00000001);
         port_ = 0;
         onChanged();
         return this;
       }
-
+      
       // required uint64 serverStartCode = 2;
       private long serverStartCode_ ;
-      /**
-       * <code>required uint64 serverStartCode = 2;</code>
-       *
-       * <pre>
-       ** This servers' startcode 
-       * </pre>
-       */
       public boolean hasServerStartCode() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      /**
-       * <code>required uint64 serverStartCode = 2;</code>
-       *
-       * <pre>
-       ** This servers' startcode 
-       * </pre>
-       */
       public long getServerStartCode() {
         return serverStartCode_;
       }
-      /**
-       * <code>required uint64 serverStartCode = 2;</code>
-       *
-       * <pre>
-       ** This servers' startcode 
-       * </pre>
-       */
       public Builder setServerStartCode(long value) {
         bitField0_ |= 0x00000002;
         serverStartCode_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required uint64 serverStartCode = 2;</code>
-       *
-       * <pre>
-       ** This servers' startcode 
-       * </pre>
-       */
       public Builder clearServerStartCode() {
         bitField0_ = (bitField0_ & ~0x00000002);
         serverStartCode_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // required uint64 serverCurrentTime = 3;
       private long serverCurrentTime_ ;
-      /**
-       * <code>required uint64 serverCurrentTime = 3;</code>
-       *
-       * <pre>
-       ** Current time of the region server in ms 
-       * </pre>
-       */
       public boolean hasServerCurrentTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-      /**
-       * <code>required uint64 serverCurrentTime = 3;</code>
-       *
-       * <pre>
-       ** Current time of the region server in ms 
-       * </pre>
-       */
       public long getServerCurrentTime() {
         return serverCurrentTime_;
       }
-      /**
-       * <code>required uint64 serverCurrentTime = 3;</code>
-       *
-       * <pre>
-       ** Current time of the region server in ms 
-       * </pre>
-       */
       public Builder setServerCurrentTime(long value) {
         bitField0_ |= 0x00000004;
         serverCurrentTime_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required uint64 serverCurrentTime = 3;</code>
-       *
-       * <pre>
-       ** Current time of the region server in ms 
-       * </pre>
-       */
       public Builder clearServerCurrentTime() {
         bitField0_ = (bitField0_ & ~0x00000004);
         serverCurrentTime_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:RegionServerStartupRequest)
     }
-
+    
     static {
       defaultInstance = new RegionServerStartupRequest(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:RegionServerStartupRequest)
   }
-
+  
   public interface RegionServerStartupResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // repeated .NameStringPair mapEntries = 1;
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> 
         getMapEntriesList();
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getMapEntries(int index);
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     int getMapEntriesCount();
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getMapEntriesOrBuilderList();
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getMapEntriesOrBuilder(
         int index);
   }
-  /**
-   * Protobuf type {@code RegionServerStartupResponse}
-   */
   public static final class RegionServerStartupResponse extends
       com.google.protobuf.GeneratedMessage
       implements RegionServerStartupResponseOrBuilder {
     // Use RegionServerStartupResponse.newBuilder() to construct.
-    private RegionServerStartupResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private RegionServerStartupResponse(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private RegionServerStartupResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private RegionServerStartupResponse(boolean noInit) {}
+    
     private static final RegionServerStartupResponse defaultInstance;
     public static RegionServerStartupResponse getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public RegionServerStartupResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private RegionServerStartupResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-                mapEntries_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair>();
-                mutable_bitField0_ |= 0x00000001;
-              }
-              mapEntries_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.PARSER, extensionRegistry));
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-          mapEntries_ = java.util.Collections.unmodifiableList(mapEntries_);
-        }
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<RegionServerStartupResponse> PARSER =
-        new com.google.protobuf.AbstractParser<RegionServerStartupResponse>() {
-      public RegionServerStartupResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new RegionServerStartupResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<RegionServerStartupResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     // repeated .NameStringPair mapEntries = 1;
     public static final int MAPENTRIES_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> mapEntries_;
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getMapEntriesList() {
       return mapEntries_;
     }
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getMapEntriesOrBuilderList() {
       return mapEntries_;
     }
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     public int getMapEntriesCount() {
       return mapEntries_.size();
     }
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getMapEntries(int index) {
       return mapEntries_.get(index);
     }
-    /**
-     * <code>repeated .NameStringPair mapEntries = 1;</code>
-     *
-     * <pre>
-     **
-     * Configuration for the regionserver to use: e.g. filesystem,
-     * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-     * etc
-     * </pre>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getMapEntriesOrBuilder(
         int index) {
       return mapEntries_.get(index);
     }
-
+    
     private void initFields() {
       mapEntries_ = java.util.Collections.emptyList();
     }
@@ -984,7 +604,7 @@ public final class RegionServerStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       for (int i = 0; i < getMapEntriesCount(); i++) {
         if (!getMapEntries(i).isInitialized()) {
           memoizedIsInitialized = 0;
@@ -994,7 +614,7 @@ public final class RegionServerStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -1003,12 +623,12 @@ public final class RegionServerStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       for (int i = 0; i < mapEntries_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -1018,14 +638,14 @@ public final class RegionServerStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -1035,7 +655,7 @@ public final class RegionServerStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse other = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse) obj;
-
+      
       boolean result = true;
       result = result && getMapEntriesList()
           .equals(other.getMapEntriesList());
@@ -1043,13 +663,9 @@ public final class RegionServerStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getMapEntriesCount() > 0) {
@@ -1057,79 +673,89 @@ public final class RegionServerStatusProtos {
         hash = (53 * hash) + getMapEntriesList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code RegionServerStartupResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponseOrBuilder {
@@ -1137,21 +763,18 @@ public final class RegionServerStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1163,7 +786,7 @@ public final class RegionServerStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         if (mapEntriesBuilder_ == null) {
@@ -1174,20 +797,20 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse build() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -1195,7 +818,17 @@ public final class RegionServerStatusProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse result = new org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse(this);
         int from_bitField0_ = bitField0_;
@@ -1211,7 +844,7 @@ public final class RegionServerStatusProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse)other);
@@ -1220,7 +853,7 @@ public final class RegionServerStatusProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.getDefaultInstance()) return this;
         if (mapEntriesBuilder_ == null) {
@@ -1252,7 +885,7 @@ public final class RegionServerStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         for (int i = 0; i < getMapEntriesCount(); i++) {
           if (!getMapEntries(i).isInitialized()) {
@@ -1262,26 +895,42 @@ public final class RegionServerStatusProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.newBuilder();
+              input.readMessage(subBuilder, extensionRegistry);
+              addMapEntries(subBuilder.buildPartial());
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // repeated .NameStringPair mapEntries = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> mapEntries_ =
         java.util.Collections.emptyList();
@@ -1291,20 +940,10 @@ public final class RegionServerStatusProtos {
           bitField0_ |= 0x00000001;
          }
       }
-
+      
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> mapEntriesBuilder_;
-
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
+      
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getMapEntriesList() {
         if (mapEntriesBuilder_ == null) {
           return java.util.Collections.unmodifiableList(mapEntries_);
@@ -1312,16 +951,6 @@ public final class RegionServerStatusProtos {
           return mapEntriesBuilder_.getMessageList();
         }
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public int getMapEntriesCount() {
         if (mapEntriesBuilder_ == null) {
           return mapEntries_.size();
@@ -1329,16 +958,6 @@ public final class RegionServerStatusProtos {
           return mapEntriesBuilder_.getCount();
         }
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getMapEntries(int index) {
         if (mapEntriesBuilder_ == null) {
           return mapEntries_.get(index);
@@ -1346,16 +965,6 @@ public final class RegionServerStatusProtos {
           return mapEntriesBuilder_.getMessage(index);
         }
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public Builder setMapEntries(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
         if (mapEntriesBuilder_ == null) {
@@ -1370,16 +979,6 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public Builder setMapEntries(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
         if (mapEntriesBuilder_ == null) {
@@ -1391,16 +990,6 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public Builder addMapEntries(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
         if (mapEntriesBuilder_ == null) {
           if (value == null) {
@@ -1414,16 +1003,6 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public Builder addMapEntries(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
         if (mapEntriesBuilder_ == null) {
@@ -1438,16 +1017,6 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public Builder addMapEntries(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
         if (mapEntriesBuilder_ == null) {
@@ -1459,16 +1028,6 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public Builder addMapEntries(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
         if (mapEntriesBuilder_ == null) {
@@ -1480,16 +1039,6 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public Builder addAllMapEntries(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> values) {
         if (mapEntriesBuilder_ == null) {
@@ -1501,16 +1050,6 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public Builder clearMapEntries() {
         if (mapEntriesBuilder_ == null) {
           mapEntries_ = java.util.Collections.emptyList();
@@ -1521,16 +1060,6 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public Builder removeMapEntries(int index) {
         if (mapEntriesBuilder_ == null) {
           ensureMapEntriesIsMutable();
@@ -1541,30 +1070,10 @@ public final class RegionServerStatusProtos {
         }
         return this;
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder getMapEntriesBuilder(
           int index) {
         return getMapEntriesFieldBuilder().getBuilder(index);
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getMapEntriesOrBuilder(
           int index) {
         if (mapEntriesBuilder_ == null) {
@@ -1572,16 +1081,6 @@ public final class RegionServerStatusProtos {
           return mapEntriesBuilder_.getMessageOrBuilder(index);
         }
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
            getMapEntriesOrBuilderList() {
         if (mapEntriesBuilder_ != null) {
@@ -1590,45 +1089,15 @@ public final class RegionServerStatusProtos {
           return java.util.Collections.unmodifiableList(mapEntries_);
         }
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addMapEntriesBuilder() {
         return getMapEntriesFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addMapEntriesBuilder(
           int index) {
         return getMapEntriesFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
-      /**
-       * <code>repeated .NameStringPair mapEntries = 1;</code>
-       *
-       * <pre>
-       **
-       * Configuration for the regionserver to use: e.g. filesystem,
-       * hbase rootdir, the hostname to use creating the RegionServer ServerName,
-       * etc
-       * </pre>
-       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder> 
            getMapEntriesBuilderList() {
         return getMapEntriesFieldBuilder().getBuilderList();
@@ -1647,234 +1116,86 @@ public final class RegionServerStatusProtos {
         }
         return mapEntriesBuilder_;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:RegionServerStartupResponse)
     }
-
+    
     static {
       defaultInstance = new RegionServerStartupResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:RegionServerStartupResponse)
   }
-
+  
   public interface RegionServerReportRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required .ServerName server = 1;
-    /**
-     * <code>required .ServerName server = 1;</code>
-     */
     boolean hasServer();
-    /**
-     * <code>required .ServerName server = 1;</code>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
-    /**
-     * <code>required .ServerName server = 1;</code>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
-
+    
     // optional .ServerLoad load = 2;
-    /**
-     * <code>optional .ServerLoad load = 2;</code>
-     *
-     * <pre>
-     ** load the server is under 
-     * </pre>
-     */
     boolean hasLoad();
-    /**
-     * <code>optional .ServerLoad load = 2;</code>
-     *
-     * <pre>
-     ** load the server is under 
-     * </pre>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad getLoad();
-    /**
-     * <code>optional .ServerLoad load = 2;</code>
-     *
-     * <pre>
-     ** load the server is under 
-     * </pre>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder getLoadOrBuilder();
   }
-  /**
-   * Protobuf type {@code RegionServerReportRequest}
-   */
   public static final class RegionServerReportRequest extends
       com.google.protobuf.GeneratedMessage
       implements RegionServerReportRequestOrBuilder {
     // Use RegionServerReportRequest.newBuilder() to construct.
-    private RegionServerReportRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private RegionServerReportRequest(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private RegionServerReportRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private RegionServerReportRequest(boolean noInit) {}
+    
     private static final RegionServerReportRequest defaultInstance;
     public static RegionServerReportRequest getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public RegionServerReportRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private RegionServerReportRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
-                subBuilder = server_.toBuilder();
-              }
-              server_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(server_);
-                server_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000001;
-              break;
-            }
-            case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000002) == 0x00000002)) {
-                subBuilder = load_.toBuilder();
-              }
-              load_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(load_);
-                load_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000002;
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<RegionServerReportRequest> PARSER =
-        new com.google.protobuf.AbstractParser<RegionServerReportRequest>() {
-      public RegionServerReportRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new RegionServerReportRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<RegionServerReportRequest> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required .ServerName server = 1;
     public static final int SERVER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_;
-    /**
-     * <code>required .ServerName server = 1;</code>
-     */
     public boolean hasServer() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required .ServerName server = 1;</code>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
       return server_;
     }
-    /**
-     * <code>required .ServerName server = 1;</code>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
       return server_;
     }
-
+    
     // optional .ServerLoad load = 2;
     public static final int LOAD_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad load_;
-    /**
-     * <code>optional .ServerLoad load = 2;</code>
-     *
-     * <pre>
-     ** load the server is under 
-     * </pre>
-     */
     public boolean hasLoad() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    /**
-     * <code>optional .ServerLoad load = 2;</code>
-     *
-     * <pre>
-     ** load the server is under 
-     * </pre>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad getLoad() {
       return load_;
     }
-    /**
-     * <code>optional .ServerLoad load = 2;</code>
-     *
-     * <pre>
-     ** load the server is under 
-     * </pre>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder getLoadOrBuilder() {
       return load_;
     }
-
+    
     private void initFields() {
       server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       load_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.getDefaultInstance();
@@ -1883,7 +1204,7 @@ public final class RegionServerStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasServer()) {
         memoizedIsInitialized = 0;
         return false;
@@ -1901,7 +1222,7 @@ public final class RegionServerStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -1913,12 +1234,12 @@ public final class RegionServerStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1932,14 +1253,14 @@ public final class RegionServerStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -1949,7 +1270,7 @@ public final class RegionServerStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest other = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest) obj;
-
+      
       boolean result = true;
       result = result && (hasServer() == other.hasServer());
       if (hasServer()) {
@@ -1965,13 +1286,9 @@ public final class RegionServerStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasServer()) {
@@ -1983,79 +1300,89 @@ public final class RegionServerStatusProtos {
         hash = (53 * hash) + getLoad().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code RegionServerReportRequest}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequestOrBuilder {
@@ -2063,21 +1390,18 @@ public final class RegionServerStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -2090,7 +1414,7 @@ public final class RegionServerStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         if (serverBuilder_ == null) {
@@ -2107,20 +1431,20 @@ public final class RegionServerStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest build() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -2128,7 +1452,17 @@ public final class RegionServerStatusProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest result = new org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest(this);
         int from_bitField0_ = bitField0_;
@@ -2153,7 +1487,7 @@ public final class RegionServerStatusProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest)other);
@@ -2162,7 +1496,7 @@ public final class RegionServerStatusProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.getDefaultInstance()) return this;
         if (other.hasServer()) {
@@ -2174,7 +1508,7 @@ public final class RegionServerStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasServer()) {
           
@@ -2192,39 +1526,61 @@ public final class RegionServerStatusProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
+              if (hasServer()) {
+                subBuilder.mergeFrom(getServer());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setServer(subBuilder.buildPartial());
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.newBuilder();
+              if (hasLoad()) {
+                subBuilder.mergeFrom(getLoad());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setLoad(subBuilder.buildPartial());
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required .ServerName server = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverBuilder_;
-      /**
-       * <code>required .ServerName server = 1;</code>
-       */
       public boolean hasServer() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
         if (serverBuilder_ == null) {
           return server_;
@@ -2232,9 +1588,6 @@ public final class RegionServerStatusProtos {
           return serverBuilder_.getMessage();
         }
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       */
       public Builder setServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverBuilder_ == null) {
           if (value == null) {
@@ -2248,9 +1601,6 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       */
       public Builder setServer(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (serverBuilder_ == null) {
@@ -2262,9 +1612,6 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       */
       public Builder mergeServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
@@ -2281,9 +1628,6 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       */
       public Builder clearServer() {
         if (serverBuilder_ == null) {
           server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
@@ -2294,17 +1638,11 @@ public final class RegionServerStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getServerFieldBuilder().getBuilder();
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
         if (serverBuilder_ != null) {
           return serverBuilder_.getMessageOrBuilder();
@@ -2312,9 +1650,6 @@ public final class RegionServerStatusProtos {
           return server_;
         }
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
           getServerFieldBuilder() {
@@ -2328,28 +1663,14 @@ public final class RegionServerStatusProtos {
         }
         return serverBuilder_;
       }
-
+      
       // optional .ServerLoad load = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad load_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder> loadBuilder_;
-      /**
-       * <code>optional .ServerLoad load = 2;</code>
-       *
-       * <pre>
-       ** load the server is under 
-       * </pre>
-       */
       public boolean hasLoad() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      /**
-       * <code>optional .ServerLoad load = 2;</code>
-       *
-       * <pre>
-       ** load the server is under 
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad getLoad() {
         if (loadBuilder_ == null) {
           return load_;
@@ -2357,13 +1678,6 @@ public final class RegionServerStatusProtos {
           return loadBuilder_.getMessage();
         }
       }
-      /**
-       * <code>optional .ServerLoad load = 2;</code>
-       *
-       * <pre>
-       ** load the server is under 
-       * </pre>
-       */
       public Builder setLoad(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad value) {
         if (loadBuilder_ == null) {
           if (value == null) {
@@ -2377,13 +1691,6 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
-      /**
-       * <code>optional .ServerLoad load = 2;</code>
-       *
-       * <pre>
-       ** load the server is under 
-       * </pre>
-       */
       public Builder setLoad(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder builderForValue) {
         if (loadBuilder_ == null) {
@@ -2395,13 +1702,6 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
-      /**
-       * <code>optional .ServerLoad load = 2;</code>
-       *
-       * <pre>
-       ** load the server is under 
-       * </pre>
-       */
       public Builder mergeLoad(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad value) {
         if (loadBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
@@ -2418,13 +1718,6 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
-      /**
-       * <code>optional .ServerLoad load = 2;</code>
-       *
-       * <pre>
-       ** load the server is under 
-       * </pre>
-       */
       public Builder clearLoad() {
         if (loadBuilder_ == null) {
           load_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.getDefaultInstance();
@@ -2435,25 +1728,11 @@ public final class RegionServerStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-      /**
-       * <code>optional .ServerLoad load = 2;</code>
-       *
-       * <pre>
-       ** load the server is under 
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder getLoadBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getLoadFieldBuilder().getBuilder();
       }
-      /**
-       * <code>optional .ServerLoad load = 2;</code>
-       *
-       * <pre>
-       ** load the server is under 
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder getLoadOrBuilder() {
         if (loadBuilder_ != null) {
           return loadBuilder_.getMessageOrBuilder();
@@ -2461,13 +1740,6 @@ public final class RegionServerStatusProtos {
           return load_;
         }
       }
-      /**
-       * <code>optional .ServerLoad load = 2;</code>
-       *
-       * <pre>
-       ** load the server is under 
-       * </pre>
-       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder> 
           getLoadFieldBuilder() {
@@ -2481,145 +1753,84 @@ public final class RegionServerStatusProtos {
         }
         return loadBuilder_;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:RegionServerReportRequest)
     }
-
+    
     static {
       defaultInstance = new RegionServerReportRequest(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:RegionServerReportRequest)
   }
-
+  
   public interface RegionServerReportResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
-  /**
-   * Protobuf type {@code RegionServerReportResponse}
-   */
   public static final class RegionServerReportResponse extends
       com.google.protobuf.GeneratedMessage
       implements RegionServerReportResponseOrBuilder {
     // Use RegionServerReportResponse.newBuilder() to construct.
-    private RegionServerReportResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private RegionServerReportResponse(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private RegionServerReportResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private RegionServerReportResponse(boolean noInit) {}
+    
     private static final RegionServerReportResponse defaultInstance;
     public static RegionServerReportResponse getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public RegionServerReportResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private RegionServerReportResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<RegionServerReportResponse> PARSER =
-        new com.google.protobuf.AbstractParser<RegionServerReportResponse>() {
-      public RegionServerReportResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new RegionServerReportResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<RegionServerReportResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -2629,95 +1840,101 @@ public final class RegionServerStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse other = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse) obj;
-
+      
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code RegionServerReportResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponseOrBuilder {
@@ -2725,21 +1942,18 @@ public final class RegionServerStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -2750,25 +1964,25 @@ public final class RegionServerStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse build() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -2776,13 +1990,23 @@ public final class RegionServerStatusProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse result = new org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse(this);
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse)other);
@@ -2791,300 +2015,142 @@ public final class RegionServerStatusProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
           }
         }
-        return this;
       }
-
+      
+      
       // @@protoc_insertion_point(builder_scope:RegionServerReportResponse)
     }
-
+    
     static {
       defaultInstance = new RegionServerReportResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:RegionServerReportResponse)
   }
-
+  
   public interface ReportRSFatalErrorRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required .ServerName server = 1;
-    /**
-     * <code>required .ServerName server = 1;</code>
-     *
-     * <pre>
-     ** name of the server experiencing the error 
-     * </pre>
-     */
     boolean hasServer();
-    /**
-     * <code>required .ServerName server = 1;</code>
-     *
-     * <pre>
-     ** name of the server experiencing the error 
-     * </pre>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
-    /**
-     * <code>required .ServerName server = 1;</code>
-     *
-     * <pre>
-     ** name of the server experiencing the error 
-     * </pre>
-     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
-
+    
     // required string errorMessage = 2;
-    /**
-     * <code>required string errorMessage = 2;</code>
-     *
-     * <pre>
-     ** informative text to expose in the master logs and UI 
-     * </pre>
-     */
     boolean hasErrorMessage();
-    /**
-     * <code>required string errorMessage = 2;</code>
-     *
-     * <pre>
-     ** informative text to expose in the master logs and UI 
-     * </pre>
-     */
-    java.lang.String getErrorMessage();
-    /**
-     * <code>required string errorMessage = 2;</code>
-     *
-     * <pre>
-     ** informative text to expose in the master logs and UI 
-     * </pre>
-     */
-    com.google.protobuf.ByteString
-        getErrorMessageBytes();
+    String getErrorMessage();
   }
-  /**
-   * Protobuf type {@code ReportRSFatalErrorRequest}
-   */
   public static final class ReportRSFatalErrorRequest extends
       com.google.protobuf.GeneratedMessage
       implements ReportRSFatalErrorRequestOrBuilder {
     // Use ReportRSFatalErrorRequest.newBuilder() to construct.
-    private ReportRSFatalErrorRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private ReportRSFatalErrorRequest(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private ReportRSFatalErrorRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private ReportRSFatalErrorRequest(boolean noInit) {}
+    
     private static final ReportRSFatalErrorRequest defaultInstance;
     public static ReportRSFatalErrorRequest getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public ReportRSFatalErrorRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private ReportRSFatalErrorRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
-                subBuilder = server_.toBuilder();
-              }
-              server_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(server_);
-                server_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000001;
-              break;
-            }
-            case 18: {
-              bitField0_ |= 0x00000002;
-              errorMessage_ = input.readBytes();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<ReportRSFatalErrorRequest> PARSER =
-        new com.google.protobuf.AbstractParser<ReportRSFatalErrorRequest>() {
-      public ReportRSFatalErrorRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ReportRSFatalErrorRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<ReportRSFatalErrorRequest> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required .ServerName server = 1;
     public static final int SERVER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_;
-    /**
-     * <code>required .ServerName server = 1;</code>
-     *
-     * <pre>
-     ** name of the server experiencing the error 
-     * </pre>
-     */
     public boolean hasServer() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required .ServerName server = 1;</code>
-     *
-     * <pre>
-     ** name of the server experiencing the error 
-     * </pre>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
       return server_;
     }
-    /**
-     * <code>required .ServerName server = 1;</code>
-     *
-     * <pre>
-     ** name of the server experiencing the error 
-     * </pre>
-     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
       return server_;
     }
-
+    
     // required string errorMessage = 2;
     public static final int ERRORMESSAGE_FIELD_NUMBER = 2;
     private java.lang.Object errorMessage_;
-    /**
-     * <code>required string errorMessage = 2;</code>
-     *
-     * <pre>
-     ** informative text to expose in the master logs and UI 
-     * </pre>
-     */
     public boolean hasErrorMessage() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    /**
-     * <code>required string errorMessage = 2;</code>
-     *
-     * <pre>
-     ** informative text to expose in the master logs and UI 
-     * </pre>
-     */
-    public java.lang.String getErrorMessage() {
+    public String getErrorMessage() {
       java.lang.Object ref = errorMessage_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
+      if (ref instanceof String) {
+        return (String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
           errorMessage_ = s;
         }
         return s;
       }
     }
-    /**
-     * <code>required string errorMessage = 2;</code>
-     *
-     * <pre>
-     ** informative text to expose in the master logs and UI 
-     * </pre>
-     */
-    public com.google.protobuf.ByteString
-        getErrorMessageBytes() {
+    private com.google.protobuf.ByteString getErrorMessageBytes() {
       java.lang.Object ref = errorMessage_;
-      if (ref instanceof java.lang.String) {
+      if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
         errorMessage_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-
+    
     private void initFields() {
       server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       errorMessage_ = "";
@@ -3093,7 +2159,7 @@ public final class RegionServerStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasServer()) {
         memoizedIsInitialized = 0;
         return false;
@@ -3109,7 +2175,7 @@ public final class RegionServerStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -3121,12 +2187,12 @@ public final class RegionServerStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -3140,14 +2206,14 @@ public final class RegionServerStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -3157,7 +2223,7 @@ public final class RegionServerStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest other = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest) obj;
-
+      
       boolean result = true;
       result = result && (hasServer() == other.hasServer());
       if (hasServer()) {
@@ -3173,13 +2239,9 @@ public final class RegionServerStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasServer()) {
@@ -3191,79 +2253,89 @@ public final class RegionServerStatusProtos {
         hash = (53 * hash) + getErrorMessage().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code ReportRSFatalErrorRequest}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequestOrBuilder {
@@ -3271,21 +2343,18 @@ public final class RegionServerStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -3297,7 +2366,7 @@ public final class RegionServerStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         if (serverBuilder_ == null) {
@@ -3310,20 +2379,20 @@ public final class RegionServerStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest build() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -3331,7 +2400,17 @@ public final class RegionServerStatusProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest result = new org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest(this);
         int from_bitField0_ = bitField0_;
@@ -3352,7 +2431,7 @@ public final class RegionServerStatusProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest)other);
@@ -3361,21 +2440,19 @@ public final class RegionServerStatusProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.getDefaultInstance()) return this;
         if (other.hasServer()) {
           mergeServer(other.getServer());
         }
         if (other.hasErrorMessage()) {
-          bitField0_ |= 0x00000002;
-          errorMessage_ = other.errorMessage_;
-          onChanged();
+          setErrorMessage(other.getErrorMessage());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasServer()) {
           
@@ -3391,47 +2468,57 @@ public final class RegionServerStatusProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
+              if (hasServer()) {
+                subBuilder.mergeFrom(getServer());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setServer(subBuilder.buildPartial());
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              errorMessage_ = input.readBytes();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required .ServerName server = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverBuilder_;
-      /**
-       * <code>required .ServerName server = 1;</code>
-       *
-       * <pre>
-       ** name of the server experiencing the error 
-       * </pre>
-       */
       public boolean hasServer() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       *
-       * <pre>
-       ** name of the server experiencing the error 
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
         if (serverBuilder_ == null) {
           return server_;
@@ -3439,13 +2526,6 @@ public final class RegionServerStatusProtos {
           return serverBuilder_.getMessage();
         }
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       *
-       * <pre>
-       ** name of the server experiencing the error 
-       * </pre>
-       */
       public Builder setServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverBuilder_ == null) {
           if (value == null) {
@@ -3459,13 +2539,6 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       *
-       * <pre>
-       ** name of the server experiencing the error 
-       * </pre>
-       */
       public Builder setServer(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (serverBuilder_ == null) {
@@ -3477,13 +2550,6 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       *
-       * <pre>
-       ** name of the server experiencing the error 
-       * </pre>
-       */
       public Builder mergeServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
@@ -3500,13 +2566,6 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       *
-       * <pre>
-       ** name of the server experiencing the error 
-       * </pre>
-       */
       public Builder clearServer() {
         if (serverBuilder_ == null) {
           server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
@@ -3517,25 +2576,11 @@ public final class RegionServerStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       *
-       * <pre>
-       ** name of the server experiencing the error 
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getServerFieldBuilder().getBuilder();
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       *
-       * <pre>
-       ** name of the server experiencing the error 
-       * </pre>
-       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
         if (serverBuilder_ != null) {
           return serverBuilder_.getMessageOrBuilder();
@@ -3543,13 +2588,6 @@ public final class RegionServerStatusProtos {
           return server_;
         }
       }
-      /**
-       * <code>required .ServerName server = 1;</code>
-       *
-       * <pre>
-       ** name of the server experiencing the error 
-       * </pre>
-       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
           getServerFieldBuilder() {
@@ -3563,66 +2601,23 @@ public final class RegionServerStatusProtos {
         }
         return serverBuilder_;
       }
-
+      
       // required string errorMessage = 2;
       private java.lang.Object errorMessage_ = "";
-      /**
-       * <code>required string errorMessage = 2;</code>
-       *
-       * <pre>
-       ** informative text to expose in the master logs and UI 
-       * </pre>
-       */
       public boolean hasErrorMessage() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      /**
-       * <code>required string errorMessage = 2;</code>
-       *
-       * <pre>
-       ** informative text to expose in the master logs and UI 
-       * </pre>
-       */
-      public java.lang.String getErrorMessage() {
+      public String getErrorMessage() {
         java.lang.Object ref = errorMessage_;
-        if (!(ref instanceof java.lang.String)) {
-          java.lang.String s = ((com.google.protobuf.ByteString) ref)
-              .toStringUtf8();
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           errorMessage_ = s;
           return s;
         } else {
-          return (java.lang.String) ref;
+          return (String) ref;
         }
       }
-      /**
-       * <code>required string errorMessage = 2;</code>
-       *
-       * <pre>
-       ** informative text to expose in the master logs and UI 
-       * </pre>
-       */
-      public com.google.protobuf.ByteString
-          getErrorMessageBytes() {
-        java.lang.Object ref = errorMessage_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          errorMessage_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>required string errorMessage = 2;</code>
-       *
-       * <pre>
-       ** informative text to expose in the master logs and UI 
-       * </pre>
-       */
-      public Builder setErrorMessage(
-          java.lang.String value) {
+      public Builder setErrorMessage(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -3631,175 +2626,95 @@ public final class RegionServerStatusProtos {
         onChanged();
         return this;
       }
-      /**
-       * <code>required string errorMessage = 2;</code>
-       *
-       * <pre>
-       ** informative text to expose in the master logs and UI 
-       * </pre>
-       */
       public Builder clearErrorMessage() {
         bitField0_ = (bitField0_ & ~0x00000002);
         errorMessage_ = getDefaultInstance().getErrorMessage();
         onChanged();
         return this;
       }
-      /**
-       * <code>required string errorMessage = 2;</code>
-       *
-       * <pre>
-       ** informative text to expose in the master logs and UI 
-       * </pre>
-       */
-      public Builder setErrorMessageBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+      void setErrorMessage(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000002;
         errorMessage_ = value;
         onChanged();
-        return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:ReportRSFatalErrorRequest)
     }
-
+    
     static {
       defaultInstance = new ReportRSFatalErrorRequest(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:ReportRSFatalErrorRequest)
   }
-
+  
   public interface ReportRSFatalErrorResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
-  /**
-   * Protobuf type {@code ReportRSFatalErrorResponse}
-   */
   public static final class ReportRSFatalErrorResponse extends
       com.google.protobuf.GeneratedMessage
       implements ReportRSFatalErrorResponseOrBuilder {
     // Use ReportRSFatalErrorResponse.newBuilder() to construct.
-    private ReportRSFatalErrorResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private ReportRSFatalErrorResponse(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private ReportRSFatalErrorResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private ReportRSFatalErrorResponse(boolean noInit) {}
+    
     private static final ReportRSFatalErrorResponse defaultInstance;
     public static ReportRSFatalErrorResponse getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public ReportRSFatalErrorResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private ReportRSFatalErrorResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<ReportRSFatalErrorResponse> PARSER =
-        new com.google.protobuf.AbstractParser<ReportRSFatalErrorResponse>() {
-      public ReportRSFatalErrorResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ReportRSFatalErrorResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<ReportRSFatalErrorResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -3809,95 +2724,101 @@ public final class RegionServerStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse other = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse) obj;
-
+      
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code ReportRSFatalErrorResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponseOrBuilder {
@@ -3905,21 +2826,18 @@ public final class RegionServerStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -3930,25 +2848,25 @@ public final class RegionServerStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse build() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -3956,13 +2874,23 @@ public final class RegionServerStatusProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse result = new org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse(this);
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse)other);
@@ -3971,187 +2899,102 @@ public final class RegionServerStatusProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
           }
         }
-        return this;
       }
-
+      
+      
       // @@protoc_insertion_point(builder_scope:ReportRSFatalErrorResponse)
     }
-
+    
     static {
       defaultInstance = new ReportRSFatalErrorResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:ReportRSFatalErrorResponse)
   }
-
+  
   public interface GetLastFlushedSequenceIdRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required bytes regionName = 1;
-    /**
-     * <code>required bytes regionName = 1;</code>
-     *
-     * <pre>
-     ** region name 
-     * </pre>
-     */
     boolean hasRegionName();
-    /**
-     * <code>required bytes regionName = 1;</code>
-     *
-     * <pre>
-     ** region name 
-     * </pre>
-     */
     com.google.protobuf.ByteString getRegionName();
   }
-  /**
-   * Protobuf type {@code GetLastFlushedSequenceIdRequest}
-   */
   public static final class GetLastFlushedSequenceIdRequest extends
       com.google.protobuf.GeneratedMessage
       implements GetLastFlushedSequenceIdRequestOrBuilder {
     // Use GetLastFlushedSequenceIdRequest.newBuilder() to construct.
-    private GetLastFlushedSequenceIdRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private GetLastFlushedSequenceIdRequest(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private GetLastFlushedSequenceIdRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private GetLastFlushedSequenceIdRequest(boolean noInit) {}
+    
     private static final GetLastFlushedSequenceIdRequest defaultInstance;
     public static GetLastFlushedSequenceIdRequest getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public GetLastFlushedSequenceIdRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private GetLastFlushedSequenceIdRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              regionName_ = input.readBytes();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<GetLastFlushedSequenceIdRequest> PARSER =
-        new com.google.protobuf.AbstractParser<GetLastFlushedSequenceIdRequest>() {
-      public GetLastFlushedSequenceIdRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new GetLastFlushedSequenceIdRequest(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<GetLastFlushedSequenceIdRequest> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required bytes regionName = 1;
     public static final int REGIONNAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString regionName_;
-    /**
-     * <code>required bytes regionName = 1;</code>
-     *
-     * <pre>
-     ** region name 
-     * </pre>
-     */
     public boolean hasRegionName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required bytes regionName = 1;</code>
-     *
-     * <pre>
-     ** region name 
-     * </pre>
-     */
     public com.google.protobuf.ByteString getRegionName() {
       return regionName_;
     }
-
+    
     private void initFields() {
       regionName_ = com.google.protobuf.ByteString.EMPTY;
     }
@@ -4159,7 +3002,7 @@ public final class RegionServerStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasRegionName()) {
         memoizedIsInitialized = 0;
         return false;
@@ -4167,7 +3010,7 @@ public final class RegionServerStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -4176,12 +3019,12 @@ public final class RegionServerStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -4191,14 +3034,14 @@ public final class RegionServerStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -4208,7 +3051,7 @@ public final class RegionServerStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest other = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest) obj;
-
+      
       boolean result = true;
       result = result && (hasRegionName() == other.hasRegionName());
       if (hasRegionName()) {
@@ -4219,13 +3062,9 @@ public final class RegionServerStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRegionName()) {
@@ -4233,79 +3072,89 @@ public final class RegionServerStatusProtos {
         hash = (53 * hash) + getRegionName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code GetLastFlushedSequenceIdRequest}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequestOrBuilder {
@@ -4313,21 +3162,18 @@ public final class RegionServerStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -4338,27 +3184,27 @@ public final class RegionServerStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         regionName_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest build() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -4366,7 +3212,17 @@ public final class RegionServerStatusProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest result = new org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest(this);
         int from_bitField0_ = bitField0_;
@@ -4379,7 +3235,7 @@ public final class RegionServerStatusProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest)other);
@@ -4388,7 +3244,7 @@ public final class RegionServerStatusProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.getDefaultInstance()) return this;
         if (other.hasRegionName()) {
@@ -4397,7 +3253,7 @@ public final class RegionServerStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasRegionName()) {
           
@@ -4405,55 +3261,49 @@ public final class RegionServerStatusProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              regionName_ = input.readBytes();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required bytes regionName = 1;
       private com.google.protobuf.ByteString regionName_ = com.google.protobuf.ByteString.EMPTY;
-      /**
-       * <code>required bytes regionName = 1;</code>
-       *
-       * <pre>
-       ** region name 
-       * </pre>
-       */
       public boolean hasRegionName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required bytes regionName = 1;</code>
-       *
-       * <pre>
-       ** region name 
-       * </pre>
-       */
       public com.google.protobuf.ByteString getRegionName() {
         return regionName_;
       }
-      /**
-       * <code>required bytes regionName = 1;</code>
-       *
-       * <pre>
-       ** region name 
-       * </pre>
-       */
       public Builder setRegionName(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
@@ -4463,172 +3313,70 @@ public final class RegionServerStatusProtos {
         onChanged();
         return this;
       }
-      /**
-       * <code>required bytes regionName = 1;</code>
-       *
-       * <pre>
-       ** region name 
-       * </pre>
-       */
       public Builder clearRegionName() {
         bitField0_ = (bitField0_ & ~0x00000001);
         regionName_ = getDefaultInstance().getRegionName();
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:GetLastFlushedSequenceIdRequest)
     }
-
+    
     static {
       defaultInstance = new GetLastFlushedSequenceIdRequest(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:GetLastFlushedSequenceIdRequest)
   }
-
+  
   public interface GetLastFlushedSequenceIdResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-
+    
     // required uint64 lastFlushedSequenceId = 1;
-    /**
-     * <code>required uint64 lastFlushedSequenceId = 1;</code>
-     *
-     * <pre>
-     ** the last HLog sequence id flushed from MemStore to HFile for the region 
-     * </pre>
-     */
     boolean hasLastFlushedSequenceId();
-    /**
-     * <code>required uint64 lastFlushedSequenceId = 1;</code>
-     *
-     * <pre>
-     ** the last HLog sequence id flushed from MemStore to HFile for the region 
-     * </pre>
-     */
     long getLastFlushedSequenceId();
   }
-  /**
-   * Protobuf type {@code GetLastFlushedSequenceIdResponse}
-   */
   public static final class GetLastFlushedSequenceIdResponse extends
       com.google.protobuf.GeneratedMessage
       implements GetLastFlushedSequenceIdResponseOrBuilder {
     // Use GetLastFlushedSequenceIdResponse.newBuilder() to construct.
-    private GetLastFlushedSequenceIdResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+    private GetLastFlushedSequenceIdResponse(Builder builder) {
       super(builder);
-      this.unknownFields = builder.getUnknownFields();
     }
-    private GetLastFlushedSequenceIdResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private GetLastFlushedSequenceIdResponse(boolean noInit) {}
+    
     private static final GetLastFlushedSequenceIdResponse defaultInstance;
     public static GetLastFlushedSequenceIdResponse getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public GetLastFlushedSequenceIdResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private GetLastFlushedSequenceIdResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              lastFlushedSequenceId_ = input.readUInt64();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.Builder.class);
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<GetLastFlushedSequenceIdResponse> PARSER =
-        new com.google.protobuf.AbstractParser<GetLastFlushedSequenceIdResponse>() {
-      public GetLastFlushedSequenceIdResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new GetLastFlushedSequenceIdResponse(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<GetLastFlushedSequenceIdResponse> getParserForType() {
-      return PARSER;
-    }
-
+    
     private int bitField0_;
     // required uint64 lastFlushedSequenceId = 1;
     public static final int LASTFLUSHEDSEQUENCEID_FIELD_NUMBER = 1;
     private long lastFlushedSequenceId_;
-    /**
-     * <code>required uint64 lastFlushedSequenceId = 1;</code>
-     *
-     * <pre>
-     ** the last HLog sequence id flushed from MemStore to HFile for the region 
-     * </pre>
-     */
     public boolean hasLastFlushedSequenceId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    /**
-     * <code>required uint64 lastFlushedSequenceId = 1;</code>
-     *
-     * <pre>
-     ** the last HLog sequence id flushed from MemStore to HFile for the region 
-     * </pre>
-     */
     public long getLastFlushedSequenceId() {
       return lastFlushedSequenceId_;
     }
-
+    
     private void initFields() {
       lastFlushedSequenceId_ = 0L;
     }
@@ -4636,7 +3384,7 @@ public final class RegionServerStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-
+      
       if (!hasLastFlushedSequenceId()) {
         memoizedIsInitialized = 0;
         return false;
@@ -4644,7 +3392,7 @@ public final class RegionServerStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -4653,12 +3401,12 @@ public final class RegionServerStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -4668,14 +3416,14 @@ public final class RegionServerStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-
+    
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-
+    
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -4685,7 +3433,7 @@ public final class RegionServerStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse other = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse) obj;
-
+      
       boolean result = true;
       result = result && (hasLastFlushedSequenceId() == other.hasLastFlushedSequenceId());
       if (hasLastFlushedSequenceId()) {
@@ -4696,13 +3444,9 @@ public final class RegionServerStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-
-    private int memoizedHashCode = 0;
+    
     @java.lang.Override
     public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasLastFlushedSequenceId()) {
@@ -4710,79 +3454,89 @@ public final class RegionServerStatusProtos {
         hash = (53 * hash) + hashLong(getLastFlushedSequenceId());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
       return hash;
     }
-
+    
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
+    
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /**
-     * Protobuf type {@code GetLastFlushedSequenceIdResponse}
-     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponseOrBuilder {
@@ -4790,21 +3544,18 @@ public final class RegionServerStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_descriptor;
       }
-
+      
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.Builder.class);
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable;
       }
-
+      
       // Construct using org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      
+      private Builder(BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -4815,27 +3566,27 @@ public final class RegionServerStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-
+      
       public Builder clear() {
         super.clear();
         lastFlushedSequenceId_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
+      
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.getDescriptor();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.getDefaultInstance();
       }
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse build() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -4843,7 +3594,17 @@ public final class RegionServerStatusProtos {
         }
         return result;
       }
-
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse result = new org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse(this);
         int from_bitField0_ = bitField0_;
@@ -4856,7 +3617,7 @@ public final class RegionServerStatusProtos {
         onBuilt();
         return result;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse)other);
@@ -4865,7 +3626,7 @@ public final class RegionServerStatusProtos {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.getDefaultInstance()) return this;
         if (other.hasLastFlushedSequenceId()) {
@@ -4874,7 +3635,7 @@ public final class RegionServerStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
+      
       public final boolean isInitialized() {
         if (!hasLastFlushedSequenceId()) {
           
@@ -4882,148 +3643,100 @@ public final class RegionServerStatusProtos {
         }
         return true;
       }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              lastFlushedSequenceId_ = input.readUInt64();
+              break;
+            }
           }
         }
-        return this;
       }
+      
       private int bitField0_;
-
+      
       // required uint64 lastFlushedSequenceId = 1;
       private long lastFlushedSequenceId_ ;
-      /**
-       * <code>required uint64 lastFlushedSequenceId = 1;</code>
-       *
-       * <pre>
-       ** the last HLog sequence id flushed from MemStore to HFile for the region 
-       * </pre>
-       */
       public boolean hasLastFlushedSequenceId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      /**
-       * <code>required uint64 lastFlushedSequenceId = 1;</code>
-       *
-       * <pre>
-       ** the last HLog sequence id flushed from MemStore to HFile for the region 
-       * </pre>
-       */
       public long getLastFlushedSequenceId() {
         return lastFlushedSequenceId_;
       }
-      /**
-       * <code>required uint64 lastFlushedSequenceId = 1;</code>
-       *
-       * <pre>
-       ** the last HLog sequence id flushed from MemStore to HFile for the region 
-       * </pre>
-       */
       public Builder setLastFlushedSequenceId(long value) {
         bitField0_ |= 0x00000001;
         lastFlushedSequenceId_ = value;
         onChanged();
         return this;
       }
-      /**
-       * <code>required uint64 lastFlushedSequenceId = 1;</code>
-       *
-       * <pre>
-       ** the last HLog sequence id flushed from MemStore to HFile for the region 
-       * </pre>
-       */
       public Builder clearLastFlushedSequenceId() {
         bitField0_ = (bitField0_ & ~0x00000001);
         lastFlushedSequenceId_ = 0L;
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:GetLastFlushedSequenceIdResponse)
     }
-
+    
     static {
       defaultInstance = new GetLastFlushedSequenceIdResponse(true);
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:GetLastFlushedSequenceIdResponse)
   }
-
-  /**
-   * Protobuf service {@code RegionServerStatusService}
-   */
+  
   public static abstract class RegionServerStatusService
       implements com.google.protobuf.Service {
     protected RegionServerStatusService() {}
-
+    
     public interface Interface {
-      /**
-       * <code>rpc regionServerStartup(.RegionServerStartupRequest) returns (.RegionServerStartupResponse);</code>
-       *
-       * <pre>
-       ** Called when a region server first starts. 
-       * </pre>
-       */
       public abstract void regionServerStartup(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse> done);
-
-      /**
-       * <code>rpc regionServerReport(.RegionServerReportRequest) returns (.RegionServerReportResponse);</code>
-       *
-       * <pre>
-       ** Called to report the load the RegionServer is under. 
-       * </pre>
-       */
+      
       public abstract void regionServerReport(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse> done);
-
-      /**
-       * <code>rpc reportRSFatalError(.ReportRSFatalErrorRequest) returns (.ReportRSFatalErrorResponse);</code>
-       *
-       * <pre>
-       **
-       * Called by a region server to report a fatal error that is causing it to
-       * abort.
-       * </pre>
-       */
+      
       public abstract void reportRSFatalError(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse> done);
-
-      /**
-       * <code>rpc getLastFlushedSequenceId(.GetLastFlushedSequenceIdRequest) returns (.GetLastFlushedSequenceIdResponse);</code>
-       *
-       * <pre>
-       ** Called to get the sequence id of the last MemStore entry flushed to an
-       * HFile for a specified region. Used by the region server to speed up
-       * log splitting. 
-       * </pre>
-       */
+      
       public abstract void getLastFlushedSequenceId(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse> done);
-
+      
     }
-
+    
     public static com.google.protobuf.Service newReflectiveService(
         final Interface impl) {
       return new RegionServerStatusService() {
@@ -5034,7 +3747,7 @@ public final class RegionServerStatusProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse> done) {
           impl.regionServerStartup(controller, request, done);
         }
-
+        
         @java.lang.Override
         public  void regionServerReport(
             com.google.protobuf.RpcController controller,
@@ -5042,7 +3755,7 @@ public final class RegionServerStatusProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse> done) {
           impl.regionServerReport(controller, request, done);
         }
-
+        
         @java.lang.Override
         public  void reportRSFatalError(
             com.google.protobuf.RpcController controller,
@@ -5050,7 +3763,7 @@ public final class RegionServerStatusProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse> done) {
           impl.reportRSFatalError(controller, request, done);
         }
-
+        
         @java.lang.Override
         public  void getLastFlushedSequenceId(
             com.google.protobuf.RpcController controller,
@@ -5058,10 +3771,10 @@ public final class RegionServerStatusProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse> done) {
           impl.getLastFlushedSequenceId(controller, request, done);
         }
-
+        
       };
     }
-
+    
     public static com.google.protobuf.BlockingService
         newReflectiveBlockingService(final BlockingInterface impl) {
       return new com.google.protobuf.BlockingService() {
@@ -5069,7 +3782,7 @@ public final class RegionServerStatusProtos {
             getDescriptorForType() {
           return getDescriptor();
         }
-
+        
         public final com.google.protobuf.Message callBlockingMethod(
             com.google.protobuf.Descriptors.MethodDescriptor method,
             com.google.protobuf.RpcController controller,
@@ -5093,7 +3806,7 @@ public final class RegionServerStatusProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-
+        
         public final com.google.protobuf.Message
             getRequestPrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -5115,7 +3828,7 @@ public final class RegionServerStatusProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-
+        
         public final com.google.protobuf.Message
             getResponsePrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -5137,62 +3850,30 @@ public final class RegionServerStatusProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-
+        
       };
     }
-
-    /**
-     * <code>rpc regionServerStartup(.RegionServerStartupRequest) returns (.RegionServerStartupResponse);</code>
-     *
-     * <pre>
-     ** Called when a region server first starts. 
-     * </pre>
-     */
+    
     public abstract void regionServerStartup(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse> done);
-
-    /**
-     * <code>rpc regionServerReport(.RegionServerReportRequest) returns (.RegionServerReportResponse);</code>
-     *
-     * <pre>
-     ** Called to report the load the RegionServer is under. 
-     * </pre>
-     */
+    
     public abstract void regionServerReport(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse> done);
-
-    /**
-     * <code>rpc reportRSFatalError(.ReportRSFatalErrorRequest) returns (.ReportRSFatalErrorResponse);</code>
-     *
-     * <pre>
-     **
-     * Called by a region server to report a fatal error that is causing it to
-     * abort.
-     * </pre>
-     */
+    
     public abstract void reportRSFatalError(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse> done);
-
-    /**
-     * <code>rpc getLastFlushedSequenceId(.GetLastFlushedSequenceIdRequest) returns (.GetLastFlushedSequenceIdResponse);</code>
-     *
-     * <pre>
-     ** Called to get the sequence id of the last MemStore entry flushed to an
-     * HFile for a specified region. Used by the region server to speed up
-     * log splitting. 
-     * </pre>
-     */
+    
     public abstract void getLastFlushedSequenceId(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse> done);
-
+    
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -5202,7 +3883,7 @@ public final class RegionServerStatusProtos {
         getDescriptorForType() {
       return getDescriptor();
     }
-
+    
     public final void callMethod(
         com.google.protobuf.Descriptors.MethodDescriptor method,
         com.google.protobuf.RpcController controller,
@@ -5239,7 +3920,7 @@ public final class RegionServerStatusProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-
+    
     public final com.google.protobuf.Message
         getRequestPrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -5261,7 +3942,7 @@ public final class RegionServerStatusProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-
+    
     public final com.google.protobuf.Message
         getResponsePrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -5283,23 +3964,23 @@ public final class RegionServerStatusProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-
+    
     public static Stub newStub(
         com.google.protobuf.RpcChannel channel) {
       return new Stub(channel);
     }
-
+    
     public static final class Stub extends org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService implements Interface {
       private Stub(com.google.protobuf.RpcChannel channel) {
         this.channel = channel;
       }
-
+      
       private final com.google.protobuf.RpcChannel channel;
-
+      
       public com.google.protobuf.RpcChannel getChannel() {
         return channel;
       }
-
+      
       public  void regionServerStartup(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest request,
@@ -5314,7 +3995,7 @@ public final class RegionServerStatusProtos {
             org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.getDefaultInstance()));
       }
-
+      
       public  void regionServerReport(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest request,
@@ -5329,7 +4010,7 @@ public final class RegionServerStatusProtos {
             org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.getDefaultInstance()));
       }
-
+      
       public  void reportRSFatalError(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest request,
@@ -5344,7 +4025,7 @@ public final class RegionServerStatusProtos {
             org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.getDefaultInstance()));
       }
-
+      
       public  void getLastFlushedSequenceId(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest request,
@@ -5360,41 +4041,41 @@ public final class RegionServerStatusProtos {
             org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.getDefaultInstance()));
       }
     }
-
+    
     public static BlockingInterface newBlockingStub(
         com.google.protobuf.BlockingRpcChannel channel) {
       return new BlockingStub(channel);
     }
-
+    
     public interface BlockingInterface {
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse regionServerStartup(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest request)
           throws com.google.protobuf.ServiceException;
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse regionServerReport(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest request)
           throws com.google.protobuf.ServiceException;
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse reportRSFatalError(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest request)
           throws com.google.protobuf.ServiceException;
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse getLastFlushedSequenceId(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest request)
           throws com.google.protobuf.ServiceException;
     }
-
+    
     private static final class BlockingStub implements BlockingInterface {
       private BlockingStub(com.google.protobuf.BlockingRpcChannel channel) {
         this.channel = channel;
       }
-
+      
       private final com.google.protobuf.BlockingRpcChannel channel;
-
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse regionServerStartup(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest request)
@@ -5405,8 +4086,8 @@ public final class RegionServerStatusProtos {
           request,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.getDefaultInstance());
       }
-
-
+      
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse regionServerReport(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest request)
@@ -5417,8 +4098,8 @@ public final class RegionServerStatusProtos {
           request,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.getDefaultInstance());
       }
-
-
+      
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse reportRSFatalError(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest request)
@@ -5429,8 +4110,8 @@ public final class RegionServerStatusProtos {
           request,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.getDefaultInstance());
       }
-
-
+      
+      
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse getLastFlushedSequenceId(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest request)
@@ -5441,12 +4122,10 @@ public final class RegionServerStatusProtos {
           request,
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.getDefaultInstance());
       }
-
+      
     }
-
-    // @@protoc_insertion_point(class_scope:RegionServerStatusService)
   }
-
+  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_RegionServerStartupRequest_descriptor;
   private static
@@ -5487,7 +4166,7 @@ public final class RegionServerStatusProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable;
-
+  
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -5532,49 +4211,65 @@ public final class RegionServerStatusProtos {
           internal_static_RegionServerStartupRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionServerStartupRequest_descriptor,
-              new java.lang.String[] { "Port", "ServerStartCode", "ServerCurrentTime", });
+              new java.lang.String[] { "Port", "ServerStartCode", "ServerCurrentTime", },
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.class,
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.Builder.class);
           internal_static_RegionServerStartupResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_RegionServerStartupResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionServerStartupResponse_descriptor,
-              new java.lang.String[] { "MapEntries", });
+              new java.lang.String[] { "MapEntries", },
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.class,
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.Builder.class);
           internal_static_RegionServerReportRequest_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_RegionServerReportRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionServerReportRequest_descriptor,
-              new java.lang.String[] { "Server", "Load", });
+              new java.lang.String[] { "Server", "Load", },
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.class,
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.Builder.class);
           internal_static_RegionServerReportResponse_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_RegionServerReportResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionServerReportResponse_descriptor,
-              new java.lang.String[] { });
+              new java.lang.String[] { },
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.class,
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.Builder.class);
           internal_static_ReportRSFatalErrorRequest_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_ReportRSFatalErrorRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ReportRSFatalErrorRequest_descriptor,
-              new java.lang.String[] { "Server", "ErrorMessage", });
+              new java.lang.String[] { "Server", "ErrorMessage", },
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.class,
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.Builder.class);
           internal_static_ReportRSFatalErrorResponse_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_ReportRSFatalErrorResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ReportRSFatalErrorResponse_descriptor,
-              new java.lang.String[] { });
+              new java.lang.String[] { },
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.class,
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.Builder.class);
           internal_static_GetLastFlushedSequenceIdRequest_descriptor =
             getDescriptor().getMessageTypes().get(6);
           internal_static_GetLastFlushedSequenceIdRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetLastFlushedSequenceIdRequest_descriptor,
-              new java.lang.String[] { "RegionName", });
+              new java.lang.String[] { "RegionName", },
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.class,
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.Builder.class);
           internal_static_GetLastFlushedSequenceIdResponse_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetLastFlushedSequenceIdResponse_descriptor,
-              new java.lang.String[] { "LastFlushedSequenceId", });
+              new java.lang.String[] { "LastFlushedSequenceId", },
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.class,
+              org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.Builder.class);
           return null;
         }
       };
@@ -5584,6 +4279,6 @@ public final class RegionServerStatusProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
         }, assigner);
   }
-
+  
   // @@protoc_insertion_point(outer_class_scope)
 }
