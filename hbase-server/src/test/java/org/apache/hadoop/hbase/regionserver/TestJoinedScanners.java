@@ -83,7 +83,7 @@ public class TestJoinedScanners {
       HTable ht = htu.createTable(
         Bytes.toBytes(this.getClass().getSimpleName()), families);
 
-      long rows_to_insert = 10000;
+      long rows_to_insert = 1000;
       int insert_batch = 20;
       int flag_percent = 1;
       int large_bytes = 128 * 1024;
