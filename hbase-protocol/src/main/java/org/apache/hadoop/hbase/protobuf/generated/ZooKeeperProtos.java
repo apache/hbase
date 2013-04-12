@@ -4925,6 +4925,10 @@ public final class ZooKeeperProtos {
     // optional string purpose = 5;
     boolean hasPurpose();
     String getPurpose();
+    
+    // optional int64 createTime = 6;
+    boolean hasCreateTime();
+    long getCreateTime();
   }
   public static final class TableLock extends
       com.google.protobuf.GeneratedMessage
@@ -5030,12 +5034,23 @@ public final class ZooKeeperProtos {
       }
     }
     
+    // optional int64 createTime = 6;
+    public static final int CREATETIME_FIELD_NUMBER = 6;
+    private long createTime_;
+    public boolean hasCreateTime() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public long getCreateTime() {
+      return createTime_;
+    }
+    
     private void initFields() {
       tableName_ = com.google.protobuf.ByteString.EMPTY;
       lockOwner_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       threadId_ = 0L;
       isShared_ = false;
       purpose_ = "";
+      createTime_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -5070,6 +5085,9 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeBytes(5, getPurposeBytes());
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeInt64(6, createTime_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -5098,6 +5116,10 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(5, getPurposeBytes());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(6, createTime_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -5147,6 +5169,11 @@ public final class ZooKeeperProtos {
         result = result && getPurpose()
             .equals(other.getPurpose());
       }
+      result = result && (hasCreateTime() == other.hasCreateTime());
+      if (hasCreateTime()) {
+        result = result && (getCreateTime()
+            == other.getCreateTime());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -5175,6 +5202,10 @@ public final class ZooKeeperProtos {
       if (hasPurpose()) {
         hash = (37 * hash) + PURPOSE_FIELD_NUMBER;
         hash = (53 * hash) + getPurpose().hashCode();
+      }
+      if (hasCreateTime()) {
+        hash = (37 * hash) + CREATETIME_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getCreateTime());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -5307,6 +5338,8 @@ public final class ZooKeeperProtos {
         bitField0_ = (bitField0_ & ~0x00000008);
         purpose_ = "";
         bitField0_ = (bitField0_ & ~0x00000010);
+        createTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       
@@ -5369,6 +5402,10 @@ public final class ZooKeeperProtos {
           to_bitField0_ |= 0x00000010;
         }
         result.purpose_ = purpose_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.createTime_ = createTime_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -5399,6 +5436,9 @@ public final class ZooKeeperProtos {
         }
         if (other.hasPurpose()) {
           setPurpose(other.getPurpose());
+        }
+        if (other.hasCreateTime()) {
+          setCreateTime(other.getCreateTime());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5464,6 +5504,11 @@ public final class ZooKeeperProtos {
             case 42: {
               bitField0_ |= 0x00000010;
               purpose_ = input.readBytes();
+              break;
+            }
+            case 48: {
+              bitField0_ |= 0x00000020;
+              createTime_ = input.readInt64();
               break;
             }
           }
@@ -5664,6 +5709,27 @@ public final class ZooKeeperProtos {
         onChanged();
       }
       
+      // optional int64 createTime = 6;
+      private long createTime_ ;
+      public boolean hasCreateTime() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      public long getCreateTime() {
+        return createTime_;
+      }
+      public Builder setCreateTime(long value) {
+        bitField0_ |= 0x00000020;
+        createTime_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearCreateTime() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        createTime_ = 0L;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:TableLock)
     }
     
@@ -5758,11 +5824,12 @@ public final class ZooKeeperProtos {
       "tate.State\"\"\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISA" +
       "BLED\020\001\"+\n\027ReplicationHLogPosition\022\020\n\010pos" +
       "ition\030\001 \002(\003\"$\n\017ReplicationLock\022\021\n\tlockOw" +
-      "ner\030\001 \002(\t\"s\n\tTableLock\022\021\n\ttableName\030\001 \001(",
-      "\014\022\036\n\tlockOwner\030\002 \001(\0132\013.ServerName\022\020\n\010thr" +
-      "eadId\030\003 \001(\003\022\020\n\010isShared\030\004 \001(\010\022\017\n\007purpose" +
-      "\030\005 \001(\tBE\n*org.apache.hadoop.hbase.protob" +
-      "uf.generatedB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
+      "ner\030\001 \002(\t\"\207\001\n\tTableLock\022\021\n\ttableName\030\001 \001",
+      "(\014\022\036\n\tlockOwner\030\002 \001(\0132\013.ServerName\022\020\n\010th" +
+      "readId\030\003 \001(\003\022\020\n\010isShared\030\004 \001(\010\022\017\n\007purpos" +
+      "e\030\005 \001(\t\022\022\n\ncreateTime\030\006 \001(\003BE\n*org.apach" +
+      "e.hadoop.hbase.protobuf.generatedB\017ZooKe" +
+      "eperProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -5854,7 +5921,7 @@ public final class ZooKeeperProtos {
           internal_static_TableLock_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_TableLock_descriptor,
-              new java.lang.String[] { "TableName", "LockOwner", "ThreadId", "IsShared", "Purpose", },
+              new java.lang.String[] { "TableName", "LockOwner", "ThreadId", "IsShared", "Purpose", "CreateTime", },
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLock.class,
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLock.Builder.class);
           return null;

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.exceptions.LockTimeoutException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.lock.ZKInterProcessReadWriteLock;
@@ -66,11 +67,16 @@ public abstract class TableLockManager {
   protected static final String TABLE_READ_LOCK_TIMEOUT_MS =
     "hbase.table.read.lock.timeout.ms";
 
-  protected static final int DEFAULT_TABLE_WRITE_LOCK_TIMEOUT_MS =
+  protected static final long DEFAULT_TABLE_WRITE_LOCK_TIMEOUT_MS =
     600 * 1000; //10 min default
 
-  protected static final int DEFAULT_TABLE_READ_LOCK_TIMEOUT_MS =
+  protected static final long DEFAULT_TABLE_READ_LOCK_TIMEOUT_MS =
     600 * 1000; //10 min default
+
+  public static final String TABLE_LOCK_EXPIRE_TIMEOUT = "hbase.table.lock.expire.ms";
+
+  public static final long DEFAULT_TABLE_LOCK_EXPIRE_TIMEOUT_MS =
+      600 * 1000; //10 min default
 
   /**
    * A distributed lock for a table.
@@ -109,14 +115,32 @@ public abstract class TableLockManager {
   public abstract TableLock readLock(byte[] tableName, String purpose);
 
   /**
-   * Force releases all table write locks and lock attempts even if this thread does
+   * Visits all table locks(read and write), and lock attempts with the given callback
+   * MetadataHandler.
+   * @param handler the metadata handler to call
+   * @throws IOException If there is an unrecoverable error
+   */
+  public abstract void visitAllLocks(MetadataHandler handler) throws IOException;
+
+  /**
+   * Force releases all table locks(read and write) that have been held longer than
+   * "hbase.table.lock.expire.ms". Assumption is that the clock skew between zookeeper
+   * and this servers is negligible.
+   * The behavior of the lock holders still thinking that they have the lock is undefined.
+   * @throws IOException If there is an unrecoverable error
+   */
+  public abstract void reapAllExpiredLocks() throws IOException;
+
+  /**
+   * Force releases table write locks and lock attempts even if this thread does
    * not own the lock. The behavior of the lock holders still thinking that they
    * have the lock is undefined. This should be used carefully and only when
    * we can ensure that all write-lock holders have died. For example if only
    * the master can hold write locks, then we can reap it's locks when the backup
    * master starts.
+   * @throws IOException If there is an unrecoverable error
    */
-  public abstract void reapAllTableWriteLocks() throws IOException;
+  public abstract void reapWriteLocks() throws IOException;
 
   /**
    * Called after a table has been deleted, and after the table lock is  released.
@@ -135,11 +159,14 @@ public abstract class TableLockManager {
     // Initialize table level lock manager for schema changes, if enabled.
     if (conf.getBoolean(TABLE_LOCK_ENABLE,
         DEFAULT_TABLE_LOCK_ENABLE)) {
-      int writeLockTimeoutMs = conf.getInt(TABLE_WRITE_LOCK_TIMEOUT_MS,
+      long writeLockTimeoutMs = conf.getLong(TABLE_WRITE_LOCK_TIMEOUT_MS,
           DEFAULT_TABLE_WRITE_LOCK_TIMEOUT_MS);
-      int readLockTimeoutMs = conf.getInt(TABLE_READ_LOCK_TIMEOUT_MS,
+      long readLockTimeoutMs = conf.getLong(TABLE_READ_LOCK_TIMEOUT_MS,
           DEFAULT_TABLE_READ_LOCK_TIMEOUT_MS);
-      return new ZKTableLockManager(zkWatcher, serverName, writeLockTimeoutMs, readLockTimeoutMs);
+      long lockExpireTimeoutMs = conf.getLong(TABLE_LOCK_EXPIRE_TIMEOUT,
+          DEFAULT_TABLE_LOCK_EXPIRE_TIMEOUT_MS);
+
+      return new ZKTableLockManager(zkWatcher, serverName, writeLockTimeoutMs, readLockTimeoutMs, lockExpireTimeoutMs);
     }
 
     return new NullTableLockManager();
@@ -167,11 +194,33 @@ public abstract class TableLockManager {
       return new NullTableLock();
     }
     @Override
-    public void reapAllTableWriteLocks() throws IOException {
+    public void reapAllExpiredLocks() throws IOException {
+    }
+    @Override
+    public void reapWriteLocks() throws IOException {
     }
     @Override
     public void tableDeleted(byte[] tableName) throws IOException {
     }
+    @Override
+    public void visitAllLocks(MetadataHandler handler) throws IOException {
+    }
+  }
+
+  /** Public for hbck */
+  public static ZooKeeperProtos.TableLock fromBytes(byte[] bytes) {
+    int pblen = ProtobufUtil.lengthOfPBMagic();
+    if (bytes == null || bytes.length < pblen) {
+      return null;
+    }
+    try {
+      ZooKeeperProtos.TableLock data = ZooKeeperProtos.TableLock.newBuilder().mergeFrom(
+          bytes, pblen, bytes.length - pblen).build();
+      return data;
+    } catch (InvalidProtocolBufferException ex) {
+      LOG.warn("Exception in deserialization", ex);
+    }
+    return null;
   }
 
   /**
@@ -192,9 +241,9 @@ public abstract class TableLockManager {
         }
         LOG.debug("Table is locked by: " +
             String.format("[tableName=%s, lockOwner=%s, threadId=%s, " +
-                "purpose=%s, isShared=%s]", Bytes.toString(data.getTableName().toByteArray()),
+                "purpose=%s, isShared=%s, createTime=%s]", Bytes.toString(data.getTableName().toByteArray()),
                 ProtobufUtil.toServerName(data.getLockOwner()), data.getThreadId(),
-                data.getPurpose(), data.getIsShared()));
+                data.getPurpose(), data.getIsShared(), data.getCreateTime()));
       }
     };
 
@@ -278,7 +327,8 @@ public abstract class TableLockManager {
           .setLockOwner(ProtobufUtil.toServerName(serverName))
           .setThreadId(Thread.currentThread().getId())
           .setPurpose(purpose)
-          .setIsShared(isShared).build();
+          .setIsShared(isShared)
+          .setCreateTime(EnvironmentEdgeManager.currentTimeMillis()).build();
         byte[] lockMetadata = toBytes(data);
 
         InterProcessReadWriteLock lock = new ZKInterProcessReadWriteLock(zkWatcher, tableLockZNode,
@@ -291,25 +341,11 @@ public abstract class TableLockManager {
       return ProtobufUtil.prependPBMagic(data.toByteArray());
     }
 
-    private static ZooKeeperProtos.TableLock fromBytes(byte[] bytes) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      if (bytes == null || bytes.length < pblen) {
-        return null;
-      }
-      try {
-        ZooKeeperProtos.TableLock data = ZooKeeperProtos.TableLock.newBuilder().mergeFrom(
-            bytes, pblen, bytes.length - pblen).build();
-        return data;
-      } catch (InvalidProtocolBufferException ex) {
-        LOG.warn("Exception in deserialization", ex);
-      }
-      return null;
-    }
-
     private final ServerName serverName;
     private final ZooKeeperWatcher zkWatcher;
     private final long writeLockTimeoutMs;
     private final long readLockTimeoutMs;
+    private final long lockExpireTimeoutMs;
 
     /**
      * Initialize a new manager for table-level locks.
@@ -322,11 +358,12 @@ public abstract class TableLockManager {
      * given table, or -1 for no timeout
      */
     public ZKTableLockManager(ZooKeeperWatcher zkWatcher,
-      ServerName serverName, long writeLockTimeoutMs, long readLockTimeoutMs) {
+      ServerName serverName, long writeLockTimeoutMs, long readLockTimeoutMs, long lockExpireTimeoutMs) {
       this.zkWatcher = zkWatcher;
       this.serverName = serverName;
       this.writeLockTimeoutMs = writeLockTimeoutMs;
       this.readLockTimeoutMs = readLockTimeoutMs;
+      this.lockExpireTimeoutMs = lockExpireTimeoutMs;
     }
 
     @Override
@@ -340,19 +377,33 @@ public abstract class TableLockManager {
           serverName, readLockTimeoutMs, true, purpose);
     }
 
+    public void visitAllLocks(MetadataHandler handler) throws IOException {
+      for (String tableName : getTableNames()) {
+        String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableName);
+        ZKInterProcessReadWriteLock lock = new ZKInterProcessReadWriteLock(
+            zkWatcher, tableLockZNode, null);
+        lock.readLock(null).visitLocks(handler);
+        lock.writeLock(null).visitLocks(handler);
+      }
+    }
+
+    private List<String> getTableNames() throws IOException {
+
+      List<String> tableNames;
+      try {
+        tableNames = ZKUtil.listChildrenNoWatch(zkWatcher, zkWatcher.tableLockZNode);
+      } catch (KeeperException e) {
+        LOG.error("Unexpected ZooKeeper error when listing children", e);
+        throw new IOException("Unexpected ZooKeeper exception", e);
+      }
+      return tableNames;
+    }
+
     @Override
-    public void reapAllTableWriteLocks() throws IOException {
+    public void reapWriteLocks() throws IOException {
       //get the table names
       try {
-        List<String> tableNames;
-        try {
-          tableNames = ZKUtil.listChildrenNoWatch(zkWatcher, zkWatcher.tableLockZNode);
-        } catch (KeeperException e) {
-          LOG.error("Unexpected ZooKeeper error when listing children", e);
-          throw new IOException("Unexpected ZooKeeper exception", e);
-        }
-
-        for (String tableName : tableNames) {
+        for (String tableName : getTableNames()) {
           String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableName);
           ZKInterProcessReadWriteLock lock = new ZKInterProcessReadWriteLock(
               zkWatcher, tableLockZNode, null);
@@ -362,6 +413,24 @@ public abstract class TableLockManager {
         throw ex;
       } catch (Exception ex) {
         LOG.warn("Caught exception while reaping table write locks", ex);
+      }
+    }
+
+    @Override
+    public void reapAllExpiredLocks() throws IOException {
+      //get the table names
+      try {
+        for (String tableName : getTableNames()) {
+          String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableName);
+          ZKInterProcessReadWriteLock lock = new ZKInterProcessReadWriteLock(
+              zkWatcher, tableLockZNode, null);
+          lock.readLock(null).reapExpiredLocks(lockExpireTimeoutMs);
+          lock.writeLock(null).reapExpiredLocks(lockExpireTimeoutMs);
+        }
+      } catch (IOException ex) {
+        throw ex;
+      } catch (Exception ex) {
+        throw new IOException(ex);
       }
     }
 

@@ -287,7 +287,7 @@ public class TestTableLockManager {
     writeLocksAttempted.await();
 
     //now reap all table locks
-    lockManager.reapAllTableWriteLocks();
+    lockManager.reapWriteLocks();
 
     TEST_UTIL.getConfiguration().setInt(TableLockManager.TABLE_WRITE_LOCK_TIMEOUT_MS, 0);
     TableLockManager zeroTimeoutLockManager = TableLockManager.createTableLockManager(

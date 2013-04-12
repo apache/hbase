@@ -143,4 +143,5 @@ message TableLock {
   optional int64 threadId = 3;
   optional bool isShared = 4;
   optional string purpose = 5;
+  optional int64 createTime = 6;
 }

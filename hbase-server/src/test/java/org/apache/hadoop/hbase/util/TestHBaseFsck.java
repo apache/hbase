@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.SynchronousQueue;
@@ -73,6 +74,8 @@ import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -1299,7 +1302,7 @@ public class TestHBaseFsck {
       // TODO: fixHdfsHoles does not work against splits, since the parent dir lingers on
       // for some time until children references are deleted. HBCK erroneously sees this as
       // overlapping regions
-      HBaseFsck hbck = doFsck(conf, true, true, false, false, false, true, true, true, false, null);
+      HBaseFsck hbck = doFsck(conf, true, true, false, false, false, true, true, true, false, false, null);
       assertErrors(hbck, new ERROR_CODE[] {}); //no LINGERING_SPLIT_PARENT reported
 
       // assert that the split META entry is still there.
@@ -1361,7 +1364,7 @@ public class TestHBaseFsck {
           ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN}); //no LINGERING_SPLIT_PARENT
 
       // now fix it. The fix should not revert the region split, but add daughters to META
-      hbck = doFsck(conf, true, true, false, false, false, false, false, false, false, null);
+      hbck = doFsck(conf, true, true, false, false, false, false, false, false, false, false, null);
       assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
           ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN});
 
@@ -1934,6 +1937,71 @@ public class TestHBaseFsck {
       calledCount++;
       return false;
     }
+  }
+
+  @Test(timeout=30000)
+  public void testCheckTableLocks() throws Exception {
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge(0);
+    EnvironmentEdgeManager.injectEdge(edge);
+    // check no errors
+    HBaseFsck hbck = doFsck(conf, false);
+    assertNoErrors(hbck);
+
+    ServerName mockName = new ServerName("localhost", 60000, 1);
+
+    // obtain one lock
+    final TableLockManager tableLockManager = TableLockManager.createTableLockManager(conf, TEST_UTIL.getZooKeeperWatcher(), mockName);
+    TableLock writeLock = tableLockManager.writeLock(Bytes.toBytes("foo"), "testCheckTableLocks");
+    writeLock.acquire();
+    hbck = doFsck(conf, false);
+    assertNoErrors(hbck); // should not have expired, no problems
+
+    edge.incrementTime(conf.getLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT,
+        TableLockManager.DEFAULT_TABLE_LOCK_EXPIRE_TIMEOUT_MS)); // let table lock expire
+
+    hbck = doFsck(conf, false);
+    assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.EXPIRED_TABLE_LOCK});
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    new Thread() {
+      public void run() {
+        TableLock readLock = tableLockManager.writeLock(Bytes.toBytes("foo"), "testCheckTableLocks");
+        try {
+          latch.countDown();
+          readLock.acquire();
+        } catch (IOException ex) {
+          fail();
+        } catch (IllegalStateException ex) {
+          return; // expected, since this will be reaped under us.
+        }
+        fail("should not have come here");
+      };
+    }.start();
+
+    latch.await(); // wait until thread starts
+    Threads.sleep(300); // wait some more to ensure writeLock.acquire() is called
+
+    hbck = doFsck(conf, false);
+    assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.EXPIRED_TABLE_LOCK}); // still one expired, one not-expired
+
+    edge.incrementTime(conf.getLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT,
+        TableLockManager.DEFAULT_TABLE_LOCK_EXPIRE_TIMEOUT_MS)); // let table lock expire
+
+    hbck = doFsck(conf, false);
+    assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.EXPIRED_TABLE_LOCK, ERROR_CODE.EXPIRED_TABLE_LOCK}); // both are expired
+
+    conf.setLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT, 1); // reaping from ZKInterProcessWriteLock uses znode cTime,
+                                                                 // which is not injectable through EnvironmentEdge
+    Threads.sleep(10);
+    hbck = doFsck(conf, true); // now fix both cases
+
+    hbck = doFsck(conf, false);
+    assertNoErrors(hbck);
+
+    // ensure that locks are deleted
+    writeLock = tableLockManager.writeLock(Bytes.toBytes("foo"), "should acquire without blocking");
+    writeLock.acquire(); // this should not block.
+    writeLock.release(); // release for clean state
   }
 
   @org.junit.Rule

@@ -63,9 +63,21 @@ public interface InterProcessLock {
 
   /**
    * If supported, attempts to reap all the locks of this type by forcefully
-   * deleting the locks. Lock reaping is different than coordinated lock revocation
+   * deleting the locks (both held and attempted) that have expired according
+   * to the given timeout. Lock reaping is different than coordinated lock revocation
    * in that, there is no coordination, and the behavior is undefined if the
    * lock holder is still alive.
+   * @throws IOException If there is an unrecoverable error reaping the locks
+   */
+  public void reapExpiredLocks(long expireTimeoutMs) throws IOException;
+
+  /**
+   * If supported, attempts to reap all the locks of this type by forcefully
+   * deleting the locks (both held and attempted). Lock reaping is different
+   * than coordinated lock revocation in that, there is no coordination, and
+   * the behavior is undefined if the lock holder is still alive.
+   * Calling this should have the same affect as calling {@link #reapExpiredLocks(long)}
+   * with timeout=0.
    * @throws IOException If there is an unrecoverable error reaping the locks
    */
   public void reapAllLocks() throws IOException;
@@ -83,4 +95,11 @@ public interface InterProcessLock {
      */
     public void handleMetadata(byte[] metadata);
   }
+
+  /**
+   * Visits the locks (both held and attempted) of this type with the given
+   * {@link MetadataHandler}.
+   * @throws InterruptedException If there is an unrecoverable error
+   */
+  public void visitLocks(MetadataHandler handler) throws IOException;
 }

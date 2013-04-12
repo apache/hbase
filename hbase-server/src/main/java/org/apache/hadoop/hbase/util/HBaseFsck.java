@@ -64,9 +64,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Delete;
@@ -82,6 +80,8 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
+import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -95,6 +95,7 @@ import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
+import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -197,6 +198,7 @@ public class HBaseFsck extends Configured implements Tool {
   private boolean fixSplitParents = false; // fix lingering split parents
   private boolean fixReferenceFiles = false; // fix lingering reference store file
   private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
+  private boolean fixTableLocks = false; // fix table locks which are expired
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
   // .META. are always checked
@@ -454,6 +456,8 @@ public class HBaseFsck extends Configured implements Tool {
     }
 
     offlineReferenceFileRepair();
+
+    checkAndFixTableLocks();
 
     // Print table summary
     printTableSummary(tablesInfo);
@@ -2471,6 +2475,15 @@ public class HBaseFsck extends Configured implements Tool {
     return hbi;
   }
 
+  private void checkAndFixTableLocks() throws IOException {
+    TableLockChecker checker = new TableLockChecker(createZooKeeperWatcher(), errors);
+    checker.checkTableLocks();
+
+    if (this.fixTableLocks) {
+      checker.fixExpiredTableLocks();
+    }
+  }
+
   /**
     * Check values in regionInfo for .META.
     * Check if zero or more than one regions with META are found.
@@ -2560,7 +2573,7 @@ public class HBaseFsck extends Configured implements Tool {
           Pair<HRegionInfo, ServerName> pair = HRegionInfo.getHRegionInfoAndServerName(result);
           if (pair == null || pair.getFirst() == null) {
             emptyRegionInfoQualifiers.add(result);
-            errors.reportError(ERROR_CODE.EMPTY_META_CELL, 
+            errors.reportError(ERROR_CODE.EMPTY_META_CELL,
               "Empty REGIONINFO_QUALIFIER found in .META.");
             return true;
           }
@@ -2897,7 +2910,7 @@ public class HBaseFsck extends Configured implements Tool {
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      WRONG_USAGE, EMPTY_META_CELL
+      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK
     }
     public void clear();
     public void report(String message);
@@ -3238,6 +3251,14 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   /**
+   * Set table locks fix mode.
+   * Delete table locks held for a long time
+   */
+  public void setFixTableLocks(boolean shouldFix) {
+    fixTableLocks = shouldFix;
+  }
+
+  /**
    * Check if we should rerun fsck again. This checks if we've tried to
    * fix something and we should rerun fsck tool again.
    * Display the full report from fsck. This displays all live and dead
@@ -3476,8 +3497,12 @@ public class HBaseFsck extends Configured implements Tool {
     out.println("");
     out.println("  Metadata Repair shortcuts");
     out.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
-        "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps -fixReferenceFiles");
+        "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps -fixReferenceFiles -fixTableLocks");
     out.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
+
+    out.println("");
+    out.println("  Table lock options");
+    out.println("   -fixTableLocks    Deletes table locks held for a long time (hbase.table.lock.expire.ms, 10min by default)");
 
     out.flush();
     errors.reportError(ERROR_CODE.WRONG_USAGE, sw.toString());
@@ -3603,6 +3628,7 @@ public class HBaseFsck extends Configured implements Tool {
         setFixSplitParents(false);
         setCheckHdfs(true);
         setFixReferenceFiles(true);
+        setFixTableLocks(true);
       } else if (cmd.equals("-repairHoles")) {
         // this will make all missing hdfs regions available but may lose data
         setFixHdfsHoles(true);
@@ -3647,6 +3673,8 @@ public class HBaseFsck extends Configured implements Tool {
         setSummary();
       } else if (cmd.equals("-metaonly")) {
         setCheckMetaOnly();
+      } else if (cmd.equals("-fixTableLocks")) {
+        setFixTableLocks(true);
       } else if (cmd.startsWith("-")) {
         errors.reportError(ERROR_CODE.WRONG_USAGE, "Unrecognized option:" + cmd);
         return printUsageAndExit();
