@@ -3456,14 +3456,14 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     @Override
-    public boolean next(List<KeyValue> outResults, int limit)
+    public boolean next(List<KeyValue> outResults)
         throws IOException {
-      return next(outResults, limit, null);
+      // apply the batching limit by default
+      return next(outResults, batch);
     }
 
     @Override
-    public synchronized boolean next(List<KeyValue> outResults, int limit,
-        String metric) throws IOException {
+    public synchronized boolean next(List<KeyValue> outResults, int limit) throws IOException {
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -3476,7 +3476,7 @@ public class HRegion implements HeapSize { // , Writable{
         // This could be a new thread from the last time we called next().
         MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
 
-        return nextRaw(outResults, limit, metric);
+        return nextRaw(outResults, limit);
       } finally {
         closeRegionOperation();
       }
@@ -3485,49 +3485,44 @@ public class HRegion implements HeapSize { // , Writable{
     @Override
     public boolean nextRaw(List<KeyValue> outResults)
         throws IOException {
-      return nextRaw(outResults, batch, null);
+      return nextRaw(outResults, batch);
     }
 
     @Override
-    public boolean nextRaw(List<KeyValue> outResults, int limit,
-        String metric) throws IOException {
+    public boolean nextRaw(List<KeyValue> outResults, int limit) throws IOException {
       boolean returnResult;
       if (outResults.isEmpty()) {
         // Usually outResults is empty. This is true when next is called
         // to handle scan or get operation.
-        returnResult = nextInternal(outResults, limit, metric);
+        returnResult = nextInternal(outResults, limit);
       } else {
         List<KeyValue> tmpList = new ArrayList<KeyValue>();
-        returnResult = nextInternal(tmpList, limit, metric);
+        returnResult = nextInternal(tmpList, limit);
         outResults.addAll(tmpList);
       }
       resetFilters();
       if (isFilterDone()) {
         return false;
       }
+      if (region != null && region.metricsRegion != null) {
+        long totalSize = 0;
+        if (outResults != null) {
+          for(KeyValue kv:outResults) {
+            totalSize += kv.getLength();
+          }
+        }
+        region.metricsRegion.updateScanNext(totalSize);
+      }
       return returnResult;
     }
 
-    @Override
-    public boolean next(List<KeyValue> outResults)
-        throws IOException {
-      // apply the batching limit by default
-      return next(outResults, batch, null);
-    }
 
-    @Override
-    public boolean next(List<KeyValue> outResults, String metric)
-        throws IOException {
-      // apply the batching limit by default
-      return next(outResults, batch, metric);
-    }
-
-    private void populateFromJoinedHeap(List<KeyValue> results, int limit, String metric)
+    private void populateFromJoinedHeap(List<KeyValue> results, int limit)
         throws IOException {
       assert joinedContinuationRow != null;
       KeyValue kv = populateResult(results, this.joinedHeap, limit,
           joinedContinuationRow.getBuffer(), joinedContinuationRow.getRowOffset(),
-          joinedContinuationRow.getRowLength(), metric);
+          joinedContinuationRow.getRowLength());
       if (kv != KV_LIMIT) {
         // We are done with this row, reset the continuation.
         joinedContinuationRow = null;
@@ -3545,14 +3540,13 @@ public class HRegion implements HeapSize { // , Writable{
      * @param currentRow Byte array with key we are fetching.
      * @param offset offset for currentRow
      * @param length length for currentRow
-     * @param metric Metric key to be passed into KeyValueHeap::next().
      * @return KV_LIMIT if limit reached, next KeyValue otherwise.
      */
     private KeyValue populateResult(List<KeyValue> results, KeyValueHeap heap, int limit,
-        byte[] currentRow, int offset, short length, String metric) throws IOException {
+        byte[] currentRow, int offset, short length) throws IOException {
       KeyValue nextKv;
       do {
-        heap.next(results, limit - results.size(), metric);
+        heap.next(results, limit - results.size());
         if (limit > 0 && results.size() == limit) {
           return KV_LIMIT;
         }
@@ -3569,7 +3563,7 @@ public class HRegion implements HeapSize { // , Writable{
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
-    private boolean nextInternal(List<KeyValue> results, int limit, String metric)
+    private boolean nextInternal(List<KeyValue> results, int limit)
     throws IOException {
       if (!results.isEmpty()) {
         throw new IllegalArgumentException("First parameter should be an empty list");
@@ -3622,7 +3616,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
 
           KeyValue nextKv = populateResult(results, this.storeHeap, limit, currentRow, offset,
-              length, metric);
+              length);
           // Ok, we are good, let's try to get some results from the main heap.
           if (nextKv == KV_LIMIT) {
             if (this.filter != null && filter.hasFilterRow()) {
@@ -3667,12 +3661,12 @@ public class HRegion implements HeapSize { // , Writable{
                 && joinedHeap.peek().matchingRow(currentRow, offset, length));
             if (mayHaveData) {
               joinedContinuationRow = current;
-              populateFromJoinedHeap(results, limit, metric);
+              populateFromJoinedHeap(results, limit);
             }
           }
         } else {
           // Populating from the joined heap was stopped by limits, populate some more.
-          populateFromJoinedHeap(results, limit, metric);
+          populateFromJoinedHeap(results, limit);
         }
 
         // We may have just called populateFromJoinedMap and hit the limits. If that is
@@ -4382,7 +4376,13 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     if (this.metricsRegion != null) {
-      this.metricsRegion.updateGet();
+      long totalSize = 0l;
+      if (results != null) {
+        for (KeyValue kv:results) {
+          totalSize += kv.getLength();
+        }
+      }
+      this.metricsRegion.updateGet(totalSize);
     }
 
     return results;

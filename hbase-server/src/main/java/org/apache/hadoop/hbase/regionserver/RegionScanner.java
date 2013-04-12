@@ -69,7 +69,7 @@ public interface RegionScanner extends InternalScanner {
    * to return.
    * This is a special internal method to be called from coprocessor hooks to avoid expensive setup.
    * Caller must set the thread's readpoint, start and close a region operation, an synchronize on the scanner object.
-   * See {@link #nextRaw(List, int, String)}
+   * See {@link #nextRaw(List, int)}
    * @param result return output array
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
@@ -99,9 +99,8 @@ public interface RegionScanner extends InternalScanner {
    * </pre></code>
    * @param result return output array
    * @param limit limit on row count to get
-   * @param metric the metric name
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  public boolean nextRaw(List<KeyValue> result, int limit, String metric) throws IOException;
+  public boolean nextRaw(List<KeyValue> result, int limit) throws IOException;
 }

@@ -188,6 +188,7 @@ public interface MetricsRegionServerSource extends BaseSource {
   static final String INCREMENT_KEY = "increment";
   static final String MUTATE_KEY = "mutate";
   static final String APPEND_KEY = "append";
+  static final String SCAN_NEXT_KEY = "scanNext";
   static final String SLOW_MUTATE_KEY = "slowPutCount";
   static final String SLOW_GET_KEY = "slowGetCount";
   static final String SLOW_DELETE_KEY = "slowDeleteCount";

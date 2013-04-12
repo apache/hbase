@@ -121,27 +121,11 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * @return true if there are more keys, false if all scanners are done
    */
   public boolean next(List<KeyValue> result, int limit) throws IOException {
-    return next(result, limit, null);
-  }
-
-  /**
-   * Gets the next row of keys from the top-most scanner.
-   * <p>
-   * This method takes care of updating the heap.
-   * <p>
-   * This can ONLY be called when you are using Scanners that implement
-   * InternalScanner as well as KeyValueScanner (a {@link StoreScanner}).
-   * @param result output result list
-   * @param limit limit on row count to get
-   * @param metric the metric name
-   * @return true if there are more keys, false if all scanners are done
-   */
-  public boolean next(List<KeyValue> result, int limit, String metric) throws IOException {
     if (this.current == null) {
       return false;
     }
     InternalScanner currentAsInternal = (InternalScanner)this.current;
-    boolean mayContainMoreRows = currentAsInternal.next(result, limit, metric);
+    boolean mayContainMoreRows = currentAsInternal.next(result, limit);
     KeyValue pee = this.current.peek();
     /*
      * By definition, any InternalScanner must return false only when it has no
@@ -171,11 +155,6 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    */
   public boolean next(List<KeyValue> result) throws IOException {
     return next(result, -1);
-  }
-
-  @Override
-  public boolean next(List<KeyValue> result, String metric) throws IOException {
-    return next(result, -1, metric);
   }
 
   private static class KVScannerComparator implements Comparator<KeyValueScanner> {
