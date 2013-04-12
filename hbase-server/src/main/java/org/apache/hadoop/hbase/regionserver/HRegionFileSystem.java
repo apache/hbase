@@ -540,6 +540,8 @@ public class HRegionFileSystem {
         return null;
       }      
     }
+ 
+    f.getReader().close(true);
     
     Path splitDir = new Path(getSplitsDir(hri), familyName);
     // A reference to the bottom half of the hsf store file.
