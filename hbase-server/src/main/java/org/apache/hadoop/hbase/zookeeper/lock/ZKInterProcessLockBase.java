@@ -313,7 +313,10 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
     }
     try {
       if (ZKUtil.checkExists(zkWatcher, lock.getPath()) != -1) {
-        ZKUtil.deleteNode(zkWatcher, lock.getPath(), lock.getVersion());
+        boolean ret = ZKUtil.deleteNode(zkWatcher, lock.getPath(), lock.getVersion());
+        if (!ret && ZKUtil.checkExists(zkWatcher, lock.getPath()) != -1) {
+          throw new IllegalStateException("Couldn't delete " + lock.getPath());
+        }
         if (!acquiredLock.compareAndSet(lock, null)) {
           LOG.debug("Current process no longer holds " + lock + " for " +
               fullyQualifiedZNode);
