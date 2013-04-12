@@ -214,7 +214,7 @@ public class TestMultiColumnScanner {
               deletedSomething = true;
             }
           if (deletedSomething)
-            region.delete(d, true);
+            region.delete(d);
         }
       }
       region.flushcache();

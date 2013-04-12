@@ -93,11 +93,11 @@ public class TestAtomicOperation extends HBaseTestCase {
     a.setReturnResults(false);
     a.add(fam1, qual1, Bytes.toBytes(v1));
     a.add(fam1, qual2, Bytes.toBytes(v2));
-    assertNull(region.append(a, true));
+    assertNull(region.append(a));
     a = new Append(row);
     a.add(fam1, qual1, Bytes.toBytes(v2));
     a.add(fam1, qual2, Bytes.toBytes(v1));
-    Result result = region.append(a, true);
+    Result result = region.append(a);
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1+v2), result.getValue(fam1, qual1)));
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
   }
@@ -210,7 +210,7 @@ public class TestAtomicOperation extends HBaseTestCase {
           inc.addColumn(fam1, qual1, amount);
           inc.addColumn(fam1, qual2, amount*2);
           inc.addColumn(fam2, qual3, amount*3);
-          region.increment(inc, true);
+          region.increment(inc);
 
           // verify: Make sure we only see completed increments
           Get g = new Get(row);
@@ -246,7 +246,7 @@ public class TestAtomicOperation extends HBaseTestCase {
               a.add(fam1, qual1, val);
               a.add(fam1, qual2, val);
               a.add(fam2, qual3, val);
-              region.append(a, true);
+              region.append(a);
 
               Get g = new Get(row);
               Result result = region.get(g);

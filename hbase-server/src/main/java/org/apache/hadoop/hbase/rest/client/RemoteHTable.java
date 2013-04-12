@@ -706,7 +706,7 @@ public class RemoteHTable implements HTableInterface {
   }
 
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-      long amount, boolean writeToWAL) throws IOException {
+      long amount, Durability durability) throws IOException {
     throw new IOException("incrementColumnValue not supported");
   }
 

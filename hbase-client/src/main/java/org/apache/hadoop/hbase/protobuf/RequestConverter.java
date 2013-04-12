@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -199,12 +200,12 @@ public final class RequestConverter {
    * @param family
    * @param qualifier
    * @param amount
-   * @param writeToWAL
+   * @param durability
    * @return a mutate request
    */
   public static MutateRequest buildMutateRequest(
       final byte[] regionName, final byte[] row, final byte[] family,
-      final byte [] qualifier, final long amount, final boolean writeToWAL) {
+      final byte [] qualifier, final long amount, final Durability durability) {
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
@@ -213,7 +214,7 @@ public final class RequestConverter {
     MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFrom(row));
     mutateBuilder.setMutateType(MutationType.INCREMENT);
-    mutateBuilder.setWriteToWAL(writeToWAL);
+    mutateBuilder.setDurability(ProtobufUtil.toDurability(durability));
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     columnBuilder.setFamily(ByteString.copyFrom(family));
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();

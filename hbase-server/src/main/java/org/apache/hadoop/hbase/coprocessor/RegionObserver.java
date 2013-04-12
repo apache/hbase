@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -488,11 +489,11 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param put The Put object
    * @param edit The WALEdit object that will be written to the wal
-   * @param writeToWAL true if the change should be written to the WAL
+   * @param durability Persistence guarantee for this Put
    * @throws IOException if an error occurred on the coprocessor
    */
   void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, 
-      final Put put, final WALEdit edit, final boolean writeToWAL)
+      final Put put, final WALEdit edit, final Durability durability)
     throws IOException;
 
   /**
@@ -503,11 +504,11 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param put The Put object
    * @param edit The WALEdit object for the wal
-   * @param writeToWAL true if the change should be written to the WAL
+   * @param durability Persistence guarantee for this Put
    * @throws IOException if an error occurred on the coprocessor
    */
   void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, 
-      final Put put, final WALEdit edit, final boolean writeToWAL)
+      final Put put, final WALEdit edit, final Durability durability)
     throws IOException;
 
   /**
@@ -520,11 +521,11 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param delete The Delete object
    * @param edit The WALEdit object for the wal
-   * @param writeToWAL true if the change should be written to the WAL
+   * @param durability Persistence guarantee for this Delete
    * @throws IOException if an error occurred on the coprocessor
    */
   void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
-      final Delete delete, final WALEdit edit, final boolean writeToWAL)
+      final Delete delete, final WALEdit edit, final Durability durability)
     throws IOException;
 
   /**
@@ -535,11 +536,11 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param delete The Delete object
    * @param edit The WALEdit object for the wal
-   * @param writeToWAL true if the change should be written to the WAL
+   * @param durability Persistence guarantee for this Delete
    * @throws IOException if an error occurred on the coprocessor
    */
   void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Delete delete, final WALEdit edit, final boolean writeToWAL)
+      final Delete delete, final WALEdit edit, final Durability durability)
     throws IOException;
   
   /**

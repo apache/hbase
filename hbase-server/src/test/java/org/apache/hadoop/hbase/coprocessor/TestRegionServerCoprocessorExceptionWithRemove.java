@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -50,7 +51,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
                        final Put put, final WALEdit edit,
-                       final boolean writeToWAL) {
+                       final Durability durability) {
       String tableName =
           c.getEnvironment().getRegion().getRegionInfo().getTableNameAsString();
       if (tableName.equals("observed_table")) {

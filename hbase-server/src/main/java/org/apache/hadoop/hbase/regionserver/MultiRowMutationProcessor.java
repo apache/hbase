@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProcessorProtos.MultiRowMutationProcessorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProcessorProtos.MultiRowMutationProcessorResponse;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -86,7 +87,7 @@ MultiRowMutationProcessorResponse> {
             + m.getClass().getName());
       }
       for (List<? extends Cell> cells: m.getFamilyMap().values()) {
-        boolean writeToWAL = m.getWriteToWAL();
+        boolean writeToWAL = m.getDurability() != Durability.SKIP_WAL;
         for (Cell cell : cells) {
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
           mutationKvs.add(kv);
@@ -104,14 +105,14 @@ MultiRowMutationProcessorResponse> {
     if (coprocessorHost != null) {
       for (Mutation m : mutations) {
         if (m instanceof Put) {
-          if (coprocessorHost.prePut((Put) m, walEdit, m.getWriteToWAL())) {
+          if (coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
             // by pass everything
             return;
           }
         } else if (m instanceof Delete) {
           Delete d = (Delete) m;
           region.prepareDelete(d);
-          if (coprocessorHost.preDelete(d, walEdit, d.getWriteToWAL())) {
+          if (coprocessorHost.preDelete(d, walEdit, d.getDurability())) {
             // by pass everything
             return;
           }
@@ -126,9 +127,9 @@ MultiRowMutationProcessorResponse> {
     if (coprocessorHost != null) {
       for (Mutation m : mutations) {
         if (m instanceof Put) {
-          coprocessorHost.postPut((Put) m, walEdit, m.getWriteToWAL());
+          coprocessorHost.postPut((Put) m, walEdit, m.getDurability());
         } else if (m instanceof Delete) {
-          coprocessorHost.postDelete((Delete) m, walEdit, m.getWriteToWAL());
+          coprocessorHost.postDelete((Delete) m, walEdit, m.getDurability());
         }
       }
     }
@@ -142,5 +143,17 @@ MultiRowMutationProcessorResponse> {
   @Override
   public void initialize(MultiRowMutationProcessorRequest msg) {
     //nothing
+  }
+
+  @Override
+  public Durability useDurability() {
+    // return true when at least one mutation requested a WAL flush (default)
+    Durability durability = Durability.USE_DEFAULT;
+    for (Mutation m : mutations) {
+      if (m.getDurability().ordinal() > durability.ordinal()) {
+        durability = m.getDurability();
+      }
+    }
+    return durability;
   }
 }

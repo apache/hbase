@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.client.coprocessor.BigDecimalColumnInterpreter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -83,12 +84,12 @@ public class TestBigDecimalColumnInterpreter {
      */
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       BigDecimal bd = new BigDecimal(i);
       put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(bd));
       table.put(put);
       Put p2 = new Put(ROWS[i]);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       p2.add(TEST_FAMILY, Bytes.add(TEST_MULTI_CQ, Bytes.toBytes(bd)),
         Bytes.toBytes(bd.multiply(new BigDecimal("0.10"))));
       table.put(p2);

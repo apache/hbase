@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -69,8 +70,11 @@ public class TestResettingCounters {
     HRegion region = HRegion.createHRegion(hri, path, conf, htd);
     try {
       Increment odd = new Increment(rows[0]);
+      odd.setDurability(Durability.SKIP_WAL);
       Increment even = new Increment(rows[0]);
+      even.setDurability(Durability.SKIP_WAL);
       Increment all = new Increment(rows[0]);
+      all.setDurability(Durability.SKIP_WAL);
       for (int i=0;i<numQualifiers;i++) {
         if (i % 2 == 0) even.addColumn(families[0], qualifiers[i], 1);
         else odd.addColumn(families[0], qualifiers[i], 1);
@@ -78,14 +82,14 @@ public class TestResettingCounters {
       }
 
       // increment odd qualifiers 5 times and flush
-      for (int i=0;i<5;i++) region.increment(odd, false);
+      for (int i=0;i<5;i++) region.increment(odd);
       region.flushcache();
 
       // increment even qualifiers 5 times
-      for (int i=0;i<5;i++) region.increment(even, false);
+      for (int i=0;i<5;i++) region.increment(even);
 
       // increment all qualifiers, should have value=6 for all
-      Result result = region.increment(all, false);
+      Result result = region.increment(all);
       assertEquals(numQualifiers, result.size());
       KeyValue [] kvs = result.raw();
       for (int i=0;i<kvs.length;i++) {

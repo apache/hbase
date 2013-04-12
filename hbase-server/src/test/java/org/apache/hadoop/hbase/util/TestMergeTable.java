@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -141,7 +142,7 @@ public class TestMergeTable {
     LOG.info("Created region " + region.getRegionNameAsString());
     for(int i = firstRow; i < firstRow + nrows; i++) {
       Put put = new Put(Bytes.toBytes("row_" + String.format("%1$05d", i)));
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(COLUMN_NAME, null,  VALUE);
       region.put(put);
       if (i % 10000 == 0) {

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -298,14 +299,14 @@ public class TestMasterReplication {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Put put, final WALEdit edit, 
-        final boolean writeToWAL)
+        final Durability durability)
         throws IOException {
       nCount++;
     }
     @Override
     public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
         final Delete delete, final WALEdit edit, 
-        final boolean writeToWAL)
+        final Durability durability)
         throws IOException {
       nDelete++;
     }

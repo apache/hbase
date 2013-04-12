@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.DroppedSnapshotException;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
@@ -184,7 +185,6 @@ import com.google.protobuf.Service;
 @InterfaceAudience.Private
 public class HRegion implements HeapSize { // , Writable{
   public static final Log LOG = LogFactory.getLog(HRegion.class);
-  private static final String MERGEDIR = ".merges";
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";
@@ -1666,17 +1666,16 @@ public class HRegion implements HeapSize { // , Writable{
   //////////////////////////////////////////////////////////////////////////////
   /**
    * @param delete delete object
-   * @param writeToWAL append to the write ahead lock or not
    * @throws IOException read exceptions
    */
-  public void delete(Delete delete, boolean writeToWAL)
+  public void delete(Delete delete)
   throws IOException {
     checkReadOnly();
     checkResources();
     startRegionOperation();
     this.writeRequestsCount.increment();
     try {
-      byte [] row = delete.getRow();
+      delete.getRow();
       // All edits for the given row (across all column families) must happen atomically.
       doBatchMutate(delete, null);
     } finally {
@@ -1691,15 +1690,16 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * This is used only by unit tests. Not required to be a public API.
    * @param familyMap map of family to edits for the given family.
-   * @param writeToWAL
+   * @param clusterId
+   * @param durability
    * @throws IOException
    */
   void delete(NavigableMap<byte[], List<? extends Cell>> familyMap, UUID clusterId,
-      boolean writeToWAL) throws IOException {
+      Durability durability) throws IOException {
     Delete delete = new Delete(FOR_UNIT_TESTS_ONLY);
     delete.setFamilyMap(familyMap);
     delete.setClusterId(clusterId);
-    delete.setWriteToWAL(writeToWAL);
+    delete.setDurability(durability);
     doBatchMutate(delete, null);
   }
 
@@ -1762,16 +1762,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param put
    * @throws IOException
    */
-  public void put(Put put) throws IOException {
-    this.put(put, put.getWriteToWAL());
-  }
-
-  /**
-   * @param put
-   * @param writeToWAL
-   * @throws IOException
-   */
-  public void put(Put put, boolean writeToWAL)
+  public void put(Put put)
   throws IOException {
     checkReadOnly();
 
@@ -1783,13 +1774,6 @@ public class HRegion implements HeapSize { // , Writable{
     startRegionOperation();
     this.writeRequestsCount.increment();
     try {
-      // We obtain a per-row lock, so other clients will block while one client
-      // performs an update. The read lock is released by the client calling
-      // #commit or #abort or if the HRegionServer lease on the lock expires.
-      // See HRegionServer#RegionListener for how the expire on HRegionServer
-      // invokes a HRegion#abort.
-      byte [] row = put.getRow();
-
       // All edits for the given row (across all column families) must happen atomically.
       doBatchMutate(put, null);
     } finally {
@@ -1884,13 +1868,13 @@ public class HRegion implements HeapSize { // , Writable{
         Pair<Mutation, Integer> nextPair = batchOp.operations[i];
         Mutation m = nextPair.getFirst();
         if (m instanceof Put) {
-          if (coprocessorHost.prePut((Put) m, walEdit, m.getWriteToWAL())) {
+          if (coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
             // pre hook says skip this Put
             // mark as success and skip in doMiniBatchMutation
             batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
           }
         } else if (m instanceof Delete) {
-          if (coprocessorHost.preDelete((Delete) m, walEdit, m.getWriteToWAL())) {
+          if (coprocessorHost.preDelete((Delete) m, walEdit, m.getDurability())) {
             // pre hook says skip this Delete
             // mark as success and skip in doMiniBatchMutation
             batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
@@ -2092,6 +2076,7 @@ public class HRegion implements HeapSize { // , Writable{
       // ------------------------------------
       // STEP 4. Build WAL edit
       // ----------------------------------
+      Durability durability = Durability.USE_DEFAULT;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         // Skip puts that were determined to be invalid during preprocessing
         if (batchOp.retCodeDetails[i].getOperationStatusCode()
@@ -2101,12 +2086,17 @@ public class HRegion implements HeapSize { // , Writable{
         batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
 
         Mutation m = batchOp.operations[i].getFirst();
-        if (!m.getWriteToWAL()) {
+        Durability tmpDur = m.getDurability(); 
+        if (tmpDur.ordinal() > durability.ordinal()) {
+          durability = tmpDur;
+        }
+        if (tmpDur == Durability.SKIP_WAL) {
           if (m instanceof Put) {
             recordPutWithoutWal(m.getFamilyMap());
           }
           continue;
         }
+
         // Add WAL edits by CP
         WALEdit fromCP = batchOp.walEditsFromCoprocessors[i];
         if (fromCP != null) {
@@ -2115,7 +2105,6 @@ public class HRegion implements HeapSize { // , Writable{
           }
         }
         addFamilyMapToWALEdit(familyMaps[i], walEdit);
-
       }
 
       // -------------------------
@@ -2142,7 +2131,7 @@ public class HRegion implements HeapSize { // , Writable{
       // STEP 7. Sync wal.
       // -------------------------
       if (walEdit.size() > 0) {
-        syncOrDefer(txid);
+        syncOrDefer(txid, durability);
       }
       walSyncSuccessful = true;
       // calling the post CP hook for batch mutation
@@ -2174,9 +2163,9 @@ public class HRegion implements HeapSize { // , Writable{
           }
           Mutation m = batchOp.operations[i].getFirst();
           if (m instanceof Put) {
-            coprocessorHost.postPut((Put) m, walEdit, m.getWriteToWAL());
+            coprocessorHost.postPut((Put) m, walEdit, m.getDurability());
           } else {
-            coprocessorHost.postDelete((Delete) m, walEdit, m.getWriteToWAL());
+            coprocessorHost.postDelete((Delete) m, walEdit, m.getDurability());
           }
         }
       }
@@ -2511,7 +2500,6 @@ public class HRegion implements HeapSize { // , Writable{
     Put p = new Put(row);
     p.setFamilyMap(familyMap);
     p.setClusterId(HConstants.DEFAULT_CLUSTER_ID);
-    p.setWriteToWAL(true);
     doBatchMutate(p, null);
   }
 
@@ -4487,7 +4475,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
           // 10. Sync edit log
           if (txid != 0) {
-            syncOrDefer(txid);
+            syncOrDefer(txid, processor.useDurability());
           }
           walSyncSuccessful = true;
         }
@@ -4587,15 +4575,15 @@ public class HRegion implements HeapSize { // , Writable{
    * Perform one or more append operations on a row.
    *
    * @param append
-   * @param writeToWAL
    * @return new keyvalues after increment
    * @throws IOException
    */
-  public Result append(Append append, boolean writeToWAL)
+  public Result append(Append append)
       throws IOException {
     byte[] row = append.getRow();
     checkRow(row, "append");
     boolean flush = false;
+    boolean writeToWAL = append.getDurability() != Durability.SKIP_WAL;
     WALEdit walEdits = null;
     List<KeyValue> allKVs = new ArrayList<KeyValue>(append.size());
     Map<Store, List<KeyValue>> tempMemstore = new HashMap<Store, List<KeyValue>>();
@@ -4728,7 +4716,8 @@ public class HRegion implements HeapSize { // , Writable{
         releaseRowLock(lid);
       }
       if (writeToWAL) {
-        syncOrDefer(txid); // sync the transaction log outside the rowlock
+        // sync the transaction log outside the rowlock
+        syncOrDefer(txid, append.getDurability());
       }
     } finally {
       if (w != null) {
@@ -4753,16 +4742,16 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Perform one or more increment operations on a row.
    * @param increment
-   * @param writeToWAL
    * @return new keyvalues after increment
    * @throws IOException
    */
-  public Result increment(Increment increment, boolean writeToWAL)
+  public Result increment(Increment increment)
   throws IOException {
     byte [] row = increment.getRow();
     checkRow(row, "increment");
     TimeRange tr = increment.getTimeRange();
     boolean flush = false;
+    boolean writeToWAL = increment.getDurability() != Durability.SKIP_WAL;
     WALEdit walEdits = null;
     List<KeyValue> allKVs = new ArrayList<KeyValue>(increment.size());
     Map<Store, List<KeyValue>> tempMemstore = new HashMap<Store, List<KeyValue>>();
@@ -4871,7 +4860,8 @@ public class HRegion implements HeapSize { // , Writable{
         releaseRowLock(lid);
       }
       if (writeToWAL) {
-        syncOrDefer(txid); // sync the transaction log outside the rowlock
+        // sync the transaction log outside the rowlock
+        syncOrDefer(txid, increment.getDurability());
       }
     } finally {
       if (w != null) {
@@ -5293,9 +5283,32 @@ public class HRegion implements HeapSize { // , Writable{
    * @param txid should sync up to which transaction
    * @throws IOException If anything goes wrong with DFS
    */
-  private void syncOrDefer(long txid) throws IOException {
-    if (this.getRegionInfo().isMetaRegion() || !isDeferredLogSyncEnabled()) {
+  private void syncOrDefer(long txid, Durability durability) throws IOException {
+    if (this.getRegionInfo().isMetaRegion()) {
       this.log.sync(txid);
+    } else {
+      switch(durability) {
+      case USE_DEFAULT:
+        // do what CF defaults to
+        if (!isDeferredLogSyncEnabled()) {
+          this.log.sync(txid);
+        }
+        break;
+      case SKIP_WAL:
+        // nothing do to
+        break;
+      case ASYNC_WAL:
+        // defer the sync, unless we globally can't
+        if (this.deferredLogSyncDisabled) {
+          this.log.sync(txid);
+        }
+        break;
+      case SYNC_WAL:
+      case FSYNC_WAL:
+        // sync the WAL edit (SYNC and FSYNC treated the same for now)
+        this.log.sync(txid);
+        break;
+      }
     }
   }
 

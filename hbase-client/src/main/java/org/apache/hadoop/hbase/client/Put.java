@@ -86,7 +86,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     for(Map.Entry<byte [], List<? extends Cell>> entry: putToCopy.getFamilyMap().entrySet()) {
       this.familyMap.put(entry.getKey(), entry.getValue());
     }
-    this.writeToWAL = putToCopy.writeToWAL;
+    this.durability = putToCopy.durability;
   }
 
   /**

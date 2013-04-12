@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -491,7 +492,7 @@ public class TestMasterTransitions {
       // If start key, add 'aaa'.
       byte [] row = getStartKey(hri);
       Put p = new Put(row);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       p.add(getTestFamily(), getTestQualifier(), row);
       t.put(p);
       rows++;

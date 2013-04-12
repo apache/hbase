@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -1230,7 +1231,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       Put put = new Put(row);
       byte[] value = generateValue(this.rand);
       put.add(FAMILY_NAME, QUALIFIER_NAME, value);
-      put.setWriteToWAL(writeToWAL);
+      put.setDurability(writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       table.put(put);
     }
   }
@@ -1361,7 +1362,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       Put put = new Put(format(i));
       byte[] value = generateValue(this.rand);
       put.add(FAMILY_NAME, QUALIFIER_NAME, value);
-      put.setWriteToWAL(writeToWAL);
+      put.setDurability(writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       table.put(put);
     }
 

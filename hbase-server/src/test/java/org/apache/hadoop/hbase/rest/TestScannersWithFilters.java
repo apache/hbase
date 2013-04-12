@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -137,7 +138,7 @@ public class TestScannersWithFilters {
       // Insert first half
       for(byte [] ROW : ROWS_ONE) {
         Put p = new Put(ROW);
-        p.setWriteToWAL(false);
+        p.setDurability(Durability.SKIP_WAL);
         for(byte [] QUALIFIER : QUALIFIERS_ONE) {
           p.add(FAMILIES[0], QUALIFIER, VALUES[0]);
         }
@@ -145,7 +146,7 @@ public class TestScannersWithFilters {
       }
       for(byte [] ROW : ROWS_TWO) {
         Put p = new Put(ROW);
-        p.setWriteToWAL(false);
+        p.setDurability(Durability.SKIP_WAL);
         for(byte [] QUALIFIER : QUALIFIERS_TWO) {
           p.add(FAMILIES[1], QUALIFIER, VALUES[1]);
         }
@@ -155,7 +156,7 @@ public class TestScannersWithFilters {
       // Insert second half (reverse families)
       for(byte [] ROW : ROWS_ONE) {
         Put p = new Put(ROW);
-        p.setWriteToWAL(false);
+        p.setDurability(Durability.SKIP_WAL);
         for(byte [] QUALIFIER : QUALIFIERS_ONE) {
           p.add(FAMILIES[1], QUALIFIER, VALUES[0]);
         }
@@ -163,7 +164,7 @@ public class TestScannersWithFilters {
       }
       for(byte [] ROW : ROWS_TWO) {
         Put p = new Put(ROW);
-        p.setWriteToWAL(false);
+        p.setDurability(Durability.SKIP_WAL);
         for(byte [] QUALIFIER : QUALIFIERS_TWO) {
           p.add(FAMILIES[0], QUALIFIER, VALUES[1]);
         }

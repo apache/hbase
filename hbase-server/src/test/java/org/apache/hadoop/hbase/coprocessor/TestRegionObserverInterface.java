@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
@@ -399,7 +400,7 @@ public class TestRegionObserverInterface {
     for (long i=1; i<=10; i++) {
       byte[] iBytes = Bytes.toBytes(i);
       Put put = new Put(iBytes);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(A, A, iBytes);
       table.put(put);
     }

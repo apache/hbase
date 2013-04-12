@@ -498,7 +498,7 @@ public class TestScanner extends HBaseTestCase {
       Delete dc = new Delete(firstRowBytes);
       /* delete column1 of firstRow */
       dc.deleteColumns(fam1, col1);
-      r.delete(dc, true);
+      r.delete(dc);
       r.flushcache();
 
       addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),

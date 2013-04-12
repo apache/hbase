@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -92,7 +93,7 @@ public class TestColumnSeeking {
       for (String value : values) {
         for (String row : rows) {
           Put p = new Put(Bytes.toBytes(row));
-          p.setWriteToWAL(false);
+          p.setDurability(Durability.SKIP_WAL);
           for (String column : allColumns) {
             for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
               KeyValue kv =
@@ -203,7 +204,7 @@ public class TestColumnSeeking {
 
     for (String row : rows) {
       Put p = new Put(Bytes.toBytes(row));
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       for (String column : allColumns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           KeyValue kv =

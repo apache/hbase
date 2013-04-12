@@ -460,7 +460,7 @@ public class TestMultipleTimestamps {
     for (int rowIdx: rowIndexes) {
       byte row[] = Bytes.toBytes("row:" + rowIdx);
       Put put = new Put(row);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       for(int colIdx: columnIndexes) {
         byte column[] = Bytes.toBytes("column:" + colIdx);
         for (long version: versions) {
@@ -482,7 +482,7 @@ public class TestMultipleTimestamps {
     byte row[] = Bytes.toBytes("row:" + rowIdx);
     byte column[] = Bytes.toBytes("column:" + colIdx);
     Put put = new Put(row);
-    put.setWriteToWAL(false);
+    put.setDurability(Durability.SKIP_WAL);
 
     for (long idx = versionStart; idx <= versionEnd; idx++) {
       put.add(cf, column, idx, Bytes.toBytes("value-version-" + idx));

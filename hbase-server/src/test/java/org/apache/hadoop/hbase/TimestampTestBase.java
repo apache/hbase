@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -242,7 +243,7 @@ public class TimestampTestBase extends HBaseTestCase {
     final long ts)
   throws IOException {
     Put put = new Put(ROW, ts);
-    put.setWriteToWAL(false);
+    put.setDurability(Durability.SKIP_WAL);
     put.add(FAMILY_NAME, QUALIFIER_NAME, bytes);
     loader.put(put);
   }

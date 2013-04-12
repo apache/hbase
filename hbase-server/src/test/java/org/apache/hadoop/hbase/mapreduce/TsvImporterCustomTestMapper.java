@@ -21,6 +21,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.KeyValue;
 
@@ -56,7 +57,7 @@ public class TsvImporterCustomTestMapper extends TsvImporterMapper {
     ImmutableBytesWritable rowKey =
       new ImmutableBytesWritable(Bytes.toBytes(valueTokens[0]));
     Put put = new Put(rowKey.copyBytes());
-    put.setWriteToWAL(false);
+    put.setDurability(Durability.SKIP_WAL);
 
     //The value should look like this: VALUE1 or VALUE2. Let's multiply
     //the integer by 3

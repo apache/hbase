@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -50,7 +51,7 @@ public class TestRegionObserverStacking extends TestCase {
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
         final Put put, final WALEdit edit,
-        final boolean writeToWAL)
+        final Durability durability)
         throws IOException {
       id = System.currentTimeMillis();
       try {
@@ -65,7 +66,7 @@ public class TestRegionObserverStacking extends TestCase {
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
         final Put put, final WALEdit edit,
-        final boolean writeToWAL)
+        final Durability durability)
         throws IOException {
       id = System.currentTimeMillis();
       try {
@@ -81,7 +82,7 @@ public class TestRegionObserverStacking extends TestCase {
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
         final Put put, final WALEdit edit,
-        final boolean writeToWAL)
+        final Durability durability)
         throws IOException {
       id = System.currentTimeMillis();
       try {

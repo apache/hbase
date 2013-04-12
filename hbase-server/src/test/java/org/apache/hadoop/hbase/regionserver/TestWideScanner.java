@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -69,7 +70,7 @@ public class TestWideScanner extends HBaseTestCase {
         byte[] b = Bytes.toBytes(String.format("%10d", i));
         for (j = 0; j < 100; j++) {
           Put put = new Put(row);
-          put.setWriteToWAL(false);
+          put.setDurability(Durability.SKIP_WAL);
           put.add(COLUMNS[rng.nextInt(COLUMNS.length)], b, ++ts, b);
           region.put(put);
           count++;

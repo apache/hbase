@@ -445,7 +445,7 @@ public abstract class HBaseTestCase extends TestCase {
 
     public void delete(Delete delete,  boolean writeToWAL)
     throws IOException {
-      this.region.delete(delete, writeToWAL);
+      this.region.delete(delete);
     }
 
     public Result get(Get get) throws IOException {

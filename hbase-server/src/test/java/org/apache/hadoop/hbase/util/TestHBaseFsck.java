@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -165,7 +166,7 @@ public class TestHBaseFsck {
         // When we find a diff RS, change the assignment and break
         if (startCode != sn.getStartcode()) {
           Put put = new Put(res.getRow());
-          put.setWriteToWAL(false);
+          put.setDurability(Durability.SKIP_WAL);
           put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
             Bytes.toBytes(sn.getHostAndPort()));
           put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,

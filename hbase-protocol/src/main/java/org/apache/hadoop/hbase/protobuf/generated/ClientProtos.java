@@ -6401,9 +6401,9 @@ public final class ClientProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getAttributeOrBuilder(
         int index);
     
-    // optional bool writeToWAL = 6 [default = true];
-    boolean hasWriteToWAL();
-    boolean getWriteToWAL();
+    // optional .MutationProto.Durability durability = 6 [default = USE_DEFAULT];
+    boolean hasDurability();
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability getDurability();
     
     // optional .TimeRange timeRange = 7;
     boolean hasTimeRange();
@@ -6440,6 +6440,84 @@ public final class ClientProtos {
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_MutationProto_fieldAccessorTable;
+    }
+    
+    public enum Durability
+        implements com.google.protobuf.ProtocolMessageEnum {
+      USE_DEFAULT(0, 0),
+      SKIP_WAL(1, 1),
+      ASYNC_WAL(2, 2),
+      SYNC_WAL(3, 3),
+      FSYNC_WAL(4, 4),
+      ;
+      
+      public static final int USE_DEFAULT_VALUE = 0;
+      public static final int SKIP_WAL_VALUE = 1;
+      public static final int ASYNC_WAL_VALUE = 2;
+      public static final int SYNC_WAL_VALUE = 3;
+      public static final int FSYNC_WAL_VALUE = 4;
+      
+      
+      public final int getNumber() { return value; }
+      
+      public static Durability valueOf(int value) {
+        switch (value) {
+          case 0: return USE_DEFAULT;
+          case 1: return SKIP_WAL;
+          case 2: return ASYNC_WAL;
+          case 3: return SYNC_WAL;
+          case 4: return FSYNC_WAL;
+          default: return null;
+        }
+      }
+      
+      public static com.google.protobuf.Internal.EnumLiteMap<Durability>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<Durability>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<Durability>() {
+              public Durability findValueByNumber(int number) {
+                return Durability.valueOf(number);
+              }
+            };
+      
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDescriptor().getEnumTypes().get(0);
+      }
+      
+      private static final Durability[] VALUES = {
+        USE_DEFAULT, SKIP_WAL, ASYNC_WAL, SYNC_WAL, FSYNC_WAL, 
+      };
+      
+      public static Durability valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+      
+      private final int index;
+      private final int value;
+      
+      private Durability(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+      
+      // @@protoc_insertion_point(enum_scope:MutationProto.Durability)
     }
     
     public enum MutationType
@@ -6490,7 +6568,7 @@ public final class ClientProtos {
       }
       public static final com.google.protobuf.Descriptors.EnumDescriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDescriptor().getEnumTypes().get(0);
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDescriptor().getEnumTypes().get(1);
       }
       
       private static final MutationType[] VALUES = {
@@ -6562,7 +6640,7 @@ public final class ClientProtos {
       }
       public static final com.google.protobuf.Descriptors.EnumDescriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDescriptor().getEnumTypes().get(1);
+        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.getDescriptor().getEnumTypes().get(2);
       }
       
       private static final DeleteType[] VALUES = {
@@ -7907,14 +7985,14 @@ public final class ClientProtos {
       return attribute_.get(index);
     }
     
-    // optional bool writeToWAL = 6 [default = true];
-    public static final int WRITETOWAL_FIELD_NUMBER = 6;
-    private boolean writeToWAL_;
-    public boolean hasWriteToWAL() {
+    // optional .MutationProto.Durability durability = 6 [default = USE_DEFAULT];
+    public static final int DURABILITY_FIELD_NUMBER = 6;
+    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability durability_;
+    public boolean hasDurability() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-    public boolean getWriteToWAL() {
-      return writeToWAL_;
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability getDurability() {
+      return durability_;
     }
     
     // optional .TimeRange timeRange = 7;
@@ -7946,7 +8024,7 @@ public final class ClientProtos {
       columnValue_ = java.util.Collections.emptyList();
       timestamp_ = 0L;
       attribute_ = java.util.Collections.emptyList();
-      writeToWAL_ = true;
+      durability_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability.USE_DEFAULT;
       timeRange_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.getDefaultInstance();
       associatedCellCount_ = 0;
     }
@@ -7990,7 +8068,7 @@ public final class ClientProtos {
         output.writeMessage(5, attribute_.get(i));
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeBool(6, writeToWAL_);
+        output.writeEnum(6, durability_.getNumber());
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeMessage(7, timeRange_);
@@ -8029,7 +8107,7 @@ public final class ClientProtos {
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(6, writeToWAL_);
+          .computeEnumSize(6, durability_.getNumber());
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
@@ -8081,10 +8159,10 @@ public final class ClientProtos {
       }
       result = result && getAttributeList()
           .equals(other.getAttributeList());
-      result = result && (hasWriteToWAL() == other.hasWriteToWAL());
-      if (hasWriteToWAL()) {
-        result = result && (getWriteToWAL()
-            == other.getWriteToWAL());
+      result = result && (hasDurability() == other.hasDurability());
+      if (hasDurability()) {
+        result = result &&
+            (getDurability() == other.getDurability());
       }
       result = result && (hasTimeRange() == other.hasTimeRange());
       if (hasTimeRange()) {
@@ -8125,9 +8203,9 @@ public final class ClientProtos {
         hash = (37 * hash) + ATTRIBUTE_FIELD_NUMBER;
         hash = (53 * hash) + getAttributeList().hashCode();
       }
-      if (hasWriteToWAL()) {
-        hash = (37 * hash) + WRITETOWAL_FIELD_NUMBER;
-        hash = (53 * hash) + hashBoolean(getWriteToWAL());
+      if (hasDurability()) {
+        hash = (37 * hash) + DURABILITY_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getDurability());
       }
       if (hasTimeRange()) {
         hash = (37 * hash) + TIMERANGE_FIELD_NUMBER;
@@ -8274,7 +8352,7 @@ public final class ClientProtos {
         } else {
           attributeBuilder_.clear();
         }
-        writeToWAL_ = true;
+        durability_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability.USE_DEFAULT;
         bitField0_ = (bitField0_ & ~0x00000020);
         if (timeRangeBuilder_ == null) {
           timeRange_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.getDefaultInstance();
@@ -8355,7 +8433,7 @@ public final class ClientProtos {
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000008;
         }
-        result.writeToWAL_ = writeToWAL_;
+        result.durability_ = durability_;
         if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
           to_bitField0_ |= 0x00000010;
         }
@@ -8445,8 +8523,8 @@ public final class ClientProtos {
             }
           }
         }
-        if (other.hasWriteToWAL()) {
-          setWriteToWAL(other.getWriteToWAL());
+        if (other.hasDurability()) {
+          setDurability(other.getDurability());
         }
         if (other.hasTimeRange()) {
           mergeTimeRange(other.getTimeRange());
@@ -8531,8 +8609,14 @@ public final class ClientProtos {
               break;
             }
             case 48: {
-              bitField0_ |= 0x00000020;
-              writeToWAL_ = input.readBool();
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability value = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(6, rawValue);
+              } else {
+                bitField0_ |= 0x00000020;
+                durability_ = value;
+              }
               break;
             }
             case 58: {
@@ -8996,23 +9080,26 @@ public final class ClientProtos {
         return attributeBuilder_;
       }
       
-      // optional bool writeToWAL = 6 [default = true];
-      private boolean writeToWAL_ = true;
-      public boolean hasWriteToWAL() {
+      // optional .MutationProto.Durability durability = 6 [default = USE_DEFAULT];
+      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability durability_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability.USE_DEFAULT;
+      public boolean hasDurability() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-      public boolean getWriteToWAL() {
-        return writeToWAL_;
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability getDurability() {
+        return durability_;
       }
-      public Builder setWriteToWAL(boolean value) {
+      public Builder setDurability(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
         bitField0_ |= 0x00000020;
-        writeToWAL_ = value;
+        durability_ = value;
         onChanged();
         return this;
       }
-      public Builder clearWriteToWAL() {
+      public Builder clearDurability() {
         bitField0_ = (bitField0_ & ~0x00000020);
-        writeToWAL_ = true;
+        durability_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Durability.USE_DEFAULT;
         onChanged();
         return this;
       }
@@ -21128,73 +21215,76 @@ public final class ClientProtos {
       "\006exists\030\002 \003(\010\"\177\n\tCondition\022\013\n\003row\030\001 \002(\014\022" +
       "\016\n\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022!\n\013co",
       "mpareType\030\004 \002(\0162\014.CompareType\022\037\n\ncompara" +
-      "tor\030\005 \002(\0132\013.Comparator\"\372\004\n\rMutationProto" +
+      "tor\030\005 \002(\0132\013.Comparator\"\365\005\n\rMutationProto" +
       "\022\013\n\003row\030\001 \001(\014\022/\n\nmutateType\030\002 \001(\0162\033.Muta" +
       "tionProto.MutationType\022/\n\013columnValue\030\003 " +
       "\003(\0132\032.MutationProto.ColumnValue\022\021\n\ttimes" +
       "tamp\030\004 \001(\004\022!\n\tattribute\030\005 \003(\0132\016.NameByte" +
-      "sPair\022\030\n\nwriteToWAL\030\006 \001(\010:\004true\022\035\n\ttimeR" +
-      "ange\030\007 \001(\0132\n.TimeRange\022\033\n\023associatedCell" +
-      "Count\030\010 \001(\005\032\326\001\n\013ColumnValue\022\016\n\006family\030\001 " +
-      "\002(\014\022A\n\016qualifierValue\030\002 \003(\0132).MutationPr",
-      "oto.ColumnValue.QualifierValue\032t\n\016Qualif" +
-      "ierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001" +
-      "(\014\022\021\n\ttimestamp\030\003 \001(\004\022-\n\ndeleteType\030\004 \001(" +
-      "\0162\031.MutationProto.DeleteType\">\n\014Mutation" +
-      "Type\022\n\n\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002" +
-      "\022\n\n\006DELETE\020\003\"U\n\nDeleteType\022\026\n\022DELETE_ONE" +
-      "_VERSION\020\000\022\034\n\030DELETE_MULTIPLE_VERSIONS\020\001" +
-      "\022\021\n\rDELETE_FAMILY\020\002\"r\n\rMutateRequest\022 \n\006" +
-      "region\030\001 \002(\0132\020.RegionSpecifier\022 \n\010mutati" +
-      "on\030\002 \002(\0132\016.MutationProto\022\035\n\tcondition\030\003 ",
-      "\001(\0132\n.Condition\"<\n\016MutateResponse\022\027\n\006res" +
-      "ult\030\001 \001(\0132\007.Result\022\021\n\tprocessed\030\002 \001(\010\"\307\002" +
-      "\n\004Scan\022\027\n\006column\030\001 \003(\0132\007.Column\022!\n\tattri" +
-      "bute\030\002 \003(\0132\016.NameBytesPair\022\020\n\010startRow\030\003" +
-      " \001(\014\022\017\n\007stopRow\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007." +
-      "Filter\022\035\n\ttimeRange\030\006 \001(\0132\n.TimeRange\022\026\n" +
-      "\013maxVersions\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001" +
-      "(\010:\004true\022\021\n\tbatchSize\030\t \001(\r\022\025\n\rmaxResult" +
-      "Size\030\n \001(\004\022\022\n\nstoreLimit\030\013 \001(\r\022\023\n\013storeO" +
-      "ffset\030\014 \001(\r\022\"\n\032loadColumnFamiliesOnDeman",
-      "d\030\r \001(\010\"\230\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132" +
-      "\020.RegionSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\021" +
-      "\n\tscannerId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001(\r\022" +
-      "\024\n\014closeScanner\030\005 \001(\010\022\023\n\013nextCallSeq\030\006 \001" +
-      "(\004\"u\n\014ScanResponse\022\027\n\006result\030\001 \003(\0132\007.Res" +
-      "ult\022\021\n\tscannerId\030\002 \001(\004\022\023\n\013moreResults\030\003 " +
-      "\001(\010\022\013\n\003ttl\030\004 \001(\r\022\027\n\017resultSizeBytes\030\005 \001(" +
-      "\004\"\260\001\n\024BulkLoadHFileRequest\022 \n\006region\030\001 \002" +
-      "(\0132\020.RegionSpecifier\0224\n\nfamilyPath\030\002 \003(\013" +
-      "2 .BulkLoadHFileRequest.FamilyPath\022\024\n\014as",
-      "signSeqNum\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family" +
-      "\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileRes" +
-      "ponse\022\016\n\006loaded\030\001 \002(\010\"_\n\026CoprocessorServ" +
-      "iceCall\022\013\n\003row\030\001 \002(\014\022\023\n\013serviceName\030\002 \002(" +
-      "\t\022\022\n\nmethodName\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"d" +
-      "\n\031CoprocessorServiceRequest\022 \n\006region\030\001 " +
-      "\002(\0132\020.RegionSpecifier\022%\n\004call\030\002 \002(\0132\027.Co" +
-      "processorServiceCall\"]\n\032CoprocessorServi" +
-      "ceResponse\022 \n\006region\030\001 \002(\0132\020.RegionSpeci" +
-      "fier\022\035\n\005value\030\002 \002(\0132\016.NameBytesPair\"B\n\013M",
-      "ultiAction\022 \n\010mutation\030\001 \001(\0132\016.MutationP" +
-      "roto\022\021\n\003get\030\002 \001(\0132\004.Get\"I\n\014ActionResult\022" +
-      "\026\n\005value\030\001 \001(\0132\007.Result\022!\n\texception\030\002 \001" +
-      "(\0132\016.NameBytesPair\"^\n\014MultiRequest\022 \n\006re" +
-      "gion\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006action\030\002" +
-      " \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 \001(\010\".\n\rMu" +
-      "ltiResponse\022\035\n\006result\030\001 \003(\0132\r.ActionResu" +
-      "lt2\342\002\n\rClientService\022 \n\003get\022\013.GetRequest" +
-      "\032\014.GetResponse\022/\n\010multiGet\022\020.MultiGetReq" +
-      "uest\032\021.MultiGetResponse\022)\n\006mutate\022\016.Muta",
-      "teRequest\032\017.MutateResponse\022#\n\004scan\022\014.Sca" +
-      "nRequest\032\r.ScanResponse\022>\n\rbulkLoadHFile" +
-      "\022\025.BulkLoadHFileRequest\032\026.BulkLoadHFileR" +
-      "esponse\022F\n\013execService\022\032.CoprocessorServ" +
-      "iceRequest\032\033.CoprocessorServiceResponse\022" +
-      "&\n\005multi\022\r.MultiRequest\032\016.MultiResponseB" +
-      "B\n*org.apache.hadoop.hbase.protobuf.gene" +
-      "ratedB\014ClientProtosH\001\210\001\001\240\001\001"
+      "sPair\022:\n\ndurability\030\006 \001(\0162\031.MutationProt" +
+      "o.Durability:\013USE_DEFAULT\022\035\n\ttimeRange\030\007" +
+      " \001(\0132\n.TimeRange\022\033\n\023associatedCellCount\030" +
+      "\010 \001(\005\032\326\001\n\013ColumnValue\022\016\n\006family\030\001 \002(\014\022A\n",
+      "\016qualifierValue\030\002 \003(\0132).MutationProto.Co" +
+      "lumnValue.QualifierValue\032t\n\016QualifierVal" +
+      "ue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022\021\n\t" +
+      "timestamp\030\003 \001(\004\022-\n\ndeleteType\030\004 \001(\0162\031.Mu" +
+      "tationProto.DeleteType\"W\n\nDurability\022\017\n\013" +
+      "USE_DEFAULT\020\000\022\014\n\010SKIP_WAL\020\001\022\r\n\tASYNC_WAL" +
+      "\020\002\022\014\n\010SYNC_WAL\020\003\022\r\n\tFSYNC_WAL\020\004\">\n\014Mutat" +
+      "ionType\022\n\n\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PU" +
+      "T\020\002\022\n\n\006DELETE\020\003\"U\n\nDeleteType\022\026\n\022DELETE_" +
+      "ONE_VERSION\020\000\022\034\n\030DELETE_MULTIPLE_VERSION",
+      "S\020\001\022\021\n\rDELETE_FAMILY\020\002\"r\n\rMutateRequest\022" +
+      " \n\006region\030\001 \002(\0132\020.RegionSpecifier\022 \n\010mut" +
+      "ation\030\002 \002(\0132\016.MutationProto\022\035\n\tcondition" +
+      "\030\003 \001(\0132\n.Condition\"<\n\016MutateResponse\022\027\n\006" +
+      "result\030\001 \001(\0132\007.Result\022\021\n\tprocessed\030\002 \001(\010" +
+      "\"\307\002\n\004Scan\022\027\n\006column\030\001 \003(\0132\007.Column\022!\n\tat" +
+      "tribute\030\002 \003(\0132\016.NameBytesPair\022\020\n\010startRo" +
+      "w\030\003 \001(\014\022\017\n\007stopRow\030\004 \001(\014\022\027\n\006filter\030\005 \001(\013" +
+      "2\007.Filter\022\035\n\ttimeRange\030\006 \001(\0132\n.TimeRange" +
+      "\022\026\n\013maxVersions\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030",
+      "\010 \001(\010:\004true\022\021\n\tbatchSize\030\t \001(\r\022\025\n\rmaxRes" +
+      "ultSize\030\n \001(\004\022\022\n\nstoreLimit\030\013 \001(\r\022\023\n\013sto" +
+      "reOffset\030\014 \001(\r\022\"\n\032loadColumnFamiliesOnDe" +
+      "mand\030\r \001(\010\"\230\001\n\013ScanRequest\022 \n\006region\030\001 \001" +
+      "(\0132\020.RegionSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Sca" +
+      "n\022\021\n\tscannerId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001" +
+      "(\r\022\024\n\014closeScanner\030\005 \001(\010\022\023\n\013nextCallSeq\030" +
+      "\006 \001(\004\"u\n\014ScanResponse\022\027\n\006result\030\001 \003(\0132\007." +
+      "Result\022\021\n\tscannerId\030\002 \001(\004\022\023\n\013moreResults" +
+      "\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\022\027\n\017resultSizeBytes\030\005",
+      " \001(\004\"\260\001\n\024BulkLoadHFileRequest\022 \n\006region\030" +
+      "\001 \002(\0132\020.RegionSpecifier\0224\n\nfamilyPath\030\002 " +
+      "\003(\0132 .BulkLoadHFileRequest.FamilyPath\022\024\n" +
+      "\014assignSeqNum\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006fam" +
+      "ily\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFile" +
+      "Response\022\016\n\006loaded\030\001 \002(\010\"_\n\026CoprocessorS" +
+      "erviceCall\022\013\n\003row\030\001 \002(\014\022\023\n\013serviceName\030\002" +
+      " \002(\t\022\022\n\nmethodName\030\003 \002(\t\022\017\n\007request\030\004 \002(" +
+      "\014\"d\n\031CoprocessorServiceRequest\022 \n\006region" +
+      "\030\001 \002(\0132\020.RegionSpecifier\022%\n\004call\030\002 \002(\0132\027",
+      ".CoprocessorServiceCall\"]\n\032CoprocessorSe" +
+      "rviceResponse\022 \n\006region\030\001 \002(\0132\020.RegionSp" +
+      "ecifier\022\035\n\005value\030\002 \002(\0132\016.NameBytesPair\"B" +
+      "\n\013MultiAction\022 \n\010mutation\030\001 \001(\0132\016.Mutati" +
+      "onProto\022\021\n\003get\030\002 \001(\0132\004.Get\"I\n\014ActionResu" +
+      "lt\022\026\n\005value\030\001 \001(\0132\007.Result\022!\n\texception\030" +
+      "\002 \001(\0132\016.NameBytesPair\"^\n\014MultiRequest\022 \n" +
+      "\006region\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006actio" +
+      "n\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 \001(\010\".\n" +
+      "\rMultiResponse\022\035\n\006result\030\001 \003(\0132\r.ActionR",
+      "esult2\342\002\n\rClientService\022 \n\003get\022\013.GetRequ" +
+      "est\032\014.GetResponse\022/\n\010multiGet\022\020.MultiGet" +
+      "Request\032\021.MultiGetResponse\022)\n\006mutate\022\016.M" +
+      "utateRequest\032\017.MutateResponse\022#\n\004scan\022\014." +
+      "ScanRequest\032\r.ScanResponse\022>\n\rbulkLoadHF" +
+      "ile\022\025.BulkLoadHFileRequest\032\026.BulkLoadHFi" +
+      "leResponse\022F\n\013execService\022\032.CoprocessorS" +
+      "erviceRequest\032\033.CoprocessorServiceRespon" +
+      "se\022&\n\005multi\022\r.MultiRequest\032\016.MultiRespon" +
+      "seBB\n*org.apache.hadoop.hbase.protobuf.g",
+      "eneratedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21270,7 +21360,7 @@ public final class ClientProtos {
           internal_static_MutationProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MutationProto_descriptor,
-              new java.lang.String[] { "Row", "MutateType", "ColumnValue", "Timestamp", "Attribute", "WriteToWAL", "TimeRange", "AssociatedCellCount", },
+              new java.lang.String[] { "Row", "MutateType", "ColumnValue", "Timestamp", "Attribute", "Durability", "TimeRange", "AssociatedCellCount", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Builder.class);
           internal_static_MutationProto_ColumnValue_descriptor =

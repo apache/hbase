@@ -515,10 +515,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
 
       public long incrementColumnValue(byte[] row, byte[] family,
-          byte[] qualifier, long amount, boolean writeToWAL)
+          byte[] qualifier, long amount, Durability durability)
           throws IOException {
         return table.incrementColumnValue(row, family, qualifier, amount,
-            writeToWAL);
+            durability);
       }
 
       @Override

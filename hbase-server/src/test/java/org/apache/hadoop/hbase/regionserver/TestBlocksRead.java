@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -128,7 +129,7 @@ public class TestBlocksRead extends HBaseTestCase {
       long versionEnd) throws IOException {
     byte columnBytes[] = Bytes.toBytes(col);
     Put put = new Put(Bytes.toBytes(row));
-    put.setWriteToWAL(false);
+    put.setDurability(Durability.SKIP_WAL);
 
     for (long version = versionStart; version <= versionEnd; version++) {
       put.add(cf, columnBytes, version, genValue(row, col, version));
@@ -188,7 +189,7 @@ public class TestBlocksRead extends HBaseTestCase {
     del.deleteFamily(Bytes.toBytes(family + "_ROWCOL"), version);
     del.deleteFamily(Bytes.toBytes(family + "_ROW"), version);
     del.deleteFamily(Bytes.toBytes(family + "_NONE"), version);
-    region.delete(del, true);
+    region.delete(del);
   }
 
   private static void verifyData(KeyValue kv, String expectedRow,

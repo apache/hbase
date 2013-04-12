@@ -105,11 +105,11 @@ public class TestProtobufUtil {
 
     MutationProto proto = mutateBuilder.build();
     // default fields
-    assertEquals(true, proto.getWriteToWAL());
+    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
 
     // set the default value for equal comparison
     mutateBuilder = MutationProto.newBuilder(proto);
-    mutateBuilder.setWriteToWAL(true);
+    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
 
     Append append = ProtobufUtil.toAppend(proto, null);
 
@@ -152,11 +152,11 @@ public class TestProtobufUtil {
 
     MutationProto proto = mutateBuilder.build();
     // default fields
-    assertEquals(true, proto.getWriteToWAL());
+    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
 
     // set the default value for equal comparison
     mutateBuilder = MutationProto.newBuilder(proto);
-    mutateBuilder.setWriteToWAL(true);
+    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
 
     Delete delete = ProtobufUtil.toDelete(proto);
 
@@ -196,11 +196,11 @@ public class TestProtobufUtil {
 
     MutationProto proto = mutateBuilder.build();
     // default fields
-    assertEquals(true, proto.getWriteToWAL());
+    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
 
     // set the default value for equal comparison
     mutateBuilder = MutationProto.newBuilder(proto);
-    mutateBuilder.setWriteToWAL(true);
+    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
 
     Increment increment = ProtobufUtil.toIncrement(proto, null);
     assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(increment));
@@ -231,11 +231,11 @@ public class TestProtobufUtil {
 
     MutationProto proto = mutateBuilder.build();
     // default fields
-    assertEquals(true, proto.getWriteToWAL());
+    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
 
     // set the default value for equal comparison
     mutateBuilder = MutationProto.newBuilder(proto);
-    mutateBuilder.setWriteToWAL(true);
+    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
 
     Put put = ProtobufUtil.toPut(proto);
 

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
@@ -80,8 +81,8 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
           i == last? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes((byte)i + interval));
 
         Put put = MetaEditor.makePutFromRegionInfo(hri);
-        put.setWriteToWAL(false);
-        mr.put(put, false);
+        put.setDurability(Durability.SKIP_WAL);
+        mr.put(put);
       }
     }
     InternalScanner s = mr.getScanner(new Scan());
@@ -111,7 +112,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     try {
       List<KeyValue> keys = new ArrayList<KeyValue>();
       while (s.next(keys)) {
-        mr.delete(new Delete(keys.get(0).getRow()), false);
+        mr.delete(new Delete(keys.get(0).getRow()));
         keys.clear();
       }
     } finally {
@@ -206,7 +207,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
 
       Delete d = new Delete(T20);
       d.deleteColumn(c0, c0);
-      region.delete(d, false);
+      region.delete(d);
 
       r = region.getClosestRowBefore(T20, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
@@ -220,7 +221,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
 
       d = new Delete(T30);
       d.deleteColumn(c0, c0);
-      region.delete(d, false);
+      region.delete(d);
 
       r = region.getClosestRowBefore(T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
@@ -256,7 +257,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       // in memory; make sure we get back t10 again.
       d = new Delete(T20);
       d.deleteColumn(c1, c1);
-      region.delete(d, false);
+      region.delete(d);
       r = region.getClosestRowBefore(T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 

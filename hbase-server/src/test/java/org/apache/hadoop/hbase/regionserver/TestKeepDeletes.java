@@ -100,7 +100,7 @@ public class TestKeepDeletes extends HBaseTestCase {
 
     // now place a delete marker at ts+2
     Delete d = new Delete(T1, ts+2);
-    region.delete(d, true);
+    region.delete(d);
 
     // a raw scan can see the delete markers
     // (one for each column family)
@@ -187,7 +187,7 @@ public class TestKeepDeletes extends HBaseTestCase {
 
     Delete d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts);
-    region.delete(d, true);
+    region.delete(d);
 
     // scan still returns delete markers and deletes rows
     Scan s = new Scan();
@@ -230,7 +230,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     region.put(p);
     Delete d = new Delete(T1, ts+2);
     d.deleteColumn(c0, c0, ts);
-    region.delete(d, true);
+    region.delete(d);
 
     // "past" get does not see rows behind delete marker
     Get g = new Get(T1);
@@ -302,15 +302,15 @@ public class TestKeepDeletes extends HBaseTestCase {
     region.put(p);
 
     Delete d = new Delete(T1, ts+1);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts+2);
     d.deleteColumn(c0, c0, ts+2);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts+3);
     d.deleteColumns(c0, c0, ts+3);
-    region.delete(d, true);
+    region.delete(d);
 
     Scan s = new Scan();
     s.setRaw(true);
@@ -340,19 +340,19 @@ public class TestKeepDeletes extends HBaseTestCase {
 
     Delete d = new Delete(T1, ts);
     d.deleteColumns(c0, c0, ts);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts);
     d.deleteFamily(c0);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+1);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+2);
-    region.delete(d, true);
+    region.delete(d);
 
     // 1 family marker, 1 column marker, 2 version markers
     assertEquals(4, countDeleteMarkers(region));
@@ -392,19 +392,19 @@ public class TestKeepDeletes extends HBaseTestCase {
     // all the following deletes affect the put
     Delete d = new Delete(T1, ts);
     d.deleteColumns(c0, c0, ts);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts);
     d.deleteFamily(c0, ts);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+1);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts);
     d.deleteColumn(c0, c0, ts+2);
-    region.delete(d, true);
+    region.delete(d);
 
     // 1 family marker, 1 column marker, 2 version markers
     assertEquals(4, countDeleteMarkers(region));
@@ -471,20 +471,20 @@ public class TestKeepDeletes extends HBaseTestCase {
 
     Delete d = new Delete(T1, ts+2);
     d.deleteColumns(c0, c0, ts+2);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts+2);
     d.deleteFamily(c1, ts+2);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T2, ts+2);
     d.deleteFamily(c0, ts+2);
-    region.delete(d, true);
+    region.delete(d);
 
     // add an older delete, to make sure it is filtered
     d = new Delete(T1, ts-10);
     d.deleteFamily(c1, ts-10);
-    region.delete(d, true);
+    region.delete(d);
 
     // ts + 2 does NOT include the delete at ts+2
     checkGet(region, T1, c0, c0, ts+2, T2, T1);
@@ -535,15 +535,15 @@ public class TestKeepDeletes extends HBaseTestCase {
     Delete d = new Delete(T1, ts);
     // test corner case (Put and Delete have same TS)
     d.deleteColumns(c0, c0, ts);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts+1);
     d.deleteColumn(c0, c0, ts+1);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T1, ts+3);
     d.deleteColumn(c0, c0, ts+3);
-    region.delete(d, true);
+    region.delete(d);
 
     region.flushcache();
     region.compactStores(true);
@@ -631,10 +631,10 @@ public class TestKeepDeletes extends HBaseTestCase {
 
     // family markers are each family
     Delete d = new Delete(T1, ts+1);
-    region.delete(d, true);
+    region.delete(d);
 
     d = new Delete(T2, ts+2);
-    region.delete(d, true);
+    region.delete(d);
 
     Scan s = new Scan(T1);
     s.setTimeRange(0, ts+1);
@@ -682,11 +682,11 @@ public class TestKeepDeletes extends HBaseTestCase {
 
     // place a family delete marker
     Delete d = new Delete(T1, ts-1);
-    region.delete(d, true);
+    region.delete(d);
     // and a column delete marker
     d = new Delete(T1, ts-2);
     d.deleteColumns(c0, c0, ts-1);
-    region.delete(d, true);
+    region.delete(d);
 
     Get g = new Get(T1);
     g.setMaxVersions();

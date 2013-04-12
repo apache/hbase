@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -131,7 +132,8 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
       // The actions are not immutable, so we defensively copy them
       if (action instanceof Put) {
         Put put = new Put((Put) action);
-        put.setWriteToWAL(useWriteAheadLogging);
+        put.setDurability(useWriteAheadLogging ? Durability.SYNC_WAL
+            : Durability.SKIP_WAL);
         table.put(put);
       } else if (action instanceof Delete) {
         Delete delete = new Delete((Delete) action);
