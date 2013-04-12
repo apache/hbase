@@ -370,37 +370,50 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @return a double of a cost associated with the proposed
    */
   protected double computeCost(Cluster cluster) {
+    double moveCost = (moveCostMultiplier > 0) ?
+      (moveCostMultiplier * computeMoveCost(cluster)) :
+      0;
 
-    double moveCost = moveCostMultiplier * computeMoveCost(cluster);
+    double regionCountSkewCost = (loadMultiplier > 0) ?
+      (loadMultiplier * computeSkewLoadCost(cluster)) :
+      0;
 
-    double regionCountSkewCost = loadMultiplier * computeSkewLoadCost(cluster);
-    double tableSkewCost = tableMultiplier * computeTableSkewLoadCost(cluster);
-    double localityCost =
-        localityMultiplier * computeDataLocalityCost(cluster);
+    double tableSkewCost = (tableMultiplier > 0) ?
+      (tableMultiplier * computeTableSkewLoadCost(cluster)) :
+      0;
+
+    double localityCost = (localityMultiplier > 0) ?
+      (localityMultiplier * computeDataLocalityCost(cluster)) :
+      0;
 
     double memstoreSizeCost =
-        memStoreSizeMultiplier
-            * computeRegionLoadCost(cluster, RegionLoadCostType.MEMSTORE_SIZE);
-    double storefileSizeCost =
-        storeFileSizeMultiplier
-            * computeRegionLoadCost(cluster, RegionLoadCostType.STOREFILE_SIZE);
+      (memStoreSizeMultiplier > 0) ?
+      (memStoreSizeMultiplier * computeRegionLoadCost(cluster, RegionLoadCostType.MEMSTORE_SIZE)) :
+      0;
 
+    double storefileSizeCost =
+      (storeFileSizeMultiplier > 0) ?
+      (storeFileSizeMultiplier * computeRegionLoadCost(cluster, RegionLoadCostType.STOREFILE_SIZE)):
+      0;
 
     double readRequestCost =
-        readRequestMultiplier
-            * computeRegionLoadCost(cluster, RegionLoadCostType.READ_REQUEST);
+      (readRequestMultiplier > 0) ?
+      (readRequestMultiplier * computeRegionLoadCost(cluster, RegionLoadCostType.READ_REQUEST)) :
+      0;
+
     double writeRequestCost =
-        writeRequestMultiplier
-            * computeRegionLoadCost(cluster, RegionLoadCostType.WRITE_REQUEST);
+      (writeRequestMultiplier > 0) ?
+      (writeRequestMultiplier * computeRegionLoadCost(cluster, RegionLoadCostType.WRITE_REQUEST)) :
+      0;
 
     double total =
-        moveCost + regionCountSkewCost + tableSkewCost + localityCost + memstoreSizeCost
-            + storefileSizeCost + readRequestCost + writeRequestCost;
+      moveCost + regionCountSkewCost + tableSkewCost + localityCost + memstoreSizeCost
+        + storefileSizeCost + readRequestCost + writeRequestCost;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Computed weights for a potential balancing total = " + total + " moveCost = "
-          + moveCost + " regionCountSkewCost = " + regionCountSkewCost + " tableSkewCost = "
-          + tableSkewCost + " localityCost = " + localityCost + " memstoreSizeCost = "
-          + memstoreSizeCost + " storefileSizeCost = " + storefileSizeCost);
+        + moveCost + " regionCountSkewCost = " + regionCountSkewCost + " tableSkewCost = "
+        + tableSkewCost + " localityCost = " + localityCost + " memstoreSizeCost = "
+        + memstoreSizeCost + " storefileSizeCost = " + storefileSizeCost);
     }
     return total;
   }
