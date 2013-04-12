@@ -167,7 +167,7 @@ public class TestAssignmentManager {
    * @throws KeeperException
    * @throws InterruptedException
    */
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testBalanceOnMasterFailoverScenarioWithOpenedNode()
       throws IOException, KeeperException, InterruptedException {
     AssignmentManagerWithExtrasForTesting am =
@@ -214,7 +214,7 @@ public class TestAssignmentManager {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testBalanceOnMasterFailoverScenarioWithClosedNode()
       throws IOException, KeeperException, InterruptedException {
     AssignmentManagerWithExtrasForTesting am =
@@ -262,7 +262,7 @@ public class TestAssignmentManager {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testBalanceOnMasterFailoverScenarioWithOfflineNode()
       throws IOException, KeeperException, InterruptedException {
     AssignmentManagerWithExtrasForTesting am =
@@ -327,7 +327,7 @@ public class TestAssignmentManager {
    * @throws KeeperException
    * @throws InterruptedException
    */
-  @Test(timeout = 10000)
+  @Test(timeout = 60000)
   public void testBalance()
   throws IOException, KeeperException, InterruptedException {
     // Create and startup an executor.  This is used by AssignmentManager
@@ -724,7 +724,7 @@ public class TestAssignmentManager {
    * situation
    * @throws ServiceException
    */
-  @Test(timeout = 5000)
+  @Test(timeout = 60000)
   public void testProcessDeadServersAndRegionsInTransitionShouldNotFailWithNPE()
       throws IOException, KeeperException, InterruptedException, ServiceException {
     final RecoverableZooKeeper recoverableZk = Mockito

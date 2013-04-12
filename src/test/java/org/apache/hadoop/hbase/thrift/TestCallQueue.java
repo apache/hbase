@@ -76,7 +76,7 @@ public class TestCallQueue {
               " elementsRemoved:" + elementsRemoved);
   }
 
-  @Test(timeout=3000)
+  @Test(timeout=60000)
   public void testPutTake() throws Exception {
     ThriftMetrics metrics = createMetrics();
     CallQueue callQueue = new CallQueue(
@@ -90,7 +90,7 @@ public class TestCallQueue {
     verifyMetrics(metrics, "timeInQueue_num_ops", elementsRemoved);
   }
 
-  @Test(timeout=3000)
+  @Test(timeout=60000)
   public void testOfferPoll() throws Exception {
     ThriftMetrics metrics = createMetrics();
     CallQueue callQueue = new CallQueue(

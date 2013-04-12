@@ -74,7 +74,7 @@ public class TestPBOnWritableRpc {
     }
   }
 
-  @Test(timeout=10000)
+  @Test(timeout=60000)
   public void testCalls() throws Exception {
     testCallsInternal(conf);
   }

@@ -35,7 +35,7 @@ public class TestThreads {
 
   private volatile boolean wasInterrupted;
 
-  @Test(timeout=6000)
+  @Test(timeout=60000)
   public void testSleepWithoutInterrupt() throws InterruptedException {
     Thread sleeper = new Thread(new Runnable() {
       @Override

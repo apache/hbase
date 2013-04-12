@@ -37,7 +37,7 @@ public class TestTimeoutExceptionInjector {
   /**
    * Test that a manually triggered timer fires an exception.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testTimerTrigger() {
     final long time = 10000000; // pick a value that is very far in the future
     ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
@@ -64,7 +64,7 @@ public class TestTimeoutExceptionInjector {
    * Demonstrate TimeoutExceptionInjector semantics -- completion means no more exceptions passed to
    * error listener.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testStartAfterComplete() throws InterruptedException {
     final long time = 10;
     ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
@@ -84,7 +84,7 @@ public class TestTimeoutExceptionInjector {
    * Demonstrate TimeoutExceptionInjector semantics -- triggering fires exception and completes
    * the timer.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testStartAfterTrigger() throws InterruptedException {
     final long time = 10;
     ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);

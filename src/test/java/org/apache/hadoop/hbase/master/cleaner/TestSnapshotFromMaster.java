@@ -168,7 +168,7 @@ public class TestSnapshotFromMaster {
    * <li>If asking about a snapshot has hasn't occurred, you should get an error.</li>
    * </ol>
    */
-  @Test(timeout = 15000)
+  @Test(timeout = 60000)
   public void testIsDoneContract() throws Exception {
 
     String snapshotName = "asyncExpectedFailureTest";

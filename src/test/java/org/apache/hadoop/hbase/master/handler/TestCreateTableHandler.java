@@ -99,7 +99,7 @@ public class TestCreateTableHandler {
 
   }
   
-  @Test (timeout=10000)
+  @Test (timeout=60000)
   public void testMasterRestartAfterEnablingNodeIsCreated() throws Exception {
     byte[] tableName = Bytes.toBytes("testMasterRestartAfterEnablingNodeIsCreated");
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();

@@ -744,7 +744,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
   
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testTableExistsIfTheSpecifiedTableRegionIsSplitParent() throws Exception {
     final byte[] tableName = 
         Bytes.toBytes("testTableExistsIfTheSpecifiedTableRegionIsSplitParent");

@@ -124,7 +124,7 @@ public class TestProcedureMember {
   /**
    * Test the normal sub procedure execution case.
    */
-  @Test(timeout = 500)
+  @Test(timeout = 60000)
   public void testSimpleRun() throws Exception {
     member = buildCohortMember();
     EmptySubprocedure subproc = new EmptySubprocedure(member, mockListener);
@@ -155,7 +155,7 @@ public class TestProcedureMember {
    * Make sure we call cleanup etc, when we have an exception during
    * {@link Subprocedure#acquireBarrier()}.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testMemberPrepareException() throws Exception {
     buildCohortMemberPair();
 
@@ -190,7 +190,7 @@ public class TestProcedureMember {
   /**
    * Make sure we call cleanup etc, when we have an exception during prepare.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testSendMemberAcquiredCommsFailure() throws Exception {
     buildCohortMemberPair();
 
@@ -229,7 +229,7 @@ public class TestProcedureMember {
    * is checked.  Thus, the {@link Subprocedure#prepare} should succeed but later get rolled back
    * via {@link Subprocedure#cleanup}.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testCoordinatorAbort() throws Exception {
     buildCohortMemberPair();
 
@@ -274,7 +274,7 @@ public class TestProcedureMember {
    * member.  Members are then responsible for reading its TX log.  This implementation actually
    * rolls back, and thus breaks the normal TX guarantees.
   */
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testMemberCommitException() throws Exception {
     buildCohortMemberPair();
 
@@ -315,7 +315,7 @@ public class TestProcedureMember {
    * member.  Members are then responsible for reading its TX log.  This implementation actually
    * rolls back, and thus breaks the normal TX guarantees.
   */
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testMemberCommitCommsFailure() throws Exception {
     buildCohortMemberPair();
     final TimeoutException oate = new TimeoutException("bogus timeout",1,2,0);

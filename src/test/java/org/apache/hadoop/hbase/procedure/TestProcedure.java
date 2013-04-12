@@ -82,7 +82,7 @@ public class TestProcedure {
    * With a single member, verify ordered execution.  The Coordinator side is run in a separate
    * thread so we can only trigger from members and wait for particular state latches.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testSingleMember() throws Exception {
     // The member
     List<String> members =  new ArrayList<String>();
@@ -126,7 +126,7 @@ public class TestProcedure {
     verify(procspy, never()).receive(any(ForeignException.class));
   }
 
-  @Test(timeout=1000)
+  @Test(timeout=60000)
   public void testMultipleMember() throws Exception {
     // 2 members
     List<String> members =  new ArrayList<String>();
@@ -178,7 +178,7 @@ public class TestProcedure {
     verify(procspy, never()).receive(any(ForeignException.class));
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testErrorPropagation() throws Exception {
     List<String> members =  new ArrayList<String>();
     members.add("member");
@@ -203,7 +203,7 @@ public class TestProcedure {
     verify(procspy).sendGlobalBarrierComplete();
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 60000)
   public void testBarrieredErrorPropagation() throws Exception {
     List<String> members =  new ArrayList<String>();
     members.add("member");

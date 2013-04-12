@@ -210,7 +210,7 @@ public class TestFlushSnapshotFromClient {
     }
   }
 
-  @Test(timeout = 15000)
+  @Test(timeout = 60000)
   public void testAsyncFlushSnapshot() throws Exception {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("asyncSnapshot")
