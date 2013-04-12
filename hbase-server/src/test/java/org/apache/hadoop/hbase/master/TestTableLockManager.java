@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -245,10 +246,19 @@ public class TestTableLockManager {
     admin.deleteTable(TABLE_NAME);
 
     //ensure that znode for the table node has been deleted
-    ZooKeeperWatcher zkWatcher = TEST_UTIL.getZooKeeperWatcher();
-
-    assertTrue(ZKUtil.checkExists(zkWatcher,
-        ZKUtil.joinZNode(zkWatcher.tableLockZNode, Bytes.toString(TABLE_NAME))) < 0);
+    final ZooKeeperWatcher zkWatcher = TEST_UTIL.getZooKeeperWatcher();
+    final String znode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, Bytes.toString(TABLE_NAME));
+    
+    TEST_UTIL.waitFor(5000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        int ver = ZKUtil.checkExists(zkWatcher, znode);
+        return ver < 0;
+      }
+    });
+    int ver = ZKUtil.checkExists(zkWatcher,
+      ZKUtil.joinZNode(zkWatcher.tableLockZNode, Bytes.toString(TABLE_NAME)));
+    assertTrue("Unexpected znode version " + ver, ver < 0);
 
   }
 
