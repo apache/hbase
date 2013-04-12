@@ -30,6 +30,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,7 +68,7 @@ public class TestColumnPrefixFilter {
 
       for (String row: rows) {
         Put p = new Put(Bytes.toBytes(row));
-        p.setWriteToWAL(false);
+        p.setDurability(Durability.SKIP_WAL);
         for (String column: columns) {
           for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
             KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
@@ -129,7 +130,7 @@ public class TestColumnPrefixFilter {
 
       for (String row: rows) {
         Put p = new Put(Bytes.toBytes(row));
-        p.setWriteToWAL(false);
+        p.setDurability(Durability.SKIP_WAL);
         for (String column: columns) {
           for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
             KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,

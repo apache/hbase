@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -330,7 +331,7 @@ public class TestMetaMigrationConvertingToPB {
       int j = (i + 1) % startKeys.length;
       HRegionInfo hri = new HRegionInfo(tableName, startKeys[i], startKeys[j]);
       Put put = new Put(hri.getRegionName());
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         getBytes(hri)); //this is the old Writable serialization
 
@@ -397,7 +398,7 @@ public class TestMetaMigrationConvertingToPB {
       int j = (i + 1) % startKeys.length;
       HRegionInfo hri = new HRegionInfo(tableName, startKeys[i], startKeys[j]);
       Put put = MetaEditor.makePutFromRegionInfo(hri);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       meta.put(put);
       LOG.info("createMultiRegionsWithPBSerialization: PUT inserted " + hri.toString());
 

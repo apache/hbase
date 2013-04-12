@@ -154,7 +154,7 @@ public class ThriftUtilities {
       out = new Put(in.getRow());
     }
 
-    out.setWriteToWAL(in.isWriteToWal());
+    out.setDurability(in.isWriteToWal() ? Durability.SYNC_WAL : Durability.SKIP_WAL);
 
     for (TColumnValue columnValue : in.getColumnValues()) {
       if (columnValue.isSetTimestamp()) {
@@ -228,7 +228,7 @@ public class ThriftUtilities {
         out = new Delete(in.getRow());
       }
     }
-    out.setWriteToWAL(in.isWriteToWal());
+    out.setDurability(in.isWriteToWal() ? Durability.SYNC_WAL : Durability.SKIP_WAL);
     return out;
   }
 
@@ -322,7 +322,7 @@ public class ThriftUtilities {
     for (TColumnIncrement column : in.getColumns()) {
       out.addColumn(column.getFamily(), column.getQualifier(), column.getAmount());
     }
-    out.setWriteToWAL(in.isWriteToWal());
+    out.setDurability(in.isWriteToWal() ? Durability.SYNC_WAL : Durability.SKIP_WAL);
     return out;
   }
 }

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -231,22 +232,23 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, 
-      final Put put, final WALEdit edit, final boolean writeToWAL) throws IOException {
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
   }
 
   @Override
   public void postPut(final ObserverContext<RegionCoprocessorEnvironment> e, 
-      final Put put, final WALEdit edit, final boolean writeToWAL) throws IOException {
+      final Put put, final WALEdit edit, final Durability durability) throws IOException {
   }
 
   @Override
-  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e, 
-      final Delete delete, final WALEdit edit, final boolean writeToWAL) throws IOException {
+  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e, final Delete delete,
+      final WALEdit edit, final Durability durability) throws IOException {
   }
 
   @Override
   public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Delete delete, final WALEdit edit, final boolean writeToWAL) throws IOException {
+      final Delete delete, final WALEdit edit, final Durability durability)
+      throws IOException {
   }
   
   @Override

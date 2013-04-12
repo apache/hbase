@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,7 +63,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
-  protected boolean writeToWAL = true;
+  protected Durability durability = Durability.USE_DEFAULT;
   // A Map sorted by column family.
   protected NavigableMap<byte [], List<? extends Cell>> familyMap =
     new TreeMap<byte [], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
@@ -167,19 +166,16 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
-   * @return true if edits should be applied to WAL, false if not
+   * Set the durability for this mutation
+   * @param d
    */
-  public boolean getWriteToWAL() {
-    return this.writeToWAL;
+  public void setDurability(Durability d) {
+    this.durability = d;
   }
 
-  /**
-   * Set whether this Delete should be written to the WAL or not.
-   * Not writing the WAL means you may lose edits on server crash.
-   * @param write true if edits should be written to WAL, false if not
-   */
-  public void setWriteToWAL(boolean write) {
-    this.writeToWAL = write;
+  /** Get the current durability */
+  public Durability getDurability() {
+    return this.durability;
   }
 
   /**

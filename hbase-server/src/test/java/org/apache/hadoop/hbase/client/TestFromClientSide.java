@@ -518,7 +518,7 @@ public class TestFromClientSide {
       System.out.println(String.format("Saving row: %s, with value %s", row,
           value));
       Put put = new Put(Bytes.toBytes(row));
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(Bytes.toBytes("trans-blob"), null, Bytes
           .toBytes("value for blob"));
       put.add(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
@@ -734,7 +734,7 @@ public class TestFromClientSide {
     };
     for(int i=0;i<10;i++) {
       Put put = new Put(ROWS[i]);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(FAMILY, QUALIFIERS[i], VALUE);
       ht.put(put);
     }
@@ -770,7 +770,7 @@ public class TestFromClientSide {
     };
     for(int i=0;i<10;i++) {
       Put put = new Put(ROWS[i]);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(FAMILY, QUALIFIERS[i], VALUE);
       ht.put(put);
     }
@@ -1995,7 +1995,7 @@ public class TestFromClientSide {
     for (int i = 0; i < 10; i++) {
       byte [] bytes = Bytes.toBytes(i);
       put = new Put(bytes);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(FAMILIES[0], QUALIFIER, bytes);
       ht.put(put);
     }
@@ -2103,7 +2103,7 @@ public class TestFromClientSide {
 
     for(int i=0;i<numRows;i++) {
       Put put = new Put(ROWS[i]);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       for(int j=0;j<numColsPerRow;j++) {
         put.add(FAMILY, QUALIFIERS[j], QUALIFIERS[j]);
       }
@@ -3693,7 +3693,7 @@ public class TestFromClientSide {
     for (int i = 0; i < NB_BATCH_ROWS; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(CONTENTS_FAMILY, null, value);
       rowsUpdate.add(put);
     }
@@ -3721,7 +3721,7 @@ public class TestFromClientSide {
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(CONTENTS_FAMILY, null, value);
       rowsUpdate.add(put);
     }
@@ -3763,7 +3763,7 @@ public class TestFromClientSide {
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(CONTENTS_FAMILY, null, value);
       rowsUpdate.add(put);
     }
@@ -4023,7 +4023,7 @@ public class TestFromClientSide {
     try {
       for (Result r : s) {
         put = new Put(r.getRow());
-        put.setWriteToWAL(false);
+        put.setDurability(Durability.SKIP_WAL);
         for (KeyValue kv : r.raw()) {
           put.add(kv);
         }

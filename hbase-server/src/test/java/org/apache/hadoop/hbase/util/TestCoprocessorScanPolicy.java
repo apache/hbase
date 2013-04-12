@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -215,7 +216,7 @@ public class TestCoprocessorScanPolicy {
     // since it is loaded by a different class loader
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
-        final WALEdit edit, final boolean writeToWAL) throws IOException {
+        final WALEdit edit, final Durability durability) throws IOException {
       if (put.getAttribute("ttl") != null) {
         Cell cell = put.getFamilyMap().values().iterator().next().get(0);
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);

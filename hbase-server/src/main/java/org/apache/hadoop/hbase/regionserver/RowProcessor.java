@@ -25,6 +25,7 @@ import java.util.UUID;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 import com.google.protobuf.ByteString;
@@ -133,4 +134,9 @@ public interface RowProcessor<S extends Message, T extends Message> {
    * @throws IOException
    */
   void initialize(S msg) throws IOException;
+
+  /**
+   * @return The {@link Durability} to use
+   */
+  Durability useDurability();
 }

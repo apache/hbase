@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.exceptions.WrongRegionException;
@@ -174,7 +175,7 @@ public class TestHRegion extends HBaseTestCase {
     RegionScanner scanner1 = region.getScanner(scan);
 
     Delete delete = new Delete(Bytes.toBytes("r1"));
-    region.delete(delete, false);
+    region.delete(delete);
     region.flushcache();
 
     // open the second scanner
@@ -524,10 +525,11 @@ public class TestHRegion extends HBaseTestCase {
     this.region = initHRegion(TABLE, getName(), conf, true, Bytes.toBytes("somefamily"));
     boolean exceptionCaught = false;
     Append append = new Append(Bytes.toBytes("somerow"));
+    append.setDurability(Durability.SKIP_WAL);
     append.add(Bytes.toBytes("somefamily"), Bytes.toBytes("somequalifier"),
         Bytes.toBytes("somevalue"));
     try {
-      region.append(append, false);
+      region.append(append);
     } catch (IOException e) {
       exceptionCaught = true;
     } finally {
@@ -542,9 +544,10 @@ public class TestHRegion extends HBaseTestCase {
     this.region = initHRegion(TABLE, getName(), conf, true, Bytes.toBytes("somefamily"));
     boolean exceptionCaught = false;
     Increment inc = new Increment(Bytes.toBytes("somerow"));
+    inc.setDurability(Durability.SKIP_WAL);
     inc.addColumn(Bytes.toBytes("somefamily"), Bytes.toBytes("somequalifier"), 1L);
     try {
-      region.increment(inc, false);
+      region.increment(inc);
     } catch (IOException e) {
       exceptionCaught = true;
     } finally {
@@ -568,7 +571,7 @@ public class TestHRegion extends HBaseTestCase {
         break;
       Delete delete = new Delete(results.get(0).getRow());
       delete.deleteColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
-      r.delete(delete, false);
+      r.delete(delete);
       results.clear();
     } while (more);
     assertEquals("Did not perform correct number of deletes", 3, count);
@@ -619,7 +622,7 @@ public class TestHRegion extends HBaseTestCase {
       System.out.println(String.format("Saving row: %s, with value %s", row,
         value));
       Put put = new Put(Bytes.toBytes(row));
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(Bytes.toBytes("trans-blob"), null,
         Bytes.toBytes("value for blob"));
       put.add(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
@@ -1110,7 +1113,7 @@ public class TestHRegion extends HBaseTestCase {
       Delete delete = new Delete(row1);
       delete.deleteColumn(fam1, qual);
       delete.deleteColumn(fam1, qual);
-      region.delete(delete, false);
+      region.delete(delete);
 
       Get get = new Get(row1);
       get.addFamily(fam1);
@@ -1144,7 +1147,7 @@ public class TestHRegion extends HBaseTestCase {
         NavigableMap<byte[], List<? extends Cell>> deleteMap =
           new TreeMap<byte[], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
-        region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, true);
+        region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, Durability.SYNC_WAL);
       } catch (Exception e) {
         assertTrue("Family " +new String(family)+ " does not exist", false);
       }
@@ -1156,7 +1159,7 @@ public class TestHRegion extends HBaseTestCase {
         NavigableMap<byte[], List<? extends Cell>> deleteMap =
           new TreeMap<byte[], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
-        region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, true);
+        region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, Durability.SYNC_WAL);
       } catch (Exception e) {
         ok = true;
       }
@@ -1198,7 +1201,7 @@ public class TestHRegion extends HBaseTestCase {
       // ok now delete a split:
       Delete delete = new Delete(row);
       delete.deleteColumns(fam, splitA);
-      region.delete(delete, true);
+      region.delete(delete);
 
       // assert some things:
       Get get = new Get(row).addColumn(fam, serverinfo);
@@ -1223,7 +1226,7 @@ public class TestHRegion extends HBaseTestCase {
 
       // Now delete all... then test I can add stuff back
       delete = new Delete(row);
-      region.delete(delete, false);
+      region.delete(delete);
       assertEquals(0, region.get(get).size());
 
       region.put(new Put(row).add(fam, splitA, Bytes.toBytes("reference_A")));
@@ -1253,7 +1256,7 @@ public class TestHRegion extends HBaseTestCase {
 
       // now delete something in the present
       Delete delete = new Delete(row);
-      region.delete(delete, true);
+      region.delete(delete);
 
       // make sure we still see our data
       Get get = new Get(row).addColumn(fam, serverinfo);
@@ -1262,7 +1265,7 @@ public class TestHRegion extends HBaseTestCase {
 
       // delete the future row
       delete = new Delete(row,HConstants.LATEST_TIMESTAMP-3);
-      region.delete(delete, true);
+      region.delete(delete);
 
       // make sure it is gone
       get = new Get(row).addColumn(fam, serverinfo);
@@ -1292,7 +1295,7 @@ public class TestHRegion extends HBaseTestCase {
       // add data with LATEST_TIMESTAMP, put without WAL
       Put put = new Put(row);
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
-      region.put(put, false);
+      region.put(put);
 
       // Make sure it shows up with an actual timestamp
       Get get = new Get(row).addColumn(fam, qual);
@@ -1308,7 +1311,7 @@ public class TestHRegion extends HBaseTestCase {
       row = Bytes.toBytes("row2");
       put = new Put(row);
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
-      region.put(put, true);
+      region.put(put);
 
       // Make sure it shows up with an actual timestamp
       get = new Get(row).addColumn(fam, qual);
@@ -1346,11 +1349,11 @@ public class TestHRegion extends HBaseTestCase {
       try {
         // no TS specified == use latest. should not error
         region.put(new Put(row).add(fam, Bytes.toBytes("qual"), Bytes
-            .toBytes("value")), false);
+            .toBytes("value")));
         // TS out of range. should error
         region.put(new Put(row).add(fam, Bytes.toBytes("qual"),
             System.currentTimeMillis() + 2000,
-            Bytes.toBytes("value")), false);
+            Bytes.toBytes("value")));
         fail("Expected IOE for TS out of configured timerange");
       } catch (FailedSanityCheckException ioe) {
         LOG.debug("Received expected exception", ioe);
@@ -1377,7 +1380,7 @@ public class TestHRegion extends HBaseTestCase {
       Delete delete = new Delete(rowA);
       delete.deleteFamily(fam1);
 
-      region.delete(delete, true);
+      region.delete(delete);
 
       // now create data.
       Put put = new Put(rowA);
@@ -1428,7 +1431,7 @@ public class TestHRegion extends HBaseTestCase {
       region.put(put);
 
       // now delete the value:
-      region.delete(delete, true);
+      region.delete(delete);
 
 
       // ok put data:
@@ -1484,7 +1487,7 @@ public class TestHRegion extends HBaseTestCase {
       NavigableMap<byte[], List<? extends Cell>> deleteMap =
         new TreeMap<byte[], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
       deleteMap.put(fam1, kvs);
-      region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, true);
+      region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, Durability.SYNC_WAL);
 
       // extract the key values out the memstore:
       // This is kinda hacky, but better than nothing...
@@ -2785,7 +2788,7 @@ public class TestHRegion extends HBaseTestCase {
       boolean toggle=true;
       for (long i = 0; i < numRows; i++) {
         Put put = new Put(Bytes.toBytes(i));
-        put.setWriteToWAL(false);
+        put.setDurability(Durability.SKIP_WAL);
         put.add(family, qual1, Bytes.toBytes(i % 10));
         region.put(put);
 
@@ -3005,7 +3008,7 @@ public class TestHRegion extends HBaseTestCase {
           for (int r = 0; r < numRows; r++) {
             byte[] row = Bytes.toBytes("row" + r);
             Put put = new Put(row);
-            put.setWriteToWAL(false);
+            put.setDurability(Durability.SKIP_WAL);
             byte[] value = Bytes.toBytes(String.valueOf(numPutsFinished));
             for (byte[] family : families) {
               for (byte[] qualifier : qualifiers) {
@@ -3018,7 +3021,7 @@ public class TestHRegion extends HBaseTestCase {
             if (numPutsFinished > 0 && numPutsFinished % 47 == 0) {
               System.out.println("put iteration = " + numPutsFinished);
               Delete delete = new Delete(row, (long)numPutsFinished-30);
-              region.delete(delete, true);
+              region.delete(delete);
             }
             numPutsFinished++;
           }
@@ -3192,7 +3195,7 @@ public class TestHRegion extends HBaseTestCase {
 
       Delete delete = new Delete(Bytes.toBytes(1L), 1L);
       //delete.deleteColumn(family, qual1);
-      region.delete(delete, true);
+      region.delete(delete);
 
       put = new Put(Bytes.toBytes(2L));
       put.add(family, qual1, 2L, Bytes.toBytes(2L));
@@ -3250,7 +3253,7 @@ public class TestHRegion extends HBaseTestCase {
         for (int i = 0; i < duplicate_multiplier; i ++) {
           for (int j = 0; j < num_unique_rows; j++) {
             Put put = new Put(Bytes.toBytes("row" + j));
-            put.setWriteToWAL(false);
+            put.setDurability(Durability.SKIP_WAL);
             put.add(fam1, qf1, version++, val1);
             region.put(put);
           }
@@ -3304,7 +3307,7 @@ public class TestHRegion extends HBaseTestCase {
       byte row[] = Bytes.toBytes("row:" + 0);
       byte column[] = Bytes.toBytes("column:" + 0);
       Put put = new Put(row);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       for (long idx = 1; idx <= 4; idx++) {
         put.add(FAMILY, column, idx, Bytes.toBytes("value-version-" + idx));
       }
@@ -3360,7 +3363,7 @@ public class TestHRegion extends HBaseTestCase {
       region.flushcache();
 
       Delete del = new Delete(row);
-      region.delete(del, true);
+      region.delete(del);
       region.flushcache();
 
       // Get remaining rows (should have none)
@@ -3545,7 +3548,7 @@ public class TestHRegion extends HBaseTestCase {
         inc.addColumn(family, qualifier, ONE);
         count++;
         try {
-          region.increment(inc, true);
+          region.increment(inc);
         } catch (IOException e) {
           e.printStackTrace();
           break;
@@ -3636,7 +3639,7 @@ public class TestHRegion extends HBaseTestCase {
         app.add(family, qualifier, CHAR);
         count++;
         try {
-          region.append(app, true);
+          region.append(app);
         } catch (IOException e) {
           e.printStackTrace();
           break;
@@ -3772,7 +3775,7 @@ public class TestHRegion extends HBaseTestCase {
   throws IOException {
     for(int i=startRow; i<startRow+numRows; i++) {
       Put put = new Put(Bytes.toBytes("" + i));
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       for(byte [] family : families) {
         put.add(family, qf, null);
       }

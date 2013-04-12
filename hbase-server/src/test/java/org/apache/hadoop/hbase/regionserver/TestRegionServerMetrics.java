@@ -168,7 +168,7 @@ public class TestRegionServerMetrics {
 
     Put p = new Put(row);
     p.add(cf, qualifier, val);
-    p.setWriteToWAL(false);
+    p.setDurability(Durability.SKIP_WAL);
 
     t.put(p);
     t.flushCommits();

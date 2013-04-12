@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -94,7 +95,7 @@ public class TestTableResource {
           k[1] = b2;
           k[2] = b3;
           Put put = new Put(k);
-          put.setWriteToWAL(false);
+          put.setDurability(Durability.SKIP_WAL);
           put.add(famAndQf[0], famAndQf[1], k);
           table.put(put);
         }

@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.TableExistsException;
 import org.apache.hadoop.hbase.exceptions.TableNotEnabledException;
@@ -1307,7 +1308,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           k[2] = b3;
           Put put = new Put(k);
           put.add(f, null, k);
-          if (r.getLog() == null) put.setWriteToWAL(false);
+          if (r.getLog() == null) put.setDurability(Durability.SKIP_WAL);
           r.put(put);
           rowCount++;
         }

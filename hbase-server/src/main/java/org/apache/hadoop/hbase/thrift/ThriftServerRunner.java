@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -976,7 +977,8 @@ public class ThriftServerRunner implements Runnable {
             } else {
               delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
             }
-            delete.setWriteToWAL(m.writeToWAL);
+            delete.setDurability(m.writeToWAL ? Durability.SYNC_WAL
+                : Durability.SKIP_WAL);
           } else {
             if(famAndQf.length == 1) {
               put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
@@ -987,7 +989,7 @@ public class ThriftServerRunner implements Runnable {
                   m.value != null ? getBytes(m.value)
                       : HConstants.EMPTY_BYTE_ARRAY);
             }
-            put.setWriteToWAL(m.writeToWAL);
+            put.setDurability(m.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
           }
         }
         if (!delete.isEmpty())
@@ -1034,7 +1036,8 @@ public class ThriftServerRunner implements Runnable {
             } else {
               delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
             }
-            delete.setWriteToWAL(m.writeToWAL);
+            delete.setDurability(m.writeToWAL ? Durability.SYNC_WAL
+                : Durability.SKIP_WAL);
           } else {
             if(famAndQf.length == 1) {
               put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
@@ -1045,7 +1048,7 @@ public class ThriftServerRunner implements Runnable {
                   m.value != null ? getBytes(m.value)
                       : HConstants.EMPTY_BYTE_ARRAY);
             }
-            put.setWriteToWAL(m.writeToWAL);
+            put.setDurability(m.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
           }
         }
         if (!delete.isEmpty())

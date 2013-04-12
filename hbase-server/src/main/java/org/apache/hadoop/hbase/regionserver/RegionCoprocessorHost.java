@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -882,19 +883,19 @@ public class RegionCoprocessorHost
   /**
    * @param put The Put object
    * @param edit The WALEdit object.
-   * @param writeToWAL true if the change should be written to the WAL
+   * @param durability The durability used
    * @return true if default processing should be bypassed
    * @exception IOException Exception
    */
   public boolean prePut(Put put, WALEdit edit,
-      final boolean writeToWAL) throws IOException {
+      final Durability durability) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).prePut(ctx, put, edit, writeToWAL);
+          ((RegionObserver)env.getInstance()).prePut(ctx, put, edit, durability);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -910,17 +911,17 @@ public class RegionCoprocessorHost
   /**
    * @param put The Put object
    * @param edit The WALEdit object.
-   * @param writeToWAL true if the change should be written to the WAL
+   * @param durability The durability used
    * @exception IOException Exception
    */
   public void postPut(Put put, WALEdit edit,
-      final boolean writeToWAL) throws IOException {
+      final Durability durability) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postPut(ctx, put, edit, writeToWAL);
+          ((RegionObserver)env.getInstance()).postPut(ctx, put, edit, durability);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -934,19 +935,19 @@ public class RegionCoprocessorHost
   /**
    * @param delete The Delete object
    * @param edit The WALEdit object.
-   * @param writeToWAL true if the change should be written to the WAL
+   * @param durability The durability used
    * @return true if default processing should be bypassed
    * @exception IOException Exception
    */
   public boolean preDelete(Delete delete, WALEdit edit,
-      final boolean writeToWAL) throws IOException {
+      final Durability durability) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).preDelete(ctx, delete, edit, writeToWAL);
+          ((RegionObserver)env.getInstance()).preDelete(ctx, delete, edit, durability);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -962,17 +963,17 @@ public class RegionCoprocessorHost
   /**
    * @param delete The Delete object
    * @param edit The WALEdit object.
-   * @param writeToWAL true if the change should be written to the WAL
+   * @param durability The durability used
    * @exception IOException Exception
    */
   public void postDelete(Delete delete, WALEdit edit,
-      final boolean writeToWAL) throws IOException {
+      final Durability durability) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postDelete(ctx, delete, edit, writeToWAL);
+          ((RegionObserver)env.getInstance()).postDelete(ctx, delete, edit, durability);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -143,7 +144,7 @@ public class TestFilter {
     // Insert first half
     for(byte [] ROW : ROWS_ONE) {
       Put p = new Put(ROW);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       for(byte [] QUALIFIER : QUALIFIERS_ONE) {
         p.add(FAMILIES[0], QUALIFIER, VALUES[0]);
       }
@@ -151,7 +152,7 @@ public class TestFilter {
     }
     for(byte [] ROW : ROWS_TWO) {
       Put p = new Put(ROW);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       for(byte [] QUALIFIER : QUALIFIERS_TWO) {
         p.add(FAMILIES[1], QUALIFIER, VALUES[1]);
       }
@@ -164,7 +165,7 @@ public class TestFilter {
     // Insert second half (reverse families)
     for(byte [] ROW : ROWS_ONE) {
       Put p = new Put(ROW);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       for(byte [] QUALIFIER : QUALIFIERS_ONE) {
         p.add(FAMILIES[1], QUALIFIER, VALUES[0]);
       }
@@ -172,7 +173,7 @@ public class TestFilter {
     }
     for(byte [] ROW : ROWS_TWO) {
       Put p = new Put(ROW);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       for(byte [] QUALIFIER : QUALIFIERS_TWO) {
         p.add(FAMILIES[0], QUALIFIER, VALUES[1]);
       }
@@ -184,13 +185,13 @@ public class TestFilter {
       Delete d = new Delete(ROW);
       d.deleteColumns(FAMILIES[0], QUALIFIERS_ONE[1]);
       d.deleteColumns(FAMILIES[1], QUALIFIERS_ONE[1]);
-      this.region.delete(d, false);
+      this.region.delete(d);
     }
     for(byte [] ROW : ROWS_TWO) {
       Delete d = new Delete(ROW);
       d.deleteColumns(FAMILIES[0], QUALIFIERS_TWO[1]);
       d.deleteColumns(FAMILIES[1], QUALIFIERS_TWO[1]);
-      this.region.delete(d, false);
+      this.region.delete(d);
     }
     colsPerRow -= 2;
 
@@ -199,13 +200,13 @@ public class TestFilter {
       Delete d = new Delete(ROWS_ONE[1]);
       d.deleteColumns(FAMILIES[0], QUALIFIER);
       d.deleteColumns(FAMILIES[1], QUALIFIER);
-      this.region.delete(d, false);
+      this.region.delete(d);
     }
     for(byte [] QUALIFIER : QUALIFIERS_TWO) {
       Delete d = new Delete(ROWS_TWO[1]);
       d.deleteColumns(FAMILIES[0], QUALIFIER);
       d.deleteColumns(FAMILIES[1], QUALIFIER);
-      this.region.delete(d, false);
+      this.region.delete(d);
     }
     numRows -= 2;
   }
@@ -222,7 +223,7 @@ public class TestFilter {
     // create new rows and column family to show how reseek works..
     for (byte[] ROW : ROWS_THREE) {
       Put p = new Put(ROW);
-      p.setWriteToWAL(true);
+      p.setDurability(Durability.SKIP_WAL);
       for (byte[] QUALIFIER : QUALIFIERS_THREE) {
         p.add(FAMILIES[0], QUALIFIER, VALUES[0]);
 
@@ -231,7 +232,7 @@ public class TestFilter {
     }
     for (byte[] ROW : ROWS_FOUR) {
       Put p = new Put(ROW);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       for (byte[] QUALIFIER : QUALIFIERS_FOUR) {
         p.add(FAMILIES[1], QUALIFIER, VALUES[1]);
       }
@@ -243,7 +244,7 @@ public class TestFilter {
     // Insert second half (reverse families)
     for (byte[] ROW : ROWS_THREE) {
       Put p = new Put(ROW);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       for (byte[] QUALIFIER : QUALIFIERS_THREE) {
         p.add(FAMILIES[1], QUALIFIER, VALUES[0]);
       }
@@ -251,7 +252,7 @@ public class TestFilter {
     }
     for (byte[] ROW : ROWS_FOUR) {
       Put p = new Put(ROW);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       for (byte[] QUALIFIER : QUALIFIERS_FOUR) {
         p.add(FAMILIES[0], QUALIFIER, VALUES[1]);
       }
@@ -1317,7 +1318,7 @@ public class TestFilter {
 
     for(KeyValue kv : srcKVs) {
       Put put = new Put(kv.getRow()).add(kv);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       this.region.put(put);
     }
 
@@ -1500,7 +1501,7 @@ public class TestFilter {
   public void testColumnPaginationFilter() throws Exception {
       // Test that the filter skips multiple column versions.
       Put p = new Put(ROWS_ONE[0]);
-      p.setWriteToWAL(false);
+      p.setDurability(Durability.SKIP_WAL);
       p.add(FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]);
       this.region.put(p);
       this.region.flushcache();

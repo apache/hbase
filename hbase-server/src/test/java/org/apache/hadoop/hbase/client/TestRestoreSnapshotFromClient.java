@@ -266,7 +266,7 @@ public class TestRestoreSnapshotFromClient {
       byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
       Put put = new Put(key);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       for (byte[] family: families) {
         put.add(family, qualifier, value);
       }

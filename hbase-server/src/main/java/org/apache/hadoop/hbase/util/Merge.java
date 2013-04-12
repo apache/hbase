@@ -224,7 +224,7 @@ public class Merge extends Configured implements Tool {
 
     Delete delete  = new Delete(regioninfo.getRegionName(),
         System.currentTimeMillis());
-    meta.delete(delete, true);
+    meta.delete(delete);
   }
 
   /*

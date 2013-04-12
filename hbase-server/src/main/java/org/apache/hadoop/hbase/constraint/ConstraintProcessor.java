@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -81,7 +82,7 @@ public class ConstraintProcessor extends BaseRegionObserver {
 
   @Override
   public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put,
-      WALEdit edit, boolean writeToWAL) throws IOException {
+      WALEdit edit, Durability durability) throws IOException {
     // check the put against the stored constraints
     for (Constraint c : constraints) {
       c.check(put);

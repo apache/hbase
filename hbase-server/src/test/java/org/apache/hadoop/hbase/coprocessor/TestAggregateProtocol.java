@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -86,12 +87,12 @@ public class TestAggregateProtocol {
      */
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       Long l = new Long(i);
       put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(l));
       table.put(put);
       Put p2 = new Put(ROWS[i]);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       p2.add(TEST_FAMILY, Bytes.add(TEST_MULTI_CQ, Bytes.toBytes(l)), Bytes
           .toBytes(l * 10));
       table.put(p2);

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
@@ -314,7 +315,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   @Override
   public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Put put, final WALEdit edit,
-      final boolean writeToWAL) throws IOException {
+      final Durability durability) throws IOException {
     Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
@@ -347,7 +348,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   @Override
   public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Put put, final WALEdit edit,
-      final boolean writeToWAL) throws IOException {
+      final Durability durability) throws IOException {
     Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
@@ -380,7 +381,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   @Override
   public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit,
-      final boolean writeToWAL) throws IOException {
+      final Durability durability) throws IOException {
     Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
@@ -394,7 +395,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   @Override
   public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit,
-      final boolean writeToWAL) throws IOException {
+      final Durability durability) throws IOException {
     Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);

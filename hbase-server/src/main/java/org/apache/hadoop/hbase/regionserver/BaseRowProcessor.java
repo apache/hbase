@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 import com.google.protobuf.Message;
@@ -47,5 +48,10 @@ implements RowProcessor<S,T> {
   @Override
   public String getName() {
     return this.getClass().getSimpleName().toLowerCase();
+  }
+
+  @Override
+  public Durability useDurability() {
+    return Durability.USE_DEFAULT;
   }
 }

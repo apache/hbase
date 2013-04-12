@@ -141,7 +141,7 @@ message MutationProto {
   repeated ColumnValue columnValue = 3;
   optional uint64 timestamp = 4;
   repeated NameBytesPair attribute = 5;
-  optional bool writeToWAL = 6 [default = true];
+  optional Durability durability = 6 [default = USE_DEFAULT];
 
   // For some mutations, a result may be returned, in which case,
   // time range can be specified for potential performance gain
@@ -153,6 +153,14 @@ message MutationProto {
   // ours.  NOTE: This is different from the pb managed cellCount of the
   // 'cell' field above which is non-null when the cells are pb'd.
   optional int32 associatedCellCount = 8;
+
+  enum Durability {
+    USE_DEFAULT  = 0;
+    SKIP_WAL     = 1;
+    ASYNC_WAL    = 2;
+    SYNC_WAL     = 3;
+    FSYNC_WAL    = 4;
+  }
 
   enum MutationType {
     APPEND = 0;

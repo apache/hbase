@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -117,7 +118,7 @@ public class TestTimeRangeMapRed {
 
       for (Long ts : tsList) {
         Put put = new Put(key.get());
-        put.setWriteToWAL(false);
+        put.setDurability(Durability.SKIP_WAL);
         put.add(FAMILY_NAME, COLUMN_NAME, ts, Bytes.toBytes(true));
         table.put(put);
       }
@@ -157,7 +158,7 @@ public class TestTimeRangeMapRed {
   private void prepareTest(final HTable table) throws IOException {
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
-      put.setWriteToWAL(false);
+      put.setDurability(Durability.SKIP_WAL);
       put.add(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
       table.put(put);
     }

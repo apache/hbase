@@ -772,7 +772,7 @@ public class HTable implements HTableInterface {
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount)
   throws IOException {
-    return incrementColumnValue(row, family, qualifier, amount, true);
+    return incrementColumnValue(row, family, qualifier, amount, Durability.SYNC_WAL);
   }
 
   /**
@@ -780,7 +780,7 @@ public class HTable implements HTableInterface {
    */
   @Override
   public long incrementColumnValue(final byte [] row, final byte [] family,
-      final byte [] qualifier, final long amount, final boolean writeToWAL)
+      final byte [] qualifier, final long amount, final Durability durability)
   throws IOException {
     NullPointerException npe = null;
     if (row == null) {
@@ -799,7 +799,7 @@ public class HTable implements HTableInterface {
             try {
               MutateRequest request = RequestConverter.buildMutateRequest(
                 location.getRegionInfo().getRegionName(), row, family,
-                qualifier, amount, writeToWAL);
+                qualifier, amount, durability);
               PayloadCarryingRpcController rpcController = new PayloadCarryingRpcController();
               MutateResponse response = server.mutate(rpcController, request);
               Result result =

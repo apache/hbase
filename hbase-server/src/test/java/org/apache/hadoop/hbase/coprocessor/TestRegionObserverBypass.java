@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -205,7 +206,7 @@ public class TestRegionObserverBypass {
   public static class TestCoprocessor extends BaseRegionObserver {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Put put, final WALEdit edit, final boolean writeToWAL)
+        final Put put, final WALEdit edit, final Durability durability)
         throws IOException {
       Map<byte[], List<? extends Cell>> familyMap = put.getFamilyMap();
       if (familyMap.containsKey(test)) {

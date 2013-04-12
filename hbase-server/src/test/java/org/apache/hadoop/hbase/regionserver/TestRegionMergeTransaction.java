@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -411,7 +412,7 @@ public class TestRegionMergeTransaction {
           Put put = new Put(k);
           put.add(f, null, k);
           if (r.getLog() == null)
-            put.setWriteToWAL(false);
+            put.setDurability(Durability.SKIP_WAL);
           r.put(put);
           rowCount++;
         }

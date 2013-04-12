@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
@@ -296,6 +297,48 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Convert a protobuf Durability into a client Durability
+   */
+  public static Durability toDurability(
+      final ClientProtos.MutationProto.Durability proto) {
+    switch(proto) {
+    case USE_DEFAULT:
+      return Durability.USE_DEFAULT;
+    case SKIP_WAL:
+      return Durability.SKIP_WAL;
+    case ASYNC_WAL:
+      return Durability.ASYNC_WAL;
+    case SYNC_WAL:
+      return Durability.SYNC_WAL;
+    case FSYNC_WAL:
+      return Durability.FSYNC_WAL;
+    default:
+      return Durability.USE_DEFAULT;
+    }
+  }
+
+  /**
+   * Convert a client Durability into a protbuf Durability
+   */
+  public static ClientProtos.MutationProto.Durability toDurability(
+      final Durability d) {
+    switch(d) {
+    case USE_DEFAULT:
+      return ClientProtos.MutationProto.Durability.USE_DEFAULT;
+    case SKIP_WAL:
+      return ClientProtos.MutationProto.Durability.SKIP_WAL;
+    case ASYNC_WAL:
+      return ClientProtos.MutationProto.Durability.ASYNC_WAL;
+    case SYNC_WAL:
+      return ClientProtos.MutationProto.Durability.SYNC_WAL;
+    case FSYNC_WAL:
+      return ClientProtos.MutationProto.Durability.FSYNC_WAL;
+    default:
+      return ClientProtos.MutationProto.Durability.USE_DEFAULT;
+    }
+  }
+
+  /**
    * Convert a protocol buffer Get to a client Get
    *
    * @param proto the protocol buffer Get to convert
@@ -419,7 +462,7 @@ public final class ProtobufUtil {
         }
       }
     }
-    put.setWriteToWAL(proto.getWriteToWAL());
+    put.setDurability(toDurability(proto.getDurability()));
     for (NameBytesPair attribute: proto.getAttributeList()) {
       put.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
@@ -499,7 +542,7 @@ public final class ProtobufUtil {
         }
       }
     }
-    delete.setWriteToWAL(proto.getWriteToWAL());
+    delete.setDurability(toDurability(proto.getDurability()));
     for (NameBytesPair attribute: proto.getAttributeList()) {
       delete.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
@@ -552,7 +595,7 @@ public final class ProtobufUtil {
         }
       }
     }
-    append.setWriteToWAL(proto.getWriteToWAL());
+    append.setDurability(toDurability(proto.getDurability()));
     for (NameBytesPair attribute: proto.getAttributeList()) {
       append.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
@@ -637,7 +680,7 @@ public final class ProtobufUtil {
       }
       increment.setTimeRange(minStamp, maxStamp);
     }
-    increment.setWriteToWAL(proto.getWriteToWAL());
+    increment.setDurability(toDurability(proto.getDurability()));
     return increment;
   }
 
@@ -857,7 +900,7 @@ public final class ProtobufUtil {
     MutationProto.Builder builder = MutationProto.newBuilder();
     builder.setRow(ByteString.copyFrom(increment.getRow()));
     builder.setMutateType(MutationType.INCREMENT);
-    builder.setWriteToWAL(increment.getWriteToWAL());
+    builder.setDurability(toDurability(increment.getDurability()));
     TimeRange timeRange = increment.getTimeRange();
     if (!timeRange.isAllTime()) {
       HBaseProtos.TimeRange.Builder timeRangeBuilder =
@@ -944,7 +987,7 @@ public final class ProtobufUtil {
     MutationProto.Builder builder = MutationProto.newBuilder();
     builder.setRow(ByteString.copyFrom(mutation.getRow()));
     builder.setMutateType(type);
-    builder.setWriteToWAL(mutation.getWriteToWAL());
+    builder.setDurability(toDurability(mutation.getDurability()));
     builder.setTimestamp(mutation.getTimeStamp());
     Map<String, byte[]> attributes = mutation.getAttributesMap();
     if (!attributes.isEmpty()) {

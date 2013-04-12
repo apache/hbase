@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
@@ -135,7 +136,7 @@ public class TestCompaction extends HBaseTestCase {
     do {
       List<KeyValue> results = new ArrayList<KeyValue>();
       boolean result = s.next(results);
-      r.delete(new Delete(results.get(0).getRow()), false);
+      r.delete(new Delete(results.get(0).getRow()));
       if (!result) break;
     } while(true);
     s.close();
@@ -253,7 +254,7 @@ public class TestCompaction extends HBaseTestCase {
     Delete delete = new Delete(secondRowBytes, System.currentTimeMillis());
     byte [][] famAndQf = {COLUMN_FAMILY, null};
     delete.deleteFamily(famAndQf[0]);
-    r.delete(delete, true);
+    r.delete(delete);
 
     // Assert deleted.
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
@@ -424,7 +425,7 @@ public class TestCompaction extends HBaseTestCase {
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
-    r.delete(delete, true);
+    r.delete(delete);
 
     // Make sure that we have only deleted family2 from secondRowBytes
     result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));
@@ -501,7 +502,7 @@ public class TestCompaction extends HBaseTestCase {
       for (int i = 0; i < compactionThreshold; i++) {
         HRegionIncommon loader = new HRegionIncommon(r);
         Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(i)));
-        p.setWriteToWAL(false);
+        p.setDurability(Durability.SKIP_WAL);
         for (int j = 0; j < jmax; j++) {
           p.add(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }
@@ -539,7 +540,7 @@ public class TestCompaction extends HBaseTestCase {
         Delete delete = new Delete(Bytes.add(STARTROW, Bytes.toBytes(i)));
         byte [][] famAndQf = {COLUMN_FAMILY, null};
         delete.deleteFamily(famAndQf[0]);
-        r.delete(delete, true);
+        r.delete(delete);
       }
       r.flushcache();
 

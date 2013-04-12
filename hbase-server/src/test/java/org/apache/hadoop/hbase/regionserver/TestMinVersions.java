@@ -170,7 +170,7 @@ public class TestMinVersions extends HBaseTestCase {
       region.put(p);
 
       Delete d = new Delete(T1, ts-1);
-      region.delete(d, true);
+      region.delete(d);
 
       Get g = new Get(T1);
       g.setMaxVersions();
