@@ -1648,9 +1648,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     forceChangeTaskLogDir();
 
+    //// hadoop2 specific settings
     // Tests were failing because this process used 6GB of virtual memory and was getting killed.
     // we up the VM usable so that processes don't get killed.
     conf.setFloat("yarn.nodemanager.vmem-pmem-ratio", 8.0f);
+
+    // Tests were failing due to MAPREDUCE-4880 / MAPREDUCE-4607 against hadoop 2.0.2-alpha and
+    // this avoids the problem by disabling speculative task execution in tests.
+    conf.setBoolean("mapreduce.map.speculative", false);
+    conf.setBoolean("mapreduce.reduce.speculative", false);
+    ////
 
     // Allow the user to override FS URI for this map-reduce cluster to use.
     mrCluster = new MiniMRCluster(servers,
