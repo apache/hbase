@@ -262,8 +262,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Create all of the RegionPlan's needed to move from the initial cluster state to the desired
    * state.
    *
-   * @param initialRegionMapping Initial mapping of Region to Server
-   * @param clusterState The desired mapping of ServerName to Regions
+   * @param cluster The state of the cluster
    * @return List of RegionPlan's that represent the moves needed to get to desired final state.
    */
   private List<RegionPlan> createRegionPlans(Cluster cluster) {
@@ -325,7 +324,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * {@link StochasticLoadBalancer#balanceCluster(Map)} recognize as signal to try a region move
    * rather than swap.
    *
-   * @param regions        list of regions.
+   * @param cluster The state of the cluster
+   * @param server index of the server
    * @param chanceOfNoSwap Chance that this will decide to try a move rather
    *                       than a swap.
    * @return a random {@link HRegionInfo} or null if an asymmetrical move is
@@ -346,8 +346,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Given a server we will want to switch regions with another server. This
    * function picks a random server from the list.
    *
-   * @param server     Current Server. This server will never be the return value.
-   * @param allServers list of all server from which to pick
+   * @param serverIndex Current Server. This server will never be the return value.
+   * @param cluster The state of the cluster
    * @return random server. Null if no other servers were found.
    */
   private int pickOtherServer(int serverIndex, Cluster cluster) {
@@ -366,8 +366,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * This is the main cost function.  It will compute a cost associated with a proposed cluster
    * state.  All different costs will be combined with their multipliers to produce a double cost.
    *
-   * @param initialRegionMapping Map of where the regions started.
-   * @param clusterState Map of ServerName to list of regions.
+   * @param cluster The state of the cluster
    * @return a double of a cost associated with the proposed
    */
   protected double computeCost(Cluster cluster) {
@@ -410,8 +409,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Given the starting state of the regions and a potential ending state
    * compute cost based upon the number of regions that have moved.
    *
-   * @param initialRegionMapping The starting location of regions.
-   * @param clusterState         The potential new cluster state.
+   * @param cluster The state of the cluster
    * @return The cost. Between 0 and 1.
    */
   double computeMoveCost(Cluster cluster) {
@@ -435,7 +433,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Compute the cost of a potential cluster state from skew in number of
    * regions on a cluster
    *
-   * @param clusterState The proposed cluster state
+   * @param cluster The state of the cluster
    * @return The cost of region load imbalance.
    */
   double computeSkewLoadCost(Cluster cluster) {
@@ -450,7 +448,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Compute the cost of a potential cluster configuration based upon how evenly
    * distributed tables are.
    *
-   * @param clusterState Proposed cluster state.
+   * @param cluster The state of the cluster
    * @return Cost of imbalance in table.
    */
   double computeTableSkewLoadCost(Cluster cluster) {
@@ -469,8 +467,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Compute a cost of a potential cluster configuration based upon where
    * {@link org.apache.hadoop.hbase.regionserver.StoreFile}s are located.
    *
-   * @param initialRegionMapping - not used
-   * @param clusterState The state of the cluster
+   * @param cluster The state of the cluster
    * @return A cost between 0 and 1. 0 Means all regions are on the sever with
    *         the most local store files.
    */
@@ -518,7 +515,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   /**
    * Compute the cost of the current cluster state due to some RegionLoadCost type
    *
-   * @param clusterState the cluster
+   * @param cluster The state of the cluster
    * @param costType     what type of cost to consider
    * @return the scaled cost.
    */
