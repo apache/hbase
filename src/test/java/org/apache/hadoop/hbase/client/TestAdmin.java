@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -1429,6 +1431,21 @@ public class TestAdmin {
     LOG.info("after flushing all regions and rolling logs there are " +
         count + " log files");
     assertTrue(("actual count: " + count), count <= 2);
+  }
+
+  @Test
+  public void testMoveToPreviouslyAssignedRS() throws IOException {
+    byte[] tableName = Bytes.toBytes("testMoveToPreviouslyAssignedRS");
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HMaster master = cluster.getMaster();
+    HBaseAdmin localAdmin = createTable(tableName);
+    List<HRegionInfo> tableRegions = localAdmin.getTableRegions(tableName);
+    HRegionInfo hri = tableRegions.get(0);
+    AssignmentManager am = master.getAssignmentManager();
+    ServerName server = am.getRegionServerOfRegion(hri);
+    localAdmin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(server.getServerName()));
+    assertEquals("Current region server and region server before move should be same.", server,
+      am.getRegionServerOfRegion(hri));
   }
 
   private void setUpforLogRolling() {

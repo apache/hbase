@@ -763,13 +763,13 @@ public class TestMasterObserver {
       // Try to force a move
       Collection<ServerName> servers = master.getClusterStatus().getServers();
       String destName = null;
-      String firstRegionHostnamePortStr = firstGoodPair.getValue().toString();
-      LOG.info("firstRegionHostnamePortStr=" + firstRegionHostnamePortStr);
+      String serverNameForFirstRegion = firstGoodPair.getValue().toString();
+      LOG.info("firstRegionHostnamePortStr=" + serverNameForFirstRegion);
       boolean found = false;
       // Find server that is NOT carrying the first region
       for (ServerName info : servers) {
         LOG.info("ServerName=" + info);
-        if (!firstRegionHostnamePortStr.equals(info.getHostAndPort())) {
+        if (!serverNameForFirstRegion.equals(info.getServerName())) {
           destName = info.toString();
           found = true;
           break;

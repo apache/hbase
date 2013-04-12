@@ -1189,6 +1189,11 @@ Server {
       dest = balancer.randomAssignment(destServers);
     } else {
       dest = new ServerName(Bytes.toString(destServerName));
+      if (dest.equals(p.getSecond())) {
+        LOG.debug("Skipping move of region " + p.getFirst().getRegionNameAsString()
+          + " because region already assigned to the same server " + dest + ".");
+        return;
+      }
     }
     
     // Now we can do the move
