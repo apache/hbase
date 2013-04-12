@@ -25,6 +25,9 @@ package org.apache.hadoop.hbase.regionserver;
  */
 public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
 
+  public static final String OPS_SAMPLE_NAME = "ops";
+  public static final String SIZE_VALUE_NAME = "size";
+
   /**
    * Close the region's metrics as this region is closing.
    */
@@ -41,10 +44,16 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   void updateDelete();
 
   /**
-   * Update related counts of gets.
+   * Update count and sizes of gets.
+   * @param getSize size in bytes of the resulting key values for a get
    */
-  void updateGet();
+  void updateGet(long getSize);
 
+  /**
+   * Update the count and sizes of resultScanner.next()
+   * @param scanSize Size in bytes of the resulting key values for a next()
+   */
+  void updateScan(long scanSize);
   /**
    * Update related counts of increments.
    */
@@ -59,4 +68,6 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
    * Get the aggregate source to which this reports.
    */
   MetricsRegionAggregateSource getAggregateSource();
+
+
 }

@@ -325,24 +325,12 @@ public class TestRegionObserverInterface {
         }
 
         @Override
-        public boolean next(List<KeyValue> results, String metric)
-            throws IOException {
-          return next(results, -1, metric);
-        }
-
-        @Override
         public boolean next(List<KeyValue> results, int limit)
             throws IOException{
-          return next(results, limit, null);
-        }
-
-        @Override
-        public boolean next(List<KeyValue> results, int limit, String metric)
-            throws IOException {
           List<KeyValue> internalResults = new ArrayList<KeyValue>();
           boolean hasMore;
           do {
-            hasMore = scanner.next(internalResults, limit, metric);
+            hasMore = scanner.next(internalResults, limit);
             if (!internalResults.isEmpty()) {
               long row = Bytes.toLong(internalResults.get(0).getRow());
               if (row % 2 == 0) {

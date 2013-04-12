@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MetricMutableStat;
 
 public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
@@ -39,11 +40,14 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private String regionGetKey;
   private String regionIncrementKey;
   private String regionAppendKey;
+  private String regionScanNextKey;
   private MetricMutableCounterLong regionPut;
   private MetricMutableCounterLong regionDelete;
-  private MetricMutableCounterLong regionGet;
   private MetricMutableCounterLong regionIncrement;
   private MetricMutableCounterLong regionAppend;
+
+  private MetricMutableStat regionGet;
+  private MetricMutableStat regionScanNext;
 
   public MetricsRegionSourceImpl(MetricsRegionWrapper regionWrapper,
                                  MetricsRegionAggregateSourceImpl aggregate) {
@@ -70,14 +74,17 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     regionDeleteKey = regionNamePrefix + MetricsRegionServerSource.DELETE_KEY + suffix;
     regionDelete = registry.getLongCounter(regionDeleteKey, 0l);
 
-    regionGetKey = regionNamePrefix + MetricsRegionServerSource.GET_KEY + suffix;
-    regionGet = registry.getLongCounter(regionGetKey, 0l);
-
     regionIncrementKey = regionNamePrefix + MetricsRegionServerSource.INCREMENT_KEY + suffix;
     regionIncrement = registry.getLongCounter(regionIncrementKey, 0l);
 
     regionAppendKey = regionNamePrefix + MetricsRegionServerSource.APPEND_KEY + suffix;
     regionAppend = registry.getLongCounter(regionAppendKey, 0l);
+
+    regionGetKey = regionNamePrefix + MetricsRegionServerSource.GET_KEY;
+    regionGet = registry.newStat(regionGetKey, "", OPS_SAMPLE_NAME, SIZE_VALUE_NAME);
+
+    regionScanNextKey = regionNamePrefix + MetricsRegionServerSource.SCAN_NEXT_KEY;
+    regionScanNext = registry.newStat(regionScanNextKey, "", OPS_SAMPLE_NAME, SIZE_VALUE_NAME);
   }
 
   @Override
@@ -88,10 +95,12 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     LOG.trace("Removing region Metrics: " + regionWrapper.getRegionName());
     registry.removeMetric(regionPutKey);
     registry.removeMetric(regionDeleteKey);
-    registry.removeMetric(regionGetKey);
     registry.removeMetric(regionIncrementKey);
 
     registry.removeMetric(regionAppendKey);
+
+    registry.removeMetric(regionGetKey);
+    registry.removeMetric(regionScanNextKey);
 
     JmxCacheBuster.clearJmxCache();
   }
@@ -107,8 +116,13 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   }
 
   @Override
-  public void updateGet() {
-    regionGet.incr();
+  public void updateGet(long getSize) {
+    regionGet.add(getSize);
+  }
+
+  @Override
+  public void updateScan(long scanSize) {
+    regionScanNext.add(scanSize);
   }
 
   @Override

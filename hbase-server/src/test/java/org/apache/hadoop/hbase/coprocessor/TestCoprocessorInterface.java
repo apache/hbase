@@ -78,32 +78,20 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     }
 
     @Override
-    public boolean next(List<KeyValue> results, String metric)
-        throws IOException {
-      return delegate.next(results, metric);
-    }
-
-    @Override
     public boolean next(List<KeyValue> result, int limit) throws IOException {
       return delegate.next(result, limit);
-    }
-
-    @Override
-    public boolean next(List<KeyValue> result, int limit, String metric)
-        throws IOException {
-      return delegate.next(result, limit, metric);
-    }
-
-    @Override
-    public boolean nextRaw(List<KeyValue> result, int limit, String metric) 
-        throws IOException {
-      return delegate.nextRaw(result, limit, metric);
     }
 
     @Override
     public boolean nextRaw(List<KeyValue> result) 
         throws IOException {
       return delegate.nextRaw(result);
+    }
+
+    @Override
+    public boolean nextRaw(List<KeyValue> result, int limit)
+        throws IOException {
+      return delegate.nextRaw(result, limit);
     }
 
     @Override

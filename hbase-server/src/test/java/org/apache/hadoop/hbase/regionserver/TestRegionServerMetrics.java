@@ -31,6 +31,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import static org.junit.Assert.*;
+
+import java.io.IOException;
 
 
 @Category(MediumTests.class)
@@ -139,7 +142,7 @@ public class TestRegionServerMetrics {
           .getSource()
           .getAggregateSource();
       String prefix = "table."+tableNameString + ".region." + i.getEncodedName();
-      metricsHelper.assertCounter(prefix + ".getCount", 10, agg);
+      metricsHelper.assertCounter(prefix + ".getNumOps", 10, agg);
       metricsHelper.assertCounter(prefix + ".mutateCount", 30, agg);
     }
 
@@ -308,5 +311,44 @@ public class TestRegionServerMetrics {
     metricsHelper.assertCounter("appendNumOps", 73, serverSource);
 
     t.close();
+  }
+
+  @Test
+  public void testScanNext() throws IOException {
+    String tableNameString = "testScanNext";
+    byte[] tableName = Bytes.toBytes(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("One");
+
+
+    TEST_UTIL.createTable(tableName, cf);
+    HTable t = new HTable(conf, tableName);
+    t.setAutoFlush(false);
+    for (int insertCount =0; insertCount < 100; insertCount++) {
+      Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
+      p.add(cf, qualifier, val);
+      t.put(p);
+    }
+    t.flushCommits();
+
+    Scan s = new Scan();
+    s.setBatch(1);
+    s.setCaching(1);
+    ResultScanner resultScanners = t.getScanner(s);
+
+    for (int nextCount = 0; nextCount < 30; nextCount++) {
+      Result result = resultScanners.next();
+      assertNotNull(result);
+      assertEquals(1, result.size());
+    }
+    for ( HRegionInfo i:t.getRegionLocations().keySet()) {
+      MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+          .getMetrics()
+          .getSource()
+          .getAggregateSource();
+      String prefix = "table."+tableNameString + ".region." + i.getEncodedName();
+      metricsHelper.assertCounter(prefix + ".scanNextNumOps", 30, agg);
+    }
   }
 }
