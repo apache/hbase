@@ -721,7 +721,7 @@ Server {
     //are invalidated
     this.tableLockManager = TableLockManager.createTableLockManager(conf, zooKeeper, serverName);
     if (!masterRecovery) {
-      this.tableLockManager.reapAllTableWriteLocks();
+      this.tableLockManager.reapWriteLocks();
     }
 
     status.setStatus("Initializing ZK system trackers");

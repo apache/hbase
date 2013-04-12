@@ -48,8 +48,7 @@ public class ZKInterProcessReadLock extends ZKInterProcessLockBase {
    * {@inheritDoc}
    */
   @Override
-  protected String getLockPath(String createdZNode, List<String> children)
-  throws IOException, InterruptedException {
+  protected String getLockPath(String createdZNode, List<String> children) throws IOException {
     TreeSet<String> writeChildren =
         new TreeSet<String>(ZNodeComparator.COMPARATOR);
     for (String child : children) {
@@ -67,17 +66,8 @@ public class ZKInterProcessReadLock extends ZKInterProcessLockBase {
     String pathToWatch = lowerChildren.last();
     String nodeHoldingLock = lowerChildren.first();
     String znode = ZKUtil.joinZNode(parentLockNode, nodeHoldingLock);
-    try {
-      handleLockMetadata(znode);
-    } catch (IOException e) {
-      LOG.warn("Error processing lock metadata in " + nodeHoldingLock, e);
-    }
-    return pathToWatch;
-  }
+    handleLockMetadata(znode);
 
-  @Override
-  public void reapAllLocks() throws IOException {
-    throw new UnsupportedOperationException(
-        "Lock reaping is not supported for ZK based read locks");
+    return pathToWatch;
   }
 }

@@ -28,18 +28,20 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public interface InterProcessReadWriteLock {
 
   /**
-   * Obtain a reader lock containing given metadata.
+   * Obtain a read lock containing given metadata.
    * @param metadata Serialized lock metadata (this may contain information
    *                 such as the process owning the lock or the purpose for
-   *                 which the lock was acquired). Must not be null.
-   * @return An instantiated InterProcessReadWriteLock instance
+   *                 which the lock was acquired).
+   * @return An instantiated InterProcessLock instance
    */
   public InterProcessLock readLock(byte[] metadata);
 
   /**
-   * Obtain a writer lock containing given metadata.
-   * @param metadata See documentation of metadata parameter in readLock()
-   * @return An instantiated InterProcessReadWriteLock instance
+   * Obtain a write lock containing given metadata.
+   * @param metadata Serialized lock metadata (this may contain information
+   *                 such as the process owning the lock or the purpose for
+   *                 which the lock was acquired).
+   * @return An instantiated InterProcessLock instance
    */
   public InterProcessLock writeLock(byte[] metadata);
 }

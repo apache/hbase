@@ -28,7 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * ZooKeeper based write lock:
@@ -47,8 +46,7 @@ public class ZKInterProcessWriteLock extends ZKInterProcessLockBase {
    * {@inheritDoc}
    */
   @Override
-  protected String getLockPath(String createdZNode, List<String> children)
-  throws IOException, InterruptedException {
+  protected String getLockPath(String createdZNode, List<String> children) throws IOException {
     TreeSet<String> sortedChildren =
         new TreeSet<String>(ZNodeComparator.COMPARATOR);
     sortedChildren.addAll(children);
@@ -56,43 +54,8 @@ public class ZKInterProcessWriteLock extends ZKInterProcessLockBase {
     if (pathToWatch != null) {
       String nodeHoldingLock = sortedChildren.first();
       String znode = ZKUtil.joinZNode(parentLockNode, nodeHoldingLock);
-      try {
-        handleLockMetadata(znode);
-      } catch (IOException e) {
-        LOG.warn("Error processing lock metadata in " + nodeHoldingLock, e);
-      }
+      handleLockMetadata(znode);
     }
     return pathToWatch;
-  }
-
-  /**
-   * Referred in zk recipe as "Revocable Shared Locks with Freaking Laser Beams"
-   * (http://zookeeper.apache.org/doc/trunk/recipes.html).
-   */
-  public void reapAllLocks() throws IOException {
-    List<String> children;
-    try {
-      children = ZKUtil.listChildrenNoWatch(zkWatcher, parentLockNode);
-    } catch (KeeperException e) {
-      LOG.error("Unexpected ZooKeeper error when listing children", e);
-      throw new IOException("Unexpected ZooKeeper exception", e);
-    }
-
-    KeeperException deferred = null;
-    for (String child : children) {
-      if (isChildWriteLock(child)) {
-        String znode = ZKUtil.joinZNode(parentLockNode, child);
-        LOG.info("Reaping write lock for znode:" + znode);
-        try {
-          ZKUtil.deleteNodeFailSilent(zkWatcher, znode);
-        } catch (KeeperException ex) {
-          LOG.warn("Error reaping the znode for write lock :" + znode);
-          deferred = ex;
-        }
-      }
-    }
-    if (deferred != null) {
-      throw new IOException("ZK exception while reaping locks:", deferred);
-    }
   }
 }

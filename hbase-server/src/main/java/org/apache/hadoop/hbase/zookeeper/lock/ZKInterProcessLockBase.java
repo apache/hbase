@@ -62,6 +62,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
   protected final ZooKeeperWatcher zkWatcher;
   protected final String parentLockNode;
   protected final String fullyQualifiedZNode;
+  protected final String childZNode;
   protected final byte[] metadata;
   protected final MetadataHandler handler;
 
@@ -113,18 +114,22 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
     /** Parses sequenceId from the znode name. Zookeeper documentation
      * states: The sequence number is always fixed length of 10 digits, 0 padded
      */
-    public static int getChildSequenceId(String childZNode) {
+    public static long getChildSequenceId(String childZNode) {
       Preconditions.checkNotNull(childZNode);
       assert childZNode.length() >= 10;
       String sequenceIdStr = childZNode.substring(childZNode.length() - 10);
-      return Integer.parseInt(sequenceIdStr);
+      return Long.parseLong(sequenceIdStr);
     }
 
     @Override
     public int compare(String zNode1, String zNode2) {
-      int seq1 = getChildSequenceId(zNode1);
-      int seq2 = getChildSequenceId(zNode2);
-      return seq1 - seq2;
+      long seq1 = getChildSequenceId(zNode1);
+      long seq2 = getChildSequenceId(zNode2);
+      if (seq1 == seq2) {
+        return 0;
+      } else {
+        return seq1 < seq2 ? -1 : 1;
+      }
     }
   }
 
@@ -143,6 +148,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
     this.fullyQualifiedZNode = ZKUtil.joinZNode(parentLockNode, childNode);
     this.metadata = metadata;
     this.handler = handler;
+    this.childZNode = childNode;
   }
 
   /**
@@ -233,6 +239,17 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
   }
 
   /**
+   * Check if a child znode represents a read lock.
+   * @param child The child znode we want to check.
+   * @return whether the child znode represents a read lock
+   */
+  protected static boolean isChildReadLock(String child) {
+    int idx = child.lastIndexOf(ZKUtil.ZNODE_PATH_SEPARATOR);
+    String suffix = child.substring(idx + 1);
+    return suffix.startsWith(WRITE_LOCK_CHILD_NODE_PREFIX);
+  }
+
+  /**
    * Check if a child znode represents a write lock.
    * @param child The child znode we want to check.
    * @return whether the child znode represents a write lock
@@ -241,6 +258,17 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
     int idx = child.lastIndexOf(ZKUtil.ZNODE_PATH_SEPARATOR);
     String suffix = child.substring(idx + 1);
     return suffix.startsWith(WRITE_LOCK_CHILD_NODE_PREFIX);
+  }
+
+  /**
+   * Check if a child znode represents the same type(read or write) of lock
+   * @param child The child znode we want to check.
+   * @return whether the child znode represents the same type(read or write) of lock
+   */
+  protected boolean isChildOfSameType(String child) {
+    int idx = child.lastIndexOf(ZKUtil.ZNODE_PATH_SEPARATOR);
+    String suffix = child.substring(idx + 1);
+    return suffix.startsWith(this.childZNode);
   }
 
   /**
@@ -304,29 +332,105 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
   }
 
   /**
+   * Process metadata stored in a ZNode using a callback
+   * <p>
+   * @param lockZNode The node holding the metadata
+   * @return True if metadata was ready and processed, false otherwise.
+   */
+  protected boolean handleLockMetadata(String lockZNode) {
+    return handleLockMetadata(lockZNode, handler);
+  }
+
+  /**
    * Process metadata stored in a ZNode using a callback object passed to
    * this instance.
    * <p>
    * @param lockZNode The node holding the metadata
-   * @return True if metadata was ready and processed
-   * @throws IOException If an unexpected ZooKeeper error occurs
-   * @throws InterruptedException If interrupted when reading the metadata
+   * @param handler the metadata handler
+   * @return True if metadata was ready and processed, false on exception.
    */
-  protected boolean handleLockMetadata(String lockZNode)
-  throws IOException, InterruptedException {
-    byte[] metadata = null;
-    try {
-      metadata = ZKUtil.getData(zkWatcher, lockZNode);
-    } catch (KeeperException ex) {
-      LOG.warn("Cannot getData for znode:" + lockZNode, ex);
-    }
-    if (metadata == null) {
+  protected boolean handleLockMetadata(String lockZNode, MetadataHandler handler) {
+    if (handler == null) {
       return false;
     }
-    if (handler != null) {
+    try {
+      byte[] metadata = ZKUtil.getData(zkWatcher, lockZNode);
       handler.handleMetadata(metadata);
+    } catch (KeeperException ex) {
+      LOG.warn("Error processing lock metadata in " + lockZNode);
+      return false;
     }
     return true;
+  }
+
+  @Override
+  public void reapAllLocks() throws IOException {
+    reapExpiredLocks(0);
+  }
+
+  /**
+   * Will delete all lock znodes of this type (either read or write) which are "expired"
+   * according to timeout. Assumption is that the clock skew between zookeeper and this servers
+   * is negligible.
+   * Referred in zk recipe as "Revocable Shared Locks with Freaking Laser Beams".
+   * (http://zookeeper.apache.org/doc/trunk/recipes.html).
+   */
+  public void reapExpiredLocks(long timeout) throws IOException {
+    List<String> children;
+    try {
+      children = ZKUtil.listChildrenNoWatch(zkWatcher, parentLockNode);
+    } catch (KeeperException e) {
+      LOG.error("Unexpected ZooKeeper error when listing children", e);
+      throw new IOException("Unexpected ZooKeeper exception", e);
+    }
+
+    KeeperException deferred = null;
+    Stat stat = new Stat();
+    long expireDate = System.currentTimeMillis() - timeout; //we are using cTime in zookeeper
+    for (String child : children) {
+      if (isChildOfSameType(child)) {
+        String znode = ZKUtil.joinZNode(parentLockNode, child);
+        try {
+          ZKUtil.getDataNoWatch(zkWatcher, znode, stat);
+          if (stat.getCtime() < expireDate) {
+            LOG.info("Reaping lock for znode:" + znode);
+            ZKUtil.deleteNodeFailSilent(zkWatcher, znode);
+          }
+        } catch (KeeperException ex) {
+          LOG.warn("Error reaping the znode for write lock :" + znode);
+          deferred = ex;
+        }
+      }
+    }
+    if (deferred != null) {
+      throw new IOException("ZK exception while reaping locks:", deferred);
+    }
+  }
+
+  /**
+   * Visits the locks (both held and attempted) with the given MetadataHandler.
+   * @throws InterruptedException If there is an unrecoverable error
+   */
+  public void visitLocks(MetadataHandler handler) throws IOException {
+    List<String> children;
+    try {
+      children = ZKUtil.listChildrenNoWatch(zkWatcher, parentLockNode);
+    } catch (KeeperException e) {
+      LOG.error("Unexpected ZooKeeper error when listing children", e);
+      throw new IOException("Unexpected ZooKeeper exception", e);
+    }
+    if (children.size() > 0) {
+      for (String child : children) {
+        if (isChildOfSameType(child)) {
+          String znode = ZKUtil.joinZNode(parentLockNode, child);
+          String childWatchesZNode = getLockPath(child, children);
+          if (childWatchesZNode == null) {
+            LOG.info("Lock is held by: " + child);
+          }
+          handleLockMetadata(znode, handler);
+        }
+      }
+    }
   }
 
   /**
@@ -343,5 +447,5 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
    *         acquired lock.
    */
   protected abstract String getLockPath(String myZNode, List<String> children)
-  throws IOException, InterruptedException;
+  throws IOException;
 }
