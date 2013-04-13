@@ -607,9 +607,14 @@ public class ReplicationSource extends Thread
     } catch (IOException ioe) {
       LOG.warn(peerClusterZnode + " Got: ", ioe);
       this.reader = null;
-      // TODO Need a better way to determinate if a file is really gone but
-      // TODO without scanning all logs dir
-      if (sleepMultiplier == this.maxRetriesMultiplier) {
+      if (ioe.getCause() instanceof NullPointerException) {
+        // Workaround for race condition in HDFS-4380
+        // which throws a NPE if we open a file before any data node has the most recent block
+        // Just sleep and retry.  Will require re-reading compressed HLogs for compressionContext.
+        LOG.warn("Got NPE opening reader, will retry.");
+      } else if (sleepMultiplier == this.maxRetriesMultiplier) {
+        // TODO Need a better way to determine if a file is really gone but
+        // TODO without scanning all logs dir  
         LOG.warn("Waited too long for this file, considering dumping");
         return !processEndOfFile();
       }

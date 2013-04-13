@@ -67,7 +67,11 @@ public class ReplicationHLogReaderManager {
       this.reader = HLog.getReader(this.fs, path, this.conf);
       this.lastPath = path;
     } else {
-      this.reader.reset();
+      try {
+        this.reader.reset();
+      } catch (NullPointerException npe) {
+        throw new IOException("NPE resetting reader, likely HDFS-4380", npe);
+      }
     }
     return this.reader;
   }

@@ -445,7 +445,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     Result[] res = scanner.next(NB_ROWS_IN_BIG_BATCH);
     scanner.close();
 
-    assertEquals(NB_ROWS_IN_BATCH *10, res.length);
+    assertEquals(NB_ROWS_IN_BIG_BATCH, res.length);
 
     scan = new Scan();
 
