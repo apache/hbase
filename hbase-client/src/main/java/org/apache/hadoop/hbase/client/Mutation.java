@@ -51,8 +51,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       2 * ClassSize.REFERENCE +
       // Timestamp
       1 * Bytes.SIZEOF_LONG +
-      // writeToWAL
-      Bytes.SIZEOF_BOOLEAN +
+      // durability
+      ClassSize.REFERENCE +
       // familyMap
       ClassSize.REFERENCE +
       // familyMap
