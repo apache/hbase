@@ -20,14 +20,13 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Classes;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -573,17 +572,6 @@ public class Scan extends OperationWithAttributes implements Writable {
     return map;
   }
 
-  @SuppressWarnings("unchecked")
-  private Writable createForName(String className) {
-    try {
-      Class<? extends Writable> clazz =
-        (Class<? extends Writable>) Class.forName(className);
-      return WritableFactories.newInstance(clazz, new Configuration());
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException("Can't find class " + className);
-    }
-  }
-
   //Writable
   public void readFields(final DataInput in)
   throws IOException {
@@ -598,7 +586,8 @@ public class Scan extends OperationWithAttributes implements Writable {
     this.caching = in.readInt();
     this.cacheBlocks = in.readBoolean();
     if(in.readBoolean()) {
-      this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
+      this.filter = Classes.createWritableForName(
+        Bytes.toString(Bytes.readByteArray(in)));
       this.filter.readFields(in);
     }
     this.tr = new TimeRange();

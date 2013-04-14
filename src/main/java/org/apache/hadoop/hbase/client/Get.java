@@ -19,14 +19,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Classes;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -248,6 +247,7 @@ public class Get extends OperationWithAttributes
    * Method for retrieving the get's RowLock
    * @return RowLock
    */
+  @SuppressWarnings("deprecation")
   public RowLock getRowLock() {
     return new RowLock(this.row, this.lockId);
   }
@@ -400,7 +400,8 @@ public class Get extends OperationWithAttributes
     this.maxVersions = in.readInt();
     boolean hasFilter = in.readBoolean();
     if (hasFilter) {
-      this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
+      this.filter = Classes.createWritableForName(
+        Bytes.toString(Bytes.readByteArray(in)));
       this.filter.readFields(in);
     }
     this.cacheBlocks = in.readBoolean();
@@ -457,16 +458,5 @@ public class Get extends OperationWithAttributes
       }
     }
     writeAttributes(out);
-  }
-
-  @SuppressWarnings("unchecked")
-  private Writable createForName(String className) {
-    try {
-      Class<? extends Writable> clazz =
-        (Class<? extends Writable>) Class.forName(className);
-      return WritableFactories.newInstance(clazz, new Configuration());
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException("Can't find class " + className);
-    }
   }
 }
