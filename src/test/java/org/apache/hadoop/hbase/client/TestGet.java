@@ -36,13 +36,13 @@ import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.io.ByteStreams;
-import com.sun.org.apache.xml.internal.security.utils.Base64;
 
 // TODO: cover more test cases
 @Category(SmallTests.class)
