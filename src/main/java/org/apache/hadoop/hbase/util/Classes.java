@@ -20,10 +20,26 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.io.WritableFactories;
+
 /**
  * Utilities for class manipulation.
  */
 public class Classes {
+
+  /**
+   * Dynamic class loader to load filter/comparators
+   */
+  private final static ClassLoader CLASS_LOADER;
+
+  static {
+    ClassLoader parent = Classes.class.getClassLoader();
+    Configuration conf = HBaseConfiguration.create();
+    CLASS_LOADER = new DynamicClassLoader(conf, parent);
+  }
 
   /**
    * Equivalent of {@link Class#forName(String)} which also returns classes for
@@ -61,6 +77,7 @@ public class Classes {
     return valueType;
   }
 
+  @SuppressWarnings("rawtypes")
   public static String stringify(Class[] classes) {
     StringBuilder buf = new StringBuilder();
     if (classes != null) {
@@ -74,5 +91,45 @@ public class Classes {
       buf.append("NULL");
     }
     return buf.toString();
+  }
+
+  /**
+   * Used to dynamically load a filter class, and create a Writable filter.
+   * This filter class most likely extends Configurable.
+   *
+   * @param className the filter class name.
+   * @return a filter
+   */
+  @SuppressWarnings("unchecked")
+  public static Filter createWritableForName(String className) {
+    try {
+      Class<? extends Filter> clazz =
+        (Class<? extends Filter>) Class.forName(className, true, CLASS_LOADER);
+      return (Filter)WritableFactories.newInstance(clazz, new Configuration());
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException("Can't find class " + className);
+    }
+  }
+
+  /**
+   * This method is almost the same as #createWritableForName, except
+   * that this one doesn't expect the filter class to extends Configurable.
+   *
+   * @param className the filter class name.
+   * @return a filter
+   */
+  @SuppressWarnings("unchecked")
+  public static Filter createForName(String className) {
+    try {
+      Class<? extends Filter> clazz =
+        (Class<? extends Filter>)Class.forName(className, true, CLASS_LOADER);
+      return (Filter)clazz.newInstance();
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException("Can't find class " + className);
+    } catch (InstantiationException e) {
+      throw new RuntimeException("Couldn't instantiate " + className, e);
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException("No access to " + className, e);
+    }
   }
 }

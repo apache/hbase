@@ -21,11 +21,11 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.Classes;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.List;
 
 /**
  * A wrapper filter that filters an entire row if any of the KeyValue checks do
@@ -91,17 +91,8 @@ public class SkipFilter extends FilterBase {
   }
 
   public void readFields(DataInput in) throws IOException {
-    String className = in.readUTF();
-    try {
-      this.filter = (Filter)(Class.forName(className).newInstance());
-      this.filter.readFields(in);
-    } catch (InstantiationException e) {
-      throw new RuntimeException("Failed deserialize.", e);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException("Failed deserialize.", e);
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException("Failed deserialize.", e);
-    }
+    this.filter = Classes.createForName(in.readUTF());
+    this.filter.readFields(in);
   }
 
   public boolean isFamilyEssential(byte[] name) {
