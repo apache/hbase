@@ -880,6 +880,44 @@ public class TestHLogSplit {
     }
   }
 
+  @Test
+  public void testRetryOpenDuringRecovery() throws Exception {
+    generateHLogs(-1);
+
+    fs.initialize(fs.getUri(), conf);
+
+    FileSystem spiedFs = Mockito.spy(fs);
+    // The "Cannot obtain block length" part is very important,
+    // that's how it comes out of HDFS. If HDFS changes the exception
+    // message, this test needs to be adjusted accordingly.
+    //
+    // When DFSClient tries to open a file, HDFS needs to locate
+    // the last block of the file and get its length. However, if the
+    // last block is under recovery, HDFS may have problem to obtain
+    // the block length, in which case, retry may help.
+    Mockito.doAnswer(new Answer<FSDataInputStream>() {
+      private int count = 0;
+
+      public FSDataInputStream answer(InvocationOnMock invocation) throws Throwable {
+            if (count++ < 3) {
+                throw new IOException("Cannot obtain block length");
+            }
+            return (FSDataInputStream)invocation.callRealMethod();
+        }
+    }).when(spiedFs).open(Mockito.<Path>any(), Mockito.anyInt());
+
+    HLogSplitter logSplitter = new HLogSplitter(
+        conf, HBASEDIR, HLOGDIR, OLDLOGDIR, spiedFs, null);
+
+    try {
+      logSplitter.splitLog();
+      assertEquals(NUM_WRITERS, fs.listStatus(OLDLOGDIR).length);
+      assertFalse(fs.exists(HLOGDIR));
+    } catch (IOException e) {
+      fail("There shouldn't be any exception but: " + e.toString());
+    }
+  }
+
   /**
    * Test log split process with fake data and lots of edits to trigger threading
    * issues.
@@ -1330,6 +1368,7 @@ public class TestHLogSplit {
   private Path getLogForRegion(Path rootdir, byte[] table, String region)
   throws IOException {
     Path tdir = HTableDescriptor.getTableDir(rootdir, table);
+    @SuppressWarnings("deprecation")
     Path editsdir = HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
       Bytes.toString(region.getBytes())));
     FileStatus [] files = this.fs.listStatus(editsdir);
