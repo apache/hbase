@@ -31,13 +31,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.exceptions.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.exceptions.TableExistsException;
-import org.apache.hadoop.hbase.exceptions.TableNotDisabledException;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.exceptions.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.exceptions.TableExistsException;
+import org.apache.hadoop.hbase.exceptions.TableNotDisabledException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.BulkReOpen;
@@ -63,6 +63,7 @@ public abstract class TableEventHandler extends EventHandler {
   protected final byte [] tableName;
   protected final String tableNameStr;
   protected TableLock tableLock;
+  private boolean isPrepareCalled = false;
 
   public TableEventHandler(EventType eventType, byte [] tableName, Server server,
       MasterServices masterServices) {
@@ -97,6 +98,7 @@ public abstract class TableEventHandler extends EventHandler {
         releaseTableLock();
       }
     }
+    this.isPrepareCalled = true;
     return this;
   }
 
@@ -113,6 +115,11 @@ public abstract class TableEventHandler extends EventHandler {
 
   @Override
   public void process() {
+    if (!isPrepareCalled) {
+      //For proper table locking semantics, the implementor should ensure to call
+      //TableEventHandler.prepare() before calling process()
+      throw new RuntimeException("Implementation should have called prepare() first");
+    }
     try {
       LOG.info("Handling table operation " + eventType + " on table " +
           Bytes.toString(tableName));

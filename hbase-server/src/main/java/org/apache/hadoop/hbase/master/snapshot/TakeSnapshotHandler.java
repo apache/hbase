@@ -43,10 +43,10 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -129,10 +129,18 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
   public TakeSnapshotHandler prepare() throws Exception {
     super.prepare();
-    loadTableDescriptor(); // check that .tableinfo is present
+    this.tableLock.acquire(); // after this, you should ensure to release this lock in
+                              // case of exceptions
+    boolean success = false;
+    try {
+      loadTableDescriptor(); // check that .tableinfo is present
+      success = true;
+    } finally {
+      if (!success) {
+        releaseTableLock();
+      }
+    }
 
-    this.tableLock.acquire(); //after this, you should ensure to release this lock in
-                              //case of exceptions
     return this;
   }
 
