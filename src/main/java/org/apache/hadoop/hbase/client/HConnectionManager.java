@@ -1161,11 +1161,10 @@ public class HConnectionManager {
      */
     void deleteCachedLocation(final byte [] tableName, final byte [] row) {
       synchronized (this.cachedRegionLocations) {
-        Map<byte[], HRegionLocation> tableLocations =
-            getTableLocations(tableName);
-        // start to examine the cache. we can only do cache actions
-        // if there's something in the cache for this table.
+        Map<byte[], HRegionLocation> tableLocations = getTableLocations(tableName);
         if (!tableLocations.isEmpty()) {
+          // start to examine the cache. we can only do cache actions
+          // if there's something in the cache for this table.
           HRegionLocation rl = getCachedLocation(tableName, row);
           if (rl != null) {
             tableLocations.remove(rl.getRegionInfo().getStartKey());
@@ -1175,6 +1174,28 @@ public class HConnectionManager {
                 " for tableName=" + Bytes.toString(tableName) +
                 " from cache " + "because of " + Bytes.toStringBinary(row));
             }
+          }
+        }
+      }
+    }
+
+    @Override
+    public void deleteCachedRegionLocation(final HRegionLocation location) {
+      if (location == null) {
+        return;
+      }
+      synchronized (this.cachedRegionLocations) {
+        byte[] tableName = location.getRegionInfo().getTableName();
+        Map<byte[], HRegionLocation> tableLocations = getTableLocations(tableName);
+        if (!tableLocations.isEmpty()) {
+          // Delete if there's something in the cache for this region.
+          HRegionLocation removedLocation =
+              tableLocations.remove(location.getRegionInfo().getStartKey());
+          if (LOG.isDebugEnabled() && removedLocation != null) {
+            LOG.debug("Removed " +
+              location.getRegionInfo().getRegionNameAsString() +
+              " for tableName=" + Bytes.toString(tableName) +
+              " from cache");
           }
         }
       }

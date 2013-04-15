@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -172,6 +173,10 @@ public abstract class ServerCallable<T> implements Callable<T> {
           if (hrl != null) {
             getConnection().clearCaches(hrl.getHostnamePort());
           }
+        } else if (t instanceof NotServingRegionException && numRetries == 1) {
+          // Purge cache entries for this specific region from META cache
+          // since we don't call connect(true) when number of retries is 1.
+          getConnection().deleteCachedRegionLocation(location);
         }
         RetriesExhaustedException.ThrowableWithExtraContext qt =
           new RetriesExhaustedException.ThrowableWithExtraContext(t,
