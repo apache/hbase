@@ -706,6 +706,8 @@ public class SnapshotManager implements Stoppable {
       final HTableDescriptor hTableDescriptor) throws HBaseSnapshotException {
     String tableName = hTableDescriptor.getNameAsString();
 
+    // TODO: There is definite race condition for managing the single handler. We should fix
+    // and remove the limitation of single snapshot / restore at a time.
     // make sure we aren't running a snapshot on the same table
     if (isTakingSnapshot(tableName)) {
       throw new RestoreSnapshotException("Snapshot in progress on the restore table=" + tableName);
@@ -718,7 +720,7 @@ public class SnapshotManager implements Stoppable {
 
     try {
       RestoreSnapshotHandler handler =
-        new RestoreSnapshotHandler(master, snapshot, hTableDescriptor, metricsMaster);
+        new RestoreSnapshotHandler(master, snapshot, hTableDescriptor, metricsMaster).prepare();
       this.executorService.submit(handler);
       restoreHandlers.put(hTableDescriptor.getNameAsString(), handler);
     } catch (Exception e) {
