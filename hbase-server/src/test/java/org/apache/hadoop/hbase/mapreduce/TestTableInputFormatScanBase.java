@@ -30,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -42,18 +41,21 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 /**
+ * <p>
  * Tests various scan start and stop row scenarios. This is set in a scan and
  * tested in a MapReduce job to see if that is handed over and done properly
  * too.
+ * </p>
+ * <p>
+ * This test is broken into two parts in order to side-step the test timeout
+ * period of 900, as documented in HBASE-8326.
+ * </p>
  */
-@Category(LargeTests.class)
-public class TestTableInputFormatScan {
+public abstract class TestTableInputFormatScanBase {
 
-  static final Log LOG = LogFactory.getLog(TestTableInputFormatScan.class);
+  static final Log LOG = LogFactory.getLog(TestTableInputFormatScanBase.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   static final byte[] TABLE_NAME = Bytes.toBytes("scantest");
@@ -161,162 +163,13 @@ public class TestTableInputFormatScan {
   }
 
   /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanEmptyToEmpty()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan(null, null, null);
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanEmptyToAPP()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan(null, "app", "apo");
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanEmptyToBBA()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan(null, "bba", "baz");
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanEmptyToBBB()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan(null, "bbb", "bba");
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanEmptyToOPP()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan(null, "opp", "opo");
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanOBBToOPP()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("obb", "opp", "opo");
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanOBBToQPP()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("obb", "qpp", "qpo");
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanOPPToEmpty()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("opp", null, "zzz");
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanYYXToEmpty()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("yyx", null, "zzz");
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanYYYToEmpty()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("yyy", null, "zzz");
-  }
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testScanYZYToEmpty()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScan("yzy", null, "zzz");
-  }
-
-  @Test
-  public void testScanFromConfiguration()
-  throws IOException, InterruptedException, ClassNotFoundException {
-    testScanFromConfiguration("bba", "bbd", "bbc");
-  }
-
-  /**
    * Tests an MR Scan initialized from properties set in the Configuration.
    * 
    * @throws IOException
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
-  private void testScanFromConfiguration(String start, String stop, String last)
+  protected void testScanFromConfiguration(String start, String stop, String last)
   throws IOException, InterruptedException, ClassNotFoundException {
     String jobName = "ScanFromConfig" + (start != null ? start.toUpperCase() : "Empty") +
       "To" + (stop != null ? stop.toUpperCase() : "Empty");
@@ -353,7 +206,7 @@ public class TestTableInputFormatScan {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
-  private void testScan(String start, String stop, String last)
+  protected void testScan(String start, String stop, String last)
   throws IOException, InterruptedException, ClassNotFoundException {
     String jobName = "Scan" + (start != null ? start.toUpperCase() : "Empty") +
       "To" + (stop != null ? stop.toUpperCase() : "Empty");

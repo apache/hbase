@@ -25,9 +25,13 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -545,32 +549,33 @@ public class TableMapReduceUtil {
    * the DistributedCache.
    */
   public static void addDependencyJars(Configuration conf,
-      Class... classes) throws IOException {
+      Class<?>... classes) throws IOException {
 
     FileSystem localFs = FileSystem.getLocal(conf);
-
     Set<String> jars = new HashSet<String>();
-
     // Add jars that are already in the tmpjars variable
-    jars.addAll( conf.getStringCollection("tmpjars") );
+    jars.addAll(conf.getStringCollection("tmpjars"));
+
+    // add jars as we find them to a map of contents jar name so that we can avoid
+    // creating new jars for classes that have already been packaged.
+    Map<String, String> packagedClasses = new HashMap<String, String>();
 
     // Add jars containing the specified classes
-    for (Class clazz : classes) {
+    for (Class<?> clazz : classes) {
       if (clazz == null) continue;
 
-      String pathStr = findOrCreateJar(clazz);
-      if (pathStr == null) {
+      Path path = findOrCreateJar(clazz, localFs, packagedClasses);
+      if (path == null) {
         LOG.warn("Could not find jar for class " + clazz +
                  " in order to ship it to the cluster.");
         continue;
       }
-      Path path = new Path(pathStr);
       if (!localFs.exists(path)) {
         LOG.warn("Could not validate jar file " + path + " for class "
                  + clazz);
         continue;
       }
-      jars.add(path.makeQualified(localFs).toString());
+      jars.add(path.toString());
     }
     if (jars.isEmpty()) return;
 
@@ -584,17 +589,22 @@ public class TableMapReduceUtil {
    * a directory in the classpath, it creates a Jar on the fly with the
    * contents of the directory and returns the path to that Jar. If a Jar is
    * created, it is created in the system temporary directory. Otherwise,
-   * returns an existing jar that contains a class of the same name.
+   * returns an existing jar that contains a class of the same name. Maintains
+   * a mapping from jar contents to the tmp jar created.
    * @param my_class the class to find.
+   * @param fs the FileSystem with which to qualify the returned path.
+   * @param packagedClasses a map of class name to path.
    * @return a jar file that contains the class.
    * @throws IOException
    */
-  private static String findOrCreateJar(Class<?> my_class)
+  private static Path findOrCreateJar(Class<?> my_class, FileSystem fs,
+      Map<String, String> packagedClasses)
   throws IOException {
     // attempt to locate an existing jar for the class.
-    String jar = findContainingJar(my_class);
+    String jar = findContainingJar(my_class, packagedClasses);
     if (null == jar || jar.isEmpty()) {
       jar = getJar(my_class);
+      updateMap(jar, packagedClasses);
     }
 
     if (null == jar || jar.isEmpty()) {
@@ -602,23 +612,45 @@ public class TableMapReduceUtil {
     }
 
     LOG.debug(String.format("For class %s, using jar %s", my_class.getName(), jar));
-    return jar;
+    return new Path(jar).makeQualified(fs);
   }
 
   /**
-   * Find a jar that contains a class of the same name, if any.
-   * It will return a jar file, even if that is not the first thing
-   * on the class path that has a class with the same name.
-   * 
-   * This is shamelessly copied from JobConf
-   * 
+   * Add entries to <code>packagedClasses</code> corresponding to class files
+   * contained in <code>jar</code>.
+   * @param jar The jar who's content to list.
+   * @param packagedClasses map[class -> jar]
+   */
+  private static void updateMap(String jar, Map<String, String> packagedClasses) throws IOException {
+    ZipFile zip = null;
+    try {
+      zip = new ZipFile(jar);
+      for (Enumeration<? extends ZipEntry> iter = zip.entries(); iter.hasMoreElements();) {
+        ZipEntry entry = iter.nextElement();
+        if (entry.getName().endsWith("class")) {
+          packagedClasses.put(entry.getName(), jar);
+        }
+      }
+    } finally {
+      if (null != zip) zip.close();
+    }
+  }
+
+  /**
+   * Find a jar that contains a class of the same name, if any. It will return
+   * a jar file, even if that is not the first thing on the class path that
+   * has a class with the same name. Looks first on the classpath and then in
+   * the <code>packagedClasses</code> map.
    * @param my_class the class to find.
    * @return a jar file that contains the class, or null.
    * @throws IOException
    */
-  private static String findContainingJar(Class<?> my_class) throws IOException {
+  private static String findContainingJar(Class<?> my_class, Map<String, String> packagedClasses)
+      throws IOException {
     ClassLoader loader = my_class.getClassLoader();
     String class_file = my_class.getName().replaceAll("\\.", "/") + ".class";
+
+    // first search the classpath
     for (Enumeration<URL> itr = loader.getResources(class_file); itr.hasMoreElements();) {
       URL url = itr.nextElement();
       if ("jar".equals(url.getProtocol())) {
@@ -637,14 +669,18 @@ public class TableMapReduceUtil {
         return toReturn.replaceAll("!.*$", "");
       }
     }
+
+    // now look in any jars we've packaged using JarFinder
+    for (Map.Entry<String, String> e : packagedClasses.entrySet()) {
+      if (e.getKey().equals(class_file)) return e.getValue();
+    }
     return null;
   }
 
   /**
-   * Invoke 'getJar' on a JarFinder implementation. Useful for some job configuration
-   * contexts (HBASE-8140) and also for testing on MRv2. First check if we have
-   * HADOOP-9426. Lacking that, fall back to the backport.
-   *
+   * Invoke 'getJar' on a JarFinder implementation. Useful for some job
+   * configuration contexts (HBASE-8140) and also for testing on MRv2. First
+   * check if we have HADOOP-9426. Lacking that, fall back to the backport.
    * @param my_class the class to find.
    * @return a jar file that contains the class, or null.
    */
