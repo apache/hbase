@@ -163,6 +163,12 @@ public interface HConnection extends Abortable, Closeable {
   public void clearRegionCache(final byte [] tableName);
 
   /**
+   * Deletes cached locations for the specific region.
+   * @param location The location object for the region, to be purged from cache.
+   */
+  public void deleteCachedRegionLocation(final HRegionLocation location);
+
+  /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
    * lives in, ignoring any value that might be in the cache.
    * @param tableName name of the table <i>row</i> is in
