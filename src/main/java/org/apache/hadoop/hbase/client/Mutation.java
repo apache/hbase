@@ -27,13 +27,17 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public abstract class Mutation extends OperationWithAttributes implements Row {
+  private static final Log LOG = LogFactory.getLog(Mutation.class);
   // Attribute used in Mutations to indicate the originating cluster.
   private static final String CLUSTER_ID_ATTR = "_c.id_";
+  private static final String DURABILITY_ID_ATTR = "_dur_";
 
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
@@ -110,6 +114,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
   }
 
   /**
+   * @deprecated Use {@link #getDurability()} instead.
    * @return true if edits should be applied to WAL, false if not
    */
   public boolean getWriteToWAL() {
@@ -119,10 +124,36 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
   /**
    * Set whether this Delete should be written to the WAL or not.
    * Not writing the WAL means you may lose edits on server crash.
+   * This method will reset any changes made via {@link #setDurability(Durability)} 
    * @param write true if edits should be written to WAL, false if not
+   * @deprecated Use {@link #setDurability(Durability)} instead.
    */
   public void setWriteToWAL(boolean write) {
-    this.writeToWAL = write;
+    setDurability(write ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
+  }
+
+  /**
+   * Set the durability for this mutation.
+   * Note that RegionServers prior to 0.94.7 will only honor {@link Durability#SKIP_WAL}.
+   * This method will reset any changes made via {@link #setWriteToWAL(boolean)} 
+   * @param d
+   */
+  public void setDurability(Durability d) {
+    setAttribute(DURABILITY_ID_ATTR, Bytes.toBytes(d.ordinal()));
+    this.writeToWAL = d != Durability.SKIP_WAL;
+  }
+
+  /** Get the current durability */
+  public Durability getDurability() {
+    byte[] attr = getAttribute(DURABILITY_ID_ATTR);
+    if (attr != null) {
+      try {
+        return Durability.valueOf(Bytes.toInt(attr));
+      } catch (IllegalArgumentException iax) {
+        LOG.warn("Invalid or unknown durability settting", iax);
+      }
+    }
+    return writeToWAL ? Durability.USE_DEFAULT : Durability.SKIP_WAL;
   }
 
   /**

@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -2380,6 +2381,8 @@ public class HRegion implements HeapSize { // , Writable{
       // ------------------------------------
       // STEP 4. Build WAL edit
       // ----------------------------------
+      Durability durability = Durability.USE_DEFAULT;
+
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         // Skip puts that were determined to be invalid during preprocessing
         if (batchOp.retCodeDetails[i].getOperationStatusCode()
@@ -2389,12 +2392,17 @@ public class HRegion implements HeapSize { // , Writable{
         batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
 
         Mutation m = batchOp.operations[i].getFirst();
-        if (!m.getWriteToWAL()) {
+        Durability tmpDur = m.getDurability(); 
+        if (tmpDur.ordinal() > durability.ordinal()) {
+          durability = tmpDur;
+        }
+        if (tmpDur == Durability.SKIP_WAL) {
           if (m instanceof Put) {
             recordPutWithoutWal(m.getFamilyMap());
           }
           continue;
         }
+
         // Add WAL edits by CP
         WALEdit fromCP = batchOp.walEditsFromCoprocessors[i];
         if (fromCP != null) {
@@ -2429,7 +2437,7 @@ public class HRegion implements HeapSize { // , Writable{
       // STEP 7. Sync wal.
       // -------------------------
       if (walEdit.size() > 0) {
-        syncOrDefer(txid);
+        syncOrDefer(txid, durability);
       }
       walSyncSuccessful = true;
       // calling the post CP hook for batch mutation
@@ -4856,6 +4864,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       long now = EnvironmentEdgeManager.currentTimeMillis();
       byte[] byteNow = Bytes.toBytes(now);
+      Durability durability = Durability.USE_DEFAULT;
       try {
         // 5. Check mutations and apply edits to a single WALEdit
         for (Mutation m : mutations) {
@@ -4873,7 +4882,11 @@ public class HRegion implements HeapSize { // , Writable{
                 "Action must be Put or Delete. But was: "
                     + m.getClass().getName());
           }
-          if (m.getWriteToWAL()) {
+          Durability tmpDur = m.getDurability(); 
+          if (tmpDur.ordinal() > durability.ordinal()) {
+            durability = tmpDur;
+          }
+          if (tmpDur != Durability.SKIP_WAL) {
             addFamilyMapToWALEdit(m.getFamilyMap(), walEdit);
           }
         }
@@ -4904,7 +4917,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         // 9. sync WAL if required
         if (walEdit.size() > 0) {
-          syncOrDefer(txid);
+          syncOrDefer(txid, durability);
         }
         walSyncSuccessful = true;
 
@@ -5122,7 +5135,8 @@ public class HRegion implements HeapSize { // , Writable{
         releaseRowLock(lid);
       }
       if (writeToWAL) {
-        syncOrDefer(txid); // sync the transaction log outside the rowlock
+        // sync the transaction log outside the rowlock
+        syncOrDefer(txid, append.getDurability());
       }
     } finally {
       closeRegionOperation();
@@ -5269,7 +5283,8 @@ public class HRegion implements HeapSize { // , Writable{
         releaseRowLock(lid);
       }
       if (writeToWAL) {
-        syncOrDefer(txid); // sync the transaction log outside the rowlock
+        // sync the transaction log outside the rowlock
+        syncOrDefer(txid, Durability.USE_DEFAULT);
       }
     } finally {
       closeRegionOperation();
@@ -5366,7 +5381,8 @@ public class HRegion implements HeapSize { // , Writable{
         releaseRowLock(lid);
       }
       if (writeToWAL) {
-        syncOrDefer(txid); // sync the transaction log outside the rowlock
+        // sync the transaction log outside the rowlock
+        syncOrDefer(txid, Durability.USE_DEFAULT);
       }
     } finally {
       closeRegionOperation();
@@ -5835,9 +5851,32 @@ public class HRegion implements HeapSize { // , Writable{
    * @param txid should sync up to which transaction
    * @throws IOException If anything goes wrong with DFS
    */
-  private void syncOrDefer(long txid) throws IOException {
-    if (this.getRegionInfo().isMetaRegion() || !isDeferredLogSyncEnabled()) {
+  private void syncOrDefer(long txid, Durability durability) throws IOException {
+    if (this.getRegionInfo().isMetaRegion()) {
       this.log.sync(txid);
+    } else {
+      switch(durability) {
+      case USE_DEFAULT:
+        // do what CF defaults to
+        if (!isDeferredLogSyncEnabled()) {
+          this.log.sync(txid);
+        }
+        break;
+      case SKIP_WAL:
+        // nothing do to
+        break;
+      case ASYNC_WAL:
+        // defer the sync, unless we globally can't
+        if (this.deferredLogSyncDisabled) {
+          this.log.sync(txid);
+        }
+        break;
+      case SYNC_WAL:
+      case FSYNC_WAL:
+        // sync the WAL edit (SYNC and FSYNC treated the same for now)
+        this.log.sync(txid);
+        break;
+      }
     }
   }
 
