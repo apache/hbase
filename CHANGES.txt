@@ -1,5 +1,94 @@
 HBase Change Log
 
+Release 0.94.7 - 4/15/2013
+Sub-task
+
+    [HBASE-7615] - Add metrics for snapshots
+    [HBASE-7801] - Allow a deferred sync option per Mutation.
+    [HBASE-8210] - Backport the LoadTest portions of HBASE-7383
+    [HBASE-8316] - JoinedHeap for non essential column families should reseek instead of seek
+
+Bug
+
+    [HBASE-7401] - Remove warning message about running 'hbase migrate'
+    [HBASE-7658] - grant with an empty string as permission should throw an exception
+    [HBASE-7817] - Suggested JDWP debug options in hbase-env.sh are wrong
+    [HBASE-7824] - Improve master start up time when there is log splitting work
+    [HBASE-7925] - Back port HBASE-6881 into 0.94
+    [HBASE-7961] - truncate on disabled table should throw TableNotEnabledException.
+    [HBASE-8014] - Backport HBASE-6915 to 0.94.
+    [HBASE-8030] - znode path of online region servers is hard coded in rolling_restart.sh
+    [HBASE-8044] - split/flush/compact/major_compact from hbase shell does not work for region key with \x format
+    [HBASE-8081] - Backport HBASE-7213 (separate hlog for meta tables) to 0.94
+    [HBASE-8092] - bulk assignment in 0.94 doesn't handle ZK errors very well
+    [HBASE-8096] - [replication] NPE while replicating a log that is acquiring a new block from HDFS
+    [HBASE-8118] - TestTablePermission depends on the execution order
+    [HBASE-8125] - HBASE-7435 breaks BuiltInGzipDecompressor on Hadoop < 1.0.x
+    [HBASE-8127] - Region of a disabling or disabled table could be stuck in transition state when RS dies during Master initialization
+    [HBASE-8128] - HTable#put improvements
+    [HBASE-8131] - Create table handler needs to handle failure cases.
+    [HBASE-8142] - Sporadic TestZKProcedureControllers failures on trunk
+    [HBASE-8146] - IntegrationTestBigLinkedList does not work on distributed setup
+    [HBASE-8150] - server should not produce RAITE for already-opening region in 0.94 (because master retry logic handles this case poorly)
+    [HBASE-8151] - Decode memstoreTS in HFileReaderV2 only when necessary
+    [HBASE-8158] - Backport HBASE-8140 "TableMapReduceUtils#addDependencyJar fails when nested inside another MR job"
+    [HBASE-8160] - HMaster#move doesn't check if master initialized
+    [HBASE-8166] - Avoid writing the memstoreTS into HFiles when possible
+    [HBASE-8169] - TestMasterFailover#testMasterFailoverWithMockedRITOnDeadRS may fail due to regions randomly assigned to a RS
+    [HBASE-8170] - HbaseAdmin.createTable cannot handle creating three regions
+    [HBASE-8176] - Backport HBASE-5335 "Dynamic Schema Configurations" to 0.94
+    [HBASE-8179] - JSON formatting for cluster status is sort of broken
+    [HBASE-8188] - Avoid unnecessary row compare in StoreScanner
+    [HBASE-8192] - Logic errror causes infinite loop in HRegion.bulkLoadHFiles(List)
+    [HBASE-8207] - Replication could have data loss when machine name contains hyphen "-"
+    [HBASE-8208] - In some situations data is not replicated to slaves when deferredLogSync is enabled
+    [HBASE-8211] - Support for NN HA for 0.94
+    [HBASE-8212] - Introduce a new separator instead of hyphen('-') for renaming recovered queues' znodes
+    [HBASE-8213] - global authorization may lose efficacy
+    [HBASE-8215] - Removing existing .regioninfo in writeRegioninfoOnFilesystem
+    [HBASE-8222] - User class should implement equals() and hashCode()
+    [HBASE-8225] - [replication] minor code bug when registering ReplicationLogCleaner
+    [HBASE-8226] - HBaseTestingUtility#waitUntilAllRegionsAssigned won't return if it counts "too many" regions
+    [HBASE-8229] - Replication code logs like crazy if a target table cannot be found.
+    [HBASE-8230] - Possible NPE on regionserver abort if replication service has not been started
+    [HBASE-8231] - delete tests in table_tests.rb(TestShell) always running on empty table.
+    [HBASE-8232] - TestAccessController occasionally fails with IndexOutOfBoundsException
+    [HBASE-8246] - Backport HBASE-6318 to 0.94 where SplitLogWorker exits due to ConcurrentModificationException
+    [HBASE-8259] - Snapshot backport in 0.94.6 breaks rolling restarts
+    [HBASE-8266] - Master cannot start if TableNotFoundException is thrown while partial table recovery
+    [HBASE-8270] - Backport HBASE-8097 'MetaServerShutdownHandler may potentially keep bumping up DeadServer.numProcessing' to 0.94
+    [HBASE-8274] - Backport to 94: HBASE-7488 Implement HConnectionManager.locateRegions which is currently returning null
+    [HBASE-8276] - Backport hbase-6738 to 0.94 "Too aggressive task resubmission from the distributed log manager"
+    [HBASE-8285] - HBaseClient never recovers for single HTable.get() calls with no retries when regions move
+    [HBASE-8288] - HBaseFileSystem: Refactoring and correct semantics for createPath methods
+    [HBASE-8303] - Increse the test timeout to 60s when they are less than 20s
+    [HBASE-8313] - Add Bloom filter testing for HFileOutputFormat
+    [HBASE-8326] - mapreduce.TestTableInputFormatScan times out frequently
+
+Improvement
+
+    [HBASE-7599] - Port HBASE-6066 (low hanging read path improvements) to 0.94
+    [HBASE-8148] - Allow IPC to bind on a specific address
+    [HBASE-8152] - Avoid creating empty reference file when splitkey is outside the key range of a store file
+    [HBASE-8174] - Backport HBASE-8161(setting blocking file count on table level doesn't work) to 0.94
+    [HBASE-8198] - Backport HBASE-8063(Filter HFiles based on first/last key) into 0.94
+    [HBASE-8199] - Eliminate exception for ExportSnapshot against the null table snapshot (with no data in)
+    [HBASE-8209] - Improve LoadTest extensibility
+
+New Feature
+
+    [HBASE-1936] - ClassLoader that loads from hdfs; useful adding filters to classpath without having to restart services
+    [HBASE-7415] - [snapshots] Add task information to snapshot operation
+
+Task
+
+    [HBASE-7929] - Reapply hbase-7507 "Make memstore flush be able to retry after exception" to 0.94 branch.
+
+Test
+
+    [HBASE-8106] - Test to check replication log znodes move is done correctly
+
+
 Release 0.94.6 - 3/14/2013
 Sub-task
 
