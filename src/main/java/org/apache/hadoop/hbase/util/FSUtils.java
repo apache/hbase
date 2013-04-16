@@ -129,6 +129,7 @@ public abstract class FSUtils {
    * @return output stream to the created file
    * @throws IOException if the file cannot be created
    */
+  @SuppressWarnings("deprecation")
   public static FSDataOutputStream create(FileSystem fs, Path path,
       FsPermission perm) throws IOException {
     return create(fs, path, perm, true);
@@ -948,7 +949,7 @@ public abstract class FSUtils {
    * @throws IOException
    */
   public abstract void recoverFileLease(final FileSystem fs, final Path p,
-      Configuration conf) throws IOException;
+      Configuration conf, CancelableProgressable reporter) throws IOException;
 
   /**
    * @param fs

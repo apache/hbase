@@ -455,7 +455,7 @@ public class TestHLog  {
       public void run() {
           try {
             FSUtils.getInstance(fs, rlConf)
-              .recoverFileLease(recoveredFs, walPath, rlConf);
+              .recoverFileLease(recoveredFs, walPath, rlConf, null);
           } catch (IOException e) {
             exception = e;
           }

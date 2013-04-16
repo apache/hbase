@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -715,8 +716,12 @@ public class HLog implements Syncable {
    * @throws IOException
    */
   public static Reader getReader(final FileSystem fs, final Path path,
-                                 Configuration conf)
-      throws IOException {
+      Configuration conf) throws IOException {
+    return getReader(fs, path, conf, null);
+  }
+
+  public static Reader getReader(final FileSystem fs, final Path path,
+        Configuration conf, CancelableProgressable reporter) throws IOException {
     if (logReaderClass == null) {
       logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
         SequenceFileLogReader.class, Reader.class);
@@ -739,6 +744,9 @@ public class HLog implements Syncable {
           if (msg != null && msg.contains("Cannot obtain block length")) {
             if (++nbAttempt == 1) {
               LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
+            }
+            if (reporter != null && !reporter.progress()) {
+              throw new InterruptedIOException("Operation is cancelled");
             }
             if (nbAttempt > 2 && openTimeout < System.currentTimeMillis()) {
               LOG.error("Can't open after " + nbAttempt + " attempts and "

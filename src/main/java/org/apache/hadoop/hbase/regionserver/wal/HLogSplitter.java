@@ -108,7 +108,6 @@ public class HLogSplitter {
   
   private MonitoredTask status;
 
-
   /**
    * Create a new HLogSplitter using the given {@link Configuration} and the
    * <code>hbase.hlog.splitter.impl</code> property to derived the instance
@@ -282,7 +281,7 @@ public class HLogSplitter {
             + ": " + logPath + ", length=" + logLength);
         Reader in;
         try {
-          in = getReader(fs, log, conf, skipErrors);
+          in = getReader(fs, log, conf, skipErrors, null);
           if (in != null) {
             parseHLog(in, logPath, entryBuffers, fs, conf, skipErrors);
             try {
@@ -356,54 +355,47 @@ public class HLogSplitter {
     final Map<byte[], Object> logWriters = Collections.
     synchronizedMap(new TreeMap<byte[], Object>(Bytes.BYTES_COMPARATOR));
     boolean isCorrupted = false;
-    
     Preconditions.checkState(status == null);
-    status = TaskMonitor.get().createStatus(
-        "Splitting log file " + logfile.getPath() +
-        "into a temporary staging area.");
 
     Object BAD_WRITER = new Object();
-
-    boolean progress_failed = false;
 
     boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors",
         HLog.SPLIT_SKIP_ERRORS_DEFAULT);
     int interval = conf.getInt("hbase.splitlog.report.interval.loglines", 1024);
-    // How often to send a progress report (default 1/2 the zookeeper session
-    // timeout of if that not set, the split log DEFAULT_TIMEOUT)
-    int period = conf.getInt("hbase.splitlog.report.period",
-      conf.getInt("hbase.splitlog.manager.timeout", ZKSplitLog.DEFAULT_TIMEOUT) / 2);
-    int numOpenedFilesBeforeReporting =
-      conf.getInt("hbase.splitlog.report.openedfiles", 3);
     Path logPath = logfile.getPath();
-    long logLength = logfile.getLen();
-    LOG.info("Splitting hlog: " + logPath + ", length=" + logLength);
-    status.setStatus("Opening log file");
-    Reader in = null;
-    try {
-      in = getReader(fs, logfile, conf, skipErrors);
-    } catch (CorruptedLogFileException e) {
-      LOG.warn("Could not get reader, corrupted log file " + logPath, e);
-      ZKSplitLog.markCorrupted(rootDir, logfile.getPath().getName(), fs);
-      isCorrupted = true;
-    }
-    if (in == null) {
-      status.markComplete("Was nothing to split in log file");
-      LOG.warn("Nothing to split in log file " + logPath);
-      return true;
-    }
-    long t = EnvironmentEdgeManager.currentTimeMillis();
-    long last_report_at = t;
-    if (reporter != null && reporter.progress() == false) {
-      status.markComplete("Failed: reporter.progress asked us to terminate");
-      return false;
-    }
-    // Report progress every so many edits and/or files opened (opening a file
-    // takes a bit of time).
+    boolean progress_failed = false;
     int editsCount = 0;
-    int numNewlyOpenedFiles = 0;
-    Entry entry;
+    Reader in = null;
+
     try {
+      status = TaskMonitor.get().createStatus(
+        "Splitting log file " + logfile.getPath() +
+        "into a temporary staging area.");
+      long logLength = logfile.getLen();
+      LOG.info("Splitting hlog: " + logPath + ", length=" + logLength);
+      status.setStatus("Opening log file");
+      if (reporter != null && !reporter.progress()) {
+        progress_failed = true;
+        return false;
+      }
+      try {
+        in = getReader(fs, logfile, conf, skipErrors, reporter);
+      } catch (CorruptedLogFileException e) {
+        LOG.warn("Could not get reader, corrupted log file " + logPath, e);
+        ZKSplitLog.markCorrupted(rootDir, logfile.getPath().getName(), fs);
+        isCorrupted = true;
+      }
+      if (in == null) {
+        status.markComplete("Was nothing to split in log file");
+        LOG.warn("Nothing to split in log file " + logPath);
+        return true;
+      }
+
+      int numOpenedFilesBeforeReporting =
+        conf.getInt("hbase.splitlog.report.openedfiles", 3);
+      int numNewlyOpenedFiles = 0;
+      Entry entry;
+
       while ((entry = getNextLogLine(in,logPath, skipErrors)) != null) {
         byte[] region = entry.getKey().getEncodedRegionName();
         Object o = logWriters.get(region);
@@ -434,14 +426,10 @@ public class HLogSplitter {
           numNewlyOpenedFiles = 0;
           String countsStr = "edits=" + editsCount + ", files=" + logWriters.size();
           status.setStatus("Split " + countsStr);
-          long t1 = EnvironmentEdgeManager.currentTimeMillis();
-          if ((t1 - last_report_at) > period) {
-            last_report_at = t;
-            if (reporter != null && reporter.progress() == false) {
-              status.markComplete("Failed: reporter.progress asked us to terminate; " + countsStr);
-              progress_failed = true;
-              return false;
-            }
+          if (reporter != null && reporter.progress() == false) {
+            status.markComplete("Failed: reporter.progress asked us to terminate; " + countsStr);
+            progress_failed = true;
+            return false;
           }
         }
       }
@@ -454,16 +442,12 @@ public class HLogSplitter {
       throw e;
     } finally {
       boolean allWritersClosed = false;
+      int n = 0;
       try {
-        int n = 0;
         for (Map.Entry<byte[], Object> logWritersEntry : logWriters.entrySet()) {
           Object o = logWritersEntry.getValue();
-          long t1 = EnvironmentEdgeManager.currentTimeMillis();
-          if ((t1 - last_report_at) > period) {
-            last_report_at = t;
-            if ((progress_failed == false) && (reporter != null) && (reporter.progress() == false)) {
-              progress_failed = true;
-            }
+          if ((progress_failed == false) && (reporter != null) && (reporter.progress() == false)) {
+            progress_failed = true;
           }
           if (o == BAD_WRITER) {
             continue;
@@ -495,12 +479,12 @@ public class HLogSplitter {
           }
         }
         allWritersClosed = true;
+      } finally {
         String msg = "Processed " + editsCount + " edits across " + n + " regions"
             + " threw away edits for " + (logWriters.size() - n) + " regions" + "; log file="
             + logPath + " is corrupted = " + isCorrupted + " progress failed = " + progress_failed;
         LOG.info(msg);
         status.markComplete(msg);
-      } finally {
         if (!allWritersClosed) {
           for (Map.Entry<byte[], Object> logWritersEntry : logWriters.entrySet()) {
             Object o = logWritersEntry.getValue();
@@ -517,7 +501,9 @@ public class HLogSplitter {
             }
           }
         }
-        in.close();
+        if (in != null) {
+          in.close();
+        }
       }
     }
     return !progress_failed;
@@ -732,7 +718,7 @@ public class HLogSplitter {
    * @throws CorruptedLogFile
    */
   protected Reader getReader(FileSystem fs, FileStatus file, Configuration conf,
-      boolean skipErrors)
+      boolean skipErrors, CancelableProgressable reporter)
       throws IOException, CorruptedLogFileException {
     Path path = file.getPath();
     long length = file.getLen();
@@ -747,9 +733,9 @@ public class HLogSplitter {
     }
 
     try {
-      FSUtils.getInstance(fs, conf).recoverFileLease(fs, path, conf);
+      FSUtils.getInstance(fs, conf).recoverFileLease(fs, path, conf, reporter);
       try {
-        in = getReader(fs, path, conf);
+        in = getReader(fs, path, conf, reporter);
       } catch (EOFException e) {
         if (length <= 0) {
           // TODO should we ignore an empty, not-last log file if skip.errors
@@ -765,8 +751,8 @@ public class HLogSplitter {
         }
       }
     } catch (IOException e) {
-      if (!skipErrors) {
-        throw e;
+      if (!skipErrors || e instanceof InterruptedIOException) {
+        throw e; // Don't mark the file corrupted if interrupted, or not skipErrors
       }
       CorruptedLogFileException t =
         new CorruptedLogFileException("skipErrors=true Could not open hlog " +
@@ -834,9 +820,9 @@ public class HLogSplitter {
   /**
    * Create a new {@link Reader} for reading logs to split.
    */
-  protected Reader getReader(FileSystem fs, Path curLogFile, Configuration conf)
-      throws IOException {
-    return HLog.getReader(fs, curLogFile, conf);
+  protected Reader getReader(FileSystem fs, Path curLogFile,
+      Configuration conf, CancelableProgressable reporter) throws IOException {
+    return HLog.getReader(fs, curLogFile, conf, reporter);
   }
 
   /**

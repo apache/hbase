@@ -192,6 +192,7 @@ public class TestDistributedLogSplitting {
     for (HRegionInfo hri : regions) {
 
       Path tdir = HTableDescriptor.getTableDir(rootdir, table);
+      @SuppressWarnings("deprecation")
       Path editsdir =
         HLog.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
         hri.getEncodedName()));

@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog.TaskState;
@@ -71,7 +72,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   Thread worker;
   private final String serverName;
   private final TaskExecutor splitTaskExecutor;
-  private long zkretries;
 
   private Object taskReadyLock = new Object();
   volatile int taskReadySeq = 0;
@@ -80,14 +80,17 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private volatile boolean exitWorker;
   private Object grabTaskLock = new Object();
   private boolean workerInGrabTask = false;
-
+  private final int report_period;
 
   public SplitLogWorker(ZooKeeperWatcher watcher, Configuration conf,
       String serverName, TaskExecutor splitTaskExecutor) {
     super(watcher);
     this.serverName = serverName;
     this.splitTaskExecutor = splitTaskExecutor;
-    this.zkretries = conf.getLong("hbase.splitlog.zk.retries", 3);
+
+    report_period = conf.getInt("hbase.splitlog.report.period",
+      conf.getInt("hbase.splitlog.manager.timeout",
+        ZKSplitLog.DEFAULT_TIMEOUT) / 3);
   }
 
   public SplitLogWorker(ZooKeeperWatcher watcher, final Configuration conf,
@@ -280,15 +283,22 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       status = splitTaskExecutor.exec(ZKSplitLog.getFileName(currentTask),
           new CancelableProgressable() {
 
+        private long last_report_at = 0;
+
         @Override
         public boolean progress() {
-          if (attemptToOwnTask(false) == false) {
-            LOG.warn("Failed to heartbeat the task" + currentTask);
-            return false;
+          long t = EnvironmentEdgeManager.currentTimeMillis();
+          if ((t - last_report_at) > report_period) {
+            last_report_at = t;
+            if (!attemptToOwnTask(false)) {
+              LOG.warn("Failed to heartbeat the task" + currentTask);
+              return false;
+            }
           }
           return true;
         }
       });
+
       switch (status) {
         case DONE:
           endTask(TaskState.TASK_DONE, tot_wkr_task_done);

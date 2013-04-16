@@ -32,9 +32,9 @@ import org.apache.commons.logging.LogFactory;
 public class FSMapRUtils extends FSUtils {
   private static final Log LOG = LogFactory.getLog(FSMapRUtils.class);
   
-  public void recoverFileLease(final FileSystem fs, final Path p, 
-      Configuration conf) throws IOException {
-    LOG.info("Recovering file " + p.toString() + 
+  public void recoverFileLease(final FileSystem fs, final Path p,
+      Configuration conf, CancelableProgressable reporter) throws IOException {
+    LOG.info("Recovering file " + p.toString() +
       " by changing permission to readonly");
     FsPermission roPerm = new FsPermission((short) 0444);
     fs.setPermission(p, roPerm);

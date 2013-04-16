@@ -52,8 +52,8 @@ public class FSHDFSUtils extends FSUtils{
   public static final long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
 
   @Override
-  public void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
-  throws IOException{
+  public void recoverFileLease(final FileSystem fs, final Path p,
+      Configuration conf, CancelableProgressable reporter) throws IOException{
     if (!isAppendSupported(conf)) {
       LOG.warn("Running on HDFS without append enabled may result in data loss");
       return;
@@ -109,6 +109,10 @@ public class FSHDFSUtils extends FSUtils{
           throw new IOException("Failed to open " + p + " for append", e);
         }
       }
+      if (reporter != null && !reporter.progress()) {
+        throw new InterruptedIOException("Operation is cancelled");
+      }
+
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ex) {
