@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
@@ -88,7 +89,7 @@ public class TestSnapshotDescriptionUtils {
    */
   @Test
   public void testCompleteSnapshotWithNoSnapshotDirectoryFailure() throws Exception {
-    Path snapshotDir = new Path(root, ".snapshot");
+    Path snapshotDir = new Path(root, HConstants.SNAPSHOT_DIR_NAME);
     Path tmpDir = new Path(snapshotDir, ".tmp");
     Path workingDir = new Path(tmpDir, "not_a_snapshot");
     assertFalse("Already have working snapshot dir: " + workingDir

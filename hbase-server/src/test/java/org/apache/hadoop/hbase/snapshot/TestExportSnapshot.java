@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -205,12 +206,12 @@ public class TestExportSnapshot {
     for (FileStatus fileStatus: rootFiles) {
       String name = fileStatus.getPath().getName();
       assertTrue(fileStatus.isDir());
-      assertTrue(name.equals(".snapshot") || name.equals(".archive"));
+      assertTrue(name.equals(HConstants.SNAPSHOT_DIR_NAME) || name.equals(".archive"));
     }
 
     // compare the snapshot metadata and verify the hfiles
     final FileSystem hdfs = FileSystem.get(hdfsUri, TEST_UTIL.getConfiguration());
-    final Path snapshotDir = new Path(".snapshot", Bytes.toString(snapshotName));
+    final Path snapshotDir = new Path(HConstants.SNAPSHOT_DIR_NAME, Bytes.toString(snapshotName));
     verifySnapshot(hdfs, new Path(TEST_UTIL.getDefaultRootDirPath(), snapshotDir),
         fs, new Path(copyDir, snapshotDir));
     verifyArchive(fs, copyDir, Bytes.toString(snapshotName));
@@ -233,7 +234,8 @@ public class TestExportSnapshot {
    */
   private void verifyArchive(final FileSystem fs, final Path rootDir, final String snapshotName)
       throws IOException {
-    final Path exportedSnapshot = new Path(rootDir, new Path(".snapshot", snapshotName));
+    final Path exportedSnapshot = new Path(rootDir,
+      new Path(HConstants.SNAPSHOT_DIR_NAME, snapshotName));
     final Path exportedArchive = new Path(rootDir, ".archive");
     LOG.debug(listFiles(fs, exportedArchive, exportedArchive));
     SnapshotReferenceUtil.visitReferencedFiles(fs, exportedSnapshot,
