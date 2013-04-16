@@ -1404,7 +1404,7 @@ public class Bytes {
       throw new IllegalArgumentException("b <= a");
     }
     if (num <= 0) {
-      throw new IllegalArgumentException("num cannot be < 0");
+      throw new IllegalArgumentException("num cannot be <= 0");
     }
     byte [] prependHeader = {1, 0};
     final BigInteger startBI = new BigInteger(add(prependHeader, aPadded));
