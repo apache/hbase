@@ -688,8 +688,11 @@ public final class HConstants {
    * remaining snapshot constants; this is here to keep HConstants dependencies at a minimum and
    * uni-directional.
    */
-  public static final String SNAPSHOT_DIR_NAME = ".snapshot";
+  public static final String SNAPSHOT_DIR_NAME = ".hbase-snapshot";
 
+  /* Name of old snapshot directory. See HBASE-8352 for details on why it needs to be renamed */
+  public static final String OLD_SNAPSHOT_DIR_NAME = ".snapshot";
+  
   /** Temporary directory used for table creation and deletion */
   public static final String HBASE_TEMP_DIRECTORY = ".tmp";
 
@@ -697,7 +700,8 @@ public final class HConstants {
   public static final List<String> HBASE_NON_TABLE_DIRS =
     Collections.unmodifiableList(Arrays.asList(new String[] { HREGION_LOGDIR_NAME,
       HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME, SPLIT_LOGDIR_NAME,
-      HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME, HBASE_TEMP_DIRECTORY }));
+      HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME, HBASE_TEMP_DIRECTORY,
+      OLD_SNAPSHOT_DIR_NAME }));
 
   /** Directories that are not HBase user table directories */
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =
