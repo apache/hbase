@@ -138,7 +138,8 @@ struct TScan {
   3:optional i64 timestamp,
   4:optional list<Text> columns,
   5:optional i32 caching,
-  6:optional Text filterString
+  6:optional Text filterString,
+  7:optional i32 batchSize
 }
 
 //
