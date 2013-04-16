@@ -91,9 +91,13 @@ public class TestLogRolling  {
   }
 
   // Need to override this setup so we can edit the config before it gets sent
- // to the HDFS & HBase cluster startup.
- @BeforeClass
+  // to the HDFS & HBase cluster startup.
+  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // TODO: testLogRollOnDatanodeDeath fails if short circuit reads are on under the hadoop2
+    // profile. See HBASE-9337 for related issues.
+    System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
+
     /**** configuration for testLogRolling ****/
     // Force a region split after every 768KB
     TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE, 768L * 1024L);
