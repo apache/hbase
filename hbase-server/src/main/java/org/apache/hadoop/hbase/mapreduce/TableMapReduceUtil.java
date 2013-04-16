@@ -670,11 +670,9 @@ public class TableMapReduceUtil {
       }
     }
 
-    // now look in any jars we've packaged using JarFinder
-    for (Map.Entry<String, String> e : packagedClasses.entrySet()) {
-      if (e.getKey().equals(class_file)) return e.getValue();
-    }
-    return null;
+    // now look in any jars we've packaged using JarFinder. Returns null when
+    // no jar is found.
+    return packagedClasses.get(class_file);
   }
 
   /**
