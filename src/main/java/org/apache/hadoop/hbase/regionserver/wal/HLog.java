@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
@@ -716,22 +717,50 @@ public class HLog implements Syncable {
   public static Reader getReader(final FileSystem fs, final Path path,
                                  Configuration conf)
       throws IOException {
-    try {
-
-      if (logReaderClass == null) {
-
-        logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
-            SequenceFileLogReader.class, Reader.class);
-      }
-
-
-      HLog.Reader reader = logReaderClass.newInstance();
-      reader.init(fs, path, conf);
-      return reader;
-    } catch (IOException e) {
-      throw e;
+    if (logReaderClass == null) {
+      logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
+        SequenceFileLogReader.class, Reader.class);
     }
-    catch (Exception e) {
+
+    try {
+      // A hlog file could be under recovery, so it may take several
+      // tries to get it open. Instead of claiming it is corrupted, retry
+      // to open it up to 5 minutes by default.
+      long startWaiting = System.currentTimeMillis();
+      long openTimeout = conf.getInt("hbase.hlog.open.timeout", 300000) + startWaiting;
+      int nbAttempt = 0;
+      while (true) {
+        try {
+          HLog.Reader reader = logReaderClass.newInstance();
+          reader.init(fs, path, conf);
+          return reader;
+        } catch (IOException e) {
+          String msg = e.getMessage();
+          if (msg != null && msg.contains("Cannot obtain block length")) {
+            if (++nbAttempt == 1) {
+              LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
+            }
+            if (nbAttempt > 2 && openTimeout < System.currentTimeMillis()) {
+              LOG.error("Can't open after " + nbAttempt + " attempts and "
+                + (System.currentTimeMillis() - startWaiting)
+                + "ms " + " for " + path);
+            } else {
+              try {
+                Thread.sleep(nbAttempt < 3 ? 500 : 1000);
+                continue; // retry
+              } catch (InterruptedException ie) {
+                InterruptedIOException iioe = new InterruptedIOException();
+                iioe.initCause(ie);
+                throw iioe;
+              }
+            }
+          }
+          throw e;
+        }
+      }
+    } catch (IOException ie) {
+      throw ie;
+    } catch (Exception e) {
       throw new IOException("Cannot get log reader", e);
     }
   }
