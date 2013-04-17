@@ -116,7 +116,7 @@ public class TestSnapshotFromAdmin {
     HBaseAdmin admin = new HBaseAdmin(mockConnection);
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     // check that invalid snapshot names fail
-    failSnapshotStart(admin, builder.setName(".snapshot").build());
+    failSnapshotStart(admin, builder.setName(HConstants.SNAPSHOT_DIR_NAME).build());
     failSnapshotStart(admin, builder.setName("-snapshot").build());
     failSnapshotStart(admin, builder.setName("snapshot fails").build());
     failSnapshotStart(admin, builder.setName("snap$hot").build());
