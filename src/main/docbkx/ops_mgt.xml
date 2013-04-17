@@ -713,6 +713,106 @@ false
       </para>
     </section>
   </section>  <!--  backup -->
+
+  <section xml:id="ops.snapshots">
+    <title>HBase Snapshots</title>
+    <para>HBase Snapshots allow you to take a snapshot of a table without too much impact on Region Servers.
+      Snapshot, Clone and restore operations don't involve data copying.
+      Also, Exporting the snapshot to another cluster doesn't have impact on the Region Servers.
+    </para>
+    <para>Prior to version 0.94.6, the only way to backup or to clone a table is to use CopyTable/ExportTable,
+      or to copy all the hfiles in HDFS after disabling the table.
+      The disadvantages of these methods are that you can degrade region server performance
+      (Copy/Export Table) or you need to disable the table, that means no reads or writes;
+      and this is usually unacceptable.
+    </para>
+    <section xml:id="ops.snapshots.configuration"><title>Configuration</title>
+      <para>To turn on the snapshot support just set the
+        <varname>hbase.snapshot.enabled</varname> property to true.
+        (Snapshots are enabled by default in 0.95+ and off by default in 0.94.6+)
+        <programlisting>
+  &lt;property>
+    &lt;name>hbase.snapshot.enabled&lt;/name>
+    &lt;value>true&lt;/value>
+  &lt;/property>
+        </programlisting>
+      </para>
+    </section>
+    <section xml:id="ops.snapshots.takeasnapshot"><title>Take a Snapshot</title>
+      <para>You can take a snapshot of a table regardless of whether it is enabled or disabled.
+        The snapshot operation doesn't involve any data copying.
+        <programlisting>
+    $ ./bin/hbase shell
+    hbase> snapshot 'myTable', 'myTableSnapshot-122112'
+        </programlisting>
+      </para>
+    </section>
+    <section xml:id="ops.snapshots.list"><title>Listing Snapshots</title>
+      <para>List all snapshots taken (by printing the names and relative information).
+        <programlisting>
+    $ ./bin/hbase shell
+    hbase> list_snapshots
+        </programlisting>
+      </para>
+    </section>
+    <section xml:id="ops.snapshots.delete"><title>Deleting Snapshots</title>
+      <para>You can remove a snapshot, and the files retained for that snapshot will be removed
+        if no longer needed.
+        <programlisting>
+    $ ./bin/hbase shell
+    hbase> delete_snapshot 'myTableSnapshot-122112'
+        </programlisting>
+      </para>
+    </section>
+    <section xml:id="ops.snapshots.clone"><title>Clone a table from snapshot</title>
+      <para>From a snapshot you can create a new table (clone operation) with the same data
+      that you had when the snapshot was taken.
+      The clone operation, doesn't involve data copies, and a change to the cloned table
+      doesn't impact the snapshot or the original table.
+        <programlisting>
+    $ ./bin/hbase shell
+    hbase> clone_snapshot 'myTableSnapshot-122112', 'myNewTestTable'
+        </programlisting>
+      </para>
+    </section>
+    <section xml:id="ops.snapshots.restore"><title>Restore a snapshot</title>
+      <para>The restore operation requires the table to be disabled, and the table will be
+      restored to the state at the time when the snapshot was taken,
+      changing both data and schema if required.
+        <programlisting>
+    $ ./bin/hbase shell
+    hbase> disable 'myTable'
+    hbase> restore_snapshot 'myTableSnapshot-122112'
+        </programlisting>
+      </para>
+      <note>
+        <para>Since Replication works at log level and snapshots at file-system level,
+      after a restore, the replicas will be in a different state from the master.
+      If you want to use restore, you need to stop replication and redo the bootstrap.
+        </para>
+      </note>
+      <para>In case of partial data-loss due to misbehaving client, instead of a full restore
+      that requires the table to be disabled, you can clone the table from the snapshot
+      and use a Map-Reduce job to copy the data that you need, from the clone to the main one.
+      </para>
+    </section>
+    <section xml:id="ops.snapshots.acls"><title>Snapshots operations and ACLs</title>
+    If you are using security with the AccessController Coprocessor (See <xref linkend="hbase.accesscontrol.configuration" />),
+    only a global administrator can take, clone, or restore a snapshot, and these actions do not capture the ACL rights.
+    This means that restoring a table preserves the ACL rights of the existing table,
+    while cloning a table creates a new table that has no ACL rights until the administrator adds them.
+    </section>
+    <section xml:id="ops.snapshots.export"><title>Export to another cluster</title>
+      <para>The ExportSnapshot tool copies all the data related to a snapshot (hfiles, logs, snapshot metadata) to another cluster.
+        The tool executes a Map-Reduce job, similar to distcp, to copy files between the two clusters,
+        and since it works at file-system level the hbase cluster does not have to be online.
+        <para>To copy a snapshot called MySnapshot to an HBase cluster srv2 (hdfs:///srv2:8082/hbase) using 16 mappers:
+<programlisting>$ bin/hbase class org.apache.hadoop.hbase.snapshot.tool.ExportSnapshot -snapshot MySnapshot -copy-to hdfs:///srv2:8082/hbase -mappers 16</programlisting>
+        </para>
+      </para>
+    </section>
+  </section>  <!--  snapshots -->
+
   <section xml:id="ops.capacity"><title>Capacity Planning</title>
     <section xml:id="ops.capacity.storage"><title>Storage</title>
       <para>A common question for HBase administrators is estimating how much storage will be required for an HBase cluster.
