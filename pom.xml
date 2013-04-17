@@ -345,6 +345,11 @@
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>1.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
           <!--Making a release I've been using mvn 3.0 and specifying the apache-release
               profile on the command line as follows:
@@ -566,6 +571,44 @@
     </testResources>
 
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <inherited>false</inherited>
+        <configuration>
+          <rules>
+            <!--<requireMavenVersion>-->
+              <!--<version>[3.0.0,)</version>-->
+            <!--</requireMavenVersion>-->
+            <requireJavaVersion>
+              <version>[${javaVersion}.0,${javaVersion}.1000}]</version>
+            </requireJavaVersion>
+          </rules>
+        </configuration>
+        <executions>
+          <execution>
+            <id>clean</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <phase>pre-clean</phase>
+          </execution>
+          <execution>
+            <id>default</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <phase>validate</phase>
+          </execution>
+          <execution>
+            <id>site</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <phase>pre-site</phase>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-site-plugin</artifactId>
         <configuration>
@@ -1005,6 +1048,7 @@
   </build>
 
   <properties>
+    <javaVersion>1.6</javaVersion>
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm
     </maven.build.timestamp.format>
