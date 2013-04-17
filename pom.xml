@@ -377,7 +377,7 @@
           <version>2.5.1</version>
           <configuration>
             <source>${compileSource}</source>
-            <target>${compileSource}</target>
+            <target>${targetJavaVersion}</target>
             <showWarnings>true</showWarnings>
             <showDeprecation>false</showDeprecation>
             <compilerArgument>-Xlint:-options</compilerArgument>
@@ -1049,6 +1049,7 @@
 
   <properties>
     <javaVersion>1.6</javaVersion>
+    <targetJavaVersion>1.6</targetJavaVersion>
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm
     </maven.build.timestamp.format>
