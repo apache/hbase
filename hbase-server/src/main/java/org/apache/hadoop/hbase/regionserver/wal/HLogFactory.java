@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 public class HLogFactory {
@@ -70,6 +71,11 @@ public class HLogFactory {
       logReaderClass = null;
     }
 
+    public static HLog.Reader createReader(final FileSystem fs,
+        final Path path, Configuration conf) throws IOException {
+      return createReader(fs, path, conf, null);
+    }
+
     /**
      * Create a reader for the WAL. If you are reading from a file that's being written to
      * and need to reopen it multiple times, use {@link HLog.Reader#reset()} instead of this method
@@ -77,8 +83,8 @@ public class HLogFactory {
      * @return A WAL reader.  Close when done with it.
      * @throws IOException
      */
-    public static HLog.Reader createReader(final FileSystem fs,
-        final Path path, Configuration conf) throws IOException {
+    public static HLog.Reader createReader(final FileSystem fs, final Path path,
+        Configuration conf, CancelableProgressable reporter) throws IOException {
       if (logReaderClass == null) {
         logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
           SequenceFileLogReader.class, Reader.class);
@@ -101,6 +107,9 @@ public class HLogFactory {
             if (msg != null && msg.contains("Cannot obtain block length")) {
               if (++nbAttempt == 1) {
                 LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
+              }
+              if (reporter != null && !reporter.progress()) {
+                throw new InterruptedIOException("Operation is cancelled");
               }
               if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTimeMillis()) {
                 LOG.error("Can't open after " + nbAttempt + " attempts and "
