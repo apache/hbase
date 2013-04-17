@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.exceptions.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -112,9 +111,6 @@ public class HLogSplitter {
   final Object dataAvailable = new Object();
 
   private MonitoredTask status;
-
-  // Used in distributed log splitting
-  private DistributedLogSplittingHelper distributedLogSplittingHelper = null;
 
   // For checking the latest flushed sequence id
   protected final LastSequenceId sequenceIdChecker;
@@ -263,10 +259,6 @@ public class HLogSplitter {
     return outputSink.getOutputCounts();
   }
 
-  void setDistributedLogSplittingHelper(DistributedLogSplittingHelper helper) {
-    this.distributedLogSplittingHelper = helper;
-  }
-
   /**
    * Splits the HLog edits in the given list of logfiles (that are a mix of edits
    * on multiple regions) by region and then splits them per region directories,
@@ -317,7 +309,7 @@ public class HLogSplitter {
           //meta only. However, there is a sequence number that can be obtained
           //only by parsing.. so we parse for all files currently
           //TODO: optimize this part somehow
-          in = getReader(fs, log, conf, skipErrors);
+          in = getReader(fs, log, conf, skipErrors, null);
           if (in != null) {
             parseHLog(in, logPath, entryBuffers, fs, conf, skipErrors);
           }
@@ -420,53 +412,58 @@ public class HLogSplitter {
       CancelableProgressable reporter) throws IOException {
     boolean isCorrupted = false;
     Preconditions.checkState(status == null);
-    status = TaskMonitor.get().createStatus(
-        "Splitting log file " + logfile.getPath() +
-        "into a temporary staging area.");
     boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors",
-        HLog.SPLIT_SKIP_ERRORS_DEFAULT);
+      HLog.SPLIT_SKIP_ERRORS_DEFAULT);
     int interval = conf.getInt("hbase.splitlog.report.interval.loglines", 1024);
     Path logPath = logfile.getPath();
-    long logLength = logfile.getLen();
-    LOG.info("Splitting hlog: " + logPath + ", length=" + logLength);
-    status.setStatus("Opening log file");
-    Reader in = null;
-    try {
-      in = getReader(fs, logfile, conf, skipErrors);
-    } catch (CorruptedLogFileException e) {
-      LOG.warn("Could not get reader, corrupted log file " + logPath, e);
-      ZKSplitLog.markCorrupted(rootDir, logfile.getPath().getName(), fs);
-      isCorrupted = true;
-    }
-    if (in == null) {
-      status.markComplete("Was nothing to split in log file");
-      LOG.warn("Nothing to split in log file " + logPath);
-      return true;
-    }
-    this.setDistributedLogSplittingHelper(new DistributedLogSplittingHelper(reporter));
-    if (!reportProgressIfIsDistributedLogSplitting()) {
-      return false;
-    }
+    boolean outputSinkStarted = false;
     boolean progress_failed = false;
-    int numOpenedFilesBeforeReporting = conf.getInt("hbase.splitlog.report.openedfiles", 3);
-    int numOpenedFilesLastCheck = 0;
-    outputSink.startWriterThreads();
-    // Report progress every so many edits and/or files opened (opening a file
-    // takes a bit of time).
-    Map<byte[], Long> lastFlushedSequenceIds =
-      new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-    Entry entry;
     int editsCount = 0;
     int editsSkipped = 0;
+
     try {
+      status = TaskMonitor.get().createStatus(
+        "Splitting log file " + logfile.getPath() +
+        "into a temporary staging area.");
+      long logLength = logfile.getLen();
+      LOG.info("Splitting hlog: " + logPath + ", length=" + logLength);
+      status.setStatus("Opening log file");
+      if (reporter != null && !reporter.progress()) {
+        progress_failed = true;
+        return false;
+      }
+      Reader in = null;
+      try {
+        in = getReader(fs, logfile, conf, skipErrors, reporter);
+      } catch (CorruptedLogFileException e) {
+        LOG.warn("Could not get reader, corrupted log file " + logPath, e);
+        ZKSplitLog.markCorrupted(rootDir, logfile.getPath().getName(), fs);
+        isCorrupted = true;
+      }
+      if (in == null) {
+        status.markComplete("Was nothing to split in log file");
+        LOG.warn("Nothing to split in log file " + logPath);
+        return true;
+      }
+      int numOpenedFilesBeforeReporting = conf.getInt("hbase.splitlog.report.openedfiles", 3);
+      int numOpenedFilesLastCheck = 0;
+      outputSink.setReporter(reporter);
+      outputSink.startWriterThreads();
+      outputSinkStarted = true;
+      // Report progress every so many edits and/or files opened (opening a file
+      // takes a bit of time).
+      Map<byte[], Long> lastFlushedSequenceIds =
+        new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+      Entry entry;
+
       while ((entry = getNextLogLine(in,logPath, skipErrors)) != null) {
         byte[] region = entry.getKey().getEncodedRegionName();
         Long lastFlushedSequenceId = -1l;
         if (sequenceIdChecker != null) {
           lastFlushedSequenceId = lastFlushedSequenceIds.get(region);
           if (lastFlushedSequenceId == null) {
-              lastFlushedSequenceId = sequenceIdChecker.getLastSequenceId(region);
-              lastFlushedSequenceIds.put(region, lastFlushedSequenceId);
+            lastFlushedSequenceId = sequenceIdChecker.getLastSequenceId(region);
+            lastFlushedSequenceIds.put(region, lastFlushedSequenceId);
           }
         }
         if (lastFlushedSequenceId >= entry.getKey().getLogSeqNum()) {
@@ -482,7 +479,8 @@ public class HLogSplitter {
           String countsStr = (editsCount - editsSkipped) +
             " edits, skipped " + editsSkipped + " edits.";
           status.setStatus("Split " + countsStr);
-          if (!reportProgressIfIsDistributedLogSplitting()) {
+          if (reporter != null && !reporter.progress()) {
+            progress_failed = true;
             return false;
           }
         }
@@ -500,12 +498,13 @@ public class HLogSplitter {
       throw e;
     } finally {
       LOG.info("Finishing writing output logs and closing down.");
-      progress_failed = outputSink.finishWritingAndClose() == null;
+      if (outputSinkStarted) {
+        progress_failed = outputSink.finishWritingAndClose() == null;
+      }
       String msg = "Processed " + editsCount + " edits across "
-          + outputSink.getOutputCounts().size() + " regions; log file="
-          + logPath + " is corrupted = " + isCorrupted + " progress failed = "
-          + progress_failed;
-      ;
+        + outputSink.getOutputCounts().size() + " regions; log file="
+        + logPath + " is corrupted = " + isCorrupted + " progress failed = "
+        + progress_failed;
       LOG.info(msg);
       status.markComplete(msg);
     }
@@ -620,6 +619,7 @@ public class HLogSplitter {
    * @return Path to file into which to dump split log edits.
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   static Path getRegionSplitEditsPath(final FileSystem fs,
       final Entry logEntry, final Path rootDir, boolean isCreate)
   throws IOException {
@@ -724,7 +724,7 @@ public class HLogSplitter {
    * @throws CorruptedLogFileException
    */
   protected Reader getReader(FileSystem fs, FileStatus file, Configuration conf,
-      boolean skipErrors)
+      boolean skipErrors, CancelableProgressable reporter)
       throws IOException, CorruptedLogFileException {
     Path path = file.getPath();
     long length = file.getLen();
@@ -739,9 +739,9 @@ public class HLogSplitter {
     }
 
     try {
-      FSUtils.getInstance(fs, conf).recoverFileLease(fs, path, conf);
+      FSUtils.getInstance(fs, conf).recoverFileLease(fs, path, conf, reporter);
       try {
-        in = getReader(fs, path, conf);
+        in = getReader(fs, path, conf, reporter);
       } catch (EOFException e) {
         if (length <= 0) {
           // TODO should we ignore an empty, not-last log file if skip.errors
@@ -757,8 +757,8 @@ public class HLogSplitter {
         }
       }
     } catch (IOException e) {
-      if (!skipErrors) {
-        throw e;
+      if (!skipErrors || e instanceof InterruptedIOException) {
+        throw e; // Don't mark the file corrupted if interrupted, or not skipErrors
       }
       CorruptedLogFileException t =
         new CorruptedLogFileException("skipErrors=true Could not open hlog " +
@@ -826,9 +826,9 @@ public class HLogSplitter {
   /**
    * Create a new {@link Reader} for reading logs to split.
    */
-  protected Reader getReader(FileSystem fs, Path curLogFile, Configuration conf)
-      throws IOException {
-    return HLogFactory.createReader(fs, curLogFile, conf);
+  protected Reader getReader(FileSystem fs, Path curLogFile,
+      Configuration conf, CancelableProgressable reporter) throws IOException {
+    return HLogFactory.createReader(fs, curLogFile, conf, reporter);
   }
 
   /**
@@ -1108,56 +1108,6 @@ public class HLogSplitter {
     return ret;
   }
 
-  /***
-   * @return false if it is a distributed log splitting and it failed to report
-   *         progress
-   */
-  private boolean reportProgressIfIsDistributedLogSplitting() {
-    if (this.distributedLogSplittingHelper != null) {
-      return distributedLogSplittingHelper.reportProgress();
-    } else {
-      return true;
-    }
-  }
-
-  /**
-   * A class used in distributed log splitting
-   *
-   */
-  class DistributedLogSplittingHelper {
-    // Report progress, only used in distributed log splitting
-    private final CancelableProgressable splitReporter;
-    // How often to send a progress report (default 1/2 master timeout)
-    private final int report_period;
-    private long last_report_at = 0;
-
-    public DistributedLogSplittingHelper(CancelableProgressable reporter) {
-      this.splitReporter = reporter;
-      report_period = conf.getInt("hbase.splitlog.report.period",
-          conf.getInt("hbase.splitlog.manager.timeout",
-              SplitLogManager.DEFAULT_TIMEOUT) / 2);
-    }
-
-    /***
-     * @return false if reporter failed progressing
-     */
-    private boolean reportProgress() {
-      if (splitReporter == null) {
-        return true;
-      } else {
-        long t = EnvironmentEdgeManager.currentTimeMillis();
-        if ((t - last_report_at) > report_period) {
-          last_report_at = t;
-          if (this.splitReporter.progress() == false) {
-            LOG.warn("Failed: reporter.progress asked us to terminate");
-            return false;
-          }
-        }
-        return true;
-      }
-    }
-  }
-
   /**
    * Class that manages the output streams from the log splitting process.
    */
@@ -1178,6 +1128,8 @@ public class HLogSplitter {
 
     private final int numThreads;
 
+    private CancelableProgressable reporter = null;
+
     public OutputSink() {
       // More threads could potentially write faster at the expense
       // of causing more disk seeks as the logs are split.
@@ -1186,6 +1138,10 @@ public class HLogSplitter {
       // implementation anyway.
       numThreads = conf.getInt(
           "hbase.regionserver.hlog.splitlog.writer.threads", 3);
+    }
+
+    void setReporter(CancelableProgressable reporter) {
+      this.reporter = reporter;
     }
 
     /**
@@ -1213,7 +1169,7 @@ public class HLogSplitter {
           t.finish();
         }
         for (WriterThread t : writerThreads) {
-          if (!progress_failed && !reportProgressIfIsDistributedLogSplitting()) {
+          if (!progress_failed && reporter != null && !reporter.progress()) {
             progress_failed = true;
           }
           try {
@@ -1309,7 +1265,7 @@ public class HLogSplitter {
         for (int i = 0, n = logWriters.size(); i < n; i++) {
           Future<Void> future = completionService.take();
           future.get();
-          if (!progress_failed && !reportProgressIfIsDistributedLogSplitting()) {
+          if (!progress_failed && reporter != null && !reporter.progress()) {
             progress_failed = true;
           }
         }
@@ -1436,8 +1392,6 @@ public class HLogSplitter {
       return ret;
     }
   }
-
-
 
   /**
    *  Private data structure that wraps a Writer and its Path,

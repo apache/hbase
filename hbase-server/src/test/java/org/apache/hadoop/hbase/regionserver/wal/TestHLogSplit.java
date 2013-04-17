@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
+import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.CorruptedLogFileException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -918,6 +920,45 @@ public class TestHLogSplit {
     }
   }
 
+  @Test
+  public void testTerminationAskedByReporter() throws IOException, CorruptedLogFileException {
+    generateHLogs(1, 10, -1);
+    FileStatus logfile = fs.listStatus(HLOGDIR)[0];
+    fs.initialize(fs.getUri(), conf);
+
+    final AtomicInteger count = new AtomicInteger();
+    
+    CancelableProgressable localReporter
+      = new CancelableProgressable() {
+        @Override
+        public boolean progress() {
+          count.getAndIncrement();
+          return false;
+        }
+      };
+
+    FileSystem spiedFs = Mockito.spy(fs);
+    Mockito.doAnswer(new Answer<FSDataInputStream>() {
+      public FSDataInputStream answer(InvocationOnMock invocation) throws Throwable {
+        Thread.sleep(1500); // Sleep a while and wait report status invoked
+        return (FSDataInputStream)invocation.callRealMethod();
+      }
+    }).when(spiedFs).open(Mockito.<Path>any(), Mockito.anyInt());
+
+    try {
+      conf.setInt("hbase.splitlog.report.period", 1000);
+      HLogSplitter s = new HLogSplitter(conf, HBASEDIR, null, null, spiedFs, null);
+      boolean ret = s.splitLogFile(logfile, localReporter);
+      assertFalse("Log splitting should failed", ret);
+      assertTrue(count.get() > 0);
+    } catch (IOException e) {
+      fail("There shouldn't be any exception but: " + e.toString());
+    } finally {
+      // reset it back to its default value
+      conf.setInt("hbase.splitlog.report.period", 59000);
+    }
+  }
+
   /**
    * Test log split process with fake data and lots of edits to trigger threading
    * issues.
@@ -1000,8 +1041,8 @@ public class TestHLogSplit {
 
 
       /* Produce a mock reader that generates fake entries */
-      protected Reader getReader(FileSystem fs, Path curLogFile, Configuration conf)
-      throws IOException {
+      protected Reader getReader(FileSystem fs, Path curLogFile,
+          Configuration conf, CancelableProgressable reporter) throws IOException {
         Reader mockReader = Mockito.mock(Reader.class);
         Mockito.doAnswer(new Answer<HLog.Entry>() {
           int index = 0;

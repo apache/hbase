@@ -38,15 +38,15 @@ import java.io.InterruptedIOException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class FSHDFSUtils extends FSUtils{
+public class FSHDFSUtils extends FSUtils {
   private static final Log LOG = LogFactory.getLog(FSHDFSUtils.class);
 
   /**
    * Recover the lease from HDFS, retrying multiple times.
    */
   @Override
-  public void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
-      throws IOException {
+  public void recoverFileLease(final FileSystem fs, final Path p,
+      Configuration conf, CancelableProgressable reporter) throws IOException {
     // lease recovery not needed for local file system case.
     if (!(fs instanceof DistributedFileSystem)) {
       return;
@@ -81,6 +81,9 @@ public class FSHDFSUtils extends FSUtils{
             ", retrying.", e);
       }
       if (!recovered) {
+        if (reporter != null && !reporter.progress()) {
+          throw new InterruptedIOException("Operation is cancelled");
+        }
         // try at least twice.
         if (nbAttempt > 2 && recoveryTimeout < EnvironmentEdgeManager.currentTimeMillis()) {
           LOG.error("Can't recoverLease after " + nbAttempt + " attempts and " +

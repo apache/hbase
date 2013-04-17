@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -81,13 +82,16 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private volatile boolean exitWorker;
   private final Object grabTaskLock = new Object();
   private boolean workerInGrabTask = false;
-
+  private final int report_period;
 
   public SplitLogWorker(ZooKeeperWatcher watcher, Configuration conf,
       ServerName serverName, TaskExecutor splitTaskExecutor) {
     super(watcher);
     this.serverName = serverName;
     this.splitTaskExecutor = splitTaskExecutor;
+    report_period = conf.getInt("hbase.splitlog.report.period",
+      conf.getInt("hbase.splitlog.manager.timeout",
+        SplitLogManager.DEFAULT_TIMEOUT) / 2);
   }
 
   public SplitLogWorker(ZooKeeperWatcher watcher, final Configuration conf,
@@ -274,15 +278,22 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       status = splitTaskExecutor.exec(ZKSplitLog.getFileName(currentTask),
           new CancelableProgressable() {
 
+        private long last_report_at = 0;
+
         @Override
         public boolean progress() {
-          if (!attemptToOwnTask(false)) {
-            LOG.warn("Failed to heartbeat the task" + currentTask);
-            return false;
+          long t = EnvironmentEdgeManager.currentTimeMillis();
+          if ((t - last_report_at) > report_period) {
+            last_report_at = t;
+            if (!attemptToOwnTask(false)) {
+              LOG.warn("Failed to heartbeat the task" + currentTask);
+              return false;
+            }
           }
           return true;
         }
       });
+
       switch (status) {
         case DONE:
           endTask(new SplitLogTask.Done(this.serverName), SplitLogCounters.tot_wkr_task_done);
