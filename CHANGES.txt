@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.7 - 4/15/2013
+Release 0.94.7 - 4/16/2013
 Sub-task
 
     [HBASE-7615] - Add metrics for snapshots
@@ -64,6 +64,7 @@ Bug
     [HBASE-8303] - Increse the test timeout to 60s when they are less than 20s
     [HBASE-8313] - Add Bloom filter testing for HFileOutputFormat
     [HBASE-8326] - mapreduce.TestTableInputFormatScan times out frequently
+    [HBASE-8352] - Rename '.snapshot' directory
 
 Improvement
 
