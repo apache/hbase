@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.7 - 4/16/2013
+Release 0.94.7 - 4/17/2013
 Sub-task
 
     [HBASE-7615] - Add metrics for snapshots
@@ -68,6 +68,7 @@ Bug
 
 Improvement
 
+    [HBASE-7410] - [snapshots] add snapshot/clone/restore/export docs to ref guide
     [HBASE-7599] - Port HBASE-6066 (low hanging read path improvements) to 0.94
     [HBASE-8148] - Allow IPC to bind on a specific address
     [HBASE-8152] - Avoid creating empty reference file when splitkey is outside the key range of a store file
