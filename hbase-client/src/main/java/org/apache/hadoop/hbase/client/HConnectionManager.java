@@ -1935,13 +1935,17 @@ public class HConnectionManager {
       HRegionInfo regionInfo = oldLocation.getRegionInfo();
       final RegionMovedException rme = RegionMovedException.find(exception);
       if (rme != null) {
-        LOG.info("Region " + regionInfo.getRegionNameAsString() + " moved to " +
-          rme.getHostname() + ":" + rme.getPort() + " according to " + source.getHostnamePort());
+        if (LOG.isTraceEnabled()){
+          LOG.trace("Region " + regionInfo.getRegionNameAsString() + " moved to " +
+            rme.getHostname() + ":" + rme.getPort() + " according to " + source.getHostnamePort());
+        }
         updateCachedLocation(
             regionInfo, source, rme.getServerName(), rme.getLocationSeqNum());
       } else if (RegionOpeningException.find(exception) != null) {
-        LOG.info("Region " + regionInfo.getRegionNameAsString() + " is being opened on "
-          + source.getHostnamePort() + "; not deleting the cache entry");
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Region " + regionInfo.getRegionNameAsString() + " is being opened on "
+              + source.getHostnamePort() + "; not deleting the cache entry");
+        }
       } else {
         deleteCachedLocation(regionInfo, source);
       }
