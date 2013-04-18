@@ -267,12 +267,11 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     //java.lang.reflect.Array is a placeholder for arrays not defined above
     GENERIC_ARRAY_CODE = code++;
     addToMap(Array.class, GENERIC_ARRAY_CODE);
-    
-    addToMap(FuzzyRowFilter.class, code++);
 
-    // we aren't going to bump the rpc version number.
-    // we don't want to cause incompatiblity with older 0.94/0.92 clients.
-    addToMap(HSnapshotDescription.class, code);
+    // This must stay here to have the compatibility with CDH 4.2
+    addToMap(HSnapshotDescription.class, code++);
+
+    addToMap(FuzzyRowFilter.class, code++);
 
     // make sure that this is the last statement in this static block
     NEXT_CLASS_CODE = code;
