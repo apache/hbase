@@ -26,6 +26,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -653,7 +654,8 @@ public class HConnectionManager {
               @Override
               public void newDead(ServerName sn) {
                 clearCaches(sn);
-                rpcEngine.getClient().cancelConnections(sn.getHostname(), sn.getPort(), null);
+                rpcEngine.getClient().cancelConnections(sn.getHostname(), sn.getPort(),
+                    new SocketException(sn.getServerName() + " is dead: closing its connection."));
               }
             }, conf, listenerClass);
       }
