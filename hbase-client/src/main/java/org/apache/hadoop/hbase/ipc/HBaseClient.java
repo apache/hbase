@@ -1026,7 +1026,7 @@ public class HBaseClient {
           if (responseHeader.hasCellBlockMeta()) {
             int size = responseHeader.getCellBlockMeta().getLength();
             byte [] cellBlock = new byte[size];
-            IOUtils.readFully(this.in, cellBlock, 0, cellBlock.length);
+            IPCUtil.readChunked(this.in, cellBlock, 0, size);
             cellBlockScanner = ipcUtil.createCellScanner(this.codec, this.compressor, cellBlock);
           }
           // it's possible that this call may have been cleaned up due to a RPC
