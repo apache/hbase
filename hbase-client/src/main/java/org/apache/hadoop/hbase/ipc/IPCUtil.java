@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.ByteArrayInputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -228,6 +229,23 @@ class IPCUtil {
     byte [] bytes = new byte[size];
     IOUtils.readFully(in, bytes);
     return bytes;
+  }
+
+  /**
+   * Read in chunks of 8K (HBASE-7239)
+   * @param in
+   * @param dest
+   * @param offset
+   * @param len
+   * @throws IOException
+   */
+  static void readChunked(final DataInput in, byte[] dest, int offset, int len)
+      throws IOException {
+    int maxRead = 8192;
+
+    for (; offset < len; offset += maxRead) {
+      in.readFully(dest, offset, Math.min(len - offset, maxRead));
+    }
   }
 
   /**
