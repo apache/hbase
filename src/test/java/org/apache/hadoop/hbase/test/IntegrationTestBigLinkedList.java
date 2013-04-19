@@ -322,7 +322,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
         table = new HTable(conf, getTableName(conf));
         table.setAutoFlush(false);
         table.setWriteBufferSize(4 * 1024 * 1024);
-        numNodes = context.getConfiguration().getLong(GENERATOR_NUM_MAPPERS_KEY, 25000000);
+        numNodes = context.getConfiguration().getLong(GENERATOR_NUM_ROWS_PER_MAP_KEY, 25000000);
         if (numNodes < 25000000) {
           wrap = numNodes;
         }
@@ -374,8 +374,8 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
           Put put = new Put(Bytes.toBytes(current[i]));
           put.add(FAMILY_NAME, COLUMN_PREV, Bytes.toBytes(prev == null ? -1 : prev[i]));
 
-          if (count > 0) {
-            put.add(FAMILY_NAME, COLUMN_COUNT, Bytes.toBytes(count + 1));
+          if (count >= 0) {
+            put.add(FAMILY_NAME, COLUMN_COUNT, Bytes.toBytes(count + i));
           }
           if (id != null) {
             put.add(FAMILY_NAME, COLUMN_CLIENT, id);
@@ -901,12 +901,18 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     node.key = Bytes.toLong(result.getRow());
     if (result.containsColumn(FAMILY_NAME, COLUMN_PREV)) {
       node.prev = Bytes.toLong(result.getValue(FAMILY_NAME, COLUMN_PREV));
+    } else {
+      node.prev = -1;
     }
     if (result.containsColumn(FAMILY_NAME, COLUMN_COUNT)) {
       node.count = Bytes.toLong(result.getValue(FAMILY_NAME, COLUMN_COUNT));
+    } else {
+      node.count = -1;
     }
     if (result.containsColumn(FAMILY_NAME, COLUMN_CLIENT)) {
       node.client = Bytes.toString(result.getValue(FAMILY_NAME, COLUMN_CLIENT));
+    } else {
+      node.client = "";
     }
     return node;
   }
