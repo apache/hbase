@@ -508,7 +508,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       int index = -1;
       for (int j = 0; j < regionLocations.length; j++) {
-        if (regionLocations[j] == serverIndex) {
+        if (regionLocations[j] >= 0 && regionLocations[j] == serverIndex) {
           index = j;
           break;
         }

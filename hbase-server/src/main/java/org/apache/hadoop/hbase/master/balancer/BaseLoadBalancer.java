@@ -105,10 +105,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       regionLocations = new int[numRegions][];
 
       int tableIndex = 0, serverIndex = 0, regionIndex = 0, regionPerServerIndex = 0;
+      // populate serversToIndex first
       for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
         servers[serverIndex] = entry.getKey();
         regionsPerServer[serverIndex] = new int[entry.getValue().size()];
         serversToIndex.put(servers[serverIndex], Integer.valueOf(serverIndex));
+        serverIndex++;
+      }
+      serverIndex = 0;
+      for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
         regionPerServerIndex = 0;
         for (HRegionInfo region : entry.getValue()) {
           byte[] tableName = region.getTableName();
@@ -142,7 +147,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
             List<ServerName> loc = regionFinder.getTopBlockLocations(region);
             regionLocations[regionIndex] = new int[loc.size()];
             for (int i=0; i < loc.size(); i++) {
-              regionLocations[regionIndex][i] = serversToIndex.get(loc.get(i));
+              regionLocations[regionIndex][i] =
+                  loc.get(i) == null ? -1 :
+                    (serversToIndex.get(loc.get(i)) == null ? -1 : serversToIndex.get(loc.get(i)));
             }
           }
 
