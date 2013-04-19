@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -575,6 +576,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
     final List<Thread> threads = new ArrayList<Thread>(this.N);
     final long[] timings = new long[this.N];
     final int perClientRows = R/N;
+    final byte[] tableName = this.tableName;
+    final DataBlockEncoding encoding = this.blockEncoding;
+    final boolean flushCommits = this.flushCommits;
+    final Compression.Algorithm compression = this.compression;
+    final boolean writeToWal = this.writeToWAL;
+    final int preSplitRegions = this.presplitRegions;
     for (int i = 0; i < this.N; i++) {
       final int index = i;
       Thread t = new Thread ("TestClient-" + i) {
@@ -582,6 +589,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         public void run() {
           super.run();
           PerformanceEvaluation pe = new PerformanceEvaluation(getConf());
+          pe.tableName = tableName;
+          pe.blockEncoding = encoding;
+          pe.flushCommits = flushCommits;
+          pe.compression = compression;
+          pe.writeToWAL = writeToWal;
+          pe.presplitRegions = preSplitRegions;
           pe.N = N;
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
