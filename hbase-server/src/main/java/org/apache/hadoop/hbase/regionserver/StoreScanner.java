@@ -73,6 +73,12 @@ public class StoreScanner extends NonLazyKeyValueScanner
   protected final long oldestUnexpiredTS;
   protected final int minVersions;
 
+  /**
+   * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not
+   * KVs skipped via seeking to next row/column. TODO: estimate them?
+   */
+  private long kvsScanned = 0;
+
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
   public static final String STORESCANNER_PARALLEL_SEEK_ENABLE =
@@ -390,6 +396,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
     int count = 0;
     LOOP: while((kv = this.heap.peek()) != null) {
+      ++kvsScanned;
       // Check that the heap gives us KVs in an increasing order.
       assert prevKV == null || comparator == null || comparator.compare(prevKV, kv) <= 0 :
         "Key " + prevKV + " followed by a " + "smaller key " + kv + " in cf " + store;
@@ -648,6 +655,13 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
   static void enableLazySeekGlobally(boolean enable) {
     lazySeekEnabledGlobally = enable;
+  }
+
+  /**
+   * @return The estimated number of KVs seen by this scanner (includes some skipped KVs).
+   */
+  public long getEstimatedNumberOfKvsScanned() {
+    return this.kvsScanned;
   }
 }
 
