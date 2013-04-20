@@ -126,50 +126,55 @@ public class TestPrefixTreeSearcher {
     }
   }
 
-  /**
-   * very hard to test nubs with this thing since the a nextRowKey function will usually skip them
-   */
   @Test
   public void testRandomSeekMisses() throws IOException {
     CellSearcher searcher = null;
     List<Integer> rowStartIndexes = rows.getRowStartIndexes();
     try {
       searcher = DecoderFactory.checkOut(block, true);
-      for (int i=0; i < rows.getInputs().size(); ++i) {
-        KeyValue kv = rows.getInputs().get(i);
 
-        //nextRow
-        KeyValue inputNextRow = KeyValueUtil.createFirstKeyInNextRow(kv);
+      //test both the positionAtOrBefore and positionAtOrAfter methods
+      for(boolean beforeVsAfterOnMiss : new boolean[]{true, false}){
+        for (int i=0; i < rows.getInputs().size(); ++i) {
+          KeyValue kv = rows.getInputs().get(i);
 
-        CellScannerPosition position = searcher.positionAtOrBefore(inputNextRow);
-        boolean isFirstInRow = rowStartIndexes.contains(i);
-        if(isFirstInRow){
-          int rowIndex = rowStartIndexes.indexOf(i);
-          if(rowIndex < rowStartIndexes.size() - 1){
-//            int lastKvInRowI = rowStartIndexes.get(rowIndex + 1) - 1;
-            Assert.assertEquals(CellScannerPosition.BEFORE, position);
-            /*
-             * Can't get this to work between nubs like rowB\x00 <-> rowBB
-             *
-             * No reason to doubt that it works, but will have to come up with a smarter test.
-             */
-//            Assert.assertEquals(rows.getInputs().get(lastKvInRowI), searcher.getCurrentCell());
+          //nextRow
+          KeyValue inputNextRow = KeyValueUtil.createFirstKeyInNextRow(kv);
+
+          CellScannerPosition position = beforeVsAfterOnMiss
+              ? searcher.positionAtOrBefore(inputNextRow)
+              : searcher.positionAtOrAfter(inputNextRow);
+          boolean isFirstInRow = rowStartIndexes.contains(i);
+          if(isFirstInRow){
+            int rowIndex = rowStartIndexes.indexOf(i);
+            if(rowIndex < rowStartIndexes.size() - 1){
+              if(beforeVsAfterOnMiss){
+                Assert.assertEquals(CellScannerPosition.BEFORE, position);
+              }else{
+                Assert.assertEquals(CellScannerPosition.AFTER, position);
+              }
+
+              int expectedInputIndex = beforeVsAfterOnMiss
+                  ? rowStartIndexes.get(rowIndex + 1) - 1
+                  : rowStartIndexes.get(rowIndex + 1);
+              Assert.assertEquals(rows.getInputs().get(expectedInputIndex), searcher.current());
+            }
           }
-        }
 
-        //previous KV
-        KeyValue inputPreviousKv = KeyValueUtil.previousKey(kv);
-        boolean hit = searcher.positionAt(inputPreviousKv);
-        Assert.assertFalse(hit);
-        position = searcher.positionAtOrAfter(inputPreviousKv);
-        if(CollectionUtils.isLastIndex(rows.getInputs(), i)){
-          Assert.assertTrue(CellScannerPosition.AFTER_LAST == position);
-        }else{
-          Assert.assertTrue(CellScannerPosition.AFTER == position);
-          /*
-           * TODO: why i+1 instead of i?
-           */
-          Assert.assertEquals(rows.getInputs().get(i+1), searcher.current());
+          //previous KV
+          KeyValue inputPreviousKv = KeyValueUtil.previousKey(kv);
+          boolean hit = searcher.positionAt(inputPreviousKv);
+          Assert.assertFalse(hit);
+          position = searcher.positionAtOrAfter(inputPreviousKv);
+          if(CollectionUtils.isLastIndex(rows.getInputs(), i)){
+            Assert.assertTrue(CellScannerPosition.AFTER_LAST == position);
+          }else{
+            Assert.assertTrue(CellScannerPosition.AFTER == position);
+            /*
+             * TODO: why i+1 instead of i?
+             */
+            Assert.assertEquals(rows.getInputs().get(i+1), searcher.current());
+          }
         }
       }
     } finally {

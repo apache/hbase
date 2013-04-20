@@ -126,7 +126,11 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       //detect dead end (no fan to descend into)
       if(!currentRowNode.hasFan()){
         if(hasOccurrences()){
-          populateFirstNonRowFields();
+          if (rowLength < key.getRowLength()) {
+            nextRow();
+          } else {
+            populateFirstNonRowFields();
+          }
           return CellScannerPosition.AFTER;
         }else{
           //TODO i don't think this case is exercised by any tests
