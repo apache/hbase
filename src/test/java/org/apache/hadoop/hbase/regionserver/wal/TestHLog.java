@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -101,6 +102,7 @@ public class TestHLog  {
     // Make block sizes small.
     TEST_UTIL.getConfiguration().setInt("dfs.blocksize", 1024 * 1024);
     // needed for testAppendClose()
+    TEST_UTIL.getConfiguration().setBoolean("dfs.support.broken.append", true);
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     // quicker heartbeat interval for faster DN death notification
     TEST_UTIL.getConfiguration().setInt("heartbeat.recheck.interval", 5000);
@@ -370,17 +372,29 @@ public class TestHLog  {
     }
   }
   
-  // For this test to pass, requires:
-  // 1. HDFS-200 (append support)
-  // 2. HDFS-988 (SafeMode should freeze file operations
-  //              [FSNamesystem.nextGenerationStampForBlock])
-  // 3. HDFS-142 (on restart, maintain pendingCreates)
+  /*
+   * We pass different values to recoverFileLease() so that different code paths are covered
+   *
+   * For this test to pass, requires:
+   * 1. HDFS-200 (append support)
+   * 2. HDFS-988 (SafeMode should freeze file operations
+   *              [FSNamesystem.nextGenerationStampForBlock])
+   * 3. HDFS-142 (on restart, maintain pendingCreates)
+   */
   @Test
   public void testAppendClose() throws Exception {
+    testAppendClose(true);
+    testAppendClose(false);
+  }
+
+  /*
+   * @param triggerDirectAppend whether to trigger direct call of fs.append()
+   */
+  public void testAppendClose(final boolean triggerDirectAppend) throws Exception {
     byte [] tableName = Bytes.toBytes(getName());
     HRegionInfo regioninfo = new HRegionInfo(tableName,
              HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false);
-    Path subdir = new Path(dir, "hlogdir");
+    Path subdir = new Path(dir, "hlogdir" + triggerDirectAppend);
     Path archdir = new Path(dir, "hlogdir_archive");
     HLog wal = new HLog(fs, subdir, archdir, conf);
     final int total = 20;

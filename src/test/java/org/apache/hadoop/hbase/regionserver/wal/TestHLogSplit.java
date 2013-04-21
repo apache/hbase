@@ -122,12 +122,11 @@ public class TestHLogSplit {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().
-            setStrings("hbase.rootdir", hbaseDir.toString());
-    TEST_UTIL.getConfiguration().
-            setClass("hbase.regionserver.hlog.writer.impl",
-                InstrumentedSequenceFileLogWriter.class, HLog.Writer.class);
-
+    TEST_UTIL.getConfiguration().setStrings("hbase.rootdir", hbaseDir.toString());
+    TEST_UTIL.getConfiguration().setClass("hbase.regionserver.hlog.writer.impl",
+      InstrumentedSequenceFileLogWriter.class, HLog.Writer.class);
+    TEST_UTIL.getConfiguration().setBoolean("dfs.support.broken.append", true);
+    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.startMiniDFSCluster(2);
   }
 
@@ -218,13 +217,13 @@ public class TestHLogSplit {
       fs.exists(new Path("/hbase/t1")));
 
     generateHLogs(-1);
-    CountDownLatch latch = new CountDownLatch(1);
 
+    CountDownLatch latch = new CountDownLatch(1);
     try {
-    (new ZombieNewLogWriterRegionServer(stop, latch)).start();
-    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
-        hbaseDir, hlogDir, oldLogDir, fs);
-    logSplitter.splitLog(latch);
+      (new ZombieNewLogWriterRegionServer(latch, stop)).start();
+      HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf, hbaseDir, hlogDir, oldLogDir,
+        fs);
+      logSplitter.splitLog(latch);
     } finally {
       stop.set(true);
     }
@@ -583,9 +582,10 @@ public class TestHLogSplit {
   throws IOException {
     AtomicBoolean stop = new AtomicBoolean(false);
     generateHLogs(-1);
-    CountDownLatch latch = new CountDownLatch(1);
     fs.initialize(fs.getUri(), conf);
-    Thread zombie = new ZombieNewLogWriterRegionServer(stop, latch);
+    CountDownLatch latch = new CountDownLatch(1);
+    Thread zombie = new ZombieNewLogWriterRegionServer(latch, stop);
+
     List<Path> splits = null;
     try {
       zombie.start();
@@ -593,13 +593,16 @@ public class TestHLogSplit {
         HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
             hbaseDir, hlogDir, oldLogDir, fs);
         splits = logSplitter.splitLog(latch);
-      } catch (IOException ex) {/* expected */}
+      } catch (IOException ex) {
+        /* expected */
+        LOG.warn("testSplitWillNotTouchLogsIfNewHLogGetsCreatedAfterSplitStarted", ex);
+      }
       FileStatus[] files = fs.listStatus(hlogDir);
       if (files == null) fail("no files in " + hlogDir + " with splits " + splits);
       int logFilesNumber = files.length;
 
       assertEquals("Log files should not be archived if there's an extra file after split",
-        NUM_WRITERS + 1, logFilesNumber);
+              NUM_WRITERS + 1, logFilesNumber);
     } finally {
       stop.set(true);
     }
@@ -1075,10 +1078,10 @@ public class TestHLogSplit {
   class ZombieNewLogWriterRegionServer extends Thread {
     AtomicBoolean stop;
     CountDownLatch latch;
-    public ZombieNewLogWriterRegionServer(AtomicBoolean stop, CountDownLatch latch) {
+    public ZombieNewLogWriterRegionServer(CountDownLatch latch, AtomicBoolean stop) {
       super("ZombieNewLogWriterRegionServer");
-      this.stop = stop;
       this.latch = latch;
+      this.stop = stop;
     }
 
     @Override
@@ -1094,7 +1097,7 @@ public class TestHLogSplit {
       try {
 
         while (!fs.exists(recoveredEdits) && !stop.get()) {
-          flushToConsole("Juliet: split not started, sleeping a bit...");
+          LOG.info("Juliet: split not started, sleeping a bit...");
           Threads.sleep(10);
         }
  
@@ -1104,9 +1107,10 @@ public class TestHLogSplit {
         appendEntry(writer, "juliet".getBytes(), ("juliet").getBytes(),
             ("r").getBytes(), FAMILY, QUALIFIER, VALUE, 0);
         writer.close();
-        flushToConsole("Juliet file creator: created file " + julietLog);
+        LOG.info("Juliet file creator: created file " + julietLog);
         latch.countDown();
       } catch (IOException e1) {
+        LOG.error("Failed to create file " + julietLog, e1);
         assertTrue("Failed to create file " + julietLog, false);
       }
     }
@@ -1310,7 +1314,7 @@ public class TestHLogSplit {
       }
       if (i != leaveOpen) {
         writer[i].close();
-        flushToConsole("Closing writer " + i);
+        LOG.info("Closing writer " + i);
       }
     }
   }
@@ -1421,8 +1425,9 @@ public class TestHLogSplit {
                           byte[] row, byte[] family, byte[] qualifier,
                           byte[] value, long seq)
           throws IOException {
-
+    LOG.info(Thread.currentThread().getName() + " append");
     writer.append(createTestEntry(table, region, row, family, qualifier, value, seq));
+    LOG.info(Thread.currentThread().getName() + " sync");
     writer.sync();
     return seq;
   }

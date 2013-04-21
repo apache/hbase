@@ -33,8 +33,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -175,15 +175,17 @@ public class HLogSplitter {
    * @throws IOException will throw if corrupted hlogs aren't tolerated
    * @return the list of splits
    */
-  public List<Path> splitLog() throws IOException {
+  public List<Path> splitLog()
+      throws IOException {
     return splitLog((CountDownLatch) null);
   }
 
   /**
-   * Split up a bunch of regionserver commit log files that are no longer being written to, into new
-   * files, one per region for region to replay on startup. Delete the old log files when finished.
-   * @param latch A latch used by tests (TestHlogSplit) to coordinate with log split process before
-   * it archives the log directory.
+   * Split up a bunch of regionserver commit log files that are no longer being
+   * written to, into new files, one per region for region to replay on startup.
+   * Delete the old log files when finished.
+   *
+   * @param latch
    * @throws IOException will throw if corrupted hlogs aren't tolerated
    * @return the list of splits
    */
@@ -273,7 +275,7 @@ public class HLogSplitter {
    * directory.
    */
   private List<Path> splitLog(final FileStatus[] logfiles, CountDownLatch latch)
-    throws IOException {
+      throws IOException {
     List<Path> processedLogs = new ArrayList<Path>();
     List<Path> corruptedLogs = new ArrayList<Path>();
     List<Path> splits = null;
@@ -314,6 +316,7 @@ public class HLogSplitter {
         }
       }
       status.setStatus("Log splits complete. Checking for orphaned logs.");
+
       if (latch != null) {
         try {
           latch.await();
@@ -322,10 +325,11 @@ public class HLogSplitter {
           Thread.currentThread().interrupt();
         }
       }
-      if (fs.listStatus(srcDir).length > processedLogs.size()
+      FileStatus[] currFiles = fs.listStatus(srcDir);
+      if (currFiles.length > processedLogs.size()
           + corruptedLogs.size()) {
         throw new OrphanHLogAfterSplitException(
-            "Discovered orphan hlog after split. Maybe the "
+          "Discovered orphan hlog after split. Maybe the "
             + "HRegionServer was not dead when we started");
       }
     } finally {
