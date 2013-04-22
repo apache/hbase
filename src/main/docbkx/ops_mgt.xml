@@ -451,8 +451,8 @@ false
             <programlisting>$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
             </programlisting>
             Tail the output of <filename>/tmp/log.txt</filename> to follow the scripts
-            progress. The above does RegionServers only.  Be sure to disable the
-            load balancer before doing the above.  You'd need to do the master
+            progress. The above does RegionServers only.  The script will also disable the
+            load balancer before moving the regions.  You'd need to do the master
             update separately.  Do it before you run the above script.
             Here is a pseudo-script for how you might craft a rolling restart script:
             <orderedlist>
@@ -469,11 +469,6 @@ false
                 </listitem>
                 <listitem>
                     <para>Restart the Master: <programlisting>$ ./bin/hbase-daemon.sh stop master; ./bin/hbase-daemon.sh start master</programlisting>
-                    </para>
-                </listitem>
-                <listitem>
-                    <para>
-                       Disable the region balancer:<programlisting>$ echo "balance_switch false" | ./bin/hbase shell</programlisting>
                     </para>
                 </listitem>
                 <listitem>
