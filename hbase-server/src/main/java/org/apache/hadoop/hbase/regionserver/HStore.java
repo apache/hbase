@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -67,7 +68,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
-import org.apache.hadoop.hbase.regionserver.compactions.OffPeakCompactions;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -147,7 +148,8 @@ public class HStore implements Store {
 
   final StoreEngine<?, ?, ?> storeEngine;
 
-  private OffPeakCompactions offPeakCompactions;
+  private static final AtomicBoolean offPeakCompactionTracker = new AtomicBoolean();
+  private final OffPeakHours offPeakHours;
 
   private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
   private static int flush_retries_number;
@@ -199,7 +201,7 @@ public class HStore implements Store {
     // to clone it?
     scanInfo = new ScanInfo(family, ttl, timeToPurgeDeletes, this.comparator);
     this.memstore = new MemStore(conf, this.comparator);
-    this.offPeakCompactions = new OffPeakCompactions(conf);
+    this.offPeakHours = OffPeakHours.getInstance(conf);
 
     // Setting up cache configuration for this family
     this.cacheConf = new CacheConfig(conf, family);
@@ -1183,13 +1185,21 @@ public class HStore implements Store {
         // Normal case - coprocessor is not overriding file selection.
         if (!compaction.hasSelection()) {
           boolean isUserCompaction = priority == Store.PRIORITY_USER;
-          boolean mayUseOffPeak = this.offPeakCompactions.tryStartOffPeakRequest();
-          compaction.select(this.filesCompacting, isUserCompaction,
+          boolean mayUseOffPeak = offPeakHours.isOffPeakHour() &&
+              offPeakCompactionTracker.compareAndSet(false, true);
+          try {
+            compaction.select(this.filesCompacting, isUserCompaction,
               mayUseOffPeak, forceMajor && filesCompacting.isEmpty());
+          } catch (IOException e) {
+            if (mayUseOffPeak) {
+              offPeakCompactionTracker.set(false);
+            }
+            throw e;
+          }
           assert compaction.hasSelection();
           if (mayUseOffPeak && !compaction.getRequest().isOffPeak()) {
             // Compaction policy doesn't want to take advantage of off-peak.
-            this.offPeakCompactions.endOffPeakRequest();
+            offPeakCompactionTracker.set(false);
           }
         }
         if (this.getCoprocessorHost() != null) {
@@ -1249,7 +1259,7 @@ public class HStore implements Store {
   private void finishCompactionRequest(CompactionRequest cr) {
     this.region.reportCompactionRequestEnd(cr.isMajor());
     if (cr.isOffPeak()) {
-      this.offPeakCompactions.endOffPeakRequest();
+      offPeakCompactionTracker.set(false);
       cr.setOffPeak(false);
     }
     synchronized (filesCompacting) {
