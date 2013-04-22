@@ -532,38 +532,43 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    */
   public List<HRegionLocation> getRegionsInRange(final byte [] startKey,
-      final byte [] endKey) throws IOException {
-    return getRegionsInRange(startKey, endKey, false);
-  }
+    final byte [] endKey) throws IOException {
+    return getKeysAndRegionsInRange(startKey, endKey, false).getSecond();
+    }
 
   /**
-   * Get the corresponding regions for an arbitrary range of keys.
+   * Get the corresponding start keys and regions for an arbitrary range of
+   * keys.
    * <p>
    * @param startKey Starting row in range, inclusive
-   * @param endKey Ending row in range, exclusive
-   * @param reload true to reload information or false to use cached information
-   * @return A list of HRegionLocations corresponding to the regions that
-   * contain the specified range
+   * @param endKey Ending row in range
+   * @param includeEndKey true if endRow is inclusive, false if exclusive
+   * @return A pair of list of start keys and list of HRegionLocations that
+   *         contain the specified range
    * @throws IOException if a remote or network exception occurs
    */
-  public List<HRegionLocation> getRegionsInRange(final byte [] startKey,
-      final byte [] endKey, final boolean reload) throws IOException {
-    final boolean endKeyIsEndOfTable = Bytes.equals(endKey,
-                                                    HConstants.EMPTY_END_ROW);
+  private Pair<List<byte[]>, List<HRegionLocation>> getKeysAndRegionsInRange(
+      final byte[] startKey, final byte[] endKey, final boolean includeEndKey)
+      throws IOException {
+    final boolean endKeyIsEndOfTable = Bytes.equals(endKey,HConstants.EMPTY_END_ROW);
     if ((Bytes.compareTo(startKey, endKey) > 0) && !endKeyIsEndOfTable) {
       throw new IllegalArgumentException(
         "Invalid range: " + Bytes.toStringBinary(startKey) +
         " > " + Bytes.toStringBinary(endKey));
     }
-    final List<HRegionLocation> regionList = new ArrayList<HRegionLocation>();
-    byte [] currentKey = startKey;
+    List<byte[]> keysInRange = new ArrayList<byte[]>();
+    List<HRegionLocation> regionsInRange = new ArrayList<HRegionLocation>();
+    byte[] currentKey = startKey;
     do {
-      HRegionLocation regionLocation = getRegionLocation(currentKey, reload);
-      regionList.add(regionLocation);
+      HRegionLocation regionLocation = getRegionLocation(currentKey, false);
+      keysInRange.add(currentKey);
+      regionsInRange.add(regionLocation);
       currentKey = regionLocation.getRegionInfo().getEndKey();
-    } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW) &&
-             (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0));
-    return regionList;
+    } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
+        && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0
+            || (includeEndKey && Bytes.compareTo(currentKey, endKey) == 0)));
+    return new Pair<List<byte[]>, List<HRegionLocation>>(keysInRange,
+        regionsInRange);
   }
 
   /**
@@ -1291,33 +1296,13 @@ public class HTable implements HTableInterface {
 
   private List<byte[]> getStartKeysInRange(byte[] start, byte[] end)
   throws IOException {
-    Pair<byte[][],byte[][]> startEndKeys = getStartEndKeys();
-    byte[][] startKeys = startEndKeys.getFirst();
-    byte[][] endKeys = startEndKeys.getSecond();
-
     if (start == null) {
       start = HConstants.EMPTY_START_ROW;
     }
     if (end == null) {
       end = HConstants.EMPTY_END_ROW;
     }
-
-    List<byte[]> rangeKeys = new ArrayList<byte[]>();
-    for (int i=0; i<startKeys.length; i++) {
-      if (Bytes.compareTo(start, startKeys[i]) >= 0 ) {
-        if (Bytes.equals(endKeys[i], HConstants.EMPTY_END_ROW) ||
-            Bytes.compareTo(start, endKeys[i]) < 0) {
-          rangeKeys.add(start);
-        }
-      } else if (Bytes.equals(end, HConstants.EMPTY_END_ROW) ||
-          Bytes.compareTo(startKeys[i], end) <= 0) {
-        rangeKeys.add(startKeys[i]);
-      } else {
-        break; // past stop
-      }
-    }
-
-    return rangeKeys;
+    return getKeysAndRegionsInRange(start, end, true).getFirst();
   }
 
   public void setOperationTimeout(int operationTimeout) {
