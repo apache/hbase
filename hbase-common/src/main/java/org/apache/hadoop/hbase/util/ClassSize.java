@@ -242,7 +242,6 @@ public class ClassSize {
           }
           if (debug) {
             if (LOG.isDebugEnabled()) {
-              // Write out region name as string and its encoded name.
               LOG.debug("" + index + " " + aField.getName() + " " + aField.getType());
             }
           }
@@ -269,7 +268,6 @@ public class ClassSize {
     long size = align(prealign_size);
     if(debug) {
       if (LOG.isDebugEnabled()) {
-        // Write out region name as string and its encoded name.
         LOG.debug("Primitives=" + coeff[0] + ", arrays=" + coeff[1] +
             ", references(includes " + nrOfRefsPerObj +
             " for object overhead)=" + coeff[2] + ", refSize " + REFERENCE +

@@ -39,7 +39,7 @@ public class ScanInfo {
 
   public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
       + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_INT)
-      + Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN);
+      + (2 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN);
 
   /**
    * @param family {@link HColumnDescriptor} describing the column family

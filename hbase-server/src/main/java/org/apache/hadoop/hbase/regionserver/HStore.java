@@ -1806,8 +1806,8 @@ public class HStore implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align((17 * ClassSize.REFERENCE) + (5 * Bytes.SIZEOF_LONG)
-              + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
+      ClassSize.align(ClassSize.OBJECT + (16 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
+              + (2 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK
