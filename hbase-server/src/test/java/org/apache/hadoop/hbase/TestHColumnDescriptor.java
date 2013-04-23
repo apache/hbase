@@ -18,12 +18,14 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.junit.experimental.categories.Category;
 
@@ -93,5 +95,72 @@ public class TestHColumnDescriptor {
     assertEquals(value, desc.getConfigurationValue(key));
     desc.removeConfiguration(key);
     assertEquals(null, desc.getConfigurationValue(key));
+  }
+
+  @Test
+  public void testEqualsWithFamilyName() {
+    final String name1 = "someFamilyName";
+    HColumnDescriptor hcd1 = new HColumnDescriptor(name1);
+    HColumnDescriptor hcd2 = new HColumnDescriptor("someOtherFamilyName");
+    HColumnDescriptor hcd3 = new HColumnDescriptor(name1);
+
+    assertFalse(hcd1.equals(hcd2));
+    assertFalse(hcd2.equals(hcd1));
+
+    assertTrue(hcd3.equals(hcd1));
+    assertTrue(hcd1.equals(hcd3));
+  }
+
+  @Test
+  public void testEqualsWithAdditionalProperties() {
+    final String name1 = "someFamilyName";
+    HColumnDescriptor hcd1 = new HColumnDescriptor(name1);
+    HColumnDescriptor hcd2 = new HColumnDescriptor(name1);
+    hcd2.setBlocksize(4);
+
+    assertFalse(hcd1.equals(hcd2));
+    assertFalse(hcd2.equals(hcd1));
+
+    hcd1.setBlocksize(4);
+
+    assertTrue(hcd2.equals(hcd1));
+    assertTrue(hcd1.equals(hcd2));
+  }
+
+  @Test
+  public void testEqualsWithDifferentNumberOfProperties() {
+    final String name1 = "someFamilyName";
+    HColumnDescriptor hcd1 = new HColumnDescriptor(name1);
+    HColumnDescriptor hcd2 = new HColumnDescriptor(name1);
+    hcd2.setBlocksize(4);
+    hcd1.setBlocksize(4);
+
+    assertTrue(hcd2.equals(hcd1));
+    assertTrue(hcd1.equals(hcd2));
+
+    hcd2.setBloomFilterType(BloomType.ROW);
+
+    assertFalse(hcd1.equals(hcd2));
+    assertFalse(hcd2.equals(hcd1));
+  }
+
+  @Test
+  public void testEqualsWithDifferentOrderingOfProperties() {
+    final String name1 = "someFamilyName";
+    HColumnDescriptor hcd1 = new HColumnDescriptor(name1);
+    HColumnDescriptor hcd2 = new HColumnDescriptor(name1);
+    hcd2.setBlocksize(4);
+    hcd2.setBloomFilterType(BloomType.ROW);
+    hcd1.setBloomFilterType(BloomType.ROW);
+    hcd1.setBlocksize(4);
+
+    assertTrue(hcd2.equals(hcd1));
+    assertTrue(hcd1.equals(hcd2));
+  }
+
+  @Test
+  public void testEqualityWithSameObject() {
+    HColumnDescriptor hcd1 = new HColumnDescriptor("someName");
+    assertTrue(hcd1.equals(hcd1));
   }
 }
