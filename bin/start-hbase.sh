@@ -24,7 +24,7 @@
 
 # Start hadoop hbase daemons.
 # Run this on master node.
-usage="Usage: start-hbase.sh"
+usage="Usage: start-hbase.sh [autorestart] [--formatZK] [--formatFS]"
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin">/dev/null; pwd`
@@ -37,12 +37,19 @@ if [ $errCode -ne 0 ]
 then
   exit $errCode
 fi
+for i in 1 2 3
+do
+  if [ "$1" = "autorestart" ];then
+    commandToRun="autorestart"
+  elif [ "$1" = "--formatZK" ];then
+    formatzk=$1
+  elif [ "$1" = "--formatFS" ];then
+    formatfs=$1
+  fi
+  shift
+done
 
-
-if [ "$1" = "autorestart" ]
-then
-  commandToRun="autorestart"
-else 
+if [ "$commandToRun" = "" ];then
   commandToRun="start"
 fi
 
@@ -52,10 +59,10 @@ distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBa
 
 if [ "$distMode" == 'false' ] 
 then
-  "$bin"/hbase-daemon.sh $commandToRun master
+  "$bin"/hbase-daemon.sh $commandToRun master $formatzk $formatfs
 else
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" $commandToRun zookeeper
-  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master 
+  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master  $formatzk $formatfs
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
     --hosts "${HBASE_REGIONSERVERS}" $commandToRun regionserver
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \

@@ -225,9 +225,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * catalog tables, <code>.META.</code> and <code>-ROOT-</code>.
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
-    this.name = name.clone();
-    this.nameAsString = Bytes.toString(this.name);
-    setMetaFlags(name);
+    setName(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
     }
@@ -239,12 +237,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
       Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
-    this.name = name.clone();
-    this.nameAsString = Bytes.toString(this.name);
-    setMetaFlags(name);
-    for(HColumnDescriptor descriptor : families) {
-      this.families.put(descriptor.getName(), descriptor);
-    }
+    this(name.clone(), families);
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry:
         values.entrySet()) {
       setValue(entry.getKey(), entry.getValue());
@@ -284,9 +277,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public HTableDescriptor(final byte [] name) {
     super();
-    setMetaFlags(this.name);
-    this.name = this.isMetaRegion()? name: isLegalTableName(name);
-    this.nameAsString = Bytes.toString(this.name);
+    setName(name);
   }
 
   /**
@@ -298,9 +289,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public HTableDescriptor(final HTableDescriptor desc) {
     super();
-    this.name = desc.name.clone();
-    this.nameAsString = Bytes.toString(this.name);
-    setMetaFlags(this.name);
+    setName(desc.name.clone());
     for (HColumnDescriptor c: desc.families.values()) {
       this.families.put(c.getName(), new HColumnDescriptor(c));
     }
@@ -650,9 +639,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * Set the name of the table.
    *
    * @param name name of table
+   * @throws IllegalArgumentException if passed a table name
+   * that is made of other than 'word' characters, underscore or period: i.e.
+   * <code>[a-zA-Z_0-9.].
+   * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
    */
   public void setName(byte[] name) {
-    this.name = name;
+    this.name = isMetaTable(name) ? name : isLegalTableName(name);
     this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(this.name);
   }
@@ -987,39 +980,34 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   @Override
   public int compareTo(final HTableDescriptor other) {
+    // Check name matches
     int result = Bytes.compareTo(this.name, other.name);
-    if (result == 0) {
-      result = families.size() - other.families.size();
-    }
-    if (result == 0 && families.size() != other.families.size()) {
-      result = Integer.valueOf(families.size()).compareTo(
-          Integer.valueOf(other.families.size()));
-    }
-    if (result == 0) {
-      for (Iterator<HColumnDescriptor> it = families.values().iterator(),
-          it2 = other.families.values().iterator(); it.hasNext(); ) {
-        result = it.next().compareTo(it2.next());
-        if (result != 0) {
-          break;
-        }
+    if (result != 0) return result;
+
+    // Check size matches
+    result = families.size() - other.families.size();
+    if (result != 0) return result;
+
+    // Compare that all column families
+    for (Iterator<HColumnDescriptor> it = families.values().iterator(),
+         it2 = other.families.values().iterator(); it.hasNext(); ) {
+      result = it.next().compareTo(it2.next());
+      if (result != 0) {
+        return result;
       }
     }
-    if (result == 0) {
-      // punt on comparison for ordering, just calculate difference
-      result = this.values.hashCode() - other.values.hashCode();
-      if (result < 0)
-        result = -1;
-      else if (result > 0)
-        result = 1;
+
+    // Compare values
+    if (!values.equals(other.values)) {
+      return 1;
     }
-    if (result == 0) {
-      result = this.configuration.hashCode() - other.configuration.hashCode();
-      if (result < 0)
-        result = -1;
-      else if (result > 0)
-        result = 1;
+
+    // Compare configuration
+    if (!configuration.equals(other.configuration)) {
+      return 1;
     }
-    return result;
+
+    return 0;
   }
 
   /**
