@@ -351,11 +351,6 @@ public class RegionServerMetrics implements Updater {
         this.lastExtUpdate = this.lastUpdate;
         this.resetAllMinMax();
       }
-      if (this.histogramMetricWindow > 0 &&
-        ((this.lastUpdate - this.lastHistUpdate) >= this.histogramMetricWindow)) {
-        this.lastHistUpdate = this.lastUpdate;
-        this.resetAllHistogramBasedMetrics();
-      }
 
       this.stores.pushMetric(this.metricsRecord);
       this.storefiles.pushMetric(this.metricsRecord);
@@ -457,6 +452,12 @@ public class RegionServerMetrics implements Updater {
       this.quorumReadsExecutedInCurThread.pushMetric(this.metricsRecord);
 
       this.blocksCachedDuringCompaction.pushMetric(this.metricsRecord);
+
+      if (this.histogramMetricWindow > 0 &&
+        ((this.lastUpdate - this.lastHistUpdate) >= this.histogramMetricWindow)) {
+        this.lastHistUpdate = this.lastUpdate;
+        this.resetAllHistogramBasedMetrics();
+      }
     }
     this.metricsRecord.update();
   }

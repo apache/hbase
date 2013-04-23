@@ -25,13 +25,14 @@ public class HistogramTest extends TestCase{
 
   @Test
   public void testAboveMaxValue() {
-    Histogram hist = new Histogram(1000, 100.0, 10000.0);
+    Double hi = 10000.0;
+    Histogram hist = new Histogram(1000, 100.0, hi);
     for (int i=0; i<100; i++) {
-      Double tmp = i * 1.0;
+      Double tmp = hi + i * 1.0;
       hist.addValue(tmp);
     }
     Double prcntyl = hist.getPercentileEstimate(95.0);
-    assertTrue(prcntyl >= 94 && prcntyl <= 96);
+    assertTrue(prcntyl >= (hi + 94) && prcntyl <= (hi + 96));
   }
   @Test
   public void testBelowMinValue() {
