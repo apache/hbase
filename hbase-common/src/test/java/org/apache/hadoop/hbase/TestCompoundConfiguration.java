@@ -20,18 +20,15 @@
 package org.apache.hadoop.hbase;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
+
+import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.SmallTests;
-
-import org.junit.experimental.categories.Category;
 import org.junit.Test;
-
-import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestCompoundConfiguration extends TestCase {
@@ -50,7 +47,7 @@ public class TestCompoundConfiguration extends TestCase {
   @Test
   public void testBasicFunctionality() throws ClassNotFoundException {
     CompoundConfiguration compoundConf = new CompoundConfiguration()
-        .add(baseConf);
+        .add(baseConf); 
     assertEquals("1", compoundConf.get("A"));
     assertEquals(2, compoundConf.getInt("B", 0));
     assertEquals(3, compoundConf.getInt("C", 0));
@@ -64,6 +61,29 @@ public class TestCompoundConfiguration extends TestCase {
     } catch (ClassNotFoundException e) {
       // win!
     }
+  }
+
+  @Test
+  public void testPut() {
+    CompoundConfiguration compoundConf = new CompoundConfiguration()
+      .add(baseConf);
+    assertEquals("1", compoundConf.get("A"));
+    assertEquals(2, compoundConf.getInt("B", 0));
+    assertEquals(3, compoundConf.getInt("C", 0));
+    assertEquals(0, compoundConf.getInt("D", 0));
+
+    compoundConf.set("A", "1337");
+    compoundConf.set("string", "stringvalue");
+    assertEquals(1337, compoundConf.getInt("A", 0));
+    assertEquals("stringvalue", compoundConf.get("string"));
+
+    // we didn't modify the base conf
+    assertEquals("1", baseConf.get("A"));
+    assertNull(baseConf.get("string"));
+
+    // adding to the base shows up in the compound
+    baseConf.set("setInParent", "fromParent");
+    assertEquals("fromParent", compoundConf.get("setInParent"));
   }
 
   @Test
@@ -128,6 +148,15 @@ public class TestCompoundConfiguration extends TestCase {
     }
     // verify that entries from ImmutableConfigMap's are merged in the iterator's view
     assertEquals(baseConfSize + 2, cnt);
+
+    // Verify that adding map after compound configuration is modified overrides properly
+    CompoundConfiguration conf2 = new CompoundConfiguration();
+    conf2.set("X", "modification");
+    conf2.set("D", "not4");
+    assertEquals("modification", conf2.get("X"));
+    assertEquals("not4", conf2.get("D"));
+    conf2.addWritableMap(map);
+    assertEquals("4", conf2.get("D")); // map overrides
   }
 
   @Test
@@ -156,6 +185,15 @@ public class TestCompoundConfiguration extends TestCase {
     }
     // verify that entries from ImmutableConfigMap's are merged in the iterator's view
     assertEquals(4, cnt);
+    
+    // Verify that adding map after compound configuration is modified overrides properly
+    CompoundConfiguration conf2 = new CompoundConfiguration();
+    conf2.set("X", "modification");
+    conf2.set("D", "not4");
+    assertEquals("modification", conf2.get("X"));
+    assertEquals("not4", conf2.get("D"));
+    conf2.addStringMap(map);
+    assertEquals("4", conf2.get("D")); // map overrides
   }
 
   @Test
