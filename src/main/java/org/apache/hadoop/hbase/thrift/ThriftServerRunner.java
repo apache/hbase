@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -1520,10 +1521,11 @@ public class ThriftServerRunner implements Runnable {
   }
 
   public static IOError convertIOException(IOException e) {
-    if (e instanceof IOError) {
-      return (IOError) e;
+    long timeout = 0;
+    if (e instanceof RegionException) {
+      timeout = ((RegionException)e).getBackoffTimeMillis();
     }
-    return new IOError(e.getMessage(), 0, e.getClass().getName());
+    return new IOError(e.getMessage(), timeout, e.getClass().getSimpleName());
   }
 
   private static byte[] getQualifier(byte[][] familyAndQualifier) {

@@ -19,13 +19,16 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.thrift.generated.IOError;
+import java.io.IOException;
+
 
 /**
  * Thrown when something happens related to region handling.
  * Subclasses have to be more specific.
  */
-public class RegionException extends IOError {
+public class RegionException extends IOException {
+  private long waitMillis = 0;
+
   private static final long serialVersionUID = 1473510258071111371L;
 
   /** default constructor */
@@ -38,12 +41,16 @@ public class RegionException extends IOError {
    * @param s message
    */
   public RegionException(String s) {
-    this(s, 0);
+    super(s);
   }
 
   public RegionException(String s, long waitMillis) {
-    super(s, waitMillis, "");
-    exceptionClass = getClass().getName();
+    super(s);
+    this.waitMillis = waitMillis;
+  }
+
+  public long getBackoffTimeMillis() {
+    return this.waitMillis;
   }
 
 }
