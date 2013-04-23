@@ -60,7 +60,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   static final String SERVERNAME_SEPARATOR = ",";
 
   private static final Pattern SERVER_NAME_RE = Pattern.compile(
-      "^[^,]+" + SERVERNAME_SEPARATOR + 
+      "^[0-9a-zA-Z.-]+" + SERVERNAME_SEPARATOR +
       "[0-9]{1," + String.valueOf(0xffff).length() + "}" + SERVERNAME_SEPARATOR +
       "-?[0-9]{1," + String.valueOf(Long.MAX_VALUE).length() + "}");
 

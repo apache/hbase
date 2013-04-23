@@ -160,6 +160,11 @@ public class TestHServerInfo {
     assertFalse(HServerInfo.isValidServerName(",www.acme.com,80,0"));
     assertTrue(HServerInfo.isValidServerName("foo.bar,60020," + Long.MAX_VALUE));
     assertFalse(HServerInfo.isValidServerName("foo.bar,60020," + Long.MAX_VALUE + "a"));
+    assertFalse(HServerInfo.isValidServerName(",60020," + Long.MAX_VALUE));
+    assertFalse(HServerInfo.isValidServerName(" ,60020," + Long.MAX_VALUE));
+    assertFalse(HServerInfo.isValidServerName("  ,60020," + Long.MAX_VALUE));
+    assertFalse(HServerInfo.isValidServerName("!>;@#@#localhost,60020," +
+                                              Long.MAX_VALUE));
   }
 
 }
