@@ -1142,8 +1142,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
 
     for (HFileBlock b : loadOnOpenBlocks)
-      if (b.getBlockType() == blockType)
+      if (b.getBlockType() == blockType) {
         return b.getByteStream();
+      }
     return null;
   }
 

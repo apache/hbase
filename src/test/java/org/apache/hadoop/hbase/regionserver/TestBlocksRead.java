@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.Test;
@@ -425,7 +426,7 @@ public class TestBlocksRead extends HBaseTestCase {
     HBaseConfiguration conf = getConf();
     conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
     initHRegion(TABLE, getName(), conf, FAMILY, true);
-    if (!conf.getBoolean(HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING, HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER)) {
+    if (!conf.getBoolean(BloomFilterFactory.IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false)) {
       System.out.println("ignoring this test since the delete bloom filter is not enabled...");
       return;
     }
@@ -488,7 +489,7 @@ public class TestBlocksRead extends HBaseTestCase {
     HBaseConfiguration conf = getConf();
     conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
     initHRegion(TABLE, getName(), conf, FAMILY, true);
-    if (!conf.getBoolean(HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING, HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER)) {
+    if (!conf.getBoolean(BloomFilterFactory.IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false)) {
       System.out.println("ignoring this test since the delete bloom filter is not enabled...");
       return;
     }
@@ -532,7 +533,7 @@ public class TestBlocksRead extends HBaseTestCase {
     HBaseConfiguration conf = getConf();
     conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
     initHRegion(TABLE, getName(), conf, FAMILY, true);
-    if (!conf.getBoolean(HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING, HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER)) {
+    if (!conf.getBoolean(BloomFilterFactory.IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false)) {
       System.out.println("ignoring this test since the delete bloom filter is not enabled...");
       return;
     }
@@ -582,7 +583,7 @@ public class TestBlocksRead extends HBaseTestCase {
     HBaseConfiguration conf = getConf();
     conf.setBoolean("io.storefile.delete.column.bloom.enabled", true);
     initHRegion(TABLE, getName(), conf, FAMILY, true);
-    if (!conf.getBoolean(HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING, HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER)) {
+    if (!conf.getBoolean(BloomFilterFactory.IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false)) {
       System.out.println("ignoring this test since the delete bloom filter is not enabled...");
       return;
     }

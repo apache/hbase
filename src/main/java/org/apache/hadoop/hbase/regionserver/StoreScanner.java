@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.regionserver.kvaggregator.KeyValueAggregator;
@@ -65,7 +66,10 @@ public class StoreScanner extends NonLazyKeyValueScanner
   private final KeyValueAggregator keyValueAggregator;
   private final NavigableSet<byte[]> columns;
   private final long oldestUnexpiredTS;
-  private boolean deleteColBloomEnabled = false;
+  /**
+   * Whether the deleteColBloomFilter is enabled for usage
+   */
+  private boolean isUsingDeleteColBloom = false;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -106,9 +110,12 @@ public class StoreScanner extends NonLazyKeyValueScanner
     // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
     useRowColBloom = numCol > 1 || (!isGet && numCol == 1);
     if (store != null) {
-      this.deleteColBloomEnabled = store.conf.getBoolean(
-          HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING,
-          HConstants.ENABLE_DELETE_COLUMN_BLOOM_FILTER);
+      // check first whether the delete column bloom filter is enabled for write/read
+      if (BloomFilterFactory.isDeleteColumnBloomEnabled(store.conf)) {
+        this.isUsingDeleteColBloom = store.conf.getBoolean(
+            HConstants.USE_DELETE_COLUMN_BLOOM_FILTER_STRING,
+            HConstants.USE_DELETE_COLUMN_BLOOM_FILTER);
+      }
     }
   }
 
@@ -458,7 +465,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
                 reseek(matcher.getKeyForNextColumn(kv, null, false));
               } else {
                 reseek(matcher.getKeyForNextColumn(kv,
-                    this.heap.getActiveScanners(), deleteColBloomEnabled));
+                    this.heap.getActiveScanners(), isUsingDeleteColBloom));
               }
             } else {
               this.heap.next();
@@ -500,7 +507,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
             if (this.store == null) {
               reseek(matcher.getKeyForNextColumn(kv, null, false));
             } else {
-              reseek(matcher.getKeyForNextColumn(kv, this.heap.getActiveScanners(),deleteColBloomEnabled));
+              reseek(matcher.getKeyForNextColumn(kv, this.heap.getActiveScanners(),isUsingDeleteColBloom));
             }
             break;
 

@@ -652,9 +652,16 @@ public final class HConstants {
 
   public static final String DELETE_COLUMN_BLOOM_FILTER = "delete_column_bloom_filter";
 
-  public static final boolean ENABLE_DELETE_COLUMN_BLOOM_FILTER = false;
-
-  public static final String ENABLE_DELETE_COLUMN_BLOOM_FILTER_STRING = "enable_delete_column_bloom_filter";
+  /**
+   * This will enable/disable the usage of delete col bloom filter. Note that
+   * this won't enable/disable the delete bloom filter for being written/read.
+   * In fact, we could read and write it but we will not use it when we scan
+   * data, thus we won't do the optimized reads. In order to disable/enable the
+   * filter for write&read both, use
+   * BloomFilterFactory.IO_STOREFILE_DELETEFAMILY_BLOOM_ENABLED
+   */
+  public static final boolean USE_DELETE_COLUMN_BLOOM_FILTER = true;
+  public static final String USE_DELETE_COLUMN_BLOOM_FILTER_STRING = "use_delete_column_bloom_filter";
 
   // Delaying the region server load balancing by the following amount for a
   // load balancing where source is a favored region server.

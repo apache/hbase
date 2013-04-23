@@ -527,9 +527,10 @@ public class StoreFile extends SchemaConfigured {
 
     // load delete family bloom filter
     reader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
-
-    // load delete column bloom filter
-    reader.loadBloomfilter(BlockType.DELETE_COLUMN_BLOOM_META);
+    if (BloomFilterFactory.isDeleteColumnBloomEnabled(conf)) {
+      // load delete column bloom filter
+      reader.loadBloomfilter(BlockType.DELETE_COLUMN_BLOOM_META);
+    }
 
     try {
       byte [] timerangeBytes = metadataMap.get(TIMERANGE_KEY);
@@ -1148,6 +1149,10 @@ public class StoreFile extends SchemaConfigured {
       return generalBloomFilterWriter;
     }
 
+    BloomFilterWriter getDeleteColumnBloomFilterWriter() {
+      return deleteColumnBloomFilterWriter;
+    }
+
     private boolean closeBloomFilter(BloomFilterWriter bfw) throws IOException {
       boolean haveBloom = (bfw != null && bfw.getKeyCount() > 0);
       if (haveBloom) {
@@ -1742,6 +1747,7 @@ public class StoreFile extends SchemaConfigured {
     void disableBloomFilterForTesting() {
       generalBloomFilter = null;
       this.deleteFamilyBloomFilter = null;
+      this.deleteColumnBloomFilter = null;
     }
 
     public long getMaxTimestamp() {

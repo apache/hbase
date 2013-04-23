@@ -136,10 +136,11 @@ public final class BloomFilterFactory {
   }
 
   /**
-   * @return true if Delete Column Bloom filters are enabled in the given configuration
+   * @return true if Delete Column Bloom filters are enabled in the given
+   * configuration
    */
   public static boolean isDeleteColumnBloomEnabled(Configuration conf) {
-    return conf.getBoolean(IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, true);
+    return conf.getBoolean(IO_STOREFILE_DELETECOLUMN_BLOOM_ENABLED, false);
   }
 
   /**

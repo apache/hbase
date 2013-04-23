@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -250,6 +251,10 @@ public class TestCacheOnWrite {
 
     LOG.info("Block count by type: " + blockCountByType);
     String countByType = blockCountByType.toString();
+    int bloom_chunk = 9;
+    if (BloomFilterFactory.isDeleteColumnBloomEnabled(conf)) {
+      bloom_chunk = 10;
+    }
     BlockType cachedDataBlockType =
         encoderType.encodeInCache ? BlockType.ENCODED_DATA : BlockType.DATA;
 
@@ -257,11 +262,11 @@ public class TestCacheOnWrite {
     // so number of blocks depends on this parameter as well.
     if (encoder.getEncodingOnDisk() == DataBlockEncoding.PREFIX) {
       assertEquals("{" + cachedDataBlockType
-          + "=965, LEAF_INDEX=121, BLOOM_CHUNK=10, INTERMEDIATE_INDEX=17}",
+          + "=965, LEAF_INDEX=121, BLOOM_CHUNK="+bloom_chunk+", INTERMEDIATE_INDEX=17}",
           countByType);
     } else {
       assertEquals("{" + cachedDataBlockType
-          + "=1379, LEAF_INDEX=173, BLOOM_CHUNK=10, INTERMEDIATE_INDEX=24}",
+          + "=1379, LEAF_INDEX=173, BLOOM_CHUNK="+bloom_chunk+", INTERMEDIATE_INDEX=24}",
           countByType);
     }
 
