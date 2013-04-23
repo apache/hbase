@@ -678,6 +678,9 @@ public final class HConstants {
   public static final String HISTOGRAM_BASED_METRICS_WINDOW =
       "hbase.histogrambasedmetric.window";
 
+  public static final String CLIENT_SOCKED_CLOSED_EXC_MSG = "Interrupting the read request";
+  public static final String SERVER_INTERRUPTED_CALLS_KEY = "serverInterruptedCalls";
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

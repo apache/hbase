@@ -623,6 +623,14 @@ public class HRegionServer implements HRegionInterface,
   }
 
   /**
+   * if the current call from a client has closed his connection
+   * @return
+   */
+  public static boolean isCurrentConnectionClosed() {
+    return callContext.get().getConnection().getSocket().isClosed();
+  }
+
+  /**
    * The HRegionServer sticks in this loop until closed. It repeatedly checks
    * in with the HMaster, sending heartbeats & reports, and receiving HRegion
    * load/unload instructions.
@@ -1124,7 +1132,7 @@ public class HRegionServer implements HRegionInterface,
     return createRegionLoad(this.onlineRegions.get(Bytes.mapKey(regionName)));
   }
 
-  /*
+  /**
    * Cleanup after Throwable caught invoking method.  Converts <code>t</code>
    * to IOE if it isn't already.
    * @param t Throwable
@@ -1134,7 +1142,7 @@ public class HRegionServer implements HRegionInterface,
     return cleanup(t, null);
   }
 
-  /*
+  /**
    * Cleanup after Throwable caught invoking method.  Converts <code>t</code>
    * to IOE if it isn't already.
    * @param t Throwable
@@ -1160,7 +1168,7 @@ public class HRegionServer implements HRegionInterface,
     return t;
   }
 
-  /*
+  /**
    * @param t
    * @return Make <code>t</code> an IOE if it isn't already.
    */
@@ -1168,7 +1176,7 @@ public class HRegionServer implements HRegionInterface,
     return convertThrowableToIOE(t, null);
   }
 
-  /*
+  /**
    * @param t
    * @param msg Message to put in new IOE if passed <code>t</code> is not an IOE
    * @return Make <code>t</code> an IOE if it isn't already.
@@ -1179,7 +1187,8 @@ public class HRegionServer implements HRegionInterface,
       msg == null || msg.length() == 0?
         new IOException(t): new IOException(msg, t));
   }
-  /*
+
+  /**
    * Check if an OOME and if so, call abort immediately and avoid creating more
    * objects.
    * @param e

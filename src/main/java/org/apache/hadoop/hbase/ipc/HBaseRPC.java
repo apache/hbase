@@ -24,10 +24,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,7 +35,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.ParamFormatHelper;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import org.codehaus.jackson.map.ObjectMapper;
@@ -47,15 +44,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import java.lang.reflect.Proxy;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -496,7 +490,6 @@ public class HBaseRPC {
     private final int warnResponseTime;
     private final int warnResponseSize;
 
-
     /**
      * Construct an RPC server.
      * @param instance the instance whose methods will be called
@@ -581,7 +574,6 @@ public class HBaseRPC {
         status.setRPC(call.getMethodName(), call.getParameters(), receivedTime, method);
         status.setRPCPacket(param);
         status.resume("Servicing call");
-
         long startTime = System.currentTimeMillis();
         Object value = method.invoke(instance, call.getParameters());
         int processingTime = (int) (System.currentTimeMillis() - startTime);
@@ -640,7 +632,7 @@ public class HBaseRPC {
       } catch (InvocationTargetException e) {
         Throwable target = e.getTargetException();
         if (target instanceof IOException) {
-          throw (IOException)target;
+          throw (IOException) target;
         }
         IOException ioe = new IOException(target.toString());
         ioe.setStackTrace(target.getStackTrace());

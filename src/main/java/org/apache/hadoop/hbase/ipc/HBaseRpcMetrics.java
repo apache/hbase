@@ -103,7 +103,7 @@ public class HBaseRpcMetrics implements Updater {
     
     rpcProcessingTime.pushMetric(metricsRecord);
     rpcProcessingTime.resetMinMax();
-    
+
     synchronized (registry) {
       // Iterate through the registry to propagate the different rpc metrics.
 

@@ -170,7 +170,6 @@ public abstract class HBaseServer {
 
   protected Configuration conf;
 
-  @SuppressWarnings({"FieldCanBeLocal"})
   protected int socketSendBufferSize;
   protected final boolean tcpNoDelay;   // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
@@ -283,6 +282,10 @@ public abstract class HBaseServer {
 
     public void setPartialResponseSize(long partialResponseSize) {
       this.partialResponseSize = partialResponseSize;
+    }
+
+    public Connection getConnection() {
+      return this.connection;
     }
 
     @Override
@@ -813,7 +816,6 @@ public abstract class HBaseServer {
     // Processes one response. Returns true if there are no more pending
     // data for this channel.
     //
-    @SuppressWarnings({"ConstantConditions"})
     private boolean processResponse(final LinkedList<Call> responseQueue,
                                     boolean inHandler) throws IOException {
       boolean error = true;
@@ -1002,7 +1004,7 @@ public abstract class HBaseServer {
 
 
   /** Reads calls from a connection and queues them for handling. */
-  private class Connection {
+  public class Connection {
     private boolean versionRead = false; //if initial signature and
                                          //version are read
     private int version = -1;
@@ -1048,6 +1050,10 @@ public abstract class HBaseServer {
       }
     }
 
+    public Socket getSocket() {
+      return socket;
+    }
+
     @Override
     public String toString() {
       return getHostAddress() + ":" + remotePort;
@@ -1063,10 +1069,6 @@ public abstract class HBaseServer {
 
     public void setLastContact(long lastContact) {
       this.lastContact = lastContact;
-    }
-
-    public long getLastContact() {
-      return lastContact;
     }
 
     /* Return true if the connection has no outstanding rpc */
@@ -1584,26 +1586,6 @@ public abstract class HBaseServer {
 
     int nBytes = initialRemaining - buf.remaining();
     return (nBytes > 0) ? nBytes : ret;
-  }
-
-  /**
-   * Set the OP_READ interest for the selection key
-   * @param selectionKey
-   */
-  private static void setReadInterest(final SelectionKey selectionKey) {
-    synchronized (selectionKey) {
-      selectionKey.interestOps(selectionKey.interestOps() | SelectionKey.OP_READ);
-    }
-  }
-
-  /**
-   * Unset the OP_READ interest for the selection key
-   * @param selectionKey
-   */
-  private static void unsetReadInterest(final SelectionKey selectionKey) {
-    synchronized (selectionKey) {
-      selectionKey.interestOps(selectionKey.interestOps() & (~SelectionKey.OP_READ));
-    }
   }
 
   public long getResponseQueueSize(){
