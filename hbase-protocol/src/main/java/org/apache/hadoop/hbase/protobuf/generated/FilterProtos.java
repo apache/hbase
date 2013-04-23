@@ -397,6 +397,10 @@ public final class FilterProtos {
     // optional int32 offset = 2;
     boolean hasOffset();
     int getOffset();
+    
+    // optional bytes columnOffset = 3;
+    boolean hasColumnOffset();
+    com.google.protobuf.ByteString getColumnOffset();
   }
   public static final class ColumnPaginationFilter extends
       com.google.protobuf.GeneratedMessage
@@ -447,9 +451,20 @@ public final class FilterProtos {
       return offset_;
     }
     
+    // optional bytes columnOffset = 3;
+    public static final int COLUMNOFFSET_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString columnOffset_;
+    public boolean hasColumnOffset() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public com.google.protobuf.ByteString getColumnOffset() {
+      return columnOffset_;
+    }
+    
     private void initFields() {
       limit_ = 0;
       offset_ = 0;
+      columnOffset_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -473,6 +488,9 @@ public final class FilterProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeInt32(2, offset_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, columnOffset_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -489,6 +507,10 @@ public final class FilterProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(2, offset_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, columnOffset_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -523,6 +545,11 @@ public final class FilterProtos {
         result = result && (getOffset()
             == other.getOffset());
       }
+      result = result && (hasColumnOffset() == other.hasColumnOffset());
+      if (hasColumnOffset()) {
+        result = result && getColumnOffset()
+            .equals(other.getColumnOffset());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -539,6 +566,10 @@ public final class FilterProtos {
       if (hasOffset()) {
         hash = (37 * hash) + OFFSET_FIELD_NUMBER;
         hash = (53 * hash) + getOffset();
+      }
+      if (hasColumnOffset()) {
+        hash = (37 * hash) + COLUMNOFFSET_FIELD_NUMBER;
+        hash = (53 * hash) + getColumnOffset().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -660,6 +691,8 @@ public final class FilterProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         offset_ = 0;
         bitField0_ = (bitField0_ & ~0x00000002);
+        columnOffset_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
       
@@ -706,6 +739,10 @@ public final class FilterProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.offset_ = offset_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.columnOffset_ = columnOffset_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -727,6 +764,9 @@ public final class FilterProtos {
         }
         if (other.hasOffset()) {
           setOffset(other.getOffset());
+        }
+        if (other.hasColumnOffset()) {
+          setColumnOffset(other.getColumnOffset());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -773,6 +813,11 @@ public final class FilterProtos {
               offset_ = input.readInt32();
               break;
             }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              columnOffset_ = input.readBytes();
+              break;
+            }
           }
         }
       }
@@ -817,6 +862,30 @@ public final class FilterProtos {
       public Builder clearOffset() {
         bitField0_ = (bitField0_ & ~0x00000002);
         offset_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // optional bytes columnOffset = 3;
+      private com.google.protobuf.ByteString columnOffset_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasColumnOffset() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public com.google.protobuf.ByteString getColumnOffset() {
+        return columnOffset_;
+      }
+      public Builder setColumnOffset(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        columnOffset_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearColumnOffset() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        columnOffset_ = getDefaultInstance().getColumnOffset();
         onChanged();
         return this;
       }
@@ -12547,49 +12616,49 @@ public final class FilterProtos {
     java.lang.String[] descriptorData = {
       "\n\014Filter.proto\032\013hbase.proto\032\020Comparator." +
       "proto\"%\n\024ColumnCountGetFilter\022\r\n\005limit\030\001" +
-      " \002(\005\"7\n\026ColumnPaginationFilter\022\r\n\005limit\030" +
-      "\001 \002(\005\022\016\n\006offset\030\002 \001(\005\"$\n\022ColumnPrefixFil" +
-      "ter\022\016\n\006prefix\030\001 \002(\014\"q\n\021ColumnRangeFilter" +
-      "\022\021\n\tminColumn\030\001 \001(\014\022\032\n\022minColumnInclusiv" +
-      "e\030\002 \001(\010\022\021\n\tmaxColumn\030\003 \001(\014\022\032\n\022maxColumnI" +
-      "nclusive\030\004 \001(\010\"Q\n\rCompareFilter\022\037\n\tcompa" +
-      "reOp\030\001 \002(\0162\014.CompareType\022\037\n\ncomparator\030\002" +
-      " \001(\0132\013.Comparator\"\212\001\n\025DependentColumnFil",
-      "ter\022%\n\rcompareFilter\030\001 \002(\0132\016.CompareFilt" +
-      "er\022\024\n\014columnFamily\030\002 \001(\014\022\027\n\017columnQualif" +
-      "ier\030\003 \001(\014\022\033\n\023dropDependentColumn\030\004 \001(\010\"5" +
-      "\n\014FamilyFilter\022%\n\rcompareFilter\030\001 \002(\0132\016." +
-      "CompareFilter\"\200\001\n\nFilterList\022&\n\010operator" +
-      "\030\001 \002(\0162\024.FilterList.Operator\022\030\n\007filters\030" +
-      "\002 \003(\0132\007.Filter\"0\n\010Operator\022\021\n\rMUST_PASS_" +
-      "ALL\020\001\022\021\n\rMUST_PASS_ONE\020\002\"(\n\rFilterWrappe" +
-      "r\022\027\n\006filter\030\001 \002(\0132\007.Filter\"\024\n\022FirstKeyOn" +
-      "lyFilter\";\n%FirstKeyValueMatchingQualifi",
-      "ersFilter\022\022\n\nqualifiers\030\001 \003(\014\"8\n\016FuzzyRo" +
-      "wFilter\022&\n\rfuzzyKeysData\030\001 \003(\0132\017.BytesBy" +
-      "tesPair\")\n\023InclusiveStopFilter\022\022\n\nstopRo" +
-      "wKey\030\001 \001(\014\"!\n\rKeyOnlyFilter\022\020\n\010lenAsVal\030" +
-      "\001 \002(\010\"4\n\032MultipleColumnPrefixFilter\022\026\n\016s" +
-      "ortedPrefixes\030\001 \003(\014\"\036\n\nPageFilter\022\020\n\010pag" +
-      "eSize\030\001 \002(\003\"\036\n\014PrefixFilter\022\016\n\006prefix\030\001 " +
-      "\001(\014\"8\n\017QualifierFilter\022%\n\rcompareFilter\030" +
-      "\001 \002(\0132\016.CompareFilter\"!\n\017RandomRowFilter" +
-      "\022\016\n\006chance\030\001 \002(\002\"2\n\tRowFilter\022%\n\rcompare",
-      "Filter\030\001 \002(\0132\016.CompareFilter\"[\n\036SingleCo" +
-      "lumnValueExcludeFilter\0229\n\027singleColumnVa" +
-      "lueFilter\030\001 \002(\0132\030.SingleColumnValueFilte" +
-      "r\"\276\001\n\027SingleColumnValueFilter\022\024\n\014columnF" +
-      "amily\030\001 \001(\014\022\027\n\017columnQualifier\030\002 \001(\014\022\037\n\t" +
-      "compareOp\030\003 \002(\0162\014.CompareType\022\037\n\ncompara" +
-      "tor\030\004 \002(\0132\013.Comparator\022\027\n\017filterIfMissin" +
-      "g\030\005 \001(\010\022\031\n\021latestVersionOnly\030\006 \001(\010\"%\n\nSk" +
-      "ipFilter\022\027\n\006filter\030\001 \002(\0132\007.Filter\"*\n\020Tim" +
-      "estampsFilter\022\026\n\ntimestamps\030\001 \003(\003B\002\020\001\"4\n",
-      "\013ValueFilter\022%\n\rcompareFilter\030\001 \002(\0132\016.Co" +
-      "mpareFilter\"+\n\020WhileMatchFilter\022\027\n\006filte" +
-      "r\030\001 \002(\0132\007.FilterBB\n*org.apache.hadoop.hb" +
-      "ase.protobuf.generatedB\014FilterProtosH\001\210\001" +
-      "\001\240\001\001"
+      " \002(\005\"M\n\026ColumnPaginationFilter\022\r\n\005limit\030" +
+      "\001 \002(\005\022\016\n\006offset\030\002 \001(\005\022\024\n\014columnOffset\030\003 " +
+      "\001(\014\"$\n\022ColumnPrefixFilter\022\016\n\006prefix\030\001 \002(" +
+      "\014\"q\n\021ColumnRangeFilter\022\021\n\tminColumn\030\001 \001(" +
+      "\014\022\032\n\022minColumnInclusive\030\002 \001(\010\022\021\n\tmaxColu" +
+      "mn\030\003 \001(\014\022\032\n\022maxColumnInclusive\030\004 \001(\010\"Q\n\r" +
+      "CompareFilter\022\037\n\tcompareOp\030\001 \002(\0162\014.Compa" +
+      "reType\022\037\n\ncomparator\030\002 \001(\0132\013.Comparator\"",
+      "\212\001\n\025DependentColumnFilter\022%\n\rcompareFilt" +
+      "er\030\001 \002(\0132\016.CompareFilter\022\024\n\014columnFamily" +
+      "\030\002 \001(\014\022\027\n\017columnQualifier\030\003 \001(\014\022\033\n\023dropD" +
+      "ependentColumn\030\004 \001(\010\"5\n\014FamilyFilter\022%\n\r" +
+      "compareFilter\030\001 \002(\0132\016.CompareFilter\"\200\001\n\n" +
+      "FilterList\022&\n\010operator\030\001 \002(\0162\024.FilterLis" +
+      "t.Operator\022\030\n\007filters\030\002 \003(\0132\007.Filter\"0\n\010" +
+      "Operator\022\021\n\rMUST_PASS_ALL\020\001\022\021\n\rMUST_PASS" +
+      "_ONE\020\002\"(\n\rFilterWrapper\022\027\n\006filter\030\001 \002(\0132" +
+      "\007.Filter\"\024\n\022FirstKeyOnlyFilter\";\n%FirstK",
+      "eyValueMatchingQualifiersFilter\022\022\n\nquali" +
+      "fiers\030\001 \003(\014\"8\n\016FuzzyRowFilter\022&\n\rfuzzyKe" +
+      "ysData\030\001 \003(\0132\017.BytesBytesPair\")\n\023Inclusi" +
+      "veStopFilter\022\022\n\nstopRowKey\030\001 \001(\014\"!\n\rKeyO" +
+      "nlyFilter\022\020\n\010lenAsVal\030\001 \002(\010\"4\n\032MultipleC" +
+      "olumnPrefixFilter\022\026\n\016sortedPrefixes\030\001 \003(" +
+      "\014\"\036\n\nPageFilter\022\020\n\010pageSize\030\001 \002(\003\"\036\n\014Pre" +
+      "fixFilter\022\016\n\006prefix\030\001 \001(\014\"8\n\017QualifierFi" +
+      "lter\022%\n\rcompareFilter\030\001 \002(\0132\016.CompareFil" +
+      "ter\"!\n\017RandomRowFilter\022\016\n\006chance\030\001 \002(\002\"2",
+      "\n\tRowFilter\022%\n\rcompareFilter\030\001 \002(\0132\016.Com" +
+      "pareFilter\"[\n\036SingleColumnValueExcludeFi" +
+      "lter\0229\n\027singleColumnValueFilter\030\001 \002(\0132\030." +
+      "SingleColumnValueFilter\"\276\001\n\027SingleColumn" +
+      "ValueFilter\022\024\n\014columnFamily\030\001 \001(\014\022\027\n\017col" +
+      "umnQualifier\030\002 \001(\014\022\037\n\tcompareOp\030\003 \002(\0162\014." +
+      "CompareType\022\037\n\ncomparator\030\004 \002(\0132\013.Compar" +
+      "ator\022\027\n\017filterIfMissing\030\005 \001(\010\022\031\n\021latestV" +
+      "ersionOnly\030\006 \001(\010\"%\n\nSkipFilter\022\027\n\006filter" +
+      "\030\001 \002(\0132\007.Filter\"*\n\020TimestampsFilter\022\026\n\nt",
+      "imestamps\030\001 \003(\003B\002\020\001\"4\n\013ValueFilter\022%\n\rco" +
+      "mpareFilter\030\001 \002(\0132\016.CompareFilter\"+\n\020Whi" +
+      "leMatchFilter\022\027\n\006filter\030\001 \002(\0132\007.FilterBB" +
+      "\n*org.apache.hadoop.hbase.protobuf.gener" +
+      "atedB\014FilterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12609,7 +12678,7 @@ public final class FilterProtos {
           internal_static_ColumnPaginationFilter_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ColumnPaginationFilter_descriptor,
-              new java.lang.String[] { "Limit", "Offset", },
+              new java.lang.String[] { "Limit", "Offset", "ColumnOffset", },
               org.apache.hadoop.hbase.protobuf.generated.FilterProtos.ColumnPaginationFilter.class,
               org.apache.hadoop.hbase.protobuf.generated.FilterProtos.ColumnPaginationFilter.Builder.class);
           internal_static_ColumnPrefixFilter_descriptor =
