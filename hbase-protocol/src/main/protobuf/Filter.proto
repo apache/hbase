@@ -34,6 +34,7 @@ message ColumnCountGetFilter {
 message ColumnPaginationFilter {
   required int32 limit = 1;
   optional int32 offset = 2;
+  optional bytes columnOffset = 3;
 }
 
 message ColumnPrefixFilter {

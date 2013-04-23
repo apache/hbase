@@ -45,17 +45,23 @@ public class TestColumnPaginationFilter
     private static final byte[] ROW = Bytes.toBytes("row_1_test");
     private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
     private static final byte[] VAL_1 = Bytes.toBytes("a");
-    private static final byte [] COLUMN_QUALIFIER = Bytes.toBytes("foo");
+    private static final byte[] COLUMN_QUALIFIER = Bytes.toBytes("foo");
 
+    private Filter columnPaginationFilterOffset;
     private Filter columnPaginationFilter;
 
     @Before
     public void setUp() throws Exception {
         columnPaginationFilter = getColumnPaginationFilter();
-
+        columnPaginationFilterOffset = getColumnPaginationFilterOffset();
     }
+
     private Filter getColumnPaginationFilter() {
-        return new ColumnPaginationFilter(1,0);
+        return new ColumnPaginationFilter(1, 0);
+    }
+
+    private Filter getColumnPaginationFilterOffset() {
+        return new ColumnPaginationFilter(1, COLUMN_QUALIFIER);
     }
 
     private Filter serializationTest(Filter filter) throws Exception {
@@ -87,6 +93,9 @@ public class TestColumnPaginationFilter
     public void testSerialization() throws Exception {
       Filter newFilter = serializationTest(columnPaginationFilter);
       basicFilterTests((ColumnPaginationFilter)newFilter);
+
+      Filter newFilterOffset = serializationTest(columnPaginationFilterOffset);
+      basicFilterTests((ColumnPaginationFilter)newFilterOffset);
     }
 
 

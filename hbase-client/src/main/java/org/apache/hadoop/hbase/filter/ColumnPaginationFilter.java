@@ -19,12 +19,14 @@
 package org.apache.hadoop.hbase.filter;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.ArrayList;
 
@@ -39,15 +41,44 @@ import java.util.ArrayList;
 public class ColumnPaginationFilter extends FilterBase
 {
   private int limit = 0;
-  private int offset = 0;
+  private int offset = -1;
+  private byte[] columnOffset = null;
   private int count = 0;
 
+  /**
+   * Initializes filter with an integer offset and limit. The offset is arrived at
+   * scanning sequentially and skipping entries. @limit number of columns are
+   * then retrieved. If multiple column families are involved, the columns may be spread
+   * across them.
+   *
+   * @param limit Max number of columns to return.
+   * @param offset The integer offset where to start pagination.
+   */
   public ColumnPaginationFilter(final int limit, final int offset)
   {
     Preconditions.checkArgument(limit >= 0, "limit must be positive %s", limit);
     Preconditions.checkArgument(offset >= 0, "offset must be positive %s", offset);
     this.limit = limit;
     this.offset = offset;
+  }
+
+  /**
+   * Initializes filter with a string/bookmark based offset and limit. The offset is arrived
+   * at, by seeking to it using scanner hints. If multiple column families are involved,
+   * pagination starts at the first column family which contains @columnOffset. Columns are
+   * then retrieved sequentially upto @limit number of columns which maybe spread across
+   * multiple column families, depending on how the scan is setup.
+   *
+   * @param limit Max number of columns to return.
+   * @param columnOffset The string/bookmark offset on where to start pagination.
+   */
+  public ColumnPaginationFilter(final int limit, final byte[] columnOffset) {
+    Preconditions.checkArgument(limit >= 0, "limit must be positive %s", limit);
+    Preconditions.checkArgument(columnOffset != null,
+                                "columnOffset must be non-null %s",
+                                columnOffset);
+    this.limit = limit;
+    this.columnOffset = columnOffset;
   }
 
   /**
@@ -64,18 +95,56 @@ public class ColumnPaginationFilter extends FilterBase
     return offset;
   }
 
+  /**
+   * @return columnOffset
+   */
+  public byte[] getColumnOffset() {
+    return columnOffset;
+  }
+
   @Override
   public ReturnCode filterKeyValue(KeyValue v)
   {
-    if(count >= offset + limit)
-    {
-      return ReturnCode.NEXT_ROW;
-    }
+    if (columnOffset != null) {
+      if (count >= limit) {
+        return ReturnCode.NEXT_ROW;
+      }
+      byte[] buffer = v.getBuffer();
+      if (buffer == null) {
+        return ReturnCode.SEEK_NEXT_USING_HINT;
+      }
+      int cmp = 0;
+      // Only compare if no KV's have been seen so far.
+      if (count == 0) {
+        cmp = Bytes.compareTo(buffer,
+                              v.getQualifierOffset(),
+                              v.getQualifierLength(),
+                              this.columnOffset,
+                              0,
+                              this.columnOffset.length);
+      }
+      if (cmp < 0) {
+        return ReturnCode.SEEK_NEXT_USING_HINT;
+      } else {
+        count++;
+        return ReturnCode.INCLUDE_AND_NEXT_COL;
+      }
+    } else {
+      if (count >= offset + limit) {
+        return ReturnCode.NEXT_ROW;
+      }
 
-    ReturnCode code = count < offset ? ReturnCode.NEXT_COL :
-                                       ReturnCode.INCLUDE_AND_NEXT_COL;
-    count++;
-    return code;
+      ReturnCode code = count < offset ? ReturnCode.NEXT_COL :
+                                         ReturnCode.INCLUDE_AND_NEXT_COL;
+      count++;
+      return code;
+    }
+  }
+
+  public KeyValue getNextKeyHint(KeyValue kv) {
+    return KeyValue.createFirstOnRow(
+        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
+        kv.getFamilyOffset(), kv.getFamilyLength(), columnOffset, 0, columnOffset.length);
   }
 
   @Override
@@ -99,7 +168,12 @@ public class ColumnPaginationFilter extends FilterBase
     FilterProtos.ColumnPaginationFilter.Builder builder =
       FilterProtos.ColumnPaginationFilter.newBuilder();
     builder.setLimit(this.limit);
-    builder.setOffset(this.offset);
+    if (this.offset >= 0) {
+      builder.setOffset(this.offset);
+    }
+    if (this.columnOffset != null) {
+      builder.setColumnOffset(ByteString.copyFrom(this.columnOffset));
+    }
     return builder.build().toByteArray();
   }
 
@@ -117,6 +191,10 @@ public class ColumnPaginationFilter extends FilterBase
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
+    if (proto.hasColumnOffset()) {
+      return new ColumnPaginationFilter(proto.getLimit(),
+                                        proto.getColumnOffset().toByteArray());
+    }
     return new ColumnPaginationFilter(proto.getLimit(),proto.getOffset());
   }
 
@@ -130,11 +208,19 @@ public class ColumnPaginationFilter extends FilterBase
     if (!(o instanceof ColumnPaginationFilter)) return false;
 
     ColumnPaginationFilter other = (ColumnPaginationFilter)o;
+    if (this.columnOffset != null) {
+      return this.getLimit() == this.getLimit() &&
+          Bytes.equals(this.getColumnOffset(), other.getColumnOffset());
+    }
     return this.getLimit() == other.getLimit() && this.getOffset() == other.getOffset();
   }
 
   @Override
   public String toString() {
+    if (this.columnOffset != null) {
+      return (this.getClass().getSimpleName() + "(" + this.limit + ", " +
+          Bytes.toStringBinary(this.columnOffset) + ")");
+    }
     return String.format("%s (%d, %d)", this.getClass().getSimpleName(),
         this.limit, this.offset);
   }

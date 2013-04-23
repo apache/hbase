@@ -1429,7 +1429,7 @@ public class TestFilter {
           " total but already scanned " + (results.size() + idx) +
           (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"),
           kvs.length >= idx + results.size());
-      for(KeyValue kv : results) {
+      for (KeyValue kv : results) {
         LOG.info("row=" + row + ", result=" + kv.toString() +
             ", match=" + kvs[idx].toString());
         assertTrue("Row mismatch",
@@ -1496,6 +1496,90 @@ public class TestFilter {
         kvs.length, idx);
   }
 
+  public void testColumnPaginationFilterColumnOffset() throws Exception {
+    KeyValue [] expectedKVs = {
+      // testRowOne-0
+      new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+      // testRowOne-2
+      new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+      // testRowOne-3
+      new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+      // testRowTwo-0
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+      // testRowTwo-2
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+      // testRowTwo-3
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+    };
+    KeyValue [] expectedKVs1 = {
+      // testRowTwo-0
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      // testRowTwo-2
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      // testRowTwo-3
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1])
+    };
+    KeyValue [] expectedKVs2 = {
+      // testRowTwo-0
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
+      // testRowTwo-2
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
+      // testRowTwo-3
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1])
+    };
+    KeyValue [] expectedKVs3 = {
+      // testRowTwo-0
+      new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
+      // testRowTwo-2
+      new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
+      // testRowTwo-3
+      new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
+    };
+    Scan s = new Scan();
+
+    // Page size 1.
+    long expectedRows = 6;
+    long expectedKeys = 1;
+    s.setFilter(new ColumnPaginationFilter(1, QUALIFIERS_ONE[1]));
+    verifyScan(s, expectedRows, expectedKeys);
+    this.verifyScanFull(s, expectedKVs);
+
+    // Page size 2.
+    expectedRows = 3;
+    expectedKeys = 2;
+    s = new Scan();
+    s.setFilter(new ColumnPaginationFilter(2, QUALIFIERS_TWO[2]));
+    verifyScan(s, expectedRows, expectedKeys);
+    this.verifyScanFull(s, expectedKVs1);
+
+    // Page size 3 across multiple column families.
+    expectedRows = 3;
+    expectedKeys = 3;
+    s = new Scan();
+    s.setFilter(new ColumnPaginationFilter(3, QUALIFIERS_TWO[2]));
+    verifyScan(s, expectedRows, expectedKeys);
+    this.verifyScanFull(s, expectedKVs2);
+
+    // Page size 2 restricted to one column family.
+    expectedRows = 3;
+    expectedKeys = 2;
+    s = new Scan();
+    s.addFamily(FAMILIES[1]);
+    s.setFilter(new ColumnPaginationFilter(2, QUALIFIERS_TWO[2]));
+    this.verifyScanFull(s, expectedKVs3);
+  }
 
   @Test
   public void testColumnPaginationFilter() throws Exception {
@@ -1521,7 +1605,6 @@ public class TestFilter {
         // testRowTwo-3
         new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1])
       };
-
 
       // Set of KVs (page: 3; pageSize: 1)  - the third set of 1 column per row
       KeyValue [] expectedKVs2 = {
@@ -1594,7 +1677,7 @@ public class TestFilter {
       expectedRows = 0;
       verifyScan(s, expectedRows, 0);
       this.verifyScanFull(s, expectedKVs4);
-    }
+  }
 
   @Test
   public void testKeyOnlyFilter() throws Exception {
