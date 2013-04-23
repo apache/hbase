@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.util.Random;
-
 import org.junit.Test;
 
 import junit.framework.TestCase;

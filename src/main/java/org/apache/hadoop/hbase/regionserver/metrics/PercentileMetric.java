@@ -20,7 +20,7 @@ import org.apache.hadoop.hbase.util.Histogram;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
-/*
+/**
  * Used the org.apache.hadoop.hbase.util.Histogram to maintain time varying
  * metrics. The histogram class can provide various approximate details about
  * a stream of data supplied to the PercentileMetric without actually
@@ -38,7 +38,7 @@ public class PercentileMetric extends MetricsLongValue{
   private double percentile;
   private Histogram underlyingHistogram;
 
-  /*
+  /**
    * This constructor provides a way to create a HistogramMetric which uses a
    * Histogram to maintain the statistics of a metric stream.
    */
@@ -48,14 +48,22 @@ public class PercentileMetric extends MetricsLongValue{
     underlyingHistogram = histogram;
   }
 
-  /*
+  public PercentileMetric(String nam, MetricsRegistry registry,
+      Histogram histogram, double percentile, int numBuckets) {
+    super(nam, registry);
+    this.underlyingHistogram = histogram;
+    this.percentile = percentile;
+    this.numBuckets = numBuckets;
+  }
+
+  /**
    * The histogram which has the values updated.
    */
   public void setHistogram(final Histogram hist) {
     this.underlyingHistogram = hist;
   }
 
-  /*
+  /**
    * numBuckets : This denotes the number of buckets used to sample the data.
    * the updateMetric and refresh calls will run in O(numBuckets).
    */
@@ -63,7 +71,7 @@ public class PercentileMetric extends MetricsLongValue{
     this.numBuckets = numBuckets;
   }
 
-  /*
+  /**
    * percentile : The percentile estimate of the metric that will be seeked
    * using this metric. The value should be between 0 and 100,
    * else it will throw and exception.

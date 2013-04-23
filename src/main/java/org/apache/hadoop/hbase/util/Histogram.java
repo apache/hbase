@@ -165,7 +165,7 @@ public class Histogram {
       this.maxValue = Math.max(this.maxValue, value);
     }
 
-    /*
+    /**
      * This function gives the count of the number of items in the bucket
      * which are smaller than the given value;
      * For the purpose of this calculation, the distribution over the bucket
@@ -185,9 +185,9 @@ public class Histogram {
       return ret.intValue();
     }
 
-    /*
-     * This function gives the value which is more than a certain count in
-     * this bucket.
+    /**
+     * This function gives the value which is more than a certain count in this
+     * bucket.
      * */
     public Double getGreaterValue(int count) {
       if (count > this.count) {

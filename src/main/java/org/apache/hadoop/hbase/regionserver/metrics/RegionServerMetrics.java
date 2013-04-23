@@ -184,9 +184,13 @@ public class RegionServerMetrics implements Updater {
   /**
    * filesystem p99 read latency outlier for positional read operations
    */
-  public final PercentileMetric fsReadLatencyP99 =
-      new PercentileMetric("fsReadLatencyP99", registry,
-          HFile.preadHistogram);
+  public final PercentileMetric fsReadLatencyP99;
+
+  /**
+   * filesystem p99 read latency outlier for positional read operations during
+   * compactions
+   */
+  public final PercentileMetric fsCompactionReadLatencyP99;
 
   /**
    * filesystem read latency for positional read operations during
@@ -194,14 +198,6 @@ public class RegionServerMetrics implements Updater {
    */
   public final MetricsTimeVaryingRate fsCompactionReadLatency =
       new MetricsTimeVaryingRate("fsCompactionReadLatency", registry);
-
-  /**
-   * filesystem p99 read latency outlier for positional read operations during
-   * compactions
-   */
-  public final PercentileMetric fsCompactionReadLatencyP99 =
-      new PercentileMetric("fsReadCompactionLatencyP99", registry,
-          HFile.preadCompactionHistogram);
 
   /**
    * filesystem write latency
@@ -294,6 +290,18 @@ public class RegionServerMetrics implements Updater {
   public final Configuration conf;
 
   public RegionServerMetrics(Configuration conf) {
+    histogramMetricWindow = 1000 * conf.getLong(
+        HConstants.HISTOGRAM_BASED_METRICS_WINDOW,
+        PercentileMetric.DEFAULT_SAMPLE_WINDOW);
+    fsReadLatencyP99 = new PercentileMetric("fsReadLatencyP99", registry,
+        HFile.preadHistogram, PercentileMetric.P99, conf.getInt(
+            HConstants.PREAD_LATENCY_HISTOGRAM_NUM_BUCKETS,
+            PercentileMetric.HISTOGRAM_NUM_BUCKETS_DEFAULT));
+    fsCompactionReadLatencyP99 = new PercentileMetric(
+        "fsReadCompactionLatencyP99", registry, HFile.preadCompactionHistogram,
+        PercentileMetric.P99, conf.getInt(
+            HConstants.PREAD_COMPACTION_LATENCY_HISTOGRAM_NUM_BUCKETS,
+            PercentileMetric.HISTOGRAM_NUM_BUCKETS_DEFAULT));
     MetricsContext context = MetricsUtil.getContext("hbase");
     metricsRecord = MetricsUtil.createRecord(context, "regionserver");
     String name = Thread.currentThread().getName();
@@ -320,22 +328,7 @@ public class RegionServerMetrics implements Updater {
     this.conf = conf;
     // Initializing the HistogramBasedMetrics here since
     // they will be needing conf
-    initializeHistogramBasedMetrics();
     LOG.info("Initialized");
-  }
-
-  private void initializeHistogramBasedMetrics() {
-    histogramMetricWindow = 1000 *
-        conf.getLong(HConstants.HISTOGRAM_BASED_METRICS_WINDOW,
-        PercentileMetric.DEFAULT_SAMPLE_WINDOW);
-    fsReadLatencyP99.setNumBuckets(
-        conf.getInt(HConstants.PREAD_LATENCY_HISTOGRAM_NUM_BUCKETS,
-        PercentileMetric.HISTOGRAM_NUM_BUCKETS_DEFAULT));
-    fsReadLatencyP99.setPercentile(PercentileMetric.P99);
-    fsCompactionReadLatencyP99.setNumBuckets(conf.getInt(
-        HConstants.PREAD_COMPACTION_LATENCY_HISTOGRAM_NUM_BUCKETS,
-        PercentileMetric.HISTOGRAM_NUM_BUCKETS_DEFAULT));
-    fsCompactionReadLatencyP99.setPercentile(99.0);
   }
 
   public void shutdown() {
