@@ -73,6 +73,9 @@ public class FSHDFSUtils extends FSUtils{
     long recoveryTimeout = conf.getInt("hbase.lease.recovery.timeout", 300000);
     // conf parameter passed from unit test, indicating whether fs.append() should be triggered
     boolean triggerAppend = conf.getBoolean(TEST_TRIGGER_DFS_APPEND, false);
+    // retrying lease recovery may preempt pending lease recovery; default to waiting for 4 seconds
+    // after calling recoverLease
+    int waitingPeriod = conf.getInt("hbase.lease.recovery.waiting.period", 4000);
     Exception ex = null;
     while (!recovered) {
       try {
@@ -123,13 +126,15 @@ public class FSHDFSUtils extends FSUtils{
         }
       }
       try {
-        Thread.sleep(1000);
+        Thread.sleep(waitingPeriod);
       } catch (InterruptedException ie) {
         InterruptedIOException iioe = new InterruptedIOException();
         iioe.initCause(ie);
         throw iioe;
       }
+      // we keep original behavior without retrying lease recovery
+      break;
     }
-    LOG.info("Finished lease recover attempt for " + p);
+    LOG.info("Finished lease recovery attempt for " + p);
   }
 }
