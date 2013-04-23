@@ -116,7 +116,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   // values are defaults
   private int maxSteps = 15000;
   private int stepsPerRegion = 110;
-  private long maxRunningTime = 1 * 60 * 1000; //5 min
+  private long maxRunningTime = 60 * 1000; //1 min
   private int maxMoves = 600;
   private int numRegionLoadsToRemember = 15;
   private float loadMultiplier = 100;
@@ -179,10 +179,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   @Override
   public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState) {
-
-    // No need to balance a one node cluster.
-    if (clusterState.size() <= 1) {
-      LOG.debug("Skipping load balance as cluster has only one node.");
+    
+    if (!needsBalance(new ClusterLoadState(clusterState))) {
       return null;
     }
 
@@ -242,7 +240,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       List<RegionPlan> plans = createRegionPlans(cluster);
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Finished computing new laod balance plan.  Computation took "
+        LOG.debug("Finished computing new load balance plan.  Computation took "
             + (endTime - startTime) + "ms to try " + step
             + " different iterations.  Found a solution that moves " + plans.size()
             + " regions; Going from a computed cost of " + initCost + " to a new cost of "

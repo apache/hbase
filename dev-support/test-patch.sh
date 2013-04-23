@@ -375,6 +375,34 @@ checkHadoop20Compile () {
   return 0
 }
 
+###############################################################################
+### Attempt to compile against the hadoop 1.0
+checkHadoop10Compile () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking against hadoop 1.0 build"
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+
+  export MAVEN_OPTS="${MAVEN_OPTS}"
+  # build core and tests
+  $MVN clean test help:active-profiles -X -DskipTests -Dhadoop.profile=1.0 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk1.0JavacWarnings.txt 2>&1
+  if [[ $? != 0 ]] ; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:red}-1 hadoop1.0{color}.  The patch failed to compile against the hadoop 1.0 profile."
+    cleanupAndExit 1
+  fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+1 hadoop1.0{color}.  The patch compiles against the hadoop 1.0 profile."
+  return 0
+}
+
 
 ###############################################################################
 ### Check there are no javadoc warnings
@@ -836,6 +864,8 @@ if [[ $? != 0 ]] ; then
   cleanupAndExit 1
 fi
 
+checkHadoop10Compile
+(( RESULT = RESULT + $? ))
 checkHadoop20Compile
 (( RESULT = RESULT + $? ))
 checkJavadocWarnings
