@@ -2633,7 +2633,7 @@ public class HConnectionManager {
               regionFailure = failedRegionsInfo.get(regionName);
             }
             regionFailure.setServerName(serverName);
-            regionFailure.addException(ex);
+            regionFailure.addException(ex.getCause());
           }
           // retry, unless it is not to be retried.
           if (ex.getCause() instanceof DoNotRetryIOException) {
@@ -2664,15 +2664,6 @@ public class HConnectionManager {
           if (resp != null)
             result = resp.getAnswer(region);
 
-          if (result == null || result != HConstants.MULTIPUT_SUCCESS) {
-            regionName = Bytes.toStringBinary(e.getKey());
-            if (!failedRegionsInfo.containsKey(regionName)) {
-              regionFailure = new HRegionFailureInfo(regionName);
-              failedRegionsInfo.put(regionName, regionFailure);
-            }
-            regionFailure.setServerName(serverName);
-            regionFailure.addException(new IOException("Put failed for " + regionName));
-          }
           if (result == null) {
             // failed
             LOG.debug("Failed all for region: " +

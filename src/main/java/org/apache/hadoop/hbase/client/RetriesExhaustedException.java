@@ -15,11 +15,19 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.ipc.RemoteException;
+import org.mortbay.log.Log;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.io.SyncFailedException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.nio.channels.ClosedChannelException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,5 +106,47 @@ public class RetriesExhaustedException extends IOException {
 
   public Map<String, HRegionFailureInfo> getFailureInfo() {
     return this.failureInfo;
+  }
+
+  /**
+   * Tells whether the operation was attempted by region server or not.
+   * @return
+   */
+  public boolean wasOperationAttemptedByServer() {
+
+    // Let's iterate through all the exceptions and if any one of them
+    // was thrown by a RegionServer, then the operation might have
+    // been tried and hence the clients should take appropriate steps
+    // to validate their cache.
+    for (HRegionFailureInfo failures : failureInfo.values()) {
+      for (Throwable e : failures.getExceptions()) {
+        if (serverOperationExecutionException(e)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Tells whether it is safe or not to consider that the current exception
+   * was thrown by the region server while executing the actual operation.
+   * @param e
+   * @return
+   */
+  private boolean serverOperationExecutionException(final Throwable e) {
+
+    // In the following scenarios it is safe to assume that the operation was not
+    // performed by the region server
+    // a) ConnectException : Client was not able to connect to the region server
+    // b) NotServingRegionException : the region is not opened on the server.
+    // c) NoServerForRegionException : there is no server present for this region.
+    //
+    // Apart from the above 3 exceptions, we are not sure if the operation was
+    // attempted on region server or not. Being conservative, we return true for
+    // all the other type of exceptions.
+    return !(e instanceof ConnectException ||
+        e instanceof NotServingRegionException ||
+        e instanceof NoServerForRegionException);
   }
 }

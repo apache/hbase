@@ -40,4 +40,8 @@ public class PreemptiveFastFailException extends ConnectException {
   public long getFailureCount() {
     return failureCount;
   }
+
+  public boolean wasOperationAttemptedByServer() {
+    return false;
+  }
 }

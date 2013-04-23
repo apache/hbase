@@ -24,10 +24,24 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.regionserver.FlushRequester;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -45,9 +59,9 @@ public class TestHCM {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TABLE_NAME = Bytes.toBytes("test");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
-  private static final byte[] ROW = Bytes.toBytes("bbb");
+  private static final byte[] ROW = Bytes.toBytes("bbd");
 
-  private static final int REGION_SERVERS = 10;
+  private static final int REGION_SERVERS = 3;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -77,7 +91,6 @@ public class TestHCM {
     conn.deleteCachedLocation(TABLE_NAME, ROW, null);
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
-
   }
 
   /**
@@ -197,7 +210,58 @@ public class TestHCM {
     } catch (IOException e) {
 
     } finally {
+      ServerManager.clearRSBlacklistInTest();
       waitForRegionsToGetReAssigned();
+    }
+  }
+
+  /**
+   * Simulates a case where the RegionServer throws exception because
+   * a put operation failed.
+   * @throws Exception
+   */
+  @Test
+  public void testRemoteServerFailure() throws Exception {
+
+
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRemoteServerFailure"), FAM_NAM);
+    table.setAutoFlush(true);
+
+    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+
+    try {
+
+      for (int i = 0; i < REGION_SERVERS; i++) {
+        TEST_UTIL.getHBaseCluster().getRegionServer(i).
+        getConfiguration().set(HConstants.REGION_IMPL,
+          TestHRegion.class.getName());
+      }
+
+      TEST_UTIL.closeRegionByRow(ROW, table);
+      // Enough time for region to close and reopen with the new TestHRegionClass
+      Thread.sleep(10000);
+
+      Put put = new Put(ROW);
+      put.add(FAM_NAM, ROW, ROW);
+
+      table.put(put);
+
+      assertNull("Put should not succeed");
+    } catch (RetriesExhaustedException e) {
+      assertTrue(e.wasOperationAttemptedByServer());
+    }
+  }
+
+  static public class TestHRegion extends HRegion {
+    public TestHRegion(Path basedir, HLog log, FileSystem fs,
+        Configuration conf, HRegionInfo regionInfo, FlushRequester flushListener) {
+          super(basedir, log, fs, conf, regionInfo, flushListener);
+    }
+
+    @Override
+    public OperationStatusCode[] batchMutateWithLocks(Pair<Mutation, Integer>[] putsAndLocks,
+        String methodName) throws IOException {
+      throw new IOException("Test induced failure");
     }
   }
 
@@ -219,10 +283,10 @@ public class TestHCM {
           regionServers.get(i).getRegionServer().getHServerInfo().getHostnamePort());
     }
 
-    // abort the region server
-    int srcRSIdx = TEST_UTIL.getHBaseCluster().
-        getServerWith(regLoc.getRegionInfo().getRegionName());
-    TEST_UTIL.getHBaseCluster().stopRegionServer(srcRSIdx);
+    HRegionInterface rsConnection =
+        TEST_UTIL.getHBaseAdmin().connection.getHRegionConnection(regLoc.getServerAddress());
+    rsConnection.closeRegion(regLoc.getRegionInfo(), false);
+
   }
 
   private void verifyFailure(HTable table, Exception e) {
@@ -236,6 +300,7 @@ public class TestHCM {
     assertTrue(e instanceof RetriesExhaustedException);
     RetriesExhaustedException exp = (RetriesExhaustedException)(e);
     assertTrue(exp.getRegionNames() != null);
+    assertTrue(!exp.wasOperationAttemptedByServer());
     LOG.info(exp.getFailureInfo().values());
   }
 }
