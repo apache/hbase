@@ -186,11 +186,11 @@
       </properties>
     </profile>
 
-    <!-- profile against Hadoop 1.0.x: This is the default. It has to have the same
-    activation property as the parent Hadoop 1.0.x profile to make sure it gets run at
+    <!-- profile against Hadoop 1.1.x: This is the default. It has to have the same
+    activation property as the parent Hadoop 1.1.x profile to make sure it gets run at
     the same time. -->
     <profile>
-      <id>hadoop-1.0</id>
+      <id>hadoop-1.1</id>
       <activation>
         <property>
           <name>!hadoop.profile</name>

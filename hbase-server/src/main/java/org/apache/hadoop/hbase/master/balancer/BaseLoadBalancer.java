@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -294,13 +295,25 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   protected boolean needsBalance(ClusterLoadState cs) {
+    if (cs.getNumServers() == 0) {
+      LOG.debug("numServers=0 so skipping load balancing");
+      return false;
+    }
     // Check if we even need to do any load balancing
-    float average = cs.getLoadAverage(); // for logging
     // HBASE-3681 check sloppiness first
+    float average = cs.getLoadAverage(); // for logging
     int floor = (int) Math.floor(average * (1 - slop));
     int ceiling = (int) Math.ceil(average * (1 + slop));
-
-    return cs.getMinLoad() > ceiling || cs.getMaxLoad() < floor;
+    if (!(cs.getMinLoad() > ceiling || cs.getMaxLoad() < floor)) {
+      NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
+      LOG.info("Skipping load balancing because balanced cluster; " +
+          "servers=" + cs.getNumServers() + " " +
+          "regions=" + cs.getNumRegions() + " average=" + average + " " +
+          "mostloaded=" + serversByLoad.lastKey().getLoad() +
+          " leastloaded=" + serversByLoad.firstKey().getLoad());
+      return false;
+    }
+    return true;
   }
 
   /**

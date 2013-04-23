@@ -183,29 +183,13 @@ public class DefaultLoadBalancer extends BaseLoadBalancer {
     boolean emptyRegionServerPresent = false;
     long startTime = System.currentTimeMillis();
 
-
     ClusterLoadState cs = new ClusterLoadState(clusterMap);
 
+    if (!this.needsBalance(cs)) return null;
+    
     int numServers = cs.getNumServers();
-    if (numServers == 0) {
-      LOG.debug("numServers=0 so skipping load balancing");
-      return null;
-    }
     NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
-
     int numRegions = cs.getNumRegions();
-
-    if (!this.needsBalance(cs)) {
-      // Skipped because no server outside (min,max) range
-      float average = cs.getLoadAverage(); // for logging
-      LOG.info("Skipping load balancing because balanced cluster; " +
-        "servers=" + numServers + " " +
-        "regions=" + numRegions + " average=" + average + " " +
-        "mostloaded=" + serversByLoad.lastKey().getLoad() +
-        " leastloaded=" + serversByLoad.firstKey().getLoad());
-      return null;
-    }
-
     int min = numRegions / numServers;
     int max = numRegions % numServers == 0 ? min : min + 1;
 
