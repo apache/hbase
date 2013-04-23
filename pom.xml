@@ -668,7 +668,7 @@
               <exclude>docs/*</exclude>
               <!-- auto-gen docs -->
               <!--It don't like freebsd license-->
-              <exclude>**/src/site/resources/css/freebsd_docbook.css</exclude>
+              <exclude>**/src/main/site/resources/css/freebsd_docbook.css</exclude>
               <!--  exclude source control files -->
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
