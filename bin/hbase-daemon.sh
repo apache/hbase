@@ -36,7 +36,7 @@
 
 usage="Usage: hbase-daemon.sh [--config <conf-dir>]\
  (start|stop|restart|autorestart) <hbase-command> \
- [--formatZK] [--formatFS] <args...>"
+ <args...>"
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -56,19 +56,6 @@ shift
 
 command=$1
 shift
-
-if [ "$startStop" = "start" ];then
-  for i in 1 2
-  do
-    if [ "$1" = "--formatZK" ];then
-      formatzk=$1
-      shift
-    elif [ "$1" = "--formatFS" ];then
-      formatfs=$1
-      shift
-    fi
-  done
-fi
 
 hbase_rotate_log ()
 {
@@ -109,10 +96,6 @@ check_before_start(){
         exit 1
       fi
     fi
-}
-
-clear_hbase_data() {
-  $bin/hbase-cleanup.sh $formatzk $formatfs
 }
 
 wait_until_done ()
@@ -189,7 +172,6 @@ case $startStop in
 
 (start)
     check_before_start
-    clear_hbase_data
     nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args < /dev/null > /dev/null 2>&1  &
   ;;
 
