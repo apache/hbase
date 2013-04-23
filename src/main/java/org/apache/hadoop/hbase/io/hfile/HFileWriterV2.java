@@ -176,13 +176,16 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     float blockCachingPercentage =
         ((float)this.numCachedKeysInCurrentBlock)/this.numKeysInCurrentBlock;
 
-    LOG.debug("Block Caching %: " + blockCachingPercentage +
-        " CachingOnCompaction: " + this.cacheConf.shouldCacheOnCompaction() +
-        " Threshold: " + this.cacheConf.getCacheOnCompactionThreshold());
-
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Block Caching %: " + blockCachingPercentage +
+          " CachingOnCompaction: " + this.cacheConf.shouldCacheOnCompaction() +
+          " Threshold: " + this.cacheConf.getCacheOnCompactionThreshold());
+    }
     // Get the threshold from the config
     if (this.cacheConf.shouldCacheOnCompaction() &&
         blockCachingPercentage >= this.cacheConf.getCacheOnCompactionThreshold())  {
+      this.numBlocksCachedPerCompaction++;
+      HFile.blocksCachedDuringCompaction.incrementAndGet();
       return true;
     }
     return false;

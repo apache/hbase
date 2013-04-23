@@ -164,6 +164,7 @@ public class HFile {
 
   static final AtomicInteger writeOps = new AtomicInteger();
   static final AtomicLong writeTimeNano = new AtomicLong();
+  static final AtomicInteger blocksCachedDuringCompaction = new AtomicInteger();
 
   // For measuring latency of pread
   static final AtomicInteger preadOps = new AtomicInteger();
@@ -187,6 +188,13 @@ public class HFile {
    */
   public static final int getPreadCompactionOpsAndReset() {
     return preadCompactionOps.getAndSet(0);
+  }
+
+  /**
+   * Get number of blocks cached during compaction and reset the counter
+   */
+  public static final int getBlocksCachedDuringCompactionAndReset() {
+    return blocksCachedDuringCompaction.getAndSet(0);
   }
 
   /**
@@ -277,6 +285,11 @@ public class HFile {
      * Set whether compaction is in progress or not
      */
     void setCompactionWriter(boolean isCompaction);
+
+    /**
+     * Returns the number of blocks cached during compaction
+     */
+    int getNumBlocksCachedPerCompaction();
   }
 
   /**

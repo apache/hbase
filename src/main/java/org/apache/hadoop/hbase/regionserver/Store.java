@@ -965,6 +965,10 @@ public class Store extends SchemaConfigured implements HeapSize {
           + ", size=" + (sf == null? "none" : StringUtils.humanReadableInt(sf.getReader().length()))
           + "; total size for store is "
           + StringUtils.humanReadableInt(storeSize));
+      if (writer != null) {
+        LOG.info(", number of blocks precached="
+            + writer.getHFileWriter().getNumBlocksCachedPerCompaction());
+      }
     } catch (IOException ioe) {
       // rather than leak the status, we abort here, then rethrow the exception
       status.abort(StringUtils.stringifyException(ioe));

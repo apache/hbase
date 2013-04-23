@@ -127,6 +127,13 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
 
   protected boolean isCompactionWriter = false;
 
+  protected int numBlocksCachedPerCompaction = 0;
+
+  @Override
+  public int getNumBlocksCachedPerCompaction() {
+    return numBlocksCachedPerCompaction;
+  }
+
   public AbstractHFileWriter(Configuration conf, CacheConfig cacheConf,
       FSDataOutputStream outputStream, Path path, int blockSize,
       Compression.Algorithm compressAlgo,

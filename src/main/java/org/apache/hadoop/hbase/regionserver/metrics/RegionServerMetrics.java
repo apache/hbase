@@ -176,6 +176,12 @@ public class RegionServerMetrics implements Updater {
       new MetricsTimeVaryingRate("fsReadLatency", registry);
 
   /**
+   * number of blocks cached during compaction
+   */
+  public final MetricsIntValue blocksCachedDuringCompaction =
+      new MetricsIntValue("blocksCachedDuringCompaction", registry);
+
+  /**
    * filesystem p99 read latency outlier for positional read operations
    */
   public final PercentileMetric fsReadLatencyP99 =
@@ -424,6 +430,9 @@ public class RegionServerMetrics implements Updater {
         this.rowLockTime.inc(writeOps, HRegion.getRowLockTime());
       }
 
+      this.blocksCachedDuringCompaction.set(
+          HFile.getBlocksCachedDuringCompactionAndReset());
+
       // push the result
       this.fsReadLatencyP99.pushMetric(this.metricsRecord);
       this.fsCompactionReadLatencyP99.pushMetric(this.metricsRecord);
@@ -454,6 +463,7 @@ public class RegionServerMetrics implements Updater {
       this.quorumReadWins.pushMetric(this.metricsRecord);
       this.quorumReadsExecutedInCurThread.pushMetric(this.metricsRecord);
 
+      this.blocksCachedDuringCompaction.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
   }
