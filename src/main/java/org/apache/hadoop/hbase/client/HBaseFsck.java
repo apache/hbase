@@ -19,12 +19,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -65,20 +69,24 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
- * Check consistency among the in-memory states of the master and the
+ * Check consistency among the in-memory states of the master and the 
  * region server(s) and the state of data in HDFS.
  */
 public class HBaseFsck {
   private static final int MAX_NUM_THREADS = 50; // #threads to contact regions
   private static final long THREADS_KEEP_ALIVE_SECONDS = 60;
-
-  private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
+  private static Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
   private Configuration conf;
 
   private ClusterStatus status;
@@ -96,12 +104,14 @@ public class HBaseFsck {
   FixState fix = FixState.NONE; // do we want to try fixing the errors?
   private boolean rerun = false; // if we tried to fix something rerun hbck
   private static boolean summary = false; // if we want to print less output
-  private static boolean checkRegionInfo = false;
+  private static boolean checkRegionInfo = false; 
   private static boolean promptResponse = false;  // "no" to all prompt questions
   private int numThreads = MAX_NUM_THREADS;
+  private final String UnkownTable = "__UnknownTable__";
 
   ThreadPoolExecutor executor;         // threads to retrieve data from regionservers
   private List<WorkItem> asyncWork = Lists.newArrayList();
+  public static String json = null;
 
   /**
    * Constructor
@@ -109,7 +119,7 @@ public class HBaseFsck {
    * @param conf Configuration object
    * @throws MasterNotRunningException if the master is not running
    */
-  public HBaseFsck(Configuration conf)
+  public HBaseFsck(Configuration conf) 
     throws MasterNotRunningException, IOException {
     this.conf = conf;
 
@@ -124,11 +134,11 @@ public class HBaseFsck {
           new LinkedBlockingQueue<Runnable>());
     executor.allowCoreThreadTimeOut(true);
   }
-
+  
   public TreeMap<String, HbckInfo> getRegionInfo() {
     return this.regionInfo;
   }
-
+  
   public int initAndScanRootMeta() throws IOException {
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
@@ -137,7 +147,7 @@ public class HBaseFsck {
     // Make sure regionInfo is empty before starting
     regionInfo.clear();
     tablesInfo.clear();
-
+    
     // get a list of all regions from the master. This involves
     // scanning the META table
     if (!recordRootRegion()) {
@@ -162,11 +172,10 @@ public class HBaseFsck {
    * @return 0 on success, non-zero on failure
    */
   int doWork() throws IOException, InterruptedException {
-
+    
     if (initAndScanRootMeta() == -1) {
       return -1;
     }
-
     // get a list of all tables that have not changed recently.
     AtomicInteger numSkipped = new AtomicInteger(0);
     HTableDescriptor[] allTables = getTables(numSkipped);
@@ -187,7 +196,7 @@ public class HBaseFsck {
 
     // From the master, get a list of all known live region servers
     Collection<HServerInfo> regionServers = status.getServerInfo();
-    errors.print("Number of live region servers:" +
+    errors.print("Number of live region servers:" + 
                        regionServers.size());
     if (details) {
       for (HServerInfo rsinfo: regionServers) {
@@ -197,7 +206,7 @@ public class HBaseFsck {
 
     // From the master, get a list of all dead region servers
     Collection<String> deadRegionServers = status.getDeadServerNames();
-    errors.print("Number of dead region servers:" +
+    errors.print("Number of dead region servers:" + 
                        deadRegionServers.size());
     if (details) {
       for (String name: deadRegionServers) {
@@ -224,42 +233,42 @@ public class HBaseFsck {
     if (checkRegionInfo) {
       checkRegionInfo();
     }
-
+    
     // Print table summary
     printTableSummary();
 
     return errors.summarize();
   }
-
+  
   /**
-   * Read the .regioninfo for all regions of the table and compare with the
-   * corresponding entry in .META.
-   * Entry in .regioninfo should be consistent with the entry in .META.
-   *
+   * Read the .regioninfo for all regions of the table and compare with the 
+   * corresponding entry in .META. 
+   * Entry in .regioninfo should be consistent with the entry in .META. 
+   * 
    */
   void checkRegionInfo() {
     Path tableDir = null;
-
-    try {
+    
+    try { 
       for (HbckInfo hbi : regionInfo.values()) {
-        tableDir = HTableDescriptor.getTableDir(FSUtils.getRootDir(conf),
-			  hbi.metaEntry.getTableDesc().getName());
-
+        tableDir = HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), 
+         		  hbi.metaEntry.getTableDesc().getName());
+		  
         Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
         FileSystem fs = rootDir.getFileSystem(conf);
-
-        Path regionPath = HRegion.getRegionDir(tableDir,
+		  
+        Path regionPath = HRegion.getRegionDir(tableDir, 
                           hbi.metaEntry.getEncodedName());
         Path regionInfoPath = new Path(regionPath, HRegion.REGIONINFO_FILE);
         if (fs.exists(regionInfoPath) &&
 		        fs.getFileStatus(regionInfoPath).getLen() > 0) {
           FSDataInputStream in = fs.open(regionInfoPath);
           HRegionInfo f_hri = null;
-          try {
+          try { 
             f_hri = new HRegionInfo();
             f_hri.readFields(in);
-          } catch (IOException ex) {
-            errors.reportError("Could not read .regioninfo file at "
+          } catch (IOException ex) { 
+            errors.reportError("Could not read .regioninfo file at " 
 	                       + regionInfoPath);
           } finally {
             in.close();
@@ -267,28 +276,28 @@ public class HBaseFsck {
           HbckInfo hbckinfo = regionInfo.get(f_hri.getEncodedName());
           HRegionInfo m_hri = hbckinfo.metaEntry;
           if(!f_hri.equals(m_hri)) {
-            errors.reportError("Table name: " +
-                    f_hri.getTableDesc().getNameAsString() +
-                    " RegionInfo for "+ f_hri.getRegionNameAsString() +
+            errors.reportError("Table name: " + 
+                    f_hri.getTableDesc().getNameAsString() + 
+                    " RegionInfo for "+ f_hri.getRegionNameAsString() + 
                     " inconsistent in .META. and .regioninfo");
           }
         } else {
           if (!fs.exists(regionInfoPath)) {
-            errors.reportError(".regioninfo not found at "
+            errors.reportError(".regioninfo not found at " 
                               + regionInfoPath.toString());
           } else if (fs.getFileStatus(regionInfoPath).getLen() <= 0) {
-            errors.reportError(".regioninfo file is empty (path =  "
+            errors.reportError(".regioninfo file is empty (path =  " 
 	                    + regionInfoPath + ")");
           }
         }
-      }
+      } 
     } catch (IOException e) {
-      errors.reportError("Error in comparing .regioninfo and .META."
+      errors.reportError("Error in comparing .regioninfo and .META." 
                          + e.getMessage());
     }
   }
-
-
+	  	
+	  
   /**
    * Scan HDFS for all regions, recording their information into
    * regionInfo
@@ -299,7 +308,7 @@ public class HBaseFsck {
 
     // list all tables from HDFS
     List<FileStatus> tableDirs = Lists.newArrayList();
-
+    
     boolean foundVersionFile = false;
     FileStatus[] files = fs.listStatus(rootDir);
     for (FileStatus file : files) {
@@ -309,7 +318,7 @@ public class HBaseFsck {
         tableDirs.add(file);
       }
     }
-
+    
     // verify that version file exists
     if (!foundVersionFile) {
       errors.reportError("Version file does not exist in root dir " + rootDir);
@@ -322,7 +331,7 @@ public class HBaseFsck {
       asyncWork.add(work);
     }
   }
-
+  
   /**
    * Record the location of the ROOT region as found in ZooKeeper,
    * as if it were in a META table. This is so that we can check
@@ -331,28 +340,28 @@ public class HBaseFsck {
   boolean recordRootRegion() throws IOException {
     HRegionLocation rootLocation = connection.locateRegion(
       HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_START_ROW);
-
+    
     // Check if Root region is valid and existing
     if (rootLocation == null || rootLocation.getRegionInfo() == null ||
         rootLocation.getServerAddress() == null) {
-      errors.reportError("Root Region or some of its attributes is null.");
+      errors.reportError("Root Region or some of its attributes is null."); 
       return false;
     }
-
+    
     MetaEntry m = new MetaEntry(rootLocation.getRegionInfo(),
       rootLocation.getServerAddress(), null, System.currentTimeMillis());
     HbckInfo hbInfo = new HbckInfo(m);
     regionInfo.put(rootLocation.getRegionInfo().getEncodedName(), hbInfo);
     return true;
   }
-
+  
   /**
    * Contacts each regionserver and fetches metadata about regions.
    * @throws IOException if a remote or network exception occurs
    */
   void scanRegionServers() throws IOException, InterruptedException {
     Collection<HServerInfo> regionServers = status.getServerInfo();
-    errors.print("Number of live region servers:" +
+    errors.print("Number of live region servers:" + 
         regionServers.size());
     if (details) {
       for (HServerInfo rsinfo: regionServers) {
@@ -363,7 +372,7 @@ public class HBaseFsck {
     // finish all async tasks before analyzing what we have
     finishAsyncWork();
   }
-
+  
   /**
    * Contacts each regionserver and fetches metadata about regions.
    * @param regionServerList - the list of region servers to connect to
@@ -400,7 +409,7 @@ public class HBaseFsck {
       doConsistencyCheck(hbi);
     }
   }
-
+  
   /**
    * Check a single region for consistency and correct deployment.
    */
@@ -417,22 +426,45 @@ public class HBaseFsck {
       hbi.metaEntry.regionServer.equals(hbi.deployedOn.get(0));
     boolean shouldBeDeployed = inMeta && !hbi.metaEntry.isOffline();
     long tooRecent = System.currentTimeMillis() - timelag;
-    boolean recentlyModified =
+    boolean recentlyModified = 
       (inHdfs && hbi.foundRegionDir.getModificationTime() > tooRecent) ||
       (inMeta && hbi.metaEntry.modTime                    > tooRecent);
-
+    
+    String tableName = null;
+    if (inMeta) {
+    	tableName = hbi.metaEntry.getTableDesc().getNameAsString();
+    } else {
+    	tableName = UnkownTable;
+    }
+    TInfo tableInfo = tablesInfo.get(tableName);
+    if (tableInfo == null) {
+    	tableInfo = new TInfo(tableName);
+    	tablesInfo.put(tableName,  tableInfo);
+    }
+    tableInfo.addRegionDetails(RegionType.total, descriptiveName);
     // ========== First the healthy cases =============
     if (hbi.onlyEdits) {
       return;
     }
     if (inMeta && inHdfs && isDeployed && deploymentMatchesMeta && shouldBeDeployed) {
+    	if (!hbi.metaEntry.isOffline()) {
+    		tableInfo.addRegionDetails(RegionType.online, descriptiveName);
+    	} else {
+    		tableInfo.addRegionDetails(RegionType.offline, descriptiveName);
+    	}
       return;
     } else if (inMeta && !shouldBeDeployed && !isDeployed) {
       // offline regions shouldn't cause complaints
-      LOG.debug("Region " + descriptiveName + " offline, ignoring.");
+    	String message = "Region " + descriptiveName + " offline, ignoring.";
+      LOG.debug(message);
+      tableInfo.addRegionDetails(RegionType.offline, descriptiveName);
+      tableInfo.addRegionError(message);
       return;
     } else if (recentlyModified) {
-      LOG.info("Region " + descriptiveName + " was recently modified -- skipping");
+    	String message = "Region " + descriptiveName + " was recently modified -- skipping";
+      LOG.info(message);
+      tableInfo.addRegionDetails(RegionType.skipped, descriptiveName);
+      tableInfo.addRegionError(message);
       return;
     }
     // ========== Cases where the region is not in META =============
@@ -440,30 +472,50 @@ public class HBaseFsck {
       // We shouldn't have record of this region at all then!
       assert false : "Entry for region with no data";
     } else if (!inMeta && !inHdfs && isDeployed) {
-      errors.reportError("Region " + descriptiveName + " not on HDFS or in META but " +
-        "deployed on " + Joiner.on(", ").join(hbi.deployedOn));
+    	String message = "Region " + descriptiveName + " not on HDFS or in META but " +
+    		"deployed on " + Joiner.on(", ").join(hbi.deployedOn);
+      errors.reportError(message);
+      tableInfo.addRegionDetails(RegionType.missing, descriptiveName);
+      tableInfo.addRegionError(message);
     } else if (!inMeta && inHdfs && !isDeployed) {
-      errors.reportError("Region " + descriptiveName + " on HDFS, but not listed in META " +
-        "or deployed on any region server.");
+    	String message = "Region " + descriptiveName + " on HDFS, but not listed in META " +
+    		"or deployed on any region server.";
+      errors.reportError(message);
+      tableInfo.addRegionDetails(RegionType.missing, descriptiveName);
+      tableInfo.addRegionError(message);
     } else if (!inMeta && inHdfs && isDeployed) {
-      errors.reportError("Region " + descriptiveName + " not in META, but deployed on " +
-        Joiner.on(", ").join(hbi.deployedOn));
-
+    	String message = "Region " + descriptiveName + " not in META, but deployed on " +
+    		Joiner.on(", ").join(hbi.deployedOn);
+      errors.reportError(message);
+      tableInfo.addRegionDetails(RegionType.missing, descriptiveName);
+      tableInfo.addRegionError(message);
     // ========== Cases where the region is in META =============
     } else if (inMeta && !inHdfs && !isDeployed) {
-      errors.reportError("Region " + descriptiveName + " found in META, but not in HDFS " +
-        "or deployed on any region server.");
+    	String message = "Region " + descriptiveName + " found in META, but not in HDFS " +
+          "or deployed on any region server.";
+      errors.reportError(message);
+      tableInfo.addRegionDetails(RegionType.unknown, descriptiveName);
+      tableInfo.addRegionError(message);
     } else if (inMeta && !inHdfs && isDeployed) {
-      errors.reportError("Region " + descriptiveName + " found in META, but not in HDFS, " +
-        "and deployed on " + Joiner.on(", ").join(hbi.deployedOn));
+    	String message = "Region " + descriptiveName + " found in META, but not in HDFS, " +
+        "and deployed on " + Joiner.on(", ").join(hbi.deployedOn);
+      errors.reportError(message);
+      tableInfo.addRegionDetails(RegionType.unknown, descriptiveName);
+      tableInfo.addRegionError(message);
     } else if (inMeta && inHdfs && !isDeployed && shouldBeDeployed) {
       if (couldNotScan.contains(hbi.metaEntry.regionServer)) {
-        LOG.info("Could not verify region " + descriptiveName
+      	String message = "Could not verify region " + descriptiveName
             + " because could not scan supposed owner "
-            + hbi.metaEntry.regionServer);
+            + hbi.metaEntry.regionServer;
+        LOG.info(message);
+        tableInfo.addRegionDetails(RegionType.timeout, descriptiveName);
+        tableInfo.addRegionError(message);
       } else {
-        errors.reportWarning("Region " + descriptiveName + " not deployed on any region server.");
+      	String message = "Region " + descriptiveName + " not deployed on any region server.";
+        errors.reportWarning(message);
         // If we are trying to fix the errors
+        tableInfo.addRegionDetails(RegionType.missing, descriptiveName);
+        tableInfo.addRegionError(message);
         if (fix == FixState.ALL) {
           errors.print("Trying to fix unassigned region...");
           if (HBaseFsckRepair.fixUnassigned(this.conf, hbi.metaEntry)) {
@@ -472,13 +524,19 @@ public class HBaseFsck {
         }
       }
     } else if (inMeta && inHdfs && isDeployed && !shouldBeDeployed) {
-      errors.reportError("Region " + descriptiveName + " should not be deployed according " +
-        "to META, but is deployed on " + Joiner.on(", ").join(hbi.deployedOn));
+      String message = "Region " + descriptiveName + " should not be deployed according " +
+          "to META, but is deployed on " + Joiner.on(", ").join(hbi.deployedOn);
+    	errors.reportError(message);
+    	tableInfo.addRegionDetails(RegionType.unknown, descriptiveName);
+      tableInfo.addRegionError(message);
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
-      errors.reportFixableError("Region " + descriptiveName +
-        " is listed in META on region server " + hbi.metaEntry.regionServer +
-        " but is multiply assigned to region servers " +
-        Joiner.on(", ").join(hbi.deployedOn));
+    	String message = "Region " + descriptiveName + 
+          " is listed in META on region server " + hbi.metaEntry.regionServer + 
+          " but is multiply assigned to region servers " +
+          Joiner.on(", ").join(hbi.deployedOn);
+      errors.reportFixableError(message);
+      tableInfo.addRegionDetails(RegionType.unknown, descriptiveName);
+      tableInfo.addRegionError(message);
       // If we are trying to fix the errors
       if (fix != FixState.NONE) {
         errors.print("Trying to fix assignment error...");
@@ -487,9 +545,12 @@ public class HBaseFsck {
         }
       }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
-      errors.reportFixableError("Region " + descriptiveName +
-        " listed in META on region server " + hbi.metaEntry.regionServer +
-        " but found on region server " + hbi.deployedOn.get(0));
+      String message = "Region " + descriptiveName + 
+          " listed in META on region server " + hbi.metaEntry.regionServer + 
+          " but found on region server " + hbi.deployedOn.get(0);
+    	errors.reportFixableError(message);
+    	tableInfo.addRegionDetails(RegionType.unknown, descriptiveName);
+    	tableInfo.addRegionError(message);
       // If we are trying to fix the errors
       if (fix != FixState.NONE) {
         errors.print("Trying to fix assignment error...");
@@ -498,13 +559,16 @@ public class HBaseFsck {
         }
       }
     } else {
-      errors.reportError("Region " + descriptiveName + " is in an unforeseen state:" +
-        " inMeta=" + inMeta +
-        " inHdfs=" + inHdfs +
-        " isDeployed=" + isDeployed +
-        " isMultiplyDeployed=" + isMultiplyDeployed +
-        " deploymentMatchesMeta=" + deploymentMatchesMeta +
-        " shouldBeDeployed=" + shouldBeDeployed);
+    	String message = "Region " + descriptiveName + " is in an unforeseen state:" +
+          " inMeta=" + inMeta +
+          " inHdfs=" + inHdfs +
+          " isDeployed=" + isDeployed +
+          " isMultiplyDeployed=" + isMultiplyDeployed +
+          " deploymentMatchesMeta=" + deploymentMatchesMeta +
+          " shouldBeDeployed=" + shouldBeDeployed;
+      errors.reportError(message);
+      tableInfo.addRegionDetails(RegionType.unknown, descriptiveName);
+      tableInfo.addRegionError(message);
     }
   }
 
@@ -516,16 +580,17 @@ public class HBaseFsck {
   void checkIntegrity() {
     for (HbckInfo hbi : regionInfo.values()) {
       // Check only valid, working regions
-      if (hbi.metaEntry == null) continue;
+    	
+    	if (hbi.metaEntry == null) continue;
       if (hbi.metaEntry.regionServer == null) continue;
       if (hbi.foundRegionDir == null) continue;
       if (hbi.deployedOn.isEmpty()
           && !couldNotScan.contains(hbi.metaEntry.regionServer)) continue;
-      if (hbi.onlyEdits) continue;
-
+      if (hbi.onlyEdits) continue;      
+      
       // We should be safe here
       String tableName = hbi.metaEntry.getTableDesc().getNameAsString();
-      TInfo modTInfo = tablesInfo.get(tableName);
+    	TInfo modTInfo = tablesInfo.get(tableName);
       if (modTInfo == null) {
         modTInfo = new TInfo(tableName);
       }
@@ -535,13 +600,24 @@ public class HBaseFsck {
       modTInfo.addEdge(hbi.metaEntry.getStartKey(), hbi.metaEntry.getEndKey());
       tablesInfo.put(tableName, modTInfo);
     }
-
+    
     for (TInfo tInfo : tablesInfo.values()) {
+    	if (tInfo.getName().equals(UnkownTable)) continue;
       if (!tInfo.check()) {
-        errors.reportError("Found inconsistency in table " + tInfo.getName() +
+        errors.reportError("Found inconsistency in table " + tInfo.getName() + 
             ": " + tInfo.getLastError());
       }
     }
+  }
+
+  public enum RegionType {
+  	total,
+  	online,
+  	offline,
+  	missing,
+  	skipped,
+  	timeout,
+  	unknown
   }
 
   /**
@@ -550,23 +626,29 @@ public class HBaseFsck {
   private class TInfo {
     String tableName;
     TreeMap <byte[], byte[]> edges;
-    TreeSet <HServerAddress> deployedOn;
+    TreeSet <HServerAddress> deployedOn;    
     String lastError = null;
-
+    
+    private TreeMap<RegionType, ArrayList<String>> regionDetails = new TreeMap<RegionType, ArrayList<String>>();
+  	private ArrayList<String> regionErrors = new ArrayList<String>();
+  	
     TInfo(String name) {
       this.tableName = name;
       edges = new TreeMap <byte[], byte[]> (Bytes.BYTES_COMPARATOR);
       deployedOn = new TreeSet <HServerAddress>();
+      for (RegionType regionType : RegionType.values()) {
+      	regionDetails.put(regionType, new ArrayList<String>());
+      }
     }
-
+    
     public void addEdge(byte[] fromNode, byte[] toNode) {
       this.edges.put(fromNode, toNode);
     }
-
+    
     public void addServer(HServerAddress server) {
       this.deployedOn.add(server);
     }
-
+    
     public String getName() {
       return tableName;
     }
@@ -574,8 +656,8 @@ public class HBaseFsck {
     public int getNumRegions() {
       return edges.size();
     }
-
-    public String getLastError() {
+    
+    public String getLastError() { 
       return this.lastError;
     }
 
@@ -594,25 +676,25 @@ public class HBaseFsck {
           errors.detail('\t' + regionToStr(e));
         }
       }
-
+      
       byte[] last = new byte[0];
       byte[] next = new byte[0];
       TreeSet <byte[]> visited = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-      // Each table should start with a zero-length byte[] and end at a
+      // Each table should start with a zero-length byte[] and end at a 
       // zero-length byte[]. Just follow the edges to see if this is true
       while (true) {
         // Check if region chain is broken
         if (!edges.containsKey(last)) {
-          this.lastError = "Cannot find region with start key "
+          this.lastError = "Cannot find region with start key " 
             + posToStr(last);
           return false;
         }
         next = edges.get(last);
         // Found a cycle
         if (visited.contains(next)) {
-          this.lastError = "Cycle found in region chain. "
+          this.lastError = "Cycle found in region chain. " 
             + "Current = "+ posToStr(last)
-		+ "; Cycle Start = " +  posToStr(next);
+          	+ "; Cycle Start = " +  posToStr(next);
           return false;
         }
         // Mark next node as visited
@@ -622,7 +704,7 @@ public class HBaseFsck {
           // If we have visited all elements we are fine
           if (edges.size() != visited.size()) {
             this.lastError = "Region in-order travesal does not include "
-              + "all elements found in META.  Chain=" + visited.size()
+              + "all elements found in META.  Chain=" + visited.size() 
               + "; META=" + edges.size() + "; Missing=";
             for (Map.Entry<byte[], byte []> e : edges.entrySet()) {
               if (!visited.contains(e.getKey())) {
@@ -637,14 +719,64 @@ public class HBaseFsck {
       }
       // How did we get here?
     }
+		
+		public JSONObject toJSONObject() {
+			JSONObject ret = new JSONObject();
+			try {
+				ret.put("table", tableName);
+				for (RegionType type : RegionType.values()) {
+					ret.put(type.toString(), regionDetails.get(type).size());
+				}
+				JSONArray arr = new JSONArray();
+				for (int i=0; i<regionErrors.size(); i++) {
+					arr.put(i, regionErrors.get(i));
+				}
+				ret.put("Errors", arr);
+				ret.put("Details", this.getAllRegionDetails());
+				return ret;
+			} catch (JSONException ex) {
+				return null;
+			}
+		}
+
+		public void addRegionDetails(RegionType type, String name) {
+			regionDetails.get(type).add(name);
+		}
+		
+		public void addRegionError(String error) {
+			regionErrors.add(error);
+		}
+
+		public ArrayList<String> getRegionDetails(RegionType type) {
+			return regionDetails.get(type);
+		}
+
+		public JSONArray getRegionDetailsArray(RegionType type) {
+			JSONArray arr = new JSONArray();
+			ArrayList<String> regions = this.getRegionDetails(type);
+			for (String s : regions) {
+				arr.put(s);
+			}
+			return arr;
+		}
+
+		public JSONObject getAllRegionDetails() throws JSONException{
+			JSONObject ret = new JSONObject();
+			for (RegionType type : RegionType.values()) {
+				if (type.equals(RegionType.total)) continue;
+				if (type.equals(RegionType.online)) continue;
+				ret.put(type.toString(), getRegionDetailsArray(type));
+			}
+			return ret;
+		}
   }
 
-
+  
   /**
    * Return a list of table names whose metadata have not been modified in the
    * last few milliseconds specified by timelag
-   * if any of the REGIONINFO_QUALIFIER, SERVER_QUALIFIER, STARTCODE_QUALIFIER,
-   * SPLITA_QUALIFIER, SPLITB_QUALIFIER have not changed in the last
+   * if any of the REGIONINFO_QUALIFIER, SERVER_QUALIFIER, STARTCODE_QUALIFIER, 
+   * SPLITA_QUALIFIER, SPLITB_QUALIFIER have not changed in the last 
    * milliseconds specified by timelag, then the table is a candidate to be returned.
    * @param regionList - all entries found in .META
    * @return tables that have not been modified recently
@@ -702,14 +834,14 @@ public class HBaseFsck {
         metaRegions.add(value);
       }
     }
-
+    
     // If something is wrong
     if (metaRegions.size() != 1) {
       HRegionLocation rootLocation = connection.locateRegion(
         HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_START_ROW);
       HbckInfo root =
           regionInfo.get(rootLocation.getRegionInfo().getEncodedName());
-
+      
       // If there is no region holding .META.
       if (metaRegions.size() == 0) {
         errors.reportWarning(".META. is not found on any region.");
@@ -765,7 +897,7 @@ public class HBaseFsck {
           long ts =  Collections.max(result.list(), comp).getTimestamp();
 
           // record region details
-          byte[] value = result.getValue(HConstants.CATALOG_FAMILY,
+          byte[] value = result.getValue(HConstants.CATALOG_FAMILY, 
                                          HConstants.REGIONINFO_QUALIFIER);
           HRegionInfo info = null;
           HServerAddress server = null;
@@ -783,7 +915,7 @@ public class HBaseFsck {
           }
 
           // record region's start key
-          value = result.getValue(HConstants.CATALOG_FAMILY,
+          value = result.getValue(HConstants.CATALOG_FAMILY, 
                                   HConstants.STARTCODE_QUALIFIER);
           if (value != null) {
             startCode = value;
@@ -795,7 +927,7 @@ public class HBaseFsck {
             throw new IOException("Two entries in META are same " + previous);
           }
 
-          // show proof of progress to the user, once for every 100 records.
+          // show proof of progress to the user, once for every 100 records. 
           if (countRecord % 100 == 0) {
             errors.progress();
           }
@@ -812,10 +944,10 @@ public class HBaseFsck {
     MetaScanner.metaScan(conf, visitor,
       HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_START_ROW, null,
       Integer.MAX_VALUE);
-
+    
     // Scan .META. to pick up user regions
     MetaScanner.metaScan(conf, visitor);
-    errors.print("");
+    errors.print(""); 
   }
 
   /**
@@ -825,7 +957,7 @@ public class HBaseFsck {
     HServerAddress regionServer;   // server hosting this region
     long modTime;          // timestamp of most recent modification metadata
 
-    public MetaEntry(HRegionInfo rinfo, HServerAddress regionServer,
+    public MetaEntry(HRegionInfo rinfo, HServerAddress regionServer, 
                      byte[] startCode, long modTime) {
       super(rinfo);
       this.regionServer = regionServer;
@@ -865,6 +997,7 @@ public class HBaseFsck {
    * Prints summary of all tables found on the system.
    */
   private void printTableSummary() {
+  	if (HBaseFsck.json != null) return;
     System.out.println("Summary:");
     for (TInfo tInfo : tablesInfo.values()) {
       if (tInfo.getLastError() == null) {
@@ -880,7 +1013,7 @@ public class HBaseFsck {
       System.out.println("\n");
     }
   }
-
+  
   interface ErrorReporter {
     public void reportWarning(String message);
     public void reportError(String message);
@@ -890,7 +1023,7 @@ public class HBaseFsck {
     public void progress();
     public void print(String message);
   }
-
+  
   private static class PrintingErrorReporter implements ErrorReporter {
     public int warnCount = 0;
     public int errorCount = 0;
@@ -899,14 +1032,18 @@ public class HBaseFsck {
 
     public synchronized void reportWarning(String message) {
       if (!summary) {
-        System.out.println("WARNING: " + message);
+      	if (HBaseFsck.json == null) {
+      		System.out.println("WARNING: " + message);
+      	}
       }
       warnCount++;
     }
 
     public synchronized void reportError(String message) {
       if (!summary) {
-        System.out.println("ERROR: " + message);
+      	if (HBaseFsck.json == null) {
+      		System.out.println("ERROR: " + message);
+      	}
       }
       errorCount++;
       showProgress = 0;
@@ -914,41 +1051,56 @@ public class HBaseFsck {
 
     public synchronized void reportFixableError(String message) {
       if (!summary) {
-        System.out.println("ERROR (fixable): " + message);
+      	if (HBaseFsck.json == null) {
+      		System.out.println("ERROR (fixable): " + message);
+      	}
       }
       fixableCount++;
       showProgress = 0;
     }
 
     public synchronized int summarize() {
-      System.out.println(Integer.toString(errorCount + fixableCount) +
-                         " inconsistencies detected.");
-      System.out.println(Integer.toString(fixableCount) +
-      " inconsistencies are fixable.");
+    	if (HBaseFsck.json == null) {
+	      System.out.println(Integer.toString(errorCount + fixableCount) +
+	                         " inconsistencies detected.");
+	      System.out.println(Integer.toString(fixableCount) +
+	      " inconsistencies are fixable.");
+    	}
       if (warnCount > 0) {
-        System.out.println(Integer.toString(warnCount) + " warnings.");
+      	if (HBaseFsck.json == null) {
+      		System.out.println(Integer.toString(warnCount) + " warnings.");
+      	}
       }
       if (errorCount + fixableCount == 0) {
-        System.out.println("Status: OK ");
+      	if (HBaseFsck.json == null) {
+      		System.out.println("Status: OK ");
+      	}
         return 0;
       } else if (fixableCount == 0) {
-        System.out.println("Status: INCONSISTENT");
+      	if (HBaseFsck.json == null) {
+      		System.out.println("Status: INCONSISTENT");
+      	}
         return -1;
       } else {
-        System.out.println("Status: INCONSISTENT (fixable)");
+      	if (HBaseFsck.json == null) {
+      		System.out.println("Status: INCONSISTENT (fixable)");
+      	}
         return -2;
       }
     }
-
+    
     public synchronized void print(String message) {
+    	if (HBaseFsck.json != null) return;
       if (!summary) {
         System.out.println(message);
       }
     }
 
     public synchronized void detail(String message) {
-      if (details) {
-        System.out.println(message);
+    	if (details) {
+      	if (HBaseFsck.json == null){
+      		System.out.println(message);
+      	}
       }
       showProgress = 0;
     }
@@ -956,7 +1108,9 @@ public class HBaseFsck {
     public synchronized void progress() {
       if (showProgress++ == 10) {
         if (!summary) {
-          System.out.print(".");
+        	if (HBaseFsck.json == null) {
+        		System.out.print(".");
+        	}
         }
         showProgress = 0;
       }
@@ -977,7 +1131,7 @@ public class HBaseFsck {
     private HConnection connection;
     private boolean done;
 
-    WorkItemRegion(HBaseFsck hbck, HServerInfo info,
+    WorkItemRegion(HBaseFsck hbck, HServerInfo info, 
                    ErrorReporter errors, HConnection connection) {
       this.hbck = hbck;
       this.rsinfo = info;
@@ -1000,7 +1154,7 @@ public class HBaseFsck {
 
         // list all online regions from this region server
         HRegionInfo[] regions = server.getRegionsAssignment();
-
+        
         if (details) {
           StringBuffer buf = new StringBuffer();
           buf.append("\nRegionServer:" + rsinfo.getServerName() +
@@ -1020,7 +1174,7 @@ public class HBaseFsck {
           HbckInfo hbi = hbck.getOrCreateInfo(r.getEncodedName());
           hbi.addServer(rsinfo.getServerAddress());
         }
-      } catch (IOException e) {          // unable to connect to the region server.
+      } catch (IOException e) {          // unable to connect to the region server. 
         errors.reportWarning("RegionServer: " + rsinfo.getServerName()
           + " Unable to fetch region information. " + e);
         hbck.addFailedServer(rsinfo.getServerAddress());
@@ -1041,7 +1195,7 @@ public class HBaseFsck {
     private FileSystem fs;
     private boolean done;
 
-    WorkItemHdfsDir(HBaseFsck hbck, FileSystem fs, ErrorReporter errors,
+    WorkItemHdfsDir(HBaseFsck hbck, FileSystem fs, ErrorReporter errors, 
                     FileStatus status) {
       this.hbck = hbck;
       this.fs = fs;
@@ -1052,7 +1206,7 @@ public class HBaseFsck {
 
     public synchronized boolean isDone() {
       return done;
-    }
+    } 
 
     @Override
     public synchronized void run() {
@@ -1069,7 +1223,7 @@ public class HBaseFsck {
 
           // ignore directories that aren't hexadecimal
           if (!encodedName.toLowerCase().matches("[0-9a-f]+")) continue;
-
+  
           HbckInfo hbi = hbck.getOrCreateInfo(encodedName);
           synchronized (hbi) {
             if (hbi.foundRegionDir != null) {
@@ -1077,7 +1231,7 @@ public class HBaseFsck {
                            hbi.foundRegionDir);
             }
             hbi.foundRegionDir = regionDir;
-
+        
             // Set a flag if this region contains only edits
             // This is special case if a region is left after split
             hbi.onlyEdits = true;
@@ -1092,7 +1246,7 @@ public class HBaseFsck {
             }
           }
         }
-      } catch (IOException e) {          // unable to connect to the region server.
+      } catch (IOException e) {          // unable to connect to the region server. 
         errors.reportError("Table Directory: " + tableDir.getPath().getName() +
                       " Unable to fetch region information. " + e);
       } finally {
@@ -1101,6 +1255,21 @@ public class HBaseFsck {
       }
     }
   }
+
+	private void WriteShortTableSummaries() {
+		JSONObject ret = new JSONObject();
+		JSONArray arr = new JSONArray();
+		try {
+			int i = 0;
+			for (Entry<String, TInfo> entry : tablesInfo.entrySet()) {
+				arr.put(i++, entry.getValue().toJSONObject());
+			}
+			ret.put("Summaries", arr);
+		} catch (JSONException ex) {
+			LOG.error("Problem creating the Summaries JSON");
+		}
+		System.out.println(ret.toString());
+	}
 
   /**
    * Display the full report from fsck.
@@ -1127,7 +1296,7 @@ public class HBaseFsck {
   void setShouldRerun() {
     rerun = true;
   }
-
+  
   boolean shouldRerun() {
     return rerun;
   }
@@ -1139,9 +1308,9 @@ public class HBaseFsck {
   void setFixState(FixState newVal) {
     fix = newVal;
   }
-
+  
   /**
-   * Let the user allow the opportunity to specify "-y" to all
+   * Let the user allow the opportunity to specify "-y" to all 
    * reconfirmation questions.
    */
   static void setPromptResponse(boolean value) {
@@ -1150,7 +1319,7 @@ public class HBaseFsck {
   static boolean getPromptResponse() {
     return promptResponse;
   }
-
+  
   /**
    * We are interested in only those tables that have not changed their state in
    * META during the last few seconds specified by hbase.admin.fsck.timelag
@@ -1159,6 +1328,14 @@ public class HBaseFsck {
   void setTimeLag(long ms) {
     timelag = ms;
   }
+  
+  /**
+   * Sets the output json file where the table summaries are written to
+   * @param summaryFileName - the file name
+   */
+  private void setJsonFlag(String jsonFlag) {
+		HBaseFsck.json = jsonFlag;
+	}
 
   /**
    * Main program
@@ -1166,10 +1343,9 @@ public class HBaseFsck {
    * @param args
    * @throws ParseException
    */
-  public static void main(String [] args)
+  public static void main(String [] args) 
  throws IOException,
       MasterNotRunningException, InterruptedException, ParseException {
-
     Options opt = new Options();
     opt.addOption(OptionBuilder.withArgName("property=value").hasArg()
         .withDescription("Override HBase Configuration Settings").create("D"));
@@ -1186,12 +1362,22 @@ public class HBaseFsck {
     opt.addOption("detail", false, "Display full report of all regions.");
     opt.addOption("checkRegionInfo", false, "Check if .regioninfo is consistent with .META.");
     opt.addOption("h", false, "Display this help");
+    opt.addOption("json", false, "Outputs the table summaries and errors in JSON format");
     CommandLine cmd = new GnuParser().parse(opt, args);
 
     // any unknown args or -h
     if (!cmd.getArgList().isEmpty() || cmd.hasOption("h")) {
       new HelpFormatter().printHelp("hbck", opt);
       return;
+    }
+    
+    if (cmd.hasOption("json")) {
+    	Logger.getLogger("org.apache.zookeeper").setLevel(Level.OFF);
+    	Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.OFF);
+    	Logger.getLogger("org.apache.hadoop.fs.FileSystem").setLevel(Level.OFF);
+    	Logger.getLogger("org.apache.hadoop.fs").setLevel(Level.OFF);
+    	Logger.getLogger("org.apache.hadoop.dfs").setLevel(Level.OFF);
+    	Logger.getLogger("org.apache.hadoop.hdfs").setLevel(Level.OFF);
     }
 
     Configuration conf = HBaseConfiguration.create();
@@ -1247,7 +1433,9 @@ public class HBaseFsck {
     if (cmd.hasOption("checkRegionInfo")) {
       checkRegionInfo = true;
     }
-
+    if (cmd.hasOption("json")) {
+    	fsck.setJsonFlag("json");
+    }
     int code = -1;
     try {
       // do the real work of fsck
@@ -1258,7 +1446,7 @@ public class HBaseFsck {
         fsck.setFixState(FixState.NONE);
         long fixTime = HBaseFsckRepair.getEstimatedFixTime(conf);
         if (fixTime > 0) {
-          LOG.info("Waiting " + StringUtils.formatTime(fixTime) +
+          LOG.info("Waiting " + StringUtils.formatTime(fixTime) + 
               " before checking to see if fixes worked...");
           Thread.sleep(fixTime);
         }
@@ -1267,6 +1455,9 @@ public class HBaseFsck {
     } catch (InterruptedException ie) {
       LOG.info("HBCK was interrupted by user. Exiting...");
       code = -1;
+    }
+    if (cmd.hasOption("json")) {
+    	fsck.WriteShortTableSummaries();
     }
 
     Runtime.getRuntime().exit(code);
