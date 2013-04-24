@@ -216,7 +216,7 @@ public final class MasterSnapshotVerifier {
         String fileName = hfile.getPath().getName();
         Path file = new Path(realCfDir, fileName);
         Path archived = new Path(archivedCfDir, fileName);
-        if (!fs.exists(file) && !file.equals(archived)) {
+        if (!fs.exists(file) && !fs.exists(archived)) {
           throw new CorruptedSnapshotException("Can't find hfile: " + hfile.getPath()
               + " in the real (" + realCfDir + ") or archive (" + archivedCfDir
               + ") directory for the primary table.", snapshot);
