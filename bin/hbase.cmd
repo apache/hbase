@@ -197,7 +197,7 @@ goto :MakeCmdArgsLoop
 set hbase-command-arguments=%_hbasearguments%
 
 @rem figure out which class to run
-set corecommands=shell master regionserver thrift thrift2 rest avro hlog hbck hfile zookeeper zkcli
+set corecommands=shell master regionserver thrift rest avro hlog hbck hfile zookeeper zkcli
 for %%i in ( %corecommands% ) do (
   if "%hbase-command%"=="%%i" set corecommand=true
 )
@@ -296,13 +296,6 @@ goto :eof
   )
   goto :eof
 
-:thrift2
-  set CLASS=org.apache.hadoop.hbase.thrift2.ThriftServer
-  if NOT "%1" == "stop" (
-    set HBASE_OPTS=%HBASE_OPTS% %HBASE_THRIFT_OPTS%
-  )
-  goto :eof
-
 :rest
   set CLASS=org.apache.hadoop.hbase.rest.Main
   if NOT "%1"=="stop" (
@@ -369,7 +362,6 @@ goto :eof
   echo   zookeeper        run a Zookeeper server
   echo   rest             run an HBase REST server 
   echo   thrift           run the HBase Thrift server 
-  echo   thrift2          run the HBase Thrift2 server 
   echo   avro             run an HBase Avro server 
   echo. 
   echo PACKAGE MANAGEMENT

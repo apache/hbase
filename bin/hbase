@@ -84,7 +84,6 @@ if [ $# = 0 ]; then
   echo "  zookeeper        run a Zookeeper server"
   echo "  rest             run an HBase REST server" 
   echo "  thrift           run the HBase Thrift server" 
-  echo "  thrift2          run the HBase Thrift2 server"
   echo ""
   echo "PACKAGE MANAGEMENT"
   echo "  classpath        dump hbase CLASSPATH"
@@ -237,7 +236,7 @@ fi
 unset IFS
 
 #Set the right GC options based on the what we are running
-declare -a server_cmds=("master" "regionserver" "thrift" "thrift2" "rest" "avro" "zookeeper")
+declare -a server_cmds=("master" "regionserver" "thrift" "rest" "avro" "zookeeper")
 for cmd in ${server_cmds[@]}; do
 	if [[ $cmd == $COMMAND ]]; then
 		server=true
@@ -288,11 +287,6 @@ elif [ "$COMMAND" = "regionserver" ] ; then
   fi
 elif [ "$COMMAND" = "thrift" ] ; then
   CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
-  if [ "$1" != "stop" ] ; then
-    HBASE_OPTS="$HBASE_OPTS $HBASE_THRIFT_OPTS"
-  fi
-elif [ "$COMMAND" = "thrift2" ] ; then
-  CLASS='org.apache.hadoop.hbase.thrift2.ThriftServer'
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_THRIFT_OPTS"
   fi
