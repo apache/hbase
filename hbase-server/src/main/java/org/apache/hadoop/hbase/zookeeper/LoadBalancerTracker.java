@@ -64,9 +64,9 @@ public class LoadBalancerTracker extends ZooKeeperNodeTracker {
   public void setBalancerOn(boolean balancerOn) throws KeeperException {
   byte [] upData = toByteArray(balancerOn);
     try {
-      ZKUtil.createAndWatch(watcher, watcher.balancerZNode, upData);
-    } catch(KeeperException.NodeExistsException nee) {
       ZKUtil.setData(watcher, watcher.balancerZNode, upData);
+    } catch(KeeperException.NoNodeException nne) {
+      ZKUtil.createAndWatch(watcher, watcher.balancerZNode, upData);
     }
     super.nodeDataChanged(watcher.balancerZNode);
   }
