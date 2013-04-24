@@ -4325,67 +4325,6 @@ public class TestFromClientSide {
     }
   }
 
-  /**
-   * This test demonstrates how we use ThreadPoolExecutor.
-   * It needs to show that we only use as many threads in the pool as we have
-   * region servers. To do this, instead of doing real requests, we use a
-   * SynchronousQueue where each put must wait for a take (and vice versa)
-   * so that way we have full control of the number of active threads.
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testPoolBehavior() throws IOException, InterruptedException {
-    byte[] someBytes = Bytes.toBytes("pool");
-    HTable table = TEST_UTIL.createTable(someBytes, someBytes);
-    ThreadPoolExecutor pool = (ThreadPoolExecutor)table.getPool();
-
-    // Make sure that the TPE stars with a core pool size of one and 0
-    // initialized worker threads
-    assertEquals(1, pool.getCorePoolSize());
-    assertEquals(0, pool.getPoolSize());
-
-    // Build a SynchronousQueue that we use for thread coordination
-    final SynchronousQueue<Object> queue = new SynchronousQueue<Object>();
-    List<Runnable> tasks = new ArrayList<Runnable>(5);
-    for (int i = 0; i < 5; i++) {
-      tasks.add(new Runnable() {
-        public void run() {
-          try {
-            // The thread blocks here until we decide to let it go
-            queue.take();
-          } catch (InterruptedException ie) { }
-        }
-      });
-    }
-    // First, add two tasks and make sure the pool size follows
-    pool.submit(tasks.get(0));
-    assertEquals(1, pool.getPoolSize());
-    pool.submit(tasks.get(1));
-    assertEquals(2, pool.getPoolSize());
-
-    // Next, terminate those tasks and then make sure the pool is still the
-    // same size
-    queue.put(new Object());
-    queue.put(new Object());
-    assertEquals(2, pool.getPoolSize());
-
-    //ensure that ThreadPoolExecutor knows that tasks are finished.
-    while (pool.getCompletedTaskCount() < 2) {
-      Threads.sleep(1);
-    }
-
-    // Now let's simulate adding a RS meaning that we'll go up to three
-    // concurrent threads. The pool should not grow larger than three.
-    pool.submit(tasks.get(2));
-    pool.submit(tasks.get(3));
-    pool.submit(tasks.get(4));
-    assertEquals(3, pool.getPoolSize());
-    queue.put(new Object());
-    queue.put(new Object());
-    queue.put(new Object());
-  }
-
   @Test
   public void testClientPoolRoundRobin() throws IOException {
     final byte[] tableName = Bytes.toBytes("testClientPoolRoundRobin");
