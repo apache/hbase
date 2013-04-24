@@ -26,13 +26,14 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.TestServerCustomProtocol;
+import org.apache.hadoop.hbase.util.ClassLoaderTestHelper;
+import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.RegionLoad;
 
-import javax.tools.*;
 import java.io.*;
 import java.util.*;
 import java.util.jar.*;
@@ -41,6 +42,7 @@ import org.junit.*;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
@@ -103,90 +105,11 @@ public class TestClassLoading {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  // generate jar file
-  private boolean createJarArchive(File archiveFile, File[] tobeJared) {
-    try {
-      byte buffer[] = new byte[BUFFER_SIZE];
-      // Open archive file
-      FileOutputStream stream = new FileOutputStream(archiveFile);
-      JarOutputStream out = new JarOutputStream(stream, new Manifest());
-
-      for (int i = 0; i < tobeJared.length; i++) {
-        if (tobeJared[i] == null || !tobeJared[i].exists()
-            || tobeJared[i].isDirectory()) {
-          continue;
-        }
-
-        // Add archive entry
-        JarEntry jarAdd = new JarEntry(tobeJared[i].getName());
-        jarAdd.setTime(tobeJared[i].lastModified());
-        out.putNextEntry(jarAdd);
-
-        // Write file to archive
-        FileInputStream in = new FileInputStream(tobeJared[i]);
-        while (true) {
-          int nRead = in.read(buffer, 0, buffer.length);
-          if (nRead <= 0)
-            break;
-          out.write(buffer, 0, nRead);
-        }
-        in.close();
-      }
-      out.close();
-      stream.close();
-      LOG.info("Adding classes to jar file completed");
-      return true;
-    } catch (Exception ex) {
-      LOG.error("Error: " + ex.getMessage());
-      return false;
-    }
-  }
-
-  private File buildCoprocessorJar(String className) throws Exception {
-    // compose a java source file.
-    String javaCode = "import org.apache.hadoop.hbase.coprocessor.*;" +
+  static File buildCoprocessorJar(String className) throws Exception {
+    String code = "import org.apache.hadoop.hbase.coprocessor.*;" +
       "public class " + className + " extends BaseRegionObserver {}";
-    Path baseDir = TEST_UTIL.getDataTestDir();
-    Path srcDir = new Path(TEST_UTIL.getDataTestDir(), "src");
-    File srcDirPath = new File(srcDir.toString());
-    srcDirPath.mkdirs();
-    File sourceCodeFile = new File(srcDir.toString(), className + ".java");
-    BufferedWriter bw = new BufferedWriter(new FileWriter(sourceCodeFile));
-    bw.write(javaCode);
-    bw.close();
-
-    // compile it by JavaCompiler
-    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-    ArrayList<String> srcFileNames = new ArrayList<String>();
-    srcFileNames.add(sourceCodeFile.toString());
-    StandardJavaFileManager fm = compiler.getStandardFileManager(null, null,
-      null);
-    Iterable<? extends JavaFileObject> cu =
-      fm.getJavaFileObjects(sourceCodeFile);
-    List<String> options = new ArrayList<String>();
-    options.add("-classpath");
-    // only add hbase classes to classpath. This is a little bit tricky: assume
-    // the classpath is {hbaseSrc}/target/classes.
-    String currentDir = new File(".").getAbsolutePath();
-    String classpath =
-        currentDir + File.separator + "target"+ File.separator + "classes" +
-        System.getProperty("path.separator") + System.getProperty("java.class.path");
-    options.add(classpath);
-    LOG.debug("Setting classpath to: "+classpath);
-
-    JavaCompiler.CompilationTask task = compiler.getTask(null, fm, null,
-      options, null, cu);
-    assertTrue("Compile file " + sourceCodeFile + " failed.", task.call());
-
-    // build a jar file by the classes files
-    String jarFileName = className + ".jar";
-    File jarFile = new File(baseDir.toString(), jarFileName);
-    if (!createJarArchive(jarFile,
-        new File[]{new File(srcDir.toString(), className + ".class")})){
-      assertTrue("Build jar file failed.", false);
-    }
-
-    return jarFile;
+    return ClassLoaderTestHelper.buildJar(
+      TEST_UTIL.getDataTestDir().toString(), className, code);
   }
 
   @Test
@@ -235,7 +158,7 @@ public class TestClassLoading {
       }
       admin.deleteTable(tableName);
     }
-    CoprocessorHost.classLoadersCache.clear();
+    CoprocessorClassLoader.clearCache();
     byte[] startKey = {10, 63};
     byte[] endKey = {12, 43};
     admin.createTable(htd, startKey, endKey, 4);
@@ -282,22 +205,22 @@ public class TestClassLoading {
     assertTrue("Configuration key 'k2' was missing on a region", found2_k2);
     assertTrue("Configuration key 'k3' was missing on a region", found2_k3);
     // check if CP classloaders are cached
-    assertTrue(jarFileOnHDFS1 + " was not cached",
-      CoprocessorHost.classLoadersCache.containsKey(pathOnHDFS1));
-    assertTrue(jarFileOnHDFS2 + " was not cached",
-      CoprocessorHost.classLoadersCache.containsKey(pathOnHDFS2));
+    assertNotNull(jarFileOnHDFS1 + " was not cached",
+      CoprocessorClassLoader.getIfCached(pathOnHDFS1));
+    assertNotNull(jarFileOnHDFS2 + " was not cached",
+      CoprocessorClassLoader.getIfCached(pathOnHDFS2));
     //two external jar used, should be one classloader per jar
     assertEquals("The number of cached classloaders should be equal to the number" +
       " of external jar files",
-      2, CoprocessorHost.classLoadersCache.size());
+      2, CoprocessorClassLoader.getAllCached().size());
     //check if region active classloaders are shared across all RS regions
     Set<ClassLoader> externalClassLoaders = new HashSet<ClassLoader>(
-        CoprocessorHost.classLoadersCache.values());
+      CoprocessorClassLoader.getAllCached());
     for (Map.Entry<HRegion, Set<ClassLoader>> regionCP : regionsActiveClassLoaders.entrySet()) {
       assertTrue("Some CP classloaders for region " + regionCP.getKey() + " are not cached."
-            + " ClassLoader Cache:" + externalClassLoaders
-            + " Region ClassLoaders:" + regionCP.getValue(),
-            externalClassLoaders.containsAll(regionCP.getValue()));
+        + " ClassLoader Cache:" + externalClassLoaders
+        + " Region ClassLoaders:" + regionCP.getValue(),
+        externalClassLoaders.containsAll(regionCP.getValue()));
     }
   }
 

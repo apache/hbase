@@ -19,39 +19,51 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.common.collect.MapMaker;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.UUID;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.io.IOUtils;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.URL;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.*;
-import java.util.concurrent.ConcurrentMap;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 
 /**
  * Provides the common setup framework and runtime services for coprocessor
@@ -73,10 +85,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   public static final String WAL_COPROCESSOR_CONF_KEY =
     "hbase.coprocessor.wal.classes";
 
-  //coprocessor jars are put under ${hbase.local.dir}/coprocessor/jars/
-  private static final String COPROCESSOR_JARS_DIR = File.separator
-      + "coprocessor" + File.separator + "jars" + File.separator;
-
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   /** Ordered set of loaded coprocessors with lock */
   protected SortedSet<E> coprocessors =
@@ -85,15 +93,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
   protected volatile int loadSequence;
-
-  /*
-   * External classloaders cache keyed by external jar path.
-   * ClassLoader instance is stored as a weak-reference
-   * to allow GC'ing when no CoprocessorHost is using it
-   * (@see HBASE-7205)
-   */
-  static ConcurrentMap<Path, ClassLoader> classLoadersCache =
-      new MapMaker().concurrencyLevel(3).weakValues().makeMap();
 
   public CoprocessorHost() {
     pathPrefix = UUID.randomUUID().toString();
@@ -175,7 +174,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param conf configuration for coprocessor
    * @throws java.io.IOException Exception
    */
-  @SuppressWarnings("deprecation")
   public E load(Path path, String className, int priority,
       Configuration conf) throws IOException {
     Class<?> implClass = null;
@@ -190,81 +188,8 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         throw new IOException("No jar path specified for " + className);
       }
     } else {
-      // Have we already loaded the class, perhaps from an earlier region open
-      // for the same table?
-      cl = classLoadersCache.get(path);
-      if (cl != null){
-        LOG.debug("Found classloader "+ cl + "for "+path.toString());
-        try {
-          implClass = cl.loadClass(className);
-        } catch (ClassNotFoundException e) {
-          LOG.info("Class " + className + " needs to be loaded from a file - " +
-              path + ".");
-          // go ahead to load from file system.
-        }
-      }
-    }
-
-    // If not, load
-    if (implClass == null) {
-      if (path == null) {
-        throw new IOException("No jar path specified for " + className);
-      }
-      // copy the jar to the local filesystem
-      if (!path.toString().endsWith(".jar")) {
-        throw new IOException(path.toString() + ": not a jar file?");
-      }
-      FileSystem fs = path.getFileSystem(this.conf);
-      File parentDir = new File(this.conf.get("hbase.local.dir") + COPROCESSOR_JARS_DIR);
-      parentDir.mkdirs();
-      File dst = new File(parentDir, "." + pathPrefix +
-          "." + className + "." + System.currentTimeMillis() + ".jar");
-      fs.copyToLocalFile(path, new Path(dst.toString()));
-      dst.deleteOnExit();
-
-      // TODO: code weaving goes here
-
-      // TODO: wrap heap allocations and enforce maximum usage limits
-
-      /* TODO: inject code into loop headers that monitors CPU use and
-         aborts runaway user code */
-
-      // load the jar and get the implementation main class
-      // NOTE: Path.toURL is deprecated (toURI instead) but the URLClassLoader
-      // unsurprisingly wants URLs, not URIs; so we will use the deprecated
-      // method which returns URLs for as long as it is available
-      final List<URL> paths = new ArrayList<URL>();
-      URL url = dst.getCanonicalFile().toURL();
-      paths.add(url);
-
-      JarFile jarFile = new JarFile(dst.toString());
-      Enumeration<JarEntry> entries = jarFile.entries();
-      while (entries.hasMoreElements()) {
-        JarEntry entry = entries.nextElement();
-        if (entry.getName().matches("/lib/[^/]+\\.jar")) {
-          File file = new File(parentDir, "." + pathPrefix +
-              "." + className + "." + System.currentTimeMillis() + "." + entry.getName().substring(5));
-          IOUtils.copyBytes(jarFile.getInputStream(entry), new FileOutputStream(file), conf, true);
-          file.deleteOnExit();
-          paths.add(file.toURL());
-        }
-      }
-      jarFile.close();
-
-      cl = AccessController.doPrivileged(new PrivilegedAction<CoprocessorClassLoader>() {
-              @Override
-              public CoprocessorClassLoader run() {
-                return new CoprocessorClassLoader(paths, this.getClass().getClassLoader());
-              }
-            });
-
-      // cache cp classloader as a weak value, will be GC'ed when no reference left
-      ClassLoader prev = classLoadersCache.putIfAbsent(path, cl);
-      if (prev != null) {
-        //lost update race, use already added classloader
-        cl = prev;
-      }
-
+      cl = CoprocessorClassLoader.getClassLoader(
+        path, getClass().getClassLoader(), pathPrefix, conf);
       try {
         implClass = cl.loadClass(className);
       } catch (ClassNotFoundException e) {

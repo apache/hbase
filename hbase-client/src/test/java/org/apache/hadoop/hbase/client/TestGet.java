@@ -147,8 +147,8 @@ public class TestGet {
     }
 
     Configuration conf = HBaseConfiguration.create();
-    String localPath = conf.get("hbase.local.dir") + File.separator
-      + "dynamic" + File.separator + "jars" + File.separator;
+    String localPath = conf.get("hbase.local.dir")
+      + File.separator + "jars" + File.separator;
     File jarFile = new File(localPath, "MockFilter.jar");
     jarFile.deleteOnExit();
 
