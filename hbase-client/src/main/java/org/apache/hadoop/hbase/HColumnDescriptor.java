@@ -1125,10 +1125,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public int compareTo(HColumnDescriptor o) {
     int result = Bytes.compareTo(this.name, o.getName());
     if (result == 0) {
-      // The maps interface should compare values, even if they're in different orders
-      if (!this.values.equals(o.values)) {
-        return 1;
-      }
+      // punt on comparison for ordering, just calculate difference
+      result = this.values.hashCode() - o.values.hashCode();
+      if (result < 0)
+        result = -1;
+      else if (result > 0)
+        result = 1;
     }
     if (result == 0) {
       result = this.configuration.hashCode() - o.configuration.hashCode();
