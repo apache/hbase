@@ -620,6 +620,7 @@ public class ReplicationSource extends Thread
         }
       }
     } catch (IOException ioe) {
+      if (ioe instanceof EOFException && isCurrentLogEmpty()) return true;
       LOG.warn(peerClusterZnode + " Got: ", ioe);
       this.reader = null;
       if (ioe.getCause() instanceof NullPointerException) {
@@ -637,6 +638,16 @@ public class ReplicationSource extends Thread
     return true;
   }
 
+  /*
+   * Checks whether the current log file is empty, and it is not a recovered queue. This is to
+   * handle scenario when in an idle cluster, there is no entry in the current log and we keep on
+   * trying to read the log file and get EOFEception. In case of a recovered queue the last log file
+   * may be empty, and we don't want to retry that.
+   */
+  private boolean isCurrentLogEmpty() {
+    return (this.repLogReader.getPosition() == 0 && !queueRecovered && queue.size() == 0);
+  }
+  
   /**
    * Do the sleeping logic
    * @param msg Why we sleep
