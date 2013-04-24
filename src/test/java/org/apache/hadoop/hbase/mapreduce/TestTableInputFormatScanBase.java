@@ -195,6 +195,7 @@ public abstract class TestTableInputFormatScanBase {
     job.setInputFormatClass(TableInputFormat.class);
     job.setNumReduceTasks(1);
     FileOutputFormat.setOutputPath(job, new Path(job.getJobName()));
+    TableMapReduceUtil.addDependencyJars(job);
     assertTrue(job.waitForCompletion(true));
   }
 
