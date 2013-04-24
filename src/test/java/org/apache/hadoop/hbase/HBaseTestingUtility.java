@@ -1417,6 +1417,11 @@ public class HBaseTestingUtility {
     }
     System.setProperty("hadoop.log.dir", logDir);
     c.set("mapred.output.dir", tmpDir);
+
+    // Tests were failing because this process used 6GB of virtual memory and was getting killed.
+    // we up the VM usable so that processes don't get killed.
+    conf.setFloat("yarn.nodemanager.vmem-pmem-ratio", 8.0f);
+
     mrCluster = new MiniMRCluster(servers,
       FileSystem.get(conf).getUri().toString(), 1);
     LOG.info("Mini mapreduce cluster started");
@@ -1742,7 +1747,6 @@ public class HBaseTestingUtility {
 
     return startedServer;
   }
-
 
   /**
    * Make sure that at least the specified number of region servers
