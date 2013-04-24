@@ -30,6 +30,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -49,6 +52,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class RegionScanner implements InternalScanner {
 //Package local for testability
+  public static final Log LOG = LogFactory.getLog(RegionScanner.class);
   KeyValueHeap storeHeap = null;
   private final byte [] stopRow;
   private Filter filter;
@@ -197,7 +201,7 @@ public class RegionScanner implements InternalScanner {
         getOriginalScan().setCurrentPartialResponseSize(0);
         int maxResponseSize = getOriginalScan().getMaxResponseSize();
         do {
-          moreRows = nextInternal(tmpList, limit, metric, null);
+          moreRows = nextInternal(tmpList, limit, metric, null, true);
           if (!tmpList.isEmpty()) {
             currentNbRows++;
             if (outResults != null) {
@@ -301,10 +305,10 @@ public class RegionScanner implements InternalScanner {
     if (outResults.isEmpty()) {
        // Usually outResults is empty. This is true when next is called
        // to handle scan or get operation.
-      returnResult = nextInternal(outResults, limit, metric, kvContext);
+      returnResult = nextInternal(outResults, limit, metric, kvContext, false);
     } else {
       List<KeyValue> tmpList = new ArrayList<KeyValue>();
-      returnResult = nextInternal(tmpList, limit, metric, kvContext);
+      returnResult = nextInternal(tmpList, limit, metric, kvContext, false);
       outResults.addAll(tmpList);
     }
     rowReadCnt.incrementAndGet();
@@ -340,7 +344,7 @@ public class RegionScanner implements InternalScanner {
    * @param results empty list in which results will be stored
    */
   private boolean nextInternal(List<KeyValue> results, int limit, String metric,
-      KeyValueContext kvContext)
+      KeyValueContext kvContext, boolean prefetch)
       throws IOException {
 
     if (!results.isEmpty()) {
@@ -350,6 +354,11 @@ public class RegionScanner implements InternalScanner {
     boolean partialRow = getOriginalScan().isPartialRow();
     long maxResponseSize = getOriginalScan().getMaxResponseSize();
     while (true) {
+      if (!prefetch && HRegionServer.isCurrentConnectionClosed()) {
+        HRegion.incrNumericMetric(HConstants.SERVER_INTERRUPTED_CALLS_KEY, 1);
+        LOG.error(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
+        throw new IOException(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
+      }
       byte [] currentRow = peekRow();
       if (isStopRow(currentRow)) {
         if (filter != null && filter.hasFilterRow()) {
@@ -366,6 +375,12 @@ public class RegionScanner implements InternalScanner {
       } else {
         byte [] nextRow;
         do {
+          if (!prefetch && HRegionServer.isCurrentConnectionClosed()) {
+            HRegion.incrNumericMetric(HConstants.SERVER_INTERRUPTED_CALLS_KEY,
+                1);
+            LOG.error(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
+            throw new IOException(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
+          }
           this.storeHeap.next(results, limit - results.size(), metric, kvContext);
           if (limit > 0 && results.size() == limit) {
             if (this.filter != null && filter.hasFilterRow())

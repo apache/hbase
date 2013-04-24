@@ -627,7 +627,11 @@ public class HRegionServer implements HRegionInterface,
    * @return
    */
   public static boolean isCurrentConnectionClosed() {
-    return callContext.get().getConnection().getSocket().isClosed();
+    // this is checked just because of the unit tests
+    if (callContext.get() != null) {
+      return callContext.get().getConnection().getSocket().isClosed();
+    }
+    return false;
   }
 
   /**
