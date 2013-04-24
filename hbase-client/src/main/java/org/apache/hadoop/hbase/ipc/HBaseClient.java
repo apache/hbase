@@ -392,7 +392,7 @@ public class HBaseClient {
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Use " + authMethod + " authentication for protocol "
-            + protocol.getSimpleName());
+            + (protocol == null ? "null" : protocol.getSimpleName()));
       }
       reloginMaxBackoff = conf.getInt("hbase.security.relogin.maxbackoff", 5000);
       this.remoteId = remoteId;
@@ -811,7 +811,7 @@ public class HBaseClient {
                 ticket = ticket.getRealUser();
               }
             }
-            boolean continueSasl = false;
+            boolean continueSasl;
             try {
               if (ticket == null) {
                 throw new NullPointerException("ticket is null");
@@ -855,7 +855,7 @@ public class HBaseClient {
         }
       } catch (Throwable t) {
         failedServers.addToFailedServers(remoteId.address);
-        IOException e = null;
+        IOException e;
         if (t instanceof IOException) {
           e = (IOException)t;
           markClosed(e);
@@ -1007,14 +1007,16 @@ public class HBaseClient {
             if (call != null) call.setException(re);
           }
         } else {
-          Message rpcResponseType;
-          try {
-            // TODO: Why pb engine pollution in here in this class?  FIX.
-            rpcResponseType =
-              ProtobufRpcClientEngine.Invoker.getReturnProtoType(
-                reflectionCache.getMethod(remoteId.getProtocol(), call.method.getName()));
-          } catch (Exception e) {
-            throw new RuntimeException(e); //local exception
+          Message rpcResponseType = null;
+          if (call != null){
+            try {
+              // TODO: Why pb engine pollution in here in this class?  FIX.
+              rpcResponseType =
+                ProtobufRpcClientEngine.Invoker.getReturnProtoType(
+                  reflectionCache.getMethod(remoteId.getProtocol(), call.method.getName()));
+            } catch (Exception e) {
+              throw new RuntimeException(e); //local exception
+            }
           }
           Message value = null;
           if (rpcResponseType != null) {
