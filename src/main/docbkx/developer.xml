@@ -44,6 +44,12 @@ svn co http://svn.apache.org/repos/asf/hbase/trunk hbase-core-trunk
         <programlisting>
 git clone git://git.apache.org/hbase.git
         </programlisting>
+          <para>
+              There is also a github repository that mirrors Apache git repository.  If you'd like to develop within github environment (collaborating, pull requests) you can get the source code by:
+              <programlisting>
+git clone git://github.com/apache/hbase.git
+              </programlisting>
+          </para>
       </section>
     </section>
 
@@ -990,6 +996,13 @@ mvn compile
           </para>
           <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the
           selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </para>
+      <para>
+          Generating patches using git:<sbr/>
+              <programlisting>
+$ git diff --no-prefix  > HBASE_XXXX.patch
+              </programlisting>
+              Don't forget the 'no-prefix' option; and generate the diff from the root directory of project
+      </para>
           <para>Make sure you review <xref linkend="eclipse.code.formatting"/> for code style. </para>
           </section>
           <section xml:id="submitting.patches.naming">
@@ -997,7 +1010,7 @@ mvn compile
           <para>The patch file should have the Apache HBase Jira ticket in the name.  For example, if a patch was submitted for <filename>Foo.java</filename>, then
           a patch file called <filename>Foo_HBASE_XXXX.patch</filename> would be acceptable where XXXX is the Apache HBase Jira number.
           </para>
-          <para>If you generating from a branch, then including the target branch in the filename is advised, e.g., <filename>HBASE-XXXX-0.90.patch</filename>.
+          <para>If you generating from a branch, then including the target branch in the filename is advised, e.g., <filename>HBASE_XXXX-0.90.patch</filename>.
           </para>
           </section>
           <section xml:id="submitting.patches.tests">
@@ -1160,6 +1173,76 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
           </section>
 
         </section>   <!--  patch feedback -->
+
+        <section>
+            <title>Submitting a patch again</title>
+            <para>
+                Sometimes committers ask for changes for a patch.  After incorporating the suggested/requested changes, follow the following process to submit the patch again.
+            </para>
+            <itemizedlist>
+                <listitem>
+                    Do not delete the old patch file
+                </listitem>
+                <listitem>
+                    version your new patch file using a simple scheme like this: <sbr/>
+                    HBASE-{jira number}-{version}.patch <sbr/>
+                    e.g:
+                    HBASE_XXXX-v2.patch
+                </listitem>
+                <listitem>
+                    'Cancel Patch' on JIRA.. bug status will change back to Open
+                </listitem>
+                <listitem>
+                    Attach new patch file (e.g. HBASE_XXXX-v2.patch) using 'Files --> Attach'
+                </listitem>
+                <listitem>
+                    Click on 'Submit Patch'.  Now the bug status will say 'Patch Available'.
+                </listitem>
+            </itemizedlist>
+            Committers will review the patch.  Rinse and repeat as many times as needed :-)
+        </section>
+
+        <section>
+            <title>Submitting incremental patches</title>
+            <para>
+                At times you may want to break a big change into mulitple patches.  Here is a sample work-flow using git
+                <itemizedlist>
+                    <listitem>
+                        patch 1:
+                        <itemizedlist>
+                            <listitem>
+                                $ git diff --no-prefix > HBASE_XXXX-1.patch
+                            </listitem>
+                        </itemizedlist>
+                    </listitem>
+                    <listitem>
+                        patch 2:
+                        <itemizedlist>
+                            <listitem>
+                                create a new git branch <sbr/>
+                                $ git checkout -b my_branch
+                            </listitem>
+                            <listitem>
+                                save your work
+                                $ git add file1 file2 <sbr/>
+                                $ git commit -am 'saved after HBASE_XXXX-1.patch' <sbr/>
+                                now you have your own branch, that is different from remote master branch <sbr/>
+                            </listitem>
+                            <listitem>
+                                make more changes...
+                            </listitem>
+                            <listitem>
+                                create second patch <sbr/>
+                                $ git diff --no-prefix > HBASE_XXXX-2.patch
+                            </listitem>
+                        </itemizedlist>
+
+
+
+                    </listitem>
+                </itemizedlist>
+            </para>
+        </section>
 
          <section xml:id="reviewboard">
             <title>ReviewBoard</title>
