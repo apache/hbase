@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.HashMap;
 
 import org.apache.commons.logging.Log;
@@ -34,9 +33,16 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * This is a class loader that can load classes dynamically from new
- * jar files under a configured folder. It always uses its parent class
- * loader to load a class at first. Only if its parent class loader
+ * jar files under a configured folder. The paths to the jar files are
+ * converted to URLs, and URLClassLoader logic is actually used to load
+ * classes. This class loader always uses its parent class loader
+ * to load a class at first. Only if its parent class loader
  * can not load a class, we will try to load it using the logic here.
+ * <p>
+ * The configured folder can be a HDFS path. In this case, the jar files
+ * under that folder will be copied to local at first under ${hbase.local.dir}/jars/.
+ * The local copy will be updated if the remote copy is updated, according to its
+ * last modified timestamp.
  * <p>
  * We can't unload a class already loaded. So we will use the existing
  * jar files we already know to load any class which can't be loaded
@@ -50,18 +56,15 @@ import org.apache.hadoop.fs.Path;
  * classes properly.
  */
 @InterfaceAudience.Private
-public class DynamicClassLoader extends URLClassLoader {
+public class DynamicClassLoader extends ClassLoaderBase {
   private static final Log LOG =
       LogFactory.getLog(DynamicClassLoader.class);
 
-  // Dynamic jars are put under ${hbase.local.dir}/dynamic/jars/
+  // Dynamic jars are put under ${hbase.local.dir}/jars/
   private static final String DYNAMIC_JARS_DIR = File.separator
-    + "dynamic" + File.separator + "jars" + File.separator;
+    + "jars" + File.separator;
 
-  /**
-   * Parent class loader used to load any class at first.
-   */
-  private final ClassLoader parent;
+  private static final String DYNAMIC_JARS_DIR_KEY = "hbase.dynamic.jars.dir";
 
   private File localDir;
 
@@ -81,18 +84,18 @@ public class DynamicClassLoader extends URLClassLoader {
    */
   public DynamicClassLoader(
       final Configuration conf, final ClassLoader parent) {
-    super(new URL[]{}, parent);
-    this.parent = parent;
+    super(parent);
 
     jarModifiedTime = new HashMap<String, Long>();
-    String localDirPath = conf.get("hbase.local.dir") + DYNAMIC_JARS_DIR;
+    String localDirPath = conf.get(
+      LOCAL_DIR_KEY, DEFAULT_LOCAL_DIR) + DYNAMIC_JARS_DIR;
     localDir = new File(localDirPath);
     if (!localDir.mkdirs() && !localDir.isDirectory()) {
       throw new RuntimeException("Failed to create local dir " + localDir.getPath()
         + ", DynamicClassLoader failed to init");
     }
 
-    String remotePath = conf.get("hbase.dynamic.jars.dir");
+    String remotePath = conf.get(DYNAMIC_JARS_DIR_KEY);
     if (remotePath == null || remotePath.equals(localDirPath)) {
       remoteDir = null;  // ignore if it is the same as the local path
     } else {
@@ -117,33 +120,35 @@ public class DynamicClassLoader extends URLClassLoader {
         LOG.debug("Class " + name + " not found - using dynamical class loader");
       }
 
-      // Check whether the class has already been loaded:
-      Class<?> clasz = findLoadedClass(name);
-      if (clasz != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Class " + name + " already loaded");
+      synchronized (getClassLoadingLock(name)) {
+        // Check whether the class has already been loaded:
+        Class<?> clasz = findLoadedClass(name);
+        if (clasz != null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Class " + name + " already loaded");
+          }
         }
-      }
-      else {
-        try {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Finding class: " + name);
-          }
-          clasz = findClass(name);
-        } catch (ClassNotFoundException cnfe) {
-          // Load new jar files if any
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Loading new jar files, if any");
-          }
-          loadNewJars();
+        else {
+          try {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Finding class: " + name);
+            }
+            clasz = findClass(name);
+          } catch (ClassNotFoundException cnfe) {
+            // Load new jar files if any
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Loading new jar files, if any");
+            }
+            loadNewJars();
 
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Finding class again: " + name);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Finding class again: " + name);
+            }
+            clasz = findClass(name);
           }
-          clasz = findClass(name);
         }
+        return clasz;
       }
-      return clasz;
     }
   }
 
