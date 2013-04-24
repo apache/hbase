@@ -17,6 +17,10 @@
 
 <FindBugsFilter>
   <Match>
+    <Package name="org.apache.hadoop.hbase.thrift2.generated"/>
+  </Match>
+
+  <Match>
     <Package name="org.apache.hadoop.hbase.thrift.generated"/>
   </Match>
 
