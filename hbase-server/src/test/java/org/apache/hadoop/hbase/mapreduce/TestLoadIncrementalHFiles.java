@@ -53,7 +53,6 @@ import org.junit.experimental.categories.Category;
 public class TestLoadIncrementalHFiles {
   private static final byte[] QUALIFIER = Bytes.toBytes("myqual");
   private static final byte[] FAMILY = Bytes.toBytes("myfam");
-  private static final String EXPECTED_MSG_FOR_NON_EXISTING_FAMILY = "invalid family name found";
 
   private static final byte[][] SPLIT_KEYS = new byte[][] {
     Bytes.toBytes("ddd"),
@@ -189,11 +188,6 @@ public class TestLoadIncrementalHFiles {
 
     HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    // set real family name to upper case in purpose to simulate the case that
-    // family name in HFiles is invalid
-    HColumnDescriptor family =
-        new HColumnDescriptor(Bytes.toBytes(new String(FAMILY).toUpperCase()));
-    htd.addFamily(family);
     admin.createTable(htd, SPLIT_KEYS);
 
     HTable table = new HTable(util.getConfiguration(), TABLE);
@@ -204,11 +198,6 @@ public class TestLoadIncrementalHFiles {
       assertTrue("Loading into table with non-existent family should have failed", false);
     } catch (Exception e) {
       assertTrue("IOException expected", e instanceof IOException);
-      // further check whether the exception message is correct
-      String errMsg = e.getMessage();
-      assertTrue("Incorrect exception message, expected message: ["
-          + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY + "], current message: [" + errMsg + "]",
-          errMsg.contains(EXPECTED_MSG_FOR_NON_EXISTING_FAMILY));
     }
     table.close();
     admin.close();

@@ -187,7 +187,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   /**
    * Perform a bulk load of the given directory into the given
    * pre-existing table.  This method is not threadsafe.
-   *
+   * 
    * @param hfofDir the directory that was provided as the output path
    * of a job using HFileOutputFormat
    * @param table the table to load into
@@ -220,26 +220,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     Deque<LoadQueueItem> queue = new LinkedList<LoadQueueItem>();
     try {
       discoverLoadQueue(queue, hfofDir);
-      // check whether there is invalid family name in HFiles to be bulkloaded
-      Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
-      ArrayList<String> familyNames = new ArrayList<String>();
-      for (HColumnDescriptor family : families) {
-        familyNames.add(family.getNameAsString());
-      }
-      ArrayList<String> unmatchedFamilies = new ArrayList<String>();
-      for (LoadQueueItem lqi : queue) {
-        String familyNameInHFile = Bytes.toString(lqi.family);
-        if (!familyNames.contains(familyNameInHFile)) {
-          unmatchedFamilies.add(familyNameInHFile);
-        }
-      }
-      if (unmatchedFamilies.size() > 0) {
-        String msg = "Unmatched family names found: unmatched family names in HFiles to be bulkloaded: "
-            + unmatchedFamilies + "; valid family names of table "
-            + Bytes.toString(table.getTableName()) + " are: " + familyNames;
-        LOG.error(msg);
-        throw new IOException(msg);
-      }
       int count = 0;
 
       if (queue.isEmpty()) {
@@ -378,7 +358,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     Set<Future<List<LoadQueueItem>>> splittingFutures = new HashSet<Future<List<LoadQueueItem>>>();
     while (!queue.isEmpty()) {
       final LoadQueueItem item = queue.remove();
-
+      
       final Callable<List<LoadQueueItem>> call = new Callable<List<LoadQueueItem>>() {
         public List<LoadQueueItem> call() throws Exception {
           List<LoadQueueItem> splits = groupOrSplit(regionGroups, item, table, startEndKeys);
@@ -512,12 +492,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * Attempts to do an atomic load of many hfiles into a region.  If it fails,
    * it returns a list of hfiles that need to be retried.  If it is successful
    * it will return an empty list.
-   *
+   * 
    * NOTE: To maintain row atomicity guarantees, region server callable should
    * succeed atomically and fails atomically.
-   *
+   * 
    * Protected for testing.
-   *
+   * 
    * @return empty list if success, list of items to retry on recoverable
    * failure
    */
@@ -670,7 +650,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private boolean doesTableExist(String tableName) throws Exception {
     return hbAdmin.tableExists(tableName);
   }
-
+  
   /*
    * Infers region boundaries for a new table.
    * Parameter:
@@ -678,29 +658,29 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    *     If a key is a start key of a file, then it maps to +1
    *     If a key is an end key of a file, then it maps to -1
    * Algo:
-   * 1) Poll on the keys in order:
-   *    a) Keep adding the mapped values to these keys (runningSum)
+   * 1) Poll on the keys in order: 
+   *    a) Keep adding the mapped values to these keys (runningSum) 
    *    b) Each time runningSum reaches 0, add the start Key from when the runningSum had started to a boundary list.
-   * 2) Return the boundary list.
+   * 2) Return the boundary list. 
    */
   public static byte[][] inferBoundaries(TreeMap<byte[], Integer> bdryMap) {
     ArrayList<byte[]> keysArray = new ArrayList<byte[]>();
     int runningValue = 0;
     byte[] currStartKey = null;
     boolean firstBoundary = true;
-
+    
     for (Map.Entry<byte[], Integer> item: bdryMap.entrySet()) {
       if (runningValue == 0) currStartKey = item.getKey();
       runningValue += item.getValue();
       if (runningValue == 0) {
         if (!firstBoundary) keysArray.add(currStartKey);
         firstBoundary = false;
-      }
+      } 
     }
-
+    
     return keysArray.toArray(new byte[0][0]);
   }
-
+ 
   /*
    * If the table is created for the first time, then "completebulkload" reads the files twice.
    * More modifications necessary if we want to avoid doing it.
@@ -726,7 +706,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     // Build a set of keys
     byte[][] keys;
     TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
-
+    
     for (FileStatus stat : familyDirStatuses) {
       if (!stat.isDir()) {
         LOG.warn("Skipping non-directory " + stat.getPath());
@@ -736,10 +716,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       // Skip _logs, etc
       if (familyDir.getName().startsWith("_")) continue;
       byte[] family = familyDir.getName().getBytes();
-
+     
       hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);
-
+      
       Path[] hfiles = FileUtil.stat2Paths(fs.listStatus(familyDir));
       for (Path hfile : hfiles) {
         if (hfile.getName().startsWith("_")) continue;
@@ -759,7 +739,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           LOG.info("Trying to figure out region boundaries hfile=" + hfile +
             " first=" + Bytes.toStringBinary(first) +
             " last="  + Bytes.toStringBinary(last));
-
+          
           // To eventually infer start key-end key boundaries
           Integer value = map.containsKey(first)? map.get(first):0;
           map.put(first, value+1);
@@ -771,7 +751,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         }
       }
     }
-
+    
     keys = LoadIncrementalHFiles.inferBoundaries(map);
     this.hbAdmin.createTable(htd,keys);
 
