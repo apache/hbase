@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.AssignmentPlan.POSITION;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MunkresAssignment;
@@ -485,6 +486,190 @@ public class RegionPlacement implements RegionPlacementPolicy{
     return primaryServerMap;
   }
 
+  /**
+   * Makes expansion on the new rack by migrating a number of regions from each
+   * of the existing racks to a new rack. Assumption: the assignment domain will
+   * contain information that the newly added rack is there (but no regions are
+   * assigned to it).
+   *
+   */
+  public void expandRegionsToNewRack(String newRack,
+      RegionAssignmentSnapshot assignmentSnapshot) throws IOException {
+    AssignmentPlan plan = assignmentSnapshot.getExistingAssignmentPlan();
+    AssignmentDomain domain = assignmentSnapshot.getGlobalAssignmentDomain();
+    Map<HServerAddress, List<HRegionInfo>> mapServerToRegions = assignmentSnapshot
+        .getRegionServerToRegionMap();
+    Map<String, List<HServerAddress>> mapRackToRegionServers = domain
+        .getRackToRegionServerMap();
+
+    int avgRegionsPerRs = calculateAvgRegionsPerRS(mapServerToRegions);
+    if (avgRegionsPerRs == 0) {
+      System.out
+          .println("ERROR: average number of regions per regionserver is ZERO, ABORTING!");
+      return;
+    }
+
+    // because the domain knows about the newly added rack we subtract 1.
+    int totalNumRacks = domain.getTotalRackNum() - 1;
+    int numServersNewRack = domain.getRackToRegionServerMap().get(newRack)
+        .size();
+    int moveRegionsPerRack = (int) Math.floor(avgRegionsPerRs
+        * numServersNewRack / totalNumRacks);
+    List<HRegionInfo> regionsToMove = new ArrayList<HRegionInfo>();
+    for (String rack : mapRackToRegionServers.keySet()) {
+      if (!rack.equals(newRack)) {
+        List<HRegionInfo> regionsToMoveFromRack = pickRegionsFromRack(plan,
+            mapRackToRegionServers.get(rack), mapServerToRegions, rack,
+            moveRegionsPerRack, newRack);
+        if (regionsToMoveFromRack.size() == 0) {
+          System.out
+              .println("WARNING: number of regions to be moved from rack "
+                  + rack + " is zero!");
+        }
+        regionsToMove.addAll(regionsToMoveFromRack);
+      }
+    }
+    moveRegionsToNewRack(plan, domain, regionsToMove, newRack);
+  }
+
+  /**
+   * This method will pick regions from a given rack, such that these regions
+   * are going to be moved to the new rack later. The logic behind is: we move
+   * the regions' tertiaries into a new rack
+   *
+   * @param plan - the current assignment plan
+   * @param regionServersFromOneRack - region servers that belong to the given
+   * rack
+   * @param mapServerToRegions map contains the mapping from a region server to
+   * it's regions
+   * @param currentRack
+   * @param moveRegionsPerRack - how many regions we want to move per rack
+   * @param newRack - the new rack where we will move the tertiaries
+   * @return a complete list of regions that are going to be moved in the new
+   * rack
+   */
+  private List<HRegionInfo> pickRegionsFromRack(AssignmentPlan plan,
+      List<HServerAddress> regionServersFromOneRack,
+      Map<HServerAddress, List<HRegionInfo>> mapServerToRegions,
+      String currentRack, int moveRegionsPerRack, String newRack) {
+    // we want to move equal number of tertiaries per server
+    List<HRegionInfo> regionsToMove = new ArrayList<HRegionInfo>();
+    System.out.println("------------------------------------------");
+    System.out.println("Printing how many regions are planned to be moved per regionserver in rack " + currentRack);
+    // use Math.ceil to ensure that we move at least one region from some of the RS
+    // if we should move a number of regions smaller than the total number of
+    // servers in the rack
+    int movePerServer = (int) Math.ceil(moveRegionsPerRack
+        / regionServersFromOneRack.size());
+    int totalMovedPerRack = 0;
+    int serverIndex = 0;
+    for (serverIndex = 0; serverIndex < regionServersFromOneRack.size(); serverIndex++) {
+      HServerAddress server = regionServersFromOneRack.get(serverIndex);
+      int totalMovedPerRs = 0;
+      // get all the regions on this server
+      List<HRegionInfo> regions = mapServerToRegions.get(server);
+      for (HRegionInfo region : regions) {
+        List<HServerAddress> favoredNodes = plan.getAssignment(region);
+        if (favoredNodes.size() != HConstants.FAVORED_NODES_NUM) {
+          System.out.println("WARNING!!! Number of favored nodes for region "
+              + region.getEncodedName() + " is not "
+              + HConstants.FAVORED_NODES_NUM);
+        }
+        regionsToMove.add(region);
+        totalMovedPerRs++;
+        totalMovedPerRack++;
+        if (totalMovedPerRs == movePerServer
+            || totalMovedPerRack == moveRegionsPerRack)
+          break;
+      }
+      System.out.println(totalMovedPerRs + " tertiary regions from RS "
+          + regionServersFromOneRack.get(serverIndex).getHostname()
+          + " will be moved to a new rack");
+      if (totalMovedPerRack == moveRegionsPerRack)
+        break;
+    }
+    while (serverIndex < regionServersFromOneRack.size()) {
+      System.out.println("0 tertiary regions from RS "
+          + regionServersFromOneRack.get(serverIndex).getHostname()
+          + " will be moved to a new rack");
+      serverIndex++;
+    }
+    System.out.println("Total number of regions: " + totalMovedPerRack
+        + " in rack " + currentRack + " will move its tertiary to a new rack: "
+        + newRack);
+    System.out.println("------------------------------------------");
+    return regionsToMove;
+  }
+
+  /**
+   * Returns the average number of regions per regionserver
+   *
+   * @param mapServerToRegions
+   * @return
+   */
+  private int calculateAvgRegionsPerRS(
+      Map<HServerAddress, List<HRegionInfo>> mapServerToRegions) {
+    int totalRegions = 0;
+    int totalRS = 0;
+    for (Entry<HServerAddress, List<HRegionInfo>> entry : mapServerToRegions
+        .entrySet()) {
+      if (entry.getKey() != null && entry.getKey() != null) {
+        totalRegions += entry.getValue().size();
+        totalRS++;
+      }
+    }
+    return (int) Math.floor(totalRegions / totalRS);
+  }
+
+  /**
+   *
+   * Move the regions to the new rack, such that each server will get equal
+   * number of regions
+   *
+   * @param plan - the current assignment plan
+   * @param domain - the assignment domain
+   * @param regionsToMove - the regions that would be moved to the new rack
+   * regionserver per rack are picked to be moved in the new rack
+   * @param newRack - the new rack
+   * @throws IOException
+   */
+  private void moveRegionsToNewRack(AssignmentPlan plan,
+      AssignmentDomain domain, List<HRegionInfo> regionsToMove, String newRack)
+      throws IOException {
+    System.out.println("------------------------------------------");
+    System.out
+        .println("Printing how many regions are planned to be assigned per region server in the new rack (" + newRack + ")");
+    List<HServerAddress> serversFromNewRack = domain
+        .getServersFromRack(newRack);
+    int totalNumRSNewRack = serversFromNewRack.size();
+    for (int j = 0; j < totalNumRSNewRack; j++) {
+      int regionsPerRs = 0;
+      for (int i = j; i < regionsToMove.size(); i += totalNumRSNewRack) {
+        HRegionInfo region = regionsToMove.get(i);
+        List<HServerAddress> favoredNodes = plan.getAssignment(region);
+        if (AssignmentPlan.replaceFavoredNodesServerWithNew(favoredNodes,
+            POSITION.TERTIARY, serversFromNewRack.get(j))) {
+          plan.updateAssignmentPlan(region, favoredNodes);
+
+        }
+        regionsPerRs++;
+      }
+      System.out.println("RS: " + serversFromNewRack.get(j).getHostname()
+          + " got " + regionsPerRs + "tertiary regions");
+    }
+    System.out
+        .println("Do you want to update the assignment plan with this changes (y/n): ");
+    Scanner s = new Scanner(System.in);
+    String input = s.nextLine().trim();
+    s.close();
+    if (input.toLowerCase().equals("y")) {
+      System.out.println("Updating assignment plan...");
+      updateAssignmentPlanToMeta(plan);
+      updateAssignmentPlanToRegionServers(plan);
+    } else {
+      System.out.println("exiting without updating the assignment plan");
+    }
+  }
   /**
    * Generate the assignment plan for the existing table
    *
@@ -1071,7 +1256,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
     // Set all the options
     Options opt = new Options();
     opt.addOption("w", "write", false, "write the assignments to META only");
-    opt.addOption("u", "update", false, 
+    opt.addOption("u", "update", false,
         "update the assignments to META and RegionServers together");
     opt.addOption("n", "dry-run", false, "do not write assignments to META");
     opt.addOption("v", "verify", false, "verify current assignments against META");
@@ -1079,14 +1264,14 @@ public class RegionPlacement implements RegionPlacementPolicy{
     opt.addOption("h", "help", false, "print usage");
     opt.addOption("d", "verification-details", false,
         "print the details of verification report");
-    
+
     opt.addOption("zk", true, "to set the zookeeper quorum");
     opt.addOption("fs", true, "to set HDFS");
     opt.addOption("hbase_root", true, "to set hbase_root directory");
-    
+
     opt.addOption("overwrite", false,
-      "overwrite the favored nodes for a single region," +
-      "for example: -update -r regionName -f server1:port,server2:port,server3:port");
+        "overwrite the favored nodes for a single region," +
+        "for example: -update -r regionName -f server1:port,server2:port,server3:port");
     opt.addOption("r", true, "The region name that needs to be updated");
     opt.addOption("f", true, "The new favored nodes");
 
@@ -1099,19 +1284,20 @@ public class RegionPlacement implements RegionPlacementPolicy{
     opt.addOption("munkres", false,
         "use munkres to place secondaries and tertiaries");
     opt.addOption("ld", "locality-dispersion", false, "print locality and dispersion information for current plan");
+    opt.addOption("exprack", "expand-with-rack", false, "expand the regions to a new rack");
     try {
       // Set the log4j
       Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
       Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.ERROR);
-      Logger.getLogger("org.apache.hadoop.hbase.master.RegionPlacement").
-        setLevel(Level.INFO);
+      Logger.getLogger("org.apache.hadoop.hbase.master.RegionPlacement")
+          .setLevel(Level.INFO);
 
       CommandLine cmd = new GnuParser().parse(opt, args);
       Configuration conf = HBaseConfiguration.create();
 
       boolean enforceMinAssignmentMove = true;
       boolean enforceLocality = true;
-      boolean verificationDetails =false;
+      boolean verificationDetails = false;
 
       // Read all the options
       if ((cmd.hasOption("l") &&
@@ -1132,17 +1318,17 @@ public class RegionPlacement implements RegionPlacementPolicy{
         conf.set(HConstants.ZOOKEEPER_QUORUM, cmd.getOptionValue("zk"));
         LOG.info("Setting the zk quorum: " + conf.get(HConstants.ZOOKEEPER_QUORUM));
       }
-      
+
       if (cmd.hasOption("fs")) {
         conf.set(FileSystem.FS_DEFAULT_NAME_KEY, cmd.getOptionValue("fs"));
         LOG.info("Setting the HDFS: " + conf.get(FileSystem.FS_DEFAULT_NAME_KEY));
       }
-      
+
       if (cmd.hasOption("hbase_root")) {
         conf.set(HConstants.HBASE_DIR, cmd.getOptionValue("hbase_root"));
         LOG.info("Setting the hbase root directory: " + conf.get(HConstants.HBASE_DIR));
       }
-      
+
       // Create the region placement obj
       RegionPlacement rp = new RegionPlacement(conf, enforceLocality,
           enforceMinAssignmentMove);
@@ -1176,7 +1362,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
         RegionPlacement.printAssignmentPlan(plan);
         // Write the new assignment plan to META
         rp.updateAssignmentPlanToMeta(plan);
-      }  else if (cmd.hasOption("u") || cmd.hasOption("update")) {
+      } else if (cmd.hasOption("u") || cmd.hasOption("update")) {
         // Generate the new assignment plan
         AssignmentPlan plan = rp.getNewAssignmentPlan();
         // Print the new assignment plan
@@ -1216,7 +1402,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
             favoredNodesStr);
         List<HServerAddress> favoredNodes = null;
         HRegionInfo regionInfo =
-          rp.getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap().get(regionName);
+            rp.getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap().get(regionName);
         if (regionInfo == null) {
           LOG.error("Cannot find the region " + regionName + " from the META");
         } else {
@@ -1229,6 +1415,24 @@ public class RegionPlacement implements RegionPlacementPolicy{
           newPlan.updateAssignmentPlan(regionInfo, favoredNodes);
           rp.updateAssignmentPlan(newPlan);
         }
+      } else if (cmd.hasOption("exprack")) {
+        RegionAssignmentSnapshot snapshot = rp.getRegionAssignmentSnapshot();
+        AssignmentDomain domain = snapshot.getGlobalAssignmentDomain();
+        System.out.println("List of current racks: ");
+        Set<String> allRacks = domain.getRackToRegionServerMap().keySet();
+        for (String rack : allRacks) {
+          System.out.println("\t"
+              + rack
+              + "\t number of Region Servers: "
+              + snapshot.getGlobalAssignmentDomain().getServersFromRack(rack)
+                  .size());
+        }
+        System.out
+            .println("Insert the name of the new rack (to which the migration should be done): ");
+        Scanner s = new Scanner(System.in);
+        String newRack = s.nextLine().trim();
+        s.close();
+        rp.expandRegionsToNewRack(newRack, snapshot);
       } else {
         printHelp(opt);
       }

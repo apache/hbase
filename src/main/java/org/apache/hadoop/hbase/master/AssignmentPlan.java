@@ -209,8 +209,8 @@ public class AssignmentPlan implements Writable{
    int version = in.readInt();
    if (version != VERSION) {
      throw new IOException("The version mismatch for the assignment plan. " +
-		"The expected versioin is " + VERSION +
-		" but the verion from the assigment plan is " + version);
+         "The expected versioin is " + VERSION +
+         " but the verion from the assigment plan is " + version);
    }
    // read the favoredAssignmentMap size
    int assignmentMapSize = in.readInt();
@@ -265,17 +265,45 @@ public class AssignmentPlan implements Writable{
    return true;
  }
 
- public static AssignmentPlan.POSITION getFavoredServerPosition(
-     List<HServerAddress> favoredNodes, HServerAddress server) {
-   if (favoredNodes == null || server == null ||
-       favoredNodes.size() != HConstants.FAVORED_NODES_NUM) {
-     return null;
-   }
-   for (AssignmentPlan.POSITION p : AssignmentPlan.POSITION.values()) {
-     if (favoredNodes.get(p.ordinal()).equals(server)) {
-       return p;
-     }
-   }
-   return null;
- }
+  /**
+   * Returns the position of the passed server in the list of favored nodes (the
+   * position can be primary, secondary or tertiary)
+   *
+   * @param favoredNodes
+   * @param server
+   * @return
+   */
+  public static AssignmentPlan.POSITION getFavoredServerPosition(
+      List<HServerAddress> favoredNodes, HServerAddress server) {
+    if (favoredNodes == null || server == null ||
+        favoredNodes.size() != HConstants.FAVORED_NODES_NUM) {
+      return null;
+    }
+    for (AssignmentPlan.POSITION p : AssignmentPlan.POSITION.values()) {
+      if (favoredNodes.get(p.ordinal()).equals(server)) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Replaces a server on the specified position (primary, secondary or
+   * tertiary) in the list of favored nodes with a new one.
+   *
+   * @param favoredNodes
+   * @param posOfReplacement
+   * @param newServer
+   * @return
+   */
+  public static boolean replaceFavoredNodesServerWithNew(
+      List<HServerAddress> favoredNodes, POSITION posOfReplacement,
+      HServerAddress newServer) {
+    if (favoredNodes == null || newServer == null
+        || favoredNodes.size() != HConstants.FAVORED_NODES_NUM) {
+      return false;
+    }
+    favoredNodes.set(posOfReplacement.ordinal(), newServer);
+    return true;
+  }
 }
