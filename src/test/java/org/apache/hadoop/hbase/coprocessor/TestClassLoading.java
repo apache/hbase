@@ -376,6 +376,15 @@ public class TestClassLoading {
 
   @Test
   public void testClassLoadingFromLibDirInJar() throws Exception {
+    loadingClassFromLibDirInJar("/lib/");
+  }
+
+  @Test
+  public void testClassLoadingFromRelativeLibDirInJar() throws Exception {
+    loadingClassFromLibDirInJar("lib/");
+  }
+
+  void loadingClassFromLibDirInJar(String libPrefix) throws Exception {
     FileSystem fs = cluster.getFileSystem();
 
     File innerJarFile1 = buildCoprocessorJar(cpName1);
@@ -391,7 +400,7 @@ public class TestClassLoading {
 
     for (File jarFile: new File[] { innerJarFile1, innerJarFile2 }) {
       // Add archive entry
-      JarEntry jarAdd = new JarEntry("/lib/" + jarFile.getName());
+      JarEntry jarAdd = new JarEntry(libPrefix + jarFile.getName());
       jarAdd.setTime(jarFile.lastModified());
       out.putNextEntry(jarAdd);
 
