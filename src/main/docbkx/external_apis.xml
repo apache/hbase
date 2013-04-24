@@ -383,10 +383,10 @@
             <para>If the filterIfColumnMissing flag is set to true the columns of the row will not be emitted if the specified column to check is not found in the row. The default value is false.</para>
             <para>If the setLatestVersionOnly flag is set to false, it will test previous versions (timestamps) too. The default value is true.</para>
             <para>These flags are optional and if you must set neither or both</para>
-            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueFilter(&lt;compare operator>, ‘&lt;comparator>’, ‘&lt;family>’, ‘&lt;qualifier>’,&lt;filterIfColumnMissing_boolean>, &lt;latest_version_boolean>) </para>
-            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueFilter(&lt;compare operator>, ‘&lt;comparator>’, ‘&lt;family>’, ‘&lt;qualifier>) </para>
-            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueFilter (&lt;=, ‘abc’,‘FamilyA’, ‘Column1’, true, false)" </para>
-            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueFilter (&lt;=, ‘abc’,‘FamilyA’, ‘Column1’)" </para>
+            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueFilter(‘&lt;family>’, ‘&lt;qualifier>’, &lt;compare operator>, ‘&lt;comparator>’, &lt;filterIfColumnMissing_boolean>, &lt;latest_version_boolean>) </para>
+            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueFilter(‘&lt;family>’, ‘&lt;qualifier>, &lt;compare operator>, ‘&lt;comparator>’) </para>
+            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueFilter (‘FamilyA’, ‘Column1’, &lt;=, ‘abc’, true, false)" </para>
+            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueFilter (‘FamilyA’, ‘Column1’, &lt;=, ‘abc’)" </para>
           </listitem>
 
           <listitem>
@@ -395,10 +395,10 @@
               behaves same as SingleColumnValueFilter – however, if the column is found and the
               condition passes, all the columns of the row will be emitted except for the tested
               column value. </para>
-            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueExcludeFilter(&lt;compare operator>, '&lt;comparator>', '&lt;family>', '&lt;qualifier>',&lt;latest_version_boolean>, &lt;filterIfColumnMissing_boolean>)</para>
-            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueExcludeFilter(&lt;compare operator>, '&lt;comparator>', '&lt;family>', '&lt;qualifier>') </para>
-            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueExcludeFilter (‘&lt;=’, ‘abc’,‘FamilyA’, ‘Column1’, ‘false’, ‘true’)"</para>
-            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueExcludeFilter (‘&lt;=’, ‘abc’, ‘FamilyA’, ‘Column1’)" </para>
+            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueExcludeFilter('&lt;family>', '&lt;qualifier>', &lt;compare operator>, '&lt;comparator>', &lt;latest_version_boolean>, &lt;filterIfColumnMissing_boolean>)</para>
+            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueExcludeFilter('&lt;family>', '&lt;qualifier>', &lt;compare operator>, '&lt;comparator>') </para>
+            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueExcludeFilter (‘FamilyA’, ‘Column1’, ‘&lt;=’, ‘abc’, ‘false’, ‘true’)"</para>
+            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueExcludeFilter (‘FamilyA’, ‘Column1’, ‘&lt;=’, ‘abc’)" </para>
           </listitem>
 
           <listitem>
