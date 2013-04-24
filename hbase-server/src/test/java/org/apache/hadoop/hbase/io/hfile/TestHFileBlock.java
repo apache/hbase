@@ -206,6 +206,7 @@ public class TestHFileBlock {
         HFile.DEFAULT_BYTES_PER_CHECKSUM);
     DataOutputStream dos = hbw.startWriting(blockType);
     writeTestBlockContents(dos);
+    dos.flush();
     byte[] headerAndData = hbw.getHeaderAndDataForTest();
     assertEquals(1000 * 4, hbw.getUncompressedSizeWithoutHeader());
     hbw.release();
@@ -248,14 +249,19 @@ public class TestHFileBlock {
             + "\\x00"  // XFL (extra flags)
             // OS (0 = FAT filesystems, 3 = Unix). However, this field
             // sometimes gets set to 0 on Linux and Mac, so we reset it to 3.
+            // This appears to be a difference caused by the availability
+            // (and use) of the native GZ codec.
             + "\\x03"
             + "\\xED\\xC3\\xC1\\x11\\x00 \\x08\\xC00DD\\xDD\\x7Fa"
             + "\\xD6\\xE8\\xA3\\xB9K\\x84`\\x96Q\\xD3\\xA8\\xDB\\xA8e\\xD4c"
             + "\\xD46\\xEA5\\xEA3\\xEA7\\xE7\\x00LI\\x5Cs\\xA0\\x0F\\x00\\x00"
-            + "\\xAB\\x85g\\x91"; //  4 byte checksum
+            + "\\x00\\x00\\x00\\x00"; //  4 byte checksum (ignored)
     final int correctGzipBlockLength = 95;
-    assertEquals(correctTestBlockStr, createTestBlockStr(GZ,
-        correctGzipBlockLength));
+    final String testBlockStr = createTestBlockStr(GZ, correctGzipBlockLength);
+    // We ignore the block checksum because createTestBlockStr can change the
+    // gzip header after the block is produced
+    assertEquals(correctTestBlockStr.substring(0, correctGzipBlockLength - 4),
+      testBlockStr.substring(0, correctGzipBlockLength - 4));
   }
 
   @Test
