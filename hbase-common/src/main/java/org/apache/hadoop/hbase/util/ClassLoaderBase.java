@@ -51,7 +51,6 @@ public class ClassLoaderBase extends URLClassLoader {
    * Creates a DynamicClassLoader that can load classes dynamically
    * from jar files under a specific folder.
    *
-   * @param conf the configuration for the cluster.
    * @param parent the parent ClassLoader to set.
    */
   public ClassLoaderBase(final ClassLoader parent) {

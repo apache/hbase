@@ -158,7 +158,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       Enumeration<JarEntry> entries = jarFile.entries();
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
-        if (entry.getName().matches("/lib/[^/]+\\.jar")) {
+        if (entry.getName().matches("[/]?lib/[^/]+\\.jar")) {
           File file = new File(parentDir, "." + pathPrefix + "." + path.getName()
             + "." + System.currentTimeMillis() + "." + entry.getName().substring(5));
           IOUtils.copyBytes(jarFile.getInputStream(entry), new FileOutputStream(file), conf, true);
