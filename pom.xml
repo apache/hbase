@@ -138,8 +138,8 @@
       <name>Anoop Sam John</name>
       <email>anoopsamjohn@apache.org</email>
       <timezone>+5</timezone>
-      <organization>Huawei</organization>
-      <organizationUrl>http://www.huawei.com</organizationUrl>
+      <organization>Intel</organization>
+      <organizationUrl>http://www.intel.com</organizationUrl>
     </developer>
     <developer>
       <id>ddas</id>
