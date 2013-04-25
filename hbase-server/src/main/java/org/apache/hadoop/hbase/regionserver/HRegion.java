@@ -347,6 +347,7 @@ public class HRegion implements HeapSize { // , Writable{
   final RegionServerServices rsServices;
   private RegionServerAccounting rsAccounting;
   private List<Pair<Long, Long>> recentFlushes = new ArrayList<Pair<Long,Long>>();
+  private long flushCheckInterval;
   private long blockingMemStoreSize;
   final long threadWakeFrequency;
   // Used to guard closes
@@ -438,6 +439,8 @@ public class HRegion implements HeapSize { // , Writable{
       .add(confParam)
       .addStringMap(htd.getConfiguration())
       .addWritableMap(htd.getValues());
+    this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
+        DEFAULT_CACHE_FLUSH_INTERVAL);
     this.rowLockWaitDuration = conf.getInt("hbase.rowlock.wait.duration",
                     DEFAULT_ROWLOCK_WAIT_DURATION);
 
@@ -834,6 +837,12 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   private final Object closeLock = new Object();
+
+  /** Conf key for the periodic flush interval */
+  public static final String MEMSTORE_PERIODIC_FLUSH_INTERVAL = 
+      "hbase.regionserver.optionalcacheflushinterval";
+  /** Default interval for the memstore flush */
+  public static final int DEFAULT_CACHE_FLUSH_INTERVAL = 3600000;
 
   /**
    * Close down this HRegion.  Flush the cache unless abort parameter is true,
@@ -1320,6 +1329,26 @@ public class HRegion implements HeapSize { // , Writable{
       lock.readLock().unlock();
       status.cleanup();
     }
+  }
+
+  /**
+   * Should the memstore be flushed now
+   */
+  boolean shouldFlush() {
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    //if we flushed in the recent past, we don't need to do again now
+    if ((now - getLastFlushTime() < flushCheckInterval)) {
+      return false;
+    }
+    //since we didn't flush in the recent past, flush now if certain conditions
+    //are met. Return true on first such memstore hit.
+    for (Store s : this.getStores().values()) {
+      if (s.timeOfOldestEdit() < now - flushCheckInterval) {
+        // we have an old enough edit in the memstore, flush
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -4898,7 +4927,7 @@ public class HRegion implements HeapSize { // , Writable{
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       38 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (10 * Bytes.SIZEOF_LONG) +
+      (11 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +

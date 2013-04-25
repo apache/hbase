@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB.Allocation;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
@@ -89,6 +90,9 @@ public class MemStore implements HeapSize {
 
   // Used to track own heapSize
   final AtomicLong size;
+
+  // Used to track when to flush
+  volatile long timeOfOldestEdit = Long.MAX_VALUE;
 
   TimeRangeTracker timeRangeTracker;
   TimeRangeTracker snapshotTimeRangeTracker;
@@ -166,6 +170,7 @@ public class MemStore implements HeapSize {
           if (allocator != null) {
             this.allocator = new MemStoreLAB(conf, chunkPool);
           }
+          timeOfOldestEdit = Long.MAX_VALUE;
         }
       }
     } finally {
@@ -233,6 +238,28 @@ public class MemStore implements HeapSize {
     }
   }
 
+  long timeOfOldestEdit() {
+    return timeOfOldestEdit;
+  }
+
+  private boolean addToKVSet(KeyValue e) {
+    boolean b = this.kvset.add(e);
+    setOldestEditTimeToNow();
+    return b;
+  }
+
+  private boolean removeFromKVSet(KeyValue e) {
+    boolean b = this.kvset.remove(e);
+    setOldestEditTimeToNow();
+    return b;
+  }
+
+  void setOldestEditTimeToNow() {
+    if (timeOfOldestEdit == Long.MAX_VALUE) {
+      timeOfOldestEdit = EnvironmentEdgeManager.currentTimeMillis();
+    }
+  }
+
   /**
    * Internal version of add() that doesn't clone KVs with the
    * allocator, and doesn't take the lock.
@@ -240,7 +267,7 @@ public class MemStore implements HeapSize {
    * Callers should ensure they already have the read lock taken
    */
   private long internalAdd(final KeyValue toAdd) {
-    long s = heapSizeChange(toAdd, this.kvset.add(toAdd));
+    long s = heapSizeChange(toAdd, addToKVSet(toAdd));
     timeRangeTracker.includeTimestamp(toAdd);
     this.size.addAndGet(s);
     return s;
@@ -288,7 +315,7 @@ public class MemStore implements HeapSize {
       // If the key is in the memstore, delete it. Update this.size.
       found = this.kvset.get(kv);
       if (found != null && found.getMemstoreTS() == kv.getMemstoreTS()) {
-        this.kvset.remove(kv);
+        removeFromKVSet(kv);
         long s = heapSizeChange(kv, true);
         this.size.addAndGet(-s);
       }
@@ -307,7 +334,7 @@ public class MemStore implements HeapSize {
     this.lock.readLock().lock();
     try {
       KeyValue toAdd = maybeCloneWithAllocator(delete);
-      s += heapSizeChange(toAdd, this.kvset.add(toAdd));
+      s += heapSizeChange(toAdd, addToKVSet(toAdd));
       timeRangeTracker.includeTimestamp(toAdd);
     } finally {
       this.lock.readLock().unlock();
@@ -606,6 +633,7 @@ public class MemStore implements HeapSize {
             addedSize -= delta;
             this.size.addAndGet(-delta);
             it.remove();
+            setOldestEditTimeToNow();
           } else {
             versionsVisible++;
           }
@@ -941,7 +969,7 @@ public class MemStore implements HeapSize {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (13 * ClassSize.REFERENCE));
+      ClassSize.OBJECT + (13 * ClassSize.REFERENCE) + Bytes.SIZEOF_LONG);
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
