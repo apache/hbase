@@ -643,7 +643,6 @@
               <exclude>**/.*</exclude>
               <exclude>**/*.tgz</exclude>
               <exclude>**/*.orig</exclude>
-              <exclude>**/test/**</exclude>
               <exclude>**/8e8ab58dcf39412da19833fcd8f687ac</exclude>
               <exclude>**/.git/**</exclude>
               <exclude>**/.idea/**</exclude>
